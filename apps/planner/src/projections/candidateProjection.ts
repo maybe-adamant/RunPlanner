@@ -13,8 +13,8 @@ import {
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type ExitDecisionAddress,
+  type HubDecisionAddress,
   type HubSlotAddress,
-  type HubVisitAddress,
   type IncomingRewardAddress,
   type LocalChildAddress,
   type LocalChildGroupAddress,
@@ -117,10 +117,10 @@ export interface CandidateProjectionSession {
     occurrenceId: OccurrenceId,
     values: readonly boolean[],
   ) => readonly CandidateOptionProjection<boolean>[];
-  readonly hubVisits: (
-    visit: HubVisitAddress,
-    hubSlotKeys: readonly string[],
-  ) => readonly CandidateOptionProjection<string>[];
+  readonly hubVisitOrders: (
+    hub: HubDecisionAddress,
+    values: readonly (readonly string[])[],
+  ) => readonly CandidateOptionProjection<readonly string[]>[];
   readonly sideRoomGenerations: (
     sideRoom: LocalChildAddress,
     values: readonly SideRoomGeneration[],
@@ -488,13 +488,15 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      hubVisits: (visit: HubVisitAddress, hubSlotKeys: readonly string[]) =>
+      hubVisitOrders: (hub: HubDecisionAddress, values: readonly (readonly string[])[]) =>
         projectOptions(
           cache,
           assembly,
-          `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
-          hubSlotKeys,
-          hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
+          `hub-visit-order:${semanticAddressKey(hub)}:${domainKey(
+            values.map((value) => JSON.stringify(value)),
+          )}`,
+          values,
+          values.map((hubSlotKeys) => ({ kind: 'hubVisitOrder', hub, hubSlotKeys })),
           catalog,
           options,
         ),
@@ -620,7 +622,7 @@ function candidateForced(
         evaluation.result.selectedPossible && evaluation.result.supportedStoreKeys.length === 1
       );
     case 'hubSlot':
-    case 'hubVisit':
+    case 'hubVisitOrder':
     case 'rewardWheelOfferCount':
     case 'rewardWheelPicked':
     case 'sideRoomGeneration':

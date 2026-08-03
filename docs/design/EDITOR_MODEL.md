@@ -97,7 +97,7 @@ The one Hub decision node projects:
 - its exact PreHub occurrence source and derived Hub room;
 - the 26 declaration-fixed Hub slots, of which nine or ten may be open;
 - one complete target room and incoming reward for every open slot;
-- the ordered six-visit pylon sequence;
+- the dense ordered pylon-visit prefix, through six positions;
 - generated/unavailable and entered-order state for side-room slots under
   visited combat targets;
 - derived parent restores and Hub returns;
@@ -106,15 +106,29 @@ The one Hub decision node projects:
 - findings and candidate state attached by semantic address.
 
 `HubDecisionWorkbench` is the sole N-specific renderer inside
-`BiomeWorkspace`. It may arrange the Hub as a board and visit timeline, but it
-may not expose arbitrary room replacement for a fixed slot or persist a second
-door-count value. Open-set membership and visit order remain separate controls
-because every open, unvisited slot owns a real offered reward leaf.
+`BiomeWorkspace`. It arranges the Hub as one ranked board: the exact authored
+visit prefix, one compact next-visit target while that prefix is incomplete
+that retains each remaining visit's positional marker and assessment, a clear
+visit cutoff, and a presentation-only unvisited tail. It may not expose
+arbitrary room replacement for a fixed slot or persist a second door-count
+value. Open-set membership and visit order remain separate controls because
+every open, unvisited slot owns a real offered reward leaf.
+
+The open board is a one-row-per-room roster. Its first line makes rank,
+identity, traversal state, membership, and reordering readable; its second
+line retains the existing selected main-reward control rather than inventing a
+new reward classification. This lets one room's local configuration expand
+without stretching unrelated rooms. The compact three-column closed-room
+disclosure is intentionally a different presentation because it has no active
+ranked traversal surface.
 
 Membership controls create or remove the one authored occurrence owned by a
 fixed slot; visited slots cannot be closed until their visit references are
-replaced or explicitly removed. Candidate work remains lazy on control intent
-so rendering the 26-slot board does not replay every alternative.
+replaced or explicitly removed. A Hub-decision-owned aggregate interaction
+evaluates complete proposed prefixes lazily on control intent, so rendering the
+26-slot board does not replay every alternative. Per-visit markers and exact
+destinations remain positional products even though they share that aggregate
+interaction.
 
 Before that node exists, the exact PreHub terminal decision projects one Hub
 takeover control. The application binds its engine-evaluated support and the
@@ -196,8 +210,8 @@ simulation entered the room. Selecting the decision shows every physical offer
 with room selection, reward selection, and picked state together.
 Generated unpicked targets remain fully inspectable in that decision surface;
 their rewards still participate in sibling, bag, source, and possibility
-evaluation. For N, the center region remains the fixed Hub board plus ordered
-visit timeline rather than a false ordinary spine. Its fixed Opening and
+evaluation. For N, the center region remains the fixed Hub ranked board with
+its explicit visit-prefix cutoff rather than a false ordinary spine. Its fixed Opening and
 PreHub stages and authored Hub visits may each show the same read-only primary
 reward token when their room declares one; Ephyra side-room offers never become
 an aggregate rail reward.

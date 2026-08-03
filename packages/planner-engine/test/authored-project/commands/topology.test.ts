@@ -9,7 +9,6 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createTargetAddress,
@@ -32,10 +31,11 @@ import {
 } from '../support/configured-projects';
 
 describe('authored-project commands and topology', () => {
-  it('removes the completed-Hub Preboss handoff when a visit truncates the Hub', () => {
+  it('removes the completed-Hub Preboss handoff when an aggregate visit order shortens the Hub', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 6),
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
     });
     const topology = project.routes
       .find((route) => route.routeKey === 'Surface')
@@ -53,6 +53,49 @@ describe('authored-project commands and topology', () => {
     expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
       visitOrder: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
     });
+  });
+
+  it('reorders a complete Hub visit prefix without rewriting its completed handoff', () => {
+    const project = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+    });
+    const topology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    if (topology === null || topology === undefined) throw new Error('N topology is required');
+
+    expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
+      visitOrder: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+    });
+    expect(
+      topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(true);
+    expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
+      true,
+    );
+  });
+
+  it('rejects aggregate Hub orders with duplicate, closed, or over-limit slots', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const project = createCompleteNProject();
+
+    for (const hubSlotKeys of [
+      ['combat01', 'combat01'],
+      ['combat12'],
+      ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06', 'combat07'],
+    ]) {
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceHubVisitOrder',
+          hub,
+          hubSlotKeys,
+        }),
+      ).toThrow(ProjectCommandContractError);
+    }
   });
 
   it('removes the completed-Hub Preboss handoff when an unvisited ninth slot closes', () => {

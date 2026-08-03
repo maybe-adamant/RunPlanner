@@ -7,7 +7,6 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -265,13 +264,11 @@ export function appendCompleteN(
       occurrenceId: nOccurrenceId(hubSlotKey),
     });
   }
-  for (const [offset, hubSlotKey] of visitSlotKeys.entries()) {
-    next = applyProjectCommand(next, catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(nBiome, 'hub', offset + 1),
-      hubSlotKey,
-    });
-  }
+  next = applyProjectCommand(next, catalog, {
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: visitSlotKeys,
+    kind: 'ReplaceHubVisitOrder',
+  });
   for (const [slotKey, value] of Object.entries({
     combat01: { rewardType: 'MaxHealthDropBig' },
     combat02: { rewardType: 'MaxManaDropBig' },

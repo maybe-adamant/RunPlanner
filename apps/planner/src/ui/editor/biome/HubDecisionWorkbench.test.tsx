@@ -8,7 +8,6 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalChildGroupAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -27,7 +26,6 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   appendCompleteN,
   appendNEntry,
-  createRepresentativeNProject,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -39,10 +37,27 @@ import {
   workspaceBiome,
 } from '@planner-test/support/biome-workbench';
 
+const browserPropertyRestorers: (() => void)[] = [];
+
 afterEach(() => {
   cleanup();
+  while (browserPropertyRestorers.length > 0) browserPropertyRestorers.pop()?.();
   vi.restoreAllMocks();
+  delete (document as unknown as { elementFromPoint?: Document['elementFromPoint'] })
+    .elementFromPoint;
 });
+
+function replaceBrowserProperty(target: object, property: PropertyKey, value: unknown): void {
+  const descriptor = Object.getOwnPropertyDescriptor(target, property);
+  Object.defineProperty(target, property, { configurable: true, value, writable: true });
+  browserPropertyRestorers.push(() => {
+    if (descriptor === undefined) {
+      Reflect.deleteProperty(target, property);
+    } else {
+      Object.defineProperty(target, property, descriptor);
+    }
+  });
+}
 
 function nHubState(application: PlannerApplication) {
   const plan = application.store
@@ -69,15 +84,107 @@ function nHubOccurrence(application: PlannerApplication, hubSlotKey: string) {
   return occurrence;
 }
 
-function orderedNHubSideEntries(application: PlannerApplication, hubSlotKey: string) {
-  const occurrence = nHubOccurrence(application, hubSlotKey);
-  if (occurrence.state.kind !== 'ephyraCombat') {
-    throw new Error(`${hubSlotKey} is not an Ephyra combat occurrence`);
-  }
-  return Object.entries(occurrence.state.sideRooms)
-    .filter(([, side]) => side.enteredOrdinal !== null)
-    .sort(([, left], [, right]) => left.enteredOrdinal! - right.enteredOrdinal!)
-    .map(([sideSlotKey]) => sideSlotKey);
+function hubRoster(): HTMLElement {
+  return screen.getByRole('group', { name: 'Ranked open Ephyra rooms' });
+}
+
+function hubCard(slotKey: string): HTMLElement {
+  const card = hubRoster().querySelector<HTMLElement>(`[data-hub-slot-key="${slotKey}"]`);
+  if (card === null) throw new Error(`Hub roster card ${slotKey} is missing`);
+  return card;
+}
+
+function hubDragHandle(slotKey: string): HTMLElement {
+  const handle = hubCard(slotKey).querySelector<HTMLElement>('[data-hub-roster-drag-handle]');
+  if (handle === null) throw new Error(`Hub roster drag handle ${slotKey} is missing`);
+  return handle;
+}
+
+function setHubPointerHitTarget(target: HTMLElement): void {
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => target,
+  });
+}
+
+interface HubPointerHitTarget {
+  readonly target: HTMLElement;
+  readonly x: number;
+  readonly y: number;
+}
+
+function hubNextVisitTarget(): HTMLElement {
+  const target = hubRoster().querySelector<HTMLElement>(
+    '[data-hub-roster-drop-target="nextVisit"]',
+  );
+  if (target === null) throw new Error('Hub roster next-visit target is missing');
+  return target;
+}
+
+function hubNextVisitPointerHit(): HubPointerHitTarget {
+  return Object.freeze({ target: hubNextVisitTarget(), x: 24, y: 24 });
+}
+
+function hubCardPointerHit(
+  slotKey: string,
+  placement: 'beforeSlot' | 'afterSlot',
+): HubPointerHitTarget {
+  const target = hubCard(slotKey);
+  const bounds = {
+    bottom: 180,
+    height: 120,
+    left: 0,
+    right: 360,
+    toJSON: () => ({}),
+    top: 60,
+    width: 360,
+    x: 0,
+    y: 60,
+  } as DOMRect;
+  vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(bounds);
+  return Object.freeze({
+    target,
+    x: 24,
+    y: placement === 'beforeSlot' ? 90 : 150,
+  });
+}
+
+function hubTailSlotKeys(): readonly string[] {
+  return Array.from(
+    hubRoster().querySelectorAll<HTMLElement>('.hub-ranked-tail [data-hub-slot-key]'),
+  )
+    .map((card) => card.dataset.hubSlotKey)
+    .filter((slotKey): slotKey is string => slotKey !== undefined);
+}
+
+function startHubPointerDrag(
+  sourceSlotKey: string,
+  hit: HubPointerHitTarget,
+): {
+  readonly board: HTMLElement;
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+} {
+  const board = hubRoster();
+  const pointerId = 41;
+  setHubPointerHitTarget(hit.target);
+  fireEvent.pointerDown(hubDragHandle(sourceSlotKey), {
+    button: 0,
+    clientX: 12,
+    clientY: 12,
+    isPrimary: true,
+    pointerId,
+    pointerType: 'mouse',
+  });
+  fireEvent.pointerMove(board, {
+    clientX: hit.x,
+    clientY: hit.y,
+    isPrimary: true,
+    pointerId,
+    pointerType: 'mouse',
+  });
+  return { board, pointerId, x: hit.x, y: hit.y };
 }
 
 function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocument {
@@ -118,31 +225,65 @@ function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocu
 }
 
 describe('HubDecisionWorkbench', () => {
-  it('renders the declaration-owned board and complete visit timeline', () => {
+  it('renders one ranked open-room board without the superseded visit timeline', () => {
     renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
 
     expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Ranked Ephyra rooms' })).toBeNull();
     expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26);
-    expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(6);
-    expect(screen.getByText('Pylon visit order')).toBeTruthy();
+    expect(document.querySelector('.hub-visit-timeline')).toBeNull();
+    expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(0);
+    expect(screen.queryByText('Pylon visit order')).toBeNull();
+    expect(screen.queryByText('Clear from here')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Clear visits from Visit/ })).toBeNull();
+    expect(
+      screen.getByRole('group', {
+        name: 'Visit order controls for Combat 05; Planned visit 1 of 6',
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('group', {
+        name: /Visit order controls for Combat 01; Remaining room \d+ of \d+; not in visit order/,
+      }),
+    ).toBeTruthy();
   });
 
-  it('partitions the authored board into compact open and closed presentation regions', () => {
+  it('renders every open room exactly once across the authored prefix and declaration tail', () => {
     renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
 
     const closedDisclosure = document.querySelector<HTMLDetailsElement>(
       '.hub-closed-room-disclosure',
     );
-    expect(document.querySelectorAll('.hub-open-room-card')).toHaveLength(9);
+    const openCards = Array.from(document.querySelectorAll<HTMLElement>('.hub-open-room-card'));
+    const prefix = document.querySelector<HTMLElement>('.hub-ranked-visit-prefix');
+    const tail = document.querySelector<HTMLElement>('.hub-ranked-tail');
+
+    expect(openCards).toHaveLength(9);
+    expect(prefix?.querySelectorAll('.hub-open-room-card')).toHaveLength(6);
+    expect(tail?.querySelectorAll('.hub-open-room-card')).toHaveLength(3);
+    expect(new Set(openCards.map((card) => card.dataset.hubSlotKey)).size).toBe(openCards.length);
+    expect(screen.getByText('Visit order ends here')).toBeTruthy();
+    expect(screen.getByText('6 rooms traverse the pylons')).toBeTruthy();
     expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(17);
     expect(closedDisclosure?.open).toBe(false);
     expect(screen.getByText('9 open · 9–10 required')).toBeTruthy();
     expect(screen.getByText('6 of 6 planned')).toBeTruthy();
     expect(document.querySelector('.hub-slot-grid')).toBeNull();
     expect(screen.queryByText(/^Door \d/)).toBeNull();
+    const firstVisit = screen.getByRole('article', { name: 'Combat 05 Hub room' });
+    const firstRemaining = screen.getByRole('article', { name: 'Combat 01 Hub room' });
+
+    expect(within(firstVisit).queryByText('Visit 1')).toBeNull();
+    expect(within(firstVisit).getByText('Entered')).toBeTruthy();
+    expect(within(firstRemaining).queryByText('Not in visit order')).toBeNull();
 
     for (const card of document.querySelectorAll<HTMLElement>('.hub-open-room-card')) {
+      const handle = card.querySelector<HTMLElement>('[data-hub-roster-drag-handle]');
+      expect(card.querySelector('.hub-roster-primary')).not.toBeNull();
+      expect(card.querySelector('.hub-roster-primary + .hub-main-reward')).not.toBeNull();
+      expect(handle?.getAttribute('aria-hidden')).toBe('true');
+      expect(handle?.hasAttribute('tabindex')).toBe(false);
       expect(card.querySelector('.hub-main-reward')).not.toBeNull();
       expect(card.textContent).not.toContain('Evaluated');
     }
@@ -153,25 +294,46 @@ describe('HubDecisionWorkbench', () => {
     }
   });
 
-  it('orders the authored board, visit plan, handoff, and closed rooms as one workspace', () => {
+  it('keeps unplanned visit owners in one compact next-visit target', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
-        projectId: 'hub-section-order',
-        name: 'Hub section order',
+        projectId: 'hub-partial-ranked-board',
+        name: 'Hub partial ranked board',
         configuredBiomeCounts: { Surface: 1 },
       }),
-      { includePreboss: false },
+      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
     );
     renderStaticHubDecisionWorkbench(project);
-    const workbench = screen.getByRole('region', { name: 'Ephyra Hub' });
+    const prefix = document.querySelector<HTMLElement>('.hub-ranked-visit-prefix');
+    const tail = document.querySelector<HTMLElement>('.hub-ranked-tail');
 
-    expect(Array.from(workbench.children).map((element) => element.className)).toEqual([
-      'hub-board',
-      'hub-visit-timeline',
-      'takeover-action',
-      'hub-closed-room-disclosure',
-      'workbench-action-row',
-    ]);
+    expect(screen.getByText('2 of 6 planned')).toBeTruthy();
+    expect(prefix?.querySelectorAll('.hub-open-room-card')).toHaveLength(2);
+    expect(prefix?.querySelectorAll('.hub-empty-visit-position')).toHaveLength(0);
+    expect(tail?.querySelectorAll('.hub-open-room-card')).toHaveLength(7);
+    const nextVisitTarget = hubNextVisitTarget();
+    expect(nextVisitTarget.classList).toContain('hub-next-visit-target');
+    expect(nextVisitTarget.getAttribute('aria-label')).toBe(
+      'Visit 3 is not planned; Visits 4–6 remain unplanned.',
+    );
+    expect(nextVisitTarget.textContent).toContain('Drop a room here for Visit 3');
+    expect(nextVisitTarget.textContent).toContain('Visits 4–6 remain unplanned');
+    expect(screen.getByRole('article', { name: 'Combat 05 Hub room' }).dataset.visitPosition).toBe(
+      '1',
+    );
+    expect(
+      screen.getByRole('article', { name: 'Satyr Champion Hub room' }).dataset.visitPosition,
+    ).toBe('2');
+
+    for (const visitPosition of [3, 4, 5, 6]) {
+      const marker = nextVisitTarget.querySelector<HTMLElement>(
+        `[data-semantic-owner='${semanticAddressKey(
+          createHubVisitAddress(nBiome, 'hub', visitPosition),
+        )}']`,
+      );
+      expect(marker).not.toBeNull();
+      expect(marker?.closest('.hub-next-visit-target')).toBe(nextVisitTarget);
+    }
   });
 
   it('keeps keyboard membership selection in its source batch after the Hub is authored', async () => {
@@ -413,7 +575,9 @@ describe('HubDecisionWorkbench', () => {
       false,
     );
     expect(
-      screen.getByRole('group', { name: 'Open Ephyra rooms' }).contains(document.activeElement),
+      screen
+        .getByRole('group', { name: 'Ranked open Ephyra rooms' })
+        .contains(document.activeElement),
     ).toBe(true);
     expect(screen.getByText('9 open · 9–10 required')).toBeTruthy();
     expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(17);
@@ -494,7 +658,7 @@ describe('HubDecisionWorkbench', () => {
     expect(disclosure.open).toBe(false);
   });
 
-  it('shows read-only visit reward context and marks the exact board card for reward focus', () => {
+  it('keeps the board-owned reward as the exact reward focus destination', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-visit-reward-context',
@@ -503,13 +667,10 @@ describe('HubDecisionWorkbench', () => {
       }),
     );
     const view = renderHubDecisionWorkbench(project);
-    const firstVisit = document.querySelectorAll<HTMLElement>('.hub-visit-row')[0];
     const combatCard = screen.getByRole('article', { name: 'Combat 05 Hub room' });
     const rewardOwner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
-    if (firstVisit === undefined) throw new Error('first Hub visit row is missing');
 
-    expect(within(firstVisit).getByText(/^Reward:/)).toBeTruthy();
-    expect(firstVisit.querySelector('.reward-value-editor')).toBeNull();
+    expect(document.querySelector('.hub-visit-timeline')).toBeNull();
     expect(combatCard.dataset.focusedMainReward).toBeUndefined();
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(rewardOwner)));
@@ -522,73 +683,26 @@ describe('HubDecisionWorkbench', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 
-  it('keeps each visit summary synchronized with its board-owned reward', async () => {
-    const view = renderHubDecisionWorkbench(createRepresentativeNOPQProject());
-    const combatCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
-    const visitAt = (visitIndex: number): HTMLElement => {
-      const visit = document.querySelectorAll<HTMLElement>('.hub-visit-row')[visitIndex - 1];
-      if (visit === undefined) throw new Error(`Hub visit ${visitIndex} row is missing`);
-      return visit;
-    };
-    const summaryBefore = visitAt(3).querySelector('.hub-visit-reward')?.textContent;
-    if (summaryBefore === undefined) throw new Error('Combat 02 has no visit reward summary');
+  it('keeps every positional visit marker in its exact ranked prefix card', () => {
+    renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
 
-    await view.user.click(within(combatCard).getByRole('button', { name: 'Reward' }));
-    const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
-    const replacementType = rewardTypes.find(
-      (option) =>
-        option.getAttribute('aria-disabled') !== 'true' &&
-        option.getAttribute('data-selected-value') !== 'true',
+    const prefixCards = Array.from(
+      document.querySelectorAll<HTMLElement>('.hub-ranked-visit-prefix .hub-open-room-card'),
     );
-    if (replacementType === undefined) {
-      throw new Error('Combat 02 has no editable alternative reward type');
-    }
-    await view.user.click(replacementType);
-    if (replacementType.textContent === 'Boon') {
-      const boonSources = within(await screen.findByRole('listbox')).getAllByRole('option');
-      const replacementSource = boonSources.find(
-        (option) =>
-          option.getAttribute('aria-disabled') !== 'true' &&
-          option.getAttribute('data-selected-value') !== 'true',
+    expect(prefixCards).toHaveLength(6);
+    for (const [index, card] of prefixCards.entries()) {
+      const marker = card.querySelector<HTMLElement>(
+        `[data-semantic-owner='${semanticAddressKey(
+          createHubVisitAddress(nBiome, 'hub', index + 1),
+        )}']`,
       );
-      if (replacementSource === undefined) {
-        throw new Error('Combat 02 has no editable alternative Boon source');
-      }
-      await view.user.click(replacementSource);
+      expect(marker).not.toBeNull();
+      expect(marker?.closest('.hub-open-room-card')).toBe(card);
     }
-
-    await waitFor(() =>
-      expect(visitAt(3).querySelector('.hub-visit-reward')?.textContent).not.toBe(summaryBefore),
-    );
-    expect(visitAt(3).querySelector('.reward-value-editor')).toBeNull();
   });
 
-  it('shows a fixed Story visit summary without a second reward editor', () => {
-    const project = createRepresentativeNProject({
-      openSlotKeys: [
-        'combat11',
-        'combat10',
-        'combat09',
-        'combat05',
-        'combat03',
-        'combat02',
-        'combat01',
-        'miniBoss01',
-        'story',
-      ],
-      visitSlotKeys: ['story', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat09'],
-    });
-    renderStaticHubDecisionWorkbench(project);
-    const storyVisit = document.querySelectorAll<HTMLElement>('.hub-visit-row')[0];
-    if (storyVisit === undefined) throw new Error('Story Hub visit row is missing');
-
-    expect(within(storyVisit).getByText('Reward: Story')).toBeTruthy();
-    expect(storyVisit.querySelector('.reward-value-editor')).toBeNull();
-    expect(within(storyVisit).queryByRole('button', { name: 'Reward' })).toBeNull();
-  });
-
-  it('appends, replaces, and removes visits through semantic Hub commands', async () => {
-    let project = appendCompleteN(
+  it('uses the keyboard rank fallback to dispatch one full ReplaceHubVisitOrder proposal', async () => {
+    const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-visit-commands',
         name: 'Hub visit commands',
@@ -596,134 +710,447 @@ describe('HubDecisionWorkbench', () => {
       }),
       { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
     );
-    project = applyProjectCommand(project, catalog, {
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: ['sideDoor1', 'sideDoor2'],
-      kind: 'ReplaceSideRoomEntryOrder',
-    });
     const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
-    const originalVisitOrder = [...nHubState(view.application).decision.visitOrder];
-    const preservedSideOrder = orderedNHubSideEntries(view.application, 'combat05');
-    expect(preservedSideOrder).toEqual(['sideDoor1', 'sideDoor2']);
-    const hubVisitControl = (visitIndex: number): HTMLSelectElement => {
-      const row = document.querySelectorAll<HTMLElement>('.hub-visit-row')[visitIndex - 1];
-      if (row === undefined) throw new Error(`N Hub visit ${visitIndex} row is missing`);
-      return within(row).getByRole('combobox') as HTMLSelectElement;
-    };
-    const chooseAvailableVisit = async (
-      control: HTMLSelectElement,
-      excludedSlotKeys: readonly string[],
-    ): Promise<string> => {
-      await view.user.click(control);
-      await waitFor(() =>
-        expect(
-          Array.from(control.options).some(
-            (option) =>
-              option.value !== control.value &&
-              !excludedSlotKeys.includes(option.value) &&
-              !option.disabled &&
-              option.dataset.candidateSupport !== 'unavailable',
-          ),
-        ).toBe(true),
-      );
-      const choice = Array.from(control.options).find(
-        (option) =>
-          option.value !== control.value &&
-          !excludedSlotKeys.includes(option.value) &&
-          !option.disabled &&
-          option.dataset.candidateSupport !== 'unavailable',
-      );
-      if (choice === undefined) throw new Error('Hub visit has no available replacement room');
-      await view.user.selectOptions(control, choice.value);
-      return choice.value;
-    };
+    const addAsVisitThree = within(hubCard('combat01')).getByRole('button', {
+      name: 'Add Combat 01 as visit 3',
+    });
+    act(() => addAsVisitThree.focus());
+    await view.user.keyboard('{Enter}');
 
-    const appended = await chooseAvailableVisit(
-      hubVisitControl(3),
-      nHubState(view.application).decision.visitOrder,
-    );
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual([
         'combat05',
         'miniBoss01',
-        appended,
+        'combat01',
       ]),
     );
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore + 1,
     );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      focusBefore,
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toContainEqual(
+      authoredProjectCommandDispatched({
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat05', 'miniBoss01', 'combat01'],
+        kind: 'ReplaceHubVisitOrder',
+      }),
     );
 
-    const replacement = await chooseAvailableVisit(
-      hubVisitControl(2),
-      nHubState(view.application).decision.visitOrder.filter((slotKey) => slotKey !== 'miniBoss01'),
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05', 'miniBoss01']),
     );
+  });
+
+  it('keeps a keyboard tail-only move out of semantic history and command dispatch', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-transient-tail-order',
+        name: 'Hub transient tail order',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const authoredBefore = [...nHubState(view.application).decision.visitOrder];
+    const tailKeys = (): readonly string[] =>
+      Array.from(document.querySelectorAll<HTMLElement>('.hub-ranked-tail [data-hub-slot-key]'))
+        .map((card) => card.dataset.hubSlotKey)
+        .filter((slotKey): slotKey is string => slotKey !== undefined);
+    const tailBefore = tailKeys();
+    if (tailBefore.length < 2 || tailBefore[0] === undefined || tailBefore[1] === undefined) {
+      throw new Error('The complete Hub fixture must expose at least two tail rooms.');
+    }
+
+    const moveLater = within(hubCard('combat01')).getByRole('button', {
+      name: 'Move Combat 01 later',
+    });
+    act(() => moveLater.focus());
+    await view.user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(tailKeys()).toEqual([tailBefore[1], tailBefore[0], ...tailBefore.slice(2)]),
+    );
+    expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toHaveLength(0);
+  });
+
+  it('moves a room across the cutoff with one full order and preserves focus', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-cross-cutoff-order',
+        name: 'Hub cross cutoff order',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const moved = screen.getByRole('button', { name: 'Move Combat 01 into visit 6' });
+
+    await view.user.click(moved);
+
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual([
         'combat05',
-        replacement,
-        appended,
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+        'combat01',
       ]),
     );
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 2,
+      historyBefore + 1,
     );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      focusBefore,
-    );
-
-    const confirmation = vi.spyOn(globalThis, 'confirm');
-    await view.user.click(screen.getByRole('button', { name: 'Clear visits from Visit 2 onward' }));
-    expect(confirmation).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05']),
-    );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 3,
-    );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      focusBefore,
-    );
-    expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual(preservedSideOrder);
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(nHubState(view.application).decision.visitOrder).toEqual([
-      'combat05',
-      replacement,
-      appended,
-    ]);
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(nHubState(view.application).decision.visitOrder).toEqual(originalVisitOrder);
-  });
-
-  it('removes the completed-Hub handoff when a visit is truncated', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-handoff-truncation',
-        name: 'Hub handoff truncation',
-        configuredBiomeCounts: { Surface: 1 },
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toContainEqual(
+      authoredProjectCommandDispatched({
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat01'],
+        kind: 'ReplaceHubVisitOrder',
       }),
     );
-    const view = renderHubDecisionWorkbench(project);
-
-    const confirmation = vi.spyOn(globalThis, 'confirm');
-    const removal = screen.getByRole('button', { name: 'Clear visits from Visit 6 onward' });
-    expect(removal.classList.contains('danger-action')).toBe(true);
-    expect(removal.classList.contains('action-compact')).toBe(true);
-    expect(removal.textContent).toBe('Clear from here');
-    expect(removal.closest('.hub-visit-heading')).not.toBeNull();
-    await view.user.click(removal);
-    expect(confirmation).not.toHaveBeenCalled();
-    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
-    expect(
-      nHubState(view.application).topology.decisions.some(
-        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+    const movedCard = screen.getByRole('article', { name: 'Combat 01 Hub room' });
+    expect(movedCard.dataset.visitPosition).toBe('6');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        movedCard.querySelector('[data-hub-rank-action="moveEarlier"]'),
       ),
-    ).toBe(false);
+    );
+  });
+
+  it('publishes a complete Hub order when a remaining room drops into the full prefix', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-semantic-reorder',
+        name: 'Hub pointer semantic reorder',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    dispatch.mockClear();
+    const { board, pointerId, x, y } = startHubPointerDrag(
+      'combat01',
+      hubCardPointerHit('combat05', 'beforeSlot'),
+    );
+
+    await waitFor(() => expect(hubCard('combat01').dataset.dragging).toBe('true'));
+    expect(document.querySelector('.hub-roster-drag-preview')).not.toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toHaveLength(0);
+
+    fireEvent.pointerUp(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'mouse',
+    });
+
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat01',
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+      ]),
+    );
+    expect(hubCard('combat01').dataset.visitPosition).toBe('1');
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toContainEqual(
+      authoredProjectCommandDispatched({
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat01', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23'],
+        kind: 'ReplaceHubVisitOrder',
+      }),
+    );
+    expect(board.dataset.dragging).toBeUndefined();
+    expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
+  });
+
+  it('keeps a tail-only roster drag out of semantic history and command dispatch', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-transient-tail',
+        name: 'Hub pointer transient tail',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const authoredBefore = [...nHubState(view.application).decision.visitOrder];
+    const tailBefore = hubTailSlotKeys();
+    const [sourceSlotKey, targetSlotKey] = tailBefore;
+    if (sourceSlotKey === undefined || targetSlotKey === undefined) {
+      throw new Error('The complete Hub fixture must expose two tail rooms.');
+    }
+    dispatch.mockClear();
+    const { board, pointerId, x, y } = startHubPointerDrag(
+      sourceSlotKey,
+      hubCardPointerHit(targetSlotKey, 'afterSlot'),
+    );
+
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    fireEvent.pointerUp(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'mouse',
+    });
+
+    await waitFor(() =>
+      expect(hubTailSlotKeys()).toEqual([targetSlotKey, sourceSlotKey, ...tailBefore.slice(2)]),
+    );
+    expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toHaveLength(0);
+  });
+
+  it('appends a tail room through the compact next-visit drop target', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-next-visit',
+        name: 'Hub pointer next visit',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const sourceSlotKey = hubTailSlotKeys()[0];
+    if (sourceSlotKey === undefined) throw new Error('partial Hub fixture has no remaining room');
+    dispatch.mockClear();
+    const { board, pointerId, x, y } = startHubPointerDrag(sourceSlotKey, hubNextVisitPointerHit());
+
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    fireEvent.pointerUp(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'mouse',
+    });
+
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat05',
+        'miniBoss01',
+        sourceSlotKey,
+      ]),
+    );
+    expect(hubCard(sourceSlotKey).dataset.visitPosition).toBe('3');
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toContainEqual(
+      authoredProjectCommandDispatched({
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat05', 'miniBoss01', sourceSlotKey],
+        kind: 'ReplaceHubVisitOrder',
+      }),
+    );
+  });
+
+  it('cancels a roster drag without changing the authored or transient order', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-cancel',
+        name: 'Hub pointer cancel',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const authoredBefore = [...nHubState(view.application).decision.visitOrder];
+    const tailBefore = hubTailSlotKeys();
+    dispatch.mockClear();
+    const { board, pointerId } = startHubPointerDrag(
+      'combat09',
+      hubCardPointerHit('combat11', 'afterSlot'),
+    );
+
+    await waitFor(() => expect(hubCard('combat09').dataset.dragging).toBe('true'));
+    fireEvent.pointerCancel(board, { isPrimary: true, pointerId, pointerType: 'mouse' });
+
+    await waitFor(() => {
+      expect(board.dataset.dragging).toBeUndefined();
+      expect(hubCard('combat09').dataset.dragging).toBeUndefined();
+      expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
+    });
+    expect(nHubState(view.application).decision.visitOrder).toEqual(authoredBefore);
+    expect(hubTailSlotKeys()).toEqual(tailBefore);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toHaveLength(0);
+  });
+
+  it('keeps the original pointer source when a non-primary pointer begins during an active drag', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-primary-ownership',
+        name: 'Hub pointer primary ownership',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const dispatch = vi.spyOn(view.application.store, 'dispatch');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    dispatch.mockClear();
+    const { board, pointerId, x, y } = startHubPointerDrag(
+      'combat01',
+      hubCardPointerHit('combat05', 'beforeSlot'),
+    );
+
+    await waitFor(() => expect(hubCard('combat01').dataset.dragging).toBe('true'));
+    fireEvent.pointerDown(hubDragHandle('combat03'), {
+      button: 0,
+      clientX: 16,
+      clientY: 16,
+      isPrimary: false,
+      pointerId: 42,
+      pointerType: 'touch',
+    });
+    fireEvent.pointerMove(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: false,
+      pointerId: 42,
+      pointerType: 'touch',
+    });
+    fireEvent.pointerUp(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: false,
+      pointerId: 42,
+      pointerType: 'touch',
+    });
+
+    expect(hubCard('combat01').dataset.dragging).toBe('true');
+    expect(hubCard('combat03').dataset.dragging).toBeUndefined();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    expect(
+      dispatch.mock.calls.map(([action]) => action).filter(authoredProjectCommandDispatched.match),
+    ).toHaveLength(0);
+
+    fireEvent.pointerUp(board, {
+      clientX: x,
+      clientY: y,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'mouse',
+    });
+
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat01',
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+      ]),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+  });
+
+  it('attempts document-flow edge scrolling while a narrow-layout roster drag remains active', async () => {
+    const pageScrollRoot = document.createElement('div');
+    replaceBrowserProperty(document, 'scrollingElement', pageScrollRoot);
+    replaceBrowserProperty(pageScrollRoot, 'scrollHeight', 1_200);
+    replaceBrowserProperty(window, 'innerHeight', 400);
+    const windowScrollBy = vi.fn();
+    replaceBrowserProperty(window, 'scrollBy', windowScrollBy);
+    let scheduledFrame: FrameRequestCallback | undefined;
+    replaceBrowserProperty(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      scheduledFrame = callback;
+      return 1;
+    });
+    replaceBrowserProperty(window, 'cancelAnimationFrame', () => undefined);
+
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-pointer-document-scroll',
+        name: 'Hub pointer document scroll',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    renderHubDecisionWorkbench(project);
+    const board = hubRoster();
+    const pointerId = 53;
+    setHubPointerHitTarget(hubCardPointerHit('combat05', 'beforeSlot').target);
+    fireEvent.pointerDown(hubDragHandle('combat01'), {
+      button: 0,
+      clientX: 12,
+      clientY: 350,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'touch',
+    });
+    fireEvent.pointerMove(board, {
+      clientX: 24,
+      clientY: 390,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'touch',
+    });
+
+    if (scheduledFrame === undefined) {
+      throw new Error('edge drag did not schedule document-flow scrolling');
+    }
+    act(() => scheduledFrame?.(0));
+    expect(windowScrollBy).toHaveBeenCalledWith({ top: 18 });
+
+    fireEvent.pointerCancel(board, { isPrimary: true, pointerId, pointerType: 'touch' });
   });
 
   it('creates and undoes the completed-Hub handoff through its bound intent', async () => {
@@ -768,15 +1195,16 @@ describe('HubDecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('keeps the board and exact next visit visible at an invalid local boundary', async () => {
+  it('keeps ranked cards and move controls visible at an invalid authored boundary', () => {
     let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 4),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
+      kind: 'ReplaceHubVisitOrder',
     });
     const view = renderHubDecisionWorkbench(project);
 
@@ -796,35 +1224,40 @@ describe('HubDecisionWorkbench', () => {
     expect(
       document.querySelector(".hub-closed-room-option [data-assessment='unassessed']"),
     ).not.toBeNull();
-    const rows = document.querySelectorAll<HTMLElement>('.hub-visit-row');
-    expect(rows).toHaveLength(6);
-    expect(rows[3]?.dataset.authoring).toBe('next');
-    expect(
-      Array.from(document.querySelectorAll<HTMLElement>('.hub-owner-assessment'))
-        .filter((element) => element.closest('.hub-visit-row') !== null)
-        .slice(0, 3)
-        .map((element) => element.dataset.assessment),
-    ).toEqual(['unassessed', 'unassessed', 'unassessed']);
-    const visitControl = within(rows[3]!).getByRole('combobox', {
-      name: /^Visit 4 room/,
-    }) as HTMLSelectElement;
-    await view.user.click(visitControl);
-    await waitFor(() => expect(visitControl.dataset.candidateSupport).toBe('unavailable'));
-    const { decision } = nHubState(view.application);
-    expect(
-      Array.from(visitControl.options)
-        .map((option) => option.value)
-        .filter(Boolean)
-        .sort(),
-    ).toEqual(
-      decision.openTargets
-        .filter((target) => !decision.visitOrder.includes(target.hubSlotKey))
-        .map((target) => target.hubSlotKey)
-        .sort(),
+    expect(document.querySelectorAll('.hub-ranked-visit-prefix .hub-open-room-card')).toHaveLength(
+      3,
     );
+    expect(document.querySelectorAll('.hub-empty-visit-position')).toHaveLength(0);
+    const nextVisitTarget = hubNextVisitTarget();
+    expect(nextVisitTarget.getAttribute('aria-label')).toBe(
+      'Visit 4 is not planned; Visits 5–6 remain unplanned.',
+    );
+    for (const visitPosition of [4, 5, 6]) {
+      expect(
+        nextVisitTarget.querySelector(
+          `[data-semantic-owner='${semanticAddressKey(
+            createHubVisitAddress(nBiome, 'hub', visitPosition),
+          )}']`,
+        ),
+      ).not.toBeNull();
+    }
+    expect(document.querySelectorAll('.hub-ranked-tail .hub-open-room-card')).toHaveLength(6);
+    expect(document.querySelector('.hub-visit-timeline')).toBeNull();
+    const firstTail = document.querySelector<HTMLElement>('.hub-ranked-tail .hub-open-room-card');
+    if (firstTail === null) throw new Error('invalid Hub fixture has no remaining room');
+    expect(within(firstTail).getByRole('button', { name: /^Add .+ as visit 4$/ })).toBeTruthy();
   });
 
-  it('keeps authored room details available when evaluation has not reached the retained Hub', () => {
+  it('uses the rank for authored selection and reserves Entered for evaluated entry', () => {
+    const entered = renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
+    const enteredCard = within(entered.container).getByRole('article', {
+      name: 'Combat 05 Hub room',
+    });
+    expect(enteredCard.dataset.visitPosition).toBe('1');
+    expect(within(enteredCard).queryByText('Visit 1')).toBeNull();
+    expect(within(enteredCard).getByText('Entered')).toBeTruthy();
+    cleanup();
+
     const view = renderHubDecisionWorkbench(
       withRetainedHubBehindMissingLink(createRepresentativeNOPQProject()),
     );
@@ -838,8 +1271,12 @@ describe('HubDecisionWorkbench', () => {
     expect(laterVisit.visited).toBe(true);
     expect(laterVisit.room.detailsActive).toBe(true);
     expect(laterVisit.room.entered).toBe(false);
+    const retainedCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
+    expect(retainedCard.dataset.visitPosition).toBe('3');
+    expect(within(retainedCard).queryByText('Visit 3')).toBeNull();
+    expect(within(retainedCard).queryByText('Entered')).toBeNull();
     expect(
-      within(screen.getByRole('article', { name: 'Combat 02 Hub room' })).getByRole('button', {
+      within(retainedCard).getByRole('button', {
         name: 'Open details for Combat 02',
       }),
     ).toBeTruthy();

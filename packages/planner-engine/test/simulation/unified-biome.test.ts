@@ -10,7 +10,6 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -512,13 +511,11 @@ function selectedNProject() {
       occurrenceId: createOccurrenceId(`n-${slotKey}`),
     });
   }
-  for (let index = 1; index <= 6; index += 1) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(biome, 'hub', index),
-      hubSlotKey: `combat${String(index).padStart(2, '0')}`,
-    });
-  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(biome, 'hub'),
+    hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06'],
+  });
   return applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: createExitDecisionAddress(biome, { kind: 'hubDecision', decisionKey: 'hub' }),

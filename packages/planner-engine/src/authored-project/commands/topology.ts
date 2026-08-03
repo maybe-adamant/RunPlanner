@@ -1047,12 +1047,7 @@ function updateHub(
   command: Extract<
     TopologyCommand,
     {
-      readonly kind:
-        | 'OpenHubSlot'
-        | 'CloseHubSlot'
-        | 'AppendHubVisit'
-        | 'ReplaceHubVisit'
-        | 'RemoveHubVisitsFrom';
+      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubVisitOrder';
     }
   >,
 ): ProjectDocument {
@@ -1135,30 +1130,34 @@ function updateHub(
       replaceDecision(applyTopologyRemovalImpact(topology, impact), replacement),
     );
   }
-  if (command.visit.hubKey !== descriptor.hubKey)
+  if (command.hub.hubKey !== descriptor.hubKey)
     failCommand(command, 'Hub address does not match this decision');
-  const visits = [...hub.visitOrder];
-  if (command.kind === 'RemoveHubVisitsFrom') {
-    if (command.visit.visitIndex > visits.length) return document;
-    visits.splice(command.visit.visitIndex - 1);
-  } else {
-    if (!hub.openTargets.some((target) => target.hubSlotKey === command.hubSlotKey))
-      failCommand(command, `${command.hubSlotKey} is not open`);
-    if (command.kind === 'AppendHubVisit') {
-      if (command.visit.visitIndex !== visits.length + 1)
-        failCommand(command, 'Hub visits append in order');
-      visits.push(command.hubSlotKey);
-    } else {
-      if (command.visit.visitIndex > visits.length)
-        failCommand(command, 'Hub visit does not exist');
-      visits[command.visit.visitIndex - 1] = command.hubSlotKey;
-    }
-    if (new Set(visits).size !== visits.length) failCommand(command, 'Hub visits must be distinct');
+  if (
+    !Array.isArray(command.hubSlotKeys) ||
+    !command.hubSlotKeys.every((hubSlotKey) => typeof hubSlotKey === 'string')
+  ) {
+    failCommand(command, 'Hub visit order must contain slot keys');
+  }
+  const visits = [...command.hubSlotKeys];
+  if (visits.some((hubSlotKey) => hubSlotKey.trim().length === 0)) {
+    failCommand(command, 'Hub visit order must contain non-blank slot keys');
+  }
+  if (new Set(visits).size !== visits.length) failCommand(command, 'Hub visits must be distinct');
+  if (
+    visits.some((hubSlotKey) => !hub.openTargets.some((target) => target.hubSlotKey === hubSlotKey))
+  ) {
+    failCommand(command, 'Hub visits must reference open slots');
   }
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
+  if (
+    visits.length === hub.visitOrder.length &&
+    visits.every((hubSlotKey, index) => hub.visitOrder[index] === hubSlotKey)
+  ) {
+    return document;
+  }
   const withoutCompletedHandoff =
-    command.kind === 'RemoveHubVisitsFrom' && visits.length < descriptor.requiredVisits
+    hub.visitOrder.length === descriptor.requiredVisits && visits.length < descriptor.requiredVisits
       ? removeCompletedHubHandoff(topology, descriptor.hubKey)
       : topology;
   return updateTopology(
@@ -1204,9 +1203,7 @@ export function applyTopologyCommand(
       return removeHubDecision(document, catalog, located, command);
     case 'OpenHubSlot':
     case 'CloseHubSlot':
-    case 'AppendHubVisit':
-    case 'ReplaceHubVisit':
-    case 'RemoveHubVisitsFrom':
+    case 'ReplaceHubVisitOrder':
       return updateHub(document, catalog, located, command);
     case 'ClearTopology':
       return clearTopology(document, located, command);

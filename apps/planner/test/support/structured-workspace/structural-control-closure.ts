@@ -32,8 +32,8 @@ function expectedStructuralInteraction(
       return interactions.hubTakeovers.get(key);
     case 'hubSlot':
       return interactions.hubSlots.get(key);
-    case 'hubVisit':
-      return interactions.hubVisits.get(key);
+    case 'hubVisitOrder':
+      return interactions.hubVisitOrders.get(key);
     case 'roomPicker':
       return interactions.rooms.get(key);
     case 'start':
@@ -190,7 +190,7 @@ function assertRenderedNodeControls(
       }
       return;
     }
-    case 'hubDecision':
+    case 'hubDecision': {
       assertExactObservedInteraction(
         interactions.topologyRemovals.get(workspaceTestOwnerKey(node.owner)),
         workspaceTestOwnerKey(node.owner),
@@ -211,22 +211,30 @@ function assertRenderedNodeControls(
           );
         }
       }
-      for (const visit of node.visits) {
-        if (visit.authoring === 'locked') continue;
-        const interaction = interactions.hubVisits.get(visit.marker.focusKey);
-        assertExactObservedInteraction(
-          interaction,
-          visit.marker.focusKey,
-          visit.marker.address,
-          `Hub visit ${visit.marker.focusKey}`,
+      const visitOrderKey = workspaceTestOwnerKey(node.owner);
+      const interaction = interactions.hubVisitOrders.get(visitOrderKey);
+      assertExactObservedInteraction(
+        interaction,
+        visitOrderKey,
+        node.owner,
+        `Hub visit order ${visitOrderKey}`,
+      );
+      const authoredVisitOrder = node.visits.flatMap((visit) =>
+        visit.authoring === 'authored' && visit.hubSlotKey !== undefined ? [visit.hubSlotKey] : [],
+      );
+      if (
+        interaction === undefined ||
+        interaction.selectedHubSlotKeys.length !== authoredVisitOrder.length ||
+        interaction.selectedHubSlotKeys.some(
+          (slotKey, index) => slotKey !== authoredVisitOrder[index],
+        )
+      ) {
+        throw new Error(
+          `${visitOrderKey} Hub visit-order interaction disagrees with rendered visits`,
         );
-        if (visit.authoring === 'authored' && interaction?.removal === undefined) {
-          throw new Error(
-            `${visit.marker.focusKey} authored Hub visit has no exact removal interaction`,
-          );
-        }
       }
       return;
+    }
     case 'completion':
       return;
     default:

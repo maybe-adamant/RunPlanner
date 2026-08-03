@@ -2,7 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
-  createHubVisitAddress,
+  createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -211,7 +211,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       'sideRooms',
       'sideDoor1',
     );
-    const laterVisit = createHubVisitAddress(nBiome, 'hub', 3);
+    const hub = createHubDecisionAddress(nBiome, 'hub');
     const laterSideRoom = createLocalChildAddress(
       nBiome,
       nOccurrenceId('combat02'),
@@ -259,13 +259,21 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
     });
     expect(
-      candidates.evaluate({ kind: 'hubVisit', visit: laterVisit, hubSlotKey: 'combat02' }),
+      candidates.evaluate({
+        kind: 'hubVisitOrder',
+        hub,
+        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
+      }),
     ).toMatchObject({
-      kind: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: {
-        requiredOwner: laterVisit,
-        requiredCheckpoint: 'afterTargetGeneration',
+      kind: 'hubVisitOrder',
+      result: {
+        selectedPossible: true,
+        findings: [
+          expect.objectContaining({
+            code: 'sideRoomGenerationUnavailable',
+            origin: blockedSideRoom,
+          }),
+        ],
       },
     });
   });
@@ -287,7 +295,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     );
   });
 
-  it('retains the invalid board region but withholds later Hub candidates', () => {
+  it('retains the invalid board region while keeping structural Hub order proposals authorable', () => {
     const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
@@ -300,11 +308,11 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     expect(
       candidates.evaluate({
-        kind: 'hubVisit',
-        visit: createHubVisitAddress(nBiome, 'hub', 6),
-        hubSlotKey: 'combat09',
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'hubVisitOrder', result: { selectedPossible: true } });
     expect(
       candidates.evaluate({
         kind: 'sideRoomGeneration',
@@ -326,7 +334,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
-  it('withholds a later visit from an incomplete prefix blocked at the board', () => {
+  it('assesses an aggregate visit prefix when current board findings block later evaluation', () => {
     let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
@@ -337,8 +345,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 4),
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
     });
     const evaluation = simulateProject(catalog, project);
     const biome = evaluation.routes
@@ -351,11 +360,11 @@ describe('N Hub rewards, validation, and candidates', () => {
         catalog,
         simulateProjectAssembly(catalog, project),
       ).evaluate({
-        kind: 'hubVisit',
-        visit: createHubVisitAddress(nBiome, 'hub', 4),
-        hubSlotKey: 'combat09',
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat09'],
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'hubVisitOrder', result: { selectedPossible: true } });
   });
 
   it('permits the audited ten-target peer-source repeat without changing physical-board ownership', () => {
@@ -611,14 +620,14 @@ describe('N Hub rewards, validation, and candidates', () => {
         occurrenceId: nOccurrenceId('combat10'),
       },
       {
-        kind: 'hubVisit',
-        visit: createHubVisitAddress(nBiome, 'hub', 1),
-        hubSlotKey: 'combat03',
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['combat03', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
       },
       {
-        kind: 'hubVisit',
-        visit: createHubVisitAddress(nBiome, 'hub', 1),
-        hubSlotKey: 'miniBoss01',
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: ['miniBoss01', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
       },
       {
         kind: 'sideRoomGeneration',
@@ -675,13 +684,16 @@ describe('N Hub rewards, validation, and candidates', () => {
       result: { selectedPossible: true, findings: [] },
     });
     expect(alternateVisit).toMatchObject({
-      kind: 'hubVisit',
+      kind: 'hubVisitOrder',
       result: {
         selectedPossible: true,
         findings: [expect.objectContaining({ code: 'sideRoomGenerationUnavailable' })],
       },
     });
-    expect(duplicateVisit).toMatchObject({ kind: 'hubVisit', result: { selectedPossible: false } });
+    expect(duplicateVisit).toMatchObject({
+      kind: 'hubVisitOrder',
+      result: { selectedPossible: false },
+    });
     expect(forcedSideGeneration).toMatchObject({
       kind: 'sideRoomGeneration',
       result: { selectedPossible: true, supportOutcomes: ['generated'] },
@@ -702,6 +714,71 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
     });
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
+  });
+
+  it('replays every proposed Hub visit and retains exact descendant findings as order evidence', () => {
+    let project = createRepresentativeNProject();
+    const combat05Group = createLocalChildGroupAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+    );
+    const combat05SideDoor1 = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const combat03SideDoor1 = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat03'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: combat05Group,
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: combat05SideDoor1,
+      generation: 'notGenerated',
+    });
+
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
+      kind: 'hubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat03', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23'],
+    });
+
+    expect(candidate).toMatchObject({
+      kind: 'hubVisitOrder',
+      result: {
+        candidateHubSlotKeys: [
+          'combat03',
+          'combat05',
+          'miniBoss01',
+          'combat02',
+          'combat11',
+          'combat23',
+        ],
+        selectedPossible: true,
+        findings: [
+          expect.objectContaining({
+            code: 'sideRoomGenerationUnavailable',
+            origin: combat03SideDoor1,
+          }),
+          expect.objectContaining({
+            code: 'sideRoomGenerationUnavailable',
+            origin: combat05SideDoor1,
+          }),
+        ],
+      },
+    });
   });
 
   it('does not offer a visit-referenced slot for closure even when the board would retain its minimum size', () => {

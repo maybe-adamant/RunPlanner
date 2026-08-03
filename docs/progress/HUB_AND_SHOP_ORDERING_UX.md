@@ -8,16 +8,14 @@ linked from the stable design documents or the repository delivery index while
 the work is active. On completion, durable behavior will be absorbed into the
 owning design authorities and this file will be retired.
 
-The work contains two complete vertical slices:
+The active work is one complete Hub vertical slice: replace N's separate Hub
+board and visit timeline with one ranked room board.
 
-1. replace N's separate Hub board and visit timeline with one ranked room
-   board; and
-2. present a Shop's authored purchases first and allow direct reordering of
-   those purchased offers.
-
-The Hub slice changes one engine authoring and candidate contract. The Shop
-slice changes presentation only. Side-room generation and entry order are
-explicitly outside this work.
+The Shop proposal below is deliberately deferred. It records a possible later
+follow-up, but it authorizes no Shop implementation, test migration, or
+acceptance work in this change. The Hub slice changes one engine authoring and
+candidate contract. Side-room generation and entry order are explicitly outside
+this work.
 
 ## Why This Work Exists
 
@@ -91,12 +89,22 @@ positions 1-6     visited, in authored traversal order
 positions 7-10    open and offered, but not visited
 ```
 
-At desktop width the intended three-column layout makes the six visited rooms
-two complete rows. A labelled boundary separates the visited prefix from the
-remaining open rooms. Responsive layouts may use fewer columns, but the
-ordered positions and boundary remain explicit.
+The open board is one ranked roster, one room per line, at every width. Each
+row keeps ordering legible on its first line: pointer drag grip, authored rank
+or remaining marker, room identity, authored/evaluated status, membership, and
+compact order actions. Its second line keeps the existing selected main-reward
+control and summary exactly as it is today; it does not invent a new
+major/minor reward taxonomy. Room-local details may expand below that row
+without stretching unrelated rooms as a multi-column grid would.
 
-Dragging or otherwise moving a room:
+The closed-room disclosure remains a compact three-column grid because its
+members have neither active traversal order nor an editable main reward. A
+labelled boundary separates the open roster's visit prefix from its remaining
+rooms at every width.
+
+Pointer/touch dragging is a direct-manipulation convenience; compact arrow
+buttons remain the complete keyboard fallback. Dragging or otherwise moving a
+room:
 
 - within positions 1-6 changes traversal order;
 - from below the cutoff into positions 1-6 makes it visited and displaces a
@@ -104,6 +112,15 @@ Dragging or otherwise moving a room:
 - from positions 1-6 below the cutoff removes it from the visit order and
   promotes the next ranked room when six visits were already authored; and
 - wholly within the unvisited tail changes presentation order only.
+
+The arrow labels express their actual boundary semantics rather than pretending
+every row moves one ordinal step: inside a prefix or tail they move earlier or
+later; at a full boundary they exchange the final visit and first remaining
+room; the first remaining room in an incomplete board becomes `Add as visit
+N`; and the final incomplete visit becomes `Remove from visit order`. The
+full boundary deliberately exchanges its final visit and first remaining room.
+That lets a specific visited room leave the prefix and become closable without
+reintroducing the old `Clear from here` control or a second bulk-order surface.
 
 The nested Hub visit rail remains navigation to the visited rooms' local
 details. It is not a second visit-order authoring surface.
@@ -116,16 +133,19 @@ not silently treat the first available unvisited rooms as authored visits.
 For a prefix shorter than six:
 
 - authored rooms occupy numbered positions starting at 1;
-- the remaining visited positions are visibly empty through position 6;
+- one compact next-position drop target states `Drop a room here for Visit N`
+  and that later visits remain unplanned;
+- that target retains a compact, individually assessed marker for every
+  remaining visit position, rather than letting later positional state vanish;
 - every other open room remains available below the cutoff;
 - moving a room into the next empty position appends it to the dense prefix;
 - positions after the first empty position cannot be populated; and
 - removing an authored room truncates or replaces the prefix through one
   complete proposed order, never by leaving an ordinal gap.
 
-An implementation may visually compact the empty positions, but the user must
-still be able to distinguish `three visits authored` from `the first six open
-rooms are visited`.
+The compact target must still make `three visits authored` distinct from `the
+first six open rooms are visited`; it is not a visual stand-in for four
+authored visits.
 
 ### Semantic prefix and presentation tail
 
@@ -309,20 +329,21 @@ amend this plan before broadening the slice.
 
 ## Accessibility and Interaction Rules
 
-Both surfaces must support pointer, touch, and keyboard use without relying on
-visual drag alone:
+The active Hub surface must support pointer, touch, and keyboard use without
+relying on visual drag alone:
 
 - every movable item has a named reorder control;
 - current ordinal and active/inactive status are exposed in accessible text;
 - keyboard users can move an item to every semantically available position;
-- a completed move is announced and focus stays with the moved semantic item;
+- a completed keyboard move is announced and focus stays with the moved
+  semantic item, while pointer dragging preserves native pointer continuation;
 - impossible proposals remain disabled with their existing candidate evidence;
 - cancel leaves authored state and Undo history unchanged; and
 - the UI does not dispatch intermediate commands while a pointer is moving.
 
 Use the smallest accessible sortable mechanism that satisfies these rules.
 Do not introduce a graph library or a repository-wide drag framework. A small
-presentation primitive may be shared only after the Hub and Shop consumers
+presentation primitive may be shared only after multiple implemented consumers
 prove the same focus, announcement, and input behavior; their proposal
 construction and semantic commands remain feature-owned.
 
@@ -360,7 +381,10 @@ Primary implementation neighborhoods include:
 This slice must be green by itself. Do not land an interface-only or dual-path
 preparatory commit.
 
-### Slice 2: Shop purchased-first ordering
+### Deferred proposal: Shop purchased-first ordering
+
+This is not an active delivery slice. Reconsider it only after a separate
+product decision authorizes Shop work.
 
 Deliver one complete application/UI slice:
 
@@ -386,21 +410,20 @@ failing authority test demonstrates an actual semantic defect.
 ### Closure
 
 A separate closure commit is optional. Use it only for material responsive,
-accessibility, or documentation corrections discovered after both vertical
-slices. Do not create a cleanup commit solely to move code introduced by the
-same work.
+accessibility, or documentation corrections discovered after the Hub slice. Do
+not create a cleanup commit solely to move code introduced by the same work.
 
-After implementation and manual visual review:
+After the Hub implementation and manual visual review:
 
 - absorb the durable Hub presentation contract into
   `STRUCTURED_EDITOR_WORKSPACE.md` and `EDITOR_MODEL.md`;
 - update `CANDIDATE_EVALUATION_MODEL.md` if the aggregate Hub candidate becomes
   the stable engine contract;
-- update `N_GAME_RULES.md` only where it describes the editor's separate visit
-  timeline rather than game behavior;
-- record the completed delivery in the ordinary progress history;
-- leave schema-11 Shop semantics in their current stable authorities; and
-- retire this document rather than retaining a second design authority.
+- update `N_GAME_RULES.md` only if a durable game-rule clarification is
+  actually discovered; this presentation change does not require one;
+- record the completed Hub delivery in the ordinary progress history; and
+- leave the deferred Shop proposal here or retire it through a later planning
+  decision rather than treating it as a completed design authority.
 
 ## Explicit Non-Goals
 
@@ -439,7 +462,11 @@ After implementation and manual visual review:
 ### Hub presentation acceptance
 
 - Every open room and main reward appears once in one ranked board.
+- The open board is a one-row-per-room ranked roster at desktop and narrow
+  widths, while closed rooms remain a three-column disclosure grid.
 - The first-six boundary is obvious at desktop and narrow widths.
+- Each open row preserves the existing selected main-reward control on its
+  own second line; no presentation-only reward taxonomy is introduced.
 - Cross-boundary moves update visited membership and order together.
 - Tail-only moves remain transient and dispatch no semantic command.
 - Opening appends a room to the tail; closing removes it from the board.
@@ -450,10 +477,15 @@ After implementation and manual visual review:
 - Exact findings reveal the containing room card after reorder or membership
   change.
 - Pointer and keyboard focus remain on the relevant room/control.
+- Pointer/touch dragging is available through a visible row grip; named arrow
+  controls remain available without dragging.
 - Every Hub visit marker and destination remains reachable, while one
   Hub-decision-owned interaction supplies all order proposals.
 
-### Shop acceptance
+### Deferred Shop acceptance
+
+The following remains a future proposal and is not part of the active Hub
+acceptance gate.
 
 - Purchased offers render first in exact authored purchase order.
 - Unpurchased offers render once below them in declaration order.
@@ -466,7 +498,7 @@ After implementation and manual visual review:
 
 ### Boundary and maintenance audit
 
-- React constructs no Hub-validity or Shop-legality policy.
+- React constructs no Hub-validity policy.
 - The application does not persist or semantically evaluate Hub tail order.
 - One supported Hub visit-edit command and candidate path remains after the
   slice; no compatibility path shadows it.
@@ -486,9 +518,9 @@ During implementation use the narrowest truthful lane for each authority:
 
 - `npm run test:engine` for the Hub command and candidate correction;
 - `npm run test:planner` for structured-workspace binding and projection;
-- `npm run test:ui` for the Hub and Shop interaction surfaces; and
+- `npm run test:ui` for the Hub interaction surface; and
 - `npm run test:product` for representative reorder, Undo/redo, finding, and
   persistence workflows.
 
-Run `npm run check` before declaring either cross-layer slice complete. Manual
+Run `npm run check` before declaring the Hub cross-layer slice complete. Manual
 review must cover desktop and narrow layouts plus pointer and keyboard moves.

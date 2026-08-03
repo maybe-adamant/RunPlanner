@@ -4,6 +4,11 @@
  * directory so consumers depend on one deliberate projection boundary.
  */
 export { requireWorkspaceInteraction, workspaceInteractionKey } from './contract';
+export {
+  dropHubBoardRoom,
+  moveHubBoardRoom,
+  reconcileHubBoardRanking,
+} from './presentation/hub-ranking';
 export type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
@@ -27,7 +32,8 @@ export type {
   WorkspaceHubSlotInteraction,
   WorkspaceHubSlotOpeningAttempt,
   WorkspaceHubVisit,
-  WorkspaceHubVisitInteraction,
+  WorkspaceHubVisitOrderInteraction,
+  WorkspaceHubVisitOrderProposal,
   WorkspaceInspectorDestination,
   WorkspaceInteractionCatalog,
   WorkspaceMarker,
@@ -51,4 +57,10 @@ export type {
   WorkspaceTakeoverRepairInteraction,
   WorkspaceTopologyRemovalInteraction,
 } from './contract';
+export type {
+  HubBoardDropTarget,
+  HubBoardMove,
+  HubBoardMoveResult,
+  HubBoardRanking,
+} from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';

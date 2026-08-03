@@ -4,7 +4,6 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createOccurrenceAddress,
   createTargetAddress,
   declaredPhysicalExits,
@@ -38,7 +37,7 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'fieldsCageOutcome'
   | 'hubTakeover'
   | 'hubSlot'
-  | 'hubVisit'
+  | 'hubVisitOrder'
   | 'roomPicker'
   | 'start'
   | 'structural'
@@ -268,11 +267,11 @@ export function expectedWorkspaceStructuralControls(
         const owner = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
         add('hubSlot', workspaceTestOwnerKey(owner), owner);
       }
-      const visitCount = Math.min(descriptor.requiredVisits, hub.visitOrder.length + 1);
-      for (let index = 1; index <= visitCount; index += 1) {
-        const owner = createHubVisitAddress(biome, descriptor.hubKey, index);
-        add('hubVisit', workspaceTestOwnerKey(owner), owner);
-      }
+      // Visit lifecycle markers stay independently reachable through topology
+      // closure. One Hub-decision interaction owns every complete order
+      // proposal, so this oracle intentionally does not impose a per-position
+      // UI interaction shape.
+      add('hubVisitOrder', workspaceTestOwnerKey(hubOwner), hubOwner);
     }
   }
 

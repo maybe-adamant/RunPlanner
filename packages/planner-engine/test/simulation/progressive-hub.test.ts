@@ -224,9 +224,9 @@ describe('Hub progressive biome evaluation', () => {
 
   it('publishes the reached visit as coverage at a Hub local frontier', () => {
     const project = applyProjectCommand(openHub(9, true), catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(nBiome, 'hub', 1),
-      hubSlotKey: 'combat05',
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05'],
     });
     const biome = nEvaluation(project);
 
@@ -433,11 +433,11 @@ describe('Hub progressive biome evaluation', () => {
     expect(hub).toMatchObject({ kind: 'hub', openTargets: [{ hubSlotKey: nOpenSlotKeys[0] }] });
   });
 
-  it('preserves Hub visit commands as one-based semantic addresses', () => {
+  it('derives one-based Hub visit addresses from aggregate authored order', () => {
     const project = applyProjectCommand(openHub(9), catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(nBiome, 'hub', 1),
-      hubSlotKey: 'combat05',
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat05'],
     });
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')

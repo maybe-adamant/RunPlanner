@@ -8,6 +8,7 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -322,14 +323,16 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('keeps Hub timeline and board focus represented by the nested rail', async () => {
+  it('keeps Hub visit and board focus represented by the nested rail', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     const railVisit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
-    const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
-    if (timeline === null) throw new Error('N Hub visit timeline is missing');
 
-    await view.user.click(within(timeline).getByRole('button', { name: 'Combat 02' }));
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 3)),
+      ),
+    );
     expect(railVisit.dataset.selected).toBe('true');
     expect(hubRailButton().dataset.selected).toBe('false');
 
@@ -794,7 +797,7 @@ describe('BiomeWorkspace', () => {
     expect(
       within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
         level: 3,
-        name: 'Open Ephyra rooms',
+        name: 'Hub traversal',
       }),
     ).toBeTruthy();
     nApplication.dispose();
@@ -816,7 +819,7 @@ describe('BiomeWorkspace', () => {
     });
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
-    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Preboss' }));
 
     const nPlan = view.application.store

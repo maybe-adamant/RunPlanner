@@ -141,9 +141,9 @@ describe('surface product loop', () => {
         validatedBiomeCount: 4,
       },
     });
-    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
-    expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(6);
+    expect(document.querySelectorAll('.hub-open-room-card')).toHaveLength(9);
     expect(document.body.textContent).not.toContain('N_Combat');
 
     for (const [label, structure] of [
@@ -186,7 +186,7 @@ describe('surface product loop', () => {
     expect(currentProject(recovered)).toEqual(authored);
   });
 
-  it('records an N Hub visit edit as one undoable semantic command and autosaves both states', async () => {
+  it('records an N Hub order move as one undoable semantic command and autosaves both states', async () => {
     const recovery = createRecoveryPersistence();
     const application = createApplication({
       autosaveRecovery: recovery.adapter,
@@ -207,24 +207,30 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
-    const removeFinalVisit = screen.getByRole('button', {
-      name: 'Clear visits from Visit 6 onward',
-    });
+    const moveFinalVisit = screen.getByRole('button', { name: 'Move Combat 09 earlier' });
     const historyBefore = application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(removeFinalVisit);
+    await view.user.click(moveFinalVisit);
 
     const edited = currentProject(application);
-    expect(document.querySelectorAll('.hub-visit-row[data-authoring="authored"]')).toHaveLength(5);
     const nTopology = edited.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const hub = nTopology?.decisions.find((decision) => decision.kind === 'hub');
+    if (hub === undefined || hub.kind !== 'hub') throw new Error('edited Hub is missing');
+    expect(hub.visitOrder).toEqual([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat09',
+      'combat23',
+    ]);
     expect(
       nTopology?.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(edited).not.toEqual(authored);
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore + 1,

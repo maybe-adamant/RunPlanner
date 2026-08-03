@@ -380,7 +380,7 @@ Each candidate family has an explicit semantic horizon:
 | Fields Min/Max                | Pre-outcome support ledger                                 |
 | O encounter or wheel setting  | Addressed occurrence lifecycle region                      |
 | Hub membership                | Joint open-board constraint region                         |
-| Hub visit                     | Addressed visit region                                     |
+| Hub visit order               | Complete proposed prefix through the Hub visit region      |
 | Side-room generation or entry | Parent-local side-room region                              |
 | Broad biome field             | Smallest biome suffix whose rules consume the field        |
 
@@ -388,6 +388,13 @@ A candidate does not become impossible merely because retained downstream
 authorship would require later repair. Room replacement, structural capacity,
 and downstream eligibility remain separate semantic effects. Validators beyond
 the candidate horizon run only when the candidate family depends on them.
+
+A Hub visit-order candidate is one Hub-decision-owned complete dense-prefix
+proposal. It replays every proposed visit in order, then returns evidence at
+the exact affected visit and room-local descendants. A structurally valid
+proposal remains authorable when that replay produces findings; those findings
+are repair evidence rather than a reason to hide the control or reject the
+authored order.
 
 ## Application and React Boundary
 

@@ -190,8 +190,8 @@ describe('App', () => {
     );
 
     const markup = appMarkup(application);
-    expect(markup).toContain('Open Ephyra rooms');
-    expect(markup).toContain('Pylon visit order');
+    expect(markup).toContain('Hub traversal');
+    expect(markup).toContain('Visit order ends here');
     expect(markup).toContain('data-open="true"');
     expect(markup).toContain(
       semanticOwnerElementId(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
@@ -282,7 +282,7 @@ describe('App', () => {
     expect(finding.origin).toEqual(openSet);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(openSet);
     expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
-    expect(markup).toContain('Open Ephyra rooms');
+    expect(markup).toContain('Hub traversal');
     expect(markup).toContain(semanticOwnerElementId(openSet));
   });
 
