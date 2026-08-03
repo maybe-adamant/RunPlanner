@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -676,6 +677,53 @@ describe('authored-project commands and topology', () => {
       ]),
     );
     expect(topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(false);
+  });
+
+  it('rejects a Hub takeover address outside its terminal decision biome', () => {
+    let project = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: createOccurrenceId('addressed-n-opening'),
+    });
+    const openingDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('addressed-n-opening'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
+      occurrenceId: createOccurrenceId('addressed-n-prehub'),
+      gameName: 'N_PreHub01',
+    });
+    const terminalDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('addressed-n-prehub'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: terminalDecision,
+    });
+
+    for (const hub of [
+      createHubDecisionAddress(fBiome, 'hub'),
+      createHubDecisionAddress(createBiomeAddress('Surface', 'O'), 'hub'),
+    ]) {
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceWithHubDecision',
+          decision: terminalDecision,
+          hub,
+        }),
+      ).toThrowError(
+        expect.objectContaining({
+          detail: 'Hub address does not match the terminal decision biome',
+        }),
+      );
+    }
   });
 
   it('clears every persisted N topology member through the shared clear impact', () => {

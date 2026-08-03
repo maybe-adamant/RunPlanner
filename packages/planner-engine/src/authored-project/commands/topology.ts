@@ -965,10 +965,14 @@ function replaceWithHubDecision(
   command: Extract<TopologyCommand, { readonly kind: 'ReplaceWithHubDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
+  if (located.layout.progression.kind !== 'hub') failCommand(command, 'unknown Hub decision');
   if (
-    located.layout.progression.kind !== 'hub' ||
-    command.hub.hubKey !== located.layout.progression.hubKey
-  )
+    command.hub.routeKey !== command.decision.routeKey ||
+    command.hub.biomeKey !== command.decision.biomeKey
+  ) {
+    failCommand(command, 'Hub address does not match the terminal decision biome');
+  }
+  if (command.hub.hubKey !== located.layout.progression.hubKey)
     failCommand(command, 'unknown Hub decision');
   if (command.decision.source.kind !== 'occurrence') {
     failCommand(command, 'Hub takeover requires an occurrence-owned terminal envelope');
