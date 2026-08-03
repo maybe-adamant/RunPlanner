@@ -1,8 +1,4 @@
-import {
-  semanticAddressKey,
-  type OccurrenceAddress,
-  type ShopPurchaseAddress,
-} from '../../authored-project/addresses';
+import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ShipCombatState, ShopState } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
 
@@ -19,7 +15,6 @@ export interface ShipLifecycleCandidateContext {
 
 export interface ShopPurchaseCandidateContext {
   readonly origin: OccurrenceAddress;
-  readonly purchaseOrigins: readonly ShopPurchaseAddress[];
   readonly evaluateState: (state: ShopState) => RoomLifecycleCandidateResult;
 }
 

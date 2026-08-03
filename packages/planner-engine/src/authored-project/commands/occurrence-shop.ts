@@ -11,20 +11,52 @@ export function applyShopOccurrenceCommand(
   command: ShopOccurrenceCommand,
 ): ProjectDocument {
   const current = requireTopology(located.plan, command);
-  const address = command.kind === 'ReplaceShopOffer' ? command.offer : command.purchase;
-  const occurrence = requireOccurrence(located.plan, address.occurrenceId, command);
+  const occurrence = requireOccurrence(
+    located.plan,
+    command.kind === 'ReplaceShopOffer' ? command.offer.occurrenceId : command.shop.occurrenceId,
+    command,
+  );
   if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
   }
-  const offer = occurrence.state.shop.offers[address.offerKey];
-  if (offer === undefined) failCommand(command, `unknown shop offer ${address.offerKey}`);
-  if (command.kind === 'SetShopPurchase' && typeof command.purchased !== 'boolean') {
-    failCommand(command, 'purchased must be a boolean');
+  if (command.kind === 'ReplaceShopPurchaseOrder') {
+    if (
+      !Array.isArray(command.offerKeys) ||
+      !command.offerKeys.every((key) => typeof key === 'string')
+    ) {
+      failCommand(command, 'offerKeys must be an array of Shop offer keys');
+    }
+    const seen = new Set<string>();
+    for (const offerKey of command.offerKeys) {
+      if (occurrence.state.shop.offers[offerKey] === undefined) {
+        failCommand(command, `unknown shop offer ${offerKey}`);
+      }
+      if (seen.has(offerKey)) failCommand(command, `shop offer ${offerKey} is duplicated`);
+      seen.add(offerKey);
+    }
+    if (sameOccurrenceValue(command.offerKeys, occurrence.state.shop.purchaseOrder))
+      return document;
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        current,
+        Object.freeze({
+          ...occurrence,
+          state: Object.freeze({
+            ...occurrence.state,
+            shop: Object.freeze({
+              ...occurrence.state.shop,
+              purchaseOrder: Object.freeze([...command.offerKeys]),
+            }),
+          }),
+        }),
+      ),
+    );
   }
-  const replacement =
-    command.kind === 'ReplaceShopOffer'
-      ? Object.freeze({ ...offer, offer: command.value })
-      : Object.freeze({ ...offer, purchased: command.purchased });
+  const offer = occurrence.state.shop.offers[command.offer.offerKey];
+  if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+  const replacement = Object.freeze({ ...offer, offer: command.value });
   if (sameOccurrenceValue(replacement, offer)) return document;
   return updateOccurrenceTopology(
     document,
@@ -39,7 +71,7 @@ export function applyShopOccurrenceCommand(
             ...occurrence.state.shop,
             offers: Object.freeze({
               ...occurrence.state.shop.offers,
-              [address.offerKey]: replacement,
+              [command.offer.offerKey]: replacement,
             }),
           }),
         }),

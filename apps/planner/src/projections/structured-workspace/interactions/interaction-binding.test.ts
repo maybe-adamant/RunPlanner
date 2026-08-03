@@ -1064,9 +1064,9 @@ describe('structured workspace interaction binding', () => {
       owner: wheel,
       selected: 1,
     });
-    expect(shop.shopPurchases.get(semanticAddressKey(purchase))).toMatchObject({
-      owner: purchase,
-      selected: false,
+    expect(shop.shopPurchaseOrders.get(semanticAddressKey(purchase))).toMatchObject({
+      owner: createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+      selected: [],
     });
   });
 

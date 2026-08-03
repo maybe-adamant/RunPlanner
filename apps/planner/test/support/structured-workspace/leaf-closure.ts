@@ -1,5 +1,6 @@
 import {
   createLocalChildGroupAddress,
+  createOccurrenceAddress,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 
@@ -32,7 +33,7 @@ function leafInteraction(
     case 'shipEncounterCount':
       return observed.interactions.shipEncounterCounts.get(key);
     case 'shopPurchase':
-      return observed.interactions.shopPurchases.get(key);
+      return observed.interactions.shopPurchaseOrders.get(key);
     case 'sideRoomEntryOrder':
       return observed.interactions.sideRoomEntryOrders.get(key);
     case 'sideRoomGeneration':
@@ -60,6 +61,12 @@ function leafInteractionOwner(
       { biomeKey: address.biomeKey, kind: 'biome', routeKey: address.routeKey },
       address.occurrenceId,
       address.groupKey,
+    );
+  }
+  if (kind === 'shopPurchase' && address.kind === 'shopPurchase') {
+    return createOccurrenceAddress(
+      { biomeKey: address.biomeKey, kind: 'biome', routeKey: address.routeKey },
+      address.occurrenceId,
     );
   }
   return address;

@@ -526,10 +526,9 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
-        purchased: false,
       },
-      { offer: { rewardType: 'WeaponUpgradeDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxManaDrop' }, purchased: false },
+      { offer: { rewardType: 'WeaponUpgradeDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
     ];
     const witnesses = findShopGenerationWitnesses(rewardKernelCatalog, profile, authored, facts());
     expect(witnesses.map((witness) => witness.optionKeys)).toEqual([
@@ -545,10 +544,9 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
-        purchased: false,
       },
-      { offer: { rewardType: 'WeaponUpgradeDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxManaDrop' }, purchased: false },
+      { offer: { rewardType: 'WeaponUpgradeDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
     ];
     const additionalRequirements = {
       WeaponUpgradeDropEarly: {
@@ -589,6 +587,7 @@ describe('ordered shop transitions', () => {
         profile,
         authored,
         witness,
+        [],
         createRewardHistoryState(),
         blockedFacts,
         additionalRequirements,
@@ -604,10 +603,9 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
-        purchased: false,
       },
-      { offer: { rewardType: 'WeaponUpgradeDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxManaDrop' }, purchased: false },
+      { offer: { rewardType: 'WeaponUpgradeDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
     ];
     const witness = findShopGenerationWitnesses(rewardKernelCatalog, profile, authored, facts())[0];
     if (witness === undefined) {
@@ -616,7 +614,7 @@ describe('ordered shop transitions', () => {
     const mismatched: readonly AuthoredShopOffer[] = [
       authored[0]!,
       authored[1]!,
-      { offer: { rewardType: 'MaxHealthDrop' }, purchased: true },
+      { offer: { rewardType: 'MaxHealthDrop' } },
     ];
     expect(
       simulateShopPurchases(
@@ -624,6 +622,7 @@ describe('ordered shop transitions', () => {
         profile,
         mismatched,
         witness,
+        [],
         createRewardHistoryState(),
         facts(),
       ),
@@ -638,10 +637,9 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
         },
-        purchased: true,
       },
-      { offer: { rewardType: 'WeaponUpgradeDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxManaDrop' }, purchased: false },
+      { offer: { rewardType: 'WeaponUpgradeDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
     ];
     const staleFacts = facts();
     const witness = findShopGenerationWitnesses(
@@ -660,6 +658,7 @@ describe('ordered shop transitions', () => {
         profile,
         authored,
         witness,
+        [],
         historyFromSources(cappedSources),
         staleFacts,
       ),
@@ -674,19 +673,17 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
-        purchased: false,
       },
       {
         offer: {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
         },
-        purchased: false,
       },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxHealthDropBig' }, purchased: false },
-      { offer: { rewardType: 'WeaponPointsRareDrop' }, purchased: false },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'MaxHealthDropBig' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
     const witnesses = findShopGenerationWitnesses(rewardKernelCatalog, profile, authored, facts());
     expect(witnesses).toHaveLength(2);
@@ -704,19 +701,17 @@ describe('ordered shop transitions', () => {
           rewardType: 'BlindBoxLoot',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
-        purchased: false,
       },
       {
         offer: {
           rewardType: 'BlindBoxLoot',
           payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
         },
-        purchased: false,
       },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxHealthDropBig' }, purchased: false },
-      { offer: { rewardType: 'WeaponPointsRareDrop' }, purchased: false },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'MaxHealthDropBig' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
 
     const support = evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, facts());
@@ -726,15 +721,15 @@ describe('ordered shop transitions', () => {
     expect(support.jointlyUnavailable).toBe(true);
   });
 
-  it('merges purchase orders that produce equivalent history records', () => {
+  it('executes the one exact authored purchase order', () => {
     const profile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [
-      { offer: { rewardType: 'MaxHealthDrop' }, purchased: true },
-      { offer: { rewardType: 'MaxManaDrop' }, purchased: true },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxHealthDropBig' }, purchased: false },
-      { offer: { rewardType: 'WeaponPointsRareDrop' }, purchased: false },
+      { offer: { rewardType: 'MaxHealthDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'MaxHealthDropBig' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
     const baseFacts = facts();
     const witness = findShopGenerationWitnesses(
@@ -751,6 +746,7 @@ describe('ordered shop transitions', () => {
       profile,
       authored,
       witness,
+      [0, 1],
       createRewardHistoryState(),
       baseFacts,
     );
@@ -776,7 +772,7 @@ describe('ordered shop transitions', () => {
     });
   });
 
-  it('branches purchase order and retains the only Blind Box source witness that remains valid', () => {
+  it('does not rescue an invalid authored order with another purchase permutation', () => {
     const profile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
     const initialSources = ['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade'];
     const authored: readonly AuthoredShopOffer[] = [
@@ -785,19 +781,17 @@ describe('ordered shop transitions', () => {
           rewardType: 'RandomLoot',
           payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
         },
-        purchased: true,
       },
       {
         offer: {
           rewardType: 'BlindBoxLoot',
           payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
         },
-        purchased: true,
       },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
-      { offer: { rewardType: 'MaxHealthDropBig' }, purchased: false },
-      { offer: { rewardType: 'WeaponPointsRareDrop' }, purchased: false },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'MaxHealthDropBig' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
     const baseFacts = facts(initialSources);
     const witnesses = findShopGenerationWitnesses(
@@ -807,14 +801,25 @@ describe('ordered shop transitions', () => {
       baseFacts,
     );
     expect(witnesses).not.toHaveLength(0);
+    const rejectedOrder = simulateShopPurchases(
+      rewardKernelCatalog,
+      profile,
+      authored,
+      witnesses[0]!,
+      [0, 1],
+      historyFromSources(initialSources),
+      baseFacts,
+    );
     const results = simulateShopPurchases(
       rewardKernelCatalog,
       profile,
       authored,
       witnesses[0]!,
+      [1, 0],
       historyFromSources(initialSources),
       baseFacts,
     );
+    expect(rejectedOrder).toEqual([]);
     expect(results).toHaveLength(1);
     expect(results[0]?.purchaseOrder).toEqual([1, 0]);
     expect(results[0]?.acquisitions.map((acquisition) => acquisition.event.role)).toEqual([

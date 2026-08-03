@@ -413,10 +413,10 @@ function materializeShopEntry(
             slot.key,
           ),
           offer: authored.offer,
-          purchased: authored.purchased,
         });
       }),
     ),
+    purchaseOrder: shop.purchaseOrder,
   });
 }
 

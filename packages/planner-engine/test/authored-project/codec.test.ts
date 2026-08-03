@@ -4,11 +4,15 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
+
+import { createCompleteNProject } from './support/complete-n-project';
+import { nBiome } from './support/configured-projects';
 
 function encodedFStart(): Record<string, unknown> {
   const biome = createBiomeAddress('Underworld', 'F');
@@ -67,7 +71,7 @@ const codecRejections: readonly {
 }[] = [
   { name: 'a null root', mutate: () => null },
   { name: 'an array root', mutate: () => [] },
-  { name: 'a schema-9 document', mutate: (document) => ({ ...document, schemaVersion: 9 }) },
+  { name: 'a schema-10 document', mutate: (document) => ({ ...document, schemaVersion: 10 }) },
   { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
   { name: 'a blank project name', mutate: (document) => ({ ...document, name: ' ' }) },
   {
@@ -165,6 +169,27 @@ const codecRejections: readonly {
 ];
 
 describe('project document codec', () => {
+  it('round-trips a non-empty Shop purchase order without changing its sequence', () => {
+    const occurrenceId = createOccurrenceId('round-trip-n-preboss');
+    const authored = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(nBiome, occurrenceId),
+      offerKeys: ['Minor', 'MajorNonBoon'],
+    });
+
+    const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(authored)), catalog);
+    const occurrence = decoded.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+
+    expect(occurrence?.state).toMatchObject({
+      kind: 'shop',
+      shop: { purchaseOrder: ['Minor', 'MajorNonBoon'] },
+    });
+    expect(encodeProjectDocument(decoded)).toBe(encodeProjectDocument(authored));
+  });
+
   it.each(codecRejections)('rejects %s', ({ mutate }) => {
     expect(() => decodeProjectDocument(mutate(encodedFStart()), catalog)).toThrow();
   });

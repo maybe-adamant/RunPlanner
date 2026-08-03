@@ -352,7 +352,15 @@ export interface WorkspaceInteractionCatalog {
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   readonly shipEncounterCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  readonly shopPurchases: ReadonlyMap<string, WorkspaceCandidateInteraction<boolean>>;
+  /**
+   * Each row keeps a stable ShopPurchaseAddress key, while the interaction
+   * itself is owned by the containing Shop occurrence and proposes one whole
+   * authored order.
+   */
+  readonly shopPurchaseOrders: ReadonlyMap<
+    string,
+    WorkspaceCandidateInteraction<readonly string[]>
+  >;
   readonly sideRoomEntryOrders: ReadonlyMap<
     string,
     WorkspaceCandidateInteraction<readonly string[]>
@@ -479,10 +487,24 @@ export interface WorkspaceRewardWheelDescriptor {
   readonly storeKey: string;
 }
 
+export interface WorkspaceShopPurchaseOrderOption {
+  readonly label: string;
+  readonly offerKeys: readonly string[];
+  readonly position: number;
+}
+
 export interface WorkspaceShopPurchaseDescriptor {
   readonly address: ShopPurchaseAddress;
   readonly marker: WorkspaceMarker;
   readonly purchased: boolean;
+  /** Selected ordinal in the authored order, or null when not purchased. */
+  readonly position: number | null;
+  /** Full order produced by toggling this row's purchase membership. */
+  readonly toggleOfferKeys: readonly string[];
+  /** Full-order proposals for the direct ordinal select. */
+  readonly positionOptions: readonly WorkspaceShopPurchaseOrderOption[];
+  /** One deduplicated candidate domain shared by the row's two controls. */
+  readonly proposalOfferKeys: readonly (readonly string[])[];
 }
 
 export interface WorkspaceShopOfferDescriptor {
@@ -580,6 +602,8 @@ export type WorkspaceRoomLocal =
       readonly kind: 'shop';
       readonly materialized: boolean;
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
+      /** One occurrence-owned authored order, separate from inventory rows. */
+      readonly purchaseOrder: readonly string[];
     };
 
 export interface WorkspaceRoomSummary {

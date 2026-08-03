@@ -35,7 +35,6 @@ export function prepareShopPurchaseCandidateContext({
   const entryState = room.entryState;
   return Object.freeze({
     origin: room.origin,
-    purchaseOrigins: Object.freeze(entryState.offers.map((offer) => offer.purchaseOrigin)),
     evaluateState: (state: ShopState) => {
       const candidateFindings = new Map<string, SemanticFinding>();
       const candidateRoom: CanonicalAuthoredRoom = Object.freeze({
@@ -52,10 +51,10 @@ export function prepareShopPurchaseCandidateContext({
               return Object.freeze({
                 ...offer,
                 offer: candidate.offer,
-                purchased: candidate.purchased,
               });
             }),
           ),
+          purchaseOrder: state.purchaseOrder,
         }),
       });
       const branches = processShopPurchases(

@@ -133,7 +133,10 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly shipEncounterCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  readonly shopPurchases: ReadonlyMap<string, WorkspaceCandidateInteraction<boolean>>;
+  readonly shopPurchaseOrders: ReadonlyMap<
+    string,
+    WorkspaceCandidateInteraction<readonly string[]>
+  >;
   readonly sideRoomEntryOrders: ReadonlyMap<
     string,
     WorkspaceCandidateInteraction<readonly string[]>
@@ -152,7 +155,7 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipEncounterCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
-  const shopPurchases = new Map<string, WorkspaceCandidateInteraction<boolean>>();
+  const shopPurchaseOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
   const set = <T>(
@@ -267,22 +270,28 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'shopPurchases': {
-        const purchaseValues = Object.freeze(
-          requirement.purchaseChoices.map((choice) => choice.value),
-        );
+      case 'shopPurchaseOrders': {
         for (const purchase of requirement.purchases) {
           const key = semanticAddressKey(purchase.owner);
+          const choices = Object.freeze(
+            purchase.proposalOfferKeys.map((offerKeys) =>
+              Object.freeze({
+                label: offerKeys.length === 0 ? 'No purchases' : offerKeys.join(' → '),
+                value: offerKeys,
+              }),
+            ),
+          );
           set(
-            shopPurchases,
+            shopPurchaseOrders,
             key,
             candidateInteraction(
-              purchase.owner,
-              requirement.purchaseChoices,
-              purchase.purchased,
-              () => candidates.shopPurchases(purchase.owner, purchaseValues),
+              requirement.owner,
+              choices,
+              purchase.selectedOfferKeys,
+              () => candidates.shopPurchaseOrders(requirement.owner, purchase.proposalOfferKeys),
+              key,
             ),
-            'Shop purchase',
+            'Shop purchase-order',
           );
         }
         break;
@@ -294,7 +303,7 @@ function bindOccurrenceLocalInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipEncounterCounts,
-    shopPurchases,
+    shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
   });
@@ -956,7 +965,7 @@ export function bindWorkspaceInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipEncounterCounts,
-    shopPurchases,
+    shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
   } = bindOccurrenceLocalInteractions(candidates, occurrenceInteractionRequirements.values());
@@ -1271,7 +1280,7 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     rooms,
     shipEncounterCounts,
-    shopPurchases,
+    shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
     starts,

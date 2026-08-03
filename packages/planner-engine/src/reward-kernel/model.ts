@@ -187,7 +187,6 @@ export interface ConcreteAcquisitionEvent {
 
 export interface AuthoredShopOffer {
   readonly offer: ResolvedRewardOffer;
-  readonly purchased: boolean;
 }
 
 export interface ShopGenerationWitness {

@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-10 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-11 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same canonical biome product.
 The application publishes those derived results to the editor, profiles, and
@@ -344,8 +344,8 @@ dormant project state; undo may restore their prior authored snapshot.
 
 Generated unpicked targets participate because their rooms and incoming or
 free rewards were offered by the game. Their entry-materialized shop state is
-not required and emits no facts. On a picked shop occurrence, a concrete
-negative such as `purchased: false` is complete state.
+not required and emits no facts. On a picked shop occurrence,
+`purchaseOrder: []` is complete state.
 
 ## Canonical Snapshots
 
@@ -409,7 +409,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-10's non-authoritative decision-array order and keeps shared
+preserves schema-11's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -838,15 +838,14 @@ snapshot, validate every authored offer against an eligible option entry, and
 enforce each group's `offerCount` without replacement. Positive weights do not
 change possibility support. After the inventory exists, generate and validate
 the room's outgoing batch from the same pre-purchase acquisition history and
-the complete generated current-room option set. Only then process the authored
-purchased set. Exact affordability and resource state remain deferred under
+the complete generated current-room option set. Only then execute the authored
+purchase order. Exact affordability and resource state remain deferred under
 the sufficient-resource policy in `REWARD_MODEL.md`. Blind Box persists its
-intended source, but validates that source only if purchased. Evaluate every
-semantically distinct purchase order, merge equivalent exit-history states,
-and retain a witness order proving the authored source is possible for later
-execution-plan compilation. Those post-purchase histories continue through the
-already-generated picked target; they are not used to revalidate its room or
-incoming reward.
+intended source, but validates that source only if purchased. The simulator
+evaluates that exact order, merges equivalent reward-source branches within it,
+and never retries a different order. Those post-purchase histories continue
+through the already-generated picked target; they are not used to revalidate its
+room or incoming reward.
 
 Source-bearing shop options use their declared policy at their declared
 resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,
@@ -1066,10 +1065,13 @@ set and the forced/eligibility facts that produced it. It never contains a
 likelihood score.
 
 Shop findings retain the narrowest proven owner. An offer or purchase address
-is marked unavailable only when that slot fails every reachable witness. When
-each slot remains individually possible but the complete authored set has no
-joint witness, one finding belongs to the shop occurrence with the participating
-offer keys in evidence; supported sibling slots are not marked invalid.
+is marked unavailable only when that slot fails every reachable support branch.
+When each inventory slot remains individually possible but the complete
+authored inventory set has no joint witness, one finding belongs to the Shop
+occurrence with the participating offer keys in evidence. When a structurally
+valid exact purchase order fails only as a sequence, its aggregate finding
+likewise belongs to the Shop occurrence with that authored order in evidence;
+supported sibling slots are not marked invalid.
 
 Completeness and legality findings use the same address domain. Contract
 errors remain a separate result class because they indicate malformed data or
@@ -1190,7 +1192,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
-  schema-10 fixtures across F through Q;
+  schema-11 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

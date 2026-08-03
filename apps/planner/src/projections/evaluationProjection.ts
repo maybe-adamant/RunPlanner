@@ -142,7 +142,7 @@ const findingCopy = {
   },
   shopPurchaseUnavailable: {
     title: 'Shop purchase is unavailable',
-    description: 'The selected purchases cannot be acquired in any valid purchase order.',
+    description: 'The selected purchase order cannot be completed.',
   },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 

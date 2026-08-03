@@ -660,7 +660,12 @@ one explicit default. Its authored value is:
 ```ts
 interface ShopOfferState {
   offer: ResolvedRewardOffer;
-  purchased: boolean;
+}
+
+interface ShopState {
+  profileKey: string;
+  offers: Readonly<Record<string, ShopOfferState>>;
+  purchaseOrder: readonly string[];
 }
 ```
 
@@ -706,8 +711,9 @@ rarity and price are deferred, both resolve the same authored `RandomLoot` plus
 source shape; the supporting entry stays in the derived assignment witness so
 two-offer groups still enforce without-replacement selection exactly.
 
-`purchased: false` is complete authored state. Purchase controls acquisition,
-not whether the offer exists. The ordinary `WorldShop` has three one-offer
+`purchaseOrder: []` is complete authored state. The list contains distinct
+stable slot keys in the exact player-authored acquisition order; it controls
+acquisition, not whether an inventory offer exists. The ordinary `WorldShop` has three one-offer
 groups and therefore three stable slots whose current labels are `Offer 1`,
 `Offer 2`, and `Offer 3`; internal slot keys may remain category-bearing without
 leaking into presentation. `I_WorldShop` has five one-offer groups.
@@ -754,16 +760,16 @@ sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
 
-Purchase order is derived simulation state, not authored shop UI state. A Blind
-Box offer persists its intended eventual `BoonSource`, but source support is not
+Purchase order is authored Shop state, not a simulation witness. A Blind Box
+offer persists its intended eventual `BoonSource`, but source support is not
 validated while the box is merely offered. When the box is purchased, the
-simulator explores relevant purchase orders, applies the declared
-`ordinaryNoPeer` support policy to that authored source at the acquisition role,
-and retains every reachable history state.
+simulator applies the one authored order, evaluates each purchase against the
+history from earlier authored purchases, and never retries another permutation.
+It retains ordinary reward-source possibility branches within that fixed order.
 
-A later plan compiler may select and encode one witness order. The editor
-continues to author the purchased set and intended source rather than exposing
-incidental ordering controls.
+The persisted order remains available to a later plan compiler without the
+compiler or simulator choosing a different witness order. The editor derives
+per-row membership and ordinal controls from the one occurrence-owned list.
 
 ## Offer and Acquisition
 

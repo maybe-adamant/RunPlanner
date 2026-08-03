@@ -561,7 +561,6 @@ export function processShopInventory(
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
   const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
     offer: offer.offer,
-    purchased: offer.purchased,
   }));
   const next: RewardBranchState[] = [];
   const supportResults: ShopGenerationSupport[] = [];
@@ -659,8 +658,15 @@ export function processShopPurchases(
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
   const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
     offer: offer.offer,
-    purchased: offer.purchased,
   }));
+  const purchaseOrder = entry.purchaseOrder.map((offerKey) => {
+    const index = entry.offers.findIndex((offer) => offer.offerKey === offerKey);
+    if (index < 0) return fail(`${room.gameName} purchase order has unknown offer ${offerKey}`);
+    return index;
+  });
+  if (new Set(purchaseOrder).size !== purchaseOrder.length) {
+    return fail(`${room.gameName} purchase order contains a duplicate offer`);
+  }
   const next: RewardBranchState[] = [];
   const failures: ShopPurchaseFailure[] = [];
   for (const branch of branches) {
@@ -673,6 +679,7 @@ export function processShopPurchases(
       profile,
       authored,
       pending.witness,
+      purchaseOrder,
       branch.history,
       context.facts(branch.history, new Set()),
       requirements,
@@ -706,10 +713,7 @@ export function processShopPurchases(
     }
   }
   if (next.length === 0) {
-    const purchasedIndexes = entry.offers.flatMap((offer, index) =>
-      offer.purchased ? [index] : [],
-    );
-    const failedIndexes = purchasedIndexes.filter(
+    const failedIndexes = purchaseOrder.filter(
       (index) =>
         failures.length > 0 && failures.every((failure) => failure.failedSlotIndex === index),
     );
@@ -724,8 +728,8 @@ export function processShopPurchases(
       addRewardFinding(
         findings,
         rewardFinding('shopPurchaseUnavailable', room.origin, {
-          kind: 'jointPurchaseSet',
-          offerKeys: purchasedIndexes.map((index) => entry.offers[index]!.offerKey),
+          kind: 'jointPurchaseOrder',
+          offerKeys: entry.purchaseOrder,
         }),
       );
     }

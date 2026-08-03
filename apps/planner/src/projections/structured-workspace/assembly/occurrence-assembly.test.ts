@@ -472,6 +472,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(selected.node.room.roomLocal.materialized).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal.offers)).toBe(true);
+    expect(selected.node.room.roomLocal.purchaseOrder).toEqual([]);
     expect(
       selected.node.room.roomLocal.offers.map((offer) => [
         offer.key,
@@ -491,7 +492,7 @@ describe('structured workspace occurrence assembly', () => {
           Object.isFrozen(offer.rewardControl),
       ),
     ).toBe(true);
-    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('shopPurchases');
+    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('shopPurchaseOrders');
     const selectedOffer = selected.node.room.roomLocal.offers.find(
       (offer) => offer.key === 'MajorNonBoon',
     );
@@ -500,6 +501,10 @@ describe('structured workspace occurrence assembly', () => {
       purchase: {
         address: createShopPurchaseAddress(goldenFBiome, shop, 'MajorNonBoon'),
         purchased: false,
+        position: null,
+        toggleOfferKeys: ['MajorNonBoon'],
+        positionOptions: [],
+        proposalOfferKeys: [[], ['MajorNonBoon']],
       },
       rewardControl: {
         owner: { address: createShopOfferAddress(goldenFBiome, shop, 'MajorNonBoon') },

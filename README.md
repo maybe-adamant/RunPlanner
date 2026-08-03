@@ -148,8 +148,10 @@ copied elsewhere.
   presentation slices are complete. Campaign B made candidate artifacts
   explicit, Campaign C separated the justified authored-core authorities, and
   Campaign D retained the coherent ordered history and reward folds. The
-  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) is the active
-  frontier with Commit 5c's schema, engine, projection, and UI slices.
+  [Shop purchase-order delivery record](docs/progress/SHOP_PURCHASE_ORDER.md)
+  captures Commit 5c's completed schema, engine, projection, and UI slices;
+  final desktop/narrow visual sign-off is the remaining Phase 7 acceptance
+  input.
 
 ## Source Evidence
 

@@ -337,6 +337,25 @@ function ordinalLabel(position: number): string {
   }
 }
 
+/**
+ * Shop-specific complete-order proposals stay in the occurrence projection so
+ * React only selects one already-authored transition. This is deliberately not
+ * a generic ordering abstraction: Shop membership and order are one fact.
+ */
+function uniqueShopPurchaseOrders(
+  orders: readonly (readonly string[])[],
+): readonly (readonly string[])[] {
+  const seen = new Set<string>();
+  const unique: (readonly string[])[] = [];
+  for (const order of orders) {
+    const key = JSON.stringify(order);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(Object.freeze([...order]));
+  }
+  return Object.freeze(unique);
+}
+
 function ephyraSideRoomEntryOrderControl(
   address: LocalChildAddress,
   enteredSlotKeys: readonly string[],
@@ -607,6 +626,7 @@ function roomLocalForOccurrence(
           kind: 'shop' as const,
           materialized: false,
           offers: Object.freeze([]),
+          purchaseOrder: Object.freeze([]),
         });
       }
       const profile = input.catalog.rewards.shops.byKey[shop.profileKey];
@@ -614,6 +634,21 @@ function roomLocalForOccurrence(
         throw new StructuredWorkspaceProjectionContractError(
           `${room.gameName} shop profile ${shop.profileKey} is missing`,
         );
+      }
+      const purchaseOrder = Object.freeze([...shop.purchaseOrder]);
+      const purchasedKeys = new Set<string>();
+      for (const offerKey of purchaseOrder) {
+        if (shop.offers[offerKey] === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Shop purchase order has unknown offer ${offerKey}`,
+          );
+        }
+        if (purchasedKeys.has(offerKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Shop purchase order duplicates ${offerKey}`,
+          );
+        }
+        purchasedKeys.add(offerKey);
       }
       const offers = profile.slots.values.map((slot) => {
         if (shop.offers[slot.key] === undefined) {
@@ -627,13 +662,45 @@ function roomLocalForOccurrence(
           occurrence.occurrenceId,
           slot.key,
         );
+        const purchaseIndex = purchaseOrder.indexOf(slot.key);
+        const withoutSlot = Object.freeze(
+          purchaseOrder.filter((offerKey) => offerKey !== slot.key),
+        );
+        const toggleOfferKeys = Object.freeze(
+          purchaseIndex < 0 ? [...purchaseOrder, slot.key] : [...withoutSlot],
+        );
+        const positionOptions =
+          purchaseIndex < 0
+            ? Object.freeze([])
+            : Object.freeze(
+                Array.from({ length: withoutSlot.length + 1 }, (_, insertionIndex) => {
+                  const position = insertionIndex + 1;
+                  return Object.freeze({
+                    label: ordinalLabel(position),
+                    offerKeys: Object.freeze([
+                      ...withoutSlot.slice(0, insertionIndex),
+                      slot.key,
+                      ...withoutSlot.slice(insertionIndex),
+                    ]),
+                    position,
+                  });
+                }),
+              );
         return Object.freeze({
           key: slot.key,
           label: slot.label,
           purchase: Object.freeze({
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
-            purchased: shop.offers[slot.key]!.purchased,
+            purchased: purchaseIndex >= 0,
+            position: purchaseIndex < 0 ? null : purchaseIndex + 1,
+            toggleOfferKeys,
+            positionOptions,
+            proposalOfferKeys: uniqueShopPurchaseOrders([
+              purchaseOrder,
+              toggleOfferKeys,
+              ...positionOptions.map((option) => option.offerKeys),
+            ]),
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
@@ -642,6 +709,7 @@ function roomLocalForOccurrence(
         kind: 'shop' as const,
         materialized: true,
         offers: Object.freeze(offers),
+        purchaseOrder,
       });
     }
   }
@@ -738,22 +806,20 @@ function occurrenceInteractionRequirements(
       ]);
     }
     case 'shop': {
-      if (!room.roomLocal.materialized || room.roomLocal.offers.length === 0) {
+      const shop = room.roomLocal;
+      if (!shop.materialized || shop.offers.length === 0) {
         return Object.freeze([]);
       }
       return Object.freeze([
         Object.freeze({
-          kind: 'shopPurchases' as const,
+          kind: 'shopPurchaseOrders' as const,
           owner: room.address,
-          purchaseChoices: Object.freeze([
-            Object.freeze({ label: 'Not purchased', value: false }),
-            Object.freeze({ label: 'Purchased', value: true }),
-          ]),
           purchases: Object.freeze(
-            room.roomLocal.offers.map((offer) =>
+            shop.offers.map((offer) =>
               Object.freeze({
                 owner: offer.purchase.address,
-                purchased: offer.purchase.purchased,
+                proposalOfferKeys: offer.purchase.proposalOfferKeys,
+                selectedOfferKeys: shop.purchaseOrder,
               }),
             ),
           ),

@@ -117,9 +117,9 @@ pre-decision state must remain available so the user can evaluate replacements,
 whether the authored biome was otherwise complete or still an incomplete
 prefix. Owners after the first blocking invalid state remain unassessed unless
 the layout defines an atomic decision region that must be evaluated as one unit.
-This includes lifecycle-owned values such as a selected shop purchase: its
-room-lifecycle context remains available to evaluate the value that unchecks
-that exact purchase. A reward-wheel lifecycle control likewise owns the
+This includes lifecycle-owned values such as a selected Shop purchase order:
+its room-lifecycle context remains available to evaluate a complete replacement
+order that removes or reorders an exact purchase. A reward-wheel lifecycle control likewise owns the
 diagnostics of offers within that same wheel, but never a sibling wheel or
 another room's offers.
 
@@ -305,7 +305,7 @@ Some changes alter more than one local support calculation:
 
 - O encounter count and reward-wheel settings alter a room-local lifecycle;
 - a shop offer participates in one joint inventory;
-- a shop purchase participates in ordered purchase application;
+- a Shop purchase order participates in ordered purchase application;
 - N membership, visits, and side-room state alter joint-board, visit, or
   parent-local regions.
 
@@ -376,7 +376,7 @@ Each candidate family has an explicit semantic horizon:
 | Sequential sibling reward     | Earlier sibling generation plus the addressed offer        |
 | Joint unordered rewards       | Complete atomic sibling generation region                  |
 | Shop offer                    | Complete joint inventory generation                        |
-| Shop purchase                 | Ordered purchase application                               |
+| Shop purchase order           | Ordered purchase application                               |
 | Fields Min/Max                | Pre-outcome support ledger                                 |
 | O encounter or wheel setting  | Addressed occurrence lifecycle region                      |
 | Hub membership                | Joint open-board constraint region                         |
@@ -431,7 +431,7 @@ React may render declaration-owned choices and the currently authored value,
 but it does not walk topology to discover candidate owners, rebuild candidate
 grouping, choose a replay horizon, or construct candidate queries. Room and
 reward interactions follow the same contract as batch stores, Fields outcomes,
-O wheels, Hub controls, side rooms, and shop purchases. I's bounded non-goal
+O wheels, Hub controls, side rooms, and Shop purchase orders. I's bounded non-goal
 limit is a direct declaration-owned authored field rather than a contextual
 candidate interaction. Room-target candidates consume its selected value from
 their prepared generation context.

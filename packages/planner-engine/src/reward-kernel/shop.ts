@@ -133,18 +133,6 @@ export function findShopGenerationWitnesses(
   ).witnesses;
 }
 
-function permutations(values: readonly number[]): readonly (readonly number[])[] {
-  if (values.length <= 1) {
-    return [values];
-  }
-  return values.flatMap((value, index) =>
-    permutations([...values.slice(0, index), ...values.slice(index + 1)]).map((tail) => [
-      value,
-      ...tail,
-    ]),
-  );
-}
-
 function optionByWitness(
   profile: ShopProfileDeclaration,
   slotIndex: number,
@@ -160,27 +148,12 @@ function optionByWitness(
   return undefined;
 }
 
-function historyKey(history: RewardHistoryState): string {
-  const canonicalRecord = (record: Readonly<Record<string, number>>) =>
-    Object.entries(record).sort(([left], [right]) => left.localeCompare(right));
-  return JSON.stringify({
-    offerHistory: history.offerHistory,
-    useRecord: canonicalRecord(history.useRecord),
-    biomeUseRecord: canonicalRecord(history.biomeUseRecord),
-    currentRoomUseRecord: canonicalRecord(history.currentRoomUseRecord),
-    lootTypeHistory: canonicalRecord(history.lootTypeHistory),
-    lootBiomeRecord: canonicalRecord(history.lootBiomeRecord),
-    consumableRecord: canonicalRecord(history.consumableRecord),
-    upgradableTraitCount: history.upgradableTraitCount,
-    lastDevotionDepth: history.lastDevotionDepth,
-  });
-}
-
 export function evaluateShopPurchases(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
+  purchaseOrder: readonly number[],
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
@@ -205,92 +178,77 @@ export function evaluateShopPurchases(
       ]),
     });
   }
-  const purchasedIndexes = authored.flatMap((offer, index) => (offer.purchased ? [index] : []));
-  const results = new Map<string, ShopPurchaseResult>();
-  const failures: ShopPurchaseFailure[] = [];
-  for (const order of permutations(purchasedIndexes)) {
-    let history = initialHistory;
-    let possible = true;
-    let failedSlotIndex: number | undefined;
-    const acquisitions: ShopPurchaseAcquisition[] = [];
-    const remaining = new Set(authored.map((_, index) => index));
-    for (const index of order) {
-      const authoredOffer = authored[index];
-      const optionKey = witness.optionKeys[index];
-      const option =
-        optionKey === undefined ? undefined : optionByWitness(profile, index, optionKey);
-      if (authoredOffer === undefined || option === undefined) {
-        possible = false;
-        failedSlotIndex = index;
-        break;
-      }
-      const activeNames = new Set(
-        [...remaining].flatMap((remainingIndex) => {
-          const activeKey = witness.optionKeys[remainingIndex];
-          const active =
-            activeKey === undefined
-              ? undefined
-              : optionByWitness(profile, remainingIndex, activeKey);
-          return active === undefined ? [] : [active.defaultOffer.rewardType];
-        }),
-      );
-      const facts = factsWithHistory(baseFacts, history, activeNames);
+  let history = initialHistory;
+  let possible = true;
+  let failedSlotIndex: number | undefined;
+  const acquisitions: ShopPurchaseAcquisition[] = [];
+  const remaining = new Set(authored.map((_, index) => index));
+  for (const index of purchaseOrder) {
+    const authoredOffer = authored[index];
+    const optionKey = witness.optionKeys[index];
+    const option = optionKey === undefined ? undefined : optionByWitness(profile, index, optionKey);
+    if (authoredOffer === undefined || option === undefined || !remaining.has(index)) {
+      possible = false;
+      failedSlotIndex = index;
+      break;
+    }
+    const activeNames = new Set(
+      [...remaining].flatMap((remainingIndex) => {
+        const activeKey = witness.optionKeys[remainingIndex];
+        const active =
+          activeKey === undefined ? undefined : optionByWitness(profile, remainingIndex, activeKey);
+        return active === undefined ? [] : [active.defaultOffer.rewardType];
+      }),
+    );
+    const facts = factsWithHistory(baseFacts, history, activeNames);
+    if (
+      option.purchaseRequirement !== undefined &&
+      !evaluateRequirement(option.purchaseRequirement, facts.requirements)
+    ) {
+      possible = false;
+      failedSlotIndex = index;
+      break;
+    }
+    for (const binding of option.acquisitionLifecycle) {
+      const roleFacts = factsWithHistory(baseFacts, history, activeNames);
       if (
-        option.purchaseRequirement !== undefined &&
-        !evaluateRequirement(option.purchaseRequirement, facts.requirements)
+        !isOfferSupportedAtResolutionPoint(catalog, authoredOffer.offer, roleFacts, {
+          acquisitionRole: binding.role,
+        })
       ) {
         possible = false;
         failedSlotIndex = index;
         break;
       }
-      for (const binding of option.acquisitionLifecycle) {
-        const roleFacts = factsWithHistory(baseFacts, history, activeNames);
-        if (
-          !isOfferSupportedAtResolutionPoint(catalog, authoredOffer.offer, roleFacts, {
-            acquisitionRole: binding.role,
-          })
-        ) {
-          possible = false;
-          failedSlotIndex = index;
-          break;
-        }
-        const event = resolveAcquisitionRole(
-          catalog,
-          authoredOffer.offer,
-          binding.role,
-          binding.lifecyclePoint,
-        );
-        history = applyConcreteAcquisition(catalog, history, event.acquisition);
-        acquisitions.push(Object.freeze({ slotIndex: index, optionKey: option.key, event }));
-      }
-      if (!possible) {
-        break;
-      }
-      remaining.delete(index);
+      const event = resolveAcquisitionRole(
+        catalog,
+        authoredOffer.offer,
+        binding.role,
+        binding.lifecyclePoint,
+      );
+      history = applyConcreteAcquisition(catalog, history, event.acquisition);
+      acquisitions.push(Object.freeze({ slotIndex: index, optionKey: option.key, event }));
     }
-    if (possible) {
-      const result = Object.freeze({
-        history,
-        purchaseOrder: Object.freeze(order),
-        acquisitions: Object.freeze(acquisitions),
-      });
-      const key = historyKey(history);
-      if (!results.has(key)) {
-        results.set(key, result);
-      }
-    } else {
-      failures.push(
+    if (!possible) break;
+    remaining.delete(index);
+  }
+  if (!possible) {
+    return Object.freeze({
+      results: Object.freeze([]),
+      failures: Object.freeze([
         Object.freeze({
-          purchaseOrder: Object.freeze(order),
+          purchaseOrder: Object.freeze([...purchaseOrder]),
           ...(failedSlotIndex === undefined ? {} : { failedSlotIndex }),
         }),
-      );
-    }
+      ]),
+    });
   }
-  return Object.freeze({
-    results: Object.freeze([...results.values()]),
-    failures: Object.freeze(failures),
-  });
+  const result = Object.freeze({
+    history,
+    purchaseOrder: Object.freeze([...purchaseOrder]),
+    acquisitions: Object.freeze(acquisitions),
+  }) satisfies ShopPurchaseResult;
+  return Object.freeze({ results: Object.freeze([result]), failures: Object.freeze([]) });
 }
 
 export function simulateShopPurchases(
@@ -298,6 +256,7 @@ export function simulateShopPurchases(
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
+  purchaseOrder: readonly number[],
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
@@ -307,6 +266,7 @@ export function simulateShopPurchases(
     profile,
     authored,
     witness,
+    purchaseOrder,
     initialHistory,
     baseFacts,
     additionalOptionRequirements,

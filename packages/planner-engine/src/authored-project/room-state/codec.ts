@@ -16,7 +16,6 @@ import type {
   ShopState,
 } from '../model';
 import {
-  expectBoolean,
   expectExactKeys,
   expectPositiveInteger,
   expectRecord,
@@ -279,7 +278,7 @@ function decodeShopState(
   path: string,
 ): ShopState {
   const shop = expectRecord(value, path);
-  expectExactKeys(shop, ['profileKey', 'offers'], path);
+  expectExactKeys(shop, ['profileKey', 'offers', 'purchaseOrder'], path);
   const profileKey = expectString(shop.profileKey, `${path}.profileKey`);
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
@@ -288,11 +287,12 @@ function decodeShopState(
   if (profile === undefined) {
     failProjectDocument(`${path}.profileKey`, `unknown shop profile ${profileKey}`);
   }
-  return decodeShopOffers(shop.offers, catalog, profile, path);
+  return decodeShopOffers(shop.offers, shop.purchaseOrder, catalog, profile, path);
 }
 
 function decodeShopOffers(
   value: unknown,
+  rawPurchaseOrder: unknown,
   catalog: Catalog,
   profile: ShopProfileDeclaration,
   path: string,
@@ -307,7 +307,7 @@ function decodeShopOffers(
   for (const slot of profile.slots.values) {
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
-    expectExactKeys(rawOffer, ['offer', 'purchased'], offerPath);
+    expectExactKeys(rawOffer, ['offer'], offerPath);
     const offer = decodeOffer(rawOffer.offer, catalog, `${offerPath}.offer`);
     const group = profile.groups.byKey[slot.groupKey];
     if (group === undefined) {
@@ -321,12 +321,29 @@ function decodeShopOffers(
         `${offer.rewardType} is not available from ${slot.groupKey}`,
       );
     }
-    offers[slot.key] = Object.freeze({
-      offer,
-      purchased: expectBoolean(rawOffer.purchased, `${offerPath}.purchased`),
-    });
+    offers[slot.key] = Object.freeze({ offer });
   }
-  return Object.freeze({ profileKey: profile.key, offers: Object.freeze(offers) });
+  if (!Array.isArray(rawPurchaseOrder)) {
+    failProjectDocument(`${path}.purchaseOrder`, 'must be an array');
+  }
+  const purchaseKeys = rawPurchaseOrder.map((value, index) =>
+    expectString(value, `${path}.purchaseOrder[${index}]`),
+  );
+  const seen = new Set<string>();
+  for (const key of purchaseKeys) {
+    if (offers[key] === undefined) {
+      failProjectDocument(`${path}.purchaseOrder`, `${key} is not a Shop offer`);
+    }
+    if (seen.has(key)) {
+      failProjectDocument(`${path}.purchaseOrder`, `${key} is duplicated`);
+    }
+    seen.add(key);
+  }
+  return Object.freeze({
+    profileKey: profile.key,
+    offers: Object.freeze(offers),
+    purchaseOrder: Object.freeze(purchaseKeys),
+  });
 }
 
 function expectedKind(value: unknown, expected: string, path: string): void {

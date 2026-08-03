@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 10 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 11 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -10,12 +10,17 @@ export type OccurrenceId = string & {
 
 export interface ShopOfferState {
   readonly offer: ResolvedRewardOffer;
-  readonly purchased: boolean;
 }
 
 export interface ShopState {
   readonly profileKey: string;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
+  /**
+   * The exact authored sequence in which Shop slots are purchased. Inventory
+   * remains declaration ordered in `offers`; membership and ordinals derive
+   * only from this occurrence-owned list.
+   */
+  readonly purchaseOrder: readonly string[];
 }
 
 export interface FieldsCombatState {

@@ -17,7 +17,6 @@ import type {
   RewardWheelOfferAddress,
   RouteAddress,
   ShopOfferAddress,
-  ShopPurchaseAddress,
   TargetAddress,
 } from '../addresses';
 import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
@@ -173,9 +172,9 @@ export type ShopOccurrenceCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      readonly kind: 'SetShopPurchase';
-      readonly purchase: ShopPurchaseAddress;
-      readonly purchased: boolean;
+      readonly kind: 'ReplaceShopPurchaseOrder';
+      readonly shop: OccurrenceAddress;
+      readonly offerKeys: readonly string[];
     };
 
 export type OccurrenceLeafCommand =

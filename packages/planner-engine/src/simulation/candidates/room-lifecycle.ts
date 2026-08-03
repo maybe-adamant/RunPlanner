@@ -1,12 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
-  createOccurrenceAddress,
   semanticAddressKey,
   type OccurrenceAddress,
   type RewardWheelAddress,
   type SemanticAddress,
-  type ShopPurchaseAddress,
 } from '../../authored-project/addresses';
 import type {
   ProjectDocument,
@@ -65,10 +63,10 @@ export interface RewardWheelPickedCandidateQuery {
   readonly pickedOfferIndex: number;
 }
 
-export interface ShopPurchaseCandidateQuery {
-  readonly kind: 'shopPurchase';
-  readonly purchase: ShopPurchaseAddress;
-  readonly purchased: boolean;
+export interface ShopPurchaseOrderCandidateQuery {
+  readonly kind: 'shopPurchaseOrder';
+  readonly shop: OccurrenceAddress;
+  readonly offerKeys: readonly string[];
 }
 
 export type RoomLifecycleCandidateQuery =
@@ -76,7 +74,7 @@ export type RoomLifecycleCandidateQuery =
   | RewardWheelOfferCountCandidateQuery
   | RewardWheelStoreCandidateQuery
   | RewardWheelPickedCandidateQuery
-  | ShopPurchaseCandidateQuery;
+  | ShopPurchaseOrderCandidateQuery;
 
 export interface ShipEncounterCountCandidateSupport {
   readonly encounterCount: 2 | 3;
@@ -117,8 +115,8 @@ export interface EvaluatedRewardWheelPickedCandidate {
   readonly result: RewardWheelLifecycleCandidateSupport & { readonly pickedOfferIndex: number };
 }
 
-export interface EvaluatedShopPurchaseCandidate {
-  readonly kind: 'shopPurchase';
+export interface EvaluatedShopPurchaseOrderCandidate {
+  readonly kind: 'shopPurchaseOrder';
   readonly result: RoomLifecycleCandidateResult;
 }
 
@@ -128,9 +126,10 @@ export type RoomLifecycleCandidateEvaluation =
   | EvaluatedRewardWheelOfferCountCandidate
   | EvaluatedRewardWheelStoreCandidate
   | EvaluatedRewardWheelPickedCandidate
-  | EvaluatedShopPurchaseCandidate;
+  | EvaluatedShopPurchaseOrderCandidate;
 
-type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress | ShopPurchaseAddress;
+type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress;
+type LifecycleRepairScope = 'exact' | 'shopPurchaseOrder';
 
 interface LifecycleCandidateSource {
   readonly evaluation: CandidateBiomeEvaluation;
@@ -140,8 +139,19 @@ interface LifecycleCandidateSource {
 function lifecycleRepairOwnerMatches(
   owner: LifecycleRepairOwner,
   blockedOwner: SemanticAddress,
+  scope: LifecycleRepairScope = 'exact',
 ): boolean {
   if (semanticAddressKey(owner) === semanticAddressKey(blockedOwner)) return true;
+  if (
+    scope === 'shopPurchaseOrder' &&
+    owner.kind === 'occurrence' &&
+    blockedOwner.kind === 'shopPurchase' &&
+    blockedOwner.routeKey === owner.routeKey &&
+    blockedOwner.biomeKey === owner.biomeKey &&
+    blockedOwner.occurrenceId === owner.occurrenceId
+  ) {
+    return true;
+  }
   return (
     owner.kind === 'rewardWheel' &&
     blockedOwner.kind === 'rewardWheelOffer' &&
@@ -187,9 +197,12 @@ function preClampLifecycleRepairSource(
   evaluation: ProjectEvaluation,
   selected: LifecycleCandidateSource | undefined,
   owner: LifecycleRepairOwner,
+  scope: LifecycleRepairScope,
 ): LifecycleCandidateSource | undefined {
   const blockedAt = candidateBlockedAt(selected?.evaluation);
-  if (blockedAt === undefined || !lifecycleRepairOwnerMatches(owner, blockedAt)) return undefined;
+  if (blockedAt === undefined || !lifecycleRepairOwnerMatches(owner, blockedAt, scope)) {
+    return undefined;
+  }
   const raw = evaluateProgressiveBiomeAssemblyBeforeClamp(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
@@ -199,7 +212,7 @@ function preClampLifecycleRepairSource(
   );
   return raw !== null &&
     raw.evaluation.blockedAt !== undefined &&
-    lifecycleRepairOwnerMatches(owner, raw.evaluation.blockedAt)
+    lifecycleRepairOwnerMatches(owner, raw.evaluation.blockedAt, scope)
     ? Object.freeze({
         evaluation: raw.evaluation,
         artifacts: raw.candidateArtifacts.roomLifecycles,
@@ -215,6 +228,7 @@ function completeInvalidSoleOwnerSource(
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
+  scope: LifecycleRepairScope,
 ): LifecycleCandidateSource | undefined {
   const complete: CompleteBiomeProjectEvaluation | undefined = completeBiome(
     evaluation,
@@ -222,7 +236,9 @@ function completeInvalidSoleOwnerSource(
     owner.biomeKey,
   );
   if (complete?.validity !== 'invalid' || complete.findings.length === 0) return undefined;
-  return complete.findings.every((finding) => lifecycleRepairOwnerMatches(owner, finding.origin))
+  return complete.findings.every((finding) =>
+    lifecycleRepairOwnerMatches(owner, finding.origin, scope),
+  )
     ? Object.freeze({ evaluation: complete, artifacts: selectedArtifacts })
     : undefined;
 }
@@ -233,11 +249,12 @@ function lifecycleSourceForOwner(
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
+  scope: LifecycleRepairScope = 'exact',
 ): LifecycleCandidateSource | undefined {
   const selected = selectedLifecycleSource(catalog, project, evaluation, selectedArtifacts, owner);
   return (
-    preClampLifecycleRepairSource(catalog, project, evaluation, selected, owner) ??
-    completeInvalidSoleOwnerSource(evaluation, selectedArtifacts, owner) ??
+    preClampLifecycleRepairSource(catalog, project, evaluation, selected, owner, scope) ??
+    completeInvalidSoleOwnerSource(evaluation, selectedArtifacts, owner, scope) ??
     selected
   );
 }
@@ -435,57 +452,62 @@ export function evaluateRewardWheelLifecycleCandidate(
   }
 }
 
-export function evaluateShopPurchaseCandidate(
+export function evaluateShopPurchaseOrderCandidate(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
-  query: ShopPurchaseCandidateQuery,
+  query: ShopPurchaseOrderCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
   const source = lifecycleSourceForOwner(
     catalog,
     project,
     evaluation,
     selectedArtifacts,
-    query.purchase,
+    query.shop,
+    'shopPurchaseOrder',
   );
   if (source === undefined) {
     return unavailableForBiome(
       evaluation,
-      query.purchase.routeKey,
-      query.purchase.biomeKey,
-      query.purchase,
+      query.shop.routeKey,
+      query.shop.biomeKey,
+      query.shop,
       'afterRoomLifecycle',
     );
   }
-  const plan = planFor(project, query.purchase.routeKey, query.purchase.biomeKey);
+  const plan = planFor(project, query.shop.routeKey, query.shop.biomeKey);
   const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === query.purchase.occurrenceId,
+    (candidate) => candidate.occurrenceId === query.shop.occurrenceId,
   );
   if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     throw new CandidateEvaluationContractError(
-      'shop-purchase owner has no materialized shop state',
+      'shop purchase-order owner has no materialized shop state',
     );
   }
-  const existing = occurrence.state.shop.offers[query.purchase.offerKey];
-  if (existing === undefined) {
-    throw new CandidateEvaluationContractError('shop-purchase owner has no declared shop offer');
+  if (!Array.isArray(query.offerKeys) || !query.offerKeys.every((key) => typeof key === 'string')) {
+    throw new CandidateEvaluationContractError('shop purchase order must contain offer keys');
   }
-  const owner = createOccurrenceAddress(
-    createBiomeAddress(query.purchase.routeKey, query.purchase.biomeKey),
-    query.purchase.occurrenceId,
-  );
-  const context = source.artifacts?.shopAt(owner);
-  if (context === undefined) return producerUnavailable(query.purchase);
+  const seen = new Set<string>();
+  for (const offerKey of query.offerKeys) {
+    if (occurrence.state.shop.offers[offerKey] === undefined) {
+      throw new CandidateEvaluationContractError(
+        `shop purchase order has no declared offer ${offerKey}`,
+      );
+    }
+    if (seen.has(offerKey)) {
+      throw new CandidateEvaluationContractError(`shop purchase order duplicates ${offerKey}`);
+    }
+    seen.add(offerKey);
+  }
+  const context = source.artifacts?.shopAt(query.shop);
+  if (context === undefined) return producerUnavailable(query.shop);
   return Object.freeze({
-    kind: 'shopPurchase',
+    kind: 'shopPurchaseOrder',
     result: context.evaluateState(
       Object.freeze({
         ...occurrence.state.shop,
-        offers: Object.freeze({
-          ...occurrence.state.shop.offers,
-          [query.purchase.offerKey]: Object.freeze({ ...existing, purchased: query.purchased }),
-        }),
+        purchaseOrder: Object.freeze([...query.offerKeys]),
       }),
     ),
   });

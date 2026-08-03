@@ -25,7 +25,6 @@ import {
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
-  type ShopPurchaseAddress,
   type SideRoomGeneration,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -130,10 +129,10 @@ export interface CandidateProjectionSession {
     group: LocalChildGroupAddress,
     values: readonly (readonly string[])[],
   ) => readonly CandidateOptionProjection<readonly string[]>[];
-  readonly shopPurchases: (
-    purchase: ShopPurchaseAddress,
-    values: readonly boolean[],
-  ) => readonly CandidateOptionProjection<boolean>[];
+  readonly shopPurchaseOrders: (
+    shop: OccurrenceAddress,
+    values: readonly (readonly string[])[],
+  ) => readonly CandidateOptionProjection<readonly string[]>[];
 }
 
 export interface CandidateSessionFactory {
@@ -526,13 +525,15 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      shopPurchases: (purchase: ShopPurchaseAddress, values: readonly boolean[]) =>
+      shopPurchaseOrders: (shop: OccurrenceAddress, values: readonly (readonly string[])[]) =>
         projectOptions(
           cache,
           assembly,
-          `shop-purchase:${semanticAddressKey(purchase)}:${domainKey(values.map(String))}`,
+          `shop-purchase-order:${semanticAddressKey(shop)}:${domainKey(
+            values.map((value) => JSON.stringify(value)),
+          )}`,
           values,
-          values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
+          values.map((offerKeys) => ({ kind: 'shopPurchaseOrder', shop, offerKeys })),
           catalog,
           options,
         ),
@@ -580,7 +581,7 @@ function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): bool
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
-    case 'shopPurchase':
+    case 'shopPurchaseOrder':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
       return evaluation.result.support !== 'impossible';
@@ -628,7 +629,7 @@ function candidateForced(
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
-    case 'shopPurchase':
+    case 'shopPurchaseOrder':
       return false;
     case 'takeoverPrebossBatch':
       return evaluation.result.support === 'required';
