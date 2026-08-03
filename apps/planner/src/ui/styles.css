@@ -1702,8 +1702,7 @@ select {
   overflow: hidden;
 }
 
-.hub-closed-room-disclosure,
-.hub-outline-room-disclosure {
+.hub-closed-room-disclosure {
   border: 1px solid #3a3b45;
   border-radius: 12px;
   background: rgb(13 14 18 / 32%);
@@ -1714,15 +1713,7 @@ select {
   margin: 16px 6px 6px;
 }
 
-/* The board clips its card background at the rounded edge; leave room around
- * this nested disclosure so the summary's keyboard focus outline remains
- * visible at every edge. */
-.hub-outline-room-disclosure {
-  margin: 0 12px 12px;
-}
-
-.hub-closed-room-disclosure > summary,
-.hub-outline-room-disclosure > summary {
+.hub-closed-room-disclosure > summary {
   display: flex;
   min-height: 42px;
   align-items: center;
@@ -1734,13 +1725,11 @@ select {
   user-select: none;
 }
 
-.hub-closed-room-disclosure > summary::-webkit-details-marker,
-.hub-outline-room-disclosure > summary::-webkit-details-marker {
+.hub-closed-room-disclosure > summary::-webkit-details-marker {
   display: none;
 }
 
-.hub-closed-room-disclosure > summary::before,
-.hub-outline-room-disclosure > summary::before {
+.hub-closed-room-disclosure > summary::before {
   content: '›';
   color: #e2b971;
   font-size: 1.15rem;
@@ -1748,25 +1737,18 @@ select {
   transition: transform 120ms ease;
 }
 
-.hub-closed-room-disclosure[open] > summary::before,
-.hub-outline-room-disclosure[open] > summary::before {
+.hub-closed-room-disclosure[open] > summary::before {
   transform: rotate(90deg);
 }
 
-.hub-closed-room-disclosure > summary:hover,
-.hub-outline-room-disclosure > summary:hover {
+.hub-closed-room-disclosure > summary:hover {
   color: #fffaf2;
   background: rgb(255 255 255 / 3%);
 }
 
-.hub-closed-room-disclosure > summary:focus-visible,
-.hub-outline-room-disclosure > summary:focus-visible {
+.hub-closed-room-disclosure > summary:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 3px;
-}
-
-.hub-board-action {
-  padding: 12px 14px 0;
 }
 
 .hub-open-room-grid {
@@ -1781,17 +1763,11 @@ select {
   outline-offset: 3px;
 }
 
-.hub-closed-room-grid,
-.hub-outline-room-list {
+.hub-closed-room-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 7px;
   padding: 0 12px 12px;
-}
-
-.hub-outline-room-list {
-  margin: 0;
-  list-style: none;
 }
 
 .hub-open-room-card {
@@ -1810,9 +1786,9 @@ select {
   box-shadow: 0 0 0 2px rgb(174 152 202 / 14%);
 }
 
-.hub-closed-room-option,
-.hub-outline-room-option {
+.hub-closed-room-option {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   align-items: start;
   gap: 8px;
@@ -1821,14 +1797,6 @@ select {
   border-radius: 9px;
   color: #8e8b95;
   background: rgb(10 11 14 / 35%);
-}
-
-.hub-closed-room-option {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.hub-outline-room-option {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .hub-slot-heading {
@@ -2022,8 +1990,7 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hub-closed-room-grid,
-  .hub-outline-room-list {
+  .hub-closed-room-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -2033,8 +2000,7 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .hub-closed-room-grid,
-  .hub-outline-room-list {
+  .hub-closed-room-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2333,8 +2299,7 @@ select {
   .fields-batch-summary,
   .reward-wheel-settings,
   .hub-open-room-grid,
-  .hub-closed-room-grid,
-  .hub-outline-room-list {
+  .hub-closed-room-grid {
     grid-template-columns: 1fr;
   }
 
