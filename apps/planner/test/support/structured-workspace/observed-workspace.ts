@@ -54,7 +54,7 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
         appendMarker(markers, local.sideRooms.group.marker);
         for (const slot of local.sideRooms.group.slots) {
           appendMarker(markers, slot.marker);
-          appendMarker(markers, slot.rewardControl.marker);
+          if (slot.generation === 'generated') appendMarker(markers, slot.rewardControl.marker);
         }
       }
       break;

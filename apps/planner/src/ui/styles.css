@@ -2039,7 +2039,7 @@ select {
 
 .ephyra-side-grid {
   width: 100%;
-  min-width: 590px;
+  min-width: 680px;
   border-collapse: separate;
   border-spacing: 0 7px;
 }
@@ -2064,7 +2064,7 @@ select {
 }
 
 .ephyra-side-grid tbody th {
-  width: 46%;
+  width: 40%;
   border-left: 1px solid #373842;
   border-radius: 9px 0 0 9px;
   text-align: left;
@@ -2073,10 +2073,6 @@ select {
 .ephyra-side-grid tbody td:last-child {
   border-right: 1px solid #373842;
   border-radius: 0 9px 9px 0;
-}
-
-.ephyra-side-grid-row[data-generated='false'] .ephyra-side-reward {
-  opacity: 0.62;
 }
 
 .ephyra-side-room-heading {
@@ -2092,6 +2088,14 @@ select {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgb(68 69 80 / 65%);
+}
+
+.ephyra-side-priority {
+  width: 12%;
+  color: #d5c897;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
 }
 
 .ephyra-side-grid .biome-candidate-select > .field-label-with-marker,

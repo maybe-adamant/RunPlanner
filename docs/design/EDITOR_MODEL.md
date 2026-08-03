@@ -122,12 +122,18 @@ complete `ReplaceWithHubDecision` intent; React neither derives depth nor
 constructs the command. Selecting it replaces the terminal decision card with
 the existing Hub workbench, while removal and Undo restore the same card.
 
-For each active side slot, generation and entry may project as simple toggles;
-an entered slot additionally owns a unique ordinal (`1` when it is the only
-entered sibling). Generated and entered totals are derived. The editor must
-allow every permutation, and it must not suggest that reordering entries changes
-already-generated sibling offers. Reordering preserves the final modeled
-parent-exit state while changing the exact history/execution trace.
+An authored Hub visit activates a combat room's side-room table. Each declared
+row then projects generation and visit-order controls; a visited row owns a
+unique ordinal (`1` when it is the only entered sibling). A side reward becomes
+an active workspace leaf only when that row's authored generation is
+`generated`: it receives its exact marker, reward interaction, and editor even
+before evaluated entry. A `notGenerated` row retains its authored offer value
+for a later re-enable, but publishes no current reward leaf. Evaluated entry
+controls acquisition, not reward activation. Generated and visited totals are
+derived. The editor must allow every permutation, and it must not suggest that
+reordering entries changes already-generated sibling offers. Reordering
+preserves the final modeled parent-exit state while changing the exact
+history/execution trace.
 
 Projectors consume normalized domain state and never infer topology from
 rendered components.

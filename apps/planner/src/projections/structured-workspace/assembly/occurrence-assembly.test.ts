@@ -3,6 +3,8 @@ import {
   applyProjectCommand,
   createExitDecisionAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceId,
   createRewardWheelAddress,
@@ -174,7 +176,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(sideDoor2.entryOrder.options).toEqual([
       {
         key: 'notEntered',
-        label: 'Not entered',
+        label: 'Not visited',
         position: null,
         proposedEnteredSlotKeys: ['sideDoor1'],
       },
@@ -226,7 +228,9 @@ describe('structured workspace occurrence assembly', () => {
     }
     const { group } = assembly.node.room.roomLocal.sideRooms;
     const sideDoor1 = group.slots.find((slot) => slot.key === 'sideDoor1');
-    if (sideDoor1 === undefined) throw new Error('invalid active Ephyra side room is missing');
+    if (sideDoor1?.generation !== 'generated') {
+      throw new Error('invalid active Ephyra side reward is missing');
+    }
 
     expect(
       assembly.node.room.rewardControls.some(
@@ -254,6 +258,114 @@ describe('structured workspace occurrence assembly', () => {
     expect(requirement.sideRooms.map((sideRoom) => sideRoom.address)).toContainEqual(
       sideDoor1.address,
     );
+  });
+
+  it('orders Ephyra sides by availability rank and publishes rewards only after generation', () => {
+    const sideDoor1 = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const sideDoor2 = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const sideDoor2Reward = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms'),
+      enteredSlotKeys: [],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: sideDoor1,
+      generation: 'notGenerated',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: sideDoor2,
+      generation: 'generated',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: sideDoor2Reward,
+      value: { rewardType: 'AirBoost' },
+    });
+
+    const generated = assemble(project, 'Surface', 'N', nOccurrenceId('combat02')).assembly;
+    if (
+      generated.node.room.roomLocal.kind !== 'ephyra' ||
+      generated.node.room.roomLocal.sideRooms.kind !== 'published'
+    ) {
+      throw new Error('generated Ephyra sides are missing');
+    }
+    const generatedSlots = generated.node.room.roomLocal.sideRooms.group.slots;
+    expect(generatedSlots.map((slot) => [slot.key, slot.availabilityRank])).toEqual([
+      ['sideDoor2', 1],
+      ['sideDoor1', 2],
+    ]);
+    expect(generatedSlots[0]?.generation).toBe('generated');
+    expect(
+      generatedSlots[0]?.generation === 'generated' && generatedSlots[0].rewardControl.offer,
+    ).toEqual({ rewardType: 'AirBoost' });
+    expect(generatedSlots[1]?.generation).toBe('notGenerated');
+    expect(
+      generated.node.room.rewardControls.some(
+        (control) =>
+          semanticAddressKey(control.owner.address) === semanticAddressKey(sideDoor2Reward),
+      ),
+    ).toBe(true);
+
+    const inactive = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: sideDoor2,
+      generation: 'notGenerated',
+    });
+    const inactiveAssembly = assemble(inactive, 'Surface', 'N', nOccurrenceId('combat02')).assembly;
+    if (
+      inactiveAssembly.node.room.roomLocal.kind !== 'ephyra' ||
+      inactiveAssembly.node.room.roomLocal.sideRooms.kind !== 'published'
+    ) {
+      throw new Error('inactive Ephyra sides are missing');
+    }
+    const inactiveSlot = inactiveAssembly.node.room.roomLocal.sideRooms.group.slots.find(
+      (slot) => slot.key === 'sideDoor2',
+    );
+    expect(inactiveSlot?.generation).toBe('notGenerated');
+    expect(
+      inactiveAssembly.node.room.rewardControls.some(
+        (control) =>
+          semanticAddressKey(control.owner.address) === semanticAddressKey(sideDoor2Reward),
+      ),
+    ).toBe(false);
+
+    const restored = applyProjectCommand(inactive, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: sideDoor2,
+      generation: 'generated',
+    });
+    const restoredAssembly = assemble(restored, 'Surface', 'N', nOccurrenceId('combat02')).assembly;
+    if (
+      restoredAssembly.node.room.roomLocal.kind !== 'ephyra' ||
+      restoredAssembly.node.room.roomLocal.sideRooms.kind !== 'published'
+    ) {
+      throw new Error('restored Ephyra sides are missing');
+    }
+    const restoredSlot = restoredAssembly.node.room.roomLocal.sideRooms.group.slots.find(
+      (slot) => slot.key === 'sideDoor2',
+    );
+    if (restoredSlot?.generation !== 'generated') {
+      throw new Error('restored Ephyra side reward is missing');
+    }
+    expect(restoredSlot.rewardControl.offer).toEqual({ rewardType: 'AirBoost' });
   });
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {

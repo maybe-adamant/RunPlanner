@@ -27,7 +27,7 @@ export function workspaceLocalDetailMarkers(
             roomLocal.sideRooms.group.marker,
             ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
               slot.marker,
-              slot.rewardControl.marker,
+              ...(slot.generation === 'generated' ? [slot.rewardControl.marker] : []),
             ]),
           ]);
     case 'fields':

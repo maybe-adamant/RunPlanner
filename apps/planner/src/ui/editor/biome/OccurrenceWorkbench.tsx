@@ -102,7 +102,7 @@ function EphyraSideRoomEntryOrderSelect({
   };
   return (
     <label className="field-control ephyra-side-entry-order">
-      <span className="visually-hidden">{side.label} entry order</span>
+      <span className="visually-hidden">{side.label} visit order</span>
       <select
         aria-busy={candidates.pending || undefined}
         data-candidate-support={candidateSupport(selectedCandidate)}
@@ -173,19 +173,20 @@ function EphyraWorkbench({
             <SemanticOwnerMarker address={group.address} />
           </div>
           <span className="neutral-status">
-            {group.enteredSlotKeys.length} entered · {group.slots.length} possible
+            {group.enteredSlotKeys.length} visited · {group.slots.length} possible
           </span>
         </header>
         <div className="ephyra-side-grid-scroll">
           <table className="ephyra-side-grid">
             <caption className="visually-hidden">
-              Ephyra side-room generation and entry order
+              Ephyra side-room generation and visit order
             </caption>
             <thead>
               <tr>
-                <th scope="col">Side room</th>
+                <th scope="col">Room</th>
+                <th scope="col">Priority</th>
                 <th scope="col">Generated</th>
-                <th scope="col">Entry order</th>
+                <th scope="col">Visit order</th>
               </tr>
             </thead>
             <tbody>
@@ -195,28 +196,27 @@ function EphyraWorkbench({
                   workspaceInteractionKey(side.address),
                 );
                 return (
-                  <tr
-                    className="ephyra-side-grid-row"
-                    data-generated={side.generation === 'generated'}
-                    key={side.key}
-                  >
+                  <tr className="ephyra-side-grid-row" key={side.key}>
                     <th scope="row">
                       <div className="ephyra-side-room-heading">
-                        <p className="card-kicker">Door {side.physicalDoorId}</p>
                         <div className="owner-markers">
                           <span>{side.label}</span>
                           <SemanticOwnerMarker address={side.address} />
                         </div>
+                        <p className="card-kicker">Door {side.physicalDoorId}</p>
                       </div>
-                      <div className="ephyra-side-reward room-state-with-marker">
-                        <SemanticOwnerMarker address={side.rewardControl.marker.address} />
-                        <RewardControlEditor
-                          control={side.rewardControl}
-                          idPrefix={`side-${side.marker.focusKey}`}
-                          interactions={interactions}
-                        />
-                      </div>
+                      {side.generation !== 'generated' ? null : (
+                        <div className="ephyra-side-reward room-state-with-marker">
+                          <SemanticOwnerMarker address={side.rewardControl.marker.address} />
+                          <RewardControlEditor
+                            control={side.rewardControl}
+                            idPrefix={`side-${side.marker.focusKey}`}
+                            interactions={interactions}
+                          />
+                        </div>
+                      )}
                     </th>
+                    <td className="ephyra-side-priority">{side.availabilityRank}</td>
                     <td>
                       <CandidateSelect
                         id={`side-${side.marker.focusKey}-generation`}
