@@ -3,17 +3,112 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Ephyra (`N`) under the
-progressed-save, NPC-free baseline. Shared occurrence, reward, and completion
-rules are defined by
+progressed-save, NPC-free baseline. It distinguishes the game's literal route
+mechanism, the accepted planner normalization, and the currently running
+schema-9 implementation. Shared occurrence, reward, and completion rules are
+defined by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). N
 declarations own the fixed Opening and PreHub rooms, Hub slots, side-room
 descriptors, visit predicate, and completion rooms.
 
 The rules were checked against `RoomSets.lua`, `RoomDataN.lua`, `ObstacleDataN.lua`,
-Ephyra map data, encounter data, `RunLogic.lua`, `RoomLogic.lua`, and
-`RewardLogic.lua` on 2026-07-18.
+`RoomDataChaos.lua`, Ephyra map data, encounter data, `RunLogic.lua`,
+`RoomLogic.lua`, and `RewardLogic.lua`; the entry/counter facts were rechecked
+on 2026-08-02.
 
-## Authored shape
+## Literal game entry model
+
+The game uses fixed linked-room declarations for the normal N entry:
+
+```text
+N_Opening01.LinkedRoom -> N_PreHub01
+N_PreHub01.LinkedRoom  -> N_Hub
+```
+
+Leaving a room inserts it into `RoomHistory` before
+`UpdateRunHistoryCache` recomputes `BiomeDepthCache`. Opening establishes biome
+depth 1. Leaving PreHub produces the history step `Opening, PreHub` and depth 2.
+Entering `N_Hub` then creates the persistent Ephyra board used by the visit
+loop.
+
+Natural Chaos is outside the supported planner baseline, but its source facts
+remain relevant evidence. N permits the natural additional Chaos gate from
+Opening; it does not replace the normal PreHub exit. A Chaos room contributes
+its own history ordinal and biome-depth step, uses the previous N room set on
+return, and can therefore resume N at depth 2. Player-observed behavior reaches
+a fresh Hub while skipping PreHub. Static source confirms the counter and
+resumed-room-set facts but does not expose a literal `ForceNextRoom = N_Hub`
+assignment. Future Chaos support must re-establish its complete runtime and
+planner contract from the data present at that time.
+
+The game's fixed links are source evidence. They do not require the planner to
+persist a distinct linked-exit family when another authored representation
+preserves every supported lifecycle and structural outcome.
+
+## Accepted planner normalization
+
+The accepted target model is:
+
+```text
+fixed N_Opening01
+  -> width-one normal decision at biome depth 1
+  -> selected N_PreHub01 occurrence and its RunProgress reward
+  -> terminal Hub takeover envelope at biome depth 2
+  -> source-bearing persistent HubDecision
+```
+
+The Opening decision owns the stable physical exit key `prehub` and a bounded
+candidate stage containing only `N_PreHub01`. PreHub is structurally admitted
+only through that N entry declaration; other `PreHub`, Hub-slot, side-room, or
+N room declarations do not become ordinary targets.
+
+After PreHub lifecycle advances the cache to depth 2, its source owns one
+zero-target terminal envelope. That envelope is not another ordinary batch. It
+admits only the required Hub takeover, admits no ordinary target or takeover
+Preboss, and is atomically replaced by a `HubDecision` carrying the exact
+PreHub occurrence source. The Hub's semantic key continues to own its one
+derived room, persistent board, open slots, visits, side rooms, restores, and
+reward lookup.
+
+This normalization intentionally replaces the literal linked-room mechanism
+with planner-observable depth, candidate, source, and lifecycle facts. Its
+implementation is accepted only if executable fixtures preserve Opening,
+PreHub, Hub entry, board generation, visits, rewards, history, completion, and
+removal/undo behavior.
+
+### Completed-Hub Preboss remains separate
+
+`N_PreBoss01` does not participate in the post-PreHub terminal envelope. A Hub
+that satisfies its open-set and six-visit predicate owns the existing
+completed-Hub frontier:
+
+```text
+complete HubDecision
+  -> completed-Hub exit `preboss`
+  -> fixed width-one N_PreBoss01 takeover batch
+  -> N_Boss01 -> N_PostBoss01
+```
+
+The handoff remains sourced by `{ kind: 'hubDecision', decisionKey: 'hub' }`.
+An incomplete Hub exposes no Preboss handoff, while a complete Hub exposes
+exactly that one fixed target. The Preboss batch does not replace the Hub node
+or make `N_PreBoss01` an occurrence-sourced candidate.
+
+## Current implementation status
+
+The running schema-9 implementation still persists Opening -> PreHub as
+`normal.kind === 'linked'` and creates a source-less `HubDecision` after finding
+that start-owned link. Canonical materialization, history, workspace, and UI
+still publish a distinct linked-exit product. The selected depth-gated model is
+not current behavior until the implementation plan's equivalence, schema,
+engine, workspace, and deletion gates pass.
+
+Cross-cutting design documents continue to describe the running implementation
+until their owning code changes. This document records the accepted N-specific
+normalization in advance so the implementation does not silently change game
+facts or the intended abstraction boundary.
+
+## Current implemented authored shape
 
 - `N_Opening01` is the fixed authored start. Its linked `prehub` exit creates
   the fixed `N_PreHub01` occurrence.
