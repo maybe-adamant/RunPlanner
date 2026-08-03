@@ -1,192 +1,209 @@
 # Declared Exit Continuation Normalization
 
-Status: proposed future engine and application slice
+Status: implementation alternative A; source-shaped continuation model
 
 Related but deliberately separate work:
 
-- [N Hub workspace polish](N_HUB_WORKSPACE_POLISH.md) is a React/CSS
-  presentation slice. It does not change catalog, authored topology,
-  simulation, persistence, or commands.
+- [N Hub workspace polish](N_HUB_WORKSPACE_POLISH.md) is a completed React/CSS
+  presentation slice. It does not authorize topology changes.
 - [Route detour findings](../audits/ROUTE_DETOUR_FINDINGS.md) is source
-  evidence and extension research. It does not authorize Chaos work.
+  evidence and extension research. It does not authorize production Chaos.
+
+This proposal competes with `N_HUB_DEPTH_GATED_TAKEOVER.md`. The two documents
+must remain separate until one model is selected.
 
 ## Purpose
 
-Normalize declared room continuations so that Ephyra's Hub is a special
-destination with special board semantics, rather than the endpoint of a
-hard-coded N-only entry chain.
+Make Ephyra's source-to-Hub relationship explicit without changing the
+source-shaped Opening -> PreHub -> Hub entry model.
 
-The user-visible consequence is intentionally modest: an authored predecessor
-owns its own continuation action. N should not need a detached `Add fixed next
-room` or `Add Hub` inspector panel merely because its next step is fixed. The
-engine and application consequence is larger: the source-to-Hub relationship
-must be declaration-backed, structurally explicit, and reusable by a future
-detour return without adding another N-specific traversal path.
+The user-visible consequence is modest: each authored predecessor owns its own
+continuation action. N should not need a detached `Add fixed next room` or
+`Add Hub` inspector panel merely because its continuation is fixed. The engine
+consequence is more important: a Hub decision records the exact occurrence
+from which it is reached rather than relying on its room name, the biome start,
+or decision-array position.
 
-This document is a delivery proposal, not a replacement for the current design
-authorities. Once accepted and implemented, the durable decisions move into the
-catalog, authored-project, simulation, editor, workspace, and N game-rule
-documents listed below.
+This is a delivery proposal, not durable design authority. If selected and
+implemented, its accepted contracts move into the catalog, authored-project,
+simulation, editor, workspace, and N game-rule documents.
 
 ## Current Problem
 
-The present N path is represented and consumed as a special chain:
+The current N path is:
 
 ```text
 N Opening
-  -> linked PreHub exit
+  -> start-owned linked PreHub exit
   -> PreHub
-  -> separately created Hub decision
+  -> source-less Hub decision
   -> completed-Hub Preboss handoff
 ```
 
-The catalog's Hub descriptor currently owns one `linkedExit`; topology commands
-and codec checks treat it as the fixed opening-to-PreHub transition, and
-`CreateHubDecision` requires that linked PreHub state. Several engine paths
-therefore infer Hub reachability from N's layout, its start, or the linked
-PreHub room. The application mirrors that split: it can place a generated
-`CreateBatch` continuation on its predecessor workbench, while linked and Hub
-creation reach a standalone authoring frontier.
+`HubDecision` currently persists `hubKey`, `openTargets`, and `visitOrder`, but
+no entry source. `CreateHubDecision` proves reachability indirectly by finding
+the sole start-owned linked exit. Codec validation repeats that inference, and
+completeness discovers the Hub by comparing the current occurrence's game name
+with `layout.progression.linkedExit.roomGameName`.
 
-That is truthful for the current data, but it has three costs:
+By contrast, ordinary F-style decisions are source-addressed. Their command,
+codec, traversal, removal, candidate, and workspace products all agree on the
+exact occurrence that owns the decision. N loses that property precisely at
+its most structurally significant boundary.
 
-1. N's normal path receives a visibly different editor shape from ordinary
-   biome progression.
-2. Structural continuation ownership is spread across catalog, commands,
-   codec, traversal, and UI-specific frontier cases.
-3. A future alternate path into the Hub would require another special-case
-   chain instead of naming the same Hub-entry boundary.
+The current shape has three costs:
+
+1. Hub reachability is implicit even though its downstream board is large.
+2. Catalog, codec, traversal, removal, and workspace code reconstruct the same
+   N-only relationship using different surrounding facts.
+3. A future alternate entry into the same Hub cannot be represented without
+   either more inference or a second special path.
 
 ## Evidence and Scope
 
-The current game evidence establishes that N Opening is linked to PreHub and
-PreHub is linked to the Hub. Natural Chaos is not a production feature. Game
-scripts establish that an N Opening secret door is additional to its normal
-exit and that Chaos resumes the previous room set. Player-observed runtime
-behavior says taking Chaos from N Opening returns directly to the Hub, skipping
-PreHub. The current static source review did not independently expose the
-named direct `N_Hub` force; this remains a focused future runtime-evidence item.
+The game scripts establish the current source-shaped facts:
 
-Nothing in this slice adds Chaos declarations, authored state, commands,
-reward support, lifecycle behavior, candidates, or UI. It merely makes the
-ordinary source-to-Hub boundary capable of being named when that future work is
-ready.
+- `N_Opening01.LinkedRoom = "N_PreHub01"`;
+- `N_PreHub01.LinkedRoom = "N_Hub"`;
+- N's natural Chaos gate is an additional exit available from Opening rather
+  than a replacement for its normal linked exit; and
+- `BaseChaos.UsePreviousRoomSet = true` resumes N after the detour.
+
+Player observation says taking that Chaos gate reaches the Hub without entering
+PreHub. Static source review confirms the resumed N context and the downstream
+N room-history predicates that accept either PreHub or Chaos, but it does not
+expose a literal `ForceNextRoom = N_Hub` assignment. That runtime observation
+therefore remains extension evidence, not a production Chaos contract.
+
+Nothing in this alternative adds Chaos declarations, authored state, commands,
+reward support, lifecycle behavior, candidates, or UI. It only proves that a
+second declared occurrence source could enter the same unique Hub.
 
 ## Required Target Contract
 
-The target model is a finite, declaration-owned continuation vocabulary, not a
-generic graph API or a callback-shaped escape hatch:
+The source-shaped path remains:
 
 ```text
-ordinary source
-  -> generated normal-decision continuation
-  -> fixed-room continuation
-  -> Hub-entry continuation
-
-completed Hub
-  -> existing completed-Hub handoff
-```
-
-The completed-Hub handoff remains semantically distinct: it depends on the
-Hub's board and six-visit predicate. It may share an application action-row
-presentation with other continuations, but it must not become an ordinary
-generated decision.
-
-N's declaration-backed path then reads:
-
-```text
-Opening -- fixed-room continuation --> PreHub
-PreHub  -- Hub-entry continuation  --> Hub
-Hub     -- completed handoff        --> Preboss
+Opening -- fixed linked continuation --> PreHub
+PreHub  -- source-bearing Hub entry  --> Hub
+Hub     -- completed handoff          --> Preboss
 ```
 
 The central invariant is:
 
-> Every reachable Hub has an exact declaration-backed source-to-Hub relation
-> that topology commands, decoding, traversal, removal, focus, and closure
-> can resolve. No generic path may infer that relation from a start occurrence,
-> a room game name, or a UI position.
+> Every reachable Hub decision records one exact, selected, declaration-backed
+> occurrence source. Commands, decoding, traversal, removal, projection, focus,
+> and closure resolve that relation directly from persisted topology.
 
-The resulting model must also support the later shape without adding any
-production Chaos behavior now:
+The fixed Opening -> PreHub link remains a distinct declared continuation. The
+completed-Hub handoff also remains distinct because it is enabled by the Hub's
+board and six-visit predicate. Neither becomes an ordinary generated batch.
 
-```text
-future detour room -- declared resume / Hub entry --> the same Hub
+### Persisted Representation
+
+This alternative selects a source-bearing Hub decision rather than introducing
+a second Hub-entry edge product:
+
+```ts
+interface HubDecision {
+  readonly kind: 'hub';
+  readonly hubKey: string;
+  readonly source: {
+    readonly kind: 'occurrence';
+    readonly occurrenceId: OccurrenceId;
+  };
+  readonly openTargets: readonly HubTargetReference[];
+  readonly visitOrder: readonly string[];
+}
 ```
 
-Only one selected route reaches the unique Hub decision at a time. Alternative
-future entry sources do not create duplicate boards, Hub rooms, or completion
-handoffs.
+The Hub remains the semantic owner of its room, board, slots, and visits.
+`source` establishes reachability and placement; it does not replace `hubKey`
+as Hub identity and does not turn the Hub into an ordinary exit target.
 
-### Persisted Representation Decision
+A separate persisted Hub-entry edge would add another semantic owner between
+the predecessor and the already-specialized Hub product. It would complicate
+removal, focus, and closure while recreating the detached intermediate shape
+this work is intended to remove. The source-bearing decision expresses the
+same relation without another topology node.
 
-The required invariant does not prematurely dictate one TypeScript
-discriminator. Before implementation, inventory every core consumer and choose
-one explicit representation:
+`CreateHubDecision` must receive the exact source in its semantic command. The
+engine validates that:
 
-1. a new source-owned Hub-entry exit variant that references the Hub key; or
-2. a source-bearing Hub decision whose source is validated as its exact entry.
+- the source occurrence exists and lies on the selected authored spine;
+- the catalog permits that source to enter the addressed Hub;
+- the source owns no competing selected continuation;
+- no other Hub decision with the same key exists; and
+- adding the relation cannot create a selected topology cycle.
 
-Either choice is acceptable only if it provides a first-class, removable,
-serializable source-to-Hub relationship with stable semantic ownership. It must
-not leave the relationship implicit in a decoder, evaluator, or projection.
-The chosen representation must preserve the existing single-Hub cardinality
-and cleanly model future alternate entries.
+This is a schema-10 change. A schema-9 migration may add the source only when
+it recognizes the valid N shape accepted by the schema-9 codec: one start-owned
+linked exit whose target is `N_PreHub01`, plus at most one `hub` decision. If a
+Hub exists, its source becomes that exact linked target occurrence. Malformed,
+detached, duplicate, or ambiguous legacy topology is rejected rather than
+repaired by room name.
 
-If the selected representation changes persisted topology, make the schema
-decision explicitly. A migration may normalize only a uniquely recognized,
-valid schema-9 N chain; malformed or ambiguous legacy topology must be
-rejected, not guessed at. If the accepted representation needs no persistence
-change, the implementation must document why its explicit semantic relation is
-still complete at the decoder boundary.
+## Catalog Contract
 
-## Authority and Change Inventory
+The Hub descriptor must declare its allowed entry relation instead of asking
+engine consumers to infer it from `linkedExit.roomGameName`. The normalized
+shape may retain the current linked PreHub descriptor while adding a narrow Hub
+entry descriptor, for example:
 
-| Owner                          | Required work                                                                                                                                                                               | Must not own                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Hades II catalog               | Replace N's singular start-only linked-exit assumption with source-resolved declared continuation facts; retain the fixed Opening, PreHub, Hub, and Preboss game declarations.              | Authored selection, UI labels, candidate policy, or runtime Chaos data.                   |
-| Planner engine                 | Resolve the continuation allowed for a structural source; create, remove, decode, materialize, evaluate, and traverse the explicit Hub entry; preserve one atomic undoable authored change. | React presentation, focus labels, Redux, or UI-session state.                             |
-| Planner application projection | Adapt resolved continuation facts to markers, exact destinations, complete command intents, and focus timing.                                                                               | Re-deriving topology eligibility from room candidates or findings.                        |
-| React UI                       | Render a projection-supplied continuation action in its predecessor workbench and use common action-row styling.                                                                            | Deciding whether a source reaches a Hub, allocating identities, or constructing commands. |
+```ts
+interface HubEntryDescriptor {
+  readonly hubKey: string;
+  readonly allowedSourceRoomGameNames: readonly string[];
+}
+```
 
-### Catalog and Engine Work
+The exact field spelling is an implementation choice. Its constraints are not:
 
-The catalog needs a narrow continuation-resolution declaration that can answer
-the following for an authored source:
+- it is finite and declaration-owned;
+- every room name resolves to an authored room in the same biome;
+- the production N declaration initially admits only `N_PreHub01`;
+- it does not contain callbacks, rendered addresses, or candidate logic; and
+- a test catalog can admit a second authored source without naming Chaos.
 
-- is the regular continuation a generated normal decision, a fixed room, or a
-  Hub entry;
-- which stable semantic key and concrete room declaration it targets when
-  applicable; and
-- which source is allowed to establish a specific Hub entry.
+The current fixed Opening, PreHub, derived Hub, Hub slots, and completed-Hub
+Preboss declarations remain unchanged.
 
-The engine then migrates all current special-path consumers to that resolution:
+## Engine Change Inventory
 
-- topology command validation and identity allocation;
-- topology codec ownership, cycle, reachability, and source validation;
-- physical-exit and downstream-selection queries;
-- removal and selected-subtree reconciliation;
-- semantic addresses and exact command/focus owners where the chosen persisted
-  shape requires them;
-- materialization, history composition, progressive evaluation, completeness,
-  and validation traversal; and
-- deterministic undo/redo of the one semantic edit.
+### Authored commands and codec
 
-An invalid or incomplete evaluation may annotate a declared continuation, but
-must never erase its structurally representable authored control or downstream
-topology. Structural construction invariants may still reject malformed command
-proposals; evaluation status is not structural continuation authority.
+- Add the occurrence source to `HubDecision` and `CreateHubDecision`.
+- Decode the exact source and validate declaration permission, selected-spine
+  reachability, uniqueness, and source conflict.
+- Include Hub entry relations in selected-cycle and closure validation.
+- Encode and compare the complete source-bearing decision.
+- Implement the exact schema-9 to schema-10 migration described above.
 
-### Application and UI Work
+### Topology queries and removal
 
-The structured-workspace semantic assembly should expose one typed continuation
-product for a real predecessor. It contains its semantic owner, continuation
-kind, target summary, complete bound intent, and declared focus result. The
-application, not the engine, supplies concise presentation copy from this typed
-product.
+- Resolve a Hub decision by source as well as by stable Hub key.
+- Replace start/room-name inference with the persisted relation.
+- Make removal of the selected source continuation remove exactly the Hub,
+  every Hub-owned slot occurrence and visit, and the completed-Hub handoff.
+- Preserve unrelated dead offers and sibling topology.
+- Make undo/redo restore the complete relation atomically.
 
-React should use one small continuation-action surface in the relevant existing
-workbenches:
+### Materialization, history, and evaluation
+
+- Enter the Hub when traversal reaches the persisted Hub source.
+- Preserve the existing one derived `N_Hub`, atomic board generation, visit
+  order, parent-local side rooms, restores, reward lookup, and handoff.
+- Materialize no duplicate Hub room or board for an alternate test source.
+- Address incomplete or invalid entry state to the exact Hub/source owner.
+
+The existing linked PreHub materialization and history product remain in this
+alternative. This is the principal code-debt difference from the competing
+depth-gated takeover model.
+
+## Application and UI Contract
+
+Structured-workspace assembly projects one typed continuation interaction for
+the real predecessor:
 
 ```text
 Opening:       Continue to PreHub
@@ -195,92 +212,85 @@ Normal batch:  Add next decision
 Completed Hub: Continue to Preboss
 ```
 
-Exact final wording is an application vocabulary decision; the important rule
-is that it comes from the projected continuation kind, never `if biome ===
-'N'` in React.
+Exact wording remains application-owned. React receives the semantic owner,
+presentation kind, complete bound intent, and focus destination. It must not
+decide that PreHub reaches the Hub by checking `biomeKey`, `gameName`, or rail
+position.
 
-An authoring frontier with a rendered predecessor belongs inside that
-predecessor's workbench. A standalone frontier remains legitimate only where
-there is no authored/rendered predecessor, such as a completely unstarted
-biome. The fixed PreHub occurrence remains a normal player-facing occurrence
-workbench; a linked-exit wrapper may remain an internal topology product if it
-is useful, but it must not force a second inspector panel.
-
-The rail follows the explicit selected topology relationship: Opening,
-authored PreHub, then Hub. It does not introduce N-specific traversal code.
-The completed-Hub handoff still belongs to the Hub workbench, but can use the
-same continuation-action presentation shape.
+The fixed PreHub remains a normal occurrence workbench. Its linked-exit wrapper
+may remain an engine/canonical product, but it does not receive a detached
+inspector. The Hub rail card follows the exact persisted source and appears
+after whichever selected occurrence owns it.
 
 ## Future Chaos Seam
 
-The only future-facing deliverable in this slice is a **test-only alternate
-Hub-entry fixture**. It declares a second structurally legal source for the
-same Hub and proves that the engine and projection do not depend on PreHub's
-room name or N's start occurrence.
+The only future-facing deliverable is a test-only alternate Hub-entry fixture.
+It declares a second structurally legal occurrence source and proves:
 
-It is not production Chaos data. It must not add a Chaos room declaration,
-reward bag, lifecycle profile, candidate, editor control, or route behavior.
-When natural Chaos is later implemented, its additional-door and resume policy
-will extend the detour decision envelope described in
-[Route detour findings](../audits/ROUTE_DETOUR_FINDINGS.md), then target this
-already-proven Hub-entry boundary.
+- the same Hub key is entered from that source;
+- no PreHub-name or start-occurrence lookup remains;
+- only one Hub board and completed handoff exist; and
+- removal and undo follow the selected alternate source.
+
+It must not add production Chaos data, a Chaos occurrence kind, a reward bag,
+lifecycle behavior, candidate controls, or route integration. Future Chaos
+would first extend the outgoing decision envelope as an additional special
+exit, then use this established Hub-entry relation after its selected detour
+occurrence.
 
 ## Delivery Slices
 
-Each slice must be a complete vertical change with its primary tests and no
-compatibility/shadow path retained for a later commit.
+Each slice is a complete vertical change with its primary tests and removes the
+superseded inference in the same commit.
 
-### Slice 1: declared continuation and Hub-entry core
+### Slice A1: catalog, persistence, and topology
 
-- establish the chosen persisted representation and schema treatment;
-- update N's normalized declaration and source-resolution query;
-- migrate commands, codec, topology queries, removal, history/materialization,
-  progressive evaluation, completeness, and validation;
-- add focused catalog and engine tests, including the alternate-entry fixture;
-- update durable core design documents affected by the accepted model.
+- add the declared Hub-entry source contract;
+- add the persisted Hub source and schema migration;
+- update commands, codec, topology queries, cycles, removal, and impact;
+- add production N and test-only alternate-source coverage.
 
-This slice may update compilation consumers required by the new core surface,
-but must not leave a temporary dual model or an application-owned topology
-fallback.
+### Slice A2: simulation and candidates
 
-### Slice 2: workspace and editor consumption
+- migrate materialization, history, progressive evaluation, completeness,
+  validation, and Hub candidate preparation to the exact source;
+- remove every start/PreHub-name inference;
+- retain Hub board, visit, side-room, reward, and handoff behavior unchanged.
 
-- project the shared predecessor-owned continuation product and its complete
-  interactions;
-- remove the linked/Hub standalone-frontier presentation for any source with a
-  rendered predecessor;
-- embed the fixed-room and Hub-entry actions in the relevant workbenches;
-- make the N rail consume the generic selected topology relationship; and
-- add focused projection, closure, interaction, UI, and product-loop
-  witnesses.
+### Slice A3: workspace and UI
+
+- project predecessor-owned fixed and Hub-entry continuation interactions;
+- move linked and Hub creation controls into their predecessor workbenches;
+- order the rail from explicit topology;
+- add projection closure, focus, UI, and product-loop witnesses.
 
 ## Test and Closure Matrix
 
-The completed implementation must demonstrate all of the following:
+The implementation must prove:
 
-1. N can author Opening -> PreHub -> Hub -> Preboss through only
-   declaration-backed continuations.
-2. Opening cannot skip directly to Hub, and an undeclared room cannot establish
-   a Hub entry.
-3. A test-only alternate declared source can reach the same Hub without
-   PreHub-name or start-occurrence logic.
-4. Removing an entry removes exactly its selected downstream Hub structure and
-   handoff; undo and redo restore it atomically.
-5. Codec and topology validation reject duplicate, detached, cyclic,
+1. N authors Opening -> PreHub -> Hub -> Preboss through declaration-backed
+   continuations.
+2. The persisted Hub source is the exact selected PreHub occurrence.
+3. Opening cannot establish the Hub and an undeclared room cannot establish it.
+4. A test-only alternate allowed source reaches the same unique Hub without
+   PreHub-name or start-occurrence inference.
+5. Removing an entry removes exactly its selected Hub subtree; undo and redo
+   restore it atomically.
+6. Codec and topology validation reject missing, duplicate, detached, cyclic,
    mis-sourced, or mis-targeted Hub entries.
-6. Materialization, progressive evaluation, completeness, and findings follow
-   the explicit relation rather than special N chain inference.
-7. Continuation markers, inspector destinations, bound interactions, and focus
-   destinations are independently closed in workspace tests, including the new
-   Hub-entry owner.
-8. An evaluation finding never hides a structurally representable continuation
-   action.
-9. N's Opening and PreHub show their continuation actions in their own
-   workbenches, with no detached `Add fixed next room` or `Add Hub` panel.
-10. Ordinary generated `Add next decision` behavior and the completed-Hub
-    Preboss handoff retain their existing semantic distinctions.
+7. Materialization, history, progressive evaluation, completeness, and findings
+   follow the persisted relation.
+8. Existing Hub board membership, board rewards, six visits, side rooms,
+   restores, pylons, lookup, and completed handoff remain equivalent.
+9. Workspace markers, inspector destinations, interactions, and focus resolve
+   the exact Hub/source owners independently.
+10. Findings never hide a structurally valid continuation action.
+11. Opening and PreHub render continuation actions in their own workbenches;
+    no detached creation panel remains.
+12. Ordinary generated decisions and completed-Hub handoff behavior do not
+    change.
 
-The phase closes with the complete repository gate:
+The phase closes with:
 
 ```text
 npm run check
@@ -288,29 +298,20 @@ npm run check
 
 ## Non-Goals
 
-- Implementing natural Chaos, Anomaly, or any other detour.
-- Adding an open-ended graph, generic edge type, callbacks in declarations, or
-  a `special` escape hatch.
-- Treating fixed PreHub as a generated normal-door batch.
+- Implementing natural Chaos, Anomaly, or another detour.
+- Replacing the fixed Opening -> PreHub link with ordinary eligibility.
+- Treating Hub entry as a room candidate or takeover.
+- Removing linked-exit domain and canonical products.
 - Changing Hub board membership, visits, side rooms, rewards, pylons, or the
   completed-Hub predicate.
-- Letting candidate eligibility, findings, or evaluated entry hide authored
-  continuation controls.
-- Moving continuation policy into React or making the engine return UI copy.
-- Folding this work into the current N Hub workspace-polish slice.
+- Adding a generic graph edge, callback, service registry, or `special` escape
+  hatch.
+- Letting React, findings, or candidate presentation determine reachability.
 
 ## Documentation Reconciliation
 
-After implementation, reconcile the accepted durable contract in:
-
-- [Catalog model](../design/CATALOG_MODEL.md);
-- [Authored project model](../design/AUTHORED_PROJECT_MODEL.md);
-- [Simulation and validation](../design/SIMULATION_AND_VALIDATION.md);
-- [Editor model](../design/EDITOR_MODEL.md);
-- [Structured editor workspace](../design/STRUCTURED_EDITOR_WORKSPACE.md); and
-- [N game rules](../biomes/N_GAME_RULES.md).
-
-Keep the route-detour document as evidence and extension research rather than
-making it the authority for normal N continuation semantics. Retire or update
-this progress proposal only after those authorities describe the implemented
-model.
+If this alternative is selected and implemented, reconcile its durable
+contract in the catalog, authored-project, simulation, editor, workspace, and
+N game-rule authorities. Retain route-detour evidence as extension research.
+Retire this proposal only after those authorities describe the implemented
+source-bearing Hub entry.
