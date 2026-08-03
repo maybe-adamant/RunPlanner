@@ -56,7 +56,7 @@ afterEach(cleanup);
 
 function interactionsFor(
   project: ProjectDocument,
-  options: CandidateSessionFactoryOptions = {},
+  options: CandidateSessionFactoryOptions = { yieldToHost: () => Promise.resolve() },
 ): WorkspaceInteractionCatalog {
   const { structuredWorkspace } = createStructuredWorkspaceTestServices(options);
   return structuredWorkspace.project(simulateProjectAssembly(catalog, project)).interactions;
