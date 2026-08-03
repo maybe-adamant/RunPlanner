@@ -425,7 +425,8 @@ function HubVisitRow({
         workspaceInteractionKey(visit.marker.address),
       )
     : undefined;
-  if (visit.authoring === 'authored' && interaction?.removal === undefined) {
+  const removal = interaction?.removal;
+  if (visit.authoring === 'authored' && removal === undefined) {
     throw new Error('An authored Hub visit must retain its RemoveHubVisitsFrom interaction.');
   }
   const reward =
@@ -443,18 +444,30 @@ function HubVisitRow({
     <li className="hub-visit-row" data-authoring={visit.authoring}>
       <div className="hub-visit-index">{visit.visitIndex}</div>
       <div className="hub-visit-content">
-        <div className="owner-markers">
-          <button
-            className="semantic-focus-link"
-            onClick={() =>
-              dispatch(semanticOwnerFocused(visit.room?.marker.address ?? visit.marker.address))
-            }
-            type="button"
-          >
-            {visit.room?.label ?? label}
-          </button>
-          <SemanticOwnerMarker address={visit.marker.address} />
-          <MarkerAssessment marker={visit.marker} />
+        <div className="hub-visit-heading">
+          <div className="owner-markers">
+            <button
+              className="semantic-focus-link"
+              onClick={() =>
+                dispatch(semanticOwnerFocused(visit.room?.marker.address ?? visit.marker.address))
+              }
+              type="button"
+            >
+              {visit.room?.label ?? label}
+            </button>
+            <SemanticOwnerMarker address={visit.marker.address} />
+            <MarkerAssessment marker={visit.marker} />
+          </div>
+          {removal === undefined ? null : (
+            <button
+              aria-label={`Remove visits from Visit ${visit.visitIndex}`}
+              className="danger-action action-compact"
+              onClick={() => executeIntent(removal)}
+              type="button"
+            >
+              Remove from here
+            </button>
+          )}
         </div>
         {reward === undefined ? null : <p className="hub-visit-reward">Reward: {reward.summary}</p>}
         {interaction === undefined ? (
@@ -469,16 +482,6 @@ function HubVisitRow({
           />
         )}
       </div>
-      {interaction?.removal === undefined ? null : (
-        <button
-          aria-label={`Remove visits from Visit ${visit.visitIndex}`}
-          className="danger-action action-compact"
-          onClick={() => executeIntent(interaction.removal!)}
-          type="button"
-        >
-          Remove from here
-        </button>
-      )}
     </li>
   );
 }

@@ -1915,7 +1915,7 @@ select {
 
 .hub-visit-row {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   padding: 9px 12px;
@@ -1935,6 +1935,22 @@ select {
 
 .hub-visit-content {
   min-width: 0;
+}
+
+.hub-visit-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.hub-visit-heading > .owner-markers {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.hub-visit-heading > .danger-action {
+  justify-self: end;
 }
 
 .hub-empty-visit-state {
@@ -1980,11 +1996,6 @@ select {
   margin-inline-start: auto;
 }
 
-.hub-visit-row > .danger-action {
-  align-self: center;
-  justify-self: end;
-}
-
 @container (max-width: 760px) {
   .hub-open-room-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2002,6 +2013,18 @@ select {
 
   .hub-closed-room-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hub-visit-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .hub-visit-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-visit-heading > .danger-action {
+    justify-self: start;
   }
 }
 
@@ -2301,15 +2324,6 @@ select {
   .hub-open-room-grid,
   .hub-closed-room-grid {
     grid-template-columns: 1fr;
-  }
-
-  .hub-visit-row {
-    grid-template-columns: 32px minmax(0, 1fr);
-  }
-
-  .hub-visit-row > .danger-action {
-    grid-column: 2;
-    justify-self: start;
   }
 
   .biome-hub-rail-visits {
