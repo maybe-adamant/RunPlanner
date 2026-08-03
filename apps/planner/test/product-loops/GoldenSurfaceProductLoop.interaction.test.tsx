@@ -208,7 +208,9 @@ describe('surface product loop', () => {
     await view.user.click(hubRailButton());
 
     vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
-    const removeFinalVisit = screen.getByRole('button', { name: 'Remove visits from Visit 6' });
+    const removeFinalVisit = screen.getByRole('button', {
+      name: 'Clear visits from Visit 6 onward',
+    });
     const historyBefore = application.store.getState().projectWorkspace.history.past.length;
 
     await view.user.click(removeFinalVisit);

@@ -677,7 +677,7 @@ describe('HubDecisionWorkbench', () => {
     );
 
     const confirmation = vi.spyOn(globalThis, 'confirm');
-    await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 2' }));
+    await view.user.click(screen.getByRole('button', { name: 'Clear visits from Visit 2 onward' }));
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05']),
@@ -711,9 +711,10 @@ describe('HubDecisionWorkbench', () => {
     const view = renderHubDecisionWorkbench(project);
 
     const confirmation = vi.spyOn(globalThis, 'confirm');
-    const removal = screen.getByRole('button', { name: 'Remove visits from Visit 6' });
+    const removal = screen.getByRole('button', { name: 'Clear visits from Visit 6 onward' });
     expect(removal.classList.contains('danger-action')).toBe(true);
     expect(removal.classList.contains('action-compact')).toBe(true);
+    expect(removal.textContent).toBe('Clear from here');
     expect(removal.closest('.hub-visit-heading')).not.toBeNull();
     await view.user.click(removal);
     expect(confirmation).not.toHaveBeenCalled();
