@@ -460,12 +460,12 @@ function HubVisitRow({
           </div>
           {removal === undefined ? null : (
             <button
-              aria-label={`Remove visits from Visit ${visit.visitIndex}`}
+              aria-label={`Clear visits from Visit ${visit.visitIndex} onward`}
               className="danger-action action-compact"
               onClick={() => executeIntent(removal)}
               type="button"
             >
-              Remove from here
+              Clear from here
             </button>
           )}
         </div>
