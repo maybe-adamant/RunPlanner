@@ -51,7 +51,7 @@ describe('candidate application boundary', () => {
   it('keeps workspace loading inside the single React interaction adapter', () => {
     const loaderCallers = sourceFiles(uiRoot)
       .filter((path) => /\.load\s*\(/.test(readFileSync(path, 'utf8')))
-      .map((path) => relative(uiRoot, path));
+      .map((path) => relative(uiRoot, path).replaceAll('\\', '/'));
 
     expect(loaderCallers).toEqual(['controls/useWorkspaceInteraction.ts']);
   });
