@@ -2212,6 +2212,14 @@ declaration-derived biome completion.
 Add Tauri after the browser application proves the complete cross-biome
 simulation and shared UX architecture.
 
+Phase 8 begins with a deliberately narrow no-install delivery slice: one
+permission-minimal Tauri host around the existing Vite build and one Windows
+x64 workflow that publishes a ZIP containing the unbundled executable. This
+portable preview uses the existing browser profile and recovery adapters,
+depends on the system WebView2 runtime, and adds no installer, updater, native
+plugin, or Rust-side application behavior. Native file adapters and the other
+desktop capabilities below remain later independent slices.
+
 ### Deliverables
 
 - Tauri 2 wrapper around the existing Vite build;

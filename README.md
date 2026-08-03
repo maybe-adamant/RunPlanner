@@ -35,8 +35,10 @@ decisions, including H's fixed-count Fields decisions, I's generated Preboss
 peer, O's ordered ship encounters and reward wheels, Q's staged progression,
 and N's persistent Hub, visit timeline, side rooms, and WorldShop.
 
-The browser application is the active development host. Desktop packaging and
-the app/game execution boundary remain deliberate later steps.
+The browser application remains the primary development host. A permission-minimal
+Tauri 2 shell packages the same application as a no-install Windows preview;
+native desktop file integration and the app/game execution boundary remain
+deliberate later steps.
 
 Natural Chaos is explicit future special-exit work, and Anomaly detours remain
 deferred. Neither has production declaration, authored state, command,
@@ -97,7 +99,7 @@ Important modeling contracts:
 - React and Redux Toolkit for UI projection and application state;
 - Vite for browser development and production builds;
 - Vitest for domain, application, and interaction fixtures;
-- Tauri 2 later, when desktop file and packaging capabilities are needed.
+- Tauri 2 for the no-install desktop host and platform release artifacts.
 
 React Flow is not a foundation dependency. If introduced, it may render a
 projection of semantic authored topology but will never own topology or node
@@ -185,6 +187,20 @@ Run the complete validation suite with:
 ```bash
 npm run check
 ```
+
+The desktop host wraps the same production Vite build without adding Rust-side
+domain behavior. On a machine with the platform's Tauri prerequisites:
+
+```bash
+npm run desktop:dev
+npm run desktop:build
+```
+
+`desktop:build` creates an unbundled native executable. The Windows release
+workflow runs the complete repository gate, builds and launch-smokes that
+executable, then publishes a no-install ZIP and SHA-256 checksum. A manual
+workflow run retains the archive as a workflow artifact; pushing a version tag
+matching `apps/planner/package.json` also creates or updates its GitHub release.
 
 The complete `test` and `check` commands remain the phase, push, and release
 gates. Development uses narrower test lanes:

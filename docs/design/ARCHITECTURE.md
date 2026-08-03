@@ -357,8 +357,15 @@ small, inspectable, and aligned with the editor's design language.
 
 ### Tauri
 
-Tauri is deferred until the browser-hosted vertical slice requires desktop
-capabilities. Its eventual responsibilities are narrow:
+Tauri is a permission-minimal host around the same Vite application used by
+browser development. Its current responsibility is limited to native window
+creation and no-install platform packaging. The first supported artifact is a
+Windows x64 ZIP containing the unbundled executable; later Linux and macOS
+artifacts may use their platform-native unpack-and-run formats.
+
+The desktop host deliberately reuses the browser profile and recovery adapters
+until a focused desktop-file slice replaces them through the existing
+application contracts. Its eventual responsibilities remain narrow:
 
 - native window and packaging;
 - open/save dialogs;
@@ -366,7 +373,10 @@ capabilities. Its eventual responsibilities are narrow:
 - clipboard integration;
 - application preferences and update plumbing if later required.
 
-No simulator rule moves into Rust merely because Tauri is present.
+No simulator rule moves into Rust merely because Tauri is present. The current
+host registers no application commands or plugins and grants no frontend
+capabilities. Tauri's native file-drop interception is disabled so ordinary
+HTML pointer and drag interactions retain browser parity.
 
 ### React Flow
 

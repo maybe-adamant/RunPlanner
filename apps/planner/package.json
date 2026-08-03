@@ -1,10 +1,12 @@
 {
   "name": "@run-planner/planner",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build --no-bundle -- --locked",
     "build": "vite build",
     "typecheck": "tsc --project tsconfig.json"
   },
@@ -19,6 +21,7 @@
     "react-redux": "9.3.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "2.11.4",
     "@vitejs/plugin-react": "6.0.3",
     "vite": "8.1.5"
   }

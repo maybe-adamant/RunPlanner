@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+/apps/planner/src-tauri/target/
+/apps/planner/src-tauri/gen/schemas/
 *.local
 .DS_Store
 
