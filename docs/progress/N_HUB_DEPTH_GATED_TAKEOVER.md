@@ -1,21 +1,23 @@
 # N Hub Depth-Gated Takeover
 
-Status: implementation alternative B; normalized decision/takeover model
+Status: selected implementation plan; normalized decision/takeover model;
+implementation pending
 
-This proposal competes with
-`DECLARED_EXIT_CONTINUATION_NORMALIZATION.md`. It deliberately accepts a data
-simplification in exchange for removing N-only continuation machinery. Neither
-document is selected design authority yet.
+This plan deliberately accepts a data simplification in exchange for removing
+N-only continuation machinery. `N_GAME_RULES.md` owns the literal game facts
+and accepted planner normalization. This document owns delivery until the
+running implementation and durable cross-cutting design authorities converge
+on that contract.
 
-## Decision Question
+## Selected Model
 
-Can the planner replace the game's literal linked entry chain:
+The planner will replace the game's literal linked entry chain:
 
 ```text
 Opening.LinkedRoom -> PreHub.LinkedRoom -> Hub
 ```
 
-with the following behaviorally equivalent authored model?
+with the following behaviorally equivalent authored model:
 
 ```text
 fixed Opening
@@ -25,7 +27,7 @@ fixed Opening
   -> persistent Hub board
 ```
 
-The proposed simplification is justified only if game-data and product fixtures
+The simplification remains justified only if game-data and product fixtures
 prove that the current normal N route preserves its observable planner outcome:
 Opening and PreHub lifecycle, depth, history, Hub board, visits, and completed
 handoff. Natural Chaos is not data in this slice and does not widen this
@@ -60,8 +62,8 @@ It does not mean the game declarations or planner products are identical.
 PreHub is the literal linked room, while Chaos is a separately generated
 special exit with its own room, reward, encounter, history, and availability
 policy. A future Chaos slice owns the decision-envelope and resume model if
-and when that data enters the catalog; B does not add a provisional version of
-either.
+and when that data enters the catalog; this plan does not add a provisional
+version of either.
 
 ### Hub behavior
 
@@ -73,9 +75,9 @@ Downstream N room requirements explicitly accept history containing either
 The static source does not express the proposed `depth == 2` Hub takeover as a
 literal declaration. For this slice, it is a planner normalization of the
 current Opening -> PreHub -> Hub route. Its depth boundary is consistent with
-the observed Chaos route, but B does not contract or model that route. The raw
-`LinkedRoom` facts must remain recorded in source-evidence documentation even
-if they disappear from the normalized topology contract.
+the observed Chaos route, but this plan does not contract or model that route.
+The raw `LinkedRoom` facts must remain recorded in source-evidence documentation
+even if they disappear from the normalized topology contract.
 
 ## Target Authored Flow
 
@@ -98,8 +100,8 @@ N_Opening01 occurrence
 This plan intentionally has no authored Chaos path, alternate Hub source,
 host-context type, or generic resume contract. If a later catalog slice adds
 an N-opening Chaos gate, it defines the additional-exit selection and resumed
-N decision context from the actual data then present. B supplies only the
-ordinary N decision and terminal-Hub vocabulary that that later slice may
+N decision context from the actual data then present. This plan supplies only
+the ordinary N decision and terminal-Hub vocabulary that that later slice may
 choose to extend.
 
 ## Modeling Contract
@@ -276,9 +278,9 @@ Only one selected continuation product may be owned by a source. An
 
 The current catalog makes `ProgressionDescriptor` an exclusive union of
 `generated` and `hub`. That prevents N from consuming the normal decision
-machinery while retaining its Hub board descriptor. Implementing B requires a
-catalog-schema change, but it must model the data now present rather than
-create a global capability framework for hypothetical consumers.
+machinery while retaining its Hub board descriptor. Implementing this plan
+requires a catalog-schema change, but it must model the data now present rather
+than create a global capability framework for hypothetical consumers.
 
 The default target is therefore a bounded Hub progression descriptor with two
 declaration-owned current-N facts:
@@ -491,7 +493,7 @@ production model.
 
 ## Equivalence Gates
 
-Alternative B is acceptable only if all gates pass.
+The implementation is acceptable only if all gates pass.
 
 ### Entry and counters
 
@@ -561,19 +563,30 @@ The phase closes with:
 npm run check
 ```
 
-## Direct Comparison With Alternative A
+## Decision Record
 
-| Dimension          | A: source-shaped continuation              | B: depth-gated takeover                                |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------ |
-| Game-data fidelity | Preserves literal fixed link topology      | Normalizes links into eligibility and takeover         |
-| Persisted change   | Adds Hub source                            | Converts linked PreHub to batch and adds Hub source    |
-| Catalog change     | Adds allowed Hub entry sources             | Adds bounded N entry and terminal-Hub declarations     |
-| Candidate change   | Minimal; Hub remains a continuation action | Adds a terminal Hub takeover candidate                 |
-| Deleted debt       | Removes inference, retains linked family   | Removes inference and the linked entry family          |
-| Future Chaos entry | Explicit declared Hub-entry relation       | Later data extension; no current detour contract       |
-| UI model           | PreHub continuation action, then Enter Hub | Ordinary PreHub picker, then Hub takeover picker       |
-| Primary risk       | Retains an N-only linked path              | Proves equivalence through a broader core rewrite      |
-| Long-term payoff   | Lower-risk explicitness                    | Stronger unification and smaller conceptual vocabulary |
+The selected model replaces the source-shaped alternative that would have
+retained Opening -> PreHub as a linked topology family and added only an exact
+source to `HubDecision`. That alternative preserved the literal game mechanism
+with lower implementation risk, but it also preserved the N-only persisted,
+canonical, workspace, and UI vocabulary responsible for much of the current
+change neighborhood.
+
+The depth-gated takeover model was selected because it:
+
+- presents PreHub through the established room/reward decision interaction;
+- makes Hub selection an explicit terminal resolution of the same decision
+  surface;
+- retains a source-bearing Hub and the existing persistent board semantics;
+- removes the linked-entry domain family after completed-Hub metadata is
+  separated; and
+- leaves future Chaos data to its own evidence-backed slice rather than adding
+  a speculative resume abstraction now.
+
+The accepted cost is reduced fidelity to the game's literal `LinkedRoom`
+implementation and a broader initial core rewrite. Failure of the lifecycle,
+Hub-product, source-domain, or deletion gates stops implementation and requires
+revisiting the normalization rather than preserving both models.
 
 ## Non-Goals
 
@@ -587,20 +600,21 @@ npm run check
 - Changing the Hub board, visits, side rooms, rewards, pylons, restores, shop
   lookup, or completed-Hub predicate.
 - Reproducing literal `LinkedRoom` mechanics elsewhere after deleting them.
-- Choosing this alternative solely because it deletes more lines.
+- Justifying the selected model solely because it deletes more lines.
 
-## Decision Gate
+## Implementation Start Gate
 
-Do not choose between A and B from UI preference alone. First complete B1's
-current-N lifecycle fixtures and the progression-switch inventory. Then compare:
+Complete B1 before changing production topology. It must establish:
 
-- how many production owners each alternative changes;
-- which branches each deletes rather than forwards;
+- the current-N lifecycle and depth equivalence fixtures;
+- the complete linked-family and progression-switch inventories;
+- the closed PreHub-to-Hub and completed-Hub-to-Preboss terminal matrix;
+- the schema-10 migration-or-rejection decision;
+- which branches the implementation deletes rather than forwards;
 - whether the normalized current N path preserves every observable pre-Hub and
   Hub product; and
-- whether B's bounded descriptor reduces rather than relocates coupling.
+- whether the bounded descriptor reduces rather than relocates coupling.
 
-Choose alternative A if preserving the linked source mechanism materially
-shrinks risk or B cannot prove lifecycle equivalence. Choose alternative B if
-the equivalence gates pass and the implementation ledger shows that linked-path
-deletion outweighs the added takeover/capability machinery.
+Do not begin B2 if any equivalence proof fails, if another live owner for linked
+topology is found, or if the proposed bounded policy requires a parallel
+production path.
