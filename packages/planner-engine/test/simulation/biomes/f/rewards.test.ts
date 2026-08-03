@@ -295,9 +295,9 @@ function shopTimingProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'SetShopPurchase',
-    purchase: createShopPurchaseAddress(biome, shop, 'Boon'),
-    purchased: true,
+    kind: 'ReplaceShopPurchaseOrder',
+    shop: createOccurrenceAddress(biome, shop),
+    offerKeys: ['Boon'],
   });
   project = addBatch(project, shop, 'RunProgress', [
     {
@@ -394,9 +394,9 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'SetShopPurchase',
-    purchase: createShopPurchaseAddress(biome, shop, 'Boon'),
-    purchased: true,
+    kind: 'ReplaceShopPurchaseOrder',
+    shop: createOccurrenceAddress(biome, shop),
+    offerKeys: ['Boon'],
   });
   project = addTakeover(project, shop, [
     createOccurrenceId('blind-preboss-shop'),
@@ -706,9 +706,9 @@ describe('F reward-history simulation', () => {
     const offerResult = evaluate(invalidShopOfferProject()).rewards;
     let purchaseProject = invalidBlindBoxPurchaseProject();
     purchaseProject = applyProjectCommand(purchaseProject, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(biome, createOccurrenceId('blind-shop'), 'MajorNonBoon'),
-      purchased: true,
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(biome, createOccurrenceId('blind-shop')),
+      offerKeys: ['Boon', 'MajorNonBoon'],
     });
     const purchaseResult = evaluate(purchaseProject).rewards;
     const offerFindings = offerResult.findings.filter(

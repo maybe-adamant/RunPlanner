@@ -5,9 +5,9 @@ import {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
   canUndoProjectHistory,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
-  createShopPurchaseAddress,
   redoProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
@@ -60,19 +60,15 @@ describe('authored project history', () => {
 
   it('records a room-leaf edit as one atomic undoable snapshot', () => {
     const initial = createProjectHistory(createCompleteNProject());
-    const purchased = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(
-        nBiome,
-        createOccurrenceId('round-trip-n-preboss'),
-        'MajorNonBoon',
-      ),
-      purchased: true,
+    const ordered = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(nBiome, createOccurrenceId('round-trip-n-preboss')),
+      offerKeys: ['Minor', 'MajorNonBoon'],
     });
 
-    expect(purchased.past).toEqual([initial.present]);
-    const undone = undoProjectHistory(purchased);
+    expect(ordered.past).toEqual([initial.present]);
+    const undone = undoProjectHistory(ordered);
     expect(undone.present).toBe(initial.present);
-    expect(redoProjectHistory(undone).present).toBe(purchased.present);
+    expect(redoProjectHistory(undone).present).toBe(ordered.present);
   });
 });

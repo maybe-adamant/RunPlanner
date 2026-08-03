@@ -2166,15 +2166,16 @@ independently reviewable slices:
 10. the completed Campaign B candidate-artifact and Campaign C authored-core
     delivery, plus the D history/reward audits, closed before the next
     cross-layer feature; and
-11. Commit 5c replaces the Shop purchased-set model with exact authored order
-    through the two slices in `SHOP_PURCHASE_ORDER.md`.
+11. the completed Commit 5c replaces the Shop purchased-set model with exact
+    authored order through the two slices recorded in
+    `SHOP_PURCHASE_ORDER.md`.
 
 The owning design documents define the delivered contracts. Commit 4 is the
 explicit end of the unified biome refactor; Commits 5a and 5b preserve that
 authority while completing the final interaction and presentation acceptance
 formerly carried by Commit 13. The re-anchor campaigns change neither that
-authority nor the closed feature contract. Commit 5c is a separate
-authored-Shop correction that replaces the schema 9 purchased-set contract
+authority nor the closed feature contract. Commit 5c is a completed separate
+authored-Shop correction that replaces the schema-10 purchased-set contract
 without reopening biome topology. The current presentation taxonomy uses
 common exit decisions, normal-door batches, one specialized Hub decision, and
 declaration-derived biome completion.

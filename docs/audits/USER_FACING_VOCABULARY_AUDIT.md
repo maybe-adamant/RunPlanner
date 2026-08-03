@@ -86,7 +86,7 @@ is retained in a downstream route suffix.
 | Findings scope                 | `App.tsx` passes only the selected route's findings to `ProjectFindings`; Settings renders no findings surface. The empty state is already `No findings in this route.` | Keep. Do not restore the old evaluated-prefix wording or add Settings findings.                         |
 | Selected-decision rail context | `biome-presentation.ts` projects the selected room and, only for a direct single reward, a structured reward token.                                                     | Keep. Do not restore generic inspector, Hub-card, or footer reward summaries.                           |
 | Removal impact                 | The UI now exposes danger actions without `This removes …` scope paragraphs.                                                                                            | Keep the danger treatment and translate only visible action labels. Do not add warning/scope copy back. |
-| Shop purchase wording          | `Purchased` and `shopPurchaseUnavailable` still represent the old boolean purchase model.                                                                               | Defer to Commit 5c, whose ordered authored purchase contract changes the meaning.                       |
+| Shop purchase wording          | Shop rows derive `Purchased` and a direct ordinal from the authored exact purchase order; `shopPurchaseUnavailable` refers to that order.                               | Keep `Purchased` for row membership and call the adjacent column `Purchase order`.                      |
 | Candidate picker states        | The shared picker already says `Required`, `Not evaluated`, `Current · unavailable`, and `Unavailable`; unavailable options use `— unavailable`.                        | Keep.                                                                                                   |
 
 The old audit's proposed Shop text was also incorrect: Shop details activate
@@ -224,7 +224,8 @@ nine or ten Ephyra rooms to keep open in the Hub.`
 - `Specify every exit` becomes `Choose a room for every door`.
 - `Configure the entered shop` becomes `Finish setting up this Shop`.
 
-`shopPurchaseUnavailable` remains explicitly deferred to 5c.
+`shopPurchaseUnavailable` now reports that the selected purchase order cannot
+be completed; individual rows retain their stable Shop-purchase destination.
 
 ### P1 — Finding Destinations
 

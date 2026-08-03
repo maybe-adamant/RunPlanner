@@ -545,21 +545,20 @@ canonical profile and source-backed fixture are specified in
 `../design/ROOM_LIFECYCLE_MODEL.md`.
 
 Exact money, health, last-stand inventory, prices, discounts, and affordability
-are `Deferred`. V1 authors whether an offered option was purchased under a
+are `Deferred`. V1 authors one exact order of offered options purchased under a
 sufficient-resource and valid-use assumption. This preserves acquisition and
 outgoing-door consequences but may admit a purchase that one concrete resource
 state could not afford. The Last Stand support expansion above is separately
 `Simplified` because its missing-inventory condition controls generation as
 well as purchase.
 
-Purchase order is not authored UI state, but it cannot be discarded by
-simulation. A Blind Box persists its intended eventual source in authored
-payload while keeping that source game-hidden and semantically dormant until
-purchase. An earlier purchased Boon can change whether the authored source is
-then possible. Possibility simulation validates the purchased set and hidden
-source against every relevant order, retains the reachable history states, and
-may carry one witness order into a later execution plan. Store rerolls remain
-deferred.
+Purchase order is authored Shop state and remains available to later consumers.
+A Blind Box persists its intended eventual source in authored payload while
+keeping that source game-hidden and semantically dormant until purchase. An
+earlier purchased Boon can change whether the authored source is then possible.
+Possibility simulation validates the authored order and hidden source only in
+that order; it retains reward-source branches but never retries another
+permutation. Store rerolls remain deferred.
 
 ## Biome Reward Producer Map
 
@@ -596,7 +595,8 @@ following are true:
 6. shops use ordered group declarations with offer counts, per-option
    requirements, and without-replacement support;
 7. Blind Box persists its intended hidden source, and purchased-shop simulation
-   validates it across relevant order branches without persisting UI order;
+   validates it in the one persisted authored order without trying another
+   permutation;
 8. `WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct complete profiles;
 9. MetaProgress normalizes the exact 13-entry fully progressed projection and
    rejects the mutually exclusive 19-entry union;

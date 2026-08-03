@@ -98,10 +98,11 @@ describe('authored room-state defaults', () => {
       kind: 'shop',
       shop: {
         profileKey: 'WorldShop',
+        purchaseOrder: [],
         offers: {
-          Boon: { purchased: false },
-          MajorNonBoon: { purchased: false },
-          Minor: { purchased: false },
+          Boon: {},
+          MajorNonBoon: {},
+          Minor: {},
         },
       },
     });

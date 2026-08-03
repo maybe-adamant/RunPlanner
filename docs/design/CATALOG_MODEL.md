@@ -10,9 +10,9 @@ It owns declaration families, provenance, normalization policy, requirement
 scope, labels, defaults, and catalog versioning. It does not own concrete
 authored choices or lifecycle simulation algorithms.
 
-## Schema 10 Unified Biome Decisions
+## Schema 11 Unified Biome Decisions
 
-Schema 10 is the current authored contract over one `BiomeLayout` envelope
+Schema 11 is the current authored contract over one `BiomeLayout` envelope
 instead of a layout-specific split:
 
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;

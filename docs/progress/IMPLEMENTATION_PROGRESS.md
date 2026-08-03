@@ -12,7 +12,7 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-Phase 7 is active. Commits 1 through 11, the candidate-system refactor,
+Phase 7 is in final visual acceptance. Commits 1 through 11, the candidate-system refactor,
 Tartarus reconciliation, sequential blank-slot candidate evaluation, and the
 schema-8 authored-prerequisite correction are complete. All eight biomes
 participate in the production product loop.
@@ -62,8 +62,12 @@ the cooperative reward family); repeat activation is cached; edits publish one
 evaluation; and cached Undo has none. The four Commit 5b presentation slices
 and their desktop and narrow visual review are complete. Their temporary
 implementation plans are retired; durable workspace and biome contracts remain
-in their owning authorities. Commit 5c's exact authored Shop purchase order is
-the active feature frontier and follows
+in their owning authorities. Commit 5c has replaced the schema-10 purchased
+set with the schema-11 exact authored Shop purchase order across the engine,
+candidate session, workspace projection, and row controls. Its automated
+closure passed 100 test files / 891 tests, every workspace typecheck, lint,
+formatting, and the production build; final desktop/narrow visual sign-off is
+the remaining Phase 7 acceptance input. Its delivery record is
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 N's depth-gated Hub normalization is complete. Schema 10 replaces the linked
@@ -99,11 +103,11 @@ had been added without retiring overlapping facade and React assertions. The
 four review units—A14, A15.1, A15.2, and A16—closed that test ownership.
 The completed sequencing closed the candidate, authored-core, history, and
 reward campaigns before Commit 5b.3 resumed. The separate
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan then gives Commit 5c
-its schema-11 exact purchase order, simulation validation, and editor surface.
-Commit 5c intentionally replaces the schema-10 purchased-set contract. These
-plans supersede the former presentation-only Commit 12 and Commit 13 wording
-in `IMPLEMENTATION_PLAN.md`.
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) delivery record captures
+the completed schema-11 exact purchase order, simulation validation, and
+editor surface. Commit 5c intentionally replaced the schema-10 purchased-set
+contract. These plans supersede the former presentation-only Commit 12 and
+Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
 
 Campaign A's A1-through-A11 structural delivery is complete. A7 moved the
 private marker and preliminary-destination builder plus all room-local

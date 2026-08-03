@@ -1,4 +1,5 @@
 import type { OccurrenceAddress, ProjectCommand } from '@run-planner/engine/authored-project';
+import { Fragment } from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -410,9 +411,11 @@ function ShipWorkbench({
 
 function ShopWorkbench({
   interactions,
+  occurrence,
   room,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly occurrence: OccurrenceAddress;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const dispatch = useAppDispatch();
@@ -421,36 +424,58 @@ function ShopWorkbench({
   }
   return (
     <div className="shop-editor">
-      {room.offers.map((offer) => (
-        <section className="shop-offer" key={offer.key}>
-          <div className="shop-offer-heading">
-            <div className="owner-markers">
-              <h4>{offer.label}</h4>
-              <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
-            </div>
-            <ShopPurchaseControl
-              address={offer.purchase.address}
-              checked={offer.purchase.purchased}
-              id={`shop-${offer.purchase.marker.focusKey}-purchased`}
-              interactions={interactions}
-              onChange={(purchased) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'SetShopPurchase',
-                    purchase: offer.purchase.address,
-                    purchased,
-                  }),
-                )
-              }
-            />
-          </div>
-          <RewardControlEditor
-            control={offer.rewardControl}
-            idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
-            interactions={interactions}
-          />
-        </section>
-      ))}
+      <div className="shop-table-scroll">
+        <table className="shop-offer-table">
+          <thead>
+            <tr>
+              <th scope="col">Offer</th>
+              <th scope="col">Purchased</th>
+              <th scope="col">Purchase order</th>
+            </tr>
+          </thead>
+          <tbody>
+            {room.offers.map((offer) => (
+              <Fragment key={offer.key}>
+                <tr className="shop-offer" key={`${offer.key}:purchase`}>
+                  <th scope="row">
+                    <div className="owner-markers">
+                      <span>{offer.label}</span>
+                      <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
+                    </div>
+                  </th>
+                  <ShopPurchaseControl
+                    address={offer.purchase.address}
+                    interactions={interactions}
+                    label={offer.label}
+                    onChange={(offerKeys) =>
+                      dispatch(
+                        authoredProjectCommandDispatched({
+                          kind: 'ReplaceShopPurchaseOrder',
+                          shop: occurrence,
+                          offerKeys,
+                        }),
+                      )
+                    }
+                    position={offer.purchase.position}
+                    positionOptions={offer.purchase.positionOptions}
+                    purchased={offer.purchase.purchased}
+                    toggleOfferKeys={offer.purchase.toggleOfferKeys}
+                  />
+                </tr>
+                <tr className="shop-offer-reward" key={`${offer.key}:reward`}>
+                  <td colSpan={3}>
+                    <RewardControlEditor
+                      control={offer.rewardControl}
+                      idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
+                      interactions={interactions}
+                    />
+                  </td>
+                </tr>
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -532,7 +557,9 @@ export function RoomOfferEditor({
       {state.kind === 'ship' ? (
         <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
-      {state.kind === 'shop' ? <ShopWorkbench interactions={interactions} room={state} /> : null}
+      {state.kind === 'shop' ? (
+        <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      ) : null}
     </>
   );
 }

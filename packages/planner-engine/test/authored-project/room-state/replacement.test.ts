@@ -118,20 +118,15 @@ describe('authored room-state replacement', () => {
     if (shopDefault.kind !== 'shop' || shopDefault.shop === undefined) {
       throw new Error('missing active Shop default');
     }
-    const boon = shopDefault.shop.offers.Boon;
-    if (boon === undefined) throw new Error('missing Boon Shop offer');
-    const purchasedShop = Object.freeze({
+    const orderedShop = Object.freeze({
       kind: 'shop' as const,
       shop: Object.freeze({
         ...shopDefault.shop,
-        offers: Object.freeze({
-          ...shopDefault.shop.offers,
-          Boon: Object.freeze({ ...boon, purchased: true }),
-        }),
+        purchaseOrder: Object.freeze(['Boon']),
       }),
     });
     expect(
-      reconcileReplacementRoomState(catalog, shopRoom, purchasedShop, shopRoom, shopDefault),
+      reconcileReplacementRoomState(catalog, shopRoom, orderedShop, shopRoom, shopDefault),
     ).toBe(shopDefault);
 
     const ephyraRoom = room('N_Combat02');

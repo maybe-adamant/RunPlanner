@@ -57,12 +57,12 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      readonly kind: 'shopPurchases';
+      readonly kind: 'shopPurchaseOrders';
       readonly owner: OccurrenceAddress;
-      readonly purchaseChoices: readonly WorkspaceInteractionChoice<boolean>[];
       readonly purchases: readonly {
         readonly owner: ShopPurchaseAddress;
-        readonly purchased: boolean;
+        readonly proposalOfferKeys: readonly (readonly string[])[];
+        readonly selectedOfferKeys: readonly string[];
       }[];
     };
 

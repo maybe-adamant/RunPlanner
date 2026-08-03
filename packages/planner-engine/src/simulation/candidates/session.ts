@@ -45,17 +45,17 @@ import {
 import {
   evaluateRewardWheelLifecycleCandidate,
   evaluateShipEncounterCountCandidate,
-  evaluateShopPurchaseCandidate,
+  evaluateShopPurchaseOrderCandidate,
   type EvaluatedRewardWheelOfferCountCandidate,
   type EvaluatedRewardWheelPickedCandidate,
   type EvaluatedRewardWheelStoreCandidate,
   type EvaluatedShipEncounterCountCandidate,
-  type EvaluatedShopPurchaseCandidate,
+  type EvaluatedShopPurchaseOrderCandidate,
   type RewardWheelOfferCountCandidateQuery,
   type RewardWheelPickedCandidateQuery,
   type RewardWheelStoreCandidateQuery,
   type ShipEncounterCountCandidateQuery,
-  type ShopPurchaseCandidateQuery,
+  type ShopPurchaseOrderCandidateQuery,
 } from './room-lifecycle';
 import {
   evaluateRoomTargetCandidate,
@@ -93,7 +93,7 @@ export type ProjectCandidateQuery =
   | RoomTargetCandidateQuery
   | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
-  | ShopPurchaseCandidateQuery
+  | ShopPurchaseOrderCandidateQuery
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery
@@ -115,7 +115,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedRoomTargetCandidate
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
-  | EvaluatedShopPurchaseCandidate
+  | EvaluatedShopPurchaseOrderCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
@@ -252,14 +252,13 @@ function evaluateCandidateQuery(
           ?.roomLifecycles,
         query,
       );
-    case 'shopPurchase':
-      return evaluateShopPurchaseCandidate(
+    case 'shopPurchaseOrder':
+      return evaluateShopPurchaseOrderCandidate(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(
-          createBiomeAddress(query.purchase.routeKey, query.purchase.biomeKey),
-        )?.roomLifecycles,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.shop.routeKey, query.shop.biomeKey))
+          ?.roomLifecycles,
         query,
       );
   }

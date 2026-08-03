@@ -186,9 +186,9 @@ describe('P core loop', () => {
       },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'SetShopPurchase',
-      purchase,
-      purchased: true,
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      offerKeys: ['Boon'],
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluation = assembly.evaluation;
@@ -221,10 +221,10 @@ describe('P core loop', () => {
     ).toBeDefined();
     expect(
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-        kind: 'shopPurchase',
-        purchase,
-        purchased: false,
+        kind: 'shopPurchaseOrder',
+        shop: shopOwner,
+        offerKeys: [],
       }),
-    ).toEqual({ kind: 'shopPurchase', result: { supported: true, findings: [] } });
+    ).toEqual({ kind: 'shopPurchaseOrder', result: { supported: true, findings: [] } });
   });
 });

@@ -8,7 +8,6 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -330,15 +329,15 @@ describe('F candidate support', () => {
         value: offer.offer,
       },
       {
-        kind: 'shopPurchase',
-        purchase: createShopPurchaseAddress(fBiome, shopId, offerKey),
-        purchased: offer.purchased,
+        kind: 'shopPurchaseOrder',
+        shop: createOccurrenceAddress(fBiome, shopId),
+        offerKeys: shop.state.shop.purchaseOrder,
       },
     ]);
 
     expect(results).toEqual([
       { kind: 'shopOffer', result: { supported: true, findings: [] } },
-      { kind: 'shopPurchase', result: { supported: true, findings: [] } },
+      { kind: 'shopPurchaseOrder', result: { supported: true, findings: [] } },
     ]);
   });
 
@@ -584,9 +583,9 @@ describe('F candidate support', () => {
         value: offer.offer,
       },
       {
-        kind: 'shopPurchase',
-        purchase: createShopPurchaseAddress(fBiome, shop.occurrenceId, offerKey),
-        purchased: offer.purchased,
+        kind: 'shopPurchaseOrder',
+        shop: createOccurrenceAddress(fBiome, shop.occurrenceId),
+        offerKeys: shop.state.shop.purchaseOrder,
       },
     ]);
 

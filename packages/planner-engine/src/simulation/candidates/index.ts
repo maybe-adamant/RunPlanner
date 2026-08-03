@@ -44,14 +44,14 @@ export type {
   EvaluatedRewardWheelPickedCandidate,
   EvaluatedRewardWheelStoreCandidate,
   EvaluatedShipEncounterCountCandidate,
-  EvaluatedShopPurchaseCandidate,
+  EvaluatedShopPurchaseOrderCandidate,
   RewardWheelLifecycleCandidateSupport,
   RewardWheelOfferCountCandidateQuery,
   RewardWheelPickedCandidateQuery,
   RewardWheelStoreCandidateQuery,
   ShipEncounterCountCandidateQuery,
   ShipEncounterCountCandidateSupport,
-  ShopPurchaseCandidateQuery,
+  ShopPurchaseOrderCandidateQuery,
 } from './room-lifecycle';
 export type { EvaluatedRoomTargetCandidate, RoomTargetCandidateQuery } from './room-target';
 export {

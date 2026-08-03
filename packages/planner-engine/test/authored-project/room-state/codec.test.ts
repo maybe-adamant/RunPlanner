@@ -90,6 +90,34 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('$.room.state.shop: is required for an entered shop occurrence');
   });
 
+  it('requires an exact, distinct Shop purchase order over materialized offer keys', () => {
+    const declaration = room('F_Shop01');
+    const raw = mutable(
+      createDefaultRoomState(catalog, declaration, {
+        role: 'ordinary',
+        entryActive: true,
+      }),
+    );
+    const shop = raw.shop as Record<string, unknown>;
+
+    shop.purchaseOrder = ['Unknown'];
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('$.room.state.shop.purchaseOrder: Unknown is not a Shop offer');
+
+    shop.purchaseOrder = ['Boon', 'Boon'];
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('$.room.state.shop.purchaseOrder: Boon is duplicated');
+
+    shop.purchaseOrder = [];
+    const offers = shop.offers as Record<string, Record<string, unknown>>;
+    offers.Boon!.purchased = false;
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('$.room.state.shop.offers.Boon.purchased: is not a project document field');
+  });
+
   it('preserves valid Ephyra side-room ownership and rejects an entered dormant side room', () => {
     const declaration = room('N_Combat02');
     const raw = mutable(

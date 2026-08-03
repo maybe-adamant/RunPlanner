@@ -325,7 +325,7 @@ describe('contextual option projection', () => {
       'These reward details are not valid.',
       'These Shop offers cannot appear together.',
       'Finish the required earlier route steps before this option can be evaluated.',
-      'This purchase cannot be completed with the current shop configuration.',
+      'This purchase order cannot be completed with the current shop configuration.',
     ]);
   });
 

@@ -299,6 +299,16 @@ dormantly, but the editor hides them because they produce no current game
 facts. Incoming and free-reward editors remain visible on unpicked targets
 because those offers materialize on their doors.
 
+A materialized Shop preserves declaration order for inventory rows while
+deriving `Purchased` membership and a `Purchase order` ordinal from its one
+occurrence-owned `purchaseOrder` list. Each row exposes a membership toggle and
+direct ordinal select, but either interaction publishes one complete replacement
+order. Candidate support is evaluated for those complete row-scoped proposals;
+impossible positions remain visible with their evidence, and a selected invalid
+order remains editable for repair. Per-offer Shop-purchase markers and finding
+destinations remain stable even though the candidate owner is the Shop
+occurrence.
+
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.
 

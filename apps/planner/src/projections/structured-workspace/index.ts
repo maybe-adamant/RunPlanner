@@ -44,6 +44,7 @@ export type {
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
   WorkspaceRoomSummary,
+  WorkspaceShopPurchaseOrderOption,
   WorkspaceRoute,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTakeoverBatchNode,

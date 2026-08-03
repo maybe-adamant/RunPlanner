@@ -12,7 +12,6 @@ import {
   createHubVisitAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createShopPurchaseAddress,
   createTargetAddress,
   ProjectCommandContractError,
 } from '@run-planner/engine/authored-project';
@@ -405,15 +404,15 @@ describe('authored-project commands and topology', () => {
       )?.state,
     ).toMatchObject({ kind: 'shop', shop: expect.any(Object) });
     project = applyProjectCommand(project, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(fBiome, createOccurrenceId('f-preboss-shop'), 'Boon'),
-      purchased: true,
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
+      offerKeys: ['Boon'],
     });
     expect(
       fTopology(project).occurrences.find(
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
       )?.state,
-    ).toMatchObject({ kind: 'shop', shop: { offers: { Boon: { purchased: true } } } });
+    ).toMatchObject({ kind: 'shop', shop: { purchaseOrder: ['Boon'] } });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(fBiome, combatDecision.source),

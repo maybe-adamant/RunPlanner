@@ -729,6 +729,40 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
   });
 
+  it('authors Shop membership and ordinal as one complete purchase order per row action', async () => {
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(pOccurrenceIds.prebossShop),
+    );
+    const order = () => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'P',
+        pOccurrenceIds.prebossShop,
+      );
+      if (state.kind !== 'shop' || state.shop === undefined) {
+        throw new Error('P Preboss Shop state is missing');
+      }
+      return state.shop.purchaseOrder;
+    };
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(screen.getByLabelText('Purchase Offer 1'));
+    expect(order()).toEqual(['Boon']);
+
+    await view.user.click(screen.getByLabelText('Purchase Offer 2'));
+    expect(order()).toEqual(['Boon', 'MajorNonBoon']);
+
+    await view.user.selectOptions(screen.getByLabelText('Purchase order for Offer 2'), '1');
+    expect(order()).toEqual(['MajorNonBoon', 'Boon']);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 3,
+    );
+  });
+
   it('renders an unpicked Shop as dormant without inventory controls', () => {
     const { project, shopId } = dormantShopProject();
     renderStaticOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
@@ -767,9 +801,9 @@ describe('OccurrenceWorkbench', () => {
     cleanup();
 
     const selectedInvalidProject = applyProjectCommand(invalidOfferProject, catalog, {
-      kind: 'SetShopPurchase',
-      purchase,
-      purchased: true,
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      offerKeys: ['Boon'],
     });
     const repair = renderOccurrenceWorkbench(
       selectedInvalidProject,
@@ -783,7 +817,6 @@ describe('OccurrenceWorkbench', () => {
     ) as HTMLInputElement | null;
     if (repairCheckbox === null) throw new Error('selected Boon Shop purchase control is missing');
     await repair.user.click(repairCheckbox);
-    if (repairCheckbox.checked) await repair.user.click(repairCheckbox);
     expect(repairCheckbox.checked).toBe(false);
     expect(repair.application.store.getState().projectWorkspace.history.past).toHaveLength(
       repairBefore + 1,

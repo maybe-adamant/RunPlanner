@@ -215,7 +215,10 @@ function withoutLeafInteraction(
     case 'shipEncounterCount':
       return { ...interactions, shipEncounterCounts: without(interactions.shipEncounterCounts) };
     case 'shopPurchase':
-      return { ...interactions, shopPurchases: without(interactions.shopPurchases) };
+      return {
+        ...interactions,
+        shopPurchaseOrders: without(interactions.shopPurchaseOrders),
+      };
     case 'sideRoomEntryOrder':
       return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
     case 'sideRoomGeneration':

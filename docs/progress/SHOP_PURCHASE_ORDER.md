@@ -2,16 +2,22 @@
 
 ## Status
 
-This is the planned implementation authority for Phase 7 Commit 5c. The four
+Implementation is complete and its automated delivery gates are green. This
+document remains the delivery record for Phase 7 Commit 5c; the durable Shop
+contracts now live in their owning design and audit authorities. The four
 presentation-only Commit 5b slices, their visual review, and the pre-5c
-re-anchor program are closed. Their durable contracts live in the owning
-design and biome authorities; their delivery record remains in
+re-anchor program are closed. Their delivery record remains in
 [`IMPLEMENTATION_PROGRESS.md`](IMPLEMENTATION_PROGRESS.md).
 
-Commit 5c deliberately changes the persisted Shop contract: the authored plan
-will record one exact purchase sequence rather than a boolean purchased set
-whose order is selected later by simulation. This requires project schema 11
-and must not be hidden inside presentation polish.
+Commit 5c deliberately changed the persisted Shop contract: the authored plan
+records one exact purchase sequence rather than a boolean purchased set whose
+order simulation selected later. It introduced project schema 11 and was
+delivered as a domain correction rather than presentation polish.
+
+Automated validation passed on the completed product: `npm run test:changed`
+passed 88 files / 762 tests, and `npm run check` passed 100 files / 891 tests,
+all workspace typechecks, lint, formatting, and the production build. Desktop
+and narrow visual sign-off remains the final manual Phase 7 acceptance input.
 
 Stable authority remains with
 [`AUTHORED_PROJECT_MODEL.md`](../design/AUTHORED_PROJECT_MODEL.md),
@@ -24,9 +30,9 @@ documents and the current interpretation in
 [`REWARD_GAME_DATA_AUDIT.md`](../audits/REWARD_GAME_DATA_AUDIT.md) must be
 reconciled as the owning slices land.
 
-## Problem
+## Original Problem
 
-The current schema-10 model stores:
+Before this delivery, the schema-10 model stored:
 
 ```ts
 interface ShopOfferState {
@@ -387,7 +393,7 @@ The replacement authority is:
 
 ## Delivery Slices
 
-### Commit 5c.1: Deliver the Exact-Order Product Slice
+### Commit 5c.1: Deliver the Exact-Order Product Slice — complete
 
 Suggested subject:
 
@@ -448,7 +454,7 @@ authored-project tests, exact-order execution remains in reward-kernel and
 simulation tests, and candidate behavior remains in candidate tests. Do not
 create a catch-all test file named after schema 11.
 
-### Commit 5c.2: Close Exact-Order Coverage and Phase 7
+### Commit 5c.2: Close Exact-Order Coverage and Phase 7 — automated closure complete
 
 Suggested subject:
 
@@ -457,8 +463,11 @@ test(shop): close exact purchase-order product
 ```
 
 Owns cross-profile and persistence confidence, final responsive presentation,
-visual review, durable documentation absorption, and phase closure. It does not
-introduce a second implementation path or broaden the Shop model.
+visual review, durable documentation absorption, and phase closure. The
+cross-profile, persistence, candidate-cache, documentation, and automated
+repository closure are complete. Desktop and narrow visual sign-off remains
+the one pending acceptance activity; it does not introduce a second
+implementation path or broaden the Shop model.
 
 Likely files:
 
@@ -480,7 +489,7 @@ Gate:
 
 ## Final Acceptance
 
-Commit 5c is complete only when:
+The implemented product satisfies the automated Commit 5c acceptance criteria:
 
 - schema 11 has one Shop-owned ordered list and no per-offer purchased boolean;
 - `SetShopPurchase`, boolean Shop candidate contracts, and purchase permutation
@@ -497,5 +506,7 @@ Commit 5c is complete only when:
 - the persisted order remains available to future consumers without selecting
   a witness;
 - no catalog declaration or deferred affordability model is changed;
-- the complete repository gate passes; and
-- Phase 7 advances only after Commit 5b and Commit 5c closure are both recorded.
+- the complete repository gate passes.
+
+Phase 7 advances after the recorded Commit 5b closure and final desktop/narrow
+visual sign-off for this completed Shop product.

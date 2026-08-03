@@ -34,6 +34,7 @@ textarea {
 
 select[data-candidate-support='impossible'],
 .purchase-control[data-candidate-support='impossible'],
+.shop-purchase-membership[data-candidate-support='impossible'],
 .hub-membership-control[data-candidate-support='impossible'] {
   border-color: #ee8f8f;
   color: #f2a0a0;
@@ -1572,15 +1573,76 @@ select {
 }
 
 .shop-editor {
-  display: grid;
-  gap: 8px;
+  display: block;
 }
 
-.shop-offer {
-  padding: 11px;
+.shop-table-scroll {
+  overflow-x: auto;
+}
+
+.shop-offer-table {
+  width: 100%;
+  min-width: 580px;
   border: 1px solid #373842;
+  border-spacing: 0;
   border-radius: 9px;
   background: rgb(255 255 255 / 2%);
+  overflow: hidden;
+}
+
+.shop-offer-table th,
+.shop-offer-table td {
+  padding: 10px 11px;
+  border-bottom: 1px solid #34353e;
+  text-align: start;
+  vertical-align: middle;
+}
+
+.shop-offer-table thead th {
+  color: #aaa7af;
+  background: rgb(10 11 14 / 28%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shop-offer-table tbody:last-child .shop-offer-reward:last-child td {
+  border-bottom: 0;
+}
+
+.shop-offer > th {
+  min-width: 0;
+  color: #f2ede5;
+  font-size: 0.92rem;
+}
+
+.shop-offer > th .owner-markers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shop-purchase-membership {
+  width: 150px;
+}
+
+.shop-purchase-order {
+  width: 150px;
+}
+
+.shop-purchase-order select {
+  width: 100%;
+  min-width: 88px;
+}
+
+.shop-offer-reward > td {
+  padding: 10px 11px 12px;
+  background: rgb(10 11 14 / 18%);
+}
+
+.shop-offer-reward .reward-value-editor {
+  gap: 6px;
 }
 
 .fields-batch-editor {
@@ -2228,6 +2290,10 @@ select {
 
   .editor-panel-content[data-editor-layout='biome'] > .biome-workspace {
     grid-row: auto;
+  }
+
+  .shop-offer-table {
+    min-width: 520px;
   }
 
   .biome-workspace {

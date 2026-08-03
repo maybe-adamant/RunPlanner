@@ -30,7 +30,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceSideRoomEntryOrder':
       return applyEphyraOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
-    case 'SetShopPurchase':
+    case 'ReplaceShopPurchaseOrder':
       return applyShopOccurrenceCommand(document, located, command);
   }
 }

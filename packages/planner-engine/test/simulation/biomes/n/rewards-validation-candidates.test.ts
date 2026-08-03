@@ -8,6 +8,7 @@ import {
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createProjectDocument,
   createShopOfferAddress,
   createShopPurchaseAddress,
@@ -532,9 +533,9 @@ describe('N Hub rewards, validation, and candidates', () => {
     );
 
     const purchasedProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'Minor'),
-      purchased: true,
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+      offerKeys: ['Minor'],
     });
     expect(
       completeN(purchasedProject).biome.rewards.branches.some((branch) =>

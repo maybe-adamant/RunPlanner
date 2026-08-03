@@ -7,10 +7,10 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 10 Boundary
+## Schema 11 Boundary
 
-Schema 10 is the sole persisted authored-project contract. The codec rejects
-schema 9 and earlier documents rather than manufacturing N's normalized PreHub
+Schema 11 is the sole persisted authored-project contract. The codec rejects
+schema 10 and earlier documents rather than manufacturing N's normalized PreHub
 decision, terminal Hub envelope, source-bearing Hub, or another missing
 authored choice for a stale document. Catalog versions must match exactly.
 
@@ -84,7 +84,7 @@ does. Boss and optional Postboss rooms are catalog-derived completion tail
 rooms, not authored decisions or occurrences.
 
 Topology owns occurrence relationships and decisions. Room state owns rewards,
-Shop inventory and purchases when materialized, encounter choices, wheels,
+Shop inventory and exact purchase order when materialized, encounter choices, wheels,
 cages, and side-room state. UI state owns no domain topology.
 
 ## Route Scope
@@ -238,7 +238,9 @@ be authored again only after the board is restored to its completion predicate.
 
 Every occurrence begins with complete declaration-owned offer-time defaults.
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
-it; changing selection removes unselected inventory. A counted-free Preboss
+it; changing selection removes unselected inventory. Its materialized state
+owns declaration-keyed offers and one exact `purchaseOrder`; membership and
+ordinal derive only from that list. A counted-free Preboss
 keeps its complete resolved offer regardless of selection.
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
@@ -249,7 +251,7 @@ rule.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
-Ephyra side-room generation/order/rewards, and Shop offers/purchases. Leaf
+Ephyra side-room generation/order/rewards, and Shop offers/purchase order. Leaf
 edits do not rewrite topology.
 
 ## Semantic Addresses
@@ -271,7 +273,7 @@ canonical projection for maps and markers, not another identity source.
 | derived completion                | `CompletionRoomAddress`                      |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-10 addresses.
+batch-store identity, and rendered target indexes are not schema-11 addresses.
 
 ## Commands
 
@@ -297,7 +299,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 10;
+  schemaVersion: 11;
   projectId: string;
   name: string;
   catalogVersion: string;

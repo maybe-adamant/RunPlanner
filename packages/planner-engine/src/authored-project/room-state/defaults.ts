@@ -56,9 +56,13 @@ function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: st
   }
   const offers: Record<string, ShopOfferState> = {};
   for (const slot of profile.slots.values) {
-    offers[slot.key] = Object.freeze({ offer: slot.defaultOffer, purchased: false });
+    offers[slot.key] = Object.freeze({ offer: slot.defaultOffer });
   }
-  return Object.freeze({ profileKey: profile.key, offers: Object.freeze(offers) });
+  return Object.freeze({
+    profileKey: profile.key,
+    offers: Object.freeze(offers),
+    purchaseOrder: Object.freeze([]),
+  });
 }
 
 function defaultFieldsCages(

@@ -12,7 +12,6 @@ import {
   createOccurrenceId,
   createRouteAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -211,9 +210,9 @@ describe('candidate session', () => {
         value: offer.offer,
       },
       {
-        kind: 'shopPurchase',
-        purchase: createShopPurchaseAddress(fBiome, occurrence.occurrenceId, offerKey),
-        purchased: offer.purchased,
+        kind: 'shopPurchaseOrder',
+        shop: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
+        offerKeys: occurrence.state.shop.purchaseOrder,
       },
     ]);
 
@@ -231,7 +230,7 @@ describe('candidate session', () => {
         reason: 'producerFrontierUnavailable',
         evidence: {
           kind: 'producerFrontierUnavailable',
-          producer: createShopPurchaseAddress(fBiome, occurrence.occurrenceId, offerKey),
+          producer: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
         },
       },
     ]);

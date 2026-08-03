@@ -174,7 +174,7 @@ describe('evaluation presentation', () => {
       [
         'shopPurchaseUnavailable',
         'Shop purchase is unavailable',
-        'The selected purchases cannot be acquired in any valid purchase order.',
+        'The selected purchase order cannot be completed.',
       ],
     ] as const satisfies readonly (readonly [FindingCode, string, string])[];
 

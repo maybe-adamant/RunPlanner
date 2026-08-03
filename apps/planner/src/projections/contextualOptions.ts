@@ -256,7 +256,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'shopPurchaseUnavailable':
       return {
         kind: 'shop',
-        message: 'This purchase cannot be completed with the current shop configuration.',
+        message: 'This purchase order cannot be completed with the current shop configuration.',
       };
     case 'batchRewardStoreMissing':
     case 'batchStateMissing':

@@ -41,13 +41,13 @@ export interface CanonicalShopOffer {
   readonly offerOrigin: ShopOfferAddress;
   readonly purchaseOrigin: ShopPurchaseAddress;
   readonly offer: ResolvedRewardOffer;
-  readonly purchased: boolean;
 }
 
 export interface CanonicalShopEntryState {
   readonly kind: 'shop';
   readonly profileKey: string;
   readonly offers: readonly CanonicalShopOffer[];
+  readonly purchaseOrder: readonly string[];
 }
 
 export interface CanonicalLocalReward {
