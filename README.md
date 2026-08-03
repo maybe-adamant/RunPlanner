@@ -33,7 +33,7 @@ candidates, editor projection, profile persistence, recovery, and semantic
 finding navigation. The editor uses one shared workspace for ordinary and Hub
 decisions, including H's fixed-count Fields decisions, I's generated Preboss
 peer, O's ordered ship encounters and reward wheels, Q's staged progression,
-and N's persistent Hub, visit timeline, side rooms, and WorldShop.
+and N's persistent ranked Hub board, side rooms, and WorldShop.
 
 The browser application remains the primary development host. A permission-minimal
 Tauri 2 shell packages the same application as a no-install Windows preview;
@@ -151,8 +151,9 @@ copied elsewhere.
   explicit, Campaign C separated the justified authored-core authorities, and
   Campaign D retained the coherent ordered history and reward folds. Commit 5c
   completed the schema-11 exact Shop purchase order across the engine,
-  projection, and UI; final desktop/narrow visual sign-off is the remaining
-  Phase 7 acceptance input.
+  projection, and UI. The ranked Hub follow-up and manual Shop UX acceptance
+  close Phase 7. Phase 8 is complete with the successful `v0.1.0` tagged
+  Windows portable release.
 
 ## Source Evidence
 
