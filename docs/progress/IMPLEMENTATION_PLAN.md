@@ -2160,14 +2160,14 @@ independently reviewable slices:
    in `IMPLEMENTATION_PROGRESS.md`, made the active product flow,
    responsibility, import direction, and dependency injection explicit without
    advancing the feature frontier;
-9. Commit 5b delivers the four bounded changes in
-   `WORKSPACE_PRESENTATION_POLISH.md` without changing the closed domain
-   contracts;
+9. the completed Commit 5b delivered four bounded presentation changes without
+   changing the closed domain contracts; its temporary implementation plan is
+   retired and its delivery is recorded in `IMPLEMENTATION_PROGRESS.md`;
 10. the completed Campaign B candidate-artifact and Campaign C authored-core
     delivery, plus the D history/reward audits, closed before the next
     cross-layer feature; and
 11. Commit 5c replaces the Shop purchased-set model with exact authored order
-    through the three slices in `SHOP_PURCHASE_ORDER.md`.
+    through the two slices in `SHOP_PURCHASE_ORDER.md`.
 
 The owning design documents define the delivered contracts. Commit 4 is the
 explicit end of the unified biome refactor; Commits 5a and 5b preserve that

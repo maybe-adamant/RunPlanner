@@ -143,15 +143,13 @@ copied elsewhere.
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
-  active frontier and chronological delivery record. Phase 7 Slice 4
-  reconciliation and Commit 5a prompt removal are complete. The re-anchor
-  program is complete: Campaign B made candidate artifacts explicit,
-  Campaign C separated the justified authored-core authorities, and Campaign D
-  retained the coherent ordered history and reward folds. The final
-  [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  visual verification is the active frontier. The
-  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) follows with
-  Commit 5c's own schema, engine, projection, and UI slices.
+  active frontier and chronological delivery record. Phase 7 Slice 4,
+  Commit 5a prompt removal, the re-anchor program, and the four Commit 5b
+  presentation slices are complete. Campaign B made candidate artifacts
+  explicit, Campaign C separated the justified authored-core authorities, and
+  Campaign D retained the coherent ordered history and reward folds. The
+  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) is the active
+  frontier with Commit 5c's schema, engine, projection, and UI slices.
 
 ## Source Evidence
 

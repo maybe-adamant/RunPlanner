@@ -59,11 +59,12 @@ The executable work-count contract remains unchanged: rendering performs no
 evaluation or candidate work; two representative workspaces require two project
 evaluations; cold candidate activation uses its addressed batch (fourteen for
 the cooperative reward family); repeat activation is cached; edits publish one
-evaluation; and cached Undo has none. The four Commit 5b presentation slices in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) are
-implemented. Commit 5b.4's desktop and narrow visual verification is the
-active feature frontier; Commit 5c follows its own
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after that closure.
+evaluation; and cached Undo has none. The four Commit 5b presentation slices
+and their desktop and narrow visual review are complete. Their temporary
+implementation plans are retired; durable workspace and biome contracts remain
+in their owning authorities. Commit 5c's exact authored Shop purchase order is
+the active feature frontier and follows
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 N's depth-gated Hub normalization is complete. Schema 10 replaces the linked
 Opening-to-PreHub product with one bounded width-one normal decision, gives
@@ -323,8 +324,9 @@ Preboss, and Hub language across the shell, workspace, feedback, candidate
 explanations, and accessible names; it preserves the projection boundary and
 the deferred Shop purchase-order wording. Its automated gate passed all package
 typechecks, 96 test files / 822 tests, lint, formatting, and the production
-build. The required desktop and narrow visual review remains before it closes
-Commit 5b; the three Commit 5c Shop-order slices follow that verification.
+build. Desktop and narrow visual review closed Commit 5b. Its temporary
+implementation plans are retired after their durable contracts were absorbed;
+the two Commit 5c Shop-order slices now own the active frontier.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the
