@@ -9,7 +9,7 @@ pre-5c re-anchor program is closed.
 
 Commit 5c deliberately changes the persisted Shop contract: the authored plan
 will record one exact purchase sequence rather than a boolean purchased set
-whose order is selected later by simulation. This requires project schema 10
+whose order is selected later by simulation. This requires project schema 11
 and must not be hidden inside presentation polish.
 
 Stable authority remains with
@@ -25,7 +25,7 @@ reconciled as the owning slices land.
 
 ## Problem
 
-The current schema-9 model stores:
+The current schema-10 model stores:
 
 ```ts
 interface ShopOfferState {
@@ -53,8 +53,8 @@ letting simulation choose one.
 The contract correction is:
 
 ```text
-schema 9: author a purchased set -> accept if any order is supported
-schema 10: author one purchase order -> require that exact order to be supported
+schema 10: author a purchased set -> accept if any order is supported
+schema 11: author one purchase order -> require that exact order to be supported
 ```
 
 ## Target Authored Contract
@@ -141,11 +141,11 @@ does not infer purchases from a prior profile or declaration order.
 
 ## Schema and Codec Policy
 
-- Increment `PROJECT_DOCUMENT_SCHEMA_VERSION` from 9 to 10.
+- Increment `PROJECT_DOCUMENT_SCHEMA_VERSION` from 10 to 11.
 - Encode `purchaseOrder` once on `ShopState`.
 - Remove `purchased` from every encoded Shop offer.
 - Validate exact Shop keys, distinct order entries, and profile membership.
-- Schema 10 rejects schema 9. Add no compatibility decoder, migration shim, or
+- Schema 11 rejects schema 10. Add no compatibility decoder, migration shim, or
   mixed-shape runtime branch.
 - Update project factories and fixtures to author explicit orders.
 - Catalog version does not change because Shop declarations and slot identities
@@ -263,7 +263,7 @@ replace its boolean proposal with one complete proposed order.
 - Do not add drag-and-drop as the only ordering interaction.
 - Do not implement an execution-plan compiler; the authored order merely
   remains available to future consumers.
-- Do not add a schema-9 decoder, compatibility adapter, or catalog-version
+- Do not add a schema-10 decoder, compatibility adapter, or catalog-version
   change.
 
 ## Editor Contract
@@ -365,7 +365,7 @@ to keep the application green between slices.
 Tests stay with their semantic owners: command and codec coverage remains in
 authored-project tests, exact-order execution remains in reward-kernel and
 simulation tests, and candidate behavior remains in candidate tests. Do not
-create a catch-all test file named after schema 10.
+create a catch-all test file named after schema 11.
 
 ### Commit 5c.2: Project Ordered Shop Interactions
 
@@ -388,7 +388,7 @@ Likely files:
 - `apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts`
   for session-bound Shop purchase interactions;
 - architecture-boundary fixtures;
-- app test factories affected by schema 10.
+- app test factories affected by schema 11.
 
 Gate:
 
@@ -430,7 +430,7 @@ Gate:
 
 Commit 5c is complete only when:
 
-- schema 10 has one Shop-owned ordered list and no per-offer purchased boolean;
+- schema 11 has one Shop-owned ordered list and no per-offer purchased boolean;
 - `SetShopPurchase`, boolean Shop candidate contracts, and purchase permutation
   search are absent from production;
 - simulation validity depends on the exact authored order;

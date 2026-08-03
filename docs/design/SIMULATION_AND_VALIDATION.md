@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-9 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-10 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same canonical biome product.
 The application publishes those derived results to the editor, profiles, and
@@ -365,7 +365,7 @@ interface CanonicalBiome {
   biomeState: CanonicalBiomeState;
 }
 
-type CanonicalDecision = CanonicalLinkedExit | CanonicalBatch | CanonicalHubDecision;
+type CanonicalDecision = CanonicalBatch | CanonicalHubDecision;
 
 interface CanonicalBatch {
   kind: 'batch';
@@ -382,17 +382,18 @@ interface CanonicalBatch {
 interface CanonicalHubDecision {
   kind: 'hub';
   origin: HubDecisionAddress;
+  source: CanonicalRoomReference;
   room: CanonicalHubRoom;
   board: CanonicalHubBoard;
   visits: CanonicalHubVisit[];
 }
 ```
 
-`CanonicalLinkedExit` records a fixed authored target. `CanonicalBatch` owns
-one physical exit decision and every target created from it. Its targets are
-always ordered by the source room declaration's physical exit order, not by
-persisted insertion order or decision-array position. `CanonicalHubDecision`
-records the one N Hub room, its open board, and its selected visits.
+`CanonicalBatch` owns one physical exit decision and every target created from
+it. Its targets are always ordered by the source room declaration's physical
+exit order, not by persisted insertion order or decision-array position.
+`CanonicalHubDecision` records the selected PreHub source, the one N Hub room,
+its open board, and its selected visits.
 
 ```text
 entry room -> selected decision spine -> selected Preboss -> completion rooms
@@ -408,7 +409,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-9's non-authoritative decision-array order and keeps shared
+preserves schema-10's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -445,6 +446,12 @@ Candidate queries may use an ordinary exit frontier to evaluate a target that
 has not yet been created, and a takeover source frontier to evaluate the entire
 Preboss batch.
 
+N's bounded entry and terminal Hub decisions use the same exit frontier with a
+closed continuation fact. When either exact envelope is empty, history still
+completes the authored source-room lifecycle through commit and exit so the
+depth-1 PreHub or depth-2 Hub candidate consumes the correct post-room history.
+No target or Hub room is materialized merely to produce that checkpoint.
+
 ### Shared History and N Hub Semantics
 
 History composition initializes biome counters, walks the entry room and
@@ -454,9 +461,10 @@ It preserves exact physical creation order, counter state, occurrence identity,
 and restore identity. No decision-specific branch may initialize or finish a
 biome, apply its transition resets, or use a separate fold.
 
-N has one explicit structural specialization inside that same sequence. Opening
-links to PreHub, then PreHub links to the Hub decision. The Hub decision owns
-the persistent Hub room, board, six visits, parent-local side excursions, and
+N has one explicit structural specialization inside that same sequence.
+Opening's width-one normal batch selects PreHub. PreHub's exact empty terminal
+envelope is replaced by a source-bearing Hub decision, which owns the
+persistent Hub room, board, six visits, parent-local side excursions, and
 parent/Hub restores. Its board targets are generated in declaration-owned
 physical order. The selected Hub visits then occur in authored visit order.
 The Hub-owned Handoff batch is generated after the board targets in the Hub's
@@ -469,9 +477,10 @@ slots expose their incoming offer whether or not entered; not-generated slots
 expose none. Parent and Hub restores reference existing rooms and never create
 another occurrence or replay a lifecycle offer.
 
-PreHub is a fixed authored room in the same decision spine, rather than a
-Hub-only candidate rule. After canonical expansion, N history is an ordinary
-ordered event stream: Opening, PreHub, repeated Hub/main/side/restore
+PreHub is a declaration-fixed candidate in a bounded normal decision, while
+Hub is the only declaration-owned terminal result at the following depth-2
+frontier. After canonical expansion, N history is an ordinary ordered event
+stream: Opening, PreHub, repeated Hub/main/side/restore
 appearances, selected Preboss, Boss, and Postboss. Only the Hub decision
 determines the board, visit, side-room, and Handoff ordering within that stream.
 
@@ -1181,7 +1190,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
-  schema-9 fixtures across F through Q;
+  schema-10 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

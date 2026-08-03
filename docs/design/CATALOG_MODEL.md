@@ -10,9 +10,9 @@ It owns declaration families, provenance, normalization policy, requirement
 scope, labels, defaults, and catalog versioning. It does not own concrete
 authored choices or lifecycle simulation algorithms.
 
-## Schema 9 Unified Biome Decisions
+## Schema 10 Unified Biome Decisions
 
-Schema 9 is the current catalog authority. It uses one `BiomeLayout` envelope
+Schema 10 is the current authored contract over one `BiomeLayout` envelope
 instead of a layout-specific split:
 
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
@@ -28,9 +28,10 @@ Every Preboss uses the authored `Preboss` template plus
 `prebossBatchPolicy`. Takeover policies make the first normal exit a Shop
 occurrence and, when declared, later exits counted-free occurrences. I retains
 normal peers; F/G/H/O/P/Q take over their normal doors; N's completed Hub emits
-the same width-one normal-door batch. N is a fixed authored `N_Opening01`, its
-linked normal exit `prehub` reaches `N_PreHub01`, and its Hub decision key is
-`hub`.
+the same width-one normal-door batch. N starts with fixed authored
+`N_Opening01`; its bounded width-one entry uses the stable `prehub` exit to
+reach `N_PreHub01`, and its required depth-2 terminal resolution replaces an
+exact empty envelope with the source-bearing Hub decision keyed by `hub`.
 
 ### Superseded vocabulary
 
@@ -230,8 +231,11 @@ supported merely because its letter appears in the route order.
 N's layout owns the fixed mapping from semantic Hub slot to concrete Room
 Declaration. Authored state selects a supported open set and visit order; it
 does not replace the room assigned to a physical slot. N Opening and PreHub
-are real authored occurrences created by the fixed start and linked-exit
-contracts, not fixed-entry descriptors or ordinary generated candidates.
+are real authored occurrences. Opening is the fixed start; a bounded normal
+entry descriptor owns the stable `prehub` exit, the one-stage PreHub pool, and
+its one-batch/one-target bounds. A separate required terminal descriptor owns
+the depth-2 Hub takeover. Neither declaration makes Hub slots or side rooms
+ordinary candidates.
 Room-local side-slot descriptors remain facts of the concrete parent Room
 Declaration. N side slots own an availability rank because generation pressure
 forces a prefix of physical setup order. Their rewards resolve as one jointly
