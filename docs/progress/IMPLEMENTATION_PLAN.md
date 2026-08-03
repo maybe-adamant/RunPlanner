@@ -2167,8 +2167,8 @@ independently reviewable slices:
     delivery, plus the D history/reward audits, closed before the next
     cross-layer feature; and
 11. the completed Commit 5c replaces the Shop purchased-set model with exact
-    authored order through the two slices recorded in
-    `SHOP_PURCHASE_ORDER.md`.
+    authored order; its temporary implementation plan is retired after the
+    contract was absorbed into the owning design authorities.
 
 The owning design documents define the delivered contracts. Commit 4 is the
 explicit end of the unified biome refactor; Commits 5a and 5b preserve that

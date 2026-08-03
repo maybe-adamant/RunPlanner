@@ -67,8 +67,9 @@ set with the schema-11 exact authored Shop purchase order across the engine,
 candidate session, workspace projection, and row controls. Its automated
 closure passed 100 test files / 891 tests, every workspace typecheck, lint,
 formatting, and the production build; final desktop/narrow visual sign-off is
-the remaining Phase 7 acceptance input. Its delivery record is
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
+the remaining Phase 7 acceptance input. Its temporary implementation plan is
+retired; the durable contract remains in the authored-project, candidate,
+reward, lifecycle, simulation, and editor design authorities.
 
 N's depth-gated Hub normalization is complete. Schema 10 replaces the linked
 Opening-to-PreHub product with one bounded width-one normal decision, gives
@@ -102,12 +103,12 @@ paths in production. A holistic test read then found that focused owner tests
 had been added without retiring overlapping facade and React assertions. The
 four review units—A14, A15.1, A15.2, and A16—closed that test ownership.
 The completed sequencing closed the candidate, authored-core, history, and
-reward campaigns before Commit 5b.3 resumed. The separate
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) delivery record captures
-the completed schema-11 exact purchase order, simulation validation, and
-editor surface. Commit 5c intentionally replaced the schema-10 purchased-set
-contract. These plans supersede the former presentation-only Commit 12 and
-Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
+reward campaigns before Commit 5b.3 resumed. Commit 5c then completed the
+schema-11 exact purchase order, simulation validation, and editor surface. It
+intentionally replaced the schema-10 purchased-set contract; its temporary
+implementation plan is retired after absorption into the owning authorities.
+These plans supersede the former presentation-only Commit 12 and Commit 13
+wording in `IMPLEMENTATION_PLAN.md`.
 
 Campaign A's A1-through-A11 structural delivery is complete. A7 moved the
 private marker and preliminary-destination builder plus all room-local

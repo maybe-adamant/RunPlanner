@@ -24,8 +24,8 @@ The intervening work materially changed the surface this audit governs:
 Commit 5b.4 is a presentation-only change. It translates visible copy,
 accessible names, finding destinations, and evidence-dependent explanations;
 it does not rename domain contracts, change candidate support, alter topology,
-or make React calculate simulation or removal facts. The
-`shopPurchaseUnavailable` wording remains deferred to Commit 5c.
+or make React calculate simulation or removal facts. Commit 5c subsequently
+completed the exact-order `shopPurchaseUnavailable` wording recorded below.
 
 ## Audit Boundary
 
