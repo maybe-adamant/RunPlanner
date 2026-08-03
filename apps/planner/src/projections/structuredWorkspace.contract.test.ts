@@ -476,6 +476,33 @@ describe('structured workspace overlay contract', () => {
     );
   });
 
+  it('does not publish an ungenerated Ephyra reward as a current workspace leaf', () => {
+    const sideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const reward = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom,
+      generation: 'notGenerated',
+    });
+    const projected = projectWorkspace(project);
+
+    expect(projected.focusByOwner.get(semanticAddressKey(reward))).toBeUndefined();
+    expect(projected.interactions.rewards.get(semanticAddressKey(reward))).toBeUndefined();
+    expect(
+      projected.interactions.sideRoomGenerations.get(semanticAddressKey(sideRoom)),
+    ).toBeDefined();
+  });
+
   it('rejects an independently expected editable leaf omitted from projection products', () => {
     const project = createRepresentativeNOPQProject();
     const plan = project.routes

@@ -190,6 +190,7 @@ function controlsForOccurrence(
             `${sideRoom.gameName} side room has no counted reward binding`,
           );
         }
+        if (side.generation !== 'generated') continue;
         const address = createLocalRewardAddress(
           input.biome,
           occurrence.occurrenceId,
@@ -346,7 +347,7 @@ function ephyraSideRoomEntryOrderControl(
   const options: WorkspaceEphyraSideRoomEntryOption[] = [
     Object.freeze({
       key: 'notEntered',
-      label: 'Not entered',
+      label: 'Not visited',
       position: null,
       proposedEnteredSlotKeys: withoutSlot,
     }),
@@ -439,39 +440,48 @@ function roomLocalForOccurrence(
         .filter(([, side]) => side.enteredOrdinal !== null)
         .sort((left, right) => left[1].enteredOrdinal! - right[1].enteredOrdinal!)
         .map(([slotKey]) => slotKey);
-      const slots = group.slots.map((slot) => {
-        const side = state.sideRooms[slot.slotKey];
-        if (side === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Ephyra state is missing side room ${slot.slotKey}`,
+      const slots = [...group.slots]
+        .sort((left, right) => left.availabilityRank - right.availabilityRank)
+        .map((slot) => {
+          const side = state.sideRooms[slot.slotKey];
+          if (side === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${room.gameName} Ephyra state is missing side room ${slot.slotKey}`,
+            );
+          }
+          const sideRoom = requireRoom(input.catalog, slot.roomGameName);
+          const address = createLocalChildAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            group.key,
+            slot.slotKey,
           );
-        }
-        const sideRoom = requireRoom(input.catalog, slot.roomGameName);
-        const address = createLocalChildAddress(
-          input.biome,
-          occurrence.occurrenceId,
-          group.key,
-          slot.slotKey,
-        );
-        const reward = createLocalRewardAddress(
-          input.biome,
-          occurrence.occurrenceId,
-          group.key,
-          slot.slotKey,
-        );
-        return Object.freeze({
-          address,
-          entered: side.enteredOrdinal !== null,
-          enteredOrdinal: side.enteredOrdinal,
-          entryOrder: ephyraSideRoomEntryOrderControl(address, enteredSlotKeys, slot.slotKey),
-          generation: side.generation,
-          key: slot.slotKey,
-          label: sideRoom.label,
-          marker: input.markerDestinations.marker(address),
-          physicalDoorId: slot.physicalDoorId,
-          rewardControl: requireProjectedRewardControl(controls, reward, 'countedReward'),
+          const descriptor = {
+            address,
+            availabilityRank: slot.availabilityRank,
+            entered: side.enteredOrdinal !== null,
+            enteredOrdinal: side.enteredOrdinal,
+            entryOrder: ephyraSideRoomEntryOrderControl(address, enteredSlotKeys, slot.slotKey),
+            key: slot.slotKey,
+            label: sideRoom.label,
+            marker: input.markerDestinations.marker(address),
+            physicalDoorId: slot.physicalDoorId,
+          };
+          if (side.generation === 'notGenerated') {
+            return Object.freeze({ ...descriptor, generation: side.generation });
+          }
+          const reward = createLocalRewardAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            group.key,
+            slot.slotKey,
+          );
+          return Object.freeze({
+            ...descriptor,
+            generation: side.generation,
+            rewardControl: requireProjectedRewardControl(controls, reward, 'countedReward'),
+          });
         });
-      });
       return Object.freeze({
         kind: 'ephyra' as const,
         incomingReward,

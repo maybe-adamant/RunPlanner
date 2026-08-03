@@ -193,9 +193,11 @@ export function expectedWorkspaceLeafRequirements(
               workspaceSideRoomEntryOrderTestKey(sideAddress),
             ),
           );
-          requireReward(
-            createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
-          );
+          if (occurrence.state.sideRooms[slot.slotKey]?.generation === 'generated') {
+            requireReward(
+              createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
+            );
+          }
         }
         break;
       }

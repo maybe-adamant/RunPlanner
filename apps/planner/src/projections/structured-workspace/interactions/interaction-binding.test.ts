@@ -7,6 +7,7 @@ import {
   createHubDecisionAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
   createLocalRewardAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
@@ -536,6 +537,51 @@ describe('structured workspace interaction binding', () => {
     ).toEqual({
       command: { kind: 'ReplaceShopOffer', offer: shop, value: replacement },
     });
+  });
+
+  it('withholds an ungenerated Ephyra reward binding while retaining its side controls', () => {
+    const sideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const localReward = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom,
+      generation: 'notGenerated',
+    });
+    const { assembly, interactions } = bind(project, 'Surface', 'N');
+    const combat = assembly.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('combat02'),
+    );
+    if (
+      combat?.kind !== 'occurrenceWorkbench' ||
+      combat.room.roomLocal.kind !== 'ephyra' ||
+      combat.room.roomLocal.sideRooms.kind !== 'published'
+    ) {
+      throw new Error('Ephyra ungenerated-side binding fixture is missing');
+    }
+    const slot = combat.room.roomLocal.sideRooms.group.slots.find(
+      (candidate) => candidate.key === 'sideDoor2',
+    );
+    if (slot?.generation !== 'notGenerated') {
+      throw new Error('Ephyra sideDoor2 was not projected as ungenerated');
+    }
+
+    expect(interactions.rewards.has(semanticAddressKey(localReward))).toBe(false);
+    expect(interactions.sideRoomGenerations.get(semanticAddressKey(sideRoom))).toMatchObject({
+      owner: sideRoom,
+      selected: 'notGenerated',
+    });
+    expect(interactions.sideRoomEntryOrders.get(slot.entryOrder.interactionKey)).toBeDefined();
   });
 
   it('binds the only terminal Door 1 takeover choice to its exact replacement command', () => {

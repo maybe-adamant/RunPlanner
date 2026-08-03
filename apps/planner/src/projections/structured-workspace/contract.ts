@@ -505,18 +505,28 @@ export interface WorkspaceEphyraSideRoomEntryOrderControl {
   readonly selectedKey: string;
 }
 
-export interface WorkspaceEphyraSideRoomDescriptor {
+interface WorkspaceEphyraSideRoomDescriptorBase {
   readonly address: LocalChildAddress;
+  /** Declared physical availability order for the parent-local pressure rule. */
+  readonly availabilityRank: number;
   readonly entered: boolean;
   readonly enteredOrdinal: number | null;
   readonly entryOrder: WorkspaceEphyraSideRoomEntryOrderControl;
-  readonly generation: SideRoomGeneration;
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly physicalDoorId: number;
-  readonly rewardControl: WorkspaceCountedRewardControl;
 }
+
+/** A side offer becomes an active editable leaf only after generation. */
+export type WorkspaceEphyraSideRoomDescriptor =
+  | (WorkspaceEphyraSideRoomDescriptorBase & {
+      readonly generation: 'generated';
+      readonly rewardControl: WorkspaceCountedRewardControl;
+    })
+  | (WorkspaceEphyraSideRoomDescriptorBase & {
+      readonly generation: 'notGenerated';
+    });
 
 export interface WorkspaceEphyraSideRoomGroup {
   readonly address: LocalChildGroupAddress;

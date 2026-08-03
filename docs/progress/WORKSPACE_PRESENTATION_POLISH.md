@@ -81,7 +81,7 @@ concept:
 
 1. present N as `Opening -> PreHub -> Hub -> Preboss`, with the six authored
    Hub visits nested under Hub;
-2. replace Ephyra side-room entry buttons with one visible generated/entry-order
+2. replace Ephyra side-room entry buttons with one visible generated/visit-order
    grid;
 3. stop showing dormant third H cage and O combat-phase reward sections when
    the authored active count excludes them;
@@ -125,7 +125,7 @@ changes coherently.
     rail and respects `railVisibility: "inspectorOnly"`;
   - `assembly/hub-assembly.ts` creates Hub room-local workbenches and connects
     authored Hub visits to their occurrence-owned `WorkspaceRoomSummary`;
-  - `assembly/occurrence-assembly.ts` owns the projected Ephyra entry-order,
+  - `assembly/occurrence-assembly.ts` owns the projected Ephyra visit-order,
     Fields, and Ship descriptors, including their `active` facts;
   - `interactions/interaction-binding.ts` binds the complete side-room sequence
     to its candidate query, while `OccurrenceWorkbench.tsx` dispatches
@@ -220,24 +220,26 @@ a Hub visit.
   are not duplicated in its child workbench.
 - Ordinary-biome rail fixtures remain unchanged.
 
-## Change 2: Direct Ephyra Side-Room Entry Grid
+## Change 2: Direct Ephyra Side-Room Visit Grid
 
 ### Presentation
 
 An entered Ephyra parent presents its declared side rooms as:
 
 ```text
-Side room       Generated       Entry order
-Side Room 1     Generated       2nd
-Side Room 2     Generated       1st
-Side Room 3     Not generated   Not entered
+Room          Priority    Generated       Visit order
+Side Room 1  1           Generated       2nd
+Side Room 2  2           Generated       1st
+Side Room 3  3           Not generated   Not visited
 ```
 
-Use `Generated`, not `Opened`. Generation and entry are distinct facts: a side
-room may be generated without being entered, while a not-generated room cannot
-be entered.
+Use `Generated`, not `Opened`. Generation and a visit are distinct facts: a
+side room may be generated without being visited, while a not-generated room
+cannot be visited. Rows appear in declaration-owned generation-priority order;
+the read-only priority column exposes that order without making it authored
+state.
 
-The entry control is one select with `Not entered` followed by every structural
+The visit control is one select with `Not visited` followed by every structural
 position available to that row. Candidate-impossible positions remain visible
 but disabled. The select replaces `Enter Last`, `Remove From Entry Order`,
 `Earlier`, and `Later`.
@@ -248,12 +250,12 @@ scalar `CandidateSelect`.
 
 ### Ordering Policy
 
-- A currently entered room in an order of length `k` exposes positions `1`
-  through `k`. A not-entered room exposes insertion positions `1` through
+- A currently visited room in an order of length `k` exposes positions `1`
+  through `k`. A not-visited room exposes insertion positions `1` through
   `k + 1`.
-- Selecting `Not entered` removes the room and compacts the remaining order.
+- Selecting `Not visited` removes the room and compacts the remaining order.
 - Selecting position `n` removes the room from its old position if necessary,
-  inserts it at `n`, and shifts the other entered rooms atomically.
+  inserts it at `n`, and shifts the other visited rooms atomically.
 - Every option represents one complete proposed `enteredSlotKeys` sequence.
   Duplicate ordinals and gaps are never rendered or dispatched.
 - The application projection constructs every direct insertion/removal
@@ -263,18 +265,20 @@ scalar `CandidateSelect`.
   selected complete sequence. It performs no local repair.
 - Candidate-impossible positions remain visible and disabled with the existing
   explanation behavior.
-- Changing generation continues through `ReplaceSideRoomGeneration`. An entered
-  room is not silently removed from entry order to permit a generation change.
-- Generated and dormant reward presentation retains its existing behavior; this
-  slice changes side-room generation and order controls, not reward ownership
-  or retention.
+- Changing generation continues through `ReplaceSideRoomGeneration`. A visited
+  room is not silently removed from visit order to permit a generation change.
+- Generation is the side reward's activation boundary: generated rows publish
+  their editable reward, while not-generated rows retain the authored value
+  without publishing a current reward control, marker, or interaction. Entry
+  affects acquisition only; this changes presentation ownership without
+  changing reward retention or simulation timing.
 
 ### Deliverables
 
 - Replace adjacent-only side-room order proposals with all direct positions for
   the selected row.
 - Project presentation-ready position labels and complete proposed sequences.
-- Replace the current action-button cluster with the generated/entry-order grid.
+- Replace the current action-button cluster with the generated/visit-order grid.
 - Keep side-room reward editing associated with its row and visually subordinate
   to the two structural controls.
 - Preserve semantic markers, candidate loading, findings, and one-command
@@ -283,11 +287,11 @@ scalar `CandidateSelect`.
 ### Acceptance
 
 - Every generated room can move directly to any legal position in one action.
-- Removing an entered room compacts the order; inserting or moving one shifts
+- Removing a visited room compacts the order; inserting or moving one shifts
   peers deterministically.
-- No interaction can author duplicates, gaps, or a not-generated entered room.
+- No interaction can author duplicates, gaps, or a not-generated visited room.
 - One change creates one history entry; Undo and Redo restore the exact order.
-- Generation, entry order, and reward values survive profile round trips
+- Generation, visit order, and reward values survive profile round trips
   without a schema change.
 
 ## Change 3: Hide Dormant H and O Reward Sections

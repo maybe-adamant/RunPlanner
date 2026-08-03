@@ -7,6 +7,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
@@ -288,12 +289,12 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat02')),
     );
     const entryOrder = screen.getByRole('combobox', {
-      name: 'Side Room 03 entry order',
+      name: 'Side Room 03 visit order',
     }) as HTMLSelectElement;
     await view.user.click(entryOrder);
     await waitFor(() => {
       expect(Array.from(entryOrder.options).map((option) => option.textContent)).toEqual([
-        'Not entered',
+        'Not visited',
         '1st — unavailable',
         '2nd — unavailable',
       ]);
@@ -310,6 +311,88 @@ describe('OccurrenceWorkbench', () => {
     });
   });
 
+  it('orders side rooms by priority and exposes rewards only while generated', async () => {
+    const sideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    const reward = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor2',
+    );
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom,
+      generation: 'generated',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward,
+      value: { rewardType: 'AirBoost' },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat02')),
+    );
+    const table = screen.getByRole('table', {
+      name: 'Ephyra side-room generation and visit order',
+    });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Room', 'Priority', 'Generated', 'Visit order']);
+    expect(
+      within(table)
+        .getAllByRole('row')
+        .slice(1)
+        .map(
+          (row) => row.querySelector('.ephyra-side-room-heading .owner-markers span')?.textContent,
+        ),
+    ).toEqual(['Side Room 03', 'Side Room 01']);
+
+    const sideRow = () => {
+      const row = screen.getByText('Side Room 03').closest('tr');
+      if (row === null) throw new Error('Side Room 03 row is missing');
+      return row;
+    };
+    expect(within(sideRow()).getByRole('button', { name: 'Reward' })).toBeTruthy();
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceSideRoomGeneration',
+          sideRoom,
+          generation: 'notGenerated',
+        }),
+      ),
+    );
+    await waitFor(() => {
+      expect(within(sideRow()).queryByRole('button', { name: 'Reward' })).toBeNull();
+      expect(within(sideRow()).getByLabelText('Side Room 03 generation')).toBeTruthy();
+      expect(within(sideRow()).getByLabelText('Side Room 03 visit order')).toBeTruthy();
+    });
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceSideRoomGeneration',
+          sideRoom,
+          generation: 'generated',
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(within(sideRow()).getByRole('button', { name: 'Reward' })).toBeTruthy(),
+    );
+  });
+
   it('applies a direct side-room insertion as one undoable complete order', async () => {
     const view = renderOccurrenceWorkbench(
       createRepresentativeNOPQProject(),
@@ -318,12 +401,12 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat05')),
     );
     const table = screen.getByRole('table', {
-      name: 'Ephyra side-room generation and entry order',
+      name: 'Ephyra side-room generation and visit order',
     });
-    expect(within(table).getByRole('columnheader', { name: 'Side room' })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: 'Room' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Enter last|Earlier|Later/ })).toBeNull();
     const entryOrder = within(table).getByRole('combobox', {
-      name: 'Side Room 03 entry order',
+      name: 'Side Room 03 visit order',
     }) as HTMLSelectElement;
     await view.user.click(entryOrder);
     await waitFor(() =>

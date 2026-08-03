@@ -589,8 +589,10 @@ offer or ledger consumer.
 Visited combat occurrences own bounded fixed side-room slots. Generated slots
 resolve together from either `SubRoomRewards` or `SubRoomRewardsHard`; generated
 unentered slots consume their bag, while entered slots also acquire. A side
-slot's complete dormant leaf is retained when its generation state is
-`notGenerated` or its parent hub target is unvisited.
+slot retains its complete authored offer when its generation state is
+`notGenerated` or its parent Hub target is unvisited. It becomes an active
+reward leaf only when the parent detail is active and the side slot is
+generated.
 
 All generated siblings receive offers before any side room can be entered.
 They share one same-batch duplicate set and mutate their declared counted bags,
