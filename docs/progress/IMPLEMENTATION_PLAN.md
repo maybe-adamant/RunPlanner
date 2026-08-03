@@ -2198,8 +2198,9 @@ declaration-derived biome completion.
 - linked exits, generated batches, takeover preboss batches, I's mixed batch,
   and N's Hub retain their distinct domain invariants inside the common decision
   and workspace envelopes;
-- N exposes its Hub board and visit timeline as the one specialized Hub
-  decision workbench rather than a separate full-biome editor;
+- N exposes one ranked Hub board with an explicit six-visit prefix cutoff as
+  the specialized Hub decision workbench rather than a separate full-biome
+  editor or duplicate visit-order authoring surface;
 - empty and partial workspaces show only truthful declared or projected facts;
 - no room, reward, bag, force, preboss, completion, or blocking rule exists only
   in React;
@@ -2212,30 +2213,43 @@ declaration-derived biome completion.
 Add Tauri after the browser application proves the complete cross-biome
 simulation and shared UX architecture.
 
-Phase 8 begins with a deliberately narrow no-install delivery slice: one
+Phase 8 is a deliberately narrow no-install delivery slice: one
 permission-minimal Tauri host around the existing Vite build and one Windows
 x64 workflow that publishes a ZIP containing the unbundled executable. This
 portable preview uses the existing browser profile and recovery adapters,
 depends on the system WebView2 runtime, and adds no installer, updater, native
-plugin, or Rust-side application behavior. Native file adapters and the other
-desktop capabilities below remain later independent slices.
+plugin, or Rust-side application behavior.
 
 ### Deliverables
 
 - Tauri 2 wrapper around the existing Vite build;
-- native open/save dialogs;
-- scoped project-file access;
-- clipboard integration;
-- Windows packaging;
-- app preferences that are separate from project documents.
+- the unchanged browser profile and recovery adapters inside that wrapper;
+- unbundled Windows x64 executable with an application icon;
+- no-install ZIP and SHA-256 checksum;
+- explicit stable release-version input independent of package and crate
+  metadata;
+- repository gate, executable build, launch smoke, artifact upload, exact
+  tested-commit tag, and GitHub release in one workflow run.
 
 ### Acceptance
 
 - browser-hosted core and tests remain unchanged;
 - no simulation logic moves into Rust;
 - project files round-trip identically in browser fixtures and desktop use;
-- filesystem permissions are narrow and explicit;
-- packaged Windows behavior passes a focused smoke test.
+- the host registers no native application commands, plugins, or frontend
+  capabilities;
+- packaged Windows behavior passes a focused launch smoke test;
+- the release archive and checksum are published under the explicit version;
+- the generated tag names the exact commit that passed the build and smoke
+  test, and a rerun cannot move that tag to another commit.
+
+### Deferred Desktop Integrations
+
+Native open/save dialogs, scoped project-file access, clipboard integration,
+application preferences, installers, updaters, and additional operating-system
+artifacts are not Phase 8 acceptance requirements. Each requires a separate
+product need and a complete adapter-and-permission slice; none is implied by
+the presence of Tauri.
 
 ## Phase 9: Simulation Conformance and Game Protocol
 
@@ -2260,7 +2274,7 @@ The game module remains a declarative consumer and auditor.
 - corruption and recovery UX;
 - broad performance profiling;
 - worker offload only if measured simulation latency requires it;
-- application updates and release process;
+- installer/updater decisions and release-process hardening;
 - full accessibility audit;
 - documentation reconciliation;
 - removal of superseded temporary migration notes;

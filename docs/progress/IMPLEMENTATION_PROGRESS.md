@@ -12,10 +12,11 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-Phase 7 is in final visual acceptance. Commits 1 through 11, the candidate-system refactor,
-Tartarus reconciliation, sequential blank-slot candidate evaluation, and the
-schema-8 authored-prerequisite correction are complete. All eight biomes
-participate in the production product loop.
+Phase 7 is complete. Commits 1 through 12, the candidate-system refactor,
+Tartarus reconciliation, sequential blank-slot candidate evaluation, the
+schema-8 authored-prerequisite correction, and the final interaction and
+visual-acceptance follow-ups are complete. All eight biomes participate in the
+production product loop.
 
 The Linear focus progression correction is complete. It retains the existing
 transient semantic focus action: creation keeps its authored workbench
@@ -66,10 +67,34 @@ in their owning authorities. Commit 5c has replaced the schema-10 purchased
 set with the schema-11 exact authored Shop purchase order across the engine,
 candidate session, workspace projection, and row controls. Its automated
 closure passed 100 test files / 891 tests, every workspace typecheck, lint,
-formatting, and the production build; final desktop/narrow visual sign-off is
-the remaining Phase 7 acceptance input. Its temporary implementation plan is
-retired; the durable contract remains in the authored-project, candidate,
+formatting, and the production build. Manual use accepted the current checkbox
+and ordinal controls; the proposed purchased-first drag surface is declined and
+does not remain planned work. Its temporary implementation plan is retired;
+the durable exact-order contract remains in the authored-project, candidate,
 reward, lifecycle, simulation, and editor design authorities.
+
+The N ranked-board follow-up is complete in `4a9758d`. One aggregate semantic
+command and one Hub-decision-owned candidate interaction now author and assess
+the complete dense visit prefix. `HubDecisionWorkbench` renders every open room
+once in a ranked roster, keeps only the first six positions semantic, and
+retains the unvisited tail as session-only presentation state. The separate
+visit-order authoring timeline and its position-shaped command/candidate paths
+are deleted; exact visit markers and nested room-local navigation remain. Its
+durable contracts are absorbed into the authored-project, candidate, editor,
+structured-workspace, and N authorities, so the temporary Hub plan is retired.
+
+Phase 8's narrow portable-shell implementation is complete. The
+permission-minimal Tauri host wraps the existing Vite application without
+plugins, frontend capabilities, or Rust-side application behavior. The Windows
+x64 workflow passes the repository gate, compiles and launch-smokes the
+unbundled executable, and publishes a ZIP plus checksum. It now accepts an
+explicit stable release version, injects it only into the Tauri build, and
+creates the corresponding tag and GitHub release on the exact tested commit.
+The first explicit release completed successfully in workflow run
+`30841501746`: tag `v0.1.0` points to tested commit `b0c3481`, and the published
+release contains the portable ZIP and its SHA-256 checksum. Phase 8 is complete.
+Phase 9 remains unopened until the game-integration readiness gate is reviewed
+and passes.
 
 N's depth-gated Hub normalization is complete. Schema 10 replaces the linked
 Opening-to-PreHub product with one bounded width-one normal decision, gives

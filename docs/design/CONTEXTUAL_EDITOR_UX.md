@@ -526,8 +526,8 @@ The common component must support:
 9. coverage-derived feedback and blocked presentation;
 10. shared `WorkspaceBiome` structured-workspace projection;
 11. ordinary decision rail and focused-inspector presentation;
-12. `HubDecisionWorkbench`, board, visit timeline, and focused-inspector
-    presentation;
+12. `HubDecisionWorkbench`, ranked board with its explicit visit-prefix cutoff,
+    and focused-inspector presentation;
 13. frontier, prompt-free repair, accessibility, performance, and responsiveness
     closure across F/G/H/I/N/O/P/Q.
 
