@@ -1,4 +1,9 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  nemesisEncounterKeys,
+  nemesisIncomingRewardExclusions,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 const excludesClockworkGoal = {
   kind: 'currentRoomRewardExcludes',
@@ -35,6 +40,35 @@ export const iEncounterDefinitions = [
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
+    key: 'NemesisCombatI',
+    label: 'Nemesis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Nemesis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: nemesisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: nemesisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
     key: 'Story_Hades_01',
     label: 'Hades story',
     kind: 'story',
@@ -58,12 +92,12 @@ export const iEncounterDefinitions = [
 export const iEncounterSets = [
   {
     key: 'IEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+    encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
     defaultEncounterDefinitionKey: 'GeneratedI',
   },
   {
     key: 'IEncountersSmaller',
-    encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward'],
+    encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward', 'NemesisCombatI'],
     defaultEncounterDefinitionKey: 'GeneratedI_Small',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

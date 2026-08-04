@@ -107,6 +107,14 @@ export const icarusEncounterKeys = ['IcarusCombatO', 'IcarusCombatP'] as const;
 
 export const athenaEncounterKeys = ['AthenaCombatP'] as const;
 
+/** Nemesis route exclusion is permanently limited to its four combat variants. */
+export const nemesisEncounterKeys = [
+  'NemesisCombatF',
+  'NemesisCombatG',
+  'NemesisCombatH',
+  'NemesisCombatI',
+] as const;
+
 /**
  * The supported field-NPC spacing identities. Later delivery
  * gates extend this exact list when they add their own declared combat encounters.
@@ -116,6 +124,7 @@ export const supportedFieldNpcEncounterKeys = [
   ...heraclesEncounterKeys,
   ...icarusEncounterKeys,
   ...athenaEncounterKeys,
+  ...nemesisEncounterKeys,
 ] as const;
 
 export const arachneEncounterKeys = ['ArachneCombatF', 'ArachneCombatG'] as const;
@@ -137,3 +146,5 @@ export const arachneIncomingRewardExclusions = [
   'StackUpgrade',
   'TalentDrop',
 ] as const;
+
+export const nemesisIncomingRewardExclusions = arachneIncomingRewardExclusions;

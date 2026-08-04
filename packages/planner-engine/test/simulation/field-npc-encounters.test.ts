@@ -32,10 +32,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createCompleteFGProject,
+  createGoldenFGHProject,
+  createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
+  goldenHBiome,
+  goldenIBiome,
   nBiome,
   nOccurrenceId,
   oOccurrenceIds,
@@ -67,7 +71,7 @@ function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encou
   );
 }
 
-function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G') {
+function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
   const result = simulateProject(catalog, project);
   const biome = result.routes
     .find((route) => route.routeKey === 'Underworld')
@@ -102,6 +106,14 @@ function authoredOccurrence(
     throw new Error(`missing ${biomeKey} occurrence ${occurrenceId}`);
   }
   return occurrence;
+}
+
+function fieldsCages(project: ProjectDocument, occurrenceId: OccurrenceId) {
+  const state = authoredOccurrence(project, 'H', occurrenceId).state;
+  if (state.kind !== 'fieldsCombat') {
+    throw new Error(`H ${occurrenceId} is not a Fields combat room`);
+  }
+  return state.cages;
 }
 
 function replaceCollectionEntry<T extends { readonly key: string }>(
@@ -316,6 +328,145 @@ describe('field NPC encounter requirements', () => {
     expect(evaluation.biome.findings).not.toContainEqual(
       expect.objectContaining({ code: 'encounterUnavailable', origin: gArachnePhase }),
     );
+  });
+
+  it('keeps Nemesis combat route-once, shared-six spaced, and independent from ordinary rewards', () => {
+    const nemesisF = phase(goldenFBiome, goldenFOccurrenceId(5, 1));
+    const followingArtemis = phase(goldenFBiome, goldenFOccurrenceId(7, 1));
+    const nemesisG = phase(goldenGBiome, goldenGOccurrenceId(4, 1));
+    const nemesisI = phase(goldenIBiome, createOccurrenceId('golden-i-combat09'));
+    const initial = createGoldenFGHIProject();
+    const retainedIncomingReward = authoredOccurrence(
+      initial,
+      'F',
+      goldenFOccurrenceId(5, 1),
+    ).state;
+    const retainedGIncomingReward = authoredOccurrence(
+      initial,
+      'G',
+      goldenGOccurrenceId(4, 1),
+    ).state;
+    const retainedIIncomingReward = authoredOccurrence(
+      initial,
+      'I',
+      createOccurrenceId('golden-i-combat09'),
+    ).state;
+
+    expect(support(initial, nemesisF)?.candidateEncounterKeys).toContain('NemesisCombatF');
+    expect(support(initial, nemesisG)?.candidateEncounterKeys).toContain('NemesisCombatG');
+    expect(support(initial, nemesisI)?.candidateEncounterKeys).toContain('NemesisCombatI');
+
+    const withNemesisG = select(initial, nemesisG, 'NemesisCombatG');
+    expect(authoredOccurrence(withNemesisG, 'G', goldenGOccurrenceId(4, 1)).state).toEqual(
+      retainedGIncomingReward,
+    );
+    const withNemesisI = select(initial, nemesisI, 'NemesisCombatI');
+    expect(
+      authoredOccurrence(withNemesisI, 'I', createOccurrenceId('golden-i-combat09')).state,
+    ).toEqual(retainedIIncomingReward);
+
+    const withNemesis = select(initial, nemesisF, 'NemesisCombatF');
+    expect(authoredOccurrence(withNemesis, 'F', goldenFOccurrenceId(5, 1)).state).toEqual(
+      retainedIncomingReward,
+    );
+    expect(support(withNemesis, followingArtemis)?.candidateEncounterKeys).not.toContain(
+      'ArtemisCombatF',
+    );
+    expect(support(withNemesis, nemesisG)?.candidateEncounterKeys).not.toContain('NemesisCombatG');
+    expect(support(withNemesis, nemesisI)?.candidateEncounterKeys).not.toContain('NemesisCombatI');
+
+    const withArachne = select(initial, nemesisF, 'ArachneCombatF');
+    expect(support(withArachne, followingArtemis)?.candidateEncounterKeys).toContain(
+      'ArtemisCombatF',
+    );
+  });
+
+  it('records Nemesis Cage01 before evaluating Cage02 without starting its depth effect', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const room = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const passive = phase(goldenHBiome, occurrenceId, 'Passive');
+    const cage1 = phase(goldenHBiome, occurrenceId, 'Cage01');
+    const cage2 = phase(goldenHBiome, occurrenceId, 'Cage02');
+    const cage3 = phase(goldenHBiome, occurrenceId, 'Cage03');
+    const initial = createGoldenFGHProject();
+    const retainedCageRewards = fieldsCages(initial, occurrenceId);
+
+    expect(support(initial, passive)?.candidateEncounterKeys).not.toContain('NemesisCombatH');
+    expect(support(initial, cage1)?.candidateEncounterKeys).toContain('NemesisCombatH');
+    expect(support(initial, cage2)?.candidateEncounterKeys).toContain('NemesisCombatH');
+    expect(support(initial, cage3)).toBeUndefined();
+
+    let blocked = select(initial, cage2, 'NemesisCombatH');
+    blocked = select(blocked, cage1, 'NemesisCombatH');
+    expect(fieldsCages(blocked, occurrenceId)).toEqual(retainedCageRewards);
+    expect(support(blocked, cage1)).toMatchObject({
+      active: true,
+      selectedEncounterKey: 'NemesisCombatH',
+      selectedPossible: true,
+    });
+    expect(support(blocked, cage2)).toMatchObject({
+      active: true,
+      selectedEncounterKey: 'NemesisCombatH',
+      selectedPossible: false,
+    });
+
+    const baseline = evaluatedBiome(initial, 'H').biome;
+    const baselineRoom = baseline.history.rooms.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
+    );
+    const blockedBiome = evaluatedBiome(blocked, 'H').biome;
+    if (baselineRoom === undefined) throw new Error('H fixture lost its first Fields room');
+    expect(blockedBiome.coverage).toMatchObject({ kind: 'prefix', blockedAt: cage2 });
+    expect(blockedBiome.history.ledgers.encounterRecords).toContainEqual(
+      expect.objectContaining({
+        origin: room,
+        slotKey: 'Cage01',
+        encounterKey: 'NemesisCombatH',
+      }),
+    );
+    expect(blockedBiome.history.ledgers.encounterStarts).not.toContainEqual(
+      expect.objectContaining({ origin: room, slotKey: 'Cage01' }),
+    );
+    expect(blockedBiome.history.ledgers.counters.biomeEncounterDepth).toBe(
+      baselineRoom.preparation.ledgers.counters.biomeEncounterDepth,
+    );
+
+    const valid = select(initial, cage1, 'NemesisCombatH');
+    const validBiome = evaluatedBiome(valid, 'H').biome;
+    const validRoom = validBiome.history.rooms.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
+    );
+    const materializedRoom = validBiome.snapshot.decisions
+      .filter((decision) => decision.kind === 'batch')
+      .flatMap((decision) => decision.targets.map((target) => target.room))
+      .find((candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room));
+    const nemesisStart = validBiome.history.ledgers.encounterStarts.find(
+      (entry) =>
+        semanticAddressKey(entry.origin) === semanticAddressKey(room) &&
+        entry.slotKey === 'Cage01' &&
+        entry.encounterKey === 'NemesisCombatH',
+    );
+    const nemesisAdvance = validBiome.history.events.find(
+      (event) =>
+        event.kind === 'encounterDepthAdvanced' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(room) &&
+        event.phaseKey === 'Cage01',
+    );
+    if (
+      validRoom?.postCommit === undefined ||
+      materializedRoom === undefined ||
+      nemesisStart === undefined
+    ) {
+      throw new Error('valid H Nemesis room lost its lifecycle products');
+    }
+    expect(nemesisAdvance?.sequence).toBeGreaterThan(nemesisStart.sequence);
+    expect(
+      validRoom.postCommit.ledgers.counters.biomeEncounterDepth -
+        validRoom.preparation.ledgers.counters.biomeEncounterDepth,
+    ).toBe(2);
+    expect(
+      materializedRoom.localRewards?.find((reward) => reward.slotKey === 'cage1')?.offer,
+    ).toEqual(retainedCageRewards.cage1);
   });
 
   it('applies exact predecessor-room spacing without treating an earlier current-room phase as a predecessor', () => {

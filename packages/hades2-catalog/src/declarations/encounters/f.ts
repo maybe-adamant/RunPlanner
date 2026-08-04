@@ -4,6 +4,8 @@ import {
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
   artemisIncomingRewardExclusions,
+  nemesisEncounterKeys,
+  nemesisIncomingRewardExclusions,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
@@ -74,6 +76,35 @@ export const fEncounterDefinitions = [
     },
   },
   {
+    key: 'NemesisCombatF',
+    label: 'Nemesis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Nemesis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: nemesisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: nemesisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
     key: 'Story_Arachne_01',
     label: 'Arachne story',
     kind: 'story',
@@ -109,7 +140,7 @@ export const fEncounterDefinitions = [
 export const fEncounterSets = [
   {
     key: 'FEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedF', 'ArtemisCombatF', 'ArachneCombatF'],
+    encounterDefinitionKeys: ['GeneratedF', 'ArtemisCombatF', 'ArachneCombatF', 'NemesisCombatF'],
     defaultEncounterDefinitionKey: 'GeneratedF',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];
