@@ -1,12 +1,17 @@
-import { createRouteAddress } from '@run-planner/engine/authored-project';
+import {
+  createRouteAddress,
+  type EncounterPhaseAddress,
+} from '@run-planner/engine/authored-project';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
+import { useEffect, useRef } from 'react';
 
 import {
   presentBiomeFeedbackContext,
   projectFeedbackHierarchy,
   type RouteFeedbackPresentation,
 } from '@planner/projections/evaluationProjection';
+import { projectRouteNpcIndex } from '@planner/projections/routeNpcIndex';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import type {
   EditorNavigation,
@@ -15,6 +20,7 @@ import type {
 import {
   routePanelSelected,
   routeSelected,
+  semanticOwnerNavigated,
   settingsSelected,
 } from '@planner/state/editorSessionSlice';
 import {
@@ -37,9 +43,11 @@ import {
   SemanticOwnerMarker,
   StatusBadge,
 } from '../feedback/EvaluationFeedback';
+import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
+import { RouteNpcIndex } from './RouteNpcIndex';
 
 interface AppProps {
   readonly catalog: Catalog;
@@ -142,22 +150,27 @@ function RouteWorkspace({
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
-  const selectedBiomeKey = useAppSelector(
-    (state) => state.editorSession.activeBiomeKeyByRoute[workspaceRoute.routeKey] ?? null,
+  const pendingNpcPhaseFocus = useRef<EncounterPhaseAddress | null>(null);
+  const activePanel = useAppSelector(
+    (state) => state.editorSession.activePanelByRoute[workspaceRoute.routeKey],
   );
-  const activeBiomeProjection = workspaceRoute.biomes.find(
-    (biome) => biome.biomeKey === selectedBiomeKey,
-  );
-  const displayedBiomeKey = activeBiomeProjection?.biomeKey ?? null;
+  if (activePanel === undefined) {
+    throw new Error(`Editor session omitted panel state for ${workspaceRoute.routeKey}`);
+  }
+  const activeBiomeProjection =
+    activePanel.kind !== 'biome'
+      ? undefined
+      : workspaceRoute.biomes.find((biome) => biome.biomeKey === activePanel.biomeKey);
+  const displayedBiomeKey = activeBiomeProjection?.biomeKey;
   const activeBiomeFeedback =
-    displayedBiomeKey === null ? undefined : feedback.biomes.get(displayedBiomeKey);
+    displayedBiomeKey === undefined ? undefined : feedback.biomes.get(displayedBiomeKey);
   const routeEvaluation = projectEvaluation.routes.find(
     (route) => route.routeKey === workspaceRoute.routeKey,
   );
   if (routeEvaluation === undefined) {
     throw new Error(`Project evaluation omitted route ${workspaceRoute.routeKey}`);
   }
-  if (displayedBiomeKey !== null && activeBiomeFeedback === undefined) {
+  if (displayedBiomeKey !== undefined && activeBiomeFeedback === undefined) {
     throw new Error(
       `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
     );
@@ -166,6 +179,38 @@ function RouteWorkspace({
     activeBiomeFeedback === undefined
       ? undefined
       : presentBiomeFeedbackContext(catalog, activeBiomeFeedback);
+  const npcIndex = projectRouteNpcIndex(catalog, routeEvaluation, workspace.focusByOwner);
+  const contentLayout =
+    activePanel.kind === 'biome' && activeBiomeProjection === undefined
+      ? 'overview'
+      : activePanel.kind;
+
+  /**
+   * Semantic navigation owns the session destination. This short-lived local
+   * continuation restores native keyboard focus after the NPC-index row itself
+   * unmounts during that panel change.
+   */
+  useEffect(() => {
+    const phase = pendingNpcPhaseFocus.current;
+    if (phase === null) return;
+    if (
+      activePanel.kind !== 'biome' ||
+      activePanel.biomeKey !== phase.biomeKey ||
+      workspaceRoute.routeKey !== phase.routeKey
+    ) {
+      pendingNpcPhaseFocus.current = null;
+      return;
+    }
+    const phaseControl = document.getElementById(semanticOwnerControlElementId(phase));
+    const selector = phaseControl?.querySelector<HTMLSelectElement>('select:not(:disabled)');
+    pendingNpcPhaseFocus.current = null;
+    selector?.focus({ preventScroll: true });
+  }, [activePanel, workspaceRoute.routeKey]);
+
+  const navigateNpcIndexEntry = (phase: EncounterPhaseAddress): void => {
+    pendingNpcPhaseFocus.current = phase;
+    dispatch(semanticOwnerNavigated(phase));
+  };
 
   return (
     <div className="editor-workspace">
@@ -173,15 +218,36 @@ function RouteWorkspace({
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           <p className="navigation-label">{navigation.label}</p>
           <button
-            aria-current={displayedBiomeKey === null ? 'page' : undefined}
+            aria-current={activePanel.kind === 'overview' ? 'page' : undefined}
             className="panel-navigation-item"
-            data-active={displayedBiomeKey === null}
+            data-active={activePanel.kind === 'overview'}
             onClick={() =>
-              dispatch(routePanelSelected({ routeKey: workspaceRoute.routeKey, biomeKey: null }))
+              dispatch(
+                routePanelSelected({
+                  routeKey: workspaceRoute.routeKey,
+                  panel: { kind: 'overview' },
+                }),
+              )
             }
             type="button"
           >
             Route
+          </button>
+          <button
+            aria-current={activePanel.kind === 'npcIndex' ? 'page' : undefined}
+            className="panel-navigation-item"
+            data-active={activePanel.kind === 'npcIndex'}
+            onClick={() =>
+              dispatch(
+                routePanelSelected({
+                  routeKey: workspaceRoute.routeKey,
+                  panel: { kind: 'npcIndex' },
+                }),
+              )
+            }
+            type="button"
+          >
+            NPCs
           </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
@@ -193,11 +259,17 @@ function RouteWorkspace({
             const feedbackId = `${workspaceRoute.routeKey}-${biomeProjection.biomeKey}-navigation-feedback`;
             return (
               <button
-                aria-current={biomeProjection.biomeKey === displayedBiomeKey ? 'page' : undefined}
+                aria-current={
+                  activePanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
+                    ? 'page'
+                    : undefined
+                }
                 aria-describedby={feedbackId}
                 aria-label={biomeProjection.label}
                 className="panel-navigation-item"
-                data-active={biomeProjection.biomeKey === displayedBiomeKey}
+                data-active={
+                  activePanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
+                }
                 data-feedback-context={biomeFeedback.context}
                 data-projection-source={biomeProjection.source}
                 key={biomeProjection.biomeKey}
@@ -205,7 +277,7 @@ function RouteWorkspace({
                   dispatch(
                     routePanelSelected({
                       routeKey: workspaceRoute.routeKey,
-                      biomeKey: biomeProjection.biomeKey,
+                      panel: { kind: 'biome', biomeKey: biomeProjection.biomeKey },
                     }),
                   )
                 }
@@ -238,10 +310,7 @@ function RouteWorkspace({
           }
           findings={routeEvaluation.findings}
         />
-        <div
-          className="editor-panel-content"
-          data-editor-layout={displayedBiomeKey === null ? 'overview' : 'biome'}
-        >
+        <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {contextMessage === undefined ? null : (
             <p
               className="feedback-context-banner"
@@ -250,14 +319,23 @@ function RouteWorkspace({
               {contextMessage}
             </p>
           )}
-          {displayedBiomeKey === null ? (
+          {activePanel.kind === 'overview' ? (
             <RouteOverview
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
               workspaceRoute={workspaceRoute}
             />
-          ) : activeBiomeProjection === undefined ? null : (
+          ) : activePanel.kind === 'npcIndex' ? (
+            <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
+          ) : activeBiomeProjection === undefined ? (
+            <RouteOverview
+              label={navigation.label}
+              navigation={navigation}
+              feedback={feedback}
+              workspaceRoute={workspaceRoute}
+            />
+          ) : (
             <BiomeWorkspace
               biome={activeBiomeProjection}
               focusByOwner={workspace.focusByOwner}

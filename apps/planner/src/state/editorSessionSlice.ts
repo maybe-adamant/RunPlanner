@@ -13,25 +13,34 @@ export interface EditorSessionReconciliation {
   readonly clearSelectedFinding: boolean;
 }
 
+/** One catalog-driven panel selection retained independently for each route. */
+export type RoutePanel =
+  | { readonly kind: 'overview' }
+  | { readonly kind: 'npcIndex' }
+  | { readonly kind: 'biome'; readonly biomeKey: string };
+
 export interface RoutePanelSelection {
   readonly routeKey: string;
-  readonly biomeKey: string | null;
+  readonly panel: RoutePanel;
 }
 
 export interface EditorSessionState {
   readonly activeRouteKey: string | null;
-  readonly activeBiomeKeyByRoute: Readonly<Record<string, string | null>>;
+  readonly activePanelByRoute: Readonly<Record<string, RoutePanel>>;
   readonly focusedSemanticOwner: SemanticAddress | null;
   readonly selectedFinding: FindingSelection | null;
-  readonly findingNavigationRevision: number;
+  /** Advances for every explicit semantic navigation, including repeat visits. */
+  readonly semanticNavigationRevision: number;
 }
+
+const routeOverviewPanel: RoutePanel = Object.freeze({ kind: 'overview' });
 
 const emptyState: EditorSessionState = {
   activeRouteKey: null,
-  activeBiomeKeyByRoute: {},
+  activePanelByRoute: {},
   focusedSemanticOwner: null,
   selectedFinding: null,
-  findingNavigationRevision: 0,
+  semanticNavigationRevision: 0,
 };
 
 function routeKey(origin: SemanticAddress): string | null {
@@ -40,6 +49,11 @@ function routeKey(origin: SemanticAddress): string | null {
 
 function biomeKey(origin: SemanticAddress): string | null {
   return origin.kind === 'project' || origin.kind === 'route' ? null : origin.biomeKey;
+}
+
+function panelForOrigin(origin: SemanticAddress): RoutePanel {
+  const biome = biomeKey(origin);
+  return biome === null ? routeOverviewPanel : Object.freeze({ kind: 'biome', biomeKey: biome });
 }
 
 const editorSessionSlice = createSlice({
@@ -56,23 +70,34 @@ const editorSessionSlice = createSlice({
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
       state.activeRouteKey = action.payload.routeKey;
-      state.activeBiomeKeyByRoute[action.payload.routeKey] = action.payload.biomeKey;
+      state.activePanelByRoute[action.payload.routeKey] = action.payload.panel;
       state.focusedSemanticOwner = null;
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
     },
+    semanticOwnerNavigated(state, action: PayloadAction<SemanticAddress>) {
+      state.focusedSemanticOwner = action.payload;
+      state.selectedFinding = null;
+      state.semanticNavigationRevision += 1;
+      const route = routeKey(action.payload);
+      if (route === null) {
+        return;
+      }
+      state.activeRouteKey = route;
+      state.activePanelByRoute[route] = panelForOrigin(action.payload);
+    },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
       state.focusedSemanticOwner = action.payload.origin;
-      state.findingNavigationRevision += 1;
+      state.semanticNavigationRevision += 1;
       const route = routeKey(action.payload.origin);
       if (route === null) {
         return;
       }
       state.activeRouteKey = route;
-      state.activeBiomeKeyByRoute[route] = biomeKey(action.payload.origin);
+      state.activePanelByRoute[route] = panelForOrigin(action.payload.origin);
     },
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {
@@ -91,6 +116,7 @@ export const {
   routePanelSelected,
   routeSelected,
   semanticOwnerFocused,
+  semanticOwnerNavigated,
   settingsSelected,
 } = editorSessionSlice.actions;
 
@@ -105,21 +131,21 @@ function requirePanel(catalog: Catalog, selection: RoutePanelSelection): void {
   if (route === undefined) {
     throw new Error(`Editor navigation references unknown route ${selection.routeKey}`);
   }
-  if (selection.biomeKey !== null && !route.biomeKeys.includes(selection.biomeKey)) {
+  if (selection.panel.kind === 'biome' && !route.biomeKeys.includes(selection.panel.biomeKey)) {
     throw new Error(
-      `Editor navigation references biome ${selection.biomeKey} outside route ${selection.routeKey}`,
+      `Editor navigation references biome ${selection.panel.biomeKey} outside route ${selection.routeKey}`,
     );
   }
 }
 
 export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSessionState> {
-  const activeBiomeKeyByRoute = Object.fromEntries(
-    catalog.routes.values.map((route) => [route.key, null]),
+  const activePanelByRoute = Object.fromEntries(
+    catalog.routes.values.map((route) => [route.key, routeOverviewPanel]),
   );
   const initialState: EditorSessionState = {
     ...emptyState,
     activeRouteKey: catalog.routes.values[0]?.key ?? null,
-    activeBiomeKeyByRoute,
+    activePanelByRoute,
   };
 
   return (state = initialState, action) => {
@@ -127,10 +153,15 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
       requireRoute(catalog, action.payload);
     } else if (routePanelSelected.match(action)) {
       requirePanel(catalog, action.payload);
+    } else if (semanticOwnerNavigated.match(action)) {
+      const route = routeKey(action.payload);
+      if (route !== null) {
+        requirePanel(catalog, { routeKey: route, panel: panelForOrigin(action.payload) });
+      }
     } else if (findingSelected.match(action)) {
       const route = routeKey(action.payload.origin);
       if (route !== null) {
-        requirePanel(catalog, { routeKey: route, biomeKey: biomeKey(action.payload.origin) });
+        requirePanel(catalog, { routeKey: route, panel: panelForOrigin(action.payload.origin) });
       }
     }
     return editorSessionSlice.reducer(state, action);

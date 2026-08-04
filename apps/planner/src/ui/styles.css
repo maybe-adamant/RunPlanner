@@ -1041,6 +1041,66 @@ button:disabled {
   line-height: 1.5;
 }
 
+.route-npc-index {
+  max-width: 720px;
+}
+
+.route-npc-index-empty {
+  margin: 12px 0 0;
+  color: #aaa7af;
+  font-size: 0.9rem;
+}
+
+.route-npc-index-groups {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.route-npc-index-group {
+  padding: 12px;
+  border: 1px solid #393a44;
+  border-radius: 10px;
+  background: rgb(13 14 18 / 24%);
+}
+
+.route-npc-index-group h3 {
+  margin: 0;
+  color: #f1ece3;
+  font-size: 0.95rem;
+}
+
+.route-npc-index-group ol {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.route-npc-index-entry {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #3b3c46;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2%);
+  text-decoration: none;
+}
+
+.route-npc-index-entry:hover:not(:disabled) {
+  border-color: rgb(226 185 113 / 52%);
+  background: rgb(226 185 113 / 6%);
+}
+
+.route-npc-index-location {
+  color: #96939c;
+  font-size: 0.77rem;
+  font-weight: 500;
+}
+
 .empty-topology {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);

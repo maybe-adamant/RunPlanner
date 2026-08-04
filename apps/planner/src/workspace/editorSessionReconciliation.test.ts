@@ -46,9 +46,9 @@ function session(options: {
   readonly selectedFinding?: FindingSelection | null;
 }): EditorSessionState {
   return {
-    activeBiomeKeyByRoute: { Underworld: 'F' },
+    activePanelByRoute: { Underworld: { kind: 'biome', biomeKey: 'F' } },
     activeRouteKey: 'Underworld',
-    findingNavigationRevision: 1,
+    semanticNavigationRevision: 1,
     focusedSemanticOwner: options.focusedSemanticOwner ?? null,
     selectedFinding: options.selectedFinding ?? null,
   };

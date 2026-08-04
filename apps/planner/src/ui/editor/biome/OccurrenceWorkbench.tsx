@@ -19,6 +19,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -149,6 +150,7 @@ function EncounterPhaseControl({
         aria-label={`${phase.label} encounter phase`}
         className="encounter-phase-control"
         data-read-only="true"
+        id={semanticOwnerControlElementId(phase.address)}
       >
         <div className="local-reward-heading">
           <div className="owner-markers">
@@ -165,7 +167,11 @@ function EncounterPhaseControl({
     workspaceInteractionKey(phase.address),
   );
   return (
-    <section aria-label={`${phase.label} encounter phase`} className="encounter-phase-control">
+    <section
+      aria-label={`${phase.label} encounter phase`}
+      className="encounter-phase-control"
+      id={semanticOwnerControlElementId(phase.address)}
+    >
       <div className="local-reward-heading">
         <h4>{phase.label}</h4>
       </div>
@@ -558,7 +564,7 @@ function RoomCustomizationDisclosure({
   readonly room: WorkspaceRoomSummary;
 }) {
   const disclosureRef = useRef<HTMLDetailsElement>(null);
-  const { findingNavigationRevision, focusedSemanticOwner } = useAppSelector(
+  const { semanticNavigationRevision, focusedSemanticOwner } = useAppSelector(
     (state) => state.editorSession,
   );
   const focusedOwnerKey =
@@ -573,7 +579,7 @@ function RoomCustomizationDisclosure({
 
   useLayoutEffect(() => {
     if (focusedLocalOwner && disclosureRef.current !== null) disclosureRef.current.open = true;
-  }, [findingNavigationRevision, focusedLocalOwner, focusedOwnerKey]);
+  }, [semanticNavigationRevision, focusedLocalOwner, focusedOwnerKey]);
 
   return (
     <details aria-label="Customize" className="room-customization" ref={disclosureRef}>
