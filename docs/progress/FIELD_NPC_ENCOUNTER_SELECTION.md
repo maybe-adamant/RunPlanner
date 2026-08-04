@@ -605,6 +605,15 @@ meaningful supported room-local section. The initial Encounter section renders
 active ordered phases and each phase's current concrete Encounter Definition
 plus valid candidates.
 
+For this surface, a meaningful Encounter selection has two or more
+declaration-owned choices. A singleton set remains a persisted, phase-addressed
+engine product with its marker and exact focus destination, but it does not
+publish a no-op selector or reset interaction. A singleton phase with a live
+phase-owned finding instead appears as read-only diagnostic information inside
+the containing `Customize` surface. This boundary uses declared choice
+cardinality, never the current eligible-candidate count: an invalid retained
+selection in a multi-choice set remains visible and correctable.
+
 React receives labels, selected values, typed findings, and complete bound
 semantic intents. It does not inspect Encounter Set membership, evaluate
 requirements, classify NPCs, terminate phases, or calculate counters.

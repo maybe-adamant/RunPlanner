@@ -598,20 +598,47 @@ describe('HubDecisionWorkbench', () => {
         name: 'Hub room detail boundary',
         configuredBiomeCounts: { Surface: 1 },
       }),
+      {
+        openSlotKeys: [
+          'combat11',
+          'combat10',
+          'combat09',
+          'combat07',
+          'combat05',
+          'combat03',
+          'combat02',
+          'combat01',
+          'miniBoss01',
+        ],
+        visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat07', 'combat09'],
+      },
     );
     const view = renderHubDecisionWorkbench(project);
 
     const sideRoomCombat = screen.getByRole('article', { name: 'Combat 05 Hub room' });
     const miniboss = screen.getByRole('article', { name: 'Satyr Champion Hub room' });
+    const singletonCombat = screen.getByRole('article', { name: 'Combat 07 Hub room' });
     const unvisitedCombat = screen.getByRole('article', { name: 'Combat 10 Hub room' });
     const detail = within(sideRoomCombat).getByRole('button', {
       name: 'Open details for Combat 05',
     });
+    const hub = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node) => node.kind === 'hubDecision',
+    );
+    if (hub?.kind !== 'hubDecision') throw new Error('N Hub workspace node is missing');
+    const singletonSlot = hub.slots.find((slot) => slot.hubSlotKey === 'combat07');
+    if (singletonSlot?.room === undefined) throw new Error('Combat 07 Hub room is missing');
 
     expect(detail.closest('.hub-slot-meta')).not.toBeNull();
     expect(sideRoomCombat.querySelector('.hub-main-reward')?.nextElementSibling).not.toBe(detail);
     expect(unvisitedCombat.querySelector('.hub-slot-meta')).not.toBeNull();
+    expect(singletonSlot.visited).toBe(true);
+    expect(singletonSlot.room.encounterPhases).toEqual(
+      expect.arrayContaining([expect.objectContaining({ customizable: false })]),
+    );
+    expect(singletonSlot.room.hasRoomLocalCustomization).toBe(false);
     expect(within(miniboss).queryByRole('button', { name: /Open details/ })).toBeNull();
+    expect(within(singletonCombat).queryByRole('button', { name: /Open details/ })).toBeNull();
     expect(within(unvisitedCombat).queryByRole('button', { name: /Open details/ })).toBeNull();
     await view.user.click(detail);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(

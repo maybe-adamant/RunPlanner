@@ -288,8 +288,9 @@ export function expectedWorkspaceLeafRequirements(
 /**
  * Independently enumerate every declaration-addressable pooled phase, then
  * retain only phase identities the exact engine publication exposes. This
- * closes the application handoff (marker, destination, interaction) without
- * copying engine candidate or lifecycle policy into test support.
+ * closes the application handoff (marker, destination, and meaningful
+ * selection interaction) without copying engine candidate or lifecycle policy
+ * into test support.
  */
 export function expectedWorkspaceEncounterPhaseLeafRequirements(
   catalog: Catalog,
@@ -300,7 +301,7 @@ export function expectedWorkspaceEncounterPhaseLeafRequirements(
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
   const requirements = new Map<string, ExpectedWorkspaceLeafRequirement>();
-  const append = (phase: EncounterPhaseAddress): void => {
+  const append = (phase: EncounterPhaseAddress, customizable: boolean): void => {
     if (encounterCandidateAt(phase) === undefined) return;
     const key = workspaceTestOwnerKey(phase);
     if (requirements.has(key)) {
@@ -310,16 +311,23 @@ export function expectedWorkspaceEncounterPhaseLeafRequirements(
       key,
       Object.freeze({
         address: phase,
-        interactions: Object.freeze([
-          expectedLeafInteraction('encounterPhase', workspaceTestOwnerKey(phase)),
-        ]),
+        interactions: customizable
+          ? Object.freeze([expectedLeafInteraction('encounterPhase', workspaceTestOwnerKey(phase))])
+          : Object.freeze([]),
       }),
     );
   };
   const appendRoom = (room: RoomDeclaration, owner: EncounterPhaseAddress['owner']): void => {
     for (const binding of room.encounterSlotBindings) {
       if (binding.kind !== 'set') continue;
-      append(createEncounterPhaseAddress(biome, owner, binding.slotKey));
+      const set = catalog.encounterSets.byKey[binding.encounterSetKey];
+      if (set === undefined) {
+        throw new Error(`${room.gameName} has no encounter set ${binding.encounterSetKey}`);
+      }
+      append(
+        createEncounterPhaseAddress(biome, owner, binding.slotKey),
+        set.encounterDefinitionKeys.length > 1,
+      );
     }
   };
 

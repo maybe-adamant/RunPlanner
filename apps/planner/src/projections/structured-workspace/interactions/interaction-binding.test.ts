@@ -51,10 +51,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures';
-import {
-  candidateSupport,
-  createCandidateSessionFactory,
-} from '@planner/projections/candidateProjection';
+import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
@@ -1052,12 +1049,8 @@ describe('structured workspace interaction binding', () => {
     );
   });
 
-  it('binds active encounter phases to their exact top-level and local-child commands', () => {
-    const topLevelInteractions = bind(
-      createRepresentativeNOPQProject(),
-      'Surface',
-      'O',
-    ).interactions;
+  it('binds customizable encounter phases to their exact top-level and local-child commands', () => {
+    const topLevelInteractions = bind(createGoldenFGHIProject(), 'Underworld', 'I').interactions;
     const localInteractions = bind(createRepresentativeNOPQProject(), 'Surface', 'N').interactions;
     const topLevel = [...topLevelInteractions.encounterPhases.values()].find(
       (interaction) =>
@@ -1098,7 +1091,7 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('withholds dormant Ship Combat2 but publishes its active declaration-invalid phase', () => {
+  it('withholds dormant Ship Combat2 and keeps its active declaration-invalid singleton semantic', () => {
     const initial = createRepresentativeNOPQProject();
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const combat2 = createEncounterPhaseAddress(
@@ -1124,19 +1117,16 @@ describe('structured workspace interaction binding', () => {
         candidate.room.occurrenceId === oOccurrenceIds.combat04,
     );
 
-    if (interaction === undefined) throw new Error('active declaration-invalid Combat2 is missing');
-    const candidates = interaction.load();
-    expect(interaction).toMatchObject({ owner: combat2, selected: expect.any(String) });
-    expect(candidates).not.toHaveLength(0);
-    expect(candidates.every((candidate) => candidateSupport(candidate) === 'impossible')).toBe(
-      true,
-    );
-    expect(interaction.resetIntent.command).toEqual({ kind: 'ResetEncounter', phase: combat2 });
+    expect(interaction).toBeUndefined();
     expect(node).toMatchObject({
       kind: 'occurrenceWorkbench',
       room: {
         encounterPhases: expect.arrayContaining([
-          expect.objectContaining({ address: combat2, marker: expect.any(Object) }),
+          expect.objectContaining({
+            address: combat2,
+            customizable: false,
+            marker: expect.any(Object),
+          }),
         ]),
       },
     });

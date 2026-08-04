@@ -54,9 +54,17 @@ describe('structured workspace test expectations', () => {
       expect.arrayContaining([semanticAddressKey(topLevel), semanticAddressKey(localChild)]),
     );
     expect(requirements).toHaveLength(2);
+    const requirementByOwner = new Map(
+      requirements.map((requirement) => [semanticAddressKey(requirement.address), requirement]),
+    );
+    // The main N room's declared singleton remains a retained semantic leaf,
+    // while the entered side-room's two-choice set retains its exact editor.
+    expect(requirementByOwner.get(semanticAddressKey(topLevel))?.interactions).toEqual([]);
     expect(
-      requirements.every((requirement) => requirement.interactions[0]?.kind === 'encounterPhase'),
-    ).toBe(true);
+      requirementByOwner
+        .get(semanticAddressKey(localChild))
+        ?.interactions.map((interaction) => interaction.kind),
+    ).toEqual(['encounterPhase']);
   });
 
   it('derives Ephyra detail leaves from authored visit order and side generation', () => {

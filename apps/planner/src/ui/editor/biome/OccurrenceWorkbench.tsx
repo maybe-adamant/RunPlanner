@@ -1,5 +1,9 @@
-import type { OccurrenceAddress, ProjectCommand } from '@run-planner/engine/authored-project';
-import { Fragment } from 'react';
+import {
+  semanticAddressKey,
+  type OccurrenceAddress,
+  type ProjectCommand,
+} from '@run-planner/engine/authored-project';
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -13,7 +17,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -21,10 +25,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
-import {
-  hasMeaningfulRoomLocalDetail,
-  hubMainRewardPresentation,
-} from './hubMainRewardPresentation';
+import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RoomSelector } from './RoomSelector';
 
 interface OccurrenceWorkbenchProps {
@@ -142,6 +143,23 @@ function EncounterPhaseControl({
   readonly phase: WorkspaceEncounterPhase;
 }) {
   const executeIntent = useCommandIntent();
+  if (!phase.customizable) {
+    return (
+      <section
+        aria-label={`${phase.label} encounter phase`}
+        className="encounter-phase-control"
+        data-read-only="true"
+      >
+        <div className="local-reward-heading">
+          <div className="owner-markers">
+            <h4>{phase.label}</h4>
+            <SemanticOwnerMarker address={phase.address} />
+          </div>
+        </div>
+        <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
+      </section>
+    );
+  }
   const interaction = requireWorkspaceInteraction(
     interactions.encounterPhases,
     workspaceInteractionKey(phase.address),
@@ -157,13 +175,15 @@ function EncounterPhaseControl({
         label="Encounter"
         onReplace={(encounterKey) => executeIntent(interaction.intentFor(encounterKey))}
       />
-      <button
-        className="quiet-action action-compact"
-        onClick={() => executeIntent(interaction.resetIntent)}
-        type="button"
-      >
-        Reset to default
-      </button>
+      {phase.resettable ? (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => executeIntent(interaction.resetIntent)}
+          type="button"
+        >
+          Reset to default
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -177,14 +197,17 @@ function EncounterWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phases: readonly WorkspaceEncounterPhase[];
 }) {
-  if (phases.length === 0) return null;
+  const presentedPhases = phases.filter(
+    (phase) => phase.customizable || phase.marker.findingCount > 0,
+  );
+  if (presentedPhases.length === 0) return null;
   return (
     <section aria-label="Encounter phases" className="encounter-editor">
       <div className="local-reward-heading">
         <h4>Encounter</h4>
       </div>
       <div className="encounter-phase-list">
-        {phases.map((phase) => (
+        {presentedPhases.map((phase) => (
           <EncounterPhaseControl
             idPrefix={idPrefix}
             interactions={interactions}
@@ -200,126 +223,98 @@ function EncounterWorkbench({
 function EphyraWorkbench({
   interactions,
   room,
-  showIncomingReward,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
-  readonly showIncomingReward: boolean;
 }) {
   const dispatch = useAppDispatch();
-  const incomingReward = !showIncomingReward ? null : (
-    <div className="room-state-with-marker">
-      <SemanticOwnerMarker address={room.incomingReward.marker.address} />
-      <RewardControlEditor
-        control={room.incomingReward}
-        idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
-        interactions={interactions}
-      />
-    </div>
-  );
-  if (room.sideRooms.kind === 'withheld') {
-    return (
-      <>
-        {incomingReward}
-        {showIncomingReward ? null : (
-          <p className="fixed-room-state">
-            Side rooms become available after this room is selected in the visit order.
-          </p>
-        )}
-      </>
-    );
-  }
+  if (room.sideRooms.kind === 'withheld') return null;
   const group = room.sideRooms.group;
   return (
-    <>
-      {incomingReward}
-      <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
-        <header className="local-reward-heading">
-          <div className="owner-markers">
-            <h4>Side rooms</h4>
-            <SemanticOwnerMarker address={group.address} />
-          </div>
-          <span className="neutral-status">
-            {group.enteredSlotKeys.length} visited · {group.slots.length} possible
-          </span>
-        </header>
-        <div className="ephyra-side-grid-scroll">
-          <table className="ephyra-side-grid">
-            <caption className="visually-hidden">
-              Ephyra side-room generation and visit order
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Room</th>
-                <th scope="col">Priority</th>
-                <th scope="col">Generated</th>
-                <th scope="col">Visit order</th>
-              </tr>
-            </thead>
-            <tbody>
-              {group.slots.map((side) => {
-                const generation = requireWorkspaceInteraction(
-                  interactions.sideRoomGenerations,
-                  workspaceInteractionKey(side.address),
-                );
-                return (
-                  <tr className="ephyra-side-grid-row" key={side.key}>
-                    <th scope="row">
-                      <div className="ephyra-side-room-heading">
-                        <div className="owner-markers">
-                          <span>{side.label}</span>
-                          <SemanticOwnerMarker address={side.address} />
-                        </div>
-                        <p className="card-kicker">Door {side.physicalDoorId}</p>
-                      </div>
-                      {side.generation !== 'generated' ? null : (
-                        <div className="ephyra-side-reward room-state-with-marker">
-                          <SemanticOwnerMarker address={side.rewardControl.marker.address} />
-                          <RewardControlEditor
-                            control={side.rewardControl}
-                            idPrefix={`side-${side.marker.focusKey}`}
-                            interactions={interactions}
-                          />
-                        </div>
-                      )}
-                      <EncounterWorkbench
-                        idPrefix={`side-${side.marker.focusKey}`}
-                        interactions={interactions}
-                        phases={side.encounterPhases}
-                      />
-                    </th>
-                    <td className="ephyra-side-priority">{side.availabilityRank}</td>
-                    <td>
-                      <CandidateSelect
-                        id={`side-${side.marker.focusKey}-generation`}
-                        interaction={generation}
-                        label={`${side.label} generation`}
-                        onReplace={(value) =>
-                          dispatch(
-                            authoredProjectCommandDispatched({
-                              kind: 'ReplaceSideRoomGeneration',
-                              sideRoom: side.address,
-                              generation: value,
-                            }),
-                          )
-                        }
-                      />
-                    </td>
-                    <td>
-                      <EphyraSideRoomEntryOrderSelect
-                        group={group}
-                        interactions={interactions}
-                        side={side}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+    <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
+      <header className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>Side rooms</h4>
+          <SemanticOwnerMarker address={group.address} />
         </div>
-      </section>
-    </>
+        <span className="neutral-status">
+          {group.enteredSlotKeys.length} visited · {group.slots.length} possible
+        </span>
+      </header>
+      <div className="ephyra-side-grid-scroll">
+        <table className="ephyra-side-grid">
+          <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
+          <thead>
+            <tr>
+              <th scope="col">Room</th>
+              <th scope="col">Priority</th>
+              <th scope="col">Generated</th>
+              <th scope="col">Visit order</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.slots.map((side) => {
+              const generation = requireWorkspaceInteraction(
+                interactions.sideRoomGenerations,
+                workspaceInteractionKey(side.address),
+              );
+              return (
+                <tr className="ephyra-side-grid-row" key={side.key}>
+                  <th scope="row">
+                    <div className="ephyra-side-room-heading">
+                      <div className="owner-markers">
+                        <span>{side.label}</span>
+                        <SemanticOwnerMarker address={side.address} />
+                      </div>
+                      <p className="card-kicker">Door {side.physicalDoorId}</p>
+                    </div>
+                    {side.generation !== 'generated' ? null : (
+                      <div className="ephyra-side-reward room-state-with-marker">
+                        <SemanticOwnerMarker address={side.rewardControl.marker.address} />
+                        <RewardControlEditor
+                          control={side.rewardControl}
+                          idPrefix={`side-${side.marker.focusKey}`}
+                          interactions={interactions}
+                        />
+                      </div>
+                    )}
+                    <EncounterWorkbench
+                      idPrefix={`side-${side.marker.focusKey}`}
+                      interactions={interactions}
+                      phases={side.encounterPhases}
+                    />
+                  </th>
+                  <td className="ephyra-side-priority">{side.availabilityRank}</td>
+                  <td>
+                    <CandidateSelect
+                      id={`side-${side.marker.focusKey}-generation`}
+                      interaction={generation}
+                      label={`${side.label} generation`}
+                      onReplace={(value) =>
+                        dispatch(
+                          authoredProjectCommandDispatched({
+                            kind: 'ReplaceSideRoomGeneration',
+                            sideRoom: side.address,
+                            generation: value,
+                          }),
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <EphyraSideRoomEntryOrderSelect
+                      group={group}
+                      interactions={interactions}
+                      side={side}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -490,9 +485,7 @@ function ShopWorkbench({
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const dispatch = useAppDispatch();
-  if (!room.materialized) {
-    return <p className="fixed-room-state">Shop inventory appears when you select this room.</p>;
-  }
+  if (!room.materialized) return null;
   return (
     <div className="shop-editor">
       <div className="shop-table-scroll">
@@ -552,6 +545,45 @@ function ShopWorkbench({
 }
 
 /**
+ * Local disclosure state is intentionally UI-only. Exact semantic focus opens
+ * the containing surface without adding navigation or expansion to history.
+ */
+function RoomCustomizationDisclosure({
+  children,
+  initiallyOpen,
+  room,
+}: {
+  readonly children: ReactNode;
+  readonly initiallyOpen: boolean;
+  readonly room: WorkspaceRoomSummary;
+}) {
+  const disclosureRef = useRef<HTMLDetailsElement>(null);
+  const { findingNavigationRevision, focusedSemanticOwner } = useAppSelector(
+    (state) => state.editorSession,
+  );
+  const focusedOwnerKey =
+    focusedSemanticOwner === null ? undefined : semanticAddressKey(focusedSemanticOwner);
+  const focusedLocalOwner =
+    focusedOwnerKey !== undefined &&
+    room.localDetailMarkers.some((marker) => marker.focusKey === focusedOwnerKey);
+
+  useLayoutEffect(() => {
+    if (disclosureRef.current !== null) disclosureRef.current.open = initiallyOpen;
+  }, [initiallyOpen]);
+
+  useLayoutEffect(() => {
+    if (focusedLocalOwner && disclosureRef.current !== null) disclosureRef.current.open = true;
+  }, [findingNavigationRevision, focusedLocalOwner, focusedOwnerKey]);
+
+  return (
+    <details aria-label="Customize" className="room-customization" ref={disclosureRef}>
+      <summary>Customize</summary>
+      <div className="room-customization-content">{children}</div>
+    </details>
+  );
+}
+
+/**
  * Renders the complete reward-bearing state for one room offer without
  * introducing a second room card. Ordinary decisions use this directly so
  * room selection, reward selection, and picked state remain one surface.
@@ -569,20 +601,11 @@ export function RoomOfferEditor({
 }) {
   const state = room.roomLocal;
   const showMainReward = presentation === 'full';
-  const hasRoomLocalDetail = hasMeaningfulRoomLocalDetail(room);
 
   return (
     <>
       {presentation === 'hubRoomLocal' ? (
         <HubRewardContext interactions={interactions} room={room} />
-      ) : null}
-      <EncounterWorkbench
-        idPrefix={idPrefix}
-        interactions={interactions}
-        phases={room.encounterPhases}
-      />
-      {!showMainReward && !hasRoomLocalDetail ? (
-        <p className="fixed-room-state">No additional room details.</p>
       ) : null}
       {showMainReward && state.kind === 'none' ? (
         <p className="fixed-room-state">No room reward.</p>
@@ -620,21 +643,50 @@ export function RoomOfferEditor({
           )}
         </div>
       ) : null}
-      {state.kind === 'ephyra' ? (
-        <EphyraWorkbench
-          interactions={interactions}
-          room={state}
-          showIncomingReward={showMainReward}
-        />
+      {showMainReward && state.kind === 'ephyra' ? (
+        <div className="room-state-with-marker">
+          <SemanticOwnerMarker address={state.incomingReward.marker.address} />
+          <RewardControlEditor
+            control={state.incomingReward}
+            idPrefix={`ephyra-${state.incomingReward.marker.focusKey}`}
+            interactions={interactions}
+          />
+        </div>
       ) : null}
-      {state.kind === 'fields' ? (
-        <FieldsWorkbench interactions={interactions} room={state} />
+      {presentation === 'hubRoomLocal' &&
+      state.kind === 'ephyra' &&
+      state.sideRooms.kind === 'withheld' ? (
+        <p className="fixed-room-state">
+          Side rooms become available after this room is selected in the visit order.
+        </p>
       ) : null}
-      {state.kind === 'ship' ? (
-        <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      {state.kind === 'shop' && !state.materialized ? (
+        <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
       ) : null}
-      {state.kind === 'shop' ? (
-        <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      {room.hasRoomLocalCustomization ? (
+        <RoomCustomizationDisclosure
+          initiallyOpen={presentation === 'hubRoomLocal'}
+          key={`${presentation}:${semanticAddressKey(room.address)}`}
+          room={room}
+        >
+          <EncounterWorkbench
+            idPrefix={idPrefix}
+            interactions={interactions}
+            phases={room.encounterPhases}
+          />
+          {state.kind === 'ephyra' ? (
+            <EphyraWorkbench interactions={interactions} room={state} />
+          ) : null}
+          {state.kind === 'fields' ? (
+            <FieldsWorkbench interactions={interactions} room={state} />
+          ) : null}
+          {state.kind === 'ship' ? (
+            <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
+          ) : null}
+          {state.kind === 'shop' ? (
+            <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+          ) : null}
+        </RoomCustomizationDisclosure>
       ) : null}
     </>
   );

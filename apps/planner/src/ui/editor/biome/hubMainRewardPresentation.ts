@@ -62,22 +62,3 @@ export function hubMainRewardPresentation(
       return undefined;
   }
 }
-
-/**
- * An authored details activation has useful local UI only for these room-local
- * surfaces. It deliberately does not consult evaluated entry.
- */
-export function hasMeaningfulRoomLocalDetail(room: WorkspaceRoomSummary): boolean {
-  if (room.encounterPhases.length > 0) return true;
-  switch (room.roomLocal.kind) {
-    case 'ephyra':
-    case 'fields':
-    case 'ship':
-    case 'shop':
-      return true;
-    case 'none':
-    case 'fixed':
-    case 'incomingReward':
-      return false;
-  }
-}

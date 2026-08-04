@@ -745,6 +745,8 @@ describe('structured workspace overlay contract', () => {
     );
     if (expected === undefined)
       throw new Error('invalid active Ship Combat2 phase is not expected');
+    expect(expected.interactions).toEqual([]);
+    expect(projected.interactions.encounterPhases.has(semanticAddressKey(combat2))).toBe(false);
 
     const observed = observeWorkspaceProducts({
       focusByOwner: projected.focusByOwner,
@@ -795,17 +797,6 @@ describe('structured workspace overlay contract', () => {
         }),
       }),
     ).toThrow(/required authored leaf .* has no exact workspace inspector destination/);
-
-    expect(() =>
-      assertExpectedWorkspaceLeafClosure({
-        expected: [expected],
-        observed: observeWorkspaceProducts({
-          focusByOwner: projected.focusByOwner,
-          interactions: withoutLeafInteraction(projected.interactions, expected.interactions[0]!),
-          nodes: oWorkspace.nodes,
-        }),
-      }),
-    ).toThrow(/authored encounter phase leaf .* has no exact workspace interaction/);
   });
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {

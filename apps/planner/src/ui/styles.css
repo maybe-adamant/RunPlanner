@@ -1733,6 +1733,37 @@ select {
   border-top: 1px solid #353640;
 }
 
+.room-customization {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #353640;
+}
+
+.room-customization > summary {
+  width: fit-content;
+  color: #e2b971;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.room-customization-content {
+  display: grid;
+  gap: 12px;
+}
+
+.room-customization-content > .encounter-editor,
+.room-customization-content > .ephyra-side-editor,
+.room-customization-content > .local-reward-editor,
+.room-customization-content > .ship-combat-editor,
+.room-customization-content > .shop-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .encounter-editor > .local-reward-heading {
   margin-bottom: 0;
 }
@@ -1757,6 +1788,16 @@ select {
 
 .encounter-phase-control > .quiet-action {
   justify-self: start;
+}
+
+.encounter-phase-control[data-read-only='true'] {
+  background: rgb(255 255 255 / 2%);
+}
+
+.encounter-phase-control[data-read-only='true'] > .fixed-room-state {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .ephyra-side-grid .encounter-editor {

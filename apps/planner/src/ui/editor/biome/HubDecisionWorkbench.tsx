@@ -28,10 +28,7 @@ import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import {
-  hasMeaningfulRoomLocalDetail,
-  hubMainRewardPresentation,
-} from './hubMainRewardPresentation';
+import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 
 interface HubDecisionWorkbenchProps {
@@ -688,7 +685,7 @@ function OpenHubRoomCard({
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);
   const focusedMainReward = rewardOwnerKey === focusedRewardOwnerKey;
   const canInspectLocalDetail =
-    slot.visited && slot.room !== undefined && hasMeaningfulRoomLocalDetail(slot.room);
+    slot.visited && slot.room !== undefined && slot.room.hasRoomLocalCustomization;
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const showSlotAssessment =
     visitMarker === undefined || visitMarker.assessment !== slot.marker.assessment;
