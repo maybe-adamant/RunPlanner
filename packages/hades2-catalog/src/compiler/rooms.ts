@@ -1,6 +1,9 @@
 import type {
   CatalogCollection,
-  EncounterProfile,
+  EncounterDefinition,
+  EncounterEnvelope,
+  EncounterSet,
+  EncounterSlotBinding,
   ExitTypeDeclaration,
   PrebossBatchPolicy,
   RoomCaps,
@@ -21,7 +24,11 @@ import type {
   RewardStoreDeclaration,
 } from '@run-planner/engine/reward-kernel';
 
-import type { RawPrebossBatchPolicy, RawRoomDeclaration } from '../declarations';
+import type {
+  RawEncounterSlotBinding,
+  RawPrebossBatchPolicy,
+  RawRoomDeclaration,
+} from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -241,7 +248,7 @@ function normalizeForce(force: RoomForce, rewards: RewardKernelCatalog, path: st
 function validateContextRequirementReferences(
   requirement: RequirementExpression,
   rooms: CatalogCollection<RoomDeclaration>,
-  encounters: CatalogCollection<EncounterProfile>,
+  encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   path: string,
 ): void {
   if (requirement.kind === 'all' || requirement.kind === 'any') {
@@ -249,7 +256,7 @@ function validateContextRequirementReferences(
       validateContextRequirementReferences(
         child,
         rooms,
-        encounters,
+        encounterEnvelopes,
         `${path}.requirements[${index}]`,
       ),
     );
@@ -259,7 +266,7 @@ function validateContextRequirementReferences(
     validateContextRequirementReferences(
       requirement.requirement,
       rooms,
-      encounters,
+      encounterEnvelopes,
       `${path}.requirement`,
     );
     return;
@@ -285,25 +292,81 @@ function validateContextRequirementReferences(
       }
     });
   }
-  if (requirement.kind === 'recentEncounterPhaseCount') {
-    const profile = encounters.byKey[requirement.profileKey];
-    if (profile === undefined) {
-      fail(`${path}.profileKey`, `unknown encounter profile ${requirement.profileKey}`);
+  if (requirement.kind === 'recentEnvelopeSlotCount') {
+    const envelope = encounterEnvelopes.byKey[requirement.envelopeKey];
+    if (envelope === undefined) {
+      fail(`${path}.envelopeKey`, `unknown encounter envelope ${requirement.envelopeKey}`);
     }
-    if (!profile.phases.some((phase) => phase.key === requirement.phaseKey)) {
-      fail(
-        `${path}.phaseKey`,
-        `unknown phase ${requirement.phaseKey} in ${requirement.profileKey}`,
-      );
+    if (!envelope.slots.some((slot) => slot.key === requirement.slotKey)) {
+      fail(`${path}.slotKey`, `unknown slot ${requirement.slotKey} in ${requirement.envelopeKey}`);
     }
   }
+}
+
+function normalizeEncounterSlotBindings(
+  rawBindings: readonly RawEncounterSlotBinding[],
+  envelope: EncounterEnvelope,
+  definitions: CatalogCollection<EncounterDefinition>,
+  sets: CatalogCollection<EncounterSet>,
+  path: string,
+): readonly EncounterSlotBinding[] {
+  const bindings = rawBindings.map((raw, bindingIndex): EncounterSlotBinding => {
+    const bindingPath = `${path}[${bindingIndex}]`;
+    const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
+    const slotKey = requireNonEmpty(raw.slotKey, `${bindingPath}.slotKey`);
+    if (!envelope.slots.some((slot) => slot.key === slotKey)) {
+      fail(`${bindingPath}.slotKey`, `${slotKey} is not a slot in ${envelope.key}`);
+    }
+    if (raw.kind === 'set') {
+      const encounterSetKey = requireNonEmpty(
+        raw.encounterSetKey,
+        `${bindingPath}.encounterSetKey`,
+      );
+      if (sets.byKey[encounterSetKey] === undefined) {
+        fail(`${bindingPath}.encounterSetKey`, `unknown encounter set ${encounterSetKey}`);
+      }
+      return Object.freeze({ slotKey, kind: 'set', encounterSetKey });
+    }
+    if (raw.kind === 'fixed') {
+      const encounterDefinitionKey = requireNonEmpty(
+        raw.encounterDefinitionKey,
+        `${bindingPath}.encounterDefinitionKey`,
+      );
+      if (definitions.byKey[encounterDefinitionKey] === undefined) {
+        fail(
+          `${bindingPath}.encounterDefinitionKey`,
+          `unknown encounter definition ${encounterDefinitionKey}`,
+        );
+      }
+      return Object.freeze({ slotKey, kind: 'fixed', encounterDefinitionKey });
+    }
+    fail(`${bindingPath}.kind`, `unknown encounter slot binding ${String(receivedKind)}`);
+  });
+  const seenSlots = new Set<string>();
+  for (const [bindingIndex, binding] of bindings.entries()) {
+    if (seenSlots.has(binding.slotKey)) {
+      fail(`${path}[${bindingIndex}].slotKey`, `duplicates slot ${binding.slotKey}`);
+    }
+    seenSlots.add(binding.slotKey);
+  }
+  if (bindings.length !== envelope.slots.length) {
+    fail(path, `must bind every slot in ${envelope.key} exactly once`);
+  }
+  for (const slot of envelope.slots) {
+    if (!seenSlots.has(slot.key)) {
+      fail(path, `is missing binding for ${envelope.key}.${slot.key}`);
+    }
+  }
+  return Object.freeze(bindings);
 }
 
 export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
   biomeKeys: ReadonlySet<string>,
   rewards: RewardKernelCatalog,
-  encounters: CatalogCollection<EncounterProfile>,
+  encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
+  encounterDefinitions: CatalogCollection<EncounterDefinition>,
+  encounterSets: CatalogCollection<EncounterSet>,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
 ): CatalogCollection<RoomDeclaration> {
   const rooms = rawRooms.map((room, roomIndex): RoomDeclaration => {
@@ -317,9 +380,21 @@ export function normalizeRooms(
       fail(`${path}.structuralTags`, 'is required');
     }
     const mode = validateMode(room, path);
-    if (encounters.byKey[room.encounterProfileKey] === undefined) {
-      fail(`${path}.encounterProfileKey`, `unknown encounter profile ${room.encounterProfileKey}`);
+    const encounterEnvelopeKey = requireNonEmpty(
+      room.encounterEnvelopeKey,
+      `${path}.encounterEnvelopeKey`,
+    );
+    const encounterEnvelope = encounterEnvelopes.byKey[encounterEnvelopeKey];
+    if (encounterEnvelope === undefined) {
+      fail(`${path}.encounterEnvelopeKey`, `unknown encounter envelope ${encounterEnvelopeKey}`);
     }
+    const encounterSlotBindings = normalizeEncounterSlotBindings(
+      room.encounterSlotBindings,
+      encounterEnvelope,
+      encounterDefinitions,
+      encounterSets,
+      `${path}.encounterSlotBindings`,
+    );
     if (room.exits.length === 0 && !(mode.kind === 'derived' && mode.classification === 'hub')) {
       fail(`${path}.exits`, 'must not be empty');
     }
@@ -436,7 +511,8 @@ export function normalizeRooms(
       exits: Object.freeze(exits),
       incomingReward,
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
-      encounterProfileKey: room.encounterProfileKey,
+      encounterEnvelopeKey,
+      encounterSlotBindings,
       ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),
       ...(individualRewardStoreKey === undefined ? {} : { individualRewardStoreKey }),
       enteredRewardStoreHistory: normalizeEnteredStoreHistory(
@@ -519,60 +595,74 @@ export function normalizeRooms(
           `must contain only the FieldsCombat individual store ${room.individualRewardStoreKey}`,
         );
       }
-      const profile = encounters.byKey[room.encounterProfileKey];
-      const countingPhases =
-        profile?.phases.filter((phase) => phase.countsEncounterDepth).length ?? 0;
-      if (countingPhases !== cages.maxActiveSlots) {
+      const envelope = encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+      const expectedSlots = ['Passive', 'Cage01', 'Cage02', 'Cage03'];
+      if (
+        envelope?.key !== 'FieldsEncounter' ||
+        envelope.slots.length !== expectedSlots.length ||
+        envelope.slots.some((slot, index) => slot.key !== expectedSlots[index]) ||
+        envelope.slots[0]?.activation !== 'always' ||
+        envelope.slots.slice(1).some((slot) => slot.activation !== 'templateControlled') ||
+        envelope.slots[0]?.rewardAttachment !== undefined ||
+        envelope.slots.slice(1).some((slot, index) => {
+          const attachment = slot.rewardAttachment;
+          return (
+            attachment?.kind !== 'localReward' ||
+            attachment.groupKey !== cages.key ||
+            attachment.slotKey !== cages.slotKeys[index]
+          );
+        }) ||
+        room.encounterSlotBindings.some((binding) => binding.kind !== 'set')
+      ) {
         fail(
-          `${path}.encounterProfileKey`,
-          `${room.encounterProfileKey} must count ${cages.maxActiveSlots} active cage encounters`,
+          `${path}.encounterEnvelopeKey`,
+          'FieldsCombat requires FieldsEncounter Passive/Cage01/Cage02/Cage03 slot topology and local reward attachments',
         );
       }
     }
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat') {
       const path = `rooms[${roomIndex}]`;
-      const profile = encounters.byKey[room.encounterProfileKey];
-      const intro = profile?.phases[0];
-      const combat1 = profile?.phases[1];
-      const combat2 = profile?.phases[2];
+      const envelope = encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+      const intro = envelope?.slots[0];
+      const combat1 = envelope?.slots[1];
+      const combat2 = envelope?.slots[2];
+      const wheel1 = combat1?.rewardAttachment;
+      const wheel2 = combat2?.rewardAttachment;
       if (
-        profile?.phases.length !== 3 ||
+        envelope?.key !== 'ShipEncounter' ||
+        envelope.slots.length !== 3 ||
         intro?.key !== 'Intro' ||
-        intro.kind !== 'combat' ||
-        intro.countsEncounterDepth ||
-        intro.presence !== undefined ||
-        intro.offerPoint !== undefined ||
+        intro.activation !== 'always' ||
+        intro.rewardAttachment !== undefined ||
         combat1?.key !== 'Combat1' ||
-        combat1.kind !== 'combat' ||
-        !combat1.countsEncounterDepth ||
-        combat1.presence !== undefined ||
-        combat1.offerPoint?.key !== 'wheel1' ||
-        combat1.offerPoint.offerKeys.length !== 2 ||
-        combat1.offerPoint.offerKeys[0] !== 'offer1' ||
-        combat1.offerPoint.offerKeys[1] !== 'offer2' ||
-        combat1.offerPoint.offerCount.min !== 1 ||
-        combat1.offerPoint.offerCount.max !== 2 ||
-        combat1.offerPoint.offerCount.defaultValue !== 1 ||
+        combat1.activation !== 'always' ||
+        wheel1?.kind !== 'rewardWheel' ||
+        wheel1.key !== 'wheel1' ||
+        wheel1.offerKeys.length !== 2 ||
+        wheel1.offerKeys[0] !== 'offer1' ||
+        wheel1.offerKeys[1] !== 'offer2' ||
+        wheel1.offerCount.min !== 1 ||
+        wheel1.offerCount.max !== 2 ||
+        wheel1.offerCount.defaultValue !== 1 ||
         combat2?.key !== 'Combat2' ||
-        combat2.kind !== 'combat' ||
-        !combat2.countsEncounterDepth ||
-        combat2.presence?.kind !== 'authoredOptional' ||
-        combat2.presence.defaultActive ||
-        combat2.offerPoint?.key !== 'wheel2' ||
-        combat2.offerPoint.offerKeys.length !== 2 ||
-        combat2.offerPoint.offerKeys[0] !== 'offer1' ||
-        combat2.offerPoint.offerKeys[1] !== 'offer2' ||
-        combat2.offerPoint.offerCount.min !== 1 ||
-        combat2.offerPoint.offerCount.max !== 2 ||
-        combat2.offerPoint.offerCount.defaultValue !== 1
+        combat2.activation !== 'templateControlled' ||
+        wheel2?.kind !== 'rewardWheel' ||
+        wheel2.key !== 'wheel2' ||
+        wheel2.offerKeys.length !== 2 ||
+        wheel2.offerKeys[0] !== 'offer1' ||
+        wheel2.offerKeys[1] !== 'offer2' ||
+        wheel2.offerCount.min !== 1 ||
+        wheel2.offerCount.max !== 2 ||
+        wheel2.offerCount.defaultValue !== 1 ||
+        room.encounterSlotBindings.some((binding) => binding.kind !== 'set')
       ) {
         fail(
-          `${path}.encounterProfileKey`,
-          `${room.encounterProfileKey} must define canonical combat Intro, Combat1/wheel1, and optional Combat2/wheel2 phases with two offer slots`,
+          `${path}.encounterEnvelopeKey`,
+          'ShipCombat requires ShipEncounter Intro, Combat1/wheel1, and template-controlled Combat2/wheel2 slots',
         );
       }
       if (room.localChildren.length !== 0) {
-        fail(`${path}.localChildren`, 'ShipCombat wheels belong to its encounter profile');
+        fail(`${path}.localChildren`, 'ShipCombat wheels belong to its encounter envelope');
       }
       if (room.enteredRewardStoreHistory.kind !== 'none') {
         fail(
@@ -585,7 +675,7 @@ export function normalizeRooms(
       validateContextRequirementReferences(
         room.eligibility,
         collection,
-        encounters,
+        encounterEnvelopes,
         `rooms[${roomIndex}].eligibility`,
       );
     }
@@ -593,7 +683,7 @@ export function normalizeRooms(
       validateContextRequirementReferences(
         room.force.requirement,
         collection,
-        encounters,
+        encounterEnvelopes,
         `rooms[${roomIndex}].force.requirement`,
       );
     }

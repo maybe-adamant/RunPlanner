@@ -21,6 +21,8 @@ export type {
   WorkspaceCommandIntent,
   WorkspaceCompletionNode,
   WorkspaceDefaultInspectorDestination,
+  WorkspaceEncounterInteraction,
+  WorkspaceEncounterPhase,
   WorkspaceEphyraSideRoomDescriptor,
   WorkspaceEphyraSideRoomGroup,
   WorkspaceExitSelectionInteraction,

@@ -5,6 +5,7 @@ import type {
   BiomeFieldAddress,
   ExitDecisionAddress,
   ExitSelectionAddress,
+  EncounterPhaseAddress,
   HubDecisionAddress,
   HubSlotAddress,
   IncomingRewardAddress,
@@ -170,12 +171,24 @@ export type ShopOccurrenceCommand =
       readonly offerKeys: readonly string[];
     };
 
+export type EncounterOccurrenceCommand =
+  | {
+      readonly kind: 'SelectEncounter';
+      readonly phase: EncounterPhaseAddress;
+      readonly encounterKey: string;
+    }
+  | {
+      readonly kind: 'ResetEncounter';
+      readonly phase: EncounterPhaseAddress;
+    };
+
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
   | ShipOccurrenceCommand
   | EphyraOccurrenceCommand
-  | ShopOccurrenceCommand;
+  | ShopOccurrenceCommand
+  | EncounterOccurrenceCommand;
 
 export type ProjectCommand =
   ProjectStateCommand | TopologyCommand | RoomReplacementCommand | OccurrenceLeafCommand;

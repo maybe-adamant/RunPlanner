@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
+  type EncounterPhaseAddress,
   type ExitDecision,
   type OccurrenceAddress,
   type RoomOccurrence,
@@ -17,7 +18,10 @@ import type {
   BiomeLayout,
   Catalog,
 } from '@run-planner/engine/catalog-schema';
-import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
+import type {
+  EncounterPhaseCandidateSupport,
+  ProjectBiomeEvaluation,
+} from '@run-planner/engine/simulation';
 import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
 import {
@@ -139,7 +143,9 @@ function statusFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceSta
 
 function sourceFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceProjectionSource {
   if (evaluation === undefined) return 'authored';
-  return evaluation.authoring === 'complete' ? 'canonical' : 'progressive';
+  return evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete'
+    ? 'canonical'
+    : 'progressive';
 }
 
 function assessmentForSource(
@@ -149,7 +155,9 @@ function assessmentForSource(
   const { evaluation } = source;
   if (evaluation === undefined) return 'blocked';
   if (evaluation.coverage.kind === 'none') return 'unassessed';
-  if (evaluation.coverage.kind === 'complete') return 'assessed';
+  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
+    return 'assessed';
+  }
   return source.isAssessed(address) || source.findingsFor(address).length > 0
     ? 'assessed'
     : 'unassessed';
@@ -375,6 +383,9 @@ function enrichFrontierPredecessor(
 export function assembleWorkspaceBiomeSemantics(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
+  encounterCandidateAt: (
+    phase: EncounterPhaseAddress,
+  ) => EncounterPhaseCandidateSupport | undefined = () => undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
@@ -433,6 +444,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(request.fieldsBatchFacts === undefined
         ? {}
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
+      encounterCandidateAt,
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       markerDestinations,
       occurrence: request.occurrence,

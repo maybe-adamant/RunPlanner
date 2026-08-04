@@ -1,103 +1,88 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const nEncounterProfiles = [
+export const nEncounterDefinitions = [
   {
-    key: 'N_Opening',
-    phases: [
-      {
-        key: 'OpeningGeneratedN',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'OpeningGeneratedN',
-      },
-    ],
+    key: 'OpeningGeneratedN',
+    label: 'Opening combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'N_PreHub',
-    phases: [
-      {
-        key: 'PreHubGeneratedN',
-        kind: 'combat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'PreHubGeneratedN',
-      },
-    ],
+    key: 'PreHubGeneratedN',
+    label: 'Pre-Hub combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
+  },
+  { key: 'GeneratedN', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedN_Smaller',
+    label: 'Small combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'EphyraSideRoom',
-    phases: [
-      {
-        key: 'Combat',
-        kind: 'combat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'GeneratedNSubRoom',
-      },
-    ],
+    key: 'GeneratedN_Bigger',
+    label: 'Large combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'EphyraSideRoomHard',
-    phases: [
-      {
-        key: 'Combat',
-        kind: 'combat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'GeneratedNSubRoomBigger',
-      },
-    ],
+    key: 'GeneratedNSubRoom',
+    label: 'Side-room combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
   },
   {
-    key: 'N_MiniBoss01',
-    phases: [
-      {
-        key: 'N_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossSatyrCrossbow',
-      },
-    ],
+    key: 'GeneratedNSubRoom_Bigger',
+    label: 'Large side-room combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
   },
   {
-    key: 'N_MiniBoss02',
-    phases: [
-      {
-        key: 'N_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossBoar',
-      },
-    ],
+    key: 'MiniBossSatyrCrossbow',
+    label: 'Satyr crossbow',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  { key: 'MiniBossBoar', label: 'Boar', kind: 'miniboss', countsEncounterDepth: true },
+  {
+    key: 'Story_Medea_01',
+    label: 'Medea story',
+    kind: 'story',
+    countsEncounterDepth: false,
   },
   {
-    key: 'N_Story01',
-    phases: [
-      {
-        key: 'N_Story01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Medea_01',
-      },
-    ],
+    key: 'BossPolyphemus01',
+    label: 'Polyphemus',
+    kind: 'boss',
+    countsEncounterDepth: false,
+  },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const nEncounterSets = [
+  {
+    key: 'NEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedN'],
+    defaultEncounterDefinitionKey: 'GeneratedN',
   },
   {
-    key: 'N_Boss01',
-    phases: [
-      {
-        key: 'N_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossPolyphemus01',
-      },
-    ],
+    key: 'NEncountersSmaller',
+    encounterDefinitionKeys: ['GeneratedN_Smaller'],
+    defaultEncounterDefinitionKey: 'GeneratedN_Smaller',
   },
   {
-    key: 'N_PostBoss01',
-    phases: [
-      {
-        key: 'N_PostBoss01',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Empty',
-      },
-    ],
+    key: 'NEncountersBigger',
+    encounterDefinitionKeys: ['GeneratedN_Bigger'],
+    defaultEncounterDefinitionKey: 'GeneratedN_Bigger',
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+  {
+    key: 'NEncountersSubRoom',
+    encounterDefinitionKeys: ['GeneratedNSubRoom', 'GeneratedNSubRoom_Bigger'],
+    defaultEncounterDefinitionKey: 'GeneratedNSubRoom',
+  },
+  {
+    key: 'NEncountersSubRoomLight',
+    encounterDefinitionKeys: ['GeneratedNSubRoom', 'Empty'],
+    defaultEncounterDefinitionKey: 'GeneratedNSubRoom',
+  },
+] as const satisfies readonly RawEncounterSetDeclaration[];

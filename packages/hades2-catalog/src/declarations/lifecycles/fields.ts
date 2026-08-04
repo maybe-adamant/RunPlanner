@@ -3,10 +3,10 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const fieldsRoomLifecycleProfiles = [
   {
     key: 'FieldsCombatRoom',
-    encounterProfileKeys: ['H_FieldsCombatCage2', 'H_FieldsCombatCage3'],
+    encounterEnvelopeKeys: ['FieldsEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'runEncounterSequence',

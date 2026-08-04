@@ -131,7 +131,9 @@ describe('G generation and takeover', () => {
   it('carries the validated F prefix through G’s fixed intro, ordinary spine, and completion', () => {
     const { result, g } = completeG();
     const f = result.routes[0]?.biomes[0];
-    if (f?.authoring !== 'complete') throw new Error('Golden F prefix is unavailable');
+    if (f?.authoring !== 'complete' || f.validity !== 'valid' || g.validity !== 'valid') {
+      throw new Error('Golden F/G prefix is unavailable');
+    }
 
     expect(result.status).toBe('valid');
     expect(result.routes[0]?.processing.completeValidPrefix).toEqual(['F', 'G']);
@@ -153,7 +155,7 @@ describe('G generation and takeover', () => {
     });
     expect(
       g.history.ledgers.encounterStarts.some(
-        (entry) => entry.baselineEncounterKey === 'GeneratedG_ExtraDoor',
+        (entry) => entry.encounterKey === 'GeneratedG_ExtraDoor',
       ),
     ).toBe(false);
     expect(
@@ -225,6 +227,7 @@ describe('G generation and takeover', () => {
   it('preserves Crawler’s non-counting encounter and excludes entered miniboss peers', () => {
     const project = createCompleteFGProject({ pickedMiniboss: 'G_MiniBoss02' });
     const { g, result } = completeG(project);
+    if (g.validity !== 'valid') throw new Error('Crawler fixture must be valid');
     const crawlerOrigin = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(6, 1));
     const crawler = g.history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(crawlerOrigin),
@@ -236,7 +239,7 @@ describe('G generation and takeover', () => {
       g.history.ledgers.encounterStarts.find(
         (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(crawlerOrigin),
       ),
-    ).toMatchObject({ gameName: 'G_MiniBoss02', baselineEncounterKey: 'MiniBossCrawler' });
+    ).toMatchObject({ gameName: 'G_MiniBoss02', encounterKey: 'MiniBossCrawler' });
     expect(crawler?.preOutgoing?.ledgers.counters.biomeEncounterDepth).toBe(
       crawler?.entry.ledgers.counters.biomeEncounterDepth,
     );
@@ -338,7 +341,7 @@ describe('G generation and takeover', () => {
     });
     const { result: roomEvaluation } = completeG(roomProject);
     const f = roomEvaluation.routes[0]?.biomes.find((biome) => biome.biomeKey === 'F');
-    if (f?.authoring !== 'complete')
+    if (f?.authoring !== 'complete' || f.validity !== 'valid')
       throw new Error('G repair fixture must retain complete F history');
     const room = createPreparedProjectCandidateSession(
       catalog,

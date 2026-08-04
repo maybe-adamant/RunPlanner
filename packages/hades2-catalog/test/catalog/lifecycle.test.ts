@@ -11,6 +11,7 @@ describe('room lifecycle catalog', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
       'RewardlessCombatRoom',
+      'PCombatRoom',
       'EphyraOpeningRoom',
       'EphyraMainRoom',
       'EphyraSideRoom',
@@ -75,7 +76,7 @@ describe('room lifecycle catalog', () => {
         },
         error: new CatalogContractError(
           'roomLifecycleProfiles[0].operations[0].effects',
-          'prepareRoom requires effects recordPreparation',
+          'prepareRoom requires effects recordPreparation, recordEncounter',
         ),
       },
       {
@@ -93,10 +94,10 @@ describe('room lifecycle catalog', () => {
         ),
       },
       {
-        profile: { ...base, encounterProfileKeys: ['MissingEncounter'] },
+        profile: { ...base, encounterEnvelopeKeys: ['MissingEncounter'] },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].encounterProfileKeys[0]',
-          'unknown encounter profile MissingEncounter',
+          'roomLifecycleProfiles[0].encounterEnvelopeKeys[0]',
+          'unknown encounter envelope MissingEncounter',
         ),
       },
       {
@@ -150,6 +151,34 @@ describe('room lifecycle catalog', () => {
       new CatalogContractError(
         'roomLifecycleProfiles[0].operations[4].kind',
         'generateOutgoingBatch cannot interrupt an active encounter phase',
+      ),
+    );
+  });
+
+  it('rejects reward encounter sequences without a reward-wheel slot', () => {
+    const shipProfile = declarations.roomLifecycleProfiles.find(
+      (profile) => profile.key === 'ShipCombatRoom',
+    );
+    if (shipProfile === undefined) {
+      throw new Error('Ship combat lifecycle declaration is missing');
+    }
+    const profileIndex = declarations.roomLifecycleProfiles.indexOf(shipProfile);
+
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
+            profile.key === 'ShipCombatRoom'
+              ? { ...profile, encounterEnvelopeKeys: ['PEncounter'] }
+              : profile,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `roomLifecycleProfiles[${profileIndex}].encounterEnvelopeKeys[0]`,
+        'PEncounter must expose a reward-wheel slot for runRewardEncounterSequence',
       ),
     );
   });

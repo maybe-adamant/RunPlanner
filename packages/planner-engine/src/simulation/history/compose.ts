@@ -19,8 +19,12 @@ import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
   composeBiomeHistoryEnvelope,
+  composeBiomeHistoryEnvelopeWithEncounterValidation,
   composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
+  composeBiomeHistoryPrefixWithEncounterValidation as composeValidatedPrefixHistoryEnvelope,
   type HistorySegmentWriter,
+  type EncounterValidatedBiomeHistory,
+  type EncounterValidatedPrefixHistory,
 } from './composition';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
@@ -98,7 +102,7 @@ function appendGeneratedTargets(
       kind: 'roomCreated',
       origin: target.room.origin,
       gameName: target.room.gameName,
-      encounterProfileKey: target.room.encounterProfileKey,
+      encounterEnvelopeKey: target.room.encounterEnvelopeKey,
       source: 'generatedTarget',
       picked: target.picked,
       parentOrigin,
@@ -127,7 +131,7 @@ function appendHubCreated(
     kind: 'roomCreated',
     origin: hub.room.origin,
     gameName: hub.room.gameName,
-    encounterProfileKey: hub.room.encounterProfileKey,
+    encounterEnvelopeKey: hub.room.encounterEnvelopeKey,
     source: 'hubDecision',
     picked: true,
     parentOrigin: parent.origin,
@@ -161,7 +165,7 @@ function appendHubTargets(
       kind: 'roomCreated',
       origin: target.room.origin,
       gameName: target.room.gameName,
-      encounterProfileKey: target.room.encounterProfileKey,
+      encounterEnvelopeKey: target.room.encounterEnvelopeKey,
       source: 'hubTarget',
       picked: target.room.entered,
       parentOrigin: hub.origin,
@@ -201,7 +205,7 @@ function appendLocalTargets(
       kind: 'roomCreated',
       origin: room.origin,
       gameName: room.gameName,
-      encounterProfileKey: room.encounterProfileKey,
+      encounterEnvelopeKey: room.encounterEnvelopeKey,
       source: 'localChild',
       picked: room.entered,
       parentOrigin: parent.origin,
@@ -480,13 +484,14 @@ function appendCompletedDecision(
   return selectedTarget(decision).room;
 }
 
-export function composeBiomeHistory(
+function composeBiomeHistoryResult(
   catalog: Catalog,
   snapshot: CanonicalBiome,
   seed?: HistoryStateView,
-): CanonicalBiomeHistory {
+  validateEncounterResolution = false,
+): EncounterValidatedBiomeHistory {
   let completionPredecessor: CanonicalAuthoredRoom | undefined;
-  return composeBiomeHistoryEnvelope({
+  const options = {
     catalog,
     routeKey: snapshot.routeKey,
     biomeKey: snapshot.biomeKey,
@@ -495,11 +500,11 @@ export function composeBiomeHistory(
     completionRooms: snapshot.completionRooms,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
-    composeEntry(writer) {
+    composeEntry(writer: HistorySegmentWriter): CanonicalAuthoredRoom {
       appendStandaloneRoomCreated(writer, snapshot.entryRoom, 'biomeEntry');
       return snapshot.entryRoom;
     },
-    composeBody(writer, entry) {
+    composeBody(writer: HistorySegmentWriter, entry: CanonicalAuthoredRoom): CanonicalAuthoredRoom {
       let current: CanonicalLifecycleRoom = entry;
       for (let decisionIndex = 0; decisionIndex < snapshot.decisions.length; decisionIndex += 1) {
         const decision = snapshot.decisions[decisionIndex]!;
@@ -543,27 +548,54 @@ export function composeBiomeHistory(
         fail(`${snapshot.biomeKey} never selected a Preboss`);
       return completionPredecessor;
     },
-    composeCompletionPredecessor(writer, predecessor) {
+    composeCompletionPredecessor(
+      writer: HistorySegmentWriter,
+      predecessor: CanonicalAuthoredRoom,
+    ): CanonicalAuthoredRoom {
       appendEnteredPreboss(writer, catalog, predecessor);
       return predecessor;
     },
     fail,
-  });
+  };
+  return validateEncounterResolution
+    ? composeBiomeHistoryEnvelopeWithEncounterValidation(options)
+    : Object.freeze({ kind: 'complete' as const, history: composeBiomeHistoryEnvelope(options) });
 }
 
-export function composeBiomeHistoryPrefix(
+export function composeBiomeHistory(
+  catalog: Catalog,
+  snapshot: CanonicalBiome,
+  seed?: HistoryStateView,
+): CanonicalBiomeHistory {
+  const result = composeBiomeHistoryResult(catalog, snapshot, seed);
+  if (result.kind !== 'complete') {
+    throw new Error('ordinary biome composition unexpectedly encountered encounter validation');
+  }
+  return result.history;
+}
+
+export function composeBiomeHistoryWithEncounterValidation(
+  catalog: Catalog,
+  snapshot: CanonicalBiome,
+  seed?: HistoryStateView,
+): EncounterValidatedBiomeHistory {
+  return composeBiomeHistoryResult(catalog, snapshot, seed, true);
+}
+
+function composeBiomeHistoryPrefixResult(
   catalog: Catalog,
   snapshot: MaterializedBiomePrefix,
   seed?: HistoryStateView,
-): BiomeHistoryPrefix | null {
+  validateEncounterResolution = false,
+): EncounterValidatedPrefixHistory | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
-  return composePrefixHistoryEnvelope({
+  const options = {
     routeKey: snapshot.routeKey,
     biomeKey: snapshot.biomeKey,
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
-    compose(writer) {
+    compose(writer: HistorySegmentWriter): void {
       appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
       let current: CanonicalLifecycleRoom = entry;
       for (let decisionIndex = 0; decisionIndex < snapshot.decisions.length; decisionIndex += 1) {
@@ -644,5 +676,29 @@ export function composeBiomeHistoryPrefix(
         appendHubVisitFrontier(writer, catalog, snapshot.frontier);
       }
     },
-  });
+  };
+  return validateEncounterResolution
+    ? composeValidatedPrefixHistoryEnvelope(options)
+    : Object.freeze({ kind: 'complete' as const, history: composePrefixHistoryEnvelope(options) });
+}
+
+export function composeBiomeHistoryPrefix(
+  catalog: Catalog,
+  snapshot: MaterializedBiomePrefix,
+  seed?: HistoryStateView,
+): BiomeHistoryPrefix | null {
+  const result = composeBiomeHistoryPrefixResult(catalog, snapshot, seed);
+  if (result === null) return null;
+  if (result.kind !== 'complete') {
+    throw new Error('ordinary prefix composition unexpectedly encountered encounter validation');
+  }
+  return result.history;
+}
+
+export function composeBiomeHistoryPrefixWithEncounterValidation(
+  catalog: Catalog,
+  snapshot: MaterializedBiomePrefix,
+  seed?: HistoryStateView,
+): EncounterValidatedPrefixHistory | null {
+  return composeBiomeHistoryPrefixResult(catalog, snapshot, seed, true);
 }

@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
@@ -11,6 +12,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
@@ -29,7 +31,9 @@ function completeP() {
   const evaluation = simulateProject(catalog, createRepresentativeNOPProject());
   const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'P');
-  if (biome?.authoring !== 'complete') throw new Error('P fixture did not complete');
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+    throw new Error('P fixture did not complete validly');
+  }
   return { evaluation, route, biome };
 }
 
@@ -105,6 +109,26 @@ describe('P core loop', () => {
     expect(combat.postCommit.ledgers.counters.biomeEncounterDepth).toBe(
       combat.entry.ledgers.counters.biomeEncounterDepth + 1,
     );
+  });
+
+  it('keeps the terminal P default explicit across the declared depth-nine overlap', () => {
+    const project = createRepresentativeNOPProject();
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
+      'Combat',
+    );
+    const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      phase,
+    );
+
+    expect(support).toMatchObject({
+      active: true,
+      selectedEncounterKey: 'GeneratedP',
+      selectedPossible: true,
+      candidateEncounterKeys: ['GeneratedP', 'GeneratedP_Large'],
+    });
   });
 
   it('retains an incompatible outdoor choice at its occurrence owner and evaluates candidate support', () => {
@@ -204,7 +228,7 @@ describe('P core loop', () => {
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
     const progressive =
-      previous?.authoring === 'complete' && plan !== undefined
+      previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
         ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, 3, {
             history: previous.history,
             rewardBranches: previous.rewards.branches,

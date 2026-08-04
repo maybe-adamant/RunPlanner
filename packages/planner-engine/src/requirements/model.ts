@@ -45,9 +45,9 @@ export type RequirementExpression =
       readonly range: NumericRange;
     }
   | {
-      readonly kind: 'recentEncounterPhaseCount';
-      readonly profileKey: string;
-      readonly phaseKey: string;
+      readonly kind: 'recentEnvelopeSlotCount';
+      readonly envelopeKey: string;
+      readonly slotKey: string;
       readonly roomWindow: number;
       readonly range: NumericRange;
     }

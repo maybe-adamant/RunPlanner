@@ -3,7 +3,11 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RawCatalogInput } from '../declarations';
 import { normalizeBiomes } from './biomes';
 import { requireNonEmpty } from './common';
-import { normalizeEncounterProfiles } from './encounters';
+import {
+  normalizeEncounterDefinitions,
+  normalizeEncounterEnvelopes,
+  normalizeEncounterSets,
+} from './encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
 import {
   normalizeBiomeLayouts,
@@ -24,10 +28,12 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const biomes = normalizeBiomes(input.biomes);
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
-  const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles, rewards);
+  const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
+  const encounterDefinitions = normalizeEncounterDefinitions(input.encounterDefinitions, rewards);
+  const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
     input.roomLifecycleProfiles,
-    encounterProfiles,
+    encounterEnvelopes,
     rewards.producerLifecycles,
   );
   const exitCompatibilityPolicies = normalizeExitCompatibilityPolicies(
@@ -38,7 +44,9 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     input.rooms,
     new Set(biomes.values.map((biome) => biome.key)),
     rewards,
-    encounterProfiles,
+    encounterEnvelopes,
+    encounterDefinitions,
+    encounterSets,
     exitTypes,
   );
   const biomeLayouts = normalizeBiomeLayouts(
@@ -57,7 +65,9 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     biomes,
     routes,
     rewards,
-    encounterProfiles,
+    encounterEnvelopes,
+    encounterDefinitions,
+    encounterSets,
     roomLifecycleProfiles,
     exitCompatibilityPolicies,
     exitTypes,

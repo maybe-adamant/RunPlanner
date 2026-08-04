@@ -1,4 +1,8 @@
-import type { Catalog, RewardWheelOfferPoint, RoomDeclaration } from '../../catalog-schema';
+import type {
+  Catalog,
+  EncounterRewardWheelAttachment,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import type {
   ResolvedRewardOffer,
@@ -32,6 +36,7 @@ import {
   requireShopBinding,
   type RoomStateContext,
 } from './declaration';
+import { decodeRoomEncounterState } from './encounters';
 
 function decodePayload(
   value: unknown,
@@ -119,7 +124,7 @@ function decodeCountedOffer(
 function decodeRewardWheel(
   value: unknown,
   catalog: Catalog,
-  descriptor: RewardWheelOfferPoint,
+  descriptor: EncounterRewardWheelAttachment,
   path: string,
 ): RewardWheelState {
   const wheel = expectRecord(value, path);
@@ -217,7 +222,7 @@ function decodeEphyraCombatState(
   for (const slot of slots) {
     const slotPath = `${path}.sideRooms.${slot.slotKey}`;
     const rawState = expectRecord(rawSideRooms[slot.slotKey], slotPath);
-    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'offer'], slotPath);
+    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'offer', 'encounters'], slotPath);
     const generation = expectString(rawState.generation, `${slotPath}.generation`);
     if (generation !== 'generated' && generation !== 'notGenerated') {
       failProjectDocument(`${slotPath}.generation`, 'must be generated or notGenerated');
@@ -248,6 +253,12 @@ function decodeEphyraCombatState(
         catalog,
         requireCountedBinding(sideRoom, slotPath),
         `${slotPath}.offer`,
+      ),
+      encounters: decodeRoomEncounterState(
+        rawState.encounters,
+        catalog,
+        sideRoom,
+        `${slotPath}.encounters`,
       ),
     });
   }

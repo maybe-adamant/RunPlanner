@@ -1,6 +1,6 @@
 import type {
   CatalogCollection,
-  EncounterProfile,
+  EncounterEnvelope,
   RoomLifecycleEffectKind,
   RoomLifecycleOperation,
   RoomLifecycleProfile,
@@ -20,6 +20,7 @@ const effectKinds = {
   advanceRoomCounters: true,
   recordAppearance: true,
   recordCommit: true,
+  recordEncounter: true,
   recordEncounterCompletion: true,
   recordEncounterStart: true,
   recordEnteredRewardStore: true,
@@ -44,7 +45,7 @@ const producerLifecyclePoints = {
 } as const satisfies Readonly<Record<ProducerLifecyclePointKey, true>>;
 
 const expectedEffects = {
-  prepareRoom: ['recordPreparation'],
+  prepareRoom: ['recordPreparation', 'recordEncounter'],
   materializeOfferPoint: ['recordOfferPoint'],
   enterRoom: ['recordAppearance'],
   spawnRequiredObjects: ['recordRequiredObjectSpawns'],
@@ -314,7 +315,7 @@ function validateOperationSequence(
 
 function validateEncounterCompatibility(
   profile: RoomLifecycleProfile,
-  encounterProfiles: CatalogCollection<EncounterProfile>,
+  encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   path: string,
 ): void {
   const usesOnlyEncounter = profile.operations.some(
@@ -323,6 +324,9 @@ function validateEncounterCompatibility(
   const usesEncounterSequence = profile.operations.some(
     (operation) =>
       operation.kind === 'runEncounterSequence' || operation.kind === 'runRewardEncounterSequence',
+  );
+  const usesRewardEncounterSequence = profile.operations.some(
+    (operation) => operation.kind === 'runRewardEncounterSequence',
   );
   if (usesOnlyEncounter && usesEncounterSequence) {
     fail(path, 'cannot combine only-encounter operations with an encounter sequence');
@@ -336,41 +340,50 @@ function validateEncounterCompatibility(
   ) {
     fail(path, 'lifecycle may run at most one encounter sequence');
   }
-  for (const [index, key] of profile.encounterProfileKeys.entries()) {
-    const encounter = encounterProfiles.byKey[key];
-    if (usesOnlyEncounter && encounter?.phases.length !== 1) {
+  for (const [index, key] of profile.encounterEnvelopeKeys.entries()) {
+    const encounter = encounterEnvelopes.byKey[key];
+    if (usesOnlyEncounter && encounter?.slots.length !== 1) {
       fail(
-        `${path}.encounterProfileKeys[${index}]`,
-        `${key} must expose exactly one phase for the only selector`,
+        `${path}.encounterEnvelopeKeys[${index}]`,
+        `${key} must expose exactly one slot for the only selector`,
       );
     }
-    if (usesEncounterSequence && (encounter?.phases.length ?? 0) === 0) {
-      fail(`${path}.encounterProfileKeys[${index}]`, `${key} must expose encounter phases`);
+    if (usesEncounterSequence && (encounter?.slots.length ?? 0) === 0) {
+      fail(`${path}.encounterEnvelopeKeys[${index}]`, `${key} must expose encounter slots`);
+    }
+    if (
+      usesRewardEncounterSequence &&
+      !encounter?.slots.some((slot) => slot.rewardAttachment?.kind === 'rewardWheel')
+    ) {
+      fail(
+        `${path}.encounterEnvelopeKeys[${index}]`,
+        `${key} must expose a reward-wheel slot for runRewardEncounterSequence`,
+      );
     }
   }
 }
 
 export function normalizeRoomLifecycleProfiles(
   rawProfiles: readonly RawRoomLifecycleProfileDeclaration[],
-  encounterProfiles: CatalogCollection<EncounterProfile>,
+  encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   producerLifecycles: CatalogCollection<ProducerLifecycleProfileDeclaration>,
 ): CatalogCollection<RoomLifecycleProfile> {
   return createCollection(
     rawProfiles.map((raw, profileIndex): RoomLifecycleProfile => {
       const path = `roomLifecycleProfiles[${profileIndex}]`;
       const key = requireNonEmpty(raw.key, `${path}.key`);
-      const encounterProfileKeys = freezeUniqueStrings(
-        raw.encounterProfileKeys,
-        `${path}.encounterProfileKeys`,
+      const encounterEnvelopeKeys = freezeUniqueStrings(
+        raw.encounterEnvelopeKeys,
+        `${path}.encounterEnvelopeKeys`,
       );
-      if (encounterProfileKeys.length === 0) {
-        fail(`${path}.encounterProfileKeys`, 'must not be empty');
+      if (encounterEnvelopeKeys.length === 0) {
+        fail(`${path}.encounterEnvelopeKeys`, 'must not be empty');
       }
-      for (const [index, encounterKey] of encounterProfileKeys.entries()) {
-        if (encounterProfiles.byKey[encounterKey] === undefined) {
+      for (const [index, encounterKey] of encounterEnvelopeKeys.entries()) {
+        if (encounterEnvelopes.byKey[encounterKey] === undefined) {
           fail(
-            `${path}.encounterProfileKeys[${index}]`,
-            `unknown encounter profile ${encounterKey}`,
+            `${path}.encounterEnvelopeKeys[${index}]`,
+            `unknown encounter envelope ${encounterKey}`,
           );
         }
       }
@@ -385,8 +398,8 @@ export function normalizeRoomLifecycleProfiles(
         ),
       );
       validateOperationSequence(operations, producer, `${path}.operations`);
-      const profile = Object.freeze({ key, encounterProfileKeys, producer, operations });
-      validateEncounterCompatibility(profile, encounterProfiles, path);
+      const profile = Object.freeze({ key, encounterEnvelopeKeys, producer, operations });
+      validateEncounterCompatibility(profile, encounterEnvelopes, path);
       return profile;
     }),
     'roomLifecycleProfiles',

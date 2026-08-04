@@ -1,59 +1,69 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const iEncounterProfiles = [
+const excludesClockworkGoal = {
+  kind: 'currentRoomRewardExcludes',
+  rewardTypes: ['ClockworkGoal'],
+} as const;
+
+export const iEncounterDefinitions = [
   {
-    key: 'I_Story01',
-    phases: [
-      {
-        key: 'I_Story01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Hades_01',
-      },
-    ],
+    key: 'GeneratedI',
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    requirements: excludesClockworkGoal,
   },
   {
-    key: 'I_MiniBoss01',
-    phases: [
-      {
-        key: 'I_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossRatCatcher',
-      },
-    ],
+    key: 'GeneratedI_GoalReward',
+    label: 'Goal combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
-    key: 'I_MiniBoss02',
-    phases: [
-      {
-        key: 'I_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossGoldElemental',
-      },
-    ],
+    key: 'GeneratedI_Small',
+    label: 'Small combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    requirements: excludesClockworkGoal,
   },
   {
-    key: 'I_Boss01',
-    phases: [
-      {
-        key: 'I_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossChronos01',
-      },
-    ],
+    key: 'GeneratedI_Small_GoalReward',
+    label: 'Small goal combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
-    key: 'I_PostBoss01',
-    phases: [
-      {
-        key: 'I_PostBoss01',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Empty',
-      },
-    ],
+    key: 'Story_Hades_01',
+    label: 'Hades story',
+    kind: 'story',
+    countsEncounterDepth: false,
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+  {
+    key: 'MiniBossRatCatcher',
+    label: 'Rat catcher',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  {
+    key: 'MiniBossGoldElemental',
+    label: 'Gold elemental',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  { key: 'BossChronos01', label: 'Chronos', kind: 'boss', countsEncounterDepth: false },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const iEncounterSets = [
+  {
+    key: 'IEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+    defaultEncounterDefinitionKey: 'GeneratedI',
+  },
+  {
+    key: 'IEncountersSmaller',
+    encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward'],
+    defaultEncounterDefinitionKey: 'GeneratedI_Small',
+  },
+] as const satisfies readonly RawEncounterSetDeclaration[];

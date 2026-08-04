@@ -7,6 +7,7 @@ import {
   type RewardWheelOfferAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
+import { requireShipCombatWheels } from '../../authored-project/room-state/declaration';
 import { planFor } from './evaluated-biome';
 import { CandidateEvaluationContractError } from './contract';
 
@@ -23,14 +24,12 @@ export function shipState(
     throw new CandidateEvaluationContractError('candidate owner has no Ship combat state');
   }
   const room = catalog.rooms.byKey[authored.gameName];
-  const profile =
-    room === undefined ? undefined : catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (room === undefined || profile === undefined) {
+  if (room === undefined || room.encounterEnvelopeKey !== 'ShipEncounter') {
     throw new CandidateEvaluationContractError(
-      'Ship candidate owner has no catalog encounter profile',
+      'Ship candidate owner has no catalog encounter envelope',
     );
   }
-  return Object.freeze({ authored, room, profile, state: authored.state });
+  return Object.freeze({ authored, room, state: authored.state });
 }
 
 export function wheelState(
@@ -43,9 +42,9 @@ export function wheelState(
     address.occurrenceId,
   );
   const ship = shipState(catalog, project, owner);
-  const descriptor = ship.profile.phases.find(
-    (phase) => phase.offerPoint?.key === address.wheelKey,
-  )?.offerPoint;
+  const descriptor = requireShipCombatWheels(catalog, ship.room, ship.room.gameName).find(
+    (wheel) => wheel.key === address.wheelKey,
+  );
   const wheel = ship.state.wheels[address.wheelKey];
   if (descriptor === undefined || wheel === undefined) {
     throw new CandidateEvaluationContractError(`Ship candidate has no ${address.wheelKey} wheel`);

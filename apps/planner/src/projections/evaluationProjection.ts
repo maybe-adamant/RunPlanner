@@ -103,9 +103,13 @@ const findingCopy = {
     title: 'Room cannot appear here',
     description: 'The selected room is not among the rooms that can be offered for this door.',
   },
-  encounterCountUnavailable: {
-    title: 'Encounter count cannot occur here',
-    description: 'The selected ship encounter count is unavailable when this room begins.',
+  encounterUnavailable: {
+    title: 'Encounter cannot occur here',
+    description: 'The selected encounter is unavailable when this room begins.',
+  },
+  encounterSlotActivationUnavailable: {
+    title: 'Encounter phase is not active',
+    description: 'The selected room setup does not activate this encounter phase.',
   },
   sideRoomGenerationUnavailable: {
     title: 'Side room generation cannot occur here',
@@ -369,6 +373,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · ${numberedDestinationLabel('Side room', origin.slotKey)}`;
     case 'localChildGroup':
       return `${biomeLabel} · Side room order`;
+    case 'encounterPhase':
+      return `${biomeLabel} · Encounter`;
     case 'rewardWheel':
       return `${biomeLabel} · Reward wheel`;
     case 'rewardWheelOffer':

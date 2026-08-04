@@ -331,7 +331,10 @@ describe('N Hub rewards, validation, and candidates', () => {
         group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
         enteredSlotKeys: ['sideDoor1', 'sideDoor2'],
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({
+      kind: 'sideRoomEntryOrder',
+      result: { candidateEnteredSlotKeys: ['sideDoor1', 'sideDoor2'] },
+    });
   });
 
   it('assesses an aggregate visit prefix when current board findings block later evaluation', () => {

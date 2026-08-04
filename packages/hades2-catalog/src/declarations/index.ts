@@ -1,5 +1,5 @@
 import { biomes } from './biomes';
-import { encounterProfiles } from './encounters';
+import { encounterDefinitions, encounterEnvelopes, encounterSets } from './encounters';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
@@ -31,7 +31,9 @@ export const declarations = {
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
-  encounterProfiles,
+  encounterEnvelopes,
+  encounterDefinitions,
+  encounterSets,
   roomLifecycleProfiles,
   exitCompatibilityPolicies,
   exitTypes,
@@ -42,7 +44,11 @@ export const declarations = {
 export type {
   RawCatalogInput,
   RawCountedRewardBinding,
-  RawEncounterProfileDeclaration,
+  RawEncounterDefinitionDeclaration,
+  RawEncounterEnvelopeDeclaration,
+  RawEncounterEnvelopeSlotDeclaration,
+  RawEncounterSetDeclaration,
+  RawEncounterSlotBinding,
   RawFixedRewardBinding,
   RawBiomeLayoutDeclaration,
   RawLocalChildDescriptor,

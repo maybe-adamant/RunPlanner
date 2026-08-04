@@ -19,6 +19,8 @@ export type RewardProducerOwnerAddress =
   IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress | ShopOfferAddress;
 
 export interface RewardProducerCandidateCapability {
+  /** The farthest lifecycle point candidate evaluation is allowed to model. */
+  readonly acquisitionHorizon: 'generationOnly' | 'ownEnteredLifecycle';
   readonly resolvedStoreKey?: string;
   readonly evaluateOffer: (
     owner: RewardProducerOwnerAddress,
@@ -65,6 +67,7 @@ export function createRewardProducerCandidateArtifacts(
     privateFrontiers.set(
       key,
       Object.freeze({
+        acquisitionHorizon: frontier.acquisitionHorizon,
         evaluateOffer: frontier.evaluateOffer,
         ...(frontier.resolvedStoreKey === undefined
           ? {}

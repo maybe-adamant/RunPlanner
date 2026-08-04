@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 11 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 12 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -43,10 +43,19 @@ export interface ShipCombatState {
 
 export type SideRoomGeneration = 'generated' | 'notGenerated';
 
+/**
+ * Concrete authored encounter selections belong to the room instance that
+ * owns the envelope slots. Fixed and empty slots deliberately have no entry.
+ */
+export interface RoomEncounterState {
+  readonly encounterKeyByPhase: Readonly<Record<string, string>>;
+}
+
 export interface EphyraSideRoomState {
   readonly generation: SideRoomGeneration;
   readonly enteredOrdinal: number | null;
   readonly offer: ResolvedRewardOffer;
+  readonly encounters: RoomEncounterState;
 }
 
 export interface EphyraCombatState {
@@ -84,6 +93,7 @@ export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
   readonly state: AuthoredRoomState;
+  readonly encounters: RoomEncounterState;
 }
 
 export interface ExitTargetReference {

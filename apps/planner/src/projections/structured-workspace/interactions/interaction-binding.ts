@@ -13,6 +13,7 @@ import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 import {
   candidateSupport,
   type CandidateOptionProjection,
+  type CandidateProjectionEvaluation,
   type CandidateProjectionSession,
 } from '@planner/projections/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
@@ -29,6 +30,7 @@ import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } f
 import type {
   StructuredWorkspaceContextualServices,
   WorkspaceCandidateInteraction,
+  WorkspaceEncounterInteraction,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
@@ -117,7 +119,7 @@ function candidateInteraction<T>(
   owner: SemanticAddress,
   choices: readonly WorkspaceInteractionChoice<T>[],
   selected: T | undefined,
-  load: () => readonly CandidateOptionProjection<T>[],
+  load: () => readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],
   key = workspaceInteractionKey(owner),
 ): WorkspaceCandidateInteraction<T> {
   return Object.freeze({
@@ -130,10 +132,11 @@ function candidateInteraction<T>(
 }
 
 interface WorkspaceOccurrenceLocalInteractionCatalog {
+  readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
-  readonly shipEncounterCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
   readonly shopPurchaseOrders: ReadonlyMap<
     string,
     WorkspaceCandidateInteraction<readonly string[]>
@@ -152,10 +155,11 @@ function bindOccurrenceLocalInteractions(
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
+  const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
   const rewardWheelOfferCounts = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
-  const shipEncounterCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
+  const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
   const shopPurchaseOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
@@ -174,6 +178,38 @@ function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'encounterPhases': {
+        for (const phase of requirement.phases) {
+          const key = semanticAddressKey(phase.owner);
+          const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
+          const base = candidateInteraction(
+            phase.owner,
+            phase.candidateChoices,
+            phase.selectedEncounterKey,
+            () => candidates.encounterPhases(phase.owner, encounterKeys),
+          );
+          set(
+            encounterPhases,
+            key,
+            Object.freeze({
+              ...base,
+              intentFor: (encounterKey: string) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    encounterKey,
+                    kind: 'SelectEncounter' as const,
+                    phase: phase.owner,
+                  }),
+                }),
+              resetIntent: Object.freeze({
+                command: Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner }),
+              }),
+            }),
+            'encounter phase',
+          );
+        }
+        break;
+      }
       case 'ephyraSideRooms': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
@@ -222,20 +258,20 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'shipCombat': {
-        const encounterCountValues = Object.freeze(
-          requirement.encounterCountChoices.map((choice) => choice.value),
+      case 'shipCombatPhaseCount': {
+        const combatPhaseCountValues = Object.freeze(
+          requirement.combatPhaseCountChoices.map((choice) => choice.value),
         );
         set(
-          shipEncounterCounts,
+          shipCombatPhaseCounts,
           semanticAddressKey(requirement.owner),
           candidateInteraction(
             requirement.owner,
-            requirement.encounterCountChoices,
-            requirement.encounterCount,
-            () => candidates.shipEncounterCounts(requirement.owner, encounterCountValues),
+            requirement.combatPhaseCountChoices,
+            requirement.combatPhaseCount,
+            () => candidates.shipCombatPhaseCounts(requirement.owner, combatPhaseCountValues),
           ),
-          'Ship encounter-count',
+          'Ship combat-phase count',
         );
         for (const wheel of requirement.wheels) {
           const key = semanticAddressKey(wheel.address);
@@ -300,10 +336,11 @@ function bindOccurrenceLocalInteractions(
     }
   }
   return Object.freeze({
+    encounterPhases,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
-    shipEncounterCounts,
+    shipCombatPhaseCounts,
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
@@ -974,10 +1011,11 @@ export function bindWorkspaceInteractions(
   const { project } = assembly;
   const candidates = services.candidateSessions.bind(assembly);
   const {
+    encounterPhases,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
-    shipEncounterCounts,
+    shipCombatPhaseCounts,
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
@@ -1281,6 +1319,7 @@ export function bindWorkspaceInteractions(
 
   return Object.freeze({
     batchRewardStores,
+    encounterPhases,
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
@@ -1292,7 +1331,7 @@ export function bindWorkspaceInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     rooms,
-    shipEncounterCounts,
+    shipCombatPhaseCounts,
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,

@@ -2,7 +2,8 @@ import type { SemanticAddress } from '../authored-project/addresses';
 
 export type FindingSeverity = 'error' | 'warning';
 
-export type SimulationPhase = 'completeness' | 'rewardGeneration' | 'roomGeneration';
+export type SimulationPhase =
+  'completeness' | 'encounterResolution' | 'rewardGeneration' | 'roomGeneration';
 
 export type CompletenessFindingCode =
   | 'batchRewardStoreMissing'
@@ -17,12 +18,14 @@ export type CompletenessFindingCode =
   | 'targetMissing';
 
 export type RoomGenerationFindingCode =
-  | 'encounterCountUnavailable'
   | 'fieldsCageOutcomeUnavailable'
   | 'hubOpenSlotUnavailable'
   | 'sideRoomGenerationUnavailable'
   | 'targetRoomSupportEmpty'
   | 'targetRoomUnavailable';
+
+export type EncounterResolutionFindingCode =
+  'encounterSlotActivationUnavailable' | 'encounterUnavailable';
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'
@@ -35,7 +38,10 @@ export type RewardGenerationFindingCode =
   | 'shopPurchaseUnavailable';
 
 export type FindingCode =
-  CompletenessFindingCode | RewardGenerationFindingCode | RoomGenerationFindingCode;
+  | CompletenessFindingCode
+  | EncounterResolutionFindingCode
+  | RewardGenerationFindingCode
+  | RoomGenerationFindingCode;
 
 export type FindingEvidenceValue =
   | boolean

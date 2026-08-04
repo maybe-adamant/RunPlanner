@@ -1,5 +1,6 @@
-import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
+import type { Catalog, EncounterRewardWheelAttachment } from '../../catalog-schema';
 import type { OccurrenceId, ProjectDocument, RoomOccurrence } from '../model';
+import { requireShipCombatWheels } from '../room-state/declaration';
 
 import {
   failCommand,
@@ -21,16 +22,16 @@ function requireWheel(
 ): {
   readonly occurrence: RoomOccurrence;
   readonly state: Extract<RoomOccurrence['state'], { readonly kind: 'shipCombat' }>;
-  readonly descriptor: RewardWheelOfferPoint;
+  readonly descriptor: EncounterRewardWheelAttachment;
 } {
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   if (occurrence.state.kind !== 'shipCombat') {
     failCommand(command, `${occurrence.gameName} has no reward wheels`);
   }
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-  const descriptor = catalog.encounterProfiles.byKey[room.encounterProfileKey]?.phases.find(
-    (phase) => phase.offerPoint?.key === wheelKey,
-  )?.offerPoint;
+  const descriptor = requireShipCombatWheels(catalog, room, room.gameName).find(
+    (wheel) => wheel.key === wheelKey,
+  );
   if (descriptor === undefined)
     failCommand(command, `${occurrence.gameName} has no wheel ${wheelKey}`);
   if (occurrence.state.wheels[wheelKey] === undefined) {

@@ -15,6 +15,7 @@ import {
   type CandidateContextUnavailable,
 } from './availability';
 import {
+  candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
   planFor,
@@ -83,7 +84,7 @@ function prefixBatchRewardStoreSupport(
   const biome = candidatePrefix(
     candidate ?? prefixBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey),
   );
-  const prefix = biome?.materializedPrefix;
+  const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
     return undefined;

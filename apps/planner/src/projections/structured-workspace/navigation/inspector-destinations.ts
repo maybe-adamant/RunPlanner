@@ -68,6 +68,7 @@ function subjectForDestination(
 function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
   const keys = [
     room.marker.focusKey,
+    ...room.encounterPhases.map((phase) => phase.marker.focusKey),
     ...room.rewardControls.map((control) => control.marker.focusKey),
   ];
   switch (room.roomLocal.kind) {
@@ -80,7 +81,10 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
       if (sideRooms.kind === 'published') {
         keys.push(
           sideRooms.group.marker.focusKey,
-          ...sideRooms.group.slots.map((slot) => slot.marker.focusKey),
+          ...sideRooms.group.slots.flatMap((slot) => [
+            slot.marker.focusKey,
+            ...slot.encounterPhases.map((phase) => phase.marker.focusKey),
+          ]),
         );
       }
       break;

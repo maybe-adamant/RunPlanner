@@ -7,10 +7,10 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const prebossCompletionRoomLifecycleProfiles = [
   {
     key: 'PrebossFreeRewardRoom',
-    encounterProfileKeys: ['Shop'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'advanceProducer',
@@ -46,10 +46,10 @@ export const prebossCompletionRoomLifecycleProfiles = [
   },
   {
     key: 'PrebossShopRoom',
-    encounterProfileKeys: ['Shop'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       {
         kind: 'materializeOfferPoint',
         offerPoint: 'shopInventory',
@@ -70,19 +70,10 @@ export const prebossCompletionRoomLifecycleProfiles = [
   },
   {
     key: 'BossRoom',
-    encounterProfileKeys: [
-      'F_Boss01',
-      'G_Boss01',
-      'H_Boss01',
-      'I_Boss01',
-      'N_Boss01',
-      'O_Boss01',
-      'P_Boss01',
-      'Q_Boss01',
-    ],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'startEncounter',
@@ -103,18 +94,10 @@ export const prebossCompletionRoomLifecycleProfiles = [
   },
   {
     key: 'PostBossRoom',
-    encounterProfileKeys: [
-      'F_PostBoss01',
-      'G_PostBoss01',
-      'H_PostBoss01',
-      'I_PostBoss01',
-      'N_PostBoss01',
-      'O_PostBoss01',
-      'P_PostBoss01',
-    ],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'startEncounter',

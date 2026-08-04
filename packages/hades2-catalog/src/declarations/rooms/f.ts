@@ -18,7 +18,14 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_Opening',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'OpeningGeneratedF',
+      },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -39,7 +46,14 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_Opening',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'OpeningGeneratedF',
+      },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -60,7 +74,14 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_Opening',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'OpeningGeneratedF',
+      },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -81,7 +102,10 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedF' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -109,7 +133,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -137,7 +164,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -165,7 +195,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -193,7 +226,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -221,7 +257,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -244,7 +283,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -267,7 +309,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -292,7 +337,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -317,7 +365,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -345,7 +396,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -373,7 +427,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -401,7 +458,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -424,7 +484,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -452,7 +515,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -480,7 +546,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -508,7 +577,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -536,7 +608,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -564,7 +639,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -592,7 +670,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -620,7 +701,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -648,7 +732,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -674,7 +761,10 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_MiniBoss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTreant' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -708,7 +798,10 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_MiniBoss02',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossFogEmitter' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -742,7 +835,10 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_MiniBoss03',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossAssassin' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -772,7 +868,10 @@ export const fRooms = [
     ],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'F_Story01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Arachne_01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -800,7 +899,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'HealthRestore',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -827,7 +929,10 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Shop',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -868,7 +973,10 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Shop',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+    ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -888,7 +996,10 @@ export const fRooms = [
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'F_Boss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossHecate01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -902,7 +1013,10 @@ export const fRooms = [
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'F_PostBoss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Chronos_01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },

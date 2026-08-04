@@ -7,7 +7,7 @@ import {
   type RewardKernelFacts,
 } from '../../reward-kernel';
 import type { HistoryStateView, RoomCreationSource } from '../history';
-import { projectRecentEncounterPhases } from '../history';
+import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 
 function countByGameName(
@@ -22,7 +22,7 @@ function countByGameName(
 
 interface StaticRewardViewFacts {
   readonly peerGameNamesBySourceParent: Map<RoomCreationSource, Map<string, readonly string[]>>;
-  readonly recentEncounterPhases: ReturnType<typeof projectRecentEncounterPhases>;
+  readonly recentEncounterEnvelopeSlots: ReturnType<typeof projectRecentEncounterEnvelopeSlots>;
   readonly roomsEntered: Readonly<Record<string, number>>;
 }
 
@@ -43,7 +43,7 @@ function staticRewardViewFacts(catalog: Catalog, view: HistoryStateView): Static
   }
   const facts = Object.freeze({
     peerGameNamesBySourceParent: new Map<RoomCreationSource, Map<string, readonly string[]>>(),
-    recentEncounterPhases: projectRecentEncounterPhases(view),
+    recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
     roomsEntered: countByGameName(view.ledgers.roomAppearances),
   });
   byView.set(view, facts);
@@ -139,7 +139,7 @@ export function createRewardFacts({
     lastEventRunDepthCaches: Object.freeze(
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
     ),
-    recentEncounterPhases: staticFacts.recentEncounterPhases,
+    recentEncounterEnvelopeSlots: staticFacts.recentEncounterEnvelopeSlots,
     offeredExitCount: sourceDeclaration.exits.length,
     currentBatchRoomGameNames,
     clockwork: hasClockwork

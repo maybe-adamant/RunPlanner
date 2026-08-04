@@ -11,7 +11,8 @@ export const hRooms = [
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'NoEncounter',
+    encounterEnvelopeKey: 'EmptyEncounter',
+    encounterSlotBindings: [],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
@@ -27,7 +28,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -62,7 +69,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -102,7 +115,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -137,7 +156,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -172,7 +197,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -207,7 +238,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -242,7 +279,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -277,7 +320,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -312,7 +361,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage2',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -352,7 +407,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -387,7 +448,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -422,7 +489,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassive' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
@@ -457,7 +530,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage2',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -497,7 +576,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage2',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -537,7 +622,13 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_FieldsCombatCage3',
+    encounterEnvelopeKey: 'FieldsEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -584,7 +675,10 @@ export const hRooms = [
     forcedRewardStoreKey: 'RunProgress',
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'H_MiniBoss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossVampire' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -613,7 +707,10 @@ export const hRooms = [
     forcedRewardStoreKey: 'RunProgress',
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'H_MiniBoss02',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossLamia' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -642,7 +739,10 @@ export const hRooms = [
     },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'H_Bridge01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Echo_01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
@@ -701,7 +801,10 @@ export const hRooms = [
     forcedRewardStoreKey: 'RunProgress',
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'Shop',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+    ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -742,7 +845,10 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'H_Boss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossInfestedCerberus01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -756,7 +862,10 @@ export const hRooms = [
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'H_PostBoss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },

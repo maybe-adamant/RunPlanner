@@ -1,6 +1,7 @@
 import {
   countedRewardTypeDomain,
   createPreparedProjectCandidateSession,
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   type CandidateEvaluationEvent,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -13,6 +14,7 @@ import {
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type ExitDecisionAddress,
+  type EncounterPhaseAddress,
   type HubDecisionAddress,
   type HubSlotAddress,
   type IncomingRewardAddress,
@@ -50,9 +52,28 @@ export type CountedRewardCandidateOwner = Exclude<
   { readonly kind: 'shopOffer' }
 >;
 
-export interface CandidateOptionProjection<T> {
+/**
+ * Application adaptation of the engine's exact encounter-phase artifact.
+ * It intentionally carries only the already-evaluated support state for one
+ * displayed definition; no encounter membership or requirement policy is
+ * recreated here.
+ */
+export interface EncounterCandidateProjectionEvaluation {
+  readonly kind: 'encounter';
+  readonly result: {
+    readonly support: CandidateSupport;
+  };
+}
+
+export type CandidateProjectionEvaluation =
+  ProjectCandidateEvaluation | EncounterCandidateProjectionEvaluation;
+
+export interface CandidateOptionProjection<
+  T,
+  Evaluation extends CandidateProjectionEvaluation = ProjectCandidateEvaluation,
+> {
   readonly value: T;
-  readonly evaluation: ProjectCandidateEvaluation;
+  readonly evaluation: Evaluation;
 }
 
 export interface CandidateProjectionSession {
@@ -80,6 +101,10 @@ export interface CandidateProjectionSession {
     target: TargetAddress,
     rooms: readonly RoomDeclaration[],
   ) => readonly CandidateOptionProjection<RoomDeclaration>[];
+  readonly encounterPhases: (
+    phase: EncounterPhaseAddress,
+    encounterKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[];
   readonly batchRewardStores: (
     rewardStore: BatchRewardStoreAddress,
     storeKeys: readonly string[],
@@ -96,7 +121,7 @@ export interface CandidateProjectionSession {
   readonly hubTerminalTakeover: (
     source: ExitDecisionAddress,
   ) => CandidateOptionProjection<ExitDecisionAddress>;
-  readonly shipEncounterCounts: (
+  readonly shipCombatPhaseCounts: (
     occurrence: OccurrenceAddress,
     values: readonly (2 | 3)[],
   ) => readonly CandidateOptionProjection<2 | 3>[];
@@ -221,7 +246,10 @@ function projectOptions<T>(
 
 interface ProjectCandidateProjectionCache {
   readonly evaluator: ProjectCandidateSession;
-  readonly options: Map<string, readonly CandidateOptionProjection<unknown>[]>;
+  readonly options: Map<
+    string,
+    readonly CandidateOptionProjection<unknown, CandidateProjectionEvaluation>[]
+  >;
 }
 
 async function projectOptionsCooperatively<T>(
@@ -381,6 +409,46 @@ export function createCandidateSessionFactory(
       catalog,
       options,
     );
+  const encounterPhasesFor = (
+    assembly: ProjectEvaluationAssembly,
+    phase: EncounterPhaseAddress,
+    encounterKeys: readonly string[],
+  ): readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[] => {
+    const key = `encounter:${semanticAddressKey(phase)}:${domainKey(encounterKeys)}`;
+    const projectCache = requireProjectCache(cache, assembly, catalog, options);
+    const existing = projectCache.options.get(key);
+    if (existing !== undefined) {
+      return existing as readonly CandidateOptionProjection<
+        string,
+        EncounterCandidateProjectionEvaluation
+      >[];
+    }
+    const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase);
+    const candidateKeys = support?.candidateEncounterKeys ?? [];
+    const projected = Object.freeze(
+      encounterKeys.map((encounterKey) => {
+        const candidateSupport: CandidateSupport =
+          support === undefined
+            ? 'unavailable'
+            : !support.activationSatisfied
+              ? 'impossible'
+              : candidateKeys.includes(encounterKey)
+                ? candidateKeys.length === 1
+                  ? 'forced'
+                  : 'possible'
+                : 'impossible';
+        return Object.freeze({
+          value: encounterKey,
+          evaluation: Object.freeze({
+            kind: 'encounter' as const,
+            result: Object.freeze({ support: candidateSupport }),
+          }),
+        });
+      }),
+    );
+    projectCache.options.set(key, projected);
+    return projected;
+  };
   const bind = (assembly: ProjectEvaluationAssembly): CandidateProjectionSession => {
     const existing = boundSessionCache.get(assembly);
     if (existing !== undefined) {
@@ -406,6 +474,8 @@ export function createCandidateSessionFactory(
         startRoomsFor(assembly, owner, rooms),
       roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
         roomTargetsFor(assembly, target, rooms),
+      encounterPhases: (phase: EncounterPhaseAddress, encounterKeys: readonly string[]) =>
+        encounterPhasesFor(assembly, phase, encounterKeys),
       batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
         projectOptions(
           cache,
@@ -430,7 +500,7 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      shipEncounterCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
+      shipCombatPhaseCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
         projectOptions(
           cache,
           assembly,
@@ -573,8 +643,10 @@ export function createCandidateSessionFactory(
 
 export type CandidateSupport = 'forced' | 'impossible' | 'possible' | 'unavailable';
 
-function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): boolean {
+function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): boolean {
   switch (evaluation.kind) {
+    case 'encounter':
+      return evaluation.result.support === 'forced' || evaluation.result.support === 'possible';
     case 'unavailable':
       return false;
     case 'roomTarget':
@@ -595,9 +667,11 @@ function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): bool
 }
 
 function candidateForced(
-  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+  evaluation: Exclude<CandidateProjectionEvaluation, { readonly kind: 'unavailable' }>,
 ): boolean {
   switch (evaluation.kind) {
+    case 'encounter':
+      return evaluation.result.support === 'forced';
     case 'roomTarget':
       return (
         evaluation.result.pressure.selectedPossible &&
@@ -641,16 +715,17 @@ function candidateForced(
 }
 
 export function candidateSupport(
-  option: CandidateOptionProjection<unknown> | undefined,
+  option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): CandidateSupport {
   if (option === undefined || option.evaluation.kind === 'unavailable') return 'unavailable';
+  if (option.evaluation.kind === 'encounter') return option.evaluation.result.support;
   if (!candidateSelectedPossible(option.evaluation)) return 'impossible';
   return candidateForced(option.evaluation) ? 'forced' : 'possible';
 }
 
 export function presentCandidateLabel(
   label: string,
-  option: CandidateOptionProjection<unknown> | undefined,
+  option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): string {
   return candidateSupport(option) === 'impossible' ? `${label} — unavailable` : label;
 }

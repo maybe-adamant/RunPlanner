@@ -300,7 +300,7 @@ describe('progressive biome evaluation', () => {
     const plan = fixture.project.routes
       .find((candidate) => candidate.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'G');
-    if (previous?.authoring !== 'complete' || plan === undefined) {
+    if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('progressive artifact fixture has no valid F seed or G plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
@@ -325,7 +325,11 @@ describe('progressive biome evaluation', () => {
     expect(normalProducer).toBeDefined();
     expect(prefixProducer).toBeDefined();
     expect(normalProducer).not.toBe(prefixProducer);
-    expect(Object.keys(normalProducer ?? {})).toEqual(['evaluateOffer', 'resolvedStoreKey']);
+    expect(Object.keys(normalProducer ?? {})).toEqual([
+      'acquisitionHorizon',
+      'evaluateOffer',
+      'resolvedStoreKey',
+    ]);
     expect(normalProducer?.resolvedStoreKey).toBe('MetaProgress');
     expect(clampedContext).toBeDefined();
     expect(beforeClampContext).toBeDefined();
@@ -348,7 +352,11 @@ describe('progressive biome evaluation', () => {
     const blockedPlan = blocked.project.routes
       .find((candidate) => candidate.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'G');
-    if (blockedPrevious?.authoring !== 'complete' || blockedPlan === undefined) {
+    if (
+      blockedPrevious?.authoring !== 'complete' ||
+      blockedPrevious.validity !== 'valid' ||
+      blockedPlan === undefined
+    ) {
       throw new Error('blocked reward artifact fixture has no valid F seed or G plan');
     }
     const blockedSeed = {
@@ -375,9 +383,21 @@ describe('progressive biome evaluation', () => {
       createOccurrenceId('not-a-reward-producer'),
     );
 
-    expect(blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeUndefined();
-    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeDefined();
+    const retainedBlockedProducer =
+      blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner);
+    expect(retainedBlockedProducer).toMatchObject({ acquisitionHorizon: 'generationOnly' });
+    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toMatchObject({
+      acquisitionHorizon: 'ownEnteredLifecycle',
+    });
     expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(foreignOwner)).toBeUndefined();
+    expect(
+      blockedClamped?.candidateArtifacts.rewardProducers.at(
+        createIncomingRewardAddress(
+          goldenGBiome,
+          createOccurrenceId('progressive-invalid-g-combat10'),
+        ),
+      ),
+    ).toBeUndefined();
   });
 
   it('carries opaque lifecycle artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
@@ -410,7 +430,7 @@ describe('progressive biome evaluation', () => {
     const plan = invalid.routes
       .find((candidate) => candidate.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'O');
-    if (previous?.authoring !== 'complete' || plan === undefined) {
+    if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
@@ -706,7 +726,7 @@ describe('progressive biome evaluation', () => {
   it('retains the first physical target when the second selected target is invalid', () => {
     const fixture = partialGWithInvalidSecondPhysicalTarget();
     const { evaluation } = prefix(fixture.project, 'Underworld', 'G');
-    const frontier = evaluation.materializedPrefix.frontier;
+    const frontier = evaluation.assessmentPrefix?.frontier;
 
     if (frontier?.kind !== 'exitDecision') {
       throw new Error('invalid G target did not clamp at its source decision');
@@ -725,6 +745,10 @@ describe('progressive biome evaluation', () => {
         targetOrigin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit1'),
       }),
     );
+    expect(evaluation.materializedPrefix.frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: createExitDecisionAddress(goldenGBiome, source(fixture.firstTarget)),
+    });
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({
         origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
@@ -744,10 +768,17 @@ describe('progressive biome evaluation', () => {
     expect(evaluation.coverage.blockedAt).toEqual(
       createTargetAddress(goldenGBiome, source(fixture.source), 'exit1'),
     );
-    expect(evaluation.materializedPrefix.frontier).toMatchObject({
+    expect(evaluation.assessmentPrefix?.frontier).toMatchObject({
       kind: 'exitDecision',
       targets: [],
     });
+    const authoredFrontier = evaluation.materializedPrefix.frontier;
+    if (authoredFrontier?.kind !== 'exitDecision') {
+      throw new Error('authored G target was lost after an invalid predecessor');
+    }
+    expect(authoredFrontier.targets.map((target) => target.room.occurrenceId)).toContain(
+      fixture.firstTarget,
+    );
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
@@ -760,7 +791,7 @@ describe('progressive biome evaluation', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'roomTarget' });
   });
 
   it('records an unselected takeover’s complete physical target set at its nullable frontier', () => {
@@ -794,7 +825,7 @@ describe('progressive biome evaluation', () => {
     expect(evaluation.coverage.blockedAt).toEqual(
       createIncomingRewardAddress(goldenGBiome, fixture.firstTarget),
     );
-    expect(evaluation.materializedPrefix.frontier).toMatchObject({
+    expect(evaluation.assessmentPrefix?.frontier).toMatchObject({
       kind: 'exitDecision',
       targets: [],
     });
@@ -821,7 +852,7 @@ describe('progressive biome evaluation', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'roomTarget' });
   });
 
   it('clamps an invalid semantic replacement before later generated decisions without deleting it', () => {
@@ -843,7 +874,8 @@ describe('progressive biome evaluation', () => {
         'exit1',
       ),
     );
-    expect(evaluation.materializedPrefix.decisions).toHaveLength(0);
+    expect(evaluation.assessmentPrefix?.decisions).toHaveLength(0);
+    expect(evaluation.materializedPrefix.decisions).toHaveLength(10);
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'targetRoomUnavailable' }),
     );

@@ -1,14 +1,20 @@
 import type {
   CatalogCollection,
-  EncounterPhasePresence,
-  EncounterPhase,
+  EncounterDefinition,
+  EncounterEnvelope,
+  EncounterEnvelopeSlot,
   EncounterPhaseKind,
-  EncounterProfile,
-  RewardWheelOfferPoint,
+  EncounterSet,
+  EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
-import type { RawEncounterProfileDeclaration } from '../declarations';
+import type {
+  RawEncounterDefinitionDeclaration,
+  RawEncounterEnvelopeDeclaration,
+  RawEncounterEnvelopeSlotDeclaration,
+  RawEncounterSetDeclaration,
+} from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -27,156 +33,216 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'story',
 ]);
 
-export function normalizeEncounterProfiles(
-  rawProfiles: readonly RawEncounterProfileDeclaration[],
+function normalizeRewardAttachment(
+  raw: NonNullable<RawEncounterEnvelopeSlotDeclaration['rewardAttachment']>,
   rewards: RewardKernelCatalog,
-): CatalogCollection<EncounterProfile> {
-  const profiles = rawProfiles.map((profile, profileIndex): EncounterProfile => {
-    const path = `encounterProfiles[${profileIndex}]`;
-    requireNonEmpty(profile.key, `${path}.key`);
-    const seenPhases = new Set<string>();
-    const seenOfferPoints = new Set<string>();
-    const phases = profile.phases.map((phase, phaseIndex): EncounterPhase => {
-      const phasePath = `${path}.phases[${phaseIndex}]`;
-      requireNonEmpty(phase.key, `${phasePath}.key`);
-      if (seenPhases.has(phase.key)) {
-        fail(`${phasePath}.key`, `duplicates phase ${phase.key}`);
-      }
-      seenPhases.add(phase.key);
-      if (!encounterPhaseKinds.has(phase.kind)) {
-        fail(`${phasePath}.kind`, `unknown encounter phase kind ${String(phase.kind)}`);
-      }
-      if (typeof phase.countsEncounterDepth !== 'boolean') {
-        fail(`${phasePath}.countsEncounterDepth`, 'must be boolean');
-      }
-      let presence: EncounterPhasePresence | undefined;
-      if (phase.presence !== undefined) {
-        if (phase.presence.kind !== 'authoredOptional') {
-          fail(
-            `${phasePath}.presence.kind`,
-            `unknown encounter presence ${String(phase.presence.kind)}`,
-          );
-        }
-        if (phase.presence.decisionPoint !== 'prepareRoom') {
-          fail(
-            `${phasePath}.presence.decisionPoint`,
-            `unknown presence decision point ${String(phase.presence.decisionPoint)}`,
-          );
-        }
-        if (typeof phase.presence.defaultActive !== 'boolean') {
-          fail(`${phasePath}.presence.defaultActive`, 'must be boolean');
-        }
-        presence = Object.freeze({
-          kind: 'authoredOptional',
-          decisionPoint: 'prepareRoom',
-          requirement: normalizeRequirement(
-            phase.presence.requirement,
-            `${phasePath}.presence.requirement`,
-          ),
-          defaultActive: phase.presence.defaultActive,
-        });
-        validateRequirementReferences(
-          presence.requirement,
-          rewards.rewardTypes,
-          `${phasePath}.presence.requirement`,
-        );
-      }
-      let offerPoint: RewardWheelOfferPoint | undefined;
-      if (phase.offerPoint !== undefined) {
-        const offerPath = `${phasePath}.offerPoint`;
-        if (phase.offerPoint.kind !== 'rewardWheel') {
-          fail(`${offerPath}.kind`, `unknown offer point ${String(phase.offerPoint.kind)}`);
-        }
-        const key = requireNonEmpty(phase.offerPoint.key, `${offerPath}.key`);
-        if (seenOfferPoints.has(key)) {
-          fail(`${offerPath}.key`, `duplicates offer point ${key}`);
-        }
-        seenOfferPoints.add(key);
-        if (!phase.countsEncounterDepth) {
-          fail(offerPath, 'reward wheels require a counting encounter phase');
-        }
-        const reward = normalizeRewardBinding(
-          phase.offerPoint.reward,
-          rewards,
-          `${offerPath}.reward`,
-        );
-        if (reward.kind !== 'countedChoice') {
-          fail(`${offerPath}.reward.kind`, 'reward wheels require countedChoice');
-        }
-        if (!reward.storeKeys.includes(phase.offerPoint.defaultStoreKey)) {
-          fail(`${offerPath}.defaultStoreKey`, 'must belong to the wheel reward store domain');
-        }
-        const offerKeys = freezeUniqueStrings(phase.offerPoint.offerKeys, `${offerPath}.offerKeys`);
-        if (offerKeys.length === 0) {
-          fail(`${offerPath}.offerKeys`, 'must not be empty');
-        }
-        const min = requirePositiveInteger(
-          phase.offerPoint.offerCount.min,
-          `${offerPath}.offerCount.min`,
-        );
-        const max = requirePositiveInteger(
-          phase.offerPoint.offerCount.max,
-          `${offerPath}.offerCount.max`,
-        );
-        const defaultValue = requirePositiveInteger(
-          phase.offerPoint.offerCount.defaultValue,
-          `${offerPath}.offerCount.defaultValue`,
-        );
-        if (max < min || max !== offerKeys.length) {
-          fail(`${offerPath}.offerCount.max`, 'must equal offer slot capacity and be at least min');
-        }
-        if (defaultValue < min || defaultValue > max) {
-          fail(`${offerPath}.offerCount.defaultValue`, 'must be within the offer-count range');
-        }
-        if (phase.offerPoint.picked !== 'exactlyOne') {
-          fail(
-            `${offerPath}.picked`,
-            `unknown wheel pick policy ${String(phase.offerPoint.picked)}`,
-          );
-        }
-        if (phase.offerPoint.offerTiming !== 'encounterStart') {
-          fail(
-            `${offerPath}.offerTiming`,
-            `unknown wheel offer timing ${String(phase.offerPoint.offerTiming)}`,
-          );
-        }
-        if (phase.offerPoint.acquisitionTiming !== 'postCombat') {
-          fail(
-            `${offerPath}.acquisitionTiming`,
-            `unknown wheel acquisition timing ${String(phase.offerPoint.acquisitionTiming)}`,
-          );
-        }
-        offerPoint = Object.freeze({
-          kind: 'rewardWheel',
-          key,
-          reward,
-          defaultStoreKey: phase.offerPoint.defaultStoreKey,
-          offerKeys,
-          offerCount: Object.freeze({ min, max, defaultValue }),
-          picked: 'exactlyOne',
-          offerTiming: 'encounterStart',
-          acquisitionTiming: 'postCombat',
-        });
-      }
-      return Object.freeze({
-        key: phase.key,
-        kind: phase.kind,
-        countsEncounterDepth: phase.countsEncounterDepth,
-        ...(phase.baselineEncounterKey === undefined
-          ? {}
-          : {
-              baselineEncounterKey: requireNonEmpty(
-                phase.baselineEncounterKey,
-                `${phasePath}.baselineEncounterKey`,
-              ),
-            }),
-        ...(presence === undefined ? {} : { presence }),
-        ...(offerPoint === undefined ? {} : { offerPoint }),
-      });
+  path: string,
+): EncounterSlotRewardAttachment {
+  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
+  if (raw.kind === 'localReward') {
+    return Object.freeze({
+      kind: 'localReward',
+      groupKey: requireNonEmpty(raw.groupKey, `${path}.groupKey`),
+      slotKey: requireNonEmpty(raw.slotKey, `${path}.slotKey`),
     });
+  }
+  if (raw.kind === 'rewardWheel') {
+    const key = requireNonEmpty(raw.key, `${path}.key`);
+    const reward = normalizeRewardBinding(raw.reward, rewards, `${path}.reward`);
+    if (reward.kind !== 'countedChoice') {
+      fail(`${path}.reward.kind`, 'reward wheels require countedChoice');
+    }
+    if (!reward.storeKeys.includes(raw.defaultStoreKey)) {
+      fail(`${path}.defaultStoreKey`, 'must belong to the wheel reward store domain');
+    }
+    const offerKeys = freezeUniqueStrings(raw.offerKeys, `${path}.offerKeys`);
+    if (offerKeys.length === 0) {
+      fail(`${path}.offerKeys`, 'must not be empty');
+    }
+    const min = requirePositiveInteger(raw.offerCount.min, `${path}.offerCount.min`);
+    const max = requirePositiveInteger(raw.offerCount.max, `${path}.offerCount.max`);
+    const defaultValue = requirePositiveInteger(
+      raw.offerCount.defaultValue,
+      `${path}.offerCount.defaultValue`,
+    );
+    if (max < min || max !== offerKeys.length) {
+      fail(`${path}.offerCount.max`, 'must equal offer slot capacity and be at least min');
+    }
+    if (defaultValue < min || defaultValue > max) {
+      fail(`${path}.offerCount.defaultValue`, 'must be within the offer-count range');
+    }
+    if (raw.picked !== 'exactlyOne') {
+      fail(`${path}.picked`, `unknown wheel pick policy ${String(raw.picked)}`);
+    }
+    return Object.freeze({
+      kind: 'rewardWheel',
+      key,
+      reward,
+      defaultStoreKey: raw.defaultStoreKey,
+      offerKeys,
+      offerCount: Object.freeze({ min, max, defaultValue }),
+      picked: 'exactlyOne',
+    });
+  }
+  fail(`${path}.kind`, `unknown encounter reward attachment ${String(receivedKind)}`);
+}
 
-    return Object.freeze({ key: profile.key, phases: Object.freeze(phases) });
+function normalizeEnvelopeSlot(
+  raw: RawEncounterEnvelopeSlotDeclaration,
+  rewards: RewardKernelCatalog,
+  path: string,
+): EncounterEnvelopeSlot {
+  const key = requireNonEmpty(raw.key, `${path}.key`);
+  if (raw.activation !== 'always' && raw.activation !== 'templateControlled') {
+    fail(`${path}.activation`, `unknown slot activation ${String(raw.activation)}`);
+  }
+  const activationRequirement =
+    raw.activationRequirement === undefined
+      ? undefined
+      : normalizeRequirement(raw.activationRequirement, `${path}.activationRequirement`);
+  if (activationRequirement !== undefined) {
+    if (raw.activation !== 'templateControlled') {
+      fail(`${path}.activationRequirement`, 'requires templateControlled activation');
+    }
+    validateRequirementReferences(
+      activationRequirement,
+      rewards.rewardTypes,
+      `${path}.activationRequirement`,
+    );
+  }
+  return Object.freeze({
+    key,
+    activation: raw.activation,
+    ...(activationRequirement === undefined ? {} : { activationRequirement }),
+    ...(raw.rewardAttachment === undefined
+      ? {}
+      : {
+          rewardAttachment: normalizeRewardAttachment(
+            raw.rewardAttachment,
+            rewards,
+            `${path}.rewardAttachment`,
+          ),
+        }),
   });
+}
 
-  return createCollection(profiles, 'encounterProfiles', (profile) => profile.key);
+export function normalizeEncounterEnvelopes(
+  rawEnvelopes: readonly RawEncounterEnvelopeDeclaration[],
+  rewards: RewardKernelCatalog,
+): CatalogCollection<EncounterEnvelope> {
+  return createCollection(
+    rawEnvelopes.map((raw, envelopeIndex): EncounterEnvelope => {
+      const path = `encounterEnvelopes[${envelopeIndex}]`;
+      const key = requireNonEmpty(raw.key, `${path}.key`);
+      const slots = raw.slots.map((slot, slotIndex) =>
+        normalizeEnvelopeSlot(slot, rewards, `${path}.slots[${slotIndex}]`),
+      );
+      const seenSlotKeys = new Set<string>();
+      const seenWheelKeys = new Set<string>();
+      for (const [slotIndex, slot] of slots.entries()) {
+        if (seenSlotKeys.has(slot.key)) {
+          fail(`${path}.slots[${slotIndex}].key`, `duplicates slot ${slot.key}`);
+        }
+        seenSlotKeys.add(slot.key);
+        if (slot.rewardAttachment?.kind === 'rewardWheel') {
+          if (seenWheelKeys.has(slot.rewardAttachment.key)) {
+            fail(
+              `${path}.slots[${slotIndex}].rewardAttachment.key`,
+              `duplicates wheel ${slot.rewardAttachment.key}`,
+            );
+          }
+          seenWheelKeys.add(slot.rewardAttachment.key);
+        }
+      }
+      return Object.freeze({ key, slots: Object.freeze(slots) });
+    }),
+    'encounterEnvelopes',
+    (envelope) => envelope.key,
+  );
+}
+
+export function normalizeEncounterDefinitions(
+  rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
+  rewards: RewardKernelCatalog,
+): CatalogCollection<EncounterDefinition> {
+  return createCollection(
+    rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
+      const path = `encounterDefinitions[${definitionIndex}]`;
+      const key = requireNonEmpty(raw.key, `${path}.key`);
+      const label = requireNonEmpty(raw.label, `${path}.label`);
+      if (!encounterPhaseKinds.has(raw.kind)) {
+        fail(`${path}.kind`, `unknown encounter kind ${String(raw.kind)}`);
+      }
+      if (typeof raw.countsEncounterDepth !== 'boolean') {
+        fail(`${path}.countsEncounterDepth`, 'must be boolean');
+      }
+      const requirements =
+        raw.requirements === undefined
+          ? undefined
+          : normalizeRequirement(raw.requirements, `${path}.requirements`);
+      if (requirements !== undefined) {
+        validateRequirementReferences(requirements, rewards.rewardTypes, `${path}.requirements`);
+      }
+      if (raw.sequenceEffect !== undefined && raw.sequenceEffect.kind !== 'terminateSuffix') {
+        fail(
+          `${path}.sequenceEffect.kind`,
+          `unknown encounter sequence effect ${String(raw.sequenceEffect.kind)}`,
+        );
+      }
+      const npcPresentationKey =
+        raw.npcPresentationKey === undefined
+          ? undefined
+          : requireNonEmpty(raw.npcPresentationKey, `${path}.npcPresentationKey`);
+      return Object.freeze({
+        key,
+        label,
+        kind: raw.kind,
+        countsEncounterDepth: raw.countsEncounterDepth,
+        ...(requirements === undefined ? {} : { requirements }),
+        ...(raw.sequenceEffect === undefined
+          ? {}
+          : { sequenceEffect: Object.freeze({ kind: 'terminateSuffix' as const }) }),
+        ...(npcPresentationKey === undefined ? {} : { npcPresentationKey }),
+      });
+    }),
+    'encounterDefinitions',
+    (definition) => definition.key,
+  );
+}
+
+export function normalizeEncounterSets(
+  rawSets: readonly RawEncounterSetDeclaration[],
+  definitions: CatalogCollection<EncounterDefinition>,
+): CatalogCollection<EncounterSet> {
+  return createCollection(
+    rawSets.map((raw, setIndex): EncounterSet => {
+      const path = `encounterSets[${setIndex}]`;
+      const key = requireNonEmpty(raw.key, `${path}.key`);
+      const encounterDefinitionKeys = freezeUniqueStrings(
+        raw.encounterDefinitionKeys,
+        `${path}.encounterDefinitionKeys`,
+      );
+      if (encounterDefinitionKeys.length === 0) {
+        fail(`${path}.encounterDefinitionKeys`, 'must not be empty');
+      }
+      for (const [definitionIndex, definitionKey] of encounterDefinitionKeys.entries()) {
+        if (definitions.byKey[definitionKey] === undefined) {
+          fail(
+            `${path}.encounterDefinitionKeys[${definitionIndex}]`,
+            `unknown encounter definition ${definitionKey}`,
+          );
+        }
+      }
+      const defaultEncounterDefinitionKey = requireNonEmpty(
+        raw.defaultEncounterDefinitionKey,
+        `${path}.defaultEncounterDefinitionKey`,
+      );
+      if (!encounterDefinitionKeys.includes(defaultEncounterDefinitionKey)) {
+        fail(`${path}.defaultEncounterDefinitionKey`, 'must be a member of the encounter set');
+      }
+      return Object.freeze({ key, encounterDefinitionKeys, defaultEncounterDefinitionKey });
+    }),
+    'encounterSets',
+    (set) => set.key,
+  );
 }

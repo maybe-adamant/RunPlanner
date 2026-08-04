@@ -38,6 +38,7 @@ function appendMarker(markers: WorkspaceMarker[], marker: WorkspaceMarker | unde
 function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   const markers: WorkspaceMarker[] = [];
   appendMarker(markers, room.marker);
+  for (const phase of room.encounterPhases) appendMarker(markers, phase.marker);
   for (const control of room.rewardControls) appendMarker(markers, control.marker);
   const local = room.roomLocal;
   switch (local.kind) {
@@ -54,6 +55,7 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
         appendMarker(markers, local.sideRooms.group.marker);
         for (const slot of local.sideRooms.group.slots) {
           appendMarker(markers, slot.marker);
+          for (const phase of slot.encounterPhases) appendMarker(markers, phase.marker);
           if (slot.generation === 'generated') appendMarker(markers, slot.rewardControl.marker);
         }
       }

@@ -63,6 +63,7 @@ function hubKit(source: WorkspaceBiomeSource) {
     return assembleWorkspaceOccurrence({
       biome: source.biome,
       catalog,
+      encounterCandidateAt: () => undefined,
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
       ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: occurrenceFacts,

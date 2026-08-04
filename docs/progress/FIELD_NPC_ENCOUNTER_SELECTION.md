@@ -295,8 +295,13 @@ currently eligible candidate.
 
 Examples:
 
-- the P main set may default to `GeneratedP`; at depth 10 it is invalid and the
-  user selects `GeneratedP_Large`;
+- the P main set defaults to `GeneratedP`; the current eight-combat P
+  progression reaches its terminal combat at depth 9, where `GeneratedP` and
+  `GeneratedP_Large` intentionally overlap, so Large is currently a valid
+  terminal alternative rather than an invalid-default repair. If later
+  declaration data permits a P combat at depth 10, the static `GeneratedP`
+  default will remain invalid there and the same exact-candidate correction
+  contract applies without a model change;
 - an I set may default to its non-Goal generator; a Clockwork Goal room requires
   the corresponding Goal generator;
 - P opening may default to `PIntroCombat01` while retaining the other normalized
@@ -425,6 +430,13 @@ Intro     -> OEncountersIntros
 Combat1   -> OEncountersDefault
 Combat2?  -> OEncountersDefault
 ```
+
+When the Ship room's authored count includes `Combat2`, the source's pre-room
+`BiomeEncounterDepth` requirement permits it only at depths `2` through `5`.
+That is a resolution gate, not structural dormancy: a retained third-phase
+selection and its control remain visible as an invalid, repairable phase with a
+phase-owned finding when the gate fails, while emitting no encounter history or
+effects until corrected.
 
 This admits authored sequences such as ordinary Intro plus ordinary Combat,
 Heracles plus ordinary Combat, ordinary Intro plus ordinary Combat plus
@@ -632,7 +644,7 @@ but the support below must be explicit and compiler-checkable.
 | `NEncountersBigger`       | `GeneratedN_Bigger`, `ArtemisCombatN`, `HeraclesCombatN`                        | `GeneratedN_Bigger`        |
 | `NEncountersSubRoom`      | `GeneratedNSubRoom`, `GeneratedNSubRoom_Bigger`                                 | `GeneratedNSubRoom`        |
 | `NEncountersSubRoomLight` | `GeneratedNSubRoom`, `Empty`                                                    | `GeneratedNSubRoom`        |
-| `NEncountersSubRoomHeavy` | `GeneratedNSubRoom_Bigger`                                                      | `GeneratedNSubRoom_Bigger` |
+| N heavy side rooms        | direct fixed `GeneratedNSubRoom_Bigger` binding                                 | `GeneratedNSubRoom_Bigger` |
 | `OEncountersIntros`       | `GeneratedO_Intro01`, `HeraclesCombatO`                                         | `GeneratedO_Intro01`       |
 | `OEncountersDefault`      | `GeneratedO`, `IcarusCombatO`                                                   | `GeneratedO`               |
 | P opening                 | ordinary `PIntroCombat*` identities and one `Empty`; Dream-run identity removed | `PIntroCombat01`           |
@@ -823,8 +835,10 @@ Acceptance:
   responsibilities without selecting encounter identity or count behavior;
 - production sets contain unique identities and no weights;
 - every editable phase has a complete static default;
-- I Goal and late-P defaults can remain authored-invalid and offer the exact
-  valid correction;
+- I Goal defaults can remain authored-invalid and offer the exact valid
+  correction; the modeled P terminal boundary preserves the declared
+  `GeneratedP`/`GeneratedP_Large` overlap at depth 9 rather than inventing an
+  unsupported late-P invalid-default witness;
 - invalid selections emit no substitute identity, encounter history, counter,
   or reward effect;
 - NPC-free selections preserve existing reward behavior and derive the same
@@ -998,7 +1012,7 @@ by the stable audit.
 | Compatibility-profile residue             | `EncounterProfile` is absent from the normalized catalog; retired profiles have no forwarding aliases, envelope adapters, compatibility lookup, or second materialization path                                                                                                                                                |
 | Progression-selector residue              | O reward-store overrides use `sourceRoomTemplateKey: ShipCombat`; no layout, topology, codec, or command path retains or reconstructs `sourceEncounterProfileKey`                                                                                                                                                             |
 | Empty/non-combat member mismatch          | N side and P opening `Empty` selections resolve definition-owned kind/effects without changing the stable phase address                                                                                                                                                                                                       |
-| Context-sensitive default repair          | I Goal and late-P defaults remain authored-invalid until an explicit valid command changes them                                                                                                                                                                                                                               |
+| Context-sensitive default repair          | I Goal defaults remain authored-invalid until an explicit valid command changes them; the current P terminal preserves its declared depth-9 `GeneratedP`/`GeneratedP_Large` overlap without automatic substitution                                                                                                            |
 | Silent fallback                           | invalid encounter emits no substitute definition, history, counter, reward, or NPC-index row                                                                                                                                                                                                                                  |
 | Concrete identity loss                    | authored state and resolved history carry the exact normalized game encounter key                                                                                                                                                                                                                                             |
 | Semantic family ledger                    | requirements and history use exact Encounter Definition keys; optional NPC grouping metadata is consumed only by presentation and navigation                                                                                                                                                                                  |
@@ -1101,7 +1115,8 @@ Keep representative cross-layer witnesses rather than copying the full policy
 matrix:
 
 - invalid I Goal default corrected explicitly;
-- late-P generated encounter corrected explicitly;
+- P terminal `GeneratedP`/`GeneratedP_Large` overlap remains explicit with no
+  automatic substitution;
 - Artemis F selection rejects later Artemis F/G/N candidates and retains exact
   NPC-index navigation;
 - Arachne counter override and second-biome placement;

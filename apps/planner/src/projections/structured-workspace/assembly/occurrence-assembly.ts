@@ -1,5 +1,6 @@
 import {
   createIncomingRewardAddress,
+  createEncounterPhaseAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
@@ -10,13 +11,22 @@ import {
   createShopPurchaseAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type EncounterPhaseAddress,
   type LocalChildAddress,
   type RoomOccurrence,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  Catalog,
+  EncounterRewardWheelAttachment,
+  RoomDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CanonicalAuthoredRoom, FieldsBatchFacts } from '@run-planner/engine/simulation';
+import type {
+  CanonicalAuthoredRoom,
+  EncounterPhaseCandidateSupport,
+  FieldsBatchFacts,
+} from '@run-planner/engine/simulation';
 
 import type {
   CountedRewardCandidateOwner,
@@ -33,6 +43,7 @@ import {
   workspaceSideRoomEntryOrderKey,
   type WorkspaceEphyraSideRoomEntryOption,
   type WorkspaceEphyraSideRoomEntryOrderControl,
+  type WorkspaceEncounterPhase,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
   type WorkspaceRoomLocal,
@@ -59,6 +70,10 @@ export interface WorkspaceOccurrenceProjectionFacts {
 export interface WorkspaceOccurrenceAssemblyInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
+  /** Exact engine-owned active candidate capability for one pool-backed phase. */
+  readonly encounterCandidateAt: (
+    phase: EncounterPhaseAddress,
+  ) => EncounterPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -223,26 +238,21 @@ function controlsForOccurrence(
       break;
     }
     case 'shipCombat': {
-      const profile = input.catalog.encounterProfiles.byKey[room.encounterProfileKey];
-      if (profile === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} encounter profile is missing`,
-        );
-      }
-      for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels)) {
-        const declaration = profile.phases.find(
-          (phase) => phase.offerPoint?.key === wheelKey,
-        )?.offerPoint;
-        if (declaration === undefined) {
+      const envelope = requireEncounterEnvelope(input.catalog, room);
+      for (const slot of envelope.slots) {
+        const declaration = slot.rewardAttachment;
+        if (declaration?.kind !== 'rewardWheel') continue;
+        const wheel = occurrence.state.wheels[declaration.key];
+        if (wheel === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} wheel ${wheelKey} has no reward declaration`,
+            `${room.gameName} Ship state is missing ${declaration.key}`,
           );
         }
         for (const [offerKey, offer] of Object.entries(wheel.offers)) {
           const address = createRewardWheelOfferAddress(
             input.biome,
             occurrence.occurrenceId,
-            wheelKey,
+            declaration.key,
             offerKey,
           );
           controls.push(
@@ -320,6 +330,103 @@ function requireProjectedRewardControl<TKind extends WorkspaceRewardControl['kin
     );
   }
   return control as Extract<WorkspaceRewardControl, { readonly kind: TKind }>;
+}
+
+function requireEncounterEnvelope(catalog: Catalog, room: RoomDeclaration) {
+  const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+  if (envelope === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${room.gameName} has no encounter envelope ${room.encounterEnvelopeKey}`,
+    );
+  }
+  return envelope;
+}
+
+function requireRewardWheelAttachment(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  wheelKey: string,
+): EncounterRewardWheelAttachment {
+  const attachment = requireEncounterEnvelope(catalog, room).slots.find(
+    (slot) =>
+      slot.rewardAttachment?.kind === 'rewardWheel' && slot.rewardAttachment.key === wheelKey,
+  )?.rewardAttachment;
+  if (attachment?.kind !== 'rewardWheel') {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${room.gameName} has no reward-wheel attachment ${wheelKey}`,
+    );
+  }
+  return attachment;
+}
+
+/**
+ * Maps a declaration-owned pool into one renderable phase only when the exact
+ * engine artifact says that phase is structurally active. This deliberately
+ * does not use envelope position, encounter count, requirement results, or
+ * suffix policy to decide visibility.
+ */
+function activeEncounterPhasesForOwner(
+  input: WorkspaceOccurrenceAssemblyInput,
+  room: RoomDeclaration,
+  owner: EncounterPhaseAddress['owner'],
+): readonly WorkspaceEncounterPhase[] {
+  const phases: WorkspaceEncounterPhase[] = [];
+  for (const binding of room.encounterSlotBindings) {
+    if (binding.kind !== 'set') continue;
+    const address = createEncounterPhaseAddress(input.biome, owner, binding.slotKey);
+    const support = input.encounterCandidateAt(address);
+    if (support === undefined) continue;
+    if (
+      semanticAddressKey(support.origin) !== semanticAddressKey(address) ||
+      support.active !== true
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} received mismatched encounter candidate support`,
+      );
+    }
+    const set = input.catalog.encounterSets.byKey[binding.encounterSetKey];
+    if (set === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${room.gameName} has no encounter set ${binding.encounterSetKey}`,
+      );
+    }
+    if (!set.encounterDefinitionKeys.includes(support.selectedEncounterKey)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} selected ${support.selectedEncounterKey} outside ${set.key}`,
+      );
+    }
+    const candidateChoices = Object.freeze(
+      set.encounterDefinitionKeys.map((encounterKey) => {
+        const definition = input.catalog.encounterDefinitions.byKey[encounterKey];
+        if (definition === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${set.key} has no encounter definition ${encounterKey}`,
+          );
+        }
+        return Object.freeze({ label: definition.label, value: definition.key });
+      }),
+    );
+    const selectedDefinition =
+      input.catalog.encounterDefinitions.byKey[support.selectedEncounterKey];
+    if (selectedDefinition === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} has no selected encounter definition ${support.selectedEncounterKey}`,
+      );
+    }
+    phases.push(
+      Object.freeze({
+        address,
+        candidateChoices,
+        label: binding.slotKey,
+        marker: input.markerDestinations.marker(address),
+        selectedEncounter: Object.freeze({
+          key: selectedDefinition.key,
+          label: selectedDefinition.label,
+        }),
+      }),
+    );
+  }
+  return Object.freeze(phases);
 }
 
 function ordinalLabel(position: number): string {
@@ -475,11 +582,18 @@ function roomLocalForOccurrence(
             group.key,
             slot.slotKey,
           );
+          const encounterPhases = activeEncounterPhasesForOwner(input, sideRoom, {
+            kind: 'localChild',
+            occurrenceId: occurrence.occurrenceId,
+            groupKey: group.key,
+            slotKey: slot.slotKey,
+          });
           const descriptor = {
             address,
             availabilityRank: slot.availabilityRank,
             entered: side.enteredOrdinal !== null,
             enteredOrdinal: side.enteredOrdinal,
+            encounterPhases,
             entryOrder: ephyraSideRoomEntryOrderControl(address, enteredSlotKeys, slot.slotKey),
             key: slot.slotKey,
             label: sideRoom.label,
@@ -560,16 +674,11 @@ function roomLocalForOccurrence(
     }
     case 'shipCombat': {
       const state = occurrence.state;
-      const profile = input.catalog.encounterProfiles.byKey[room.encounterProfileKey];
-      if (profile === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ship state has no encounter profile`,
-        );
-      }
+      const envelope = requireEncounterEnvelope(input.catalog, room);
       let wheelOrdinal = 0;
-      const wheels = profile.phases.flatMap((phase, phaseIndex) => {
-        const declaration = phase.offerPoint;
-        if (declaration === undefined) return [];
+      const wheels = envelope.slots.flatMap((slot, phaseIndex) => {
+        const declaration = slot.rewardAttachment;
+        if (declaration?.kind !== 'rewardWheel') return [];
         const wheel = state.wheels[declaration.key];
         if (wheel === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -614,7 +723,7 @@ function roomLocalForOccurrence(
       });
       return Object.freeze({
         kind: 'ship' as const,
-        encounterCount: state.encounterCount,
+        combatPhaseCount: state.encounterCount,
         wheels: Object.freeze(wheels),
       });
     }
@@ -715,18 +824,55 @@ function roomLocalForOccurrence(
   }
 }
 
+function encounterPhaseInteractionRequirement(
+  owner: LocalChildAddress | WorkspaceRoomSummary['address'],
+  phases: readonly WorkspaceEncounterPhase[],
+): WorkspaceOccurrenceInteractionRequirement | undefined {
+  if (phases.length === 0) return undefined;
+  return Object.freeze({
+    kind: 'encounterPhases' as const,
+    owner,
+    phases: Object.freeze(
+      phases.map((phase) =>
+        Object.freeze({
+          candidateChoices: phase.candidateChoices,
+          owner: phase.address,
+          selectedEncounterKey: phase.selectedEncounter.key,
+        }),
+      ),
+    ),
+  });
+}
+
 function occurrenceInteractionRequirements(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
 ): readonly WorkspaceOccurrenceInteractionRequirement[] {
+  const requirements: WorkspaceOccurrenceInteractionRequirement[] = [];
+  const topLevelEncounterRequirement = encounterPhaseInteractionRequirement(
+    room.address,
+    room.encounterPhases,
+  );
+  if (topLevelEncounterRequirement !== undefined) requirements.push(topLevelEncounterRequirement);
+
+  if (room.roomLocal.kind === 'ephyra' && room.roomLocal.sideRooms.kind === 'published') {
+    for (const sideRoom of room.roomLocal.sideRooms.group.slots) {
+      const localEncounterRequirement = encounterPhaseInteractionRequirement(
+        sideRoom.address,
+        sideRoom.encounterPhases,
+      );
+      if (localEncounterRequirement !== undefined) requirements.push(localEncounterRequirement);
+    }
+  }
+
   switch (room.roomLocal.kind) {
     case 'none':
     case 'fixed':
     case 'incomingReward':
     case 'fields':
-      return Object.freeze([]);
+      return Object.freeze(requirements);
     case 'ephyra': {
-      if (room.roomLocal.sideRooms.kind === 'withheld') return Object.freeze([]);
+      if (room.roomLocal.sideRooms.kind === 'withheld') return Object.freeze(requirements);
       const group = room.roomLocal.sideRooms.group;
       const sideRooms = group.slots.map((sideRoom) =>
         Object.freeze({
@@ -735,8 +881,8 @@ function occurrenceInteractionRequirements(
           generation: sideRoom.generation,
         }),
       );
-      if (sideRooms.length === 0) return Object.freeze([]);
-      return Object.freeze([
+      if (sideRooms.length === 0) return Object.freeze(requirements);
+      requirements.push(
         Object.freeze({
           kind: 'ephyraSideRooms' as const,
           generationChoices: Object.freeze([
@@ -746,33 +892,21 @@ function occurrenceInteractionRequirements(
           owner: group.address,
           sideRooms: Object.freeze(sideRooms),
         }),
-      ]);
+      );
+      return Object.freeze(requirements);
     }
     case 'ship': {
       const declaration = requireRoom(catalog, room.gameName);
-      const profile = catalog.encounterProfiles.byKey[declaration.encounterProfileKey];
-      if (profile === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${declaration.gameName} Ship projection has no encounter profile`,
-        );
-      }
       const wheels = room.roomLocal.wheels.map((wheel) => {
-        const offerPoint = profile.phases.find(
-          (phase) => phase.offerPoint?.key === wheel.key,
-        )?.offerPoint;
-        if (offerPoint === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${declaration.gameName} Ship projection has no ${wheel.key} wheel declaration`,
-          );
-        }
+        const attachment = requireRewardWheelAttachment(catalog, declaration, wheel.key);
         return Object.freeze({
           address: wheel.address,
           offerCount: wheel.offerCount,
           offerCountChoices: Object.freeze(
             Array.from(
-              { length: offerPoint.offerCount.max - offerPoint.offerCount.min + 1 },
+              { length: attachment.offerCount.max - attachment.offerCount.min + 1 },
               (_, index) => {
-                const value = offerPoint.offerCount.min + index;
+                const value = attachment.offerCount.min + index;
                 return Object.freeze({ label: String(value), value });
               },
             ),
@@ -786,31 +920,32 @@ function occurrenceInteractionRequirements(
           pickedOfferIndex: wheel.pickedOfferIndex,
           storeKey: wheel.storeKey,
           storeChoices: Object.freeze(
-            offerPoint.reward.storeKeys.map((value) =>
+            attachment.reward.storeKeys.map((value) =>
               Object.freeze({ label: workspaceRewardStoreLabel(value), value }),
             ),
           ),
         });
       });
-      return Object.freeze([
+      requirements.push(
         Object.freeze({
-          encounterCount: room.roomLocal.encounterCount,
-          encounterCountChoices: Object.freeze([
+          combatPhaseCount: room.roomLocal.combatPhaseCount,
+          combatPhaseCountChoices: Object.freeze([
             Object.freeze({ label: 'Intro + 1 combat', value: 2 as const }),
             Object.freeze({ label: 'Intro + 2 combats', value: 3 as const }),
           ]),
-          kind: 'shipCombat' as const,
+          kind: 'shipCombatPhaseCount' as const,
           owner: room.address,
           wheels: Object.freeze(wheels),
         }),
-      ]);
+      );
+      return Object.freeze(requirements);
     }
     case 'shop': {
       const shop = room.roomLocal;
       if (!shop.materialized || shop.offers.length === 0) {
-        return Object.freeze([]);
+        return Object.freeze(requirements);
       }
-      return Object.freeze([
+      requirements.push(
         Object.freeze({
           kind: 'shopPurchaseOrders' as const,
           owner: room.address,
@@ -824,7 +959,8 @@ function occurrenceInteractionRequirements(
             ),
           ),
         }),
-      ]);
+      );
+      return Object.freeze(requirements);
     }
   }
 }
@@ -851,9 +987,14 @@ export function assembleWorkspaceOccurrence(
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
+  const encounterPhases = activeEncounterPhasesForOwner(input, room, {
+    kind: 'occurrence',
+    occurrenceId: occurrence.occurrenceId,
+  });
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     detailsActive: input.facts.detailsActive,
+    encounterPhases,
     entered,
     gameName: occurrence.gameName,
     kind: room.kind,
@@ -868,7 +1009,10 @@ export function assembleWorkspaceOccurrence(
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
-    localDetailMarkers: workspaceLocalDetailMarkers(roomSummary.roomLocal),
+    localDetailMarkers: Object.freeze([
+      ...roomSummary.encounterPhases.map((phase) => phase.marker),
+      ...workspaceLocalDetailMarkers(roomSummary.roomLocal),
+    ]),
     marker: roomSummary.marker,
     room: roomSummary,
   });

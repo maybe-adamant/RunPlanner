@@ -223,6 +223,9 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.occurrence.routeKey, query.occurrence.biomeKey),
         )?.roomLifecycles,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.occurrence.routeKey, query.occurrence.biomeKey),
+        )?.encounters,
         query,
       );
     case 'rewardWheelOfferCount':

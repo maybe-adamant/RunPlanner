@@ -14,6 +14,7 @@ import type { ProjectEvaluation } from '../project';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { CandidateEvaluationContractError } from './contract';
 import {
+  candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
   completeBiomeCount,
@@ -85,7 +86,7 @@ function evaluatePrefixHubTerminalTakeover(
     query.source.biomeKey,
   );
   const biome = candidatePrefix(candidate);
-  const prefix = biome?.materializedPrefix;
+  const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
     return undefined;

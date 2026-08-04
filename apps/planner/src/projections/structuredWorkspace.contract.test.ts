@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -16,6 +18,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
   type CanonicalBatch,
@@ -33,8 +36,11 @@ import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import {
+  expectedWorkspaceEncounterPhaseLeafRequirements,
   expectedWorkspaceLeafRequirements,
   type ExpectedWorkspaceLeafInteraction,
 } from '@planner-test/support/structured-workspace/expected-leaves';
@@ -73,6 +79,18 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
   return {
     ...actual,
     assertProjectEvaluationAssembly: () => undefined,
+    encounterPhaseCandidateSupportForProjectEvaluationAssembly: (
+      ...args: Parameters<typeof actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly>
+    ) => {
+      try {
+        return actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly(...args);
+      } catch {
+        // A deliberately forged evaluator overlay has no exact candidate
+        // capability. Withhold phase controls so the overlay guard under test
+        // can reject its malformed evaluator product first.
+        return undefined;
+      }
+    },
   };
 });
 
@@ -201,6 +219,8 @@ function withoutLeafInteraction(
     return result;
   };
   switch (expected.kind) {
+    case 'encounterPhase':
+      return { ...interactions, encounterPhases: without(interactions.encounterPhases) };
     case 'reward':
       return { ...interactions, rewards: without(interactions.rewards) };
     case 'rewardWheelOfferCount':
@@ -212,8 +232,11 @@ function withoutLeafInteraction(
       return { ...interactions, rewardWheelPicks: without(interactions.rewardWheelPicks) };
     case 'rewardWheelStore':
       return { ...interactions, rewardWheelStores: without(interactions.rewardWheelStores) };
-    case 'shipEncounterCount':
-      return { ...interactions, shipEncounterCounts: without(interactions.shipEncounterCounts) };
+    case 'shipCombatPhaseCount':
+      return {
+        ...interactions,
+        shipCombatPhaseCounts: without(interactions.shipCombatPhaseCounts),
+      };
     case 'shopPurchase':
       return {
         ...interactions,
@@ -607,18 +630,21 @@ describe('structured workspace overlay contract', () => {
       }
     >();
     for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
-      const projected = projectWorkspace(project);
+      const assembly = simulateProjectAssembly(catalog, project);
+      const projected = projection().project(assembly);
       for (const route of project.routes) {
         for (const plan of route.biomes) {
           const nodes = projected.routes
             .find((candidate) => candidate.routeKey === route.routeKey)
             ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey)?.nodes;
           if (nodes === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
-          const requirements = expectedWorkspaceLeafRequirements(
-            catalog,
-            { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
-            plan,
-          );
+          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+          const requirements = [
+            ...expectedWorkspaceLeafRequirements(catalog, biome, plan),
+            ...expectedWorkspaceEncounterPhaseLeafRequirements(catalog, biome, plan, (phase) =>
+              encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
+            ),
+          ];
           for (const expected of requirements) {
             for (const interaction of expected.interactions) {
               if (!examples.has(interaction.kind)) {
@@ -631,11 +657,12 @@ describe('structured workspace overlay contract', () => {
     }
     expect([...examples.keys()].sort()).toEqual(
       [
+        'encounterPhase',
         'reward',
         'rewardWheelOfferCount',
         'rewardWheelPick',
         'rewardWheelStore',
-        'shipEncounterCount',
+        'shipCombatPhaseCount',
         'shopPurchase',
         'sideRoomEntryOrder',
         'sideRoomGeneration',
@@ -654,6 +681,131 @@ describe('structured workspace overlay contract', () => {
         }),
       ).toThrow(/has no exact workspace interaction/);
     }
+  });
+
+  it('closes exact top-level, local-child, and invalid active Ship encounter phase leaves', () => {
+    const valid = createRepresentativeNOPQProject();
+    const validAssembly = simulateProjectAssembly(catalog, valid);
+    const nPlan = valid.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    if (nPlan === undefined) throw new Error('N plan is missing');
+    const topLevelN = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: nOccurrenceId('combat05') },
+      'Encounter',
+    );
+    const localN = createEncounterPhaseAddress(
+      nBiome,
+      {
+        kind: 'localChild',
+        occurrenceId: nOccurrenceId('combat05'),
+        groupKey: 'sideRooms',
+        slotKey: 'sideDoor2',
+      },
+      'Encounter',
+    );
+    const nExpected = expectedWorkspaceEncounterPhaseLeafRequirements(
+      catalog,
+      nBiome,
+      nPlan,
+      (phase) => encounterPhaseCandidateSupportForProjectEvaluationAssembly(validAssembly, phase),
+    );
+    expect(nExpected.map((requirement) => semanticAddressKey(requirement.address))).toEqual(
+      expect.arrayContaining([semanticAddressKey(topLevelN), semanticAddressKey(localN)]),
+    );
+
+    const invalid = applyProjectCommand(valid, catalog, {
+      encounterCount: 3,
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+    });
+    const invalidAssembly = simulateProjectAssembly(catalog, invalid);
+    const projected = projection().project(invalidAssembly);
+    const oPlan = invalid.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    const oWorkspace = projected.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (oPlan === undefined || oWorkspace === undefined)
+      throw new Error('O phase fixture is missing');
+    const combat2 = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+      'Combat2',
+    );
+    const expected = expectedWorkspaceEncounterPhaseLeafRequirements(
+      catalog,
+      oBiome,
+      oPlan,
+      (phase) => encounterPhaseCandidateSupportForProjectEvaluationAssembly(invalidAssembly, phase),
+    ).find(
+      (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(combat2),
+    );
+    if (expected === undefined)
+      throw new Error('invalid active Ship Combat2 phase is not expected');
+
+    const observed = observeWorkspaceProducts({
+      focusByOwner: projected.focusByOwner,
+      interactions: projected.interactions,
+      nodes: oWorkspace.nodes,
+    });
+    expect(() =>
+      assertExpectedWorkspaceLeafClosure({ expected: [expected], observed }),
+    ).not.toThrow();
+
+    const phaseNodeKeys = observed.markerNodeKeys.get(semanticAddressKey(combat2));
+    if (phaseNodeKeys === undefined || phaseNodeKeys.size === 0) {
+      throw new Error('invalid active Ship phase has no containing workspace package');
+    }
+    const withoutPhaseMarker = oWorkspace.nodes.filter((node) => !phaseNodeKeys.has(node.key));
+    expect(() =>
+      assertExpectedWorkspaceLeafClosure({
+        expected: [expected],
+        observed: observeWorkspaceProducts({
+          focusByOwner: projected.focusByOwner,
+          interactions: projected.interactions,
+          nodes: withoutPhaseMarker,
+        }),
+      }),
+    ).toThrow(/required authored leaf has no workspace marker/);
+
+    const originalDestination = projected.focusByOwner.get(semanticAddressKey(combat2));
+    const wrongNode = oWorkspace.nodes.find((node) => !phaseNodeKeys.has(node.key));
+    if (originalDestination === undefined || wrongNode === undefined) {
+      throw new Error('invalid active Ship phase destination fixture is missing');
+    }
+    const wrongDestination = new Map(projected.focusByOwner);
+    wrongDestination.set(
+      semanticAddressKey(combat2),
+      Object.freeze({
+        ...originalDestination,
+        inspectorSubject: { kind: 'node' as const, nodeKey: wrongNode.key },
+        nodeKey: wrongNode.key,
+      }),
+    );
+    expect(() =>
+      assertExpectedWorkspaceLeafClosure({
+        expected: [expected],
+        observed: observeWorkspaceProducts({
+          focusByOwner: wrongDestination,
+          interactions: projected.interactions,
+          nodes: oWorkspace.nodes,
+        }),
+      }),
+    ).toThrow(/required authored leaf .* has no exact workspace inspector destination/);
+
+    expect(() =>
+      assertExpectedWorkspaceLeafClosure({
+        expected: [expected],
+        observed: observeWorkspaceProducts({
+          focusByOwner: projected.focusByOwner,
+          interactions: withoutLeafInteraction(projected.interactions, expected.interactions[0]!),
+          nodes: oWorkspace.nodes,
+        }),
+      }),
+    ).toThrow(/authored encounter phase leaf .* has no exact workspace interaction/);
   });
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {

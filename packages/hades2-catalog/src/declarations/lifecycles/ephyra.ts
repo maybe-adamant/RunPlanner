@@ -3,10 +3,10 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const ephyraRoomLifecycleProfiles = [
   {
     key: 'EphyraOpeningRoom',
-    encounterProfileKeys: ['N_Opening'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'advanceProducer',
@@ -33,10 +33,10 @@ export const ephyraRoomLifecycleProfiles = [
   },
   {
     key: 'EphyraMainRoom',
-    encounterProfileKeys: ['SingleCountedCombat', 'N_MiniBoss01', 'N_MiniBoss02', 'N_Story01'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'spawnRequiredObjects', effects: ['recordRequiredObjectSpawns'] },
       {
@@ -75,10 +75,10 @@ export const ephyraRoomLifecycleProfiles = [
   },
   {
     key: 'EphyraSideRoom',
-    encounterProfileKeys: ['EphyraSideRoom', 'EphyraSideRoomHard'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'advanceProducer',
@@ -114,10 +114,10 @@ export const ephyraRoomLifecycleProfiles = [
   },
   {
     key: 'EphyraHubRoom',
-    encounterProfileKeys: ['NoEncounter'],
+    encounterEnvelopeKeys: ['EmptyEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {

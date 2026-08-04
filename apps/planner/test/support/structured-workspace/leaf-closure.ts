@@ -22,6 +22,8 @@ function leafInteraction(
   key: string,
 ): ObservedOwnedInteraction | undefined {
   switch (kind) {
+    case 'encounterPhase':
+      return observed.interactions.encounterPhases.get(key);
     case 'reward':
       return observed.interactions.rewards.get(key);
     case 'rewardWheelOfferCount':
@@ -30,8 +32,8 @@ function leafInteraction(
       return observed.interactions.rewardWheelPicks.get(key);
     case 'rewardWheelStore':
       return observed.interactions.rewardWheelStores.get(key);
-    case 'shipEncounterCount':
-      return observed.interactions.shipEncounterCounts.get(key);
+    case 'shipCombatPhaseCount':
+      return observed.interactions.shipCombatPhaseCounts.get(key);
     case 'shopPurchase':
       return observed.interactions.shopPurchaseOrders.get(key);
     case 'sideRoomEntryOrder':
@@ -43,10 +45,12 @@ function leafInteraction(
 
 function leafInteractionLabel(kind: ExpectedWorkspaceLeafInteractionKind): string {
   switch (kind) {
+    case 'encounterPhase':
+      return 'encounter phase';
     case 'shopPurchase':
       return 'Shop purchase';
-    case 'shipEncounterCount':
-      return 'Ship encounter count';
+    case 'shipCombatPhaseCount':
+      return 'Ship combat-phase count';
     default:
       return kind;
   }

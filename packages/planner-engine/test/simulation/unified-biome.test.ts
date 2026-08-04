@@ -13,6 +13,8 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -146,6 +148,34 @@ function createBatchTargets(
     });
   }
   return next;
+}
+
+function withIEncounterSelection(
+  project: ReturnType<typeof createProjectDocument>,
+  occurrenceId: string,
+  encounterKey: string,
+) {
+  const encoded = JSON.parse(encodeProjectDocument(project)) as {
+    routes: Array<{
+      routeKey: string;
+      biomes: Array<{
+        biomeKey: string;
+        topology: {
+          occurrences: Array<{
+            occurrenceId: string;
+            encounters: { encounterKeyByPhase: Record<string, string> };
+          }>;
+        } | null;
+      }>;
+    }>;
+  };
+  const occurrence = encoded.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'I')
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (occurrence === undefined) throw new Error(`I fixture lost ${occurrenceId}`);
+  occurrence.encounters.encounterKeyByPhase.Encounter = encounterKey;
+  return decodeProjectDocument(encoded, catalog);
 }
 
 function completeHProject() {
@@ -371,6 +401,15 @@ function completeIProject() {
       undefined,
       selectedExitKey,
     );
+  }
+  for (const [occurrenceId, encounterKey] of [
+    ['i-combat01', 'GeneratedI_GoalReward'],
+    ['i-combat03', 'GeneratedI_Small_GoalReward'],
+    ['i-combat05', 'GeneratedI_Small_GoalReward'],
+    ['i-combat09', 'GeneratedI_GoalReward'],
+    ['i-combat06', 'GeneratedI_GoalReward'],
+  ] as const) {
+    project = withIEncounterSelection(project, occurrenceId, encounterKey);
   }
   return project;
 }
@@ -647,7 +686,8 @@ describe('unified biome simulation', () => {
     if (result?.authoring !== 'incomplete' || !('materializedPrefix' in result)) {
       throw new Error('invalid F prefix should retain a materialized prefix');
     }
-    expect(result.materializedPrefix.decisions).toEqual([]);
+    expect(result.assessmentPrefix?.decisions).toEqual([]);
+    expect(result.materializedPrefix.decisions).toHaveLength(1);
     expect(result.coverage).toMatchObject({
       kind: 'prefix',
       blockedAt: createBatchRewardStoreAddress(biome, {

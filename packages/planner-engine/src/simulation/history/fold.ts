@@ -22,6 +22,7 @@ import type {
 interface MutableLedgers {
   roomCreations: RoomCreatedHistoryEvent[];
   roomAppearances: RoomAppearanceHistoryEntry[];
+  encounterRecords: EncounterHistoryEntry[];
   encounterStarts: EncounterHistoryEntry[];
   encounterCompletions: EncounterHistoryEntry[];
   enteredRewardStores: EnteredRewardStoreHistoryEntry[];
@@ -80,6 +81,7 @@ function frozenLedgers(ledgers: MutableLedgers): HistoryLedgers {
   return Object.freeze({
     roomCreations: Object.freeze([...ledgers.roomCreations]),
     roomAppearances: Object.freeze([...ledgers.roomAppearances]),
+    encounterRecords: Object.freeze([...ledgers.encounterRecords]),
     encounterStarts: Object.freeze([...ledgers.encounterStarts]),
     encounterCompletions: Object.freeze([...ledgers.encounterCompletions]),
     enteredRewardStores: Object.freeze([...ledgers.enteredRewardStores]),
@@ -99,6 +101,7 @@ function roomName(
   event: Extract<
     HistoryEvent,
     | { readonly kind: 'encounterCompleted' }
+    | { readonly kind: 'encounterRecorded' }
     | { readonly kind: 'encounterStarted' }
     | { readonly kind: 'enteredRewardStoreRecorded' }
     | { readonly kind: 'offerPointAcquired' }
@@ -131,26 +134,17 @@ function requireRoomViews(
 }
 
 function encounterEntry(
-  event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
+  event: Extract<HistoryEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
   namesByOrigin: ReadonlyMap<string, string>,
-  encounterProfilesByOrigin: ReadonlyMap<string, string>,
 ): EncounterHistoryEntry {
-  const encounterProfileKey = encounterProfilesByOrigin.get(semanticAddressKey(event.origin));
-  if (encounterProfileKey === undefined) {
-    throw new HistoryFoldContractError(
-      `${event.kind} references a room without an encounter profile`,
-    );
-  }
   return Object.freeze({
     sequence: event.sequence,
     origin: event.origin,
     gameName: roomName(namesByOrigin, event),
-    encounterProfileKey,
-    phaseKey: event.phaseKey,
+    encounterEnvelopeKey: event.encounterEnvelopeKey,
+    slotKey: event.phaseKey,
+    encounterKey: event.encounterKey,
     phaseKind: event.phaseKind,
-    ...(event.baselineEncounterKey === undefined
-      ? {}
-      : { baselineEncounterKey: event.baselineEncounterKey }),
   });
 }
 
@@ -159,6 +153,18 @@ function encounterKey(event: {
   readonly phaseKey: string;
 }) {
   return JSON.stringify([semanticAddressKey(event.origin), event.phaseKey]);
+}
+
+function requireEncounterEnvelope(
+  envelopesByOrigin: ReadonlyMap<string, string>,
+  event: Extract<HistoryEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
+): void {
+  const ownerEnvelope = envelopesByOrigin.get(semanticAddressKey(event.origin));
+  if (ownerEnvelope === undefined || ownerEnvelope !== event.encounterEnvelopeKey) {
+    throw new HistoryFoldContractError(
+      `${event.phaseKey} does not match its room encounter envelope`,
+    );
+  }
 }
 
 function requiredObjectKey(event: {
@@ -226,6 +232,7 @@ function foldHistoryEventStream(
   const ledgers: MutableLedgers = {
     roomCreations: [...(seed?.ledgers.roomCreations ?? [])],
     roomAppearances: [...(seed?.ledgers.roomAppearances ?? [])],
+    encounterRecords: [...(seed?.ledgers.encounterRecords ?? [])],
     encounterStarts: [...(seed?.ledgers.encounterStarts ?? [])],
     encounterCompletions: [...(seed?.ledgers.encounterCompletions ?? [])],
     enteredRewardStores: [...(seed?.ledgers.enteredRewardStores ?? [])],
@@ -242,8 +249,10 @@ function foldHistoryEventStream(
     },
   };
   const namesByOrigin = new Map<string, string>();
-  const encounterProfilesByOrigin = new Map<string, string>();
+  const encounterEnvelopesByOrigin = new Map<string, string>();
+  const recordedEncounters = new Map<string, EncounterHistoryEntry>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
+  const advancedEncounterDepths = new Set<string>();
   const activeRequiredObjects = new Set<string>();
   const viewsByOrigin = new Map<string, MutableRoomViews>();
   const orderedViews: MutableRoomViews[] = [];
@@ -297,7 +306,7 @@ function foldHistoryEventStream(
           throw new HistoryFoldContractError(`room ${key} was created more than once`);
         }
         namesByOrigin.set(key, event.gameName);
-        encounterProfilesByOrigin.set(key, event.encounterProfileKey);
+        encounterEnvelopesByOrigin.set(key, event.encounterEnvelopeKey);
         ledgers.roomCreations.push(event);
         if (event.source === 'localChild') {
           if (ledgers.counters.numSubRoomsSpawned === undefined) {
@@ -443,9 +452,44 @@ function foldHistoryEventStream(
         ledgers.counters.soulPylonsSpawned += 1;
         break;
       }
-      case 'encounterStarted': {
-        const entry = encounterEntry(event, namesByOrigin, encounterProfilesByOrigin);
+      case 'encounterRecorded': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.preparation === undefined || views.entry !== undefined) {
+          throw new HistoryFoldContractError(
+            `${event.phaseKey} was recorded outside its room preparation checkpoint`,
+          );
+        }
+        const entry = encounterEntry(event, namesByOrigin);
+        requireEncounterEnvelope(encounterEnvelopesByOrigin, event);
         const key = encounterKey(event);
+        if (recordedEncounters.has(key)) {
+          throw new HistoryFoldContractError(`${event.phaseKey} was recorded more than once`);
+        }
+        recordedEncounters.set(key, entry);
+        ledgers.encounterRecords.push(entry);
+        break;
+      }
+      case 'encounterStarted': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.entry === undefined || views.exit !== undefined) {
+          throw new HistoryFoldContractError(
+            `${event.phaseKey} started outside its room entry checkpoint`,
+          );
+        }
+        const entry = encounterEntry(event, namesByOrigin);
+        requireEncounterEnvelope(encounterEnvelopesByOrigin, event);
+        const key = encounterKey(event);
+        const recorded = recordedEncounters.get(key);
+        if (
+          recorded === undefined ||
+          recorded.encounterEnvelopeKey !== entry.encounterEnvelopeKey ||
+          recorded.encounterKey !== entry.encounterKey ||
+          recorded.phaseKind !== entry.phaseKind
+        ) {
+          throw new HistoryFoldContractError(
+            `${event.phaseKey} started without its matching preparation record`,
+          );
+        }
         if (activeEncounters.has(key)) {
           throw new HistoryFoldContractError(`${event.phaseKey} started more than once`);
         }
@@ -530,10 +574,18 @@ function foldHistoryEventStream(
         }
         ledgers.counters.clockworkNonGoalRewardsAcquired += 1;
         break;
-      case 'encounterDepthAdvanced':
+      case 'encounterDepthAdvanced': {
+        const key = encounterKey(event);
+        if (activeEncounters.get(key) === undefined || advancedEncounterDepths.has(key)) {
+          throw new HistoryFoldContractError(
+            `${event.phaseKey} advanced encounter depth without one active matching encounter`,
+          );
+        }
+        advancedEncounterDepths.add(key);
         ledgers.counters.biomeEncounterDepth += event.biomeEncounterDepthDelta;
         ledgers.counters.routeEncounterDepth += event.routeEncounterDepthDelta;
         break;
+      }
       case 'encounterCompleted': {
         const key = encounterKey(event);
         const started = activeEncounters.get(key);
@@ -713,13 +765,40 @@ function foldHistoryEventStream(
     ) {
       throw new HistoryFoldContractError('prefix history contains biome completion facts');
     }
+    const preparedUnentered = orderedViews.filter((views) => views.entry === undefined);
+    if (preparedUnentered.length > 1) {
+      throw new HistoryFoldContractError(
+        'prefix history has more than one unentered prepared room',
+      );
+    }
+    const blockedRoom = preparedUnentered[0];
+    if (
+      blockedRoom !== undefined &&
+      (orderedViews.at(-1) !== blockedRoom ||
+        blockedRoom.offerPoints.length !== 0 ||
+        blockedRoom.preOutgoing !== undefined ||
+        blockedRoom.targetGenerations.length !== 0 ||
+        blockedRoom.outgoingGeneration !== undefined ||
+        blockedRoom.postCommit !== undefined ||
+        blockedRoom.exit !== undefined)
+    ) {
+      throw new HistoryFoldContractError(
+        'prefix history has an unentered room outside its terminal preparation record',
+      );
+    }
     const lastSequence = immutableEvents.at(-1)?.sequence ?? seed?.sequence ?? 0;
     return Object.freeze({
       routeKey: biomeStartOrigin.routeKey,
       biomeKey: biomeStartOrigin.biomeKey,
       events: immutableEvents,
       ledgers: frozenLedgers(ledgers),
-      rooms: Object.freeze(orderedViews.map(freezeProgressiveRoomViews)),
+      // A blocked encounter can legitimately finish preparation and record a
+      // valid earlier phase without entering its room. Its records remain in
+      // the current history view, but it has not established a room lifecycle
+      // view for downstream traversal yet.
+      rooms: Object.freeze(
+        orderedViews.filter((views) => views.entry !== undefined).map(freezeProgressiveRoomViews),
+      ),
       current: stateView(lastSequence, ledgers),
     });
   }

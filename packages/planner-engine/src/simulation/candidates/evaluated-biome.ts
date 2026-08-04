@@ -3,6 +3,7 @@ import { createBiomeAddress, type SemanticAddress } from '../../authored-project
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   CompleteBiomeProjectEvaluation,
+  CompleteValidBiomeProjectEvaluation,
   PrefixIncompleteBiomeProjectEvaluation,
   ProjectEvaluation,
 } from '../project';
@@ -34,7 +35,7 @@ function previousValidBiome(
   evaluation: ProjectEvaluation,
   routeKey: string,
   biomeKey: string,
-): CompleteBiomeProjectEvaluation | undefined {
+): CompleteValidBiomeProjectEvaluation | undefined {
   const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
   const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
   if (index <= 0 || route === undefined) return undefined;
@@ -66,7 +67,10 @@ export function candidateBiome(
   biomeKey: string,
 ): CandidateBiomeEvaluation | undefined {
   const complete = completeBiome(evaluation, routeKey, biomeKey);
-  if (complete?.validity !== 'invalid') {
+  if (
+    complete?.validity !== 'invalid' ||
+    (complete !== undefined && 'materializedPrefix' in complete)
+  ) {
     return complete ?? prefixBiome(evaluation, routeKey, biomeKey);
   }
   return (
@@ -84,6 +88,19 @@ export function candidatePrefix(
   biome: CandidateBiomeEvaluation | undefined,
 ): PrefixIncompleteBiomeProjectEvaluation | ProgressiveBiomeEvaluation | undefined {
   return biome !== undefined && 'materializedPrefix' in biome ? biome : undefined;
+}
+
+/**
+ * Candidate policy reads only the execution-assessed slice of an
+ * authored-first prefix. The complete materialized prefix remains available
+ * for structural ownership and retained-editing products, but its frontier
+ * can intentionally extend past an invalid semantic boundary.
+ */
+export function candidateAssessmentPrefix(
+  biome: CandidateBiomeEvaluation | undefined,
+): MaterializedBiomePrefix | undefined {
+  const prefix = candidatePrefix(biome);
+  return prefix === undefined ? undefined : (prefix.assessmentPrefix ?? prefix.materializedPrefix);
 }
 
 export function candidateBlockedAt(

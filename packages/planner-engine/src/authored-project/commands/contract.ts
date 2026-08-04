@@ -85,6 +85,9 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.offer;
     case 'ReplaceShopPurchaseOrder':
       return command.shop;
+    case 'SelectEncounter':
+    case 'ResetEncounter':
+      return command.phase;
   }
 }
 

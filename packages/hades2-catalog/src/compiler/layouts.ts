@@ -16,6 +16,7 @@ import type {
   ProgressionDescriptor,
   RewardStorePolicy,
   RoomDeclaration,
+  RoomTemplateKey,
   SourceRewardStorePolicyOverride,
   StartDescriptor,
 } from '@run-planner/engine/catalog-schema';
@@ -105,28 +106,38 @@ function normalizeRewardStoreOverrides(
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
   path: string,
 ): readonly SourceRewardStorePolicyOverride[] {
-  const profileKeys = freezeUniqueStrings(
-    rawOverrides.map((override) => override.sourceEncounterProfileKey),
-    `${path}.sourceEncounterProfileKeys`,
-  );
+  const templateKeys = freezeUniqueStrings(
+    rawOverrides.map((override) => override.sourceRoomTemplateKey),
+    `${path}.sourceRoomTemplateKeys`,
+  ) as readonly RoomTemplateKey[];
   return Object.freeze(
     rawOverrides.map((override, index) => {
       const overridePath = `${path}[${index}]`;
-      const sourceEncounterProfileKey = profileKeys[index] as string;
+      const sourceRoomTemplateKey = templateKeys[index] as RoomTemplateKey;
       if (
         !rooms.values.some(
           (room) =>
-            room.biomeKey === biomeKey && room.encounterProfileKey === sourceEncounterProfileKey,
+            room.biomeKey === biomeKey &&
+            room.mode.kind === 'authored' &&
+            room.mode.templateKey === sourceRoomTemplateKey,
         )
       ) {
         fail(
-          `${overridePath}.sourceEncounterProfileKey`,
-          `${sourceEncounterProfileKey} is not used by a room in ${biomeKey}`,
+          `${overridePath}.sourceRoomTemplateKey`,
+          `${sourceRoomTemplateKey} is not used by an authored room in ${biomeKey}`,
         );
       }
+      const policy = normalizeRewardStorePolicy(
+        override.policy,
+        rewardStores,
+        `${overridePath}.policy`,
+      );
+      if (policy.kind === 'sourceOfferPoint' && sourceRoomTemplateKey !== 'ShipCombat') {
+        fail(`${overridePath}.sourceRoomTemplateKey`, 'lastActiveWheel requires ShipCombat');
+      }
       return Object.freeze({
-        sourceEncounterProfileKey,
-        policy: normalizeRewardStorePolicy(override.policy, rewardStores, `${overridePath}.policy`),
+        sourceRoomTemplateKey,
+        policy,
       });
     }),
   );

@@ -32,7 +32,7 @@ interface RoomCreatedHistoryEventBase extends HistoryEventBase {
   readonly kind: 'roomCreated';
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
-  readonly encounterProfileKey: string;
+  readonly encounterEnvelopeKey: string;
 }
 
 export interface FieldsBatchOutcomeHistoryEvent extends HistoryEventBase {
@@ -159,10 +159,10 @@ export interface EncounterHistoryEntry {
   readonly sequence: number;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
-  readonly encounterProfileKey: string;
-  readonly phaseKey: string;
+  readonly encounterEnvelopeKey: string;
+  readonly slotKey: string;
+  readonly encounterKey: string;
   readonly phaseKind: EncounterPhaseKind;
-  readonly baselineEncounterKey?: string;
 }
 
 export interface EnteredRewardStoreHistoryEntry {
@@ -204,6 +204,7 @@ export interface HistoryCounters {
 export interface HistoryLedgers {
   readonly roomCreations: readonly RoomCreatedHistoryEvent[];
   readonly roomAppearances: readonly RoomAppearanceHistoryEntry[];
+  readonly encounterRecords: readonly EncounterHistoryEntry[];
   readonly encounterStarts: readonly EncounterHistoryEntry[];
   readonly encounterCompletions: readonly EncounterHistoryEntry[];
   readonly enteredRewardStores: readonly EnteredRewardStoreHistoryEntry[];

@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -10,6 +11,7 @@ import {
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import {
+  createEncounterCommandAuthorization,
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   simulateProject,
@@ -45,16 +47,34 @@ function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject(
 
 describe('selected O validation', () => {
   it('validates the complete N/O prefix with exact Ship support and forced Preboss pressure', () => {
-    const { evaluation, biome: o } = evaluateO();
+    const { project, evaluation, biome: o } = evaluateO();
 
     expect(evaluation.status).toBe('valid');
     expect(o.findings).toEqual([]);
-    expect(
-      o.roomGeneration.ordinary.encounterCounts.map((entry) => ({
-        selected: entry.selectedEncounterCount,
-        support: entry.supportEncounterCounts,
-      })),
-    ).toEqual([
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const shipCounts = [
+      oOccurrenceIds.combat04,
+      oOccurrenceIds.combat07,
+      oOccurrenceIds.combat01,
+      oOccurrenceIds.combat02,
+    ].map((occurrenceId) => {
+      const candidate = candidates.evaluate({
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, occurrenceId),
+        encounterCount: 2,
+      });
+      if (candidate.kind !== 'shipEncounterCount') {
+        throw new Error(`O Ship ${occurrenceId} candidate is unavailable`);
+      }
+      return {
+        selected: candidate.result.encounterCount,
+        support: candidate.result.supportEncounterCounts,
+      };
+    });
+    expect(shipCounts).toEqual([
       { selected: 2, support: [2] },
       { selected: 2, support: [2, 3] },
       { selected: 2, support: [2, 3] },
@@ -122,25 +142,104 @@ describe('selected O validation', () => {
     });
   });
 
-  it('addresses an unavailable first-room Combat2 count at its room occurrence', () => {
+  it('addresses an unavailable first-room Combat2 count at its exact phase', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+      occurrence,
       encounterCount: 3,
     });
     const { biome: o } = evaluateO(project);
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({ kind: 'shipEncounterCount', occurrence, encounterCount: 3 });
 
     expect(o.validity).toBe('invalid');
-    expect(o.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'encounterCountUnavailable',
-        origin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
-        evidence: expect.objectContaining({
-          selectedEncounterCount: 3,
-          supportEncounterCounts: [2],
-        }),
-      }),
+    if (!('materializedPrefix' in o)) {
+      throw new Error('invalid Ship phase did not retain an assessed prefix');
+    }
+    const blockedPhaseEvents = o.history.events.filter(
+      (event) =>
+        'origin' in event &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === oOccurrenceIds.combat04,
     );
+    expect(blockedPhaseEvents.map((event) => event.kind)).toContain('roomPrepared');
+    const preparation = blockedPhaseEvents.find((event) => event.kind === 'roomPrepared');
+    const recorded = blockedPhaseEvents.filter((event) => event.kind === 'encounterRecorded');
+    expect(recorded.map((event) => event.phaseKey)).toEqual(['Intro', 'Combat1']);
+    expect(blockedPhaseEvents.some((event) => event.kind === 'encounterStarted')).toBe(false);
+    const blockedFinding = o.findings.find(
+      (finding) =>
+        finding.code === 'encounterSlotActivationUnavailable' &&
+        finding.origin.kind === 'encounterPhase' &&
+        finding.origin.owner.kind === 'occurrence' &&
+        finding.origin.owner.occurrenceId === oOccurrenceIds.combat04 &&
+        finding.origin.phaseKey === 'Combat2',
+    );
+    if (preparation === undefined || blockedFinding === undefined) {
+      throw new Error('blocked Ship phase lost its preparation checkpoint or finding');
+    }
+    const beforeSequence = blockedFinding.evidence.beforeSequence;
+    if (typeof beforeSequence !== 'number') {
+      throw new Error('blocked Ship phase lost its numeric preparation evidence');
+    }
+    // The transient phase evaluator starts at the real roomPrepared event:
+    // each valid record advances exactly as the retained canonical prefix.
+    expect(recorded[0]?.sequence).toBe(preparation.sequence + 1);
+    expect(beforeSequence).toBe(recorded.at(-1)?.sequence);
+    expect(blockedFinding).toMatchObject({ evidence: { slotKey: 'Combat2' } });
+    expect(candidate).toMatchObject({
+      kind: 'shipEncounterCount',
+      result: {
+        supportEncounterCounts: [2],
+        selectedPossible: false,
+        findings: [
+          expect.objectContaining({
+            code: 'encounterSlotActivationUnavailable',
+            origin: createEncounterPhaseAddress(
+              oBiome,
+              { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+              'Combat2',
+            ),
+          }),
+        ],
+      },
+    });
+  });
+
+  it('retains the invalid Combat2 owner for diagnosis, rejects Select, and permits Reset', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const authorization = createEncounterCommandAuthorization(catalog, assembly);
+    const phase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+      'Combat2',
+    );
+
+    expect(() =>
+      applyProjectCommand(
+        project,
+        catalog,
+        { encounterKey: 'GeneratedO', kind: 'SelectEncounter', phase },
+        { encounterAuthorization: authorization },
+      ),
+    ).toThrow(/activation is unavailable/);
+    expect(
+      applyProjectCommand(
+        project,
+        catalog,
+        { kind: 'ResetEncounter', phase },
+        { encounterAuthorization: authorization },
+      ),
+    ).toBe(project);
   });
 
   it('rejects replacement of the declaration-fixed Devotion reward type', () => {

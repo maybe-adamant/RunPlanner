@@ -1,4 +1,4 @@
-import type { Catalog, EncounterPhase, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
+import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createTargetAddress,
@@ -9,6 +9,7 @@ import {
   type TargetAddress,
 } from '../../authored-project/addresses';
 import type { ShipCombatState } from '../../authored-project/model';
+import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
@@ -35,6 +36,7 @@ import type {
 } from '../materialization';
 import type { CanonicalDecision } from '../materialization/model';
 import { materializeShipCombatState } from '../materialization';
+import type { ResolvedEncounterPhase } from '../encounters';
 import type { SemanticFinding } from '../model';
 import type {
   RewardBranch,
@@ -407,12 +409,11 @@ function rewardWheelBinding(
   declaration: RoomDeclaration,
   wheel: CanonicalRewardWheel,
 ): CountedRewardBinding {
-  const profile = catalog.encounterProfiles.byKey[declaration.encounterProfileKey];
-  const descriptor = profile?.phases.find(
-    (phase) => phase.key === wheel.encounterPhaseKey,
-  )?.offerPoint;
+  const descriptor = encounterEnvelopeSlots(catalog, declaration, declaration.gameName).find(
+    (slot) => slot.key === wheel.encounterPhaseKey,
+  )?.rewardAttachment;
   if (
-    descriptor === undefined ||
+    descriptor?.kind !== 'rewardWheel' ||
     descriptor.key !== wheel.wheelKey ||
     descriptor.reward.producerLifecycleKey !== wheel.producerLifecycleKey ||
     !descriptor.reward.storeKeys.includes(wheel.storeKey)
@@ -475,25 +476,23 @@ interface WheelLifecycleView {
 
 function projectedEncounterEntry(
   room: CanonicalAuthoredRoom,
-  phase: EncounterPhase,
+  phase: ResolvedEncounterPhase,
   sequence: number,
 ): EncounterHistoryEntry {
   return Object.freeze({
     sequence,
     origin: room.origin,
     gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
-    phaseKey: phase.key,
+    encounterEnvelopeKey: phase.envelopeKey,
+    slotKey: phase.slotKey,
+    encounterKey: phase.encounterKey,
     phaseKind: phase.kind,
-    ...(phase.baselineEncounterKey === undefined
-      ? {}
-      : { baselineEncounterKey: phase.baselineEncounterKey }),
   });
 }
 
 function projectDormantWheelView(
   room: CanonicalAuthoredRoom,
-  phase: EncounterPhase,
+  phase: ResolvedEncounterPhase,
   generation: HistoryStateView,
 ): WheelLifecycleView {
   const start = projectedEncounterEntry(room, phase, generation.sequence + 2);
@@ -544,7 +543,9 @@ function wheelLifecycleViews(
       acquisitionSequence: acquisitionEvent.sequence,
     });
   }
-  const phase = room.encounterPhases.find((candidate) => candidate.key === wheel.encounterPhaseKey);
+  const phase = room.encounterPhases.find(
+    (candidate) => candidate.slotKey === wheel.encounterPhaseKey,
+  );
   const generation = roomView.preOutgoing;
   if (phase === undefined || generation === undefined) {
     return fail(`${room.gameName}.${wheel.wheelKey} has no dormant lifecycle view`);
@@ -574,6 +575,7 @@ function prepareShipLifecycleCandidateContext(
           occurrenceId: room.occurrenceId,
           gameName: room.gameName,
           state,
+          encounters: room.encounters,
         }),
       );
       const candidateRoom = Object.freeze({
@@ -907,6 +909,15 @@ export function evaluateBiomeRewardsAssembly(
           );
         }
         if (view === undefined) {
+          // A blocked entry can publish only its valid encounter-record
+          // prefix. It deliberately has no room-preparation view and therefore
+          // cannot acquire or publish entry-owned reward effects. Generated
+          // targets keep their parent offer-time view above, so their already
+          // offered door rewards remain independently modeled.
+          if (event.source === 'biomeEntry' && !views.has(semanticAddressKey(room.origin))) {
+            branches = advanceRewardBranches(branches, event.sequence);
+            break;
+          }
           throw new BiomeRewardSimulationContractError(
             `${room.gameName} has no offer-time history view`,
           );
@@ -950,7 +961,10 @@ export function evaluateBiomeRewardsAssembly(
               generationPolicy: 'sequential',
               generationHistorySequence: event.sequence,
               reachableBranchCount: frontierBranches.length,
-              acquisitionHorizon: 'ownEnteredLifecycle',
+              acquisitionHorizon:
+                acquisitionView === undefined || acquisitionSequence === undefined
+                  ? 'generationOnly'
+                  : 'ownEnteredLifecycle',
               owners: Object.freeze([incoming.origin]),
               ...(binding === undefined || incoming.resolvedStoreKey === undefined
                 ? {}
@@ -1039,7 +1053,10 @@ export function evaluateBiomeRewardsAssembly(
               generationPolicy: 'sequential',
               generationHistorySequence: event.sequence,
               reachableBranchCount: frontierBranches.length,
-              acquisitionHorizon: 'ownEnteredLifecycle',
+              acquisitionHorizon:
+                acquisitionEvent?.kind !== 'encounterCompleted' || acquisitionView === undefined
+                  ? 'generationOnly'
+                  : 'ownEnteredLifecycle',
               owners: Object.freeze([localReward.origin]),
               resolvedStoreKey: localReward.resolvedStoreKey,
               evaluateOffer: (
@@ -1367,7 +1384,10 @@ export function evaluateBiomeRewardsAssembly(
             generationPolicy: 'jointUnordered',
             generationHistorySequence: event.sequence,
             reachableBranchCount: frontierBranches.length,
-            acquisitionHorizon: 'ownEnteredLifecycle',
+            acquisitionHorizon:
+              acquisitionEvent?.kind !== 'offerPointAcquired' || acquisitionView === undefined
+                ? 'generationOnly'
+                : 'ownEnteredLifecycle',
             owners,
             resolvedStoreKey: wheel.storeKey,
             evaluateOffer: (

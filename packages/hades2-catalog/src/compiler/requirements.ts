@@ -77,11 +77,11 @@ export function normalizeRequirement(
         keys: freezeUniqueStrings(requirement.keys, `${path}.keys`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
-    case 'recentEncounterPhaseCount':
+    case 'recentEnvelopeSlotCount':
       return Object.freeze({
-        kind: 'recentEncounterPhaseCount',
-        profileKey: requireNonEmpty(requirement.profileKey, `${path}.profileKey`),
-        phaseKey: requireNonEmpty(requirement.phaseKey, `${path}.phaseKey`),
+        kind: 'recentEnvelopeSlotCount',
+        envelopeKey: requireNonEmpty(requirement.envelopeKey, `${path}.envelopeKey`),
+        slotKey: requireNonEmpty(requirement.slotKey, `${path}.slotKey`),
         roomWindow: requirePositiveInteger(requirement.roomWindow, `${path}.roomWindow`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
@@ -190,7 +190,7 @@ export function validateRequirementReferences(
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':
-    case 'recentEncounterPhaseCount':
+    case 'recentEnvelopeSlotCount':
       return;
   }
 }

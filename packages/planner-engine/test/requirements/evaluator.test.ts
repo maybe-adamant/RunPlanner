@@ -26,7 +26,7 @@ const baseContext = {
   rewardLookups: {},
   runDepthCache: 10,
   lastEventRunDepthCaches: {},
-  recentEncounterPhases: [],
+  recentEncounterEnvelopeSlots: [],
   offeredExitCount: 2,
   currentBatchRoomGameNames: [],
   clockwork: undefined,
@@ -45,7 +45,7 @@ describe('requirement evaluator registry', () => {
       'counterRange',
       'recordCount',
       'distinctRecordKeyCount',
-      'recentEncounterPhaseCount',
+      'recentEnvelopeSlotCount',
       'notInCurrentRoomShopOptions',
       'rewardLookupExcludes',
       'minRoomsSinceEvent',
@@ -154,21 +154,21 @@ describe('requirement evaluator registry', () => {
     ).toBe(false);
   });
 
-  it('counts a requested encounter phase at most once per recent room', () => {
+  it('counts a requested envelope slot at most once per recent room', () => {
     const requirement = {
-      kind: 'recentEncounterPhaseCount',
-      profileKey: 'ShipCombat',
-      phaseKey: 'Intro',
+      kind: 'recentEnvelopeSlotCount',
+      envelopeKey: 'ShipEncounter',
+      slotKey: 'Intro',
       roomWindow: 3,
       range: { min: 2, max: 2 },
     } as const;
     expect(
       evaluateRequirement(requirement, {
         ...baseContext,
-        recentEncounterPhases: [
-          { profileKey: 'Other', phaseKeys: ['Intro'] },
-          { profileKey: 'ShipCombat', phaseKeys: ['Intro', 'Combat1'] },
-          { profileKey: 'ShipCombat', phaseKeys: ['Intro', 'Combat1', 'Combat2'] },
+        recentEncounterEnvelopeSlots: [
+          { envelopeKey: 'Other', slotKeys: ['Intro'] },
+          { envelopeKey: 'ShipEncounter', slotKeys: ['Intro', 'Combat1'] },
+          { envelopeKey: 'ShipEncounter', slotKeys: ['Intro', 'Combat1', 'Combat2'] },
         ],
       }),
     ).toBe(true);

@@ -68,6 +68,7 @@ export function hubMainRewardPresentation(
  * surfaces. It deliberately does not consult evaluated entry.
  */
 export function hasMeaningfulRoomLocalDetail(room: WorkspaceRoomSummary): boolean {
+  if (room.encounterPhases.length > 0) return true;
   switch (room.roomLocal.kind) {
     case 'ephyra':
     case 'fields':

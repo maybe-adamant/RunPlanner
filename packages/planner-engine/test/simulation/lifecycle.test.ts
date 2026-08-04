@@ -6,6 +6,7 @@ import {
 import {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
+  type ResolvedEncounterPhase,
   type RoomLifecycleExecutionInput,
 } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -16,11 +17,41 @@ const origin = createOccurrenceAddress(
   createOccurrenceId('f-lifecycle-fixture'),
 );
 
+function phases(
+  encounterEnvelopeKey: string,
+  encounterKeys: readonly string[],
+): readonly ResolvedEncounterPhase[] {
+  const envelope = catalog.encounterEnvelopes.byKey[encounterEnvelopeKey];
+  if (envelope === undefined) throw new Error(`missing test envelope ${encounterEnvelopeKey}`);
+  return Object.freeze(
+    encounterKeys.map((encounterKey, index) => {
+      const slot = envelope.slots[index];
+      const definition = catalog.encounterDefinitions.byKey[encounterKey];
+      if (slot === undefined || definition === undefined) {
+        throw new Error(`missing test phase ${encounterEnvelopeKey}.${encounterKey}`);
+      }
+      return Object.freeze({
+        slotKey: slot.key,
+        envelopeKey: encounterEnvelopeKey,
+        encounterKey,
+        label: definition.label,
+        kind: definition.kind,
+        countsEncounterDepth: definition.countsEncounterDepth,
+        ...(definition.sequenceEffect === undefined
+          ? {}
+          : { sequenceEffect: definition.sequenceEffect }),
+        ...(slot.rewardAttachment === undefined ? {} : { rewardAttachment: slot.rewardAttachment }),
+      });
+    }),
+  );
+}
+
 function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecycleExecutionInput {
   return {
     origin,
     lifecycleProfileKey: 'StandardRewardRoom',
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterPhases: phases('SingleEncounter', ['GeneratedF']),
     producer: {
       lifecycleProfileKey: 'RoomReward',
       offer: {
@@ -40,7 +71,10 @@ function inputWithoutProducer(
   return {
     origin: executionInput.origin,
     lifecycleProfileKey: executionInput.lifecycleProfileKey,
-    encounterProfileKey: executionInput.encounterProfileKey,
+    encounterEnvelopeKey: executionInput.encounterEnvelopeKey,
+    ...(executionInput.encounterPhases === undefined
+      ? {}
+      : { encounterPhases: executionInput.encounterPhases }),
     counterEffects: executionInput.counterEffects,
   };
 }
@@ -55,7 +89,12 @@ describe('single-room lifecycle execution', () => {
       catalog,
       inputWithoutProducer({
         lifecycleProfileKey: 'FieldsCombatRoom',
-        encounterProfileKey: 'H_FieldsCombatCage2',
+        encounterEnvelopeKey: 'FieldsEncounter',
+        encounterPhases: phases('FieldsEncounter', [
+          'GeneratedH_Passive',
+          'GeneratedH',
+          'GeneratedH',
+        ]),
       }),
     ).events;
 
@@ -77,6 +116,7 @@ describe('single-room lifecycle execution', () => {
 
     expect(fragment.events.map((event) => event.kind)).toEqual([
       'roomPrepared',
+      'encounterRecorded',
       'roomEntered',
       'encounterStarted',
       'encounterDepthAdvanced',
@@ -87,18 +127,20 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[5]).toMatchObject({
+    expect(fragment.events[6]).toMatchObject({
       kind: 'producerRoleAdvanced',
       rewardType: 'Boon',
       role: 'source',
       lifecyclePoint: 'roomRewardPickup',
     });
-    expect(fragment.events[8]).toMatchObject({
+    expect(fragment.events[9]).toMatchObject({
       kind: 'roomCountersAdvanced',
       biomeDepthCacheDelta: 1,
       roomHistoryOrdinalDelta: 1,
     });
-    expect(fragment.events.map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(fragment.events.map((event) => event.sequence)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ]);
     expect(fragment.events.every((event) => event.origin === origin)).toBe(true);
     expect(Object.isFrozen(fragment)).toBe(true);
     expect(Object.isFrozen(fragment.events)).toBe(true);
@@ -154,12 +196,14 @@ describe('single-room lifecycle execution', () => {
           createOccurrenceId('n-opening-lifecycle-fixture'),
         ),
         lifecycleProfileKey: 'EphyraOpeningRoom',
-        encounterProfileKey: 'N_Opening',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['OpeningGeneratedN']),
       }),
     );
 
     expect(fragment.events.map((event) => event.kind)).toEqual([
       'roomPrepared',
+      'encounterRecorded',
       'roomEntered',
       'producerRoleAdvanced',
       'encounterStarted',
@@ -170,7 +214,7 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[2]).toMatchObject({
+    expect(fragment.events[3]).toMatchObject({
       kind: 'producerRoleAdvanced',
       lifecyclePoint: 'roomRewardPickup',
     });
@@ -185,7 +229,8 @@ describe('single-room lifecycle execution', () => {
           createOccurrenceId('n-lifecycle-fixture'),
         ),
         lifecycleProfileKey: 'EphyraMainRoom',
-        encounterProfileKey: 'SingleCountedCombat',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         requiredObjects: [
           {
             key: 'SoulPylon',
@@ -198,6 +243,7 @@ describe('single-room lifecycle execution', () => {
 
     expect(fragment.events.map((event) => event.kind)).toEqual([
       'roomPrepared',
+      'encounterRecorded',
       'roomEntered',
       'requiredObjectSpawned',
       'encounterStarted',
@@ -210,12 +256,12 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[2]).toMatchObject({
+    expect(fragment.events[3]).toMatchObject({
       kind: 'requiredObjectSpawned',
       objectKey: 'SoulPylon',
       completionRequirement: 'destroyBeforeExit',
     });
-    expect(fragment.events[6]).toMatchObject({
+    expect(fragment.events[7]).toMatchObject({
       kind: 'requiredObjectCompleted',
       objectKey: 'SoulPylon',
     });
@@ -226,13 +272,15 @@ describe('single-room lifecycle execution', () => {
       catalog,
       input({
         lifecycleProfileKey: 'WorldShopRoom',
-        encounterProfileKey: 'Shop',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['Shop']),
         producer: { lifecycleProfileKey: 'RoomReward', offer: { rewardType: 'Shop' } },
       }),
     );
 
     expect(fragment.events.map((event) => event.kind)).toEqual([
       'roomPrepared',
+      'encounterRecorded',
       'offerPointMaterialized',
       'roomEntered',
       'outgoingGenerationCheckpoint',
@@ -241,8 +289,8 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[1]).toMatchObject({ offerPoint: 'shopInventory' });
-    expect(fragment.events[4]).toMatchObject({ offerPoint: 'shopInventory' });
+    expect(fragment.events[2]).toMatchObject({ offerPoint: 'shopInventory' });
+    expect(fragment.events[5]).toMatchObject({ offerPoint: 'shopInventory' });
   });
 
   it('records entered-store provenance as a commit-time effect', () => {
@@ -269,22 +317,24 @@ describe('single-room lifecycle execution', () => {
       catalog,
       input({
         lifecycleProfileKey: 'PrebossFreeRewardRoom',
-        encounterProfileKey: 'Shop',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['Shop']),
       }),
     );
     expect(terminalReward.events.map((event) => event.kind)).not.toContain(
       'encounterDepthAdvanced',
     );
     expect(terminalReward.events.find((event) => event.kind === 'encounterStarted')).toMatchObject({
-      phaseKey: 'Shop',
+      phaseKey: 'Encounter',
       phaseKind: 'nonCombat',
-      baselineEncounterKey: 'Shop',
+      encounterKey: 'Shop',
     });
     expect(
       eventKinds(
         inputWithoutProducer({
           lifecycleProfileKey: 'BossRoom',
-          encounterProfileKey: 'F_Boss01',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', ['BossHecate01']),
         }),
       ),
     ).not.toContain('encounterDepthAdvanced');
@@ -292,7 +342,8 @@ describe('single-room lifecycle execution', () => {
       eventKinds(
         inputWithoutProducer({
           lifecycleProfileKey: 'PostBossRoom',
-          encounterProfileKey: 'F_PostBoss01',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', ['Story_Chronos_01']),
         }),
       ),
     ).not.toContain('encounterDepthAdvanced');
@@ -301,7 +352,8 @@ describe('single-room lifecycle execution', () => {
   it('omits outgoing generation from terminal profiles and remains deterministic', () => {
     const executionInput = input({
       lifecycleProfileKey: 'PrebossShopRoom',
-      encounterProfileKey: 'Shop',
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterPhases: phases('SingleEncounter', ['Shop']),
       producer: { lifecycleProfileKey: 'RoomReward', offer: { rewardType: 'Shop' } },
     });
     const first = executeRoomLifecycle(catalog, executionInput);
@@ -314,19 +366,27 @@ describe('single-room lifecycle execution', () => {
   it('fails unknown and incompatible execution references at the executor boundary', () => {
     const cases: readonly [RoomLifecycleExecutionInput, string][] = [
       [input({ lifecycleProfileKey: 'Missing' }), 'unknown room lifecycle profile Missing'],
-      [input({ encounterProfileKey: 'Missing' }), 'unknown encounter profile Missing'],
-      [input({ encounterProfileKey: 'Shop' }), 'Shop is incompatible with StandardRewardRoom'],
+      [input({ encounterEnvelopeKey: 'Missing' }), 'unknown encounter envelope Missing'],
+      [
+        input({ encounterEnvelopeKey: 'EmptyEncounter', encounterPhases: [] }),
+        'EmptyEncounter is incompatible with StandardRewardRoom',
+      ],
       [input({ enteredRewardStoreKey: 'Missing' }), 'unknown entered reward store Missing'],
       [inputWithoutProducer(), 'StandardRewardRoom requires a producer'],
       [
         input({
           lifecycleProfileKey: 'EphyraMainRoom',
-          encounterProfileKey: 'SingleCountedCombat',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         }),
         'EphyraMainRoom required-object operations do not match lifecycle input',
       ],
       [
-        input({ lifecycleProfileKey: 'BossRoom', encounterProfileKey: 'F_Boss01' }),
+        input({
+          lifecycleProfileKey: 'BossRoom',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', ['BossHecate01']),
+        }),
         'BossRoom does not accept a producer',
       ],
       [

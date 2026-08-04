@@ -10,7 +10,9 @@ function fixture() {
   const biome = simulateProject(catalog, project)
     .routes.find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'N');
-  if (biome?.authoring !== 'complete') throw new Error('N fixture did not complete');
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+    throw new Error('N fixture did not complete validly');
+  }
   const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
   if (hub?.kind !== 'hub') throw new Error('N fixture lost Hub decision');
   return { project, biome, hub, history: biome.history };

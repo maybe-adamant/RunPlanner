@@ -2,7 +2,6 @@ import type {
   ExitDecisionAddress,
   HubOpenSetAddress,
   LocalChildAddress,
-  OccurrenceAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { CounterAxis, HistoryRecord, NumericRange } from '../../requirements/model';
@@ -47,10 +46,10 @@ export type RequirementEvaluationEvidence =
       readonly expected: NumericRange;
     }
   | {
-      readonly kind: 'recentEncounterPhaseCount';
+      readonly kind: 'recentEnvelopeSlotCount';
       readonly satisfied: boolean;
-      readonly profileKey: string;
-      readonly phaseKey: string;
+      readonly envelopeKey: string;
+      readonly slotKey: string;
       readonly roomWindow: number;
       readonly actual: number;
       readonly expected: NumericRange;
@@ -154,19 +153,10 @@ export interface FieldsCageOutcomeSupportEntry extends FieldsCageOutcomeCandidat
   readonly selectedPossible: boolean;
 }
 
-export interface EncounterCountSupportEntry {
-  readonly origin: OccurrenceAddress;
-  readonly beforeSequence: number;
-  readonly selectedEncounterCount: number;
-  readonly supportEncounterCounts: readonly number[];
-  readonly selectedPossible: boolean;
-}
-
 export interface GeneratedRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
   readonly forcePressure: readonly ForcePressureLedgerEntry[];
-  readonly encounterCounts: readonly EncounterCountSupportEntry[];
   readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }

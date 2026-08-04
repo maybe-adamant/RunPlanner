@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type BiomeAddress,
+  type EncounterPhaseAddress,
   type ExitDecisionAddress,
   type ExitSelectionAddress,
   type HubDecisionAddress,
@@ -41,9 +42,20 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      readonly encounterCount: 2 | 3;
-      readonly encounterCountChoices: readonly WorkspaceInteractionChoice<2 | 3>[];
-      readonly kind: 'shipCombat';
+      /** One active exact pool-backed phase, never a profile or rendered ordinal. */
+      readonly kind: 'encounterPhases';
+      readonly owner: LocalChildAddress | OccurrenceAddress;
+      readonly phases: readonly {
+        readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+        readonly owner: EncounterPhaseAddress;
+        readonly selectedEncounterKey: string;
+      }[];
+    }
+  | {
+      /** O-specific structural activation for the optional Ship Combat2 phase. */
+      readonly combatPhaseCount: 2 | 3;
+      readonly combatPhaseCountChoices: readonly WorkspaceInteractionChoice<2 | 3>[];
+      readonly kind: 'shipCombatPhaseCount';
       readonly owner: OccurrenceAddress;
       readonly wheels: readonly {
         readonly address: RewardWheelAddress;

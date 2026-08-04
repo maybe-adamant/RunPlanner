@@ -31,7 +31,7 @@ import type {
   ProgressiveRoomHistoryViews,
   TargetGenerationView,
 } from '../history';
-import { projectRecentEncounterPhases } from '../history';
+import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
@@ -44,7 +44,6 @@ import type {
 } from '../materialization';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type {
-  EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,
@@ -181,7 +180,7 @@ function assertGenerationRequirement(requirement: RequirementExpression): void {
       }
       return;
     case 'distinctRecordKeyCount':
-    case 'recentEncounterPhaseCount':
+    case 'recentEnvelopeSlotCount':
       return;
     case 'currentBatchTargetCount':
     case 'currentBatchRoomCount':
@@ -266,7 +265,7 @@ function projectRoomGenerationRequirementContext(
     rewardLookups: Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
-    recentEncounterPhases: projectRecentEncounterPhases(view),
+    recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
     offeredExitCount: sourceDeclaration.exits.length,
     currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
     clockwork: hasClockwork
@@ -395,19 +394,19 @@ function requirementEvidence(
         expected: requirement.range,
       });
     }
-    case 'recentEncounterPhaseCount': {
-      const recentRooms = context.recentEncounterPhases.slice(-requirement.roomWindow);
+    case 'recentEnvelopeSlotCount': {
+      const recentRooms = context.recentEncounterEnvelopeSlots.slice(-requirement.roomWindow);
       return Object.freeze({
         kind: requirement.kind,
         satisfied,
-        profileKey: requirement.profileKey,
-        phaseKey: requirement.phaseKey,
+        envelopeKey: requirement.envelopeKey,
+        slotKey: requirement.slotKey,
         roomWindow: requirement.roomWindow,
         actual: recentRooms.reduce(
           (total, room) =>
             total +
-            (room.profileKey === requirement.profileKey &&
-            room.phaseKeys.includes(requirement.phaseKey)
+            (room.envelopeKey === requirement.envelopeKey &&
+            room.slotKeys.includes(requirement.slotKey)
               ? 1
               : 0),
           0,
@@ -747,11 +746,7 @@ function generationRooms(
 }
 
 function finding(
-  code:
-    | 'encounterCountUnavailable'
-    | 'fieldsCageOutcomeUnavailable'
-    | 'targetRoomSupportEmpty'
-    | 'targetRoomUnavailable',
+  code: 'fieldsCageOutcomeUnavailable' | 'targetRoomSupportEmpty' | 'targetRoomUnavailable',
   origin: SemanticFinding['origin'],
   evidence: FindingEvidence,
 ): SemanticFinding {
@@ -761,65 +756,6 @@ function finding(
     phase: 'roomGeneration',
     origin,
     evidence: Object.freeze(evidence),
-  });
-}
-
-function encounterCountEvidence(entry: EncounterCountSupportEntry): FindingEvidence {
-  return {
-    beforeSequence: entry.beforeSequence,
-    selectedEncounterCount: entry.selectedEncounterCount,
-    supportEncounterCounts: entry.supportEncounterCounts,
-  };
-}
-
-function evaluateEncounterCount(
-  catalog: Catalog,
-  room: CanonicalAuthoredRoom,
-  view: HistoryStateView,
-  enteredBiomeCount: number,
-  rewardHistory: RewardHistoryState | undefined,
-): EncounterCountSupportEntry | undefined {
-  const declaration = catalog.rooms.byKey[room.gameName];
-  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (declaration === undefined || profile === undefined) {
-    throw new BiomeRoomGenerationContractError(`${room.gameName} lost its encounter declaration`);
-  }
-  const optionalIndexes = profile.phases.flatMap((phase, index) =>
-    phase.presence === undefined ? [] : [index],
-  );
-  if (optionalIndexes.length === 0) {
-    return undefined;
-  }
-  const optionalIndex = optionalIndexes[0];
-  const optional =
-    optionalIndex === undefined ? undefined : profile.phases[optionalIndex]?.presence;
-  if (
-    optionalIndexes.length !== 1 ||
-    optional === undefined ||
-    optionalIndex !== profile.phases.length - 1
-  ) {
-    throw new BiomeRoomGenerationContractError(
-      `${room.gameName} has unsupported optional encounter-phase structure`,
-    );
-  }
-  assertGenerationRequirement(optional.requirement);
-  const context = projectRoomGenerationRequirementContext(
-    room,
-    declaration,
-    view,
-    enteredBiomeCount,
-    rewardHistory,
-  );
-  const supportEncounterCounts = evaluateRequirement(optional.requirement, context)
-    ? Object.freeze([optionalIndex, optionalIndex + 1])
-    : Object.freeze([optionalIndex]);
-  const selectedEncounterCount = room.encounterPhases.length;
-  return Object.freeze({
-    origin: room.origin,
-    beforeSequence: view.sequence,
-    selectedEncounterCount,
-    supportEncounterCounts,
-    selectedPossible: supportEncounterCounts.includes(selectedEncounterCount),
   });
 }
 
@@ -1403,7 +1339,6 @@ function evaluateTargetSlots(
   views: ReadonlyMap<string, TargetGenerationView>,
   candidateContexts: Map<string, RoomTargetCandidateContext>,
   pressure: ForcePressureLedgerEntry[],
-  encounterCounts: EncounterCountSupportEntry[],
   findings: SemanticFinding[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
@@ -1437,32 +1372,6 @@ function evaluateTargetSlots(
     const result = candidateContext.evaluateGameName(target.room.gameName);
     pressure.push(result.pressure);
     findings.push(...result.findings);
-    if (
-      target.room.kind === 'authored' &&
-      catalog.encounterProfiles.byKey[target.room.encounterProfileKey]?.phases.some(
-        (phase) => phase.presence !== undefined,
-      )
-    ) {
-      const encounterCount = evaluateEncounterCount(
-        catalog,
-        target.room,
-        view.before,
-        enteredBiomeCount,
-        rewardHistory,
-      );
-      if (encounterCount !== undefined) {
-        encounterCounts.push(encounterCount);
-        if (!encounterCount.selectedPossible) {
-          findings.push(
-            finding(
-              'encounterCountUnavailable',
-              encounterCount.origin,
-              encounterCountEvidence(encounterCount),
-            ),
-          );
-        }
-      }
-    }
     return view.after;
   };
   let before = sourceBeforeGeneration;
@@ -1795,7 +1704,6 @@ export function evaluateBiomeRoomGenerationAssembly(
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
   const candidateContexts = new Map<string, RoomTargetCandidateContext>();
   const pressure: ForcePressureLedgerEntry[] = [];
-  const encounterCounts: EncounterCountSupportEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
   const findings: SemanticFinding[] = [];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
@@ -1854,21 +1762,26 @@ export function evaluateBiomeRoomGenerationAssembly(
       continue;
     }
     const source = requireSource(rooms, batch.parent.origin);
-    const sourceViews = history.rooms.find(
-      (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
-    );
-    const sourceBeforeGeneration =
-      sourceViews === undefined
-        ? undefined
-        : normalTargetCandidateHistory(layout, source, sourceViews);
-    if (sourceBeforeGeneration === undefined) {
-      throw new BiomeRoomGenerationContractError(
-        `source ${semanticAddressKey(source.origin)} has no pre-generation view`,
-      );
-    }
     const sourceDeclaration = catalog.rooms.byKey[source.gameName];
     if (sourceDeclaration === undefined) {
       throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
+    }
+    const sourceViews = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
+    );
+    if (sourceViews === undefined) {
+      throw new BiomeRoomGenerationContractError(
+        `source ${semanticAddressKey(source.origin)} has no lifecycle history`,
+      );
+    }
+    const sourceBeforeGeneration = normalTargetCandidateHistory(layout, source, sourceViews);
+    if (sourceBeforeGeneration === undefined) {
+      // An authored-first prefix can retain a downstream decision after an
+      // earlier semantic boundary. Its source exists, but has not reached the
+      // layout's exact normal-generation checkpoint, so this decision is
+      // deliberately unassessed rather than malformed or evaluated from a
+      // weaker checkpoint.
+      continue;
     }
     const physicalExits = normalPhysicalExitsForSource(
       layout,
@@ -1904,7 +1817,6 @@ export function evaluateBiomeRoomGenerationAssembly(
       views,
       candidateContexts,
       pressure,
-      encounterCounts,
       findings,
       enteredBiomeCount,
       rewardHistories,
@@ -1916,7 +1828,6 @@ export function evaluateBiomeRoomGenerationAssembly(
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
-    encounterCounts: Object.freeze(encounterCounts),
     fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),
   });

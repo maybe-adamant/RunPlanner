@@ -1,5 +1,4 @@
 import type {
-  EncounterPhase,
   EncounterPhaseKind,
   RequiredRoomObjectDescriptor,
   RoomCounterEffects,
@@ -11,6 +10,7 @@ import type {
   OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ResolvedEncounterPhase } from '../encounters';
 
 export type RoomHistoryOrigin =
   CompletionRoomAddress | HubRoomAddress | LocalChildAddress | OccurrenceAddress;
@@ -39,10 +39,18 @@ export type RoomLifecycleEvent =
       readonly completionRequirement: RequiredRoomObjectDescriptor['completionRequirement'];
     })
   | (RoomLifecycleEventBase & {
+      readonly kind: 'encounterRecorded';
+      readonly phaseKey: string;
+      readonly encounterEnvelopeKey: string;
+      readonly encounterKey: string;
+      readonly phaseKind: EncounterPhaseKind;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
       readonly phaseKey: string;
+      readonly encounterEnvelopeKey: string;
+      readonly encounterKey: string;
       readonly phaseKind: EncounterPhaseKind;
-      readonly baselineEncounterKey?: string;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';
@@ -91,8 +99,8 @@ export interface RoomLifecycleProducerInput {
 export interface RoomLifecycleExecutionInput {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases?: readonly EncounterPhase[];
+  readonly encounterEnvelopeKey: string;
+  readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly producer?: RoomLifecycleProducerInput;
   readonly counterEffects: RoomCounterEffects;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
@@ -103,6 +111,6 @@ export interface RoomLifecycleExecutionInput {
 export interface RoomHistoryFragment {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
-  readonly encounterProfileKey: string;
+  readonly encounterEnvelopeKey: string;
   readonly events: readonly RoomLifecycleEvent[];
 }

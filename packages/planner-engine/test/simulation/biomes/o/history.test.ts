@@ -14,7 +14,12 @@ function fixture() {
   const o = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'O');
-  if (n?.authoring !== 'complete' || o?.authoring !== 'complete') {
+  if (
+    n?.authoring !== 'complete' ||
+    n.validity !== 'valid' ||
+    o?.authoring !== 'complete' ||
+    o.validity !== 'valid'
+  ) {
     throw new Error('N/O fixture did not complete');
   }
   return { project, evaluation, n, o, snapshot: o.snapshot, history: o.history };
@@ -31,7 +36,11 @@ describe('O canonical materialization and lifecycle', () => {
 
     expect(firstCombat).toMatchObject({
       gameName: 'O_Combat04',
-      encounterProfileKey: 'ShipCombat',
+      encounterEnvelopeKey: 'ShipEncounter',
+      encounterPhases: [
+        { slotKey: 'Intro', encounterKey: 'GeneratedO_Intro01' },
+        { slotKey: 'Combat1', encounterKey: 'GeneratedO' },
+      ],
       rewardWheels: [{ wheelKey: 'wheel1', storeKey: 'RunProgress', offers: [{ picked: true }] }],
     });
     expect(reprieve).toMatchObject({

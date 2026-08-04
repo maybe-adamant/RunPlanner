@@ -79,6 +79,19 @@ export interface LocalChildGroupAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly groupKey: string;
 }
+export type EncounterPhaseOwner =
+  | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
+  | {
+      readonly kind: 'localChild';
+      readonly occurrenceId: OccurrenceId;
+      readonly groupKey: string;
+      readonly slotKey: string;
+    };
+export interface EncounterPhaseAddress extends BiomeOwnedAddress {
+  readonly kind: 'encounterPhase';
+  readonly owner: EncounterPhaseOwner;
+  readonly phaseKey: string;
+}
 export interface RewardWheelAddress extends BiomeOwnedAddress {
   readonly kind: 'rewardWheel';
   readonly occurrenceId: OccurrenceId;
@@ -135,6 +148,7 @@ export type SemanticAddress =
   | LocalRewardAddress
   | LocalChildAddress
   | LocalChildGroupAddress
+  | EncounterPhaseAddress
   | RewardWheelAddress
   | RewardWheelOfferAddress
   | HubSlotAddress
@@ -302,6 +316,27 @@ export function createLocalChildGroupAddress(
     groupKey: nonBlank(groupKey, 'groupKey'),
   });
 }
+export function createEncounterPhaseAddress(
+  biome: BiomeAddress,
+  encounterOwner: EncounterPhaseOwner,
+  phaseKey: string,
+): EncounterPhaseAddress {
+  const normalizedOwner =
+    encounterOwner.kind === 'occurrence'
+      ? Object.freeze({ kind: 'occurrence' as const, occurrenceId: encounterOwner.occurrenceId })
+      : Object.freeze({
+          kind: 'localChild' as const,
+          occurrenceId: encounterOwner.occurrenceId,
+          groupKey: nonBlank(encounterOwner.groupKey, 'groupKey'),
+          slotKey: nonBlank(encounterOwner.slotKey, 'slotKey'),
+        });
+  return Object.freeze({
+    kind: 'encounterPhase',
+    ...owner(biome),
+    owner: normalizedOwner,
+    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+  });
+}
 export function createRewardWheelAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -423,6 +458,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'localChildGroup':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey]);
+    case 'encounterPhase':
+      return JSON.stringify([...base, address.owner, address.phaseKey]);
     case 'rewardWheel':
       return JSON.stringify([...base, address.occurrenceId, address.wheelKey]);
     case 'rewardWheelOffer':

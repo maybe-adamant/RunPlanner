@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -95,6 +96,25 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: owner,
       phase: 'rewardGeneration',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+      /finding has no exact workspace destination/,
+    );
+  });
+
+  it('requires an exact destination for an active encounter-phase finding', () => {
+    const phase = createEncounterPhaseAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('finding-routing-encounter') },
+      'Combat2',
+    );
+    const finding = {
+      code: 'encounterSlotActivationUnavailable',
+      evidence: {},
+      origin: phase,
+      phase: 'encounterResolution',
       severity: 'error',
     } as const satisfies SemanticFinding;
 

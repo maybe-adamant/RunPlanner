@@ -72,6 +72,11 @@ export {
   type RoomLifecycleProducerInput,
 } from './lifecycle';
 export {
+  createEncounterCommandAuthorization,
+  type EncounterPhaseCandidateSupport,
+  type ResolvedEncounterPhase,
+} from './encounters';
+export {
   composeBiomeHistory,
   composeBiomeHistoryPrefix,
   BiomeHistoryCompositionContractError,
@@ -108,7 +113,6 @@ export {
   supportedFieldsCageOutcomes,
   BiomeRoomGenerationContractError,
   HubDecisionGenerationContractError,
-  type EncounterCountSupportEntry,
   type FieldsCageOutcome,
   type FieldsCageOutcomeCandidateSupport,
   type FieldsCageOutcomeSupportEntry,
@@ -194,6 +198,7 @@ export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
   countedRewardTypeDomain,
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   evaluateBiome,
   ProjectSimulationContractError,
   simulateProject,
@@ -207,6 +212,7 @@ export {
   type BiomeGenerationValidation,
   type CompleteBiomeEvaluationCoverage,
   type CompleteBiomeProjectEvaluation,
+  type CompleteValidBiomeProjectEvaluation,
   type IncompleteBiomeEvaluationCoverage,
   type IncompleteBiomeProjectEvaluation,
   type NoBiomeEvaluationCoverage,

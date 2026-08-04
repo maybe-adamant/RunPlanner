@@ -17,9 +17,10 @@ import {
   type BiomeCandidateArtifacts,
 } from '../candidate-artifacts';
 import {
-  composeBiomeHistoryPrefix,
+  composeBiomeHistoryPrefixWithEncounterValidation,
   type BiomeHistoryPrefix,
   type CanonicalBiomeHistory,
+  type EncounterHistoryBlock,
 } from '../history';
 import type {
   CanonicalDecision,
@@ -29,6 +30,11 @@ import type {
   MaterializedExitDecisionFrontier,
   MaterializedHubVisitFrontier,
 } from '../materialization';
+import {
+  evaluateEncounterCandidates,
+  structurallyActiveEncounterRooms,
+  type EncounterCandidateBoundary,
+} from '../encounters';
 import { materializeBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
@@ -48,6 +54,13 @@ export interface BiomeGenerationValidation {
 
 export interface ProgressiveBiomeEvaluation {
   readonly materializedPrefix: MaterializedBiomePrefix;
+  /**
+   * The bounded structural slice whose ordinary lifecycle products reached a
+   * canonical checkpoint. An encounter block keeps the larger authored
+   * prefix visible while this slice prevents assessed-state leakage beyond
+   * the failed room.
+   */
+  readonly assessmentPrefix?: MaterializedBiomePrefix;
   readonly history: BiomeHistoryPrefix;
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
@@ -72,7 +85,10 @@ interface ProgressiveGenerationAssembly {
 
 function generation(
   catalog: Catalog,
-  prefix: MaterializedBiomePrefix & {
+  productPrefix: MaterializedBiomePrefix & {
+    readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
+  },
+  encounterPrefix: MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   },
   history: BiomeHistoryPrefix,
@@ -80,29 +96,45 @@ function generation(
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
+  encounterBoundary?: EncounterCandidateBoundary,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
-    prefix,
+    productPrefix,
     history,
     enteredBiomeCount,
     rewards.targetHistory,
   );
-  const hub = evaluateHubDecisionGeneration(catalog, prefix, history);
+  const hub = evaluateHubDecisionGeneration(catalog, productPrefix, history);
+  const encounters = evaluateEncounterCandidates(
+    catalog,
+    structurallyActiveEncounterRooms(encounterPrefix),
+    new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room.preparation])),
+    encounterBoundary,
+  );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:
-      ordinary.validation.validity === 'valid' && hub.validity === 'valid' ? 'valid' : 'invalid',
+      ordinary.validation.validity === 'valid' &&
+      hub.validity === 'valid' &&
+      encounters.findings.length === 0
+        ? 'valid'
+        : 'invalid',
     ordinary: ordinary.validation,
     hub,
-    findings: Object.freeze([...ordinary.validation.findings, ...hub.findings]),
+    findings: Object.freeze([
+      ...ordinary.validation.findings,
+      ...hub.findings,
+      ...encounters.findings,
+    ]),
   });
   return Object.freeze({
     validation,
     candidateArtifacts: createBiomeCandidateArtifacts(
-      createBiomeAddress(prefix.routeKey, prefix.biomeKey),
+      createBiomeAddress(productPrefix.routeKey, productPrefix.biomeKey),
       ordinary.candidateArtifacts,
       rewardProducers,
       roomLifecycles,
+      encounters.artifacts,
     ),
   });
 }
@@ -110,6 +142,7 @@ function generation(
 interface ProgressiveProducts {
   readonly evaluation: Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'>;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
+  readonly encounterBlock?: EncounterHistoryBlock;
 }
 
 function products(
@@ -120,10 +153,27 @@ function products(
   enteredBiomeCount: number,
   seed?: ProgressiveSeed,
 ): ProgressiveProducts {
-  const history = composeBiomeHistoryPrefix(catalog, prefix, seed?.history.afterTransition);
-  if (history === null) {
+  const composed = composeBiomeHistoryPrefixWithEncounterValidation(
+    catalog,
+    prefix,
+    seed?.history.afterTransition,
+  );
+  if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
   }
+  const history = composed.history;
+  const encounterBoundary =
+    composed.kind === 'blocked'
+      ? Object.freeze({
+          fallback: composed.block.afterValidRecordPrefix,
+          blocked: Object.freeze({
+            room: composed.block.room,
+            before: composed.block.before,
+          }),
+        })
+      : undefined;
+  const generationPrefix =
+    composed.kind === 'blocked' ? encounterBlockProductPrefix(prefix, composed.block) : prefix;
   const rewards = evaluateBiomeRewardsAssembly(
     catalog,
     prefix,
@@ -133,12 +183,16 @@ function products(
   );
   const roomGeneration = generation(
     catalog,
+    generationPrefix as MaterializedBiomePrefix & {
+      readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
+    },
     prefix,
     history,
     enteredBiomeCount,
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
+    encounterBoundary,
   );
   return Object.freeze({
     evaluation: Object.freeze({
@@ -146,8 +200,10 @@ function products(
       rewards: rewards.simulation,
       roomGeneration: roomGeneration.validation,
       findings: Object.freeze([]),
+      ...(composed.kind === 'blocked' ? { assessmentPrefix: generationPrefix } : {}),
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,
+    ...(composed.kind === 'blocked' ? { encounterBlock: composed.block } : {}),
   });
 }
 
@@ -172,7 +228,8 @@ function mergedFindings(
 }
 
 function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
-  return 'occurrenceId' in origin && origin.occurrenceId === occurrenceId;
+  if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;
+  return origin.kind === 'encounterPhase' && origin.owner.occurrenceId === occurrenceId;
 }
 
 function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFinding): boolean {
@@ -248,6 +305,11 @@ function localSlotIndex(visit: CanonicalHubVisit, finding: SemanticFinding): num
   const index = visit.localSlots.findIndex(
     (slot) =>
       semanticAddressKey(slot.origin) === semanticAddressKey(finding.origin) ||
+      (finding.origin.kind === 'encounterPhase' &&
+        finding.origin.owner.kind === 'localChild' &&
+        slot.origin.occurrenceId === finding.origin.owner.occurrenceId &&
+        slot.origin.groupKey === finding.origin.owner.groupKey &&
+        slot.origin.slotKey === finding.origin.owner.slotKey) ||
       (slot.incomingReward !== undefined &&
         semanticAddressKey(slot.incomingReward.origin) === semanticAddressKey(finding.origin)),
   );
@@ -390,56 +452,97 @@ function prefixDecisionEntries(prefix: MaterializedBiomePrefix): readonly Prefix
       ]);
 }
 
+function locateFinding(
+  prefix: MaterializedBiomePrefix,
+  finding: SemanticFinding,
+): LocatedFinding | undefined {
+  if (
+    prefix.entryRoom !== undefined &&
+    ownsOccurrence(finding.origin, prefix.entryRoom.occurrenceId)
+  ) {
+    return Object.freeze({ finding, decisionIndex: -1 });
+  }
+  const decisionEntry = prefixDecisionEntries(prefix).find(({ decision }) =>
+    decisionOwnsFinding(decision, finding),
+  );
+  if (decisionEntry === undefined) return undefined;
+  const { decision, decisionIndex, frontierBatch } = decisionEntry;
+  const indexedTarget = decision.kind === 'batch' ? targetIndex(decision, finding) : undefined;
+  const hubVisitLocation =
+    decision.kind === 'hub' ? hubVisitFindingLocation(decision, finding) : undefined;
+  const indexedHubBoard =
+    decision.kind === 'hub' ? hubBoardTargetIndex(decision, finding, hubVisitLocation) : undefined;
+  return Object.freeze({
+    finding,
+    decisionIndex,
+    ...(frontierBatch ? { frontierBatch: true } : {}),
+    ...(indexedTarget === undefined ? {} : { targetIndex: indexedTarget }),
+    ...(indexedHubBoard === undefined ? {} : { hubBoardTargetIndex: indexedHubBoard }),
+    ...(hubVisitLocation === undefined
+      ? {}
+      : {
+          hubVisitIndex: hubVisitLocation.visitIndex,
+          hubVisitPhase: hubVisitLocation.phase,
+          ...(hubVisitLocation.localLifecycleIndex === undefined
+            ? {}
+            : { hubLocalLifecycleIndex: hubVisitLocation.localLifecycleIndex }),
+        }),
+  });
+}
+
 function firstUnsupportedFinding(
   prefix: MaterializedBiomePrefix,
   evaluation: Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'>,
+  include: (finding: SemanticFinding) => boolean = () => true,
 ): LocatedFinding | undefined {
-  const findings = [...evaluation.roomGeneration.findings, ...evaluation.rewards.findings];
-  const located = findings.flatMap((finding): readonly LocatedFinding[] => {
-    if (
-      prefix.entryRoom !== undefined &&
-      ownsOccurrence(finding.origin, prefix.entryRoom.occurrenceId)
-    ) {
-      return [Object.freeze({ finding, decisionIndex: -1 })];
-    }
-    const decisionEntry = prefixDecisionEntries(prefix).find(({ decision }) =>
-      decisionOwnsFinding(decision, finding),
+  const located = [...evaluation.roomGeneration.findings, ...evaluation.rewards.findings]
+    .filter(include)
+    .flatMap((finding) => {
+      const location = locateFinding(prefix, finding);
+      return location === undefined ? [] : [location];
+    });
+  return located.sort(compareLocatedFindings)[0];
+}
+
+function isEncounterResolutionFinding(finding: SemanticFinding): boolean {
+  return (
+    (finding.code === 'encounterUnavailable' ||
+      finding.code === 'encounterSlotActivationUnavailable') &&
+    finding.phase === 'encounterResolution'
+  );
+}
+
+function encounterBlockFinding(block: EncounterHistoryBlock): SemanticFinding {
+  const finding = block.preparation.findings.find(
+    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(block.blockedAt),
+  );
+  if (finding === undefined) {
+    throw new Error(`encounter block ${semanticAddressKey(block.blockedAt)} has no finding`);
+  }
+  return finding;
+}
+
+function encounterBlockProductPrefix(
+  prefix: MaterializedBiomePrefix,
+  block: EncounterHistoryBlock,
+): MaterializedBiomePrefix {
+  const located = locateFinding(prefix, encounterBlockFinding(block));
+  if (located === undefined) {
+    throw new Error(
+      `encounter block ${semanticAddressKey(block.blockedAt)} has no structural owner`,
     );
-    if (decisionEntry === undefined) return [];
-    const { decision, decisionIndex, frontierBatch } = decisionEntry;
-    const indexedTarget = decision.kind === 'batch' ? targetIndex(decision, finding) : undefined;
-    const hubVisitLocation =
-      decision.kind === 'hub' ? hubVisitFindingLocation(decision, finding) : undefined;
-    const indexedHubBoard =
-      decision.kind === 'hub'
-        ? hubBoardTargetIndex(decision, finding, hubVisitLocation)
-        : undefined;
-    return [
-      Object.freeze({
-        finding,
-        decisionIndex,
-        ...(frontierBatch ? { frontierBatch: true } : {}),
-        ...(indexedTarget === undefined ? {} : { targetIndex: indexedTarget }),
-        ...(indexedHubBoard === undefined ? {} : { hubBoardTargetIndex: indexedHubBoard }),
-        ...(hubVisitLocation === undefined
-          ? {}
-          : {
-              hubVisitIndex: hubVisitLocation.visitIndex,
-              hubVisitPhase: hubVisitLocation.phase,
-              ...(hubVisitLocation.localLifecycleIndex === undefined
-                ? {}
-                : { hubLocalLifecycleIndex: hubVisitLocation.localLifecycleIndex }),
-            }),
-      }),
-    ];
-  });
-  return located.sort(
-    (left, right) =>
-      left.decisionIndex - right.decisionIndex ||
-      (left.targetIndex ?? -1) - (right.targetIndex ?? -1) ||
-      (left.hubBoardTargetIndex ?? -1) - (right.hubBoardTargetIndex ?? -1) ||
-      (left.hubVisitIndex ?? -1) - (right.hubVisitIndex ?? -1),
-  )[0];
+  }
+  return clampPrefix(prefix, located);
+}
+
+function compareLocatedFindings(left: LocatedFinding, right: LocatedFinding): number {
+  return (
+    left.decisionIndex - right.decisionIndex ||
+    (left.targetIndex ?? -1) - (right.targetIndex ?? -1) ||
+    (left.hubBoardTargetIndex ?? -1) - (right.hubBoardTargetIndex ?? -1) ||
+    (left.hubVisitIndex ?? -1) - (right.hubVisitIndex ?? -1) ||
+    (left.hubLocalLifecycleIndex ?? -1) - (right.hubLocalLifecycleIndex ?? -1)
+  );
 }
 
 function exitFrontier(
@@ -537,6 +640,37 @@ function clampPrefix(
 }
 
 /**
+ * A selected target's incoming offer is produced with that target, before
+ * the target's own room lifecycle. A generic target or incoming-offer
+ * finding therefore retains that one target in an interaction-only prefix:
+ * its offer can be corrected from the actual offer-time checkpoint, while
+ * the execution prefix still excludes the invalid room and every later
+ * lifecycle effect. All other generic boundaries use the ordinary clamp.
+ */
+function retainedInteractionPrefix(
+  prefix: MaterializedBiomePrefix,
+  located: LocatedFinding,
+): MaterializedBiomePrefix {
+  if (located.targetIndex === undefined) return clampPrefix(prefix, located);
+  const decision = located.frontierBatch
+    ? prefix.frontier?.kind === 'exitDecision'
+      ? prefix.frontier.partialBatch
+      : undefined
+    : prefix.decisions[located.decisionIndex];
+  if (decision === undefined || decision.kind !== 'batch') return clampPrefix(prefix, located);
+  const targets = decision.targets.slice(0, located.targetIndex + 1);
+  return Object.freeze({
+    ...prefix,
+    decisions: Object.freeze(
+      located.frontierBatch
+        ? [...prefix.decisions]
+        : prefix.decisions.slice(0, located.decisionIndex),
+    ),
+    frontier: exitFrontier(decision, targets),
+  });
+}
+
+/**
  * Evaluates the materializable prefix before applying its first-invalid clamp.
  * This is an engine-internal diagnostic product. Repair callers may consult
  * only the exact blocked owner’s pre-decision frontier, never later owners.
@@ -570,13 +704,21 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
-  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated.evaluation);
+  const unsupported = firstUnsupportedFinding(
+    materializedPrefix,
+    evaluated.evaluation,
+    (finding) => !isEncounterResolutionFinding(finding),
+  );
   return Object.freeze({
     evaluation: Object.freeze({
       materializedPrefix,
       ...evaluated.evaluation,
       findings: mergedFindings(evaluated.evaluation),
-      ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+      ...(evaluated.encounterBlock !== undefined
+        ? { blockedAt: evaluated.encounterBlock.blockedAt }
+        : unsupported === undefined
+          ? {}
+          : { blockedAt: unsupported.finding.origin }),
     }),
     candidateArtifacts: evaluated.candidateArtifacts,
   });
@@ -609,28 +751,87 @@ export function evaluateProgressiveBiomeAssembly(
 ): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan);
   if (initial?.entryRoom === undefined) return null;
-  let materializedPrefix = initial as MaterializedBiomePrefix & {
+  const authoredPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
-  let evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
-  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated.evaluation);
+  let executionPrefix = authoredPrefix;
+  let evaluated = products(catalog, executionPrefix, enteredBiomeCount, seed);
+  let retainedInteractions = evaluated.candidateArtifacts;
+  let encounterArtifacts = evaluated.candidateArtifacts.encounters;
+  let encounterFindings: readonly SemanticFinding[] =
+    evaluated.evaluation.roomGeneration.findings.filter(isEncounterResolutionFinding);
+  const unsupported = firstUnsupportedFinding(
+    authoredPrefix,
+    evaluated.evaluation,
+    (finding) => !isEncounterResolutionFinding(finding),
+  );
+  const encounterLocated =
+    evaluated.encounterBlock === undefined
+      ? undefined
+      : locateFinding(authoredPrefix, encounterBlockFinding(evaluated.encounterBlock));
   let retainedFindings: readonly SemanticFinding[] = Object.freeze([]);
-  if (unsupported !== undefined) {
+  const genericPrecedesEncounter =
+    unsupported !== undefined &&
+    (encounterLocated === undefined || compareLocatedFindings(unsupported, encounterLocated) <= 0);
+  if (genericPrecedesEncounter && unsupported !== undefined) {
     retainedFindings = Object.freeze([unsupported.finding]);
-    const clamped = clampPrefix(materializedPrefix, unsupported);
+    const clamped = clampPrefix(authoredPrefix, unsupported);
     if (clamped.entryRoom === undefined) return null;
-    materializedPrefix = clamped as MaterializedBiomePrefix & {
+    executionPrefix = clamped as MaterializedBiomePrefix & {
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     };
-    evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
+    evaluated = products(catalog, executionPrefix, enteredBiomeCount, seed);
+    const interactionPrefix = retainedInteractionPrefix(
+      authoredPrefix,
+      unsupported,
+    ) as MaterializedBiomePrefix & {
+      readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
+    };
+    retainedInteractions = products(
+      catalog,
+      interactionPrefix,
+      enteredBiomeCount,
+      seed,
+    ).candidateArtifacts;
+    const retainedEncounterCandidates = evaluateEncounterCandidates(
+      catalog,
+      structurallyActiveEncounterRooms(authoredPrefix),
+      new Map(
+        evaluated.evaluation.history.rooms.map((room) => [
+          semanticAddressKey(room.origin),
+          room.preparation,
+        ]),
+      ),
+      Object.freeze({ fallback: evaluated.evaluation.history.current }),
+    );
+    encounterArtifacts = retainedEncounterCandidates.artifacts;
+    encounterFindings = retainedEncounterCandidates.findings;
   }
+  const blockedAt =
+    evaluated.encounterBlock !== undefined && !genericPrecedesEncounter
+      ? evaluated.encounterBlock.blockedAt
+      : unsupported?.finding.origin;
   return Object.freeze({
     evaluation: Object.freeze({
-      materializedPrefix,
       ...evaluated.evaluation,
-      findings: mergedFindings(evaluated.evaluation, retainedFindings),
-      ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+      materializedPrefix: authoredPrefix,
+      ...(genericPrecedesEncounter
+        ? { assessmentPrefix: executionPrefix }
+        : evaluated.evaluation.assessmentPrefix === undefined
+          ? {}
+          : { assessmentPrefix: evaluated.evaluation.assessmentPrefix }),
+      findings: mergedFindings(
+        evaluated.evaluation,
+        Object.freeze([...retainedFindings, ...encounterFindings]),
+      ),
+      ...(blockedAt === undefined ? {} : { blockedAt }),
     }),
-    candidateArtifacts: evaluated.candidateArtifacts,
+    candidateArtifacts: createBiomeCandidateArtifacts(
+      evaluated.candidateArtifacts.origin,
+      retainedInteractions.roomTargets,
+      retainedInteractions.rewardProducers,
+      retainedInteractions.roomLifecycles,
+      encounterArtifacts,
+    ),
   });
 }
