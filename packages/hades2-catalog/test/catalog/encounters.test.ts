@@ -54,6 +54,13 @@ describe('encounter envelope catalog', () => {
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTreant' },
       ],
     });
+    expect(catalog.rooms.byKey.F_PostBoss01).toMatchObject({
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
+      ],
+    });
+    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('Story_Chronos_01');
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
       encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
       defaultEncounterDefinitionKey: 'GeneratedI',

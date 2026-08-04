@@ -129,12 +129,6 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: true,
   },
   { key: 'BossHecate01', label: 'Hecate', kind: 'boss', countsEncounterDepth: false },
-  {
-    key: 'Story_Chronos_01',
-    label: 'Chronos story',
-    kind: 'story',
-    countsEncounterDepth: false,
-  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const fEncounterSets = [

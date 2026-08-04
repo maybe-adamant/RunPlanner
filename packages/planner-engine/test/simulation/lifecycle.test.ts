@@ -343,7 +343,7 @@ describe('single-room lifecycle execution', () => {
         inputWithoutProducer({
           lifecycleProfileKey: 'PostBossRoom',
           encounterEnvelopeKey: 'SingleEncounter',
-          encounterPhases: phases('SingleEncounter', ['Story_Chronos_01']),
+          encounterPhases: phases('SingleEncounter', ['Empty']),
         }),
       ),
     ).not.toContain('encounterDepthAdvanced');

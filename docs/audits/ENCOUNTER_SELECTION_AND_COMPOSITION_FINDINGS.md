@@ -296,6 +296,13 @@ Encounter declarations.
 Shop, Story, HealthRestore, `Empty`, and postboss identities are non-combat
 selection positions and are outside the field-NPC replacement pools.
 
+F is the one raw postboss exception: `F_PostBoss01` names
+`Story_Chronos_01`, whose definition inherits `Empty` and exists to run
+conditional Chronos conversations and spawning from persistent progression
+state. No source requirement consumes its completed identity. The normalized
+static baseline therefore binds shared `Empty`, matching the other supported
+postboss rooms without importing those progression events.
+
 ## Multiple-Encounter Composition
 
 `SetupRoomMultipleEncountersData` considers each ordered position in turn. It
