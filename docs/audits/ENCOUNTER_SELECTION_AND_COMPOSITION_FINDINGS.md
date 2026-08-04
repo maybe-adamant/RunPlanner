@@ -1,257 +1,522 @@
-# Encounter Selection and Composition Findings
+# Encounter Selection and Composition Game-Data Audit
 
-## Status
+## Status and Scope
 
-This is a forward-looking game-data audit and extension-readiness document. It
-does not add concrete encounter selection, persistent NPC encounters, enemy
-composition, or runtime forcing to the production model.
+This document is the stable source-evidence authority for Hades II encounter
+selection and composition facts relevant to Run Planner. It records what the
+game declares and when the game performs each transition. It does not decide
+which distinctions the planner will model, simplify, defer, or expose.
 
-The current canonical product continues to suppress spontaneous persistent NPC
-selection and intentionally abstracts ordinary generated enemy waves.
+The audit was refreshed on 2026-08-03 against the installed Steam build:
 
-## Questions
+- application ID: `1145350`;
+- build ID: `24432219`;
+- script timestamps: 2026-08-01;
+- route biomes: F, G, H, I, N, O, P, and Q.
 
-This audit separates two related but different features:
+The scope is:
 
-1. Which concrete encounter is assigned to each stable room phase, including
-   Artemis, Heracles, Icarus, Athena, and Nemesis variants?
-2. Which enemies and waves are generated inside that concrete encounter, and
-   at what fidelity can the game be controlled safely?
+- combat-bearing room and phase encounter pools;
+- ordinary generated, opening, side-room, miniboss, boss, and Devotion combat
+  identities needed to close that accounting;
+- Artemis, Heracles, Icarus, Athena, Arachne, and Nemesis field encounters;
+- encounter selection, recording, counter, and multi-phase timing;
+- adjacent Nemesis random-event and Shop facts needed to distinguish them from
+  combat replacement;
+- the lower-level enemy-generation pipeline as future encounter-composition
+  evidence.
 
-They share an execution checkpoint, but they must not share one undifferentiated
-authored value. Encounter identity changes requirements, events, counter
-effects, and sometimes phase shape. Enemy composition is generated content
-inside the resolved encounter.
+Story presentation, dialogue content, exact enemy waves, rewards unrelated to
+encounter eligibility, debug-only rooms, Anomaly rooms, and runtime forcing are
+outside the completed source matrix unless called out explicitly.
 
-## Current Planner Boundary
+Statements marked **runtime probe required** are not established by static Lua
+inspection. All other behavior below was traced through the named scripts and
+inheritance chains.
 
-The catalog currently gives every Room Declaration an `encounterProfileKey`.
-An Encounter Profile is a canonical semantic projection with:
+## Primary Sources
 
-- stable phase keys and order;
-- combat or non-combat kind;
-- optional phase presence;
-- encounter-depth effect;
-- baseline encounter identity where current consumers require it;
-- phase-owned reward offer points.
+The primary evidence is the installed game scripts:
 
-`SingleCountedCombat` intentionally collapses ordinary one-combat rooms whose
-only currently modeled fact is one counting phase. H and O retain richer
-profiles because their ordered phases affect counters and rewards.
+- `EncounterSets.lua`;
+- `RunLogic.lua`;
+- `RoomLogic.lua`;
+- `RoomDataF.lua` through `RoomDataQ.lua`;
+- `EncounterData.lua`;
+- `EncounterData_Generated.lua`;
+- `EncounterData_Opening.lua`;
+- `EncounterData_Intro.lua`;
+- `EncounterData_MiniBoss.lua`;
+- `EncounterData_Devotion.lua`;
+- `EncounterData_Artemis.lua`;
+- `EncounterData_Heracles.lua`;
+- `EncounterData_Icarus.lua`;
+- `EncounterData_Athena.lua`;
+- `EncounterData_Arachne.lua`;
+- `EncounterData_Nemesis.lua`;
+- `EncounterData_Story.lua`;
+- `EncounterData_Unique.lua`;
+- `RequirementsData.lua`;
+- `NPCData.lua` and the family-specific NPC data files;
+- `InteractLogic.lua`;
+- `EventLogic.lua`;
+- `NarrativeData.lua`.
 
-The authored occurrence does not currently select a concrete game encounter.
-The simulator emits the declaration-owned profile. It does not generate enemy
-types, counts, waves, spawn timing, or map placements.
+## Encounter Selection Lifecycle
 
-This existing stable phase address is the correct extension seam. A concrete
-encounter should resolve a phase; it should not replace the Room Occurrence or
-create a second topology.
+### Offered exits do not select ordinary encounters
 
-## Game Encounter Selection
+`DoUnlockRoomExits` creates ordinary offered targets through `CreateRoom` with
+`SkipChooseEncounter = true`. At offer time the target Room and its incoming
+reward are known, but the target has no selected concrete encounter and no
+encounter occurrence has been recorded.
 
-Relevant source:
+After the player chooses an exit, `LeaveRoom` commits the predecessor to room
+history and updates the relevant history caches. It then prepares only the
+picked `nextRoom`:
 
-- `RunLogic.lua::CreateRoom`
-- `RunLogic.lua::ChooseEncounter`
-- `RunLogic.lua::SetupEncounter`
-- `RunLogic.lua::IsEncounterEligible`
-- `RoomLogic.lua::SetupRoomMultipleEncountersData`
-- `RoomLogic.lua::RecordEncounter`
-- `RoomLogic.lua::StartEncounter`
-- `EncounterSets.lua`
+- `SetupRoomMultipleEncountersData` resolves an ordered multi-encounter room;
+- otherwise `ChooseEncounter` resolves its one encounter.
 
-### Selection and record timing
+Initial rooms and other direct `CreateRoom` callers can choose immediately when
+they do not use `SkipChooseEncounter`. Reward-owned special setup such as
+Devotion is another distinct path.
 
-When a room is created for an offered exit, `CreateRoom` selects its encounter
-before the room is entered. `ChooseEncounter`:
+### ChooseEncounter
 
-1. reads the phase's supplied `LegalEncounters` or the room's set;
-2. filters each candidate through encounter eligibility;
-3. prefers forced eligible encounters;
-4. otherwise chooses one eligible entry;
-5. deep-copies and sets up the selected encounter.
+`ChooseEncounter`:
 
-`RecordEncounter` immediately updates run, game, biome, and depth caches. This
-is an appearance/creation checkpoint, not encounter start.
+1. reads the supplied phase `LegalEncounters`, otherwise the Room's legal set;
+2. filters each entry through `IsEncounterEligible`;
+3. prefers a forced eligible encounter when one exists;
+4. otherwise chooses among eligible list entries;
+5. deep-copies and sets up the chosen Encounter.
+
+Repeated names are repeated entries in the random list and therefore affect
+weight. They are not distinct concrete encounter identities. The game does not
+declare one deterministic default member for a legal set.
+
+Encounter eligibility can inspect:
+
+- legal-set membership;
+- room tags and room identity;
+- the incoming room reward;
+- current run, biome, encounter, completion, use, and room history;
+- biome depth and biome encounter depth;
+- appearance caps and rooms-since constraints;
+- forced, blocked, or previously occurring encounters;
+- named requirements and external save/profile state.
+
+### Occurrence, start, and completion are distinct checkpoints
+
+`RecordEncounter` runs during picked-room preparation. It updates encounter
+occurrence caches before map load and encounter start.
 
 `StartEncounter` later increments room, biome, and route encounter depth only
-when the resolved encounter has `CountsForRoomEncounterDepth`.
+when the resolved Encounter has `CountsForRoomEncounterDepth = true`.
 
-The future simulator therefore needs separate facts for:
+Encounter completion is recorded after combat. NPC use records are written by
+NPC interaction paths, not by encounter selection. Different field NPCs use
+different combinations of occurrence, completion, and use records for their
+later requirements.
 
-- encounter selection and occurrence at target creation/materialization;
-- encounter start and its counter effect after room entry;
-- encounter completion.
+Consequently:
 
-### Eligibility inputs
+- unpicked offered rooms do not consume field-NPC occurrence;
+- previous-room spacing observes committed predecessor room history;
+- an encounter may have occurred without having started or completed;
+- selecting an NPC encounter does not itself write that NPC's use record.
 
-Encounter eligibility can depend on:
+## Raw Named Encounter Sets
 
-- membership in the phase or room's legal encounter set;
-- room tags;
-- incoming room reward;
-- run and biome appearance caps;
-- rooms since the same encounter;
-- blocked or previously occurring encounters;
-- external game-state and named requirements.
+The following table reproduces every named F-through-Q encounter set from
+`EncounterSets.lua`. `xN` is exact source multiplicity in the list. Commented
+entries are not members and are listed separately afterward.
 
-Repeated names in `EncounterSets` are weights. They do not create distinct
-semantic candidates. The planner should normalize unique possible encounters
-and retain weights only as audit metadata if a future probability consumer
-actually needs them.
+| Source set                | Raw members and multiplicity                                                                                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FEncountersDefault`      | `GeneratedF x12`; `ArtemisCombatF x1`; `ArtemisCombatF2 x4`; `ArachneCombatF x2`; `NemesisCombatF x1`; `NemesisRandomEvent x2`; `ArtemisCombatIntro x8`; `NemesisCombatIntro x8` |
+| `GEncountersDefault`      | `FishmanIntro x1`; `GeneratedG x12`; `ArtemisCombatG x1`; `ArtemisCombatG2 x4`; `ArachneCombatG x1`; `NemesisCombatG x1`; `NemesisRandomEvent x2`                                |
+| `HEncountersDefault`      | `GeneratedH x7`; `GeneratedH_Treant2 x1`; `GeneratedH_Screamer2 x1`; `NemesisCombatH x1`                                                                                         |
+| `HEncountersPassive`      | `GeneratedH_Passive x5`; `NemesisRandomEvent x1`                                                                                                                                 |
+| `HEncountersPassiveSmall` | `GeneratedH_PassiveSmall x5`; `NemesisRandomEvent x1`                                                                                                                            |
+| `IEncountersDefault`      | `ClockworkIntro x1`; `GeneratedI x1`; `GeneratedI_GoalReward x1`; `GeneratedIChronosIntro x1`; `NemesisCombatI x1`                                                               |
+| `IEncountersSmaller`      | `ClockworkIntro x1`; `GeneratedI_Small x1`; `GeneratedI_Small_GoalReward x1`; `GeneratedI_SmallChronosIntro x1`; `NemesisCombatI x1`                                             |
+| `NEncountersDefault`      | `GeneratedN x10`; `HeraclesCombatIntro x4`; `ArtemisCombatN x2`; `ArtemisCombatN2 x4`; `HeraclesCombatN x1`; `HeraclesCombatN2 x1`                                               |
+| `NEncountersSmaller`      | `GeneratedN_Smaller x10`; `ArtemisCombatN x2`; `ArtemisCombatN2 x4`; `HeraclesCombatN x1`; `HeraclesCombatN2 x1`                                                                 |
+| `NEncountersBigger`       | `GeneratedN_Bigger x10`; `ArtemisCombatN x2`; `ArtemisCombatN2 x4`; `HeraclesCombatN x1`; `HeraclesCombatN2 x1`                                                                  |
+| `NEncountersSubRoom`      | `GeneratedNSubRoom x5`; `GeneratedNSubRoom_Bigger x5`                                                                                                                            |
+| `NEncountersSubRoomLight` | `GeneratedNSubRoom x6`; `Empty x1`                                                                                                                                               |
+| `NEncountersSubRoomHeavy` | `GeneratedNSubRoom_Bigger x1`                                                                                                                                                    |
+| `OEncountersDefault`      | `GeneratedO x10`; `DeadSeaIntro x1`; `IcarusCombatO x1`; `IcarusCombatO2 x4`; `IcarusCombatIntro x9`                                                                             |
+| `OEncountersIntros`       | `GeneratedO_Intro01 x14`; `GeneratedO_Intro01_First x1`; `HeraclesCombatO x1`; `HeraclesCombatO2 x1`                                                                             |
+| `PEncountersDefault`      | `GeneratedP x11`; `GeneratedP_Large x11`; `AthenaCombatIntro x8`; `AthenaCombatP x3`; `AthenaCombatP02 x3`; `IcarusCombatP x1`                                                   |
+| `PEncountersIntros`       | `GeneratedP_PreCombat x1`; `GeneratedP_PreCombatChronosForces x1`; `HeraclesCombatP x1`                                                                                          |
+| `QEncountersDefault`      | `GeneratedQ x1`; `TyphonIntro x1`                                                                                                                                                |
+| `QEncountersIslands`      | `GeneratedQ_Islands x1`                                                                                                                                                          |
+| `QEncountersPreBoss`      | `GeneratedQ_Large x1`; `TyphonIntro x1`                                                                                                                                          |
 
-External save/profile predicates remain excluded unless the project adds an
-explicit modeled input. An authored choice whose natural eligibility depends
-on such a predicate cannot be silently treated as eligible.
+Commented source entries include `IcarusCombatP2` in `PEncountersDefault` and
+`HeraclesCombatP2` in `PEncountersIntros`. They do not participate in the
+installed build's support set.
 
-## Persistent NPC Findings
+## Room and Phase Bindings
 
-Artemis, Heracles, Icarus, Athena, and Nemesis combat entries are members of
-the same legal encounter pools as the generated baseline. They generally
-inherit a biome-generated encounter and override requirements, events,
-difficulty, wave parameters, enemy caps, or room interaction.
+### Pool-backed combat rooms
 
-Two other mixed-pool encounter families matter to the same model:
+The table identifies the legal support used at each source selection position.
+Room ranges refer to the named route rooms in the installed scripts.
 
-- Arachne's F/G cocoon encounters are custom combat encounters that do not
-  inherit `Generated` and do not set `CountsForRoomEncounterDepth`;
-- `NemesisRandomEvent` inherits `NonCombat` and does not count.
+| Biome / rooms                         | Source position                             | Legal set or inline support                                        | Encounter-depth facts and qualifications                                                |
+| ------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| F `F_Opening01..03`                   | room encounter                              | `OpeningEmpty`, `OpeningGeneratedF`, `FCastTutorialFight`          | opening alternatives have their own progression requirements                            |
+| F `F_Combat01`                        | room encounter                              | `FIntroFight`, `GeneratedF`                                        | overrides the F default set and therefore admits no field NPC                           |
+| F `F_Combat02..22`                    | room encounter                              | `FEncountersDefault`                                               | ordinary generated and combat-NPC entries count; Arachne and Nemesis random do not      |
+| G `G_Combat01..20`                    | room encounter                              | `GEncountersDefault`                                               | ordinary generated and combat-NPC entries count; Arachne and Nemesis random do not      |
+| H `H_Combat01,03..08,10..12`          | passive encounter                           | `HEncountersPassive`                                               | ordinary passive and Nemesis random are non-counting                                    |
+| H `H_Combat02,09,13..15`              | passive encounter                           | `HEncountersPassiveSmall`                                          | ordinary passive and Nemesis random are non-counting                                    |
+| H each active reward cage             | cage encounter                              | `HEncountersDefault` from `FieldsRewardCage.LegalEncounters`       | cage encounters count; the number of active cage positions comes from Fields room setup |
+| I `I_Combat01,06..19,21,24`           | room encounter                              | `IEncountersDefault`                                               | Goal and non-Goal generators are mutually gated by incoming Clockwork reward facts      |
+| I `I_Combat02..05,20,22,23`           | room encounter                              | `IEncountersSmaller`                                               | smaller Goal and non-Goal generators have the same mutual gating                        |
+| N `N_Opening01`                       | room encounter                              | `OpeningEmpty`, `OpeningGeneratedN`                                | opening alternatives are progression-gated                                              |
+| N `N_PreHub01`                        | room encounter                              | `PreHubGeneratedN`                                                 | singleton, non-counting combat-bearing encounter                                        |
+| N `N_Combat02..08,14,22,23`           | main Hub-room encounter                     | `NEncountersDefault`                                               | generated and standard Artemis/Heracles combat entries count                            |
+| N `N_Combat12,17`                     | main Hub-room encounter                     | `NEncountersSmaller`                                               | generated and standard Artemis/Heracles combat entries count                            |
+| N `N_Combat01,09..11,13,15,16,18..21` | main Hub-room encounter                     | `NEncountersBigger`                                                | generated and standard Artemis/Heracles combat entries count                            |
+| N `N_Sub01,03..08,12,13,15`           | side-room encounter                         | `NEncountersSubRoom`                                               | both generated identities are non-counting                                              |
+| N `N_Sub02`                           | side-room encounter                         | `NEncountersSubRoomLight`                                          | generated identity and `Empty` are non-counting                                         |
+| N `N_Sub09..11,14`                    | side-room encounter                         | `NEncountersSubRoomHeavy`                                          | exact source member is `GeneratedNSubRoom_Bigger`, with an underscore                   |
+| O `O_Combat01..15`                    | first ordered position                      | `OEncountersIntros`                                                | ordinary intro is non-counting; Heracles is counting                                    |
+| O `O_Combat01..15`                    | second position and optional third position | `OEncountersDefault`                                               | each selected main combat is counting; the third position has `ChanceToPlay = 0.6`      |
+| P `P_Intro`                           | room encounter                              | inline `PIntroCombat*`, two `Empty` entries, `PIntroDreamRunEmpty` | `BasePIntroEncounters` is non-counting                                                  |
+| P `P_Combat01..19`                    | first ordered position                      | `PEncountersIntros` plus map-specific pre-combat keys              | position is non-counting unless Heracles is selected                                    |
+| P `P_Combat01..19`                    | second ordered position                     | `PEncountersDefault`                                               | generated, Athena, and Icarus standard combat identities count                          |
+| Q `Q_Combat01,02,04,06..09,12..16`    | room encounter                              | `QEncountersDefault`                                               | `GeneratedQ` is the ordinary generator; `TyphonIntro` is progression-gated              |
+| Q `Q_Combat03,05`                     | room encounter                              | `QEncountersIslands`                                               | singleton `GeneratedQ_Islands`                                                          |
+| Q `Q_Combat10,11`                     | room encounter                              | `QEncountersPreBoss`                                               | `GeneratedQ_Large` plus progression-gated `TyphonIntro`                                 |
 
-They all replace or transform an encounter phase. They do not replace the
-concrete Room Declaration.
+The source spelling distinction for N heavy side rooms is material:
+`GeneratedNSubRoom_Bigger` is the declared game encounter. The spelling
+`GeneratedNSubRoomBigger` does not occur in the source set.
 
-### Biome encounter-depth audit
+### P opening support
 
-The following matrix compares each NPC or NPC-adjacent encounter against the
-baseline phase it can occupy. A missing `CountsForRoomEncounterDepth` is false
-at `RoomLogic.lua::StartEncounter`.
+`P_Intro.LegalEncounters` contains these entries in source order:
 
-| Biome and phase pool                       | Special encounter family           | Baseline count | Resolved count | Whole-room depth delta | Reason                                                                                         |
-| ------------------------------------------ | ---------------------------------- | -------------: | -------------: | ---------------------: | ---------------------------------------------------------------------------------------------- |
-| F main, `FEncountersDefault`               | Artemis combat and intro variants  |              1 |              1 |                      0 | inherits `GeneratedF`                                                                          |
-| F main, `FEncountersDefault`               | Nemesis combat and intro variants  |              1 |              1 |                      0 | inherits `GeneratedF`                                                                          |
-| F main, `FEncountersDefault`               | Arachne combat                     |              1 |              0 |                     -1 | custom `BaseArachneCombat` has no counting flag                                                |
-| F main, `FEncountersDefault`               | `NemesisRandomEvent`               |              1 |              0 |                     -1 | inherits `NonCombat`                                                                           |
-| G main, `GEncountersDefault`               | Artemis combat variants            |              1 |              1 |                      0 | inherits `GeneratedG`                                                                          |
-| G main, `GEncountersDefault`               | Nemesis combat                     |              1 |              1 |                      0 | inherits `GeneratedG`                                                                          |
-| G main, `GEncountersDefault`               | Arachne combat                     |              1 |              0 |                     -1 | custom `BaseArachneCombat` has no counting flag                                                |
-| G main, `GEncountersDefault`               | `NemesisRandomEvent`               |              1 |              0 |                     -1 | inherits `NonCombat`                                                                           |
-| H passive room phase                       | `NemesisRandomEvent`               |              0 |              0 |                      0 | replaces `GeneratedH_Passive`, which is already non-counting                                   |
-| H reward-cage phase                        | Nemesis combat                     |              1 |              1 |             0 per cage | inherits `GeneratedH`                                                                          |
-| I main                                     | Nemesis combat                     |              1 |              1 |                      0 | inherits `GeneratedI`                                                                          |
-| N main                                     | Artemis combat variants            |              1 |              1 |                      0 | inherits `GeneratedN`                                                                          |
-| N main                                     | Heracles intro and combat variants |              1 |              1 |                      0 | inherits `GeneratedN`                                                                          |
-| O intro phase, `OEncountersIntros`         | Heracles combat variants           |              0 |              1 |                     +1 | replaces non-counting `GeneratedO_Intro01` with counting `GeneratedO` inheritance              |
-| O main combat phases, `OEncountersDefault` | Icarus intro and combat variants   |              1 |              1 |                      0 | inherits `GeneratedO`                                                                          |
-| P pre-combat phase, `PEncountersIntros`    | Heracles combat                    |              0 |              1 |                0 total | counting encounter has `BlockMultipleEncounters`, so the later one-count main phase is omitted |
-| P main combat phase, `PEncountersDefault`  | Athena intro and combat variants   |              1 |              1 |                      0 | inherits `GeneratedP`                                                                          |
-| P main combat phase, `PEncountersDefault`  | Icarus combat                      |              1 |              1 |                      0 | inherits `GeneratedP`                                                                          |
-| Q                                          | none in the audited NPC families   |              — |              — |                      0 | no NPC entry in the Q encounter pools                                                          |
+```text
+PIntroCombat01
+PIntroCombat02
+PIntroCombat03
+PIntroCombat04
+PIntroCombat05
+PIntroCombat06
+PIntroCombat07
+PIntroCombat08
+PIntroCombat09
+PIntroCombat_DragonQuad
+PIntroCombat_ZombieFishing
+PIntroCombat_ZombieQuad
+PIntroCombat_SapperGate
+PIntroCombat_CrossbowStatues
+Empty
+PIntroCombat_SapperOverlook
+Empty
+PIntroDreamRunEmpty
+```
 
-Heracles has encounter declarations in N, O, and P; he has none in G
-(Oceanus). The depth-changing Heracles case is specifically O's
-`OEncountersIntros` phase, not Oceanus.
+The repeated `Empty` entry affects weighting. `PIntroDreamRunEmpty` is gated to
+the Dream-run context. The combat entries inherit the non-counting
+`BasePIntroEncounters` behavior.
 
-Within the audited NPC families, the complete set of whole-room depth changes
-is therefore:
+### P map-specific pre-combat support
 
-- Arachne in F or G: `-1`;
-- `NemesisRandomEvent` in F or G: `-1`;
-- Heracles in O: `+1`.
+Every P normal room has two ordered positions. Its first position combines
+`PEncountersIntros` with these room-local keys:
 
-Heracles in P is a structural replacement with a net depth delta of zero. It
-turns the normally non-counting first phase into a counting phase, then
-terminates the sequence before the normally counting main phase.
+| Room             | Additional first-position members            |
+| ---------------- | -------------------------------------------- |
+| `P_Combat01`     | `P_Combat01_PreCombat01..04`                 |
+| `P_Combat02`     | `P_Combat02_PreCombat01..03`                 |
+| `P_Combat03`     | `OlympusIntro`, `P_Combat03_PreCombat01..03` |
+| `P_Combat04`     | `P_Combat04_PreCombat01..03`                 |
+| `P_Combat05`     | `P_Combat05_PreCombat01..03`                 |
+| `P_Combat06`     | `P_Combat06_PreCombat01..04`                 |
+| `P_Combat07`     | `P_Combat07_PreCombat01..03`                 |
+| `P_Combat08`     | `P_Combat08_PreCombat01..03`                 |
+| `P_Combat09`     | `P_Combat09_PreCombat01..03`                 |
+| `P_Combat10`     | `P_Combat10_PreCombat01..03`                 |
+| `P_Combat11`     | `P_Combat11_PreCombat01..04`                 |
+| `P_Combat12`     | `P_Combat12_PreCombat01..03`                 |
+| `P_Combat13`     | `P_Combat13_PreCombat01..03`                 |
+| `P_Combat14`     | `P_Combat14_PreCombat01..03`                 |
+| `P_Combat15`     | `P_Combat15_PreCombat01..04`                 |
+| `P_Combat16`     | `P_Combat16_PreCombat01..03`                 |
+| `P_Combat17..19` | no additional members                        |
 
-### Run scope and spacing audit
+The first position uses `ContinueIfInelligible = true`; an ineligible first
+position does not prevent the later main position from being constructed.
 
-The field NPC families are experienced at most once per run. Arachne's cocoon
-encounter is the exception: it may occur once in F and once in G when its
-cross-biome spacing requirement passes.
+### Context-sensitive ordinary members
 
-This common product rule is not represented by one common game field:
+The named support sets contain several mutually exclusive or overlapping
+ordinary generators:
 
-| Family   | Same-family run guard                                                                                                      | Cross-family or same-family spacing                                                                                   |
-| -------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Artemis  | `CurrentRun.UseRecord.NPC_Artemis_Field_01` must be false                                                                  | `NoRecentFieldNPCEncounter`: no listed field NPC encounter in the previous 6 rooms                                    |
-| Heracles | no Heracles encounter in `CurrentRun.EncountersCompletedCache`                                                             | `NoRecentHeraclesEncounter`: no Heracles encounter in the previous 20 rooms; also the shared 6-room field-NPC spacing |
-| Icarus   | `CurrentRun.UseRecord.NPC_Icarus_01` must be false, with additional current-run occurrence exclusions on concrete variants | shared 6-room field-NPC spacing                                                                                       |
-| Athena   | `CurrentRun.UseRecord.NPC_Athena_01` must be false                                                                         | shared 6-room field-NPC spacing                                                                                       |
-| Nemesis  | no Nemesis encounter in `CurrentRun.EncountersOccurredCache`; `NoRecentNemesisEncounter` also looks back 99 rooms          | shared 6-room field-NPC spacing; additional Nemesis shopping and biome-local guards                                   |
-| Arachne  | no Arachne encounter in `CurrentRun.EncountersOccurredBiomeCache`                                                          | `NoRecentArachneEncounter`: no Arachne encounter in the previous 5 rooms                                              |
+- `GeneratedI` rejects `ClockworkGoal`, while `GeneratedI_GoalReward` requires
+  it;
+- `GeneratedI_Small` and `GeneratedI_Small_GoalReward` have the equivalent
+  smaller-set split;
+- `GeneratedP` requires biome depth below 10;
+- `GeneratedP_Large` requires biome depth at least 9;
+- therefore both P generators are eligible at biome depth 9, while only the
+  large generator is eligible from depth 10 onward;
+- intro, Chronos, Typhon, first-time, and Dream-run identities use external or
+  narrative requirements rather than one shared ordinary-run rule.
 
-`EncountersOccurredBiomeCache` resets at biome transition. Consequently an
-Arachne encounter in F does not consume G's biome-local cap; the five-room
-lookback decides whether G is far enough from the F occurrence.
+The source does not identify a deterministic winner for the overlapping P
+depth-9 case. Multiplicity gives both generators equal raw list weight there.
 
-One raw-data irregularity needs an explicit disposition before the shared
-spacing predicate is normalized: `NoRecentFieldNPCEncounter` lists
-`AthenaCombatIntro` and `AthenaCombatP`, but not the production pool member
-`AthenaCombatP02`. The P02 encounter still requires the predicate before it can
-appear, but its own occurrence is not counted by that predicate when a later
-field NPC is evaluated. Treat this as an audited game fact or correct it
-deliberately; do not silently assume the list is a complete family expansion.
+### Fixed combat support
 
-The planner should normalize the effective route rule while preserving the
-checkpoint that proves it:
+The following fixed combat-bearing route rooms do not admit a field NPC through
+their legal encounter list. This table records the ordinary source identity or
+legal family and the encounter-depth behavior established by the inherited
+Encounter declarations.
 
-- encounter occurrence is recorded when an offered room is created;
-- NPC use is recorded only through the NPC interaction;
-- encounter completion is recorded after combat;
-- previous-room spacing reads committed room history;
-- biome-local occurrence caches reset at biome transition.
+| Biome | Fixed room support                                                                                                                                                         | Encounter-depth facts                                     |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| F     | `F_MiniBoss01: MiniBossTreant/MiniBossTreant_Shrine`; `F_MiniBoss02: MiniBossFogEmitter/MiniBossFogEmitter_Shrine`; `F_MiniBoss03: MiniBossAssassin`; Hecate boss variants | minibosses count; boss encounters do not                  |
+| G     | `MiniBossWaterUnit`; `MiniBossCrawler`; `MiniBossJellyfish`; Scylla boss variants                                                                                          | WaterUnit and Jellyfish count; Crawler and boss do not    |
+| H     | `MiniBossVampire`; `MiniBossLamia`; Cerberus boss variants                                                                                                                 | minibosses count; boss does not                           |
+| I     | `MiniBossRatCatcher`; `MiniBossGoldElemental`; Chronos boss variants                                                                                                       | minibosses count; boss does not                           |
+| N     | `MiniBossSatyrCrossbow`; `MiniBossBoar`; Polyphemus boss variants                                                                                                          | minibosses count; boss does not                           |
+| O     | `MiniBossCharybdis`; `MiniBossCaptain`; reward-owned `DevotionTestO`; Eris boss variants                                                                                   | Captain and Devotion count; Charybdis and boss do not     |
+| P     | `MiniBossTalos`; `MiniBossDragon`; Prometheus boss variants                                                                                                                | Dragon counts; Talos and boss do not                      |
+| Q     | `BossTyphonArm01`; `MiniBossBrute`; `BossTyphonTail01`; `BossTyphonEye01`; `MiniBossStalker`; Typhon Head variants                                                         | Brute, Tail, and Stalker count; Arm, Eye, and Head do not |
 
-This means `oncePerRun` is an appropriate user-facing summary for field NPCs,
-not a sufficient catalog implementation by itself. Candidate evaluation and
-runtime conformance must use the declaration-owned occurrence/use/completion
-predicate so unpicked generated encounters and committed encounters are not
-silently treated as equivalent.
+Shop, Story, HealthRestore, `Empty`, and postboss identities are non-combat
+selection positions and are outside the field-NPC replacement pools.
 
-This disproves a simple “NPC name beside the room” model. Selection targets a
-stable phase, and the selected encounter may change:
+## Multiple-Encounter Composition
 
-- effective concrete encounter identity;
-- whether that phase counts encounter depth;
-- whether later phases remain present;
-- enemy-generation inputs;
-- NPC events and rewards;
-- eligibility of later rooms and encounters through occurrence history.
+`SetupRoomMultipleEncountersData` considers each ordered position in turn. It
+selects and records every eligible position during picked-room preparation.
+Later selected entries are marked as subsequent encounters.
 
-O and P are required proof cases before a concrete schema is locked. A model
-that works only for one-phase F combat has not modeled persistent encounters.
+Those preparation-time records are immediately visible through
+`CurrentRun.EncountersOccurredCache` and
+`CurrentRun.EncountersOccurredBiomeCache`, so an occurrence-based requirement
+on a later position sees an encounter recorded earlier in the same room.
+`SumPrevRooms` has a different boundary: while the next room is being prepared,
+it reads `CurrentRun.CurrentRoom` followed by `RoomHistory`. It therefore counts
+the predecessor and earlier rooms, not positions already recorded for the next
+room. Same-room occurrence exclusion and previous-room spacing are distinct
+source checkpoints even though both ultimately inspect encounter history.
 
-## Multiple-Encounter Rooms
+If the chosen Encounter has `BlockMultipleEncounters`, construction stops and
+that Encounter is the last active position. Unpicked offered rooms do not
+resolve any of these positions.
 
-`SetupRoomMultipleEncountersData` selects and records every eligible phase when
-the room is created. Later entries are marked as subsequent encounters. If a
-selected encounter has `BlockMultipleEncounters`, construction stops and that
-encounter becomes the last phase.
+Important route structures are:
 
-The current planner already exposes relevant semantic structure:
+- O: non-counting Intro, counting first Combat, and a 60%-chance counting
+  second Combat;
+- P normal rooms: a non-counting first/pre-combat position followed by a
+  counting main position;
+- H Fields: a non-counting passive Encounter plus the room's active counting
+  reward-cage positions.
 
-- O has an intro, a first counting combat, and a context-dependent second
-  counting combat;
-- P currently collapses internal phases where they have no supported consumer;
-- H has its own Fields phase sequence.
+The P field-NPC effects are asymmetric:
 
-Concrete encounter work may require expanding a previously collapsed profile,
-but only when a supported concrete choice creates an observable distinction.
-Do not transcribe all internal phases preemptively.
+- `HeraclesCombatP` is selected only from the first-position support;
+- it is counting and has `BlockMultipleEncounters`;
+- when selected, the later main position is not constructed;
+- `IcarusCombatP` and `AthenaCombatP` are selected only from the main-position
+  support.
 
-## Enemy Composition Findings
+The O Heracles effect differs: `HeraclesCombatO` makes the Intro position
+counting but does not block the later O combat positions.
 
-Relevant source:
+## Field-NPC Source Matrix
 
-- `RunLogic.lua::SetupEncounter`
-- `RunLogic.lua::GenerateEncounter`
-- `RunLogic.lua::FillEnemyTypes`
-- `RunLogic.lua::FillEnemyCounts`
-- `RunLogic.lua::IsEnemyEligible`
-- `EncounterData.lua::Generated`
-- biome entries in `EncounterData_Generated.lua`
-- `EnemySets` and `EnemyData`
+### Concrete placements and encounter effects
 
-### Generation pipeline
+| Family / mode   | Biome | Source set or position             | Standard concrete key      | Counts encounter depth | Sequence or reward effect                                               |
+| --------------- | ----- | ---------------------------------- | -------------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| Artemis combat  | F     | `FEncountersDefault`               | `ArtemisCombatF`           | yes                    | none                                                                    |
+| Artemis combat  | G     | `GEncountersDefault`               | `ArtemisCombatG`           | yes                    | none                                                                    |
+| Artemis combat  | N     | N default/smaller/bigger sets      | `ArtemisCombatN`           | yes                    | none                                                                    |
+| Heracles combat | N     | N default/smaller/bigger sets      | `HeraclesCombatN`          | yes                    | none                                                                    |
+| Heracles combat | O     | `OEncountersIntros`                | `HeraclesCombatO`          | yes                    | turns the normally non-counting Intro into a counting encounter         |
+| Heracles combat | P     | P first position                   | `HeraclesCombatP`          | yes                    | blocks the later main position                                          |
+| Icarus combat   | O     | `OEncountersDefault`               | `IcarusCombatO`            | yes                    | can occupy either active O main combat position                         |
+| Icarus combat   | P     | `PEncountersDefault`               | `IcarusCombatP`            | yes                    | Outdoor room requirement                                                |
+| Athena combat   | P     | `PEncountersDefault`               | `AthenaCombatP`            | yes                    | none                                                                    |
+| Arachne cocoon  | F     | `FEncountersDefault`               | `ArachneCombatF`           | no                     | replaces a normally counting combat                                     |
+| Arachne cocoon  | G     | `GEncountersDefault`               | `ArachneCombatG`           | no                     | replaces a normally counting combat                                     |
+| Nemesis combat  | F     | `FEncountersDefault`               | `NemesisCombatF`           | yes                    | kill-race wager can add or remove up to 100 Gold                        |
+| Nemesis combat  | G     | `GEncountersDefault`               | `NemesisCombatG`           | yes                    | same kill-race wager                                                    |
+| Nemesis combat  | H     | `HEncountersDefault` cage position | `NemesisCombatH`           | yes                    | preserves the cage reward; kill-race wager remains                      |
+| Nemesis combat  | I     | I default/smaller sets             | `NemesisCombatI`           | yes                    | preserves the room reward; kill-race wager remains                      |
+| Nemesis random  | F/G   | F/G default set                    | `NemesisRandomEvent`       | no                     | replaces combat and suppresses the inherited ordinary room-reward spawn |
+| Nemesis random  | H     | H passive set                      | `NemesisRandomEvent`       | no                     | replaces passive work; cage encounters and cage rewards remain          |
+| Nemesis Bridge  | H     | `H_Bridge01` legal support         | `BridgeNemesisRandomEvent` | no                     | Bridge-specific fixed-room composition                                  |
+
+No Q named encounter set contains one of these field-NPC encounters.
+
+### Intro and weight-oriented variants
+
+| Family   | First-time or intro identities | Reweight/fallback identities                                | Adjacent Shop event                |
+| -------- | ------------------------------ | ----------------------------------------------------------- | ---------------------------------- |
+| Artemis  | `ArtemisCombatIntro`           | `ArtemisCombatF2`, `ArtemisCombatG2`, `ArtemisCombatN2`     | none                               |
+| Heracles | `HeraclesCombatIntro`          | `HeraclesCombatN2`, `HeraclesCombatO2`; P2 is commented out | `HeraclesShopping` in N/O/P Shops  |
+| Icarus   | `IcarusCombatIntro`            | `IcarusCombatO2`; P2 is commented out                       | none                               |
+| Athena   | `AthenaCombatIntro`            | `AthenaCombatP02`                                           | none                               |
+| Arachne  | no separate intro key          | none                                                        | none                               |
+| Nemesis  | `NemesisCombatIntro`           | none                                                        | `NemesisShopping` in F/G/H/I Shops |
+
+These are distinct source identities with distinct source requirements or list
+weight. This audit does not decide whether a consumer preserves or projects
+them.
+
+### Depth, reward, and local placement requirements
+
+Reward names are source keys. The reward tested is the incoming reward for the
+room whose encounter is being chosen. An O wheel reward or an H cage-local
+reward is not substituted for that incoming-room value in these requirements.
+
+| Family / mode   | Depth requirement                                            | Forbidden incoming rewards                                                                      | Local placement requirements                               |
+| --------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Artemis combat  | `BiomeDepthCache >= 4`                                       | `Boon`, `SpellDrop`, `Devotion`, `HermesUpgrade`, `WeaponUpgrade`                               | membership in F/G/N legal set                              |
+| Heracles combat | no common depth minimum                                      | `Devotion`                                                                                      | N combat; O first position; P first position and Indoor    |
+| Icarus combat   | `BiomeDepthCache >= 3`                                       | `Boon`, `SpellDrop`, `Devotion`, `HermesUpgrade`, `WeaponUpgrade`                               | O main position; P main position and Outdoor               |
+| Athena combat   | `BiomeDepthCache >= 4`                                       | `Boon`, `SpellDrop`, `Devotion`, `HermesUpgrade`, `WeaponUpgrade`                               | P main position                                            |
+| Arachne cocoon  | F: `4 <= BiomeDepthCache <= 8`; G: no local depth gate       | `Boon`, `SpellDrop`, `Devotion`, `HermesUpgrade`, `WeaponUpgrade`, `StackUpgrade`, `TalentDrop` | membership in F/G legal set                                |
+| Nemesis combat  | F/G/I: `BiomeDepthCache >= 4`; H: `BiomeEncounterDepth >= 1` | `Boon`, `SpellDrop`, `Devotion`, `HermesUpgrade`, `WeaponUpgrade`, `StackUpgrade`, `TalentDrop` | F/G/I main combat or H cage                                |
+| Nemesis random  | ordinary F/G/H: `BiomeDepthCache >= 4`                       | same seven-entry exclusion as Nemesis combat                                                    | F/G main encounter or H passive; Bridge has separate gates |
+
+### Cardinality and spacing mechanisms
+
+The game does not use one common NPC-history field:
+
+| Family   | Same-family guard                                                                          | Spacing requirement                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Artemis  | `CurrentRun.UseRecord.NPC_Artemis_Field_01` must be false                                  | no listed field NPC in the previous 6 rooms                                                                  |
+| Heracles | no Heracles encounter in `CurrentRun.EncountersCompletedCache`                             | no Heracles encounter in the previous 20 rooms and no listed field NPC in the previous 6 rooms               |
+| Icarus   | `CurrentRun.UseRecord.NPC_Icarus_01` false, plus concrete current-run encounter exclusions | no listed field NPC in the previous 6 rooms                                                                  |
+| Athena   | `CurrentRun.UseRecord.NPC_Athena_01` must be false                                         | no listed field NPC in the previous 6 rooms                                                                  |
+| Nemesis  | no Nemesis encounter occurrence; the family predicate looks back 99 rooms                  | no listed field NPC in the previous 6 rooms; Shop appearances suppress encounters for an additional 12 rooms |
+| Arachne  | no Arachne occurrence in `CurrentRun.EncountersOccurredBiomeCache`                         | no Arachne encounter in the previous 5 rooms; Arachne is not in the shared six-room field-NPC predicate      |
+
+`EncountersOccurredBiomeCache` resets at biome transition. An Arachne encounter
+in F therefore does not consume the G biome-local cap, although the five-room
+lookback can still suppress an early G appearance.
+
+The raw `NoRecentFieldNPCEncounter` list omits `AthenaCombatP02`. That omission
+is present in the installed source.
+
+### External save/profile requirements
+
+The standard identities also inspect state outside run-local depth, reward,
+room, occurrence, and spacing facts:
+
+| Standard identity family | Additional external requirements                                                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Artemis                  | `ArtemisCombatIntro` completed; `StandardPackageBountyActive` false; `SurfaceRouteLockedByTyphonKill` false                                                                                |
+| Heracles base            | `HeraclesCombatIntro` completed; `StandardPackageBountyActive` false                                                                                                                       |
+| Heracles O               | `DeadSeaIntro` completed; lifetime `GameState.UseRecord.NPC_Heracles_01 >= 4`                                                                                                              |
+| Heracles P               | lifetime Heracles uses at least 5; a prior `HeraclesCombatO/O2` occurrence; `AthenaFirstMeeting` recorded                                                                                  |
+| Icarus base              | `GameState.BiomeVisits.O > 1`; `StandardPackageBountyActive` false                                                                                                                         |
+| Icarus O                 | `IcarusCombatIntro` completed; no Icarus intro/O occurrence in the current run                                                                                                             |
+| Icarus P                 | `IcarusCombatIntro` completed; lifetime Icarus uses at least 4; no Icarus encounter occurrence in the current run; `AthenaFirstMeeting` recorded                                           |
+| Athena                   | `AthenaCombatIntro` completed; current-run Athena use absent; `AthenaEncounterKeepsake` not expired; `StandardPackageBountyActive` and `SurfaceRouteLockedByTyphonKill` false              |
+| Arachne F                | at least one completed run; at least one of `MiniBossTreant`, `MiniBossFogEmitter`, or `BossHecate01` completed; its child requirements replace the base G-oriented completion requirement |
+| Arachne G                | `ArachneCombatF` completed in game history                                                                                                                                                 |
+| Nemesis F                | `NemesisCombatIntro` completed; `NemesisGetFreeItemIntro01` recorded; `StandardPackageBountyActive` and `HecateMissing` false                                                              |
+| Nemesis G                | the F requirements plus no current-run `NemesisWithNarcissus01` text line                                                                                                                  |
+| Nemesis H                | intro and free-item-intro completion; `StandardPackageBountyActive` and `HecateMissing` false                                                                                              |
+| Nemesis I                | `NemesisCombatIntro`, `NemesisGetFreeItemIntro01`, and `NemesisPostCombatAboutTartarus02` recorded; `StandardPackageBountyActive` and `HecateMissing` false                                |
+
+First-time identities have their own gates:
+
+| Intro identity        | Salient requirements                                                                                                                                                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ArtemisCombatIntro`  | intro not completed; no current-run `ArachneFirstMeeting`; biome depth at least 3; at least one completed run; current health at least 10; no active bounty; at least four named prerequisite text lines recorded                                               |
+| `HeraclesCombatIntro` | intro not completed; `HeraclesFirstMeeting` recorded in game history; neither `HeraclesFirstMeeting` nor `MedeaFirstMeeting` in the current run; no active bounty                                                                                               |
+| `IcarusCombatIntro`   | no current-run `CirceFirstMeeting`; no Circe enlarge/shrink trait; intro not completed and not already occurred in the current run; current-run Icarus use absent; depth at least 3; more than one O visit; health fraction at least 0.33; no active bounty; shared field-NPC spacing |
+| `AthenaCombatIntro`   | intro not completed; current-run Athena use absent; depth at least 4; no active bounty; shared field-NPC spacing                                                                                                                                                |
+| `NemesisCombatIntro`  | intro not completed; at least seven completed runs; G Intro previously entered; previous run not cleared; depth at least 3; no active bounty; `StandardPackageBountyActive` and `HecateMissing` false                                                           |
+
+The reweight identities append cross-run conditions rather than replacing the
+standard family requirements:
+
+| Identity family    | Added condition                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Artemis `F2/G2/N2` | no Artemis field spawn in the previous 4 runs and no Shrine interaction in the previous run                                     |
+| Heracles `N2`      | no Heracles-family occurrence in the previous 8 runs and no Shrine interaction in the previous run                              |
+| Heracles `O2/P2`   | no Heracles-family occurrence in the previous 4 runs and no Shrine interaction in the previous run; P2 is not a live set member |
+| Icarus `O2/P2`     | no Icarus-family occurrence in the previous 4 runs and no Shrine interaction in the previous run; P2 is not a live set member   |
+| `AthenaCombatP02`  | at most two Athena NPC spawns in the previous 4 runs and no Shrine interaction in the previous run                              |
+
+These progression facts change eligibility or source weighting. The audit
+records them without selecting a production disposition.
+
+## Nemesis Random Events and Adjacent Behavior
+
+Nemesis uses two selection checkpoints:
+
+1. encounter preparation can choose combat or `NemesisRandomEvent` from a
+   legal encounter list;
+2. interacting with Nemesis during `NemesisRandomEvent` chooses an eligible
+   text-line behavior that supplies a cost, challenge, and result.
+
+The ordinary random event has five behavior families:
+
+| Interaction family   | Ordinary biomes | Player cost or challenge       | Result                                                      | Additional requirements                                 |
+| -------------------- | --------------- | ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------- |
+| free item            | F, G, H         | none                           | random health, healing, death-defiance, or armor consumable | Bridge uses a separate premium free-item realization    |
+| buy item             | F, G, H         | randomized Gold price          | generated health, mana, Pom, or Hammer offer                | insufficient Gold prevents acceptance                   |
+| take damage for item | F, G, H         | randomized direct damage       | generated health, mana, Pom, Gold, or Psyche offer          | repeat lines require no available hit shield            |
+| give trait for item  | F, G, H         | one eligible Olympian trait    | `RoomMoneyTripleDrop`                                       | requires a sellable god trait                           |
+| damage contest       | F, G, H         | deal 1,000 damage in 5 seconds | success reward pool or consolation reward                   | 2,000 damage changes presentation, not the success pool |
+
+The random event is absent from I encounter sets. Most ordinary text-line
+behaviors exclude `H_Bridge01`; the Bridge uses its separate realization.
+
+### F/G reward suppression
+
+The incoming door reward is chosen before encounter selection and remains
+available to `RequireNotRoomReward` eligibility. `NonCombat` normally inherits
+`EncounterEventsDefault`, whose final event calls `SpawnRoomReward`.
+`NemesisRandomEvent` assigns `UnthreadedEvents = {}`, replacing the inherited
+event list. The ordinary room reward is therefore not spawned. The selected
+Nemesis interaction supplies the effective benefit or trade result.
+
+### H Fields behavior
+
+H has no singular main-room reward. The random event replaces the non-counting
+passive encounter, while active cage encounters and their rewards remain.
+
+`BlockMaxBonusRewards` can reserve an NPC position by reducing optional Fields
+bonus positions when every point would otherwise be occupied. This does not
+identify or rewrite one particular cage reward. The Fields-only
+`MoneyDropStore = 25` caps ordinary enemy Gold drops; it is not a room-reward
+replacement declaration.
+
+`NemesisCombatH` is a separate counting member of `HEncountersDefault` and can
+occupy a cage encounter.
+
+### Shop and combat-wager behavior
+
+`NemesisShopping` and `HeraclesShopping` are Shop-owned events. They are not
+members of ordinary combat-phase selection merely because the same NPC can
+appear there.
+
+After a Nemesis combat kill race, `HandleNemesisEncounterReward` compares
+Melinoe and Nemesis kills. The result can add or remove a wager of up to 100
+Gold; a tie leaves Gold unchanged. This economy effect exists in addition to
+the combat encounter identity.
+
+## Enemy-Composition Pipeline
 
 For a generated encounter, the game:
 
@@ -264,196 +529,36 @@ For a generated encounter, the game:
 6. filters an `EnemySet` through introduction, elite, blacklist, grouping,
    trait, and enemy-specific requirements;
 7. chooses enemy types;
-8. allocates counts from each enemy's difficulty rating and count caps.
+8. allocates counts from enemy difficulty ratings and count caps.
 
-After generation, `SetupEncounter` can replace the entire result with an enemy
-introduction encounter if a generated enemy has an unseen eligible intro.
+`SetupEncounter` can subsequently replace the generated result with an enemy
+introduction encounter when a generated enemy has an unseen eligible intro.
 
-Enemy composition is therefore a function of more than
-`encounter key + biome depth`. It consumes run history, game profile,
-room/map facts, traits, enemy declarations, RNG, and encounter-specific
-overrides.
+Concrete waves therefore depend on more than encounter identity and biome
+depth. Inputs include run history, save/profile state, room/map facts, traits,
+enemy declarations, RNG, and encounter-specific overrides.
 
-### Control feasibility
+The source exposes possible intervention points—legal-set narrowing, enemy-set
+replacement, and complete `SpawnWaves` data—but static inspection does not
+prove that any is a safe execution adapter.
 
-| Requested control                                   | Likely adapter                                                               | Current confidence                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| concrete encounter identity                         | narrow the legal set at `ChooseEncounter`, then call the game implementation | high; an older BiomeControl module already demonstrates this seam       |
-| enemy pool, game-generated waves                    | replace or constrain `EnemySet` before `GenerateEncounter`                   | plausible; needs a live probe                                           |
-| exact enemy types with game-derived counts          | seed or post-process generated waves                                         | unproven; introduction and eligibility repair may replace the encounter |
-| exact types and counts for every wave               | provide a complete `SpawnWaves` result or replace generation output          | technically reachable but high risk; no validated adapter               |
-| spawn points, timing, elite attributes, AI behavior | several later runtime systems                                                | outside this feature until a concrete consumer requires them            |
+## Confirmed Unknowns and Runtime Probes
 
-The global debug-style `ForceNextEncounter` path bypasses normal behavior such
-as intro checks and is not the recommended production contract. The safer
-encounter adapter narrows a declaration-validated legal set and lets the base
-game perform setup and generation.
+The following questions remain outside static-source certainty:
 
-No equivalent conclusion is yet justified for exact waves. “The Lua table can
-be overwritten” is not sufficient evidence of safe control.
+1. Whether narrowing a legal set at runtime preserves every setup,
+   introduction, recording, and completion behavior for all supported rooms.
+2. Whether an exact requested enemy type survives introduction replacement and
+   map compatibility repair.
+3. Whether complete authored waves can pass every active-cap, spawn-point,
+   elite, timing, and encounter-completion path safely.
+4. Which apparent source conditions are additionally affected by native engine
+   behavior not visible in Lua.
 
-## Recommended Extension Contract
+A focused runtime probe should trace one ordinary and one NPC encounter from
+offered exit creation through picked-room preparation, occurrence recording,
+start, NPC interaction, completion, and next-room eligibility. Enemy-generation
+probes should separately test pool narrowing, exact types, and exact waves.
 
-### Layer 1: concrete encounter selection
-
-When implementation begins, add normalized concrete Encounter Declarations
-separate from Encounter Profiles. They should carry only planner-observable
-facts:
-
-- concrete game encounter key;
-- normalized requirements and force rules;
-- occurrence/spacing caps;
-- room tag and reward compatibility;
-- encounter-depth effect;
-- phase-sequence effects such as terminating later phases;
-- references to the enemy-generation policy needed by later work.
-
-Room Declarations bind stable profile phases to finite candidate sources.
-Authored Room Occurrences own the selected concrete encounter at each addressed
-phase.
-
-The resolved encounter spine is produced before history:
-
-```text
-baseline profile
-  + authored per-phase concrete selections
-  + declaration-owned sequence effects
-  -> resolved ordered phases
-  -> history and validation
-```
-
-History consumes only the resolved spine. It must not emit a baseline phase and
-then append an unrelated “NPC happened” side channel.
-
-Persistent NPC state is route-wide only where the game rule is route-wide:
-spacing, prior occurrence, availability, and one-per-run behavior belong in
-history and requirements. The selected destination remains the addressed phase
-of one Room Occurrence. Do not create a floating NPC topology node.
-
-### Layer 2: enemy-generation intent and result
-
-Do not put enemy waves inside Encounter Profiles. Profiles describe semantic
-room-phase structure; generated composition is a lower-level product of the
-resolved concrete encounter.
-
-If runtime probes justify enemy authoring, distinguish:
-
-- authored generation intent: pool, allowed types, or exact requested waves;
-- materialized composition: concrete wave/type/count result;
-- runtime observation: what the game actually spawned.
-
-The portable authored project should initially persist only the narrowest
-control the product needs. A full copied `SpawnWaves` table is not an
-appropriate default domain model.
-
-Enemy keys must be catalog declarations with player-facing labels and verified
-generator compatibility. UI strings, rendered wave rows, and selector order
-remain outside persisted state.
-
-## Validation and Findings
-
-Concrete encounter candidates must be evaluated at the same pre-history
-checkpoint the game uses for selection. Findings need stable phase ownership
-and typed evidence for:
-
-- encounter not legal for this phase or room;
-- room tag or incoming reward conflict;
-- appearance or spacing cap exhausted;
-- required modeled history absent;
-- required external profile input unavailable;
-- selected encounter changes the resolved sequence incompatibly;
-- selected encounter has no supported runtime adapter.
-
-Enemy-composition findings, if added later, should separately identify:
-
-- enemy not in the resolved pool;
-- introduction or profile prerequisite unavailable;
-- enemy pairing/group cap conflict;
-- difficulty/count bounds incompatible;
-- exact-wave runtime support unavailable.
-
-Encounter invalidity must not be reported as a room-topology failure.
-
-## Probe and Delivery Order
-
-### Probe 1: encounter matrix
-
-Build a source-backed matrix for every supported NPC encounter:
-
-- concrete key and NPC;
-- biome and legal phase pool;
-- room-tag/reward restrictions;
-- occurrence and spacing requirements;
-- inherited baseline encounter;
-- effective counting flag;
-- sequence-termination behavior;
-- NPC-specific reward or lifecycle effect.
-
-Include at least Arachne F, `NemesisRandomEvent` F, Artemis F, Heracles O,
-Heracles P, and Icarus O as contrasting fixtures. These cover negative,
-positive, structural-zero, and ordinary-zero depth deltas.
-
-### Probe 2: selection timing and runtime control
-
-Instrument one normal and one NPC encounter from target-room creation through
-completion. Prove that narrowing the legal set:
-
-- selects the requested eligible encounter;
-- records the correct occurrence at room creation;
-- preserves base setup and introduction checks;
-- emits the expected encounter-depth change at start;
-- can suppress unplanned NPC variants.
-
-### First implementation slice
-
-Implement concrete encounter selection without enemy authoring:
-
-1. normalized Encounter Declarations and phase candidate bindings;
-2. occurrence-owned phase selections and strict codec;
-3. resolved-spine materialization;
-4. history, requirements, candidates, and findings;
-5. UI phase selection;
-6. runtime selection/suppression probe fixtures.
-
-Use one-phase Artemis as the first vertical fixture, then close Heracles O and
-P before declaring the model general.
-
-### Probe 3: enemy-generation observation
-
-Log the complete generation input and output for representative F, O, and P
-encounters at several depths. Identify which inputs are reproducible in the app
-and which remain external.
-
-### Probe 4: bounded enemy control
-
-Test, in order:
-
-1. constrain the enemy pool and let the game generate;
-2. request exact types while the game chooses counts;
-3. request complete waves.
-
-At each step, verify intro replacement, eligibility, active caps, map
-compatibility, encounter completion, and runtime conformance reporting. Stop at
-the narrowest level that satisfies the intended product workflow.
-
-Enemy authoring becomes an implementation target only after one of these
-levels has a repeatable safe adapter and a clear user-facing need.
-
-## Open Questions
-
-- Which persistent NPCs are in the desired first product scope beyond Artemis,
-  Heracles, and Icarus?
-- Does the user need to author the exact NPC occurrence, or only constrain/force
-  route-level availability?
-- Which P internal phases must become explicit once Heracles and Athena are
-  supported?
-- Which NPC rewards or post-encounter interactions affect supported reward
-  history?
-- Is enemy control intended as a pool constraint, exact types, or exact
-  type/count waves?
-- Can exact waves survive `SetupEncounter` introduction replacement and every
-  supported room map?
-- Which external progression predicates should become explicit project inputs?
-
-These questions should be answered by focused fixtures and runtime probes, not
-by generic schema options.
+These probes are evidence work. They do not imply a planner schema or runtime
+adapter design.
