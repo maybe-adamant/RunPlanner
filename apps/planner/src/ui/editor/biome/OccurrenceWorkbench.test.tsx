@@ -284,7 +284,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByText('Fixed reward:')).toBeNull();
   });
 
-  it('keeps singleton encounter phases semantic without adding a no-op Customize surface', () => {
+  it('exposes Encounter customization when the F default set becomes meaningful', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -305,7 +305,7 @@ describe('OccurrenceWorkbench', () => {
 
     expect(node.room.encounterPhases).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ address: phase, customizable: false, resettable: false }),
+        expect.objectContaining({ address: phase, customizable: true, resettable: false }),
       ]),
     );
     expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(phase))).toBe(
@@ -315,9 +315,9 @@ describe('OccurrenceWorkbench', () => {
       workspaceProjection(view.application).interactions.encounterPhases.has(
         semanticAddressKey(phase),
       ),
-    ).toBe(false);
-    expect(screen.queryByLabelText('Customize')).toBeNull();
-    expect(screen.queryByLabelText('Encounter encounter phase')).toBeNull();
+    ).toBe(true);
+    expect(screen.getByLabelText('Customize')).toBeTruthy();
+    expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 

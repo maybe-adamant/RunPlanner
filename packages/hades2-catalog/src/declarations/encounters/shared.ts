@@ -93,3 +93,28 @@ export const sharedEncounterDefinitions = [
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const sharedEncounterSets = [] as const satisfies readonly RawEncounterSetDeclaration[];
+
+/** Artemis route exclusion is permanently limited to its three concrete variants. */
+export const artemisEncounterKeys = ['ArtemisCombatF', 'ArtemisCombatG', 'ArtemisCombatN'] as const;
+
+/**
+ * Gate B's currently supported field-NPC spacing identities. Later delivery
+ * gates extend this exact list when they add their own declared combat encounters.
+ */
+export const supportedFieldNpcEncounterKeys = [...artemisEncounterKeys] as const;
+
+export const arachneEncounterKeys = ['ArachneCombatF', 'ArachneCombatG'] as const;
+
+export const artemisIncomingRewardExclusions = [
+  'Boon',
+  'SpellDrop',
+  'Devotion',
+  'HermesUpgrade',
+  'WeaponUpgrade',
+] as const;
+
+export const arachneIncomingRewardExclusions = [
+  ...artemisIncomingRewardExclusions,
+  'StackUpgrade',
+  'TalentDrop',
+] as const;

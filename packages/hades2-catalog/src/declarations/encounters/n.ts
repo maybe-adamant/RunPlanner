@@ -1,4 +1,9 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  artemisEncounterKeys,
+  artemisIncomingRewardExclusions,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 export const nEncounterDefinitions = [
   {
@@ -14,6 +19,35 @@ export const nEncounterDefinitions = [
     countsEncounterDepth: false,
   },
   { key: 'GeneratedN', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'ArtemisCombatN',
+    label: 'Artemis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Artemis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: artemisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: artemisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
   {
     key: 'GeneratedN_Smaller',
     label: 'Small combat',
@@ -62,17 +96,17 @@ export const nEncounterDefinitions = [
 export const nEncounterSets = [
   {
     key: 'NEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedN'],
+    encounterDefinitionKeys: ['GeneratedN', 'ArtemisCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN',
   },
   {
     key: 'NEncountersSmaller',
-    encounterDefinitionKeys: ['GeneratedN_Smaller'],
+    encounterDefinitionKeys: ['GeneratedN_Smaller', 'ArtemisCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN_Smaller',
   },
   {
     key: 'NEncountersBigger',
-    encounterDefinitionKeys: ['GeneratedN_Bigger'],
+    encounterDefinitionKeys: ['GeneratedN_Bigger', 'ArtemisCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN_Bigger',
   },
   {

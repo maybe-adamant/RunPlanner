@@ -1,7 +1,71 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  arachneEncounterKeys,
+  arachneIncomingRewardExclusions,
+  artemisEncounterKeys,
+  artemisIncomingRewardExclusions,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 export const gEncounterDefinitions = [
   { key: 'GeneratedG', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'ArtemisCombatG',
+    label: 'Artemis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Artemis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: artemisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: artemisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
+    key: 'ArachneCombatG',
+    label: 'Arachne cocoon',
+    kind: 'combat',
+    countsEncounterDepth: false,
+    npcPresentationKey: 'Arachne',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: arachneIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'biome',
+          encounterKeys: ['ArachneCombatG'],
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: arachneEncounterKeys,
+          roomWindow: 5,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
   {
     key: 'Story_Narcissus_01',
     label: 'Narcissus story',
@@ -32,7 +96,7 @@ export const gEncounterDefinitions = [
 export const gEncounterSets = [
   {
     key: 'GEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedG'],
+    encounterDefinitionKeys: ['GeneratedG', 'ArtemisCombatG', 'ArachneCombatG'],
     defaultEncounterDefinitionKey: 'GeneratedG',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

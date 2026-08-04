@@ -57,9 +57,13 @@ describe('structured workspace test expectations', () => {
     const requirementByOwner = new Map(
       requirements.map((requirement) => [semanticAddressKey(requirement.address), requirement]),
     );
-    // The main N room's declared singleton remains a retained semantic leaf,
-    // while the entered side-room's two-choice set retains its exact editor.
-    expect(requirementByOwner.get(semanticAddressKey(topLevel))?.interactions).toEqual([]);
+    // Gate B makes the main N pool meaningful while the entered side-room
+    // retains its independently owned exact editor.
+    expect(
+      requirementByOwner
+        .get(semanticAddressKey(topLevel))
+        ?.interactions.map((interaction) => interaction.kind),
+    ).toEqual(['encounterPhase']);
     expect(
       requirementByOwner
         .get(semanticAddressKey(localChild))
