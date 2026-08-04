@@ -47,13 +47,16 @@ not project identity.
 
 Route and panel navigation is one generic UI-session model. The active route
 is a nullable catalog route key, where `null` selects Settings, and each route
-retains its selected biome key or route-overview selection independently.
-Application state and React composition do not define separate Underworld,
-Surface, F, G, or other route-specific navigation fields. The ordered route
-tabs, labels, valid biome panels, and initial route come from the normalized
-catalog. A semantic finding selects its owning route and biome through the same
-generic session action; route- and project-owned findings select the route
-overview or retain the current top-level location respectively.
+retains one tagged panel independently: route overview, the read-only NPC
+index, or one catalog biome. Application state and React composition do not
+define separate Underworld, Surface, F, G, NPC, or other route-specific
+navigation fields. The ordered route tabs, labels, valid biome panels, and
+initial route come from the normalized catalog. A semantic finding selects its
+owning route and biome through the same generic session action; route-owned
+findings select the route overview and project-owned findings retain the
+current top-level location. A separate exact-owner navigation action moves from
+the NPC index to the containing biome and opens its existing room-local detail
+surface without creating authored history.
 
 ## Product Language Boundary
 

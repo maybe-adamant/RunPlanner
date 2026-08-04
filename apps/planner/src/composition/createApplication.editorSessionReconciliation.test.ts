@@ -57,7 +57,7 @@ describe('application editor-session reconciliation', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );
       const navigationRevision =
-        application.store.getState().editorSession.findingNavigationRevision;
+        application.store.getState().editorSession.semanticNavigationRevision;
 
       expect(application.store.getState().editorSession).toMatchObject({
         focusedSemanticOwner: combat10Reward,
@@ -79,9 +79,12 @@ describe('application editor-session reconciliation', () => {
       const state = application.store.getState();
       expect(state.editorSession.focusedSemanticOwner).toBeNull();
       expect(state.editorSession.selectedFinding).toBeNull();
-      expect(state.editorSession.findingNavigationRevision).toBe(navigationRevision);
+      expect(state.editorSession.semanticNavigationRevision).toBe(navigationRevision);
       expect(state.editorSession.activeRouteKey).toBe('Surface');
-      expect(state.editorSession.activeBiomeKeyByRoute.Surface).toBe('N');
+      expect(state.editorSession.activePanelByRoute.Surface).toEqual({
+        kind: 'biome',
+        biomeKey: 'N',
+      });
       expect(
         state.projectWorkspace.assembly.evaluation.findings.some(
           (candidate) =>

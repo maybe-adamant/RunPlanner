@@ -56,7 +56,9 @@ function configureF(application: ReturnType<typeof createApplication>): void {
       route: createRouteAddress('Underworld'),
     }),
   );
-  application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', biomeKey: 'F' }));
+  application.store.dispatch(
+    routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'F' } }),
+  );
 }
 
 describe('App', () => {
@@ -78,6 +80,22 @@ describe('App', () => {
     expect(markup).toContain('Findings');
     expect(markup).toContain('Configure a biome in this route to begin simulation.');
     expect(markup).toContain('data-editor-layout="overview"');
+  });
+
+  it('renders the route NPC index as a distinct panel, including an empty route', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'npcIndex' } }),
+    );
+
+    const markup = appMarkup(application);
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'npcIndex',
+    });
+    expect(markup).toContain('NPC encounters');
+    expect(markup).toContain('No resolved NPC encounters in this route.');
+    expect(markup).toContain('data-editor-layout="npcIndex"');
+    expect(markup).not.toContain('Route settings');
   });
 
   it('presents the configured route extent and included biomes', () => {
@@ -184,7 +202,9 @@ describe('App', () => {
   it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
-    application.store.dispatch(routePanelSelected({ routeKey: 'Surface', biomeKey: 'N' }));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),
+    );
     application.store.dispatch(
       semanticOwnerFocused(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
     );
@@ -213,7 +233,10 @@ describe('App', () => {
     const markup = appMarkup(application);
     expect(finding.code).toBe('biomeTopologyMissing');
     expect(application.store.getState().editorSession.activeRouteKey).toBe('Underworld');
-    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('F');
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'F',
+    });
     expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
     expect(markup).toContain('Choose a starting room before building its route.');
@@ -288,7 +311,9 @@ describe('App', () => {
 
   it('keeps route and settings navigation outside authored history', () => {
     const application = createApplication();
-    application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', biomeKey: null }));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'overview' } }),
+    );
     expect(appMarkup(application)).toContain('Route settings');
 
     application.store.dispatch(routeSelected('Surface'));

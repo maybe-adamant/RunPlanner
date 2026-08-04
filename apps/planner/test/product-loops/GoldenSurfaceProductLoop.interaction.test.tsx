@@ -498,7 +498,10 @@ describe('surface product loop', () => {
 
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
     expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
-    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Surface).toBe('P');
+    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+      kind: 'biome',
+      biomeKey: 'P',
+    });
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();

@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
-import { encodeProjectDocument } from '@run-planner/engine/authored-project';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
+  encodeProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  createEncounterCommandAuthorization,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
+import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -10,7 +19,13 @@ import type {
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
 import type { ProfileFileAdapter } from '@planner/persistence/profileFile';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import {
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
 
@@ -18,6 +33,29 @@ function configuredBiomeCount(
   application: ReturnType<typeof renderPlannerForInteraction>['application'],
 ) {
   return application.store.getState().projectWorkspace.history.present.routes[0]?.biomes.length;
+}
+
+function projectWithArtemisInErebus() {
+  const initial = createCompleteFGProject();
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  return {
+    phase,
+    project: applyProjectCommand(
+      initial,
+      catalog,
+      { kind: 'SelectEncounter', phase, encounterKey: 'ArtemisCombatF' },
+      {
+        encounterAuthorization: createEncounterCommandAuthorization(
+          catalog,
+          simulateProjectAssembly(catalog, initial),
+        ),
+      },
+    ),
+  };
 }
 
 describe('planner history interaction', () => {
@@ -128,20 +166,59 @@ describe('planner history interaction', () => {
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
     await user.keyboard('{Enter}');
-    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('G');
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'G',
+    });
     expect(oceanus.getAttribute('aria-current')).toBe('page');
 
     const tartarus = screen.getByRole('button', { name: 'Tartarus' });
     tartarus.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('I');
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'I',
+    });
     expect(tartarus.getAttribute('aria-current')).toBe('page');
 
     const route = screen.getByRole('button', { name: 'Route' });
     route.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBeNull();
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'overview',
+    });
     expect(route.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('opens an NPC index row at its exact room phase without authoring history', async () => {
+    const { phase, project } = projectWithArtemisInErebus();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'NPCs' }));
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+    const npcEntry = screen.getByRole('button', {
+      name: 'Inspect Artemis combat in Erebus · Encounter',
+    });
+    npcEntry.focus();
+    await view.user.keyboard('{Enter}');
+
+    expect(application.store.getState().editorSession).toMatchObject({
+      activeRouteKey: 'Underworld',
+      focusedSemanticOwner: phase,
+      selectedFinding: null,
+    });
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'F',
+    });
+    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
+    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
+    await waitFor(() => expect(customize.open).toBe(true));
+    const encounter = screen.getByLabelText('Encounter') as HTMLSelectElement;
+    expect(encounter.value).toBe('ArtemisCombatF');
+    await waitFor(() => expect(document.activeElement).toBe(encounter));
   });
 
   it('keeps blocked and cross-route biome pages visible and editable', async () => {

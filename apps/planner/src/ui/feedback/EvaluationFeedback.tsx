@@ -81,7 +81,7 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
   const findings = (localFindings ?? projectFindings).get(ownerKey) ?? [];
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
   const navigationRevision = useAppSelector(
-    (state) => state.editorSession.findingNavigationRevision,
+    (state) => state.editorSession.semanticNavigationRevision,
   );
   const selectedKey = selectedFinding === null ? null : selectedFinding.key;
   const selectedAtOwner =

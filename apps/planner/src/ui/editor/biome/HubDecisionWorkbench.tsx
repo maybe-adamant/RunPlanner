@@ -864,8 +864,8 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
-  const findingNavigationRevision = useAppSelector(
-    (state) => state.editorSession.findingNavigationRevision,
+  const semanticNavigationRevision = useAppSelector(
+    (state) => state.editorSession.semanticNavigationRevision,
   );
   const handoff =
     frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision'
@@ -929,7 +929,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     revealedClosedOwnerKey === undefined
       ? undefined
       : selectedFindingOwnerKey === revealedClosedOwnerKey
-        ? `${revealedClosedOwnerKey}:${findingNavigationRevision}`
+        ? `${revealedClosedOwnerKey}:${semanticNavigationRevision}`
         : revealedClosedOwnerKey;
   const closedDisclosure = useRef<HTMLDetailsElement>(null);
   const openMembershipRegion = useRef<HTMLDivElement>(null);
