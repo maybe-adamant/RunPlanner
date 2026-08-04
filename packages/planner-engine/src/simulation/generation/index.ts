@@ -19,7 +19,6 @@ export {
 export type {
   ForcePressureLedgerEntry,
   GeneratedRoomGenerationValidation,
-  EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,

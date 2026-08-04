@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
@@ -99,6 +100,17 @@ function appendOwner(keys: Set<string>, owner: SemanticAddress): void {
 
 function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom): void {
   appendOwner(keys, room.origin);
+  const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
+  for (const phase of room.encounterPhases) {
+    appendOwner(
+      keys,
+      createEncounterPhaseAddress(
+        biome,
+        { kind: 'occurrence', occurrenceId: room.occurrenceId },
+        phase.slotKey,
+      ),
+    );
+  }
   if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
   for (const reward of room.localRewards ?? []) appendOwner(keys, reward.origin);
   for (const wheel of room.rewardWheels ?? []) {
@@ -113,6 +125,22 @@ function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom
 
 function appendLocalChildRoomOwners(keys: Set<string>, room: CanonicalLocalChildRoom): void {
   appendOwner(keys, room.origin);
+  const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
+  for (const phase of room.encounterPhases) {
+    appendOwner(
+      keys,
+      createEncounterPhaseAddress(
+        biome,
+        {
+          kind: 'localChild',
+          occurrenceId: room.origin.occurrenceId,
+          groupKey: room.groupKey,
+          slotKey: room.slotKey,
+        },
+        phase.slotKey,
+      ),
+    );
+  }
   if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
 }
 
@@ -190,7 +218,7 @@ function isHubVisitFrontier(
 function hasMaterializedPrefix(
   evaluation: ProjectBiomeEvaluation,
 ): evaluation is WorkspacePrefixEvaluation {
-  return evaluation.authoring === 'incomplete' && 'materializedPrefix' in evaluation;
+  return 'materializedPrefix' in evaluation;
 }
 
 function appendPrefixOwners(
@@ -246,7 +274,7 @@ function createWorkspaceEvaluatedOwnerCoverage(
       isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
     });
   }
-  if (evaluation.authoring === 'complete') {
+  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
     const snapshot = evaluation.snapshot;
     appendAuthoredRoomOwners(keys, snapshot.entryRoom);
     for (const decision of snapshot.decisions) appendDecisionOwners(keys, decision);
@@ -254,10 +282,14 @@ function createWorkspaceEvaluatedOwnerCoverage(
   } else {
     if (!hasMaterializedPrefix(evaluation)) {
       throw new StructuredWorkspaceProjectionContractError(
-        `${evaluation.biomeKey} has incomplete evaluation without prefix coverage`,
+        `${evaluation.biomeKey} has progressive evaluation without prefix coverage`,
       );
     }
-    appendPrefixOwners(keys, evaluation.materializedPrefix, evaluation);
+    appendPrefixOwners(
+      keys,
+      evaluation.assessmentPrefix ?? evaluation.materializedPrefix,
+      evaluation,
+    );
   }
   return Object.freeze({
     isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
@@ -281,8 +313,10 @@ function materialized(
   evaluation: ProjectBiomeEvaluation | undefined,
 ): CanonicalBiome | MaterializedBiomePrefix | undefined {
   if (evaluation === undefined) return undefined;
-  if (evaluation.authoring === 'complete') return evaluation.snapshot;
-  return 'materializedPrefix' in evaluation ? evaluation.materializedPrefix : undefined;
+  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
+    return evaluation.snapshot;
+  }
+  return hasMaterializedPrefix(evaluation) ? evaluation.materializedPrefix : undefined;
 }
 
 function partialBatchFromPrefix(prefix: MaterializedBiomePrefix): CanonicalBatch | undefined {

@@ -1,76 +1,38 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const gStoryEncounterProfiles = [
+export const gEncounterDefinitions = [
+  { key: 'GeneratedG', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
   {
-    key: 'G_Story01',
-    phases: [
-      {
-        key: 'G_Story01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Narcissus_01',
-      },
-    ],
+    key: 'Story_Narcissus_01',
+    label: 'Narcissus story',
+    kind: 'story',
+    countsEncounterDepth: false,
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+  {
+    key: 'MiniBossWaterUnit',
+    label: 'Water unit',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  {
+    key: 'MiniBossCrawler',
+    label: 'Crawler',
+    kind: 'miniboss',
+    countsEncounterDepth: false,
+  },
+  {
+    key: 'MiniBossJellyfish',
+    label: 'Jellyfish',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  { key: 'BossScylla01', label: 'Scylla', kind: 'boss', countsEncounterDepth: false },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
-export const gMinibossEncounterProfiles = [
+export const gEncounterSets = [
   {
-    key: 'G_MiniBoss01',
-    phases: [
-      {
-        key: 'G_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossWaterUnit',
-      },
-    ],
+    key: 'GEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedG'],
+    defaultEncounterDefinitionKey: 'GeneratedG',
   },
-  {
-    key: 'G_MiniBoss02',
-    phases: [
-      {
-        key: 'G_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'MiniBossCrawler',
-      },
-    ],
-  },
-  {
-    key: 'G_MiniBoss03',
-    phases: [
-      {
-        key: 'G_MiniBoss03',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossJellyfish',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
-
-export const gCompletionEncounterProfiles = [
-  {
-    key: 'G_Boss01',
-    phases: [
-      {
-        key: 'G_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossScylla01',
-      },
-    ],
-  },
-  {
-    key: 'G_PostBoss01',
-    phases: [
-      {
-        key: 'G_PostBoss01',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Empty',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+] as const satisfies readonly RawEncounterSetDeclaration[];

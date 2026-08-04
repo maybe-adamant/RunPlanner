@@ -12,6 +12,11 @@ import {
   createEmptyRoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateArtifacts,
 } from './rewards/lifecycle-artifacts';
+import type { EncounterCandidateArtifacts } from './encounters';
+
+function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
+  return Object.freeze({ at: () => undefined, roomAt: () => undefined });
+}
 
 /**
  * The room-target capability produced while one biome is evaluated.
@@ -28,6 +33,7 @@ export interface BiomeCandidateArtifacts {
   readonly roomTargets: RoomTargetCandidateArtifacts;
   readonly rewardProducers: RewardProducerCandidateArtifacts;
   readonly roomLifecycles: RoomLifecycleCandidateArtifacts;
+  readonly encounters: EncounterCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -56,8 +62,9 @@ export function createBiomeCandidateArtifacts(
   roomTargets: RoomTargetCandidateArtifacts,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
+  encounters: EncounterCandidateArtifacts = emptyEncounterCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
-  return Object.freeze({ origin, roomTargets, rewardProducers, roomLifecycles });
+  return Object.freeze({ origin, roomTargets, rewardProducers, roomLifecycles, encounters });
 }
 
 export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeCandidateArtifacts {
@@ -66,6 +73,7 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
     createRoomTargetCandidateArtifacts(new Map()),
     createEmptyRewardProducerCandidateArtifacts(),
     createEmptyRoomLifecycleCandidateArtifacts(),
+    emptyEncounterCandidateArtifacts(),
   );
 }
 

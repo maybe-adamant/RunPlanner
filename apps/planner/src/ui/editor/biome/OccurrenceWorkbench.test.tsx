@@ -4,6 +4,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -19,6 +21,11 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import {
+  createEncounterCommandAuthorization,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -445,6 +452,188 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
+  it('edits an entered local-child encounter through its exact phase and restores its default', async () => {
+    const parent = nOccurrenceId('combat05');
+    const phase = createEncounterPhaseAddress(
+      nBiome,
+      {
+        kind: 'localChild',
+        occurrenceId: parent,
+        groupKey: 'sideRooms',
+        slotKey: 'sideDoor2',
+      },
+      'Encounter',
+    );
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(parent),
+    );
+    const sideRoom = screen.getByText('Side Room 07').closest('tr');
+    if (sideRoom === null) throw new Error('entered Side Room 07 is missing');
+    const encounter = sideRoom.querySelector<HTMLElement>('.encounter-phase-control');
+    if (encounter === null) throw new Error('entered Side Room 07 encounter is missing');
+    expect(
+      encounter.querySelector('.semantic-owner-marker')?.getAttribute('data-semantic-owner'),
+    ).toBe(semanticAddressKey(phase));
+    const select = within(encounter).getByRole('combobox', { name: 'Encounter' });
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(select);
+    await waitFor(() =>
+      expect(
+        Array.from((select as HTMLSelectElement).options).map((option) => option.value),
+      ).toContain('GeneratedNSubRoom_Bigger'),
+    );
+    await view.user.selectOptions(select, 'GeneratedNSubRoom_Bigger');
+    await waitFor(() => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'N',
+        parent,
+      );
+      expect(state).toMatchObject({
+        kind: 'ephyraCombat',
+        sideRooms: {
+          sideDoor2: {
+            encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom_Bigger' } },
+          },
+        },
+      });
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength + 1,
+    );
+
+    await view.user.click(within(encounter).getByRole('button', { name: 'Reset to default' }));
+    await waitFor(() => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'N',
+        parent,
+      );
+      expect(state).toMatchObject({
+        kind: 'ephyraCombat',
+        sideRooms: {
+          sideDoor2: {
+            encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom' } },
+          },
+        },
+      });
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength + 2,
+    );
+  });
+
+  it('retains an activation-invalid Ship phase for diagnosis without an authorable encounter choice', async () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      encounterCount: 3,
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat04),
+    );
+    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    const phase = screen.getByLabelText('Combat2 encounter phase');
+    const select = within(phase).getByRole('combobox', {
+      name: /^Encounter/,
+    }) as HTMLSelectElement;
+
+    await view.user.click(count);
+    await waitFor(() => {
+      expect(count.dataset.candidateSupport).toBe('impossible');
+      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
+      expect(count.options[0]?.disabled).toBe(false);
+      expect(count.options[1]?.disabled).toBe(true);
+    });
+    await view.user.click(select);
+    await waitFor(() => {
+      expect(select.dataset.candidateSupport).toBe('impossible');
+      expect(Array.from(select.options)).toHaveLength(1);
+      expect(select.options[0]?.disabled).toBe(true);
+    });
+    await view.user.click(within(phase).getByRole('button', { name: 'Reset to default' }));
+    expect(select.value).toBe('GeneratedO');
+  });
+
+  it('keeps an invalid I default selected while exposing only its exact Goal correction', async () => {
+    const occurrenceId = createOccurrenceId('golden-i-combat01');
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'I'),
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const initial = createGoldenFGHIProject();
+    const reset = applyProjectCommand(
+      initial,
+      catalog,
+      { kind: 'ResetEncounter', phase },
+      {
+        encounterAuthorization: createEncounterCommandAuthorization(
+          catalog,
+          simulateProjectAssembly(catalog, initial),
+        ),
+      },
+    );
+    const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
+    const encounter = screen.getByLabelText('Encounter encounter phase');
+    const select = within(encounter).getByRole('combobox') as HTMLSelectElement;
+
+    await view.user.click(select);
+    await waitFor(() => {
+      expect(select.value).toBe('GeneratedI');
+      expect(select.dataset.candidateSupport).toBe('impossible');
+      expect(Array.from(select.options).map((option) => option.value)).toEqual([
+        'GeneratedI',
+        'GeneratedI_GoalReward',
+      ]);
+      expect(select.options[0]?.disabled).toBe(true);
+      expect(select.options[0]?.textContent).toContain('unavailable');
+      expect(select.options[1]?.disabled).toBe(false);
+    });
+
+    await view.user.selectOptions(select, 'GeneratedI_GoalReward');
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'I')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.encounters.encounterKeyByPhase,
+      ).toEqual({ Encounter: 'GeneratedI_GoalReward' }),
+    );
+    expect(
+      simulateProject(catalog, view.application.store.getState().projectWorkspace.history.present)
+        .status,
+    ).toBe('valid');
+  });
+
+  it('withholds an unavailable opening Ship Combat2 count from new authoring', async () => {
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat04),
+    );
+    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+
+    await view.user.click(count);
+    await waitFor(() => {
+      expect(count.dataset.candidateSupport).toBe('forced');
+      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2']);
+    });
+  });
+
   it('renders only active Fields cages and restores the retained third cage', () => {
     const decision = createExitDecisionAddress(goldenHBiome, {
       kind: 'occurrence',
@@ -559,7 +748,7 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
     const initialWheel = screen.getByLabelText('Reward wheel 2');
-    const ship = screen.getByLabelText('Ship combat encounters');
+    const ship = screen.getByLabelText('Ship combat details');
     expect(
       Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
     ).toEqual(['Reward wheel 1', 'Reward wheel 2']);

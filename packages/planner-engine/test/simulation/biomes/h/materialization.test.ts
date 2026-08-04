@@ -337,7 +337,7 @@ describe('H Fields materialization', () => {
     expect(minCombat).toMatchObject({
       gameName: 'H_Combat02',
       lifecycleProfileKey: 'FieldsCombatRoom',
-      encounterProfileKey: 'H_FieldsCombatCage2',
+      encounterEnvelopeKey: 'FieldsEncounter',
     });
     expect(minCombat?.localRewards?.map((reward) => reward.slotKey)).toEqual(['cage1', 'cage2']);
     expect(minCombat?.localRewards?.[1]).toMatchObject({
@@ -353,9 +353,9 @@ describe('H Fields materialization', () => {
       true,
     );
     expect(batches[1]?.targets.map((target) => target.room.localRewards?.length)).toEqual([2, 2]);
-    expect(batches[1]?.targets.map((target) => target.room.encounterProfileKey)).toEqual([
-      'H_FieldsCombatCage2',
-      'H_FieldsCombatCage2',
+    expect(batches[1]?.targets.map((target) => target.room.encounterEnvelopeKey)).toEqual([
+      'FieldsEncounter',
+      'FieldsEncounter',
     ]);
 
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
@@ -386,7 +386,13 @@ describe('H Fields materialization', () => {
     expect(maxCombat).toMatchObject({
       gameName: 'H_Combat05',
       lifecycleProfileKey: 'FieldsCombatRoom',
-      encounterProfileKey: 'H_FieldsCombatCage3',
+      encounterEnvelopeKey: 'FieldsEncounter',
+      encounterPhases: [
+        { slotKey: 'Passive', encounterKey: 'GeneratedH_Passive' },
+        { slotKey: 'Cage01', encounterKey: 'GeneratedH' },
+        { slotKey: 'Cage02', encounterKey: 'GeneratedH' },
+        { slotKey: 'Cage03', encounterKey: 'GeneratedH' },
+      ],
     });
     expect(maxCombat?.localRewards?.map((reward) => reward.slotKey)).toEqual([
       'cage1',

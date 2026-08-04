@@ -1,137 +1,49 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const oEncounterProfiles = [
+export const oEncounterDefinitions = [
   {
-    key: 'ShipCombat',
-    phases: [
-      {
-        key: 'Intro',
-        kind: 'combat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'GeneratedO_Intro01',
-      },
-      {
-        key: 'Combat1',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedO',
-        offerPoint: {
-          kind: 'rewardWheel',
-          key: 'wheel1',
-          reward: {
-            kind: 'countedChoice',
-            storeKeys: ['RunProgress', 'MetaProgress'],
-            eligibleRewardTypes: [],
-            ineligibleRewardTypes: [],
-            producerLifecycleKey: 'RoomReward',
-          },
-          defaultStoreKey: 'RunProgress',
-          offerKeys: ['offer1', 'offer2'],
-          offerCount: { min: 1, max: 2, defaultValue: 1 },
-          picked: 'exactlyOne',
-          offerTiming: 'encounterStart',
-          acquisitionTiming: 'postCombat',
-        },
-      },
-      {
-        key: 'Combat2',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedO',
-        presence: {
-          kind: 'authoredOptional',
-          decisionPoint: 'prepareRoom',
-          requirement: {
-            kind: 'counterRange',
-            axis: 'biomeEncounterDepth',
-            range: { min: 2, max: 5 },
-          },
-          defaultActive: false,
-        },
-        offerPoint: {
-          kind: 'rewardWheel',
-          key: 'wheel2',
-          reward: {
-            kind: 'countedChoice',
-            storeKeys: ['RunProgress', 'MetaProgress'],
-            eligibleRewardTypes: [],
-            ineligibleRewardTypes: [],
-            producerLifecycleKey: 'RoomReward',
-          },
-          defaultStoreKey: 'RunProgress',
-          offerKeys: ['offer1', 'offer2'],
-          offerCount: { min: 1, max: 2, defaultValue: 1 },
-          picked: 'exactlyOne',
-          offerTiming: 'encounterStart',
-          acquisitionTiming: 'postCombat',
-        },
-      },
-    ],
+    key: 'GeneratedO_Intro01',
+    label: 'Ship intro',
+    kind: 'combat',
+    countsEncounterDepth: false,
+  },
+  { key: 'GeneratedO', label: 'Ship combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'MiniBossCharybdis',
+    label: 'Charybdis',
+    kind: 'miniboss',
+    countsEncounterDepth: false,
   },
   {
-    key: 'O_MiniBoss01',
-    phases: [
-      {
-        key: 'O_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'MiniBossCharybdis',
-      },
-    ],
+    key: 'MiniBossCaptain',
+    label: 'Captain',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
   },
   {
-    key: 'O_MiniBoss02',
-    phases: [
-      {
-        key: 'O_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossCaptain',
-      },
-    ],
+    key: 'Story_Circe_01',
+    label: 'Circe story',
+    kind: 'story',
+    countsEncounterDepth: false,
   },
   {
-    key: 'O_Story01',
-    phases: [
-      {
-        key: 'O_Story01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Circe_01',
-      },
-    ],
+    key: 'DevotionTestO',
+    label: 'Devotion combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+  },
+  { key: 'BossEris01', label: 'Eris', kind: 'boss', countsEncounterDepth: false },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const oEncounterSets = [
+  {
+    key: 'OEncountersIntros',
+    encounterDefinitionKeys: ['GeneratedO_Intro01'],
+    defaultEncounterDefinitionKey: 'GeneratedO_Intro01',
   },
   {
-    key: 'O_Devotion01',
-    phases: [
-      {
-        key: 'O_Devotion01',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'DevotionTestO',
-      },
-    ],
+    key: 'OEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedO'],
+    defaultEncounterDefinitionKey: 'GeneratedO',
   },
-  {
-    key: 'O_Boss01',
-    phases: [
-      {
-        key: 'O_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossEris01',
-      },
-    ],
-  },
-  {
-    key: 'O_PostBoss01',
-    phases: [
-      {
-        key: 'O_PostBoss01',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Empty',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+] as const satisfies readonly RawEncounterSetDeclaration[];

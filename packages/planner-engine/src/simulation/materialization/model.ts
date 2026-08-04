@@ -1,8 +1,4 @@
-import type {
-  EncounterPhase,
-  RequiredRoomObjectDescriptor,
-  RoomCounterEffects,
-} from '../../catalog-schema';
+import type { RequiredRoomObjectDescriptor, RoomCounterEffects } from '../../catalog-schema';
 import type {
   BatchRewardStoreAddress,
   CompletionRoomAddress,
@@ -24,8 +20,9 @@ import type {
   ShopPurchaseAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
-import type { OccurrenceId } from '../../authored-project/model';
+import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ResolvedEncounterPhase } from '../encounters';
 
 export interface CanonicalResolvedIncomingReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;
@@ -82,8 +79,9 @@ export interface CanonicalAuthoredRoom {
   readonly origin: OccurrenceAddress;
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases: readonly EncounterPhase[];
+  readonly encounters: RoomEncounterState;
+  readonly encounterEnvelopeKey: string;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
@@ -100,8 +98,8 @@ export interface CanonicalCompletionRoom {
   readonly origin: CompletionRoomAddress;
   readonly role: CompletionRoomAddress['role'];
   readonly gameName: string;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases: readonly EncounterPhase[];
+  readonly encounterEnvelopeKey: string;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly enteredRewardStoreKey?: string;
@@ -112,8 +110,8 @@ export interface CanonicalHubRoom {
   readonly kind: 'hub';
   readonly origin: HubRoomAddress;
   readonly gameName: string;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases: readonly EncounterPhase[];
+  readonly encounterEnvelopeKey: string;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: true;
@@ -129,8 +127,9 @@ export interface CanonicalLocalChildRoom {
   readonly availabilityRank: number;
   readonly generation: 'generated' | 'notGenerated';
   readonly enteredOrdinal: number | null;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases: readonly EncounterPhase[];
+  readonly encounters: RoomEncounterState;
+  readonly encounterEnvelopeKey: string;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;

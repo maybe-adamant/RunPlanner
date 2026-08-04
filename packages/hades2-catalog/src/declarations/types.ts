@@ -2,6 +2,7 @@ import type {
   AuthoredFieldDescriptor,
   CompletionDescriptor,
   CompletedHubExitDescriptor,
+  EncounterSlotActivation,
   EncounterPhaseKind,
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
@@ -26,42 +27,69 @@ import type { EnteredRewardStoreHistoryPolicy } from '@run-planner/engine/reward
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawRewardKernelInput } from './rewards/types';
 
-export interface RawEncounterPhaseDeclaration {
+export interface RawEncounterRewardWheelAttachment {
+  readonly kind: 'rewardWheel';
   readonly key: string;
-  readonly kind: EncounterPhaseKind;
-  readonly countsEncounterDepth: boolean;
-  readonly baselineEncounterKey?: string;
-  readonly presence?: {
-    readonly kind: 'authoredOptional';
-    readonly decisionPoint: 'prepareRoom';
-    readonly requirement: RequirementExpression;
-    readonly defaultActive: boolean;
+  readonly reward: RawCountedRewardBinding;
+  readonly defaultStoreKey: string;
+  readonly offerKeys: readonly string[];
+  readonly offerCount: {
+    readonly min: number;
+    readonly max: number;
+    readonly defaultValue: number;
   };
-  readonly offerPoint?: {
-    readonly kind: 'rewardWheel';
-    readonly key: string;
-    readonly reward: RawCountedRewardBinding;
-    readonly defaultStoreKey: string;
-    readonly offerKeys: readonly string[];
-    readonly offerCount: {
-      readonly min: number;
-      readonly max: number;
-      readonly defaultValue: number;
-    };
-    readonly picked: 'exactlyOne';
-    readonly offerTiming: 'encounterStart';
-    readonly acquisitionTiming: 'postCombat';
-  };
+  readonly picked: 'exactlyOne';
 }
 
-export interface RawEncounterProfileDeclaration {
-  readonly key: string;
-  readonly phases: readonly RawEncounterPhaseDeclaration[];
+export interface RawEncounterLocalRewardAttachment {
+  readonly kind: 'localReward';
+  readonly groupKey: string;
+  readonly slotKey: string;
 }
+
+export interface RawEncounterEnvelopeSlotDeclaration {
+  readonly key: string;
+  readonly activation: EncounterSlotActivation;
+  readonly activationRequirement?: RequirementExpression;
+  readonly rewardAttachment?: RawEncounterLocalRewardAttachment | RawEncounterRewardWheelAttachment;
+}
+
+export interface RawEncounterEnvelopeDeclaration {
+  readonly key: string;
+  readonly slots: readonly RawEncounterEnvelopeSlotDeclaration[];
+}
+
+export interface RawEncounterDefinitionDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly kind: EncounterPhaseKind;
+  readonly countsEncounterDepth: boolean;
+  readonly requirements?: RequirementExpression;
+  readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
+  readonly npcPresentationKey?: string;
+}
+
+export interface RawEncounterSetDeclaration {
+  readonly key: string;
+  readonly encounterDefinitionKeys: readonly string[];
+  readonly defaultEncounterDefinitionKey: string;
+}
+
+export type RawEncounterSlotBinding =
+  | {
+      readonly slotKey: string;
+      readonly kind: 'set';
+      readonly encounterSetKey: string;
+    }
+  | {
+      readonly slotKey: string;
+      readonly kind: 'fixed';
+      readonly encounterDefinitionKey: string;
+    };
 
 export interface RawRoomLifecycleProfileDeclaration {
   readonly key: string;
-  readonly encounterProfileKeys: readonly string[];
+  readonly encounterEnvelopeKeys: readonly string[];
   readonly producer: RoomLifecycleProducerPolicy;
   readonly operations: readonly RoomLifecycleOperation[];
 }
@@ -146,7 +174,8 @@ export interface RawRoomDeclaration {
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
-  readonly encounterProfileKey: string;
+  readonly encounterEnvelopeKey: string;
+  readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
@@ -210,7 +239,9 @@ export interface RawCatalogInput {
   readonly biomes: readonly BiomeDeclaration[];
   readonly routes: readonly RouteDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
-  readonly encounterProfiles: readonly RawEncounterProfileDeclaration[];
+  readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
+  readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];
+  readonly encounterSets: readonly RawEncounterSetDeclaration[];
   readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly ExitTypeDeclaration[];

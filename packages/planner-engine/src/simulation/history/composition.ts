@@ -1,9 +1,19 @@
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../../authored-project/addresses';
-import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
+import {
+  executeEncounterRecordPrefix,
+  executeRoomLifecycle,
+  type RoomLifecycleEvent,
+} from '../lifecycle';
+import {
+  prepareRoomEncounterPhases,
+  type EncounterAuthoringRoom,
+  type PreparedEncounterPhases,
+} from '../encounters/preparation';
 import type { CanonicalCompletionRoom } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
+import { projectRoomPreparationCheckpoint } from './facts';
 import { createRoomLifecycleInput, type CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
   CanonicalBiomeHistory,
@@ -28,10 +38,61 @@ type SegmentHistoryEventData = HistoryEventData<SegmentHistoryEvent>;
 interface EventBuilder {
   readonly events: HistoryEvent[];
   readonly sequenceBase: number;
+  readonly seed?: HistoryStateView;
+  readonly validateEncounterResolution: boolean;
 }
 
 export interface HistorySegmentWriter {
   append(event: SegmentHistoryEventData): void;
+  current(): HistoryStateView;
+  readonly validatesEncounterResolution: boolean;
+}
+
+export interface EncounterHistoryBlock {
+  readonly room: EncounterAuthoringRoom;
+  readonly before: HistoryStateView;
+  readonly afterValidRecordPrefix: HistoryStateView;
+  readonly preparation: PreparedEncounterPhases;
+  readonly blockedAt: NonNullable<PreparedEncounterPhases['blockedAt']>;
+}
+
+export type EncounterValidatedPrefixHistory =
+  | { readonly kind: 'complete'; readonly history: BiomeHistoryPrefix }
+  | {
+      readonly kind: 'blocked';
+      readonly history: BiomeHistoryPrefix;
+      readonly block: EncounterHistoryBlock;
+    };
+
+export type EncounterValidatedBiomeHistory =
+  | { readonly kind: 'complete'; readonly history: CanonicalBiomeHistory }
+  | {
+      readonly kind: 'blocked';
+      readonly history: BiomeHistoryPrefix;
+      readonly block: EncounterHistoryBlock;
+    };
+
+/**
+ * A room with an invalid active encounter cannot enter its lifecycle. Valid
+ * preceding phase records are already canonical events; the caller folds that
+ * partial stream and retains this exact phase owner as its evaluation block.
+ */
+export class EncounterLifecycleBlocked extends Error {
+  constructor(
+    readonly room: EncounterAuthoringRoom,
+    readonly before: HistoryStateView,
+    readonly preparation: PreparedEncounterPhases,
+  ) {
+    if (preparation.valid || preparation.blockedAt === undefined) {
+      throw new Error('encounter lifecycle block requires an invalid preparation result');
+    }
+    super(`encounter lifecycle blocked at ${preparation.blockedAt.phaseKey}`);
+    this.name = 'EncounterLifecycleBlocked';
+  }
+
+  get blockedAt() {
+    return this.preparation.blockedAt!;
+  }
 }
 
 export interface RoomLifecycleCompositionOptions {
@@ -52,6 +113,7 @@ interface BiomeHistoryEnvelopeOptions<
   readonly biomeKey: string;
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
+  readonly validateEncounterResolution?: boolean;
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
@@ -85,6 +147,10 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
         }) as SegmentHistoryEvent,
       );
     },
+    current(): HistoryStateView {
+      return foldBiomeHistoryPrefixEvents(builder.events, builder.seed).current;
+    },
+    validatesEncounterResolution: builder.validateEncounterResolution,
   });
 }
 
@@ -109,7 +175,7 @@ export function appendStandaloneRoomCreated(
     kind: 'roomCreated',
     origin: room.origin,
     gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
+    encounterEnvelopeKey: room.encounterEnvelopeKey,
     source,
     picked: true,
   });
@@ -125,7 +191,36 @@ export function appendRoomLifecycle(
   if (!room.entered) {
     fail(`unentered room cannot execute a lifecycle`);
   }
-  const fragment = executeRoomLifecycle(catalog, createRoomLifecycleInput(catalog, room));
+  const authoringRoom: EncounterAuthoringRoom | undefined =
+    room.kind === 'authored' || room.kind === 'localChild' ? room : undefined;
+  const beforeEncounterPreparation = writer.validatesEncounterResolution
+    ? writer.current()
+    : undefined;
+  const encounterPreparation =
+    writer.validatesEncounterResolution && authoringRoom !== undefined
+      ? prepareRoomEncounterPhases(
+          catalog,
+          authoringRoom,
+          projectRoomPreparationCheckpoint(beforeEncounterPreparation!),
+        )
+      : undefined;
+  const encounterPhases = encounterPreparation?.validPrefix ?? room.encounterPhases;
+  if (encounterPreparation !== undefined && !encounterPreparation.valid) {
+    const prefix = executeEncounterRecordPrefix(
+      catalog,
+      createRoomLifecycleInput(catalog, room, encounterPhases),
+    );
+    for (const event of prefix.events) appendLifecycleEvent(writer, event, fail);
+    throw new EncounterLifecycleBlocked(
+      authoringRoom!,
+      beforeEncounterPreparation!,
+      encounterPreparation,
+    );
+  }
+  const fragment = executeRoomLifecycle(
+    catalog,
+    createRoomLifecycleInput(catalog, room, encounterPhases),
+  );
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
   let reachedOutgoing = false;
@@ -158,7 +253,50 @@ interface BiomeHistoryPrefixOptions {
   readonly biomeKey: string;
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
+  readonly validateEncounterResolution?: boolean;
   readonly compose: (writer: HistorySegmentWriter) => void;
+}
+
+function composeBiomeHistoryPrefixResult({
+  routeKey,
+  biomeKey,
+  initialCounters,
+  seed,
+  validateEncounterResolution = false,
+  compose,
+}: BiomeHistoryPrefixOptions): EncounterValidatedPrefixHistory {
+  const builder: EventBuilder = {
+    events: [],
+    sequenceBase: seed?.sequence ?? 0,
+    ...(seed === undefined ? {} : { seed }),
+    validateEncounterResolution,
+  };
+  appendEnvelope(builder, {
+    kind: 'biomeStarted',
+    origin: createBiomeAddress(routeKey, biomeKey),
+    counters: Object.freeze({ ...initialCounters }),
+  });
+  try {
+    compose(segmentWriter(builder));
+  } catch (error) {
+    if (!(error instanceof EncounterLifecycleBlocked)) throw error;
+    const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
+    return Object.freeze({
+      kind: 'blocked',
+      history,
+      block: Object.freeze({
+        room: error.room,
+        before: error.before,
+        afterValidRecordPrefix: history.current,
+        preparation: error.preparation,
+        blockedAt: error.blockedAt,
+      }),
+    });
+  }
+  return Object.freeze({
+    kind: 'complete',
+    history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+  });
 }
 
 export function composeBiomeHistoryPrefix({
@@ -167,15 +305,39 @@ export function composeBiomeHistoryPrefix({
   initialCounters,
   seed,
   compose,
-}: BiomeHistoryPrefixOptions): BiomeHistoryPrefix {
-  const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
-  appendEnvelope(builder, {
-    kind: 'biomeStarted',
-    origin: createBiomeAddress(routeKey, biomeKey),
-    counters: Object.freeze({ ...initialCounters }),
+}: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>): BiomeHistoryPrefix {
+  const result = composeBiomeHistoryPrefixResult({
+    routeKey,
+    biomeKey,
+    initialCounters,
+    ...(seed === undefined ? {} : { seed }),
+    validateEncounterResolution: false,
+    compose,
   });
-  compose(segmentWriter(builder));
-  return foldBiomeHistoryPrefixEvents(builder.events, seed);
+  if (result.kind !== 'complete') {
+    throw new Error('ordinary prefix composition unexpectedly encountered encounter validation');
+  }
+  return result.history;
+}
+
+export function composeBiomeHistoryPrefixWithEncounterValidation({
+  routeKey,
+  biomeKey,
+  initialCounters,
+  seed,
+  compose,
+}: Omit<
+  BiomeHistoryPrefixOptions,
+  'validateEncounterResolution'
+>): EncounterValidatedPrefixHistory {
+  return composeBiomeHistoryPrefixResult({
+    routeKey,
+    biomeKey,
+    initialCounters,
+    ...(seed === undefined ? {} : { seed }),
+    validateEncounterResolution: true,
+    compose,
+  });
 }
 
 function appendCompletionTail(
@@ -199,7 +361,7 @@ function appendCompletionTail(
   }
 }
 
-export function composeBiomeHistoryEnvelope<
+function composeBiomeHistoryEnvelopeResult<
   Entry,
   Predecessor,
   CompletionPredecessor extends CanonicalLifecycleRoom,
@@ -209,33 +371,95 @@ export function composeBiomeHistoryEnvelope<
   biomeKey,
   initialCounters,
   seed,
+  validateEncounterResolution = false,
   completionRooms,
   transitionEffects,
   composeEntry,
   composeBody,
   composeCompletionPredecessor,
   fail,
-}: BiomeHistoryEnvelopeOptions<Entry, Predecessor, CompletionPredecessor>): CanonicalBiomeHistory {
+}: BiomeHistoryEnvelopeOptions<
+  Entry,
+  Predecessor,
+  CompletionPredecessor
+>): EncounterValidatedBiomeHistory {
   const biome = createBiomeAddress(routeKey, biomeKey);
-  const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
+  const builder: EventBuilder = {
+    events: [],
+    sequenceBase: seed?.sequence ?? 0,
+    ...(seed === undefined ? {} : { seed }),
+    validateEncounterResolution,
+  };
   const writer = segmentWriter(builder);
   appendEnvelope(builder, {
     kind: 'biomeStarted',
     origin: biome,
     counters: Object.freeze({ ...initialCounters }),
   });
-  const entry = composeEntry(writer);
-  const predecessor = composeBody(writer, entry);
-  const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
-  appendCompletionTail(writer, catalog, biome, completionPredecessor, completionRooms, fail);
-  appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
-  for (const effect of transitionEffects) {
-    appendEnvelope(builder, {
-      kind: 'biomeCounterReset',
-      origin: biome,
-      axis: effect.axis,
-      value: 0,
+  try {
+    const entry = composeEntry(writer);
+    const predecessor = composeBody(writer, entry);
+    const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
+    appendCompletionTail(writer, catalog, biome, completionPredecessor, completionRooms, fail);
+    appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
+    for (const effect of transitionEffects) {
+      appendEnvelope(builder, {
+        kind: 'biomeCounterReset',
+        origin: biome,
+        axis: effect.axis,
+        value: 0,
+      });
+    }
+  } catch (error) {
+    if (!(error instanceof EncounterLifecycleBlocked)) throw error;
+    const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
+    return Object.freeze({
+      kind: 'blocked',
+      history,
+      block: Object.freeze({
+        room: error.room,
+        before: error.before,
+        afterValidRecordPrefix: history.current,
+        preparation: error.preparation,
+        blockedAt: error.blockedAt,
+      }),
     });
   }
-  return foldHistoryEvents(builder.events, seed);
+  return Object.freeze({ kind: 'complete', history: foldHistoryEvents(builder.events, seed) });
+}
+
+export function composeBiomeHistoryEnvelope<
+  Entry,
+  Predecessor,
+  CompletionPredecessor extends CanonicalLifecycleRoom,
+>(
+  options: Omit<
+    BiomeHistoryEnvelopeOptions<Entry, Predecessor, CompletionPredecessor>,
+    'validateEncounterResolution'
+  >,
+): CanonicalBiomeHistory {
+  const result = composeBiomeHistoryEnvelopeResult({
+    ...options,
+    validateEncounterResolution: false,
+  });
+  if (result.kind !== 'complete') {
+    throw new Error('ordinary biome composition unexpectedly encountered encounter validation');
+  }
+  return result.history;
+}
+
+export function composeBiomeHistoryEnvelopeWithEncounterValidation<
+  Entry,
+  Predecessor,
+  CompletionPredecessor extends CanonicalLifecycleRoom,
+>(
+  options: Omit<
+    BiomeHistoryEnvelopeOptions<Entry, Predecessor, CompletionPredecessor>,
+    'validateEncounterResolution'
+  >,
+): EncounterValidatedBiomeHistory {
+  return composeBiomeHistoryEnvelopeResult({
+    ...options,
+    validateEncounterResolution: true,
+  });
 }

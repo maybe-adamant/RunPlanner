@@ -1,5 +1,7 @@
 import type { Catalog, CompletionDescriptor, RoomDeclaration } from '../../catalog-schema';
 import { createCompletionRoomAddress, type BiomeAddress } from '../../authored-project/addresses';
+import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounters';
+import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
 import type { CanonicalCompletionRoom } from './model';
 
 export type CompletionEnteredStorePolicy =
@@ -79,16 +81,10 @@ export function materializeCompletionRooms({
       const profile = catalog.roomLifecycleProfiles.byKey[expected.lifecycleProfileKey];
       if (
         profile === undefined ||
-        !profile.encounterProfileKeys.includes(room.encounterProfileKey) ||
+        !profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey) ||
         (lifecycleProducerPolicy === 'noneOnly' && profile.producer.kind !== 'none')
       ) {
         fail(`${room.gameName} cannot use lifecycle ${expected.lifecycleProfileKey}`);
-      }
-      const encounter = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-      if (encounter === undefined) {
-        return fail(
-          `${room.gameName} references unknown encounter profile ${room.encounterProfileKey}`,
-        );
       }
       const resolvedStoreKey = enteredRewardStoreKey(room, enteredStorePolicy, fail);
       return Object.freeze({
@@ -96,8 +92,14 @@ export function materializeCompletionRooms({
         origin: createCompletionRoomAddress(biome, descriptor.role),
         role: descriptor.role,
         gameName: room.gameName,
-        encounterProfileKey: room.encounterProfileKey,
-        encounterPhases: encounter.phases,
+        encounterEnvelopeKey: room.encounterEnvelopeKey,
+        encounterPhases: resolveEncounterPhases(
+          catalog,
+          room,
+          createDefaultRoomEncounterState(catalog, room, `${room.gameName}.encounters`),
+          alwaysActiveEncounterSlotKeys(catalog, room, room.gameName),
+          room.gameName,
+        ),
         lifecycleProfileKey: expected.lifecycleProfileKey,
         counterEffects: room.counters,
         ...(resolvedStoreKey === undefined ? {} : { enteredRewardStoreKey: resolvedStoreKey }),

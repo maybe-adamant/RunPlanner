@@ -15,6 +15,7 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { decodeRoomState } from '../room-state/codec';
+import { decodeRoomEncounterState } from '../room-state/encounters';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
@@ -41,6 +42,7 @@ interface RawOccurrence {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
   readonly state: unknown;
+  readonly encounters: unknown;
   readonly path: string;
 }
 
@@ -146,10 +148,12 @@ function rewardStoreFor(
   path: string,
 ): BatchRewardStoreState {
   const progression = normalDecisionProgressionForLayout(layout);
+  const sourceRoomTemplateKey =
+    sourceRoom?.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined;
   const policy =
-    source.kind === 'occurrence' && sourceRoom !== undefined && progression !== undefined
+    source.kind === 'occurrence' && sourceRoomTemplateKey !== undefined && progression !== undefined
       ? (progression.rewardStoreOverrides.find(
-          (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
+          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
         )?.policy ?? progression.rewardStorePolicy)
       : { kind: 'none' as const };
   const value = expectRecord(raw, path);
@@ -710,7 +714,11 @@ export function decodeBiomeTopology(
   for (const [index, rawValue] of rawOccurrences.entries()) {
     const occurrencePath = `${path}.occurrences[${index}]`;
     const occurrence = expectRecord(rawValue, occurrencePath);
-    expectExactKeys(occurrence, ['occurrenceId', 'gameName', 'state'], occurrencePath);
+    expectExactKeys(
+      occurrence,
+      ['occurrenceId', 'gameName', 'state', 'encounters'],
+      occurrencePath,
+    );
     const id = occurrenceId(occurrence.occurrenceId, `${occurrencePath}.occurrenceId`);
     if (occurrences.has(id))
       failProjectDocument(`${occurrencePath}.occurrenceId`, `duplicates occurrence ${id}`);
@@ -720,6 +728,7 @@ export function decodeBiomeTopology(
         occurrenceId: id,
         gameName: expectNonBlankString(occurrence.gameName, `${occurrencePath}.gameName`),
         state: occurrence.state,
+        encounters: occurrence.encounters,
         path: occurrencePath,
       }),
     );
@@ -942,6 +951,12 @@ export function decodeBiomeTopology(
         room,
         owner,
         `${rawOccurrence.path}.state`,
+      ),
+      encounters: decodeRoomEncounterState(
+        rawOccurrence.encounters,
+        catalog,
+        room,
+        `${rawOccurrence.path}.encounters`,
       ),
     });
   });

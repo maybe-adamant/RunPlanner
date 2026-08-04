@@ -1,9 +1,21 @@
 export {
   composeBiomeHistory,
+  composeBiomeHistoryWithEncounterValidation,
   composeBiomeHistoryPrefix,
+  composeBiomeHistoryPrefixWithEncounterValidation,
   BiomeHistoryCompositionContractError,
 } from './compose';
-export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
+export type {
+  EncounterHistoryBlock,
+  EncounterValidatedBiomeHistory,
+  EncounterValidatedPrefixHistory,
+} from './composition';
+export {
+  projectEncounterRecordPreparation,
+  projectRoomPreparationCheckpoint,
+  projectRecentEncounterEnvelopeSlots,
+  type RecentEncounterEnvelopeSlotFact,
+} from './facts';
 export { foldHistoryEvents, HistoryFoldContractError } from './fold';
 export type {
   BiomeCompletedHistoryEvent,

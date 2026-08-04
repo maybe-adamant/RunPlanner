@@ -1,5 +1,9 @@
 import type { Catalog } from '../catalog-schema';
-import { applyProjectCommand, type ProjectCommand } from './commands/dispatch';
+import {
+  applyProjectCommand,
+  type ProjectCommand,
+  type ProjectCommandApplyOptions,
+} from './commands/dispatch';
 import type { ProjectDocument } from './model';
 
 export interface ProjectHistory {
@@ -28,8 +32,9 @@ export function applyProjectHistoryCommand(
   current: ProjectHistory,
   catalog: Catalog,
   command: ProjectCommand,
+  options: ProjectCommandApplyOptions = {},
 ): ProjectHistory {
-  const next = applyProjectCommand(current.present, catalog, command);
+  const next = applyProjectCommand(current.present, catalog, command, options);
   if (next === current.present) {
     return current;
   }

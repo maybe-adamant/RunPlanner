@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
 
 import type { LocatedBiome } from './contract';
+import { applyEncounterOccurrenceCommand } from './occurrence-encounter';
 import { applyEphyraOccurrenceCommand } from './occurrence-ephyra';
 import { applyIncomingRewardCommand } from './occurrence-incoming-reward';
 import { applyLocalRewardCommand } from './occurrence-local-reward';
@@ -32,5 +33,8 @@ export function applyOccurrenceCommand(
     case 'ReplaceShopOffer':
     case 'ReplaceShopPurchaseOrder':
       return applyShopOccurrenceCommand(document, located, command);
+    case 'SelectEncounter':
+    case 'ResetEncounter':
+      return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
 }

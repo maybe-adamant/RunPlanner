@@ -1,90 +1,50 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const fOpeningEncounterProfiles = [
+export const fEncounterDefinitions = [
   {
-    key: 'F_Opening',
-    phases: [
-      {
-        key: 'OpeningGeneratedF',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'OpeningGeneratedF',
-      },
-    ],
+    key: 'OpeningGeneratedF',
+    label: 'Opening combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+  { key: 'GeneratedF', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'Story_Arachne_01',
+    label: 'Arachne story',
+    kind: 'story',
+    countsEncounterDepth: false,
+  },
+  {
+    key: 'MiniBossTreant',
+    label: 'Treant',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  {
+    key: 'MiniBossFogEmitter',
+    label: 'Fog emitter',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  {
+    key: 'MiniBossAssassin',
+    label: 'Assassin',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  { key: 'BossHecate01', label: 'Hecate', kind: 'boss', countsEncounterDepth: false },
+  {
+    key: 'Story_Chronos_01',
+    label: 'Chronos story',
+    kind: 'story',
+    countsEncounterDepth: false,
+  },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
-export const fStoryEncounterProfiles = [
+export const fEncounterSets = [
   {
-    key: 'F_Story01',
-    phases: [
-      {
-        key: 'F_Story01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Arachne_01',
-      },
-    ],
+    key: 'FEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedF'],
+    defaultEncounterDefinitionKey: 'GeneratedF',
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
-
-export const fMinibossEncounterProfiles = [
-  {
-    key: 'F_MiniBoss01',
-    phases: [
-      {
-        key: 'F_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossTreant',
-      },
-    ],
-  },
-  {
-    key: 'F_MiniBoss02',
-    phases: [
-      {
-        key: 'F_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossFogEmitter',
-      },
-    ],
-  },
-  {
-    key: 'F_MiniBoss03',
-    phases: [
-      {
-        key: 'F_MiniBoss03',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossAssassin',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
-
-export const fCompletionEncounterProfiles = [
-  {
-    key: 'F_Boss01',
-    phases: [
-      {
-        key: 'F_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossHecate01',
-      },
-    ],
-  },
-  {
-    key: 'F_PostBoss01',
-    phases: [
-      {
-        key: 'F_PostBoss01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Chronos_01',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+] as const satisfies readonly RawEncounterSetDeclaration[];

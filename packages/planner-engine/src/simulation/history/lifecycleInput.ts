@@ -50,6 +50,7 @@ function enteredStoreKey(
 export function createRoomLifecycleInput(
   catalog: Catalog,
   room: CanonicalLifecycleRoom,
+  encounterPhases = room.encounterPhases,
 ): RoomLifecycleExecutionInput {
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined) {
@@ -59,17 +60,22 @@ export function createRoomLifecycleInput(
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
   const rewardWheels = 'rewardWheels' in room ? room.rewardWheels : undefined;
+  const activePhaseKeys = new Set(encounterPhases.map((phase) => phase.slotKey));
   const offerPointRewardStores =
     rewardWheels === undefined
       ? undefined
       : Object.freeze(
-          Object.fromEntries(rewardWheels.map((wheel) => [wheel.wheelKey, wheel.storeKey])),
+          Object.fromEntries(
+            rewardWheels
+              .filter((wheel) => activePhaseKeys.has(wheel.encounterPhaseKey))
+              .map((wheel) => [wheel.wheelKey, wheel.storeKey]),
+          ),
         );
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
-    encounterProfileKey: room.encounterProfileKey,
-    encounterPhases: room.encounterPhases,
+    encounterEnvelopeKey: room.encounterEnvelopeKey,
+    encounterPhases,
     counterEffects: room.counterEffects,
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),

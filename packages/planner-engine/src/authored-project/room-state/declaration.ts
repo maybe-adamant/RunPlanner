@@ -1,10 +1,11 @@
 import type {
   Catalog,
+  EncounterRewardWheelAttachment,
   LocalChildDescriptor,
-  RewardWheelOfferPoint,
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
+import { encounterEnvelopeSlots } from './encounters';
 import { failProjectDocument } from '../validation';
 
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
@@ -69,13 +70,9 @@ export function requireShipCombatWheels(
   catalog: Catalog,
   room: RoomDeclaration,
   path: string,
-): readonly RewardWheelOfferPoint[] {
-  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (profile === undefined) {
-    failProjectDocument(path, `unknown encounter profile ${room.encounterProfileKey}`);
-  }
-  const wheels = profile.phases.flatMap((phase) =>
-    phase.offerPoint === undefined ? [] : [phase.offerPoint],
+): readonly EncounterRewardWheelAttachment[] {
+  const wheels = encounterEnvelopeSlots(catalog, room, path).flatMap((slot) =>
+    slot.rewardAttachment?.kind === 'rewardWheel' ? [slot.rewardAttachment] : [],
   );
   if (wheels.length !== 2 || wheels[0]?.key !== 'wheel1' || wheels[1]?.key !== 'wheel2') {
     failProjectDocument(path, 'ShipCombat requires wheel1 and wheel2 offer points');

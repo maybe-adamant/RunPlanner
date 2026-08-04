@@ -1,7 +1,12 @@
-import type { CandidateOptionProjection } from '@planner/projections/candidateProjection';
+import type {
+  CandidateOptionProjection,
+  CandidateProjectionEvaluation,
+} from '@planner/projections/candidateProjection';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 
-export function candidateSelectState(option: CandidateOptionProjection<unknown> | undefined): {
+export function candidateSelectState(
+  option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
+): {
   readonly 'data-candidate-support': ReturnType<typeof candidateSupport>;
 } {
   return { 'data-candidate-support': candidateSupport(option) };
@@ -14,7 +19,7 @@ export function candidateSelectState(option: CandidateOptionProjection<unknown> 
  * affordance rule.
  */
 export function candidateMayBeAuthored(
-  option: CandidateOptionProjection<unknown> | undefined,
+  option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): boolean {
   return option !== undefined && candidateSupport(option) !== 'impossible';
 }

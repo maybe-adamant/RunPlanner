@@ -16,7 +16,7 @@ export const oBiomeLayout = {
     },
     rewardStoreOverrides: [
       {
-        sourceEncounterProfileKey: 'ShipCombat',
+        sourceRoomTemplateKey: 'ShipCombat',
         policy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
       },
     ],

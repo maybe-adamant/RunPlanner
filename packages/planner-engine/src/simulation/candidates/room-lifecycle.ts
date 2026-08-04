@@ -12,6 +12,8 @@ import type {
   ShipCombatState,
 } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
+import { materializeShipCombatState } from '../materialization';
+import type { EncounterCandidateArtifacts } from '../encounters';
 import type { CompleteBiomeProjectEvaluation, ProjectEvaluation } from '../project';
 import {
   evaluateProgressiveBiomeAssembly,
@@ -134,6 +136,7 @@ type LifecycleRepairScope = 'exact' | 'shopPurchaseOrder';
 interface LifecycleCandidateSource {
   readonly evaluation: CandidateBiomeEvaluation;
   readonly artifacts: RoomLifecycleCandidateArtifacts | undefined;
+  readonly encounters: EncounterCandidateArtifacts | undefined;
 }
 
 function lifecycleRepairOwnerMatches(
@@ -142,6 +145,16 @@ function lifecycleRepairOwnerMatches(
   scope: LifecycleRepairScope = 'exact',
 ): boolean {
   if (semanticAddressKey(owner) === semanticAddressKey(blockedOwner)) return true;
+  if (
+    owner.kind === 'occurrence' &&
+    blockedOwner.kind === 'encounterPhase' &&
+    blockedOwner.owner.kind === 'occurrence' &&
+    blockedOwner.routeKey === owner.routeKey &&
+    blockedOwner.biomeKey === owner.biomeKey &&
+    blockedOwner.owner.occurrenceId === owner.occurrenceId
+  ) {
+    return true;
+  }
   if (
     scope === 'shopPurchaseOrder' &&
     owner.kind === 'occurrence' &&
@@ -167,6 +180,7 @@ function selectedLifecycleSource(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
+  selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
 ): LifecycleCandidateSource | undefined {
   const complete = completeBiome(evaluation, owner.routeKey, owner.biomeKey);
@@ -183,12 +197,17 @@ function selectedLifecycleSource(
       : Object.freeze({
           evaluation: progressive.evaluation,
           artifacts: progressive.candidateArtifacts.roomLifecycles,
+          encounters: progressive.candidateArtifacts.encounters,
         });
   }
   const biome = complete ?? prefixBiome(evaluation, owner.routeKey, owner.biomeKey);
   return biome === undefined
     ? undefined
-    : Object.freeze({ evaluation: biome, artifacts: selectedArtifacts });
+    : Object.freeze({
+        evaluation: biome,
+        artifacts: selectedArtifacts,
+        encounters: selectedEncounterArtifacts,
+      });
 }
 
 function preClampLifecycleRepairSource(
@@ -216,6 +235,7 @@ function preClampLifecycleRepairSource(
     ? Object.freeze({
         evaluation: raw.evaluation,
         artifacts: raw.candidateArtifacts.roomLifecycles,
+        encounters: raw.candidateArtifacts.encounters,
       })
     : undefined;
 }
@@ -227,6 +247,7 @@ function preClampLifecycleRepairSource(
 function completeInvalidSoleOwnerSource(
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
+  selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
   scope: LifecycleRepairScope,
 ): LifecycleCandidateSource | undefined {
@@ -239,7 +260,11 @@ function completeInvalidSoleOwnerSource(
   return complete.findings.every((finding) =>
     lifecycleRepairOwnerMatches(owner, finding.origin, scope),
   )
-    ? Object.freeze({ evaluation: complete, artifacts: selectedArtifacts })
+    ? Object.freeze({
+        evaluation: complete,
+        artifacts: selectedArtifacts,
+        encounters: selectedEncounterArtifacts,
+      })
     : undefined;
 }
 
@@ -250,11 +275,25 @@ function lifecycleSourceForOwner(
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
   scope: LifecycleRepairScope = 'exact',
+  selectedEncounterArtifacts?: EncounterCandidateArtifacts,
 ): LifecycleCandidateSource | undefined {
-  const selected = selectedLifecycleSource(catalog, project, evaluation, selectedArtifacts, owner);
+  const selected = selectedLifecycleSource(
+    catalog,
+    project,
+    evaluation,
+    selectedArtifacts,
+    selectedEncounterArtifacts,
+    owner,
+  );
   return (
     preClampLifecycleRepairSource(catalog, project, evaluation, selected, owner, scope) ??
-    completeInvalidSoleOwnerSource(evaluation, selectedArtifacts, owner, scope) ??
+    completeInvalidSoleOwnerSource(
+      evaluation,
+      selectedArtifacts,
+      selectedEncounterArtifacts,
+      owner,
+      scope,
+    ) ??
     selected
   );
 }
@@ -278,6 +317,12 @@ function lifecycleFindings(
     findings.filter(
       (finding) =>
         semanticAddressKey(finding.origin) === semanticAddressKey(owner) ||
+        (owner.kind === 'occurrence' &&
+          finding.origin.kind === 'encounterPhase' &&
+          finding.origin.owner.kind === 'occurrence' &&
+          finding.origin.routeKey === owner.routeKey &&
+          finding.origin.biomeKey === owner.biomeKey &&
+          finding.origin.owner.occurrenceId === owner.occurrenceId) ||
         ('occurrenceId' in finding.origin &&
           finding.origin.occurrenceId === owner.occurrenceId &&
           finding.origin.routeKey === owner.routeKey &&
@@ -291,6 +336,7 @@ export function evaluateShipEncounterCountCandidate(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
+  selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
   query: ShipEncounterCountCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
   const source = lifecycleSourceForOwner(
@@ -299,9 +345,12 @@ export function evaluateShipEncounterCountCandidate(
     evaluation,
     selectedArtifacts,
     query.occurrence,
+    'exact',
+    selectedEncounterArtifacts,
   );
   const context = source?.artifacts?.shipAt(query.occurrence);
-  if (source === undefined || context === undefined) {
+  const preparation = source?.encounters?.roomAt(query.occurrence);
+  if (source === undefined || preparation === undefined) {
     return unavailableForBiome(
       evaluation,
       query.occurrence.routeKey,
@@ -311,41 +360,44 @@ export function evaluateShipEncounterCountCandidate(
     );
   }
   const ship = shipState(catalog, project, query.occurrence);
-  const support = source.evaluation.roomGeneration.ordinary.encounterCounts.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.occurrence),
+  const stateForCount = (encounterCount: 2 | 3): ShipCombatState =>
+    Object.freeze({ ...ship.state, encounterCount });
+  const encounterForCount = (encounterCount: 2 | 3) => {
+    const materialized = materializeShipCombatState(
+      catalog,
+      createBiomeAddress(query.occurrence.routeKey, query.occurrence.biomeKey),
+      ship.room,
+      Object.freeze({ ...ship.authored, state: stateForCount(encounterCount) }),
+    );
+    return Object.freeze({
+      finalPhaseKey: materialized.encounterPhases.at(-1)?.slotKey,
+      prepared: preparation.prepare(materialized.encounterPhases),
+    });
+  };
+  const encounter = encounterForCount(query.encounterCount);
+  const supportEncounterCounts = Object.freeze(
+    ([2, 3] as const).filter((encounterCount) => {
+      if (encounterCount === 2) return true;
+      const candidate = encounterForCount(encounterCount);
+      return candidate.prepared.candidates.some(
+        (phase) => phase.origin.phaseKey === candidate.finalPhaseKey && phase.activationSatisfied,
+      );
+    }),
   );
-  if (support === undefined) {
-    return coverageUnavailable(evaluation, query.occurrence, 'afterTargetGeneration');
-  }
-  const structurallyPossible = support.supportEncounterCounts.includes(query.encounterCount);
-  const lifecycle = structurallyPossible
-    ? context.evaluateState(Object.freeze({ ...ship.state, encounterCount: query.encounterCount }))
-    : undefined;
+  const lifecycle = context?.evaluateState(stateForCount(query.encounterCount));
   const findings = Object.freeze([
-    ...(structurallyPossible
-      ? []
-      : [
-          Object.freeze({
-            code: 'encounterCountUnavailable' as const,
-            severity: 'error' as const,
-            phase: 'roomGeneration' as const,
-            origin: query.occurrence,
-            evidence: Object.freeze({
-              beforeSequence: support.beforeSequence,
-              selectedEncounterCount: query.encounterCount,
-              supportEncounterCounts: support.supportEncounterCounts,
-            }),
-          }),
-        ]),
+    ...lifecycleFindings(encounter.prepared.findings, query.occurrence),
     ...(lifecycle === undefined ? [] : lifecycleFindings(lifecycle.findings, query.occurrence)),
   ]);
   return Object.freeze({
     kind: 'shipEncounterCount',
     result: Object.freeze({
       encounterCount: query.encounterCount,
-      supportEncounterCounts: support.supportEncounterCounts,
+      supportEncounterCounts,
       selectedPossible:
-        structurallyPossible && lifecycle?.supported === true && findings.length === 0,
+        supportEncounterCounts.includes(query.encounterCount) &&
+        (lifecycle?.supported ?? true) &&
+        findings.length === 0,
       findings,
     }),
   });

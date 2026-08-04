@@ -50,7 +50,7 @@ function requirementContext(
     rewardLookups: {},
     runDepthCache: 8,
     lastEventRunDepthCaches: {},
-    recentEncounterPhases: [],
+    recentEncounterEnvelopeSlots: [],
     offeredExitCount: 3,
     currentBatchRoomGameNames: [],
     clockwork: undefined,

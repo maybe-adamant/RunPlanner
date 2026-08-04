@@ -3,6 +3,7 @@ import {
   candidateSupport,
   presentCandidateLabel,
   type CandidateOptionProjection,
+  type CandidateProjectionEvaluation,
 } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -30,9 +31,11 @@ function sameOfferKeys(left: readonly string[], right: readonly string[]): boole
 }
 
 function optionFor(
-  options: readonly CandidateOptionProjection<readonly string[]>[] | undefined,
+  options:
+    | readonly CandidateOptionProjection<readonly string[], CandidateProjectionEvaluation>[]
+    | undefined,
   offerKeys: readonly string[],
-): CandidateOptionProjection<readonly string[]> | undefined {
+): CandidateOptionProjection<readonly string[], CandidateProjectionEvaluation> | undefined {
   return options?.find((option) => sameOfferKeys(option.value, offerKeys));
 }
 

@@ -5,6 +5,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceCommandIntent,
+  type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceEphyraSideRoomGroup,
@@ -131,6 +132,71 @@ function EphyraSideRoomEntryOrderSelect({
   );
 }
 
+function EncounterPhaseControl({
+  idPrefix,
+  interactions,
+  phase,
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.encounterPhases,
+    workspaceInteractionKey(phase.address),
+  );
+  return (
+    <section aria-label={`${phase.label} encounter phase`} className="encounter-phase-control">
+      <div className="local-reward-heading">
+        <h4>{phase.label}</h4>
+      </div>
+      <CandidateSelect
+        id={`${idPrefix}-${phase.address.phaseKey}`}
+        interaction={interaction}
+        label="Encounter"
+        onReplace={(encounterKey) => executeIntent(interaction.intentFor(encounterKey))}
+      />
+      <button
+        className="quiet-action action-compact"
+        onClick={() => executeIntent(interaction.resetIntent)}
+        type="button"
+      >
+        Reset to default
+      </button>
+    </section>
+  );
+}
+
+function EncounterWorkbench({
+  idPrefix,
+  interactions,
+  phases,
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phases: readonly WorkspaceEncounterPhase[];
+}) {
+  if (phases.length === 0) return null;
+  return (
+    <section aria-label="Encounter phases" className="encounter-editor">
+      <div className="local-reward-heading">
+        <h4>Encounter</h4>
+      </div>
+      <div className="encounter-phase-list">
+        {phases.map((phase) => (
+          <EncounterPhaseControl
+            idPrefix={idPrefix}
+            interactions={interactions}
+            key={workspaceInteractionKey(phase.address)}
+            phase={phase}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function EphyraWorkbench({
   interactions,
   room,
@@ -216,6 +282,11 @@ function EphyraWorkbench({
                           />
                         </div>
                       )}
+                      <EncounterWorkbench
+                        idPrefix={`side-${side.marker.focusKey}`}
+                        interactions={interactions}
+                        phases={side.encounterPhases}
+                      />
                     </th>
                     <td className="ephyra-side-priority">{side.availabilityRank}</td>
                     <td>
@@ -294,17 +365,17 @@ function ShipWorkbench({
 }) {
   const dispatch = useAppDispatch();
   const encounter = requireWorkspaceInteraction(
-    interactions.shipEncounterCounts,
+    interactions.shipCombatPhaseCounts,
     workspaceInteractionKey(occurrence),
   );
   const activeWheels = room.wheels.filter((wheel) => wheel.active);
 
   return (
-    <div aria-label="Ship combat encounters" className="ship-combat-editor">
+    <div aria-label="Ship combat details" className="ship-combat-editor">
       <CandidateSelect
-        id={`room-${occurrence.occurrenceId}-encounter-count`}
+        id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={encounter}
-        label="Encounters"
+        label="Combat phases"
         onReplace={(encounterCount) =>
           dispatch(
             authoredProjectCommandDispatched({
@@ -505,6 +576,11 @@ export function RoomOfferEditor({
       {presentation === 'hubRoomLocal' ? (
         <HubRewardContext interactions={interactions} room={room} />
       ) : null}
+      <EncounterWorkbench
+        idPrefix={idPrefix}
+        interactions={interactions}
+        phases={room.encounterPhases}
+      />
       {!showMainReward && !hasRoomLocalDetail ? (
         <p className="fixed-room-state">No additional room details.</p>
       ) : null}

@@ -9,6 +9,10 @@ import type {
 } from '../model';
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
+import {
+  createDefaultRoomEncounterState,
+  reconcileRoomEncounterState,
+} from '../room-state/encounters';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import {
   normalDecisionProgressionForLayout,
@@ -214,10 +218,14 @@ function reconcileSourceRewardStore(
 ): BiomeTopology {
   const progression = normalDecisionProgressionForLayout(located.layout);
   if (progression === undefined) return topology;
+  const sourceRoomTemplateKey =
+    replacementRoom.mode.kind === 'authored' ? replacementRoom.mode.templateKey : undefined;
   const policy =
-    progression.rewardStoreOverrides.find(
-      (override) => override.sourceEncounterProfileKey === replacementRoom.encounterProfileKey,
-    )?.policy ?? progression.rewardStorePolicy;
+    (sourceRoomTemplateKey === undefined
+      ? undefined
+      : progression.rewardStoreOverrides.find(
+          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
+        )?.policy) ?? progression.rewardStorePolicy;
   return Object.freeze({
     ...topology,
     decisions: Object.freeze(
@@ -316,6 +324,17 @@ export function applyRoomReplacementCommand(
       occurrence.state,
       replacementRoom,
       replacementDefault,
+    ),
+    encounters: reconcileRoomEncounterState(
+      catalog,
+      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+      occurrence.encounters,
+      replacementRoom,
+      createDefaultRoomEncounterState(
+        catalog,
+        replacementRoom,
+        `occurrences.${occurrence.occurrenceId}.encounters`,
+      ),
     ),
   });
   return updateOccurrenceTopology(

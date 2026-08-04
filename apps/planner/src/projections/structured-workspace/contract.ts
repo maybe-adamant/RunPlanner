@@ -3,6 +3,7 @@ import {
   type AuthoredBatchState,
   type BiomeAddress,
   type BiomeFieldAddress,
+  type EncounterPhaseAddress,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
   type HubDecisionAddress,
@@ -26,6 +27,7 @@ import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/eng
 
 import type {
   CandidateOptionProjection,
+  CandidateProjectionEvaluation,
   CandidateSessionFactory,
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
@@ -109,9 +111,23 @@ export interface WorkspaceInteractionChoice<T> {
 export interface WorkspaceCandidateInteraction<T> {
   readonly choices: readonly WorkspaceInteractionChoice<T>[];
   readonly key: string;
-  readonly load: () => readonly CandidateOptionProjection<T>[];
+  readonly load: () => readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[];
   readonly owner: SemanticAddress;
   readonly selected?: T;
+}
+
+/**
+ * One exact, pool-backed encounter phase. The interaction owns the complete
+ * semantic mutation because the phase address—not a rendered ordinal or room
+ * name—identifies the persisted selection.
+ */
+export interface WorkspaceEncounterInteraction extends WorkspaceCandidateInteraction<string> {
+  readonly intentFor: (
+    encounterKey: string,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SelectEncounter' }>>;
+  readonly resetIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetEncounter' }>
+  >;
 }
 
 export interface WorkspaceRewardInteraction {
@@ -350,6 +366,7 @@ export interface WorkspaceHubTakeoverInteraction {
 
 export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
@@ -361,7 +378,8 @@ export interface WorkspaceInteractionCatalog {
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
-  readonly shipEncounterCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
+  /** O-specific authored structure: whether the optional third Ship phase is active. */
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
   /**
    * Each row keeps a stable ShopPurchaseAddress key, while the interaction
    * itself is owned by the containing Shop occurrence and proposes one whole
@@ -537,6 +555,21 @@ export interface WorkspaceEphyraSideRoomEntryOrderControl {
   readonly selectedKey: string;
 }
 
+/**
+ * Render-ready data for one active, pool-backed phase. Catalog resolution and
+ * candidate support happened before this product reaches React.
+ */
+export interface WorkspaceEncounterPhase {
+  readonly address: EncounterPhaseAddress;
+  readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly selectedEncounter: {
+    readonly key: string;
+    readonly label: string;
+  };
+}
+
 interface WorkspaceEphyraSideRoomDescriptorBase {
   readonly address: LocalChildAddress;
   /** Declared physical availability order for the parent-local pressure rule. */
@@ -544,6 +577,8 @@ interface WorkspaceEphyraSideRoomDescriptorBase {
   readonly entered: boolean;
   readonly enteredOrdinal: number | null;
   readonly entryOrder: WorkspaceEphyraSideRoomEntryOrderControl;
+  /** Empty until this exact local child has an active engine-owned phase. */
+  readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -605,7 +640,8 @@ export type WorkspaceRoomLocal =
     }
   | {
       readonly kind: 'ship';
-      readonly encounterCount: 2 | 3;
+      /** Authored structural activation for Ship Combat2, distinct from encounter identity. */
+      readonly combatPhaseCount: 2 | 3;
       readonly wheels: readonly WorkspaceRewardWheelDescriptor[];
     }
   | {
@@ -620,6 +656,8 @@ export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
+  /** Active pool-backed encounter phases in declaration/lifecycle order. */
+  readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
   readonly gameName: string;
   readonly kind: RoomDeclaration['kind'];

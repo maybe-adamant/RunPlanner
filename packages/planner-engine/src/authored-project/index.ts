@@ -16,6 +16,7 @@ export {
   createCompletionRoomAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createHubSlotAddress,
   createHubOpenSetAddress,
@@ -43,6 +44,8 @@ export {
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
   type ExitSelectionAddress,
+  type EncounterPhaseAddress,
+  type EncounterPhaseOwner,
   type IncomingRewardAddress,
   type HubSlotAddress,
   type HubOpenSetAddress,
@@ -65,6 +68,9 @@ export {
 export {
   applyProjectCommand,
   projectCommandAddress,
+  type EncounterCommandAuthorization,
+  type EncounterOccurrenceCommand,
+  type ProjectCommandApplyOptions,
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
@@ -128,6 +134,7 @@ export {
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
+  type RoomEncounterState,
   type ShopOfferState,
   type ShopState,
 } from './model';

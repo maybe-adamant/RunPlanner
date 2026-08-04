@@ -1725,6 +1725,45 @@ select {
   border-top: 1px solid #353640;
 }
 
+.encounter-editor {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #353640;
+}
+
+.encounter-editor > .local-reward-heading {
+  margin-bottom: 0;
+}
+
+.encounter-phase-list {
+  display: grid;
+  gap: 8px;
+}
+
+.encounter-phase-control {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #3a3b45;
+  border-radius: 9px;
+  background: rgb(126 101 154 / 5%);
+}
+
+.encounter-phase-control > .local-reward-heading {
+  margin-bottom: 0;
+}
+
+.encounter-phase-control > .quiet-action {
+  justify-self: start;
+}
+
+.ephyra-side-grid .encounter-editor {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
 .reward-wheel-list,
 .reward-wheel-offers {
   display: grid;

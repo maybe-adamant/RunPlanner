@@ -23,6 +23,7 @@ import type {
 } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
+import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import {
   admitsTerminalTakeoverEnvelope,
   declaredPhysicalExitKeys,
@@ -97,10 +98,12 @@ function initialRewardStore(
   sourceRoom: RoomDeclaration | undefined,
 ): BatchRewardStoreState {
   const progression = normalDecisionProgressionForLayout(located.layout);
+  const sourceRoomTemplateKey =
+    sourceRoom?.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined;
   const policy =
-    progression !== undefined && sourceRoom !== undefined
+    progression !== undefined && sourceRoomTemplateKey !== undefined
       ? (progression.rewardStoreOverrides.find(
-          (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
+          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
         )?.policy ?? progression.rewardStorePolicy)
       : { kind: 'none' as const };
   if (policy.kind === 'authoredBaseStore')
@@ -181,6 +184,11 @@ function defaultOccurrence(
       entryActive,
       ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
     }),
+    encounters: createDefaultRoomEncounterState(
+      catalog,
+      room,
+      `occurrences.${occurrenceId}.encounters`,
+    ),
   });
 }
 
@@ -777,10 +785,12 @@ function replaceBatchRewardStore(
   }
   const source = sourceRoom(catalog, located, command.rewardStore.source, command);
   const progression = normalDecisionProgressionForLayout(located.layout);
+  const sourceRoomTemplateKey =
+    source?.mode.kind === 'authored' ? source.mode.templateKey : undefined;
   const policy =
-    progression !== undefined && source !== undefined
+    progression !== undefined && sourceRoomTemplateKey !== undefined
       ? (progression.rewardStoreOverrides.find(
-          (override) => override.sourceEncounterProfileKey === source.encounterProfileKey,
+          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
         )?.policy ?? progression.rewardStorePolicy)
       : undefined;
   if (policy?.kind !== 'authoredBaseStore' || !policy.storeKeys.includes(command.storeKey)) {

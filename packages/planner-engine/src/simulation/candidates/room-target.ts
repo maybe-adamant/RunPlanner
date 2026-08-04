@@ -37,6 +37,7 @@ import {
 import { unresolvedBatchRewardStorePrerequisite } from './batch-reward-store';
 import { CandidateEvaluationContractError } from './contract';
 import {
+  candidateAssessmentPrefix,
   completeBiome,
   completeBiomeCount,
   planFor,
@@ -209,7 +210,7 @@ function evaluatePrefixRoomTarget(
   query: RoomTargetCandidateQuery,
 ): EvaluatedRoomTargetCandidate | undefined {
   const biome = prefixBiome(evaluation, query.target.routeKey, query.target.biomeKey);
-  const prefix = biome?.materializedPrefix;
+  const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
     return undefined;
@@ -291,7 +292,8 @@ function evaluateInvalidCompleteRoomTarget(
   ) {
     return undefined;
   }
-  const prefix = progressive.evaluation.materializedPrefix;
+  const prefix =
+    progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
   const frontier = prefix.frontier;
   if (frontier?.kind !== 'exitDecision') return undefined;
   const decision = createExitDecisionAddress(

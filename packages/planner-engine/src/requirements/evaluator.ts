@@ -22,9 +22,9 @@ export interface RequirementEvaluationContext {
   readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly runDepthCache: number;
   readonly lastEventRunDepthCaches: Readonly<Record<string, number>>;
-  readonly recentEncounterPhases: readonly {
-    readonly profileKey: string;
-    readonly phaseKeys: readonly string[];
+  readonly recentEncounterEnvelopeSlots: readonly {
+    readonly envelopeKey: string;
+    readonly slotKeys: readonly string[];
   }[];
   readonly offeredExitCount: number;
   readonly currentBatchRoomGameNames: readonly string[];
@@ -78,12 +78,12 @@ export const requirementEvaluatorRegistry = Object.freeze({
     const count = requirement.keys.filter((key) => (record[key] ?? 0) > 0).length;
     return isInRange(count, requirement.range);
   },
-  recentEncounterPhaseCount: (requirement, context) => {
-    const recentRooms = context.recentEncounterPhases.slice(-requirement.roomWindow);
+  recentEnvelopeSlotCount: (requirement, context) => {
+    const recentRooms = context.recentEncounterEnvelopeSlots.slice(-requirement.roomWindow);
     const count = recentRooms.reduce(
       (total, room) =>
         total +
-        (room.profileKey === requirement.profileKey && room.phaseKeys.includes(requirement.phaseKey)
+        (room.envelopeKey === requirement.envelopeKey && room.slotKeys.includes(requirement.slotKey)
           ? 1
           : 0),
       0,
@@ -149,8 +149,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.recordCount(requirement, context);
     case 'distinctRecordKeyCount':
       return requirementEvaluatorRegistry.distinctRecordKeyCount(requirement, context);
-    case 'recentEncounterPhaseCount':
-      return requirementEvaluatorRegistry.recentEncounterPhaseCount(requirement, context);
+    case 'recentEnvelopeSlotCount':
+      return requirementEvaluatorRegistry.recentEnvelopeSlotCount(requirement, context);
     case 'notInCurrentRoomShopOptions':
       return requirementEvaluatorRegistry.notInCurrentRoomShopOptions(requirement, context);
     case 'rewardLookupExcludes':

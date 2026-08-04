@@ -148,19 +148,40 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '73611212a85d0327'],
-  ['G', '913183c0a1305a7b'],
-  ['H', '318bad512c8993ef'],
-  ['I', '99337820a5fc5fd2'],
-  ['N', '05c87b92037d5218'],
-  ['O', 'c6b3e480b4d69950'],
-  ['P', '7c455b7302656ec1'],
-  ['Q', 'fe623b36e7e3273c'],
+  ['F', '92c1c568d42455f8'],
+  ['G', '34faec2a82c835af'],
+  ['H', '4b58bdb484531cb9'],
+  ['I', 'fd313478fd3ce8af'],
+  ['N', 'f9c47c0bf1dad014'],
+  ['O', '93cd0ce2169e5f34'],
+  ['P', 'd1f9904deb57d165'],
+  ['Q', 'c12b7024220a9c39'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
   const rooms = catalog.rooms.values.filter((room) => room.biomeKey === biomeKey);
-  const encounterProfileKeys = [...new Set(rooms.map((room) => room.encounterProfileKey))];
+  const encounterEnvelopeKeys = [...new Set(rooms.map((room) => room.encounterEnvelopeKey))];
+  const encounterSetKeys: string[] = [];
+  const encounterDefinitionKeys: string[] = [];
+  for (const room of rooms) {
+    for (const binding of room.encounterSlotBindings) {
+      if (binding.kind === 'fixed') {
+        if (!encounterDefinitionKeys.includes(binding.encounterDefinitionKey)) {
+          encounterDefinitionKeys.push(binding.encounterDefinitionKey);
+        }
+        continue;
+      }
+      if (!encounterSetKeys.includes(binding.encounterSetKey)) {
+        encounterSetKeys.push(binding.encounterSetKey);
+      }
+      const encounterSet = catalog.encounterSets.byKey[binding.encounterSetKey];
+      for (const encounterDefinitionKey of encounterSet?.encounterDefinitionKeys ?? []) {
+        if (!encounterDefinitionKeys.includes(encounterDefinitionKey)) {
+          encounterDefinitionKeys.push(encounterDefinitionKey);
+        }
+      }
+    }
+  }
   const exitTypeKeys = [...new Set(rooms.flatMap((room) => room.exits.map((exit) => exit.type)))];
   const exitCompatibilityPolicyKeys = [
     ...new Set(
@@ -172,7 +193,11 @@ function normalizedBiomeSnapshot(biomeKey: string) {
   return {
     layout: catalog.biomeLayouts.byKey[biomeKey],
     rooms,
-    encounterProfiles: encounterProfileKeys.map((key) => catalog.encounterProfiles.byKey[key]),
+    encounterEnvelopes: encounterEnvelopeKeys.map((key) => catalog.encounterEnvelopes.byKey[key]),
+    encounterDefinitions: encounterDefinitionKeys.map(
+      (key) => catalog.encounterDefinitions.byKey[key],
+    ),
+    encounterSets: encounterSetKeys.map((key) => catalog.encounterSets.byKey[key]),
     exitTypes: exitTypeKeys.map((key) => catalog.exitTypes.byKey[key]),
     exitCompatibilityPolicies: exitCompatibilityPolicyKeys.map(
       (key) => catalog.exitCompatibilityPolicies.byKey[key],
@@ -265,7 +290,8 @@ describe('catalog regression coverage retained through unified decisions', () =>
     (biomeKey, expectedHash) => {
       // This snapshot includes every normalized room, its reward binding,
       // eligibility/force/counter/cap fields, local children and exits, plus
-      // the layout, encounter profiles, and exit compatibility it references.
+      // the layout, encounter envelopes, slot bindings, definitions, sets,
+      // and exit compatibility it references.
       expect(snapshotHash(normalizedBiomeSnapshot(biomeKey))).toBe(expectedHash);
     },
   );

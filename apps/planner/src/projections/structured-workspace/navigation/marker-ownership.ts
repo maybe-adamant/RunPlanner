@@ -27,6 +27,7 @@ export function workspaceLocalDetailMarkers(
             roomLocal.sideRooms.group.marker,
             ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
               slot.marker,
+              ...slot.encounterPhases.map((phase) => phase.marker),
               ...(slot.generation === 'generated' ? [slot.rewardControl.marker] : []),
             ]),
           ]);
@@ -55,6 +56,7 @@ export function workspaceOccurrenceOwnedMarkers(
 ): readonly WorkspaceMarker[] {
   return Object.freeze([
     room.marker,
+    ...room.encounterPhases.map((phase) => phase.marker),
     ...room.rewardControls.map((control) => control.marker),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),

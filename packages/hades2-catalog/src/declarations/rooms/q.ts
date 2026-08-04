@@ -11,7 +11,8 @@ export const qRooms = [
     exits: [{ index: 1, type: 'FortressMainDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'NoEncounter',
+    encounterEnvelopeKey: 'EmptyEncounter',
+    encounterSlotBindings: [],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -31,7 +32,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -50,7 +54,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -72,7 +79,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ_Islands' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -92,7 +102,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -114,7 +127,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ_Islands' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -134,7 +150,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -153,7 +172,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -172,7 +194,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -191,7 +216,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -210,7 +238,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ_Large' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -229,7 +260,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ_Large' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -251,7 +285,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -274,7 +311,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -297,7 +337,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -320,7 +363,10 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -340,7 +386,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SingleCountedCombat',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedQ' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -366,7 +415,10 @@ export const qRooms = [
     },
     forcedRewardStoreKey: 'TyphonBossRewards',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Q_MiniBoss02',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossBrute' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 3, deadline: 3 },
@@ -388,7 +440,10 @@ export const qRooms = [
     },
     forcedRewardStoreKey: 'TyphonBossRewards',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Q_MiniBoss05',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossStalker' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 3, deadline: 3 },
@@ -410,7 +465,10 @@ export const qRooms = [
     },
     forcedRewardStoreKey: 'TyphonBossRewards',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Q_MiniBoss03',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonTail01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 6, deadline: 6 },
@@ -432,7 +490,10 @@ export const qRooms = [
     },
     forcedRewardStoreKey: 'TyphonBossRewards',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Q_MiniBoss04',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonEye01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 6, deadline: 6 },
@@ -453,7 +514,10 @@ export const qRooms = [
     },
     prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'Shop',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+    ],
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -473,7 +537,10 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'Q_Boss01',
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonHead01' },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },

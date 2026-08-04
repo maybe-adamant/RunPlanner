@@ -1,12 +1,11 @@
 import type {
   Catalog,
-  EncounterPhase,
-  EncounterProfile,
   RoomLifecycleEffectKind,
   RoomLifecycleOperation,
   RoomLifecycleProfile,
 } from '../../catalog-schema';
 import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
+import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
@@ -14,13 +13,13 @@ type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
 interface ExecutionContext {
   readonly input: RoomLifecycleExecutionInput;
   readonly profile: RoomLifecycleProfile;
-  readonly encounter: EncounterProfile;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly producerRewardLifecycle?: ProducerRewardLifecycleDeclaration;
 }
 
 interface OperationContext extends ExecutionContext {
   readonly operationIndex: number;
-  readonly encounterPhase?: EncounterPhase;
+  readonly encounterPhase?: ResolvedEncounterPhase;
 }
 
 interface ExecutionState {
@@ -72,7 +71,7 @@ function requireOperation<Kind extends RoomLifecycleOperationKind>(
   return operation as Extract<RoomLifecycleOperation, { readonly kind: Kind }>;
 }
 
-function requireEncounterPhase(context: OperationContext): EncounterPhase {
+function requireEncounterPhase(context: OperationContext): ResolvedEncounterPhase {
   if (context.encounterPhase === undefined) {
     throw new LifecycleExecutionContractError(
       `operation ${context.operationIndex} has no resolved encounter phase`,
@@ -91,12 +90,12 @@ const lifecycleEffectRegistry = Object.freeze({
     });
   },
   recordPhaseOfferPoint: (context, state) => {
-    const offerPoint = requireEncounterPhase(context).offerPoint;
-    return offerPoint === undefined
+    const attachment = requireEncounterPhase(context).rewardAttachment;
+    return attachment?.kind !== 'rewardWheel'
       ? state
       : appendEvent(state, context, {
           kind: 'offerPointMaterialized',
-          offerPoint: offerPoint.key,
+          offerPoint: attachment.key,
         });
   },
   recordAppearance: (context, state) => appendEvent(state, context, { kind: 'roomEntered' }),
@@ -117,15 +116,27 @@ const lifecycleEffectRegistry = Object.freeze({
     }
     return next;
   },
+  recordEncounter: (context, state) => {
+    let next = state;
+    for (const phase of context.encounterPhases) {
+      next = appendEvent(next, context, {
+        kind: 'encounterRecorded',
+        phaseKey: phase.slotKey,
+        encounterEnvelopeKey: phase.envelopeKey,
+        encounterKey: phase.encounterKey,
+        phaseKind: phase.kind,
+      });
+    }
+    return next;
+  },
   recordEncounterStart: (context, state) => {
     const phase = requireEncounterPhase(context);
     return appendEvent(state, context, {
       kind: 'encounterStarted',
-      phaseKey: phase.key,
+      phaseKey: phase.slotKey,
+      encounterEnvelopeKey: phase.envelopeKey,
+      encounterKey: phase.encounterKey,
       phaseKind: phase.kind,
-      ...(phase.baselineEncounterKey === undefined
-        ? {}
-        : { baselineEncounterKey: phase.baselineEncounterKey }),
     });
   },
   advanceEncounterDepth: (context, state) => {
@@ -135,7 +146,7 @@ const lifecycleEffectRegistry = Object.freeze({
     }
     return appendEvent(state, context, {
       kind: 'encounterDepthAdvanced',
-      phaseKey: phase.key,
+      phaseKey: phase.slotKey,
       roomEncounterDepthDelta: 1,
       biomeEncounterDepthDelta: 1,
       routeEncounterDepthDelta: 1,
@@ -144,19 +155,19 @@ const lifecycleEffectRegistry = Object.freeze({
   recordEncounterCompletion: (context, state) =>
     appendEvent(state, context, {
       kind: 'encounterCompleted',
-      phaseKey: requireEncounterPhase(context).key,
+      phaseKey: requireEncounterPhase(context).slotKey,
     }),
   recordPhaseOfferAcquisition: (context, state) => {
-    const offerPoint = requireEncounterPhase(context).offerPoint;
-    return offerPoint === undefined
+    const attachment = requireEncounterPhase(context).rewardAttachment;
+    return attachment?.kind !== 'rewardWheel'
       ? state
       : appendEvent(state, context, {
           kind: 'offerPointAcquired',
-          offerPoint: offerPoint.key,
-          ...(context.input.offerPointRewardStores?.[offerPoint.key] === undefined
+          offerPoint: attachment.key,
+          ...(context.input.offerPointRewardStores?.[attachment.key] === undefined
             ? {}
             : {
-                enteredRewardStoreKey: context.input.offerPointRewardStores[offerPoint.key],
+                enteredRewardStoreKey: context.input.offerPointRewardStores[attachment.key],
               }),
         });
   },
@@ -237,11 +248,11 @@ function applyEffects(
   return next;
 }
 
-function resolveOnlyEncounter(context: ExecutionContext): EncounterPhase {
-  const phase = context.encounter.phases[0];
-  if (context.encounter.phases.length !== 1 || phase === undefined) {
+function resolveOnlyEncounter(context: ExecutionContext): ResolvedEncounterPhase {
+  const phase = context.encounterPhases[0];
+  if (context.encounterPhases.length !== 1 || phase === undefined) {
     throw new LifecycleExecutionContractError(
-      `${context.encounter.key} does not expose exactly one encounter phase`,
+      `${context.input.encounterEnvelopeKey} does not expose exactly one encounter phase`,
     );
   }
   return phase;
@@ -276,7 +287,7 @@ function encounterSequenceOperationHandler(
   state: ExecutionState,
 ): ExecutionState {
   let next = state;
-  for (const encounterPhase of context.encounter.phases) {
+  for (const encounterPhase of context.encounterPhases) {
     next = applyEffects(operation, { ...context, operationIndex, encounterPhase }, next);
   }
   return next;
@@ -324,33 +335,43 @@ function resolveExecutionContext(
       `unknown room lifecycle profile ${input.lifecycleProfileKey}`,
     );
   }
-  const declaredEncounter = catalog.encounterProfiles.byKey[input.encounterProfileKey];
-  if (declaredEncounter === undefined) {
+  const envelope = catalog.encounterEnvelopes.byKey[input.encounterEnvelopeKey];
+  if (envelope === undefined) {
     throw new LifecycleExecutionContractError(
-      `unknown encounter profile ${input.encounterProfileKey}`,
+      `unknown encounter envelope ${input.encounterEnvelopeKey}`,
     );
   }
-  if (!profile.encounterProfileKeys.includes(declaredEncounter.key)) {
+  if (!profile.encounterEnvelopeKeys.includes(envelope.key)) {
     throw new LifecycleExecutionContractError(
-      `${declaredEncounter.key} is incompatible with ${profile.key}`,
+      `${envelope.key} is incompatible with ${profile.key}`,
     );
   }
-  const selectedPhases = input.encounterPhases ?? declaredEncounter.phases;
+  const selectedPhases = input.encounterPhases ?? Object.freeze([]);
   if (
-    (selectedPhases.length === 0 && declaredEncounter.phases.length !== 0) ||
-    selectedPhases.length > declaredEncounter.phases.length ||
-    selectedPhases.some((phase, index) => phase.key !== declaredEncounter.phases[index]?.key) ||
-    declaredEncounter.phases
-      .slice(selectedPhases.length)
-      .some((phase) => phase.presence === undefined)
+    selectedPhases.length > envelope.slots.length ||
+    selectedPhases.some((phase, index) => {
+      const slot = envelope.slots[index];
+      const definition = catalog.encounterDefinitions.byKey[phase.encounterKey];
+      return (
+        slot === undefined ||
+        phase.envelopeKey !== envelope.key ||
+        phase.slotKey !== slot.key ||
+        definition === undefined ||
+        phase.label !== definition.label ||
+        phase.kind !== definition.kind ||
+        phase.countsEncounterDepth !== definition.countsEncounterDepth ||
+        phase.sequenceEffect?.kind !== definition.sequenceEffect?.kind ||
+        phase.rewardAttachment !== slot.rewardAttachment
+      );
+    })
   ) {
     throw new LifecycleExecutionContractError(
-      `${declaredEncounter.key} selected an invalid active encounter-phase prefix`,
+      `${envelope.key} selected an invalid active encounter-slot prefix`,
     );
   }
   const selectedOfferPoints = new Set(
     selectedPhases.flatMap((phase) =>
-      phase.offerPoint === undefined ? [] : [phase.offerPoint.key],
+      phase.rewardAttachment?.kind === 'rewardWheel' ? [phase.rewardAttachment.key] : [],
     ),
   );
   if (
@@ -359,13 +380,9 @@ function resolveExecutionContext(
     )
   ) {
     throw new LifecycleExecutionContractError(
-      `${declaredEncounter.key} received a store for an inactive offer point`,
+      `${envelope.key} received a store for an inactive offer point`,
     );
   }
-  const encounter: EncounterProfile =
-    selectedPhases === declaredEncounter.phases
-      ? declaredEncounter
-      : Object.freeze({ ...declaredEncounter, phases: Object.freeze([...selectedPhases]) });
 
   const hasRequiredObjects = (input.requiredObjects?.length ?? 0) > 0;
   const hasRequiredObjectOperations = profile.operations.some(
@@ -382,7 +399,7 @@ function resolveExecutionContext(
     if (input.producer !== undefined) {
       throw new LifecycleExecutionContractError(`${profile.key} does not accept a producer`);
     }
-    return { input, profile, encounter };
+    return { input, profile, encounterPhases: Object.freeze([...selectedPhases]) };
   }
   const producer = input.producer;
   if (producer === undefined) {
@@ -417,7 +434,12 @@ function resolveExecutionContext(
       );
     }
   }
-  return { input, profile, encounter, producerRewardLifecycle };
+  return {
+    input,
+    profile,
+    encounterPhases: Object.freeze([...selectedPhases]),
+    producerRewardLifecycle,
+  };
 }
 
 export function executeRoomLifecycle(
@@ -432,7 +454,43 @@ export function executeRoomLifecycle(
   return Object.freeze({
     origin: input.origin,
     lifecycleProfileKey: context.profile.key,
-    encounterProfileKey: context.encounter.key,
+    encounterEnvelopeKey: context.input.encounterEnvelopeKey,
+    events: state.events,
+  });
+}
+
+/**
+ * Emits only the exact preparation-and-record prefix for a room whose later
+ * active phase is invalid. The caller deliberately does not enter the room,
+ * start a phase, acquire a reward, advance counters, or commit/exit it.
+ */
+export function executeEncounterRecordPrefix(
+  catalog: Catalog,
+  input: RoomLifecycleExecutionInput,
+): RoomHistoryFragment {
+  const context = resolveExecutionContext(catalog, input);
+  const operationIndex = context.profile.operations.findIndex(
+    (operation) => operation.kind === 'prepareRoom',
+  );
+  const operation = context.profile.operations[operationIndex];
+  if (
+    operationIndex < 0 ||
+    operation?.kind !== 'prepareRoom' ||
+    !operation.effects.includes('recordEncounter')
+  ) {
+    throw new LifecycleExecutionContractError(
+      `${context.profile.key} has no encounter-record preparation operation`,
+    );
+  }
+  const state = applyEffects(
+    operation,
+    { ...context, operationIndex },
+    Object.freeze({ events: Object.freeze([]) }),
+  );
+  return Object.freeze({
+    origin: input.origin,
+    lifecycleProfileKey: context.profile.key,
+    encounterEnvelopeKey: context.input.encounterEnvelopeKey,
     events: state.events,
   });
 }

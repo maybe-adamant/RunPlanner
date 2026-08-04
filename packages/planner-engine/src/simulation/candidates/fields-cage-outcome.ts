@@ -5,7 +5,13 @@ import { fieldsCageOutcomeCandidateSupport } from '../generation';
 import type { SemanticFinding } from '../model';
 import type { ProjectEvaluation } from '../project';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
-import { candidateBiome, candidatePrefix, planFor, prefixAuthoredRooms } from './evaluated-biome';
+import {
+  candidateAssessmentPrefix,
+  candidateBiome,
+  candidatePrefix,
+  planFor,
+  prefixAuthoredRooms,
+} from './evaluated-biome';
 
 export interface FieldsCageOutcomeCandidateQuery {
   readonly kind: 'fieldsCageOutcome';
@@ -45,23 +51,21 @@ function fieldsOutcomeSupport(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.decision),
   );
   if (selected !== undefined) return selected;
-  const prefix = candidatePrefix(biome);
-  if (prefix?.materializedPrefix.frontier?.kind !== 'exitDecision') return undefined;
-  if (
-    semanticAddressKey(prefix.materializedPrefix.frontier.origin) !==
-    semanticAddressKey(query.decision)
-  ) {
+  const candidate = candidatePrefix(biome);
+  const prefix = candidateAssessmentPrefix(biome);
+  if (prefix?.frontier?.kind !== 'exitDecision') return undefined;
+  if (semanticAddressKey(prefix.frontier.origin) !== semanticAddressKey(query.decision)) {
     return undefined;
   }
-  const parent = prefix.materializedPrefix.frontier.parent;
+  const parent = prefix.frontier.parent;
   if (parent.origin.kind !== 'occurrence') return undefined;
-  const room = prefixAuthoredRooms(prefix.materializedPrefix).find(
+  const room = prefixAuthoredRooms(prefix).find(
     (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(parent.origin),
   );
   const history =
     room === undefined
       ? undefined
-      : prefix.history.rooms.find(
+      : candidate?.history.rooms.find(
           (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
         )?.preOutgoing;
   const layout =

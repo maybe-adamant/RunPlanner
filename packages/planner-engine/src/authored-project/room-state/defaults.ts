@@ -1,4 +1,8 @@
-import type { Catalog, RewardWheelOfferPoint, RoomDeclaration } from '../../catalog-schema';
+import type {
+  Catalog,
+  EncounterRewardWheelAttachment,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
@@ -21,6 +25,7 @@ import {
   requireShopBinding,
   type RoomStateContext,
 } from './declaration';
+import { createDefaultRoomEncounterState } from './encounters';
 
 function defaultCountedOffer(
   binding: CountedRewardBinding,
@@ -81,7 +86,10 @@ function defaultFieldsCages(
   return Object.freeze(cages);
 }
 
-function defaultRewardWheel(descriptor: RewardWheelOfferPoint, path: string): RewardWheelState {
+function defaultRewardWheel(
+  descriptor: EncounterRewardWheelAttachment,
+  path: string,
+): RewardWheelState {
   const offer = defaultCountedOffer(descriptor.reward, descriptor.defaultStoreKey, path);
   return Object.freeze({
     storeKey: descriptor.defaultStoreKey,
@@ -127,6 +135,11 @@ function defaultEphyraCombatState(
         requireCountedBinding(sideRoom, path),
         sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
         `${path}.sideRooms.${slot.slotKey}.offer`,
+      ),
+      encounters: createDefaultRoomEncounterState(
+        catalog,
+        sideRoom,
+        `${path}.sideRooms.${slot.slotKey}.encounters`,
       ),
     });
   }

@@ -1,0 +1,203 @@
+import { CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
+import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
+import { describe, expect, it } from 'vitest';
+
+function input(): RawCatalogInput {
+  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
+}
+
+describe('encounter envelope catalog', () => {
+  it('closes every room declaration over one envelope and complete slot bindings', () => {
+    const catalog = createCatalog(declarations);
+
+    expect(catalog.encounterEnvelopes.values.map((envelope) => envelope.key)).toEqual([
+      'EmptyEncounter',
+      'SingleEncounter',
+      'ShipEncounter',
+      'PEncounter',
+      'FieldsEncounter',
+    ]);
+    expect(catalog).not.toHaveProperty('encounterProfiles');
+
+    for (const room of catalog.rooms.values) {
+      const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+      expect(envelope).toBeDefined();
+      expect(room.encounterSlotBindings.map((binding) => binding.slotKey)).toEqual(
+        envelope?.slots.map((slot) => slot.key),
+      );
+      for (const binding of room.encounterSlotBindings) {
+        if (binding.kind === 'fixed') {
+          expect(catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]).toBeDefined();
+          continue;
+        }
+        const encounterSet = catalog.encounterSets.byKey[binding.encounterSetKey];
+        expect(encounterSet).toBeDefined();
+        expect(encounterSet?.encounterDefinitionKeys).toContain(
+          encounterSet?.defaultEncounterDefinitionKey,
+        );
+      }
+    }
+  });
+
+  it('binds ordinary support and fixed identities without an envelope-specific baseline', () => {
+    const catalog = createCatalog(declarations);
+
+    expect(catalog.rooms.byKey.F_Combat02).toMatchObject({
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+      ],
+    });
+    expect(catalog.rooms.byKey.F_MiniBoss01).toMatchObject({
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTreant' },
+      ],
+    });
+    expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
+      encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+      defaultEncounterDefinitionKey: 'GeneratedI',
+    });
+    expect(catalog.encounterSets.byKey.PEncountersDefault).toMatchObject({
+      encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large'],
+      defaultEncounterDefinitionKey: 'GeneratedP',
+    });
+    expect(catalog.rooms.byKey.N_Sub09).toMatchObject({
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        {
+          slotKey: 'Encounter',
+          kind: 'fixed',
+          encounterDefinitionKey: 'GeneratedNSubRoom_Bigger',
+        },
+      ],
+    });
+    expect(catalog.encounterSets.byKey.NEncountersSubRoomHeavy).toBeUndefined();
+    expect(catalog.encounterDefinitions.byKey.ArtemisCombatF).toBeUndefined();
+    expect(catalog.encounterDefinitions.byKey.GeneratedP_Large?.requirements).toEqual({
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 9 },
+    });
+  });
+
+  it('keeps all supported fixed slots direct and non-authored', () => {
+    const catalog = createCatalog(declarations);
+    const fixedTemplates = new Set([
+      'Devotion',
+      'Fountain',
+      'Miniboss',
+      'Preboss',
+      'Shop',
+      'Story',
+    ]);
+    const fixedRooms = catalog.rooms.values.filter(
+      (room) =>
+        (room.mode.kind === 'authored' && fixedTemplates.has(room.mode.templateKey)) ||
+        (room.mode.kind === 'derived' && room.mode.classification === 'completion'),
+    );
+
+    expect(fixedRooms).not.toHaveLength(0);
+    for (const room of fixedRooms) {
+      expect(room.encounterEnvelopeKey).toBe('SingleEncounter');
+      expect(room.encounterSlotBindings).toHaveLength(1);
+      expect(room.encounterSlotBindings[0]?.kind).toBe('fixed');
+    }
+  });
+
+  it('retains the one complete Fields envelope and ordered P and Ship bindings', () => {
+    const catalog = createCatalog(declarations);
+
+    expect(catalog.rooms.byKey.H_Combat15?.encounterSlotBindings).toEqual([
+      { slotKey: 'Passive', kind: 'set', encounterSetKey: 'HEncountersPassiveSmall' },
+      { slotKey: 'Cage01', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+      { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
+    ]);
+    expect(catalog.rooms.byKey.O_Combat01?.encounterSlotBindings).toEqual([
+      { slotKey: 'Intro', kind: 'set', encounterSetKey: 'OEncountersIntros' },
+      { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
+      { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
+    ]);
+    expect(catalog.rooms.byKey.P_Combat03?.encounterSlotBindings).toEqual([
+      { slotKey: 'Intro', kind: 'set', encounterSetKey: 'PCombat03IntroEncounters' },
+      { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
+    ]);
+    expect(
+      catalog.encounterSets.byKey.PCombat03IntroEncounters?.encounterDefinitionKeys,
+    ).not.toContain('OlympusIntro');
+    expect(catalog.encounterSets.byKey.POpeningEncounters?.encounterDefinitionKeys).toContain(
+      'Empty',
+    );
+    expect(catalog.encounterSets.byKey.POpeningEncounters?.encounterDefinitionKeys).not.toContain(
+      'PIntroDreamRunEmpty',
+    );
+  });
+
+  it('preserves the source-backed Ship Combat2 pre-room encounter-depth gate', () => {
+    const catalog = createCatalog(declarations);
+    const combat2 = catalog.encounterEnvelopes.byKey.ShipEncounter?.slots.find(
+      (slot) => slot.key === 'Combat2',
+    );
+
+    expect(combat2).toMatchObject({
+      activation: 'templateControlled',
+      activationRequirement: {
+        kind: 'counterRange',
+        axis: 'biomeEncounterDepth',
+        range: { min: 2, max: 5 },
+      },
+    });
+  });
+
+  it('rejects a source offer-point override without the ShipCombat wheel source', () => {
+    const malformed = input();
+    const layoutIndex = malformed.biomeLayouts.findIndex((layout) => layout.biomeKey === 'O');
+    const oLayout = malformed.biomeLayouts[layoutIndex];
+    if (layoutIndex < 0 || oLayout?.progression.kind !== 'generated') {
+      throw new Error('O generated layout fixture is missing');
+    }
+    (
+      oLayout.progression as unknown as {
+        rewardStoreOverrides: unknown;
+      }
+    ).rewardStoreOverrides = [
+      {
+        sourceRoomTemplateKey: 'Miniboss',
+        policy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
+      },
+    ];
+
+    expect(() => createCatalog(malformed)).toThrow(
+      new CatalogContractError(
+        `biomeLayouts[${layoutIndex}].progression.rewardStoreOverrides[0].sourceRoomTemplateKey`,
+        'lastActiveWheel requires ShipCombat',
+      ),
+    );
+  });
+
+  it('rejects an incomplete slot binding and an unknown structural requirement slot', () => {
+    const incomplete = input();
+    const fCombat = incomplete.rooms.find((room) => room.gameName === 'F_Combat02');
+    if (fCombat === undefined) throw new Error('missing F Combat 02 fixture');
+    (fCombat as unknown as { encounterSlotBindings: unknown[] }).encounterSlotBindings = [];
+    expect(() => createCatalog(incomplete)).toThrow(CatalogContractError);
+
+    const unknownSlot = input();
+    const oCombat = unknownSlot.rooms.find((room) => room.gameName === 'O_Combat01');
+    if (oCombat === undefined) throw new Error('missing O Combat 01 fixture');
+    (oCombat as { eligibility: unknown }).eligibility = {
+      kind: 'recentEnvelopeSlotCount',
+      envelopeKey: 'ShipEncounter',
+      slotKey: 'Missing',
+      roomWindow: 3,
+      range: { max: 2 },
+    };
+    expect(() => createCatalog(unknownSlot)).toThrow(
+      new CatalogContractError(
+        'rooms[138].eligibility.slotKey',
+        'unknown slot Missing in ShipEncounter',
+      ),
+    );
+  });
+});

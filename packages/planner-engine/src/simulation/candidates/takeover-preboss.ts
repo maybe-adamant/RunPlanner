@@ -12,6 +12,7 @@ import type { CanonicalDecision } from '../materialization';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { CandidateEvaluationContractError } from './contract';
 import {
+  candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
   completeBiomeCount,
@@ -58,7 +59,7 @@ function evaluatePrefixTakeover(
   const biome = candidatePrefix(
     candidate ?? prefixBiome(evaluation, query.source.routeKey, query.source.biomeKey),
   );
-  const prefix = biome?.materializedPrefix;
+  const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
     return undefined;

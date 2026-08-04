@@ -1,101 +1,66 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const hEncounterProfiles = [
+export const hEncounterDefinitions = [
   {
-    key: 'H_FieldsCombatCage2',
-    phases: [
-      { key: 'Passive', kind: 'combat', countsEncounterDepth: false },
-      {
-        key: 'Cage01',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedH',
-      },
-      {
-        key: 'Cage02',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedH',
-      },
-    ],
+    key: 'GeneratedH_Passive',
+    label: 'Passive combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
   },
   {
-    key: 'H_FieldsCombatCage3',
-    phases: [
-      { key: 'Passive', kind: 'combat', countsEncounterDepth: false },
-      {
-        key: 'Cage01',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedH',
-      },
-      {
-        key: 'Cage02',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedH',
-      },
-      {
-        key: 'Cage03',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedH',
-      },
-    ],
+    key: 'GeneratedH_PassiveSmall',
+    label: 'Small passive combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
+  },
+  { key: 'GeneratedH', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedH_Treant2',
+    label: 'Treant combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'H_MiniBoss01',
-    phases: [
-      {
-        key: 'H_MiniBoss01',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossVampire',
-      },
-    ],
+    key: 'GeneratedH_Screamer2',
+    label: 'Screamer combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'H_MiniBoss02',
-    phases: [
-      {
-        key: 'H_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossLamia',
-      },
-    ],
+    key: 'MiniBossVampire',
+    label: 'Vampire',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+  },
+  { key: 'MiniBossLamia', label: 'Lamia', kind: 'miniboss', countsEncounterDepth: true },
+  {
+    key: 'Story_Echo_01',
+    label: 'Echo story',
+    kind: 'story',
+    countsEncounterDepth: false,
   },
   {
-    key: 'H_Bridge01',
-    phases: [
-      {
-        key: 'H_Bridge01',
-        kind: 'story',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Story_Echo_01',
-      },
-    ],
+    key: 'BossInfestedCerberus01',
+    label: 'Cerberus',
+    kind: 'boss',
+    countsEncounterDepth: false,
+  },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const hEncounterSets = [
+  {
+    key: 'HEncountersDefault',
+    encounterDefinitionKeys: ['GeneratedH', 'GeneratedH_Treant2', 'GeneratedH_Screamer2'],
+    defaultEncounterDefinitionKey: 'GeneratedH',
   },
   {
-    key: 'H_Boss01',
-    phases: [
-      {
-        key: 'H_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossInfestedCerberus01',
-      },
-    ],
+    key: 'HEncountersPassive',
+    encounterDefinitionKeys: ['GeneratedH_Passive'],
+    defaultEncounterDefinitionKey: 'GeneratedH_Passive',
   },
   {
-    key: 'H_PostBoss01',
-    phases: [
-      {
-        key: 'H_PostBoss01',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Empty',
-      },
-    ],
+    key: 'HEncountersPassiveSmall',
+    encounterDefinitionKeys: ['GeneratedH_PassiveSmall'],
+    defaultEncounterDefinitionKey: 'GeneratedH_PassiveSmall',
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+] as const satisfies readonly RawEncounterSetDeclaration[];

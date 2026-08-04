@@ -77,7 +77,7 @@ function requirementMessage(evidence: RequirementEvaluationEvidence): string {
     case 'recordCount':
     case 'distinctRecordKeyCount':
       return `The current matching history count is ${evidence.actual}; this room requires a different count.`;
-    case 'recentEncounterPhaseCount':
+    case 'recentEnvelopeSlotCount':
       return 'Recent encounter history does not satisfy this room.';
     case 'minExits':
       return `This room has ${evidence.actual} doors; this room requires at least ${evidence.minimum}.`;
@@ -216,10 +216,15 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'room',
         message: 'This room is not among the rooms that can be offered for this door.',
       };
-    case 'encounterCountUnavailable':
+    case 'encounterUnavailable':
       return {
         kind: 'encounter',
-        message: 'This encounter count cannot occur when this room begins.',
+        message: 'This encounter cannot occur when this room begins.',
+      };
+    case 'encounterSlotActivationUnavailable':
+      return {
+        kind: 'encounter',
+        message: 'This encounter phase is not active for the selected room setup.',
       };
     case 'fieldsCageOutcomeUnavailable':
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };

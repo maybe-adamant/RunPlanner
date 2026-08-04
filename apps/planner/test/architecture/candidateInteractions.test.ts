@@ -38,6 +38,7 @@ type LoadableInteraction = {
 
 const families = [
   'batchRewardStores',
+  'encounterPhases',
   'fieldsCageOutcomes',
   'hubSlots',
   'hubVisitOrders',
@@ -46,7 +47,7 @@ const families = [
   'rewardWheelPicks',
   'rewardWheelStores',
   'rooms',
-  'shipEncounterCounts',
+  'shipCombatPhaseCounts',
   'shopPurchaseOrders',
   'sideRoomEntryOrders',
   'sideRoomGenerations',
@@ -61,6 +62,7 @@ type InteractionFamily = (typeof families)[number];
  */
 const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> = Object.freeze({
   batchRewardStores: 1,
+  encounterPhases: 0,
   fieldsCageOutcomes: 1,
   hubSlots: 1,
   hubVisitOrders: 1,
@@ -69,7 +71,7 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   rewardWheelPicks: 1,
   rewardWheelStores: 1,
   rooms: 1,
-  shipEncounterCounts: 1,
+  shipCombatPhaseCounts: 1,
   shopPurchaseOrders: 1,
   sideRoomEntryOrders: 1,
   sideRoomGenerations: 1,

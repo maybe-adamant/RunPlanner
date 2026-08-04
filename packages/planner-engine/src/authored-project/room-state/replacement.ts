@@ -2,7 +2,8 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { AuthoredRoomState } from '../model';
-import { requireFieldsCages, requireShipCombatWheels } from './declaration';
+import { requireEphyraSideRooms, requireFieldsCages, requireShipCombatWheels } from './declaration';
+import { reconcileRoomEncounterState } from './encounters';
 
 function countedOfferIsAdmitted(
   binding: CountedRewardBinding,
@@ -23,11 +24,9 @@ function shipEncounterCountIsAdmitted(
   if (encounterCount === 2) {
     return true;
   }
-  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
   return (
-    profile?.phases.some(
-      (phase) => phase.offerPoint?.key === 'wheel2' && phase.presence?.kind === 'authoredOptional',
-    ) ?? false
+    room.encounterEnvelopeKey === 'ShipEncounter' &&
+    requireShipCombatWheels(catalog, room, room.gameName).some((wheel) => wheel.key === 'wheel2')
   );
 }
 
@@ -148,6 +147,95 @@ function reconcileShipCombatState(
   });
 }
 
+function reconcileEphyraCombatState(
+  catalog: Catalog,
+  previousRoom: RoomDeclaration,
+  previousState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
+  replacementRoom: RoomDeclaration,
+  replacementState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
+): AuthoredRoomState {
+  if (!roomUsesTemplate(previousRoom, 'EphyraCombat')) {
+    return replacementState;
+  }
+  const previousDescriptor = requireEphyraSideRooms(previousRoom, previousRoom.gameName);
+  const replacementDescriptor = requireEphyraSideRooms(replacementRoom, replacementRoom.gameName);
+  if (
+    previousDescriptor?.key !== replacementDescriptor?.key ||
+    previousDescriptor === undefined ||
+    replacementDescriptor === undefined
+  ) {
+    return replacementState;
+  }
+  const previousSlots = new Map(previousDescriptor.slots.map((slot) => [slot.slotKey, slot]));
+  const retainedEntryOrder: { readonly slotKey: string; readonly ordinal: number }[] = [];
+  const reconciled = replacementDescriptor.slots.map((slot) => {
+    const fallback = replacementState.sideRooms[slot.slotKey];
+    if (fallback === undefined) {
+      throw new Error(`${replacementRoom.gameName} default omitted side room ${slot.slotKey}`);
+    }
+    const previousSlot = previousSlots.get(slot.slotKey);
+    const previousSide = previousState.sideRooms[slot.slotKey];
+    if (
+      previousSlot === undefined ||
+      previousSlot.roomGameName !== slot.roomGameName ||
+      previousSide === undefined
+    ) {
+      return { slotKey: slot.slotKey, state: fallback };
+    }
+    const previousChild = catalog.rooms.byKey[previousSlot.roomGameName];
+    const replacementChild = catalog.rooms.byKey[slot.roomGameName];
+    if (previousChild === undefined || replacementChild === undefined) {
+      throw new Error(`${replacementRoom.gameName} references an unknown side-room declaration`);
+    }
+    if (previousSide.enteredOrdinal !== null && previousSide.generation === 'generated') {
+      retainedEntryOrder.push({ slotKey: slot.slotKey, ordinal: previousSide.enteredOrdinal });
+    }
+    const childBinding = replacementChild.incomingReward;
+    const offer =
+      childBinding.kind === 'countedChoice' &&
+      countedOfferIsAdmitted(childBinding, previousSide.offer)
+        ? previousSide.offer
+        : fallback.offer;
+    return {
+      slotKey: slot.slotKey,
+      state: Object.freeze({
+        generation: previousSide.generation,
+        enteredOrdinal: null,
+        offer,
+        encounters: reconcileRoomEncounterState(
+          catalog,
+          previousChild,
+          previousSide.encounters,
+          replacementChild,
+          fallback.encounters,
+        ),
+      }),
+    };
+  });
+  retainedEntryOrder.sort((left, right) => left.ordinal - right.ordinal);
+  const retainedOrdinalBySlot = new Map(
+    retainedEntryOrder.map((entry, index) => [entry.slotKey, index + 1]),
+  );
+  const sideRooms = Object.fromEntries(
+    reconciled.map(({ slotKey, state }) => [
+      slotKey,
+      retainedOrdinalBySlot.has(slotKey)
+        ? Object.freeze({ ...state, enteredOrdinal: retainedOrdinalBySlot.get(slotKey) ?? null })
+        : state,
+    ]),
+  );
+  const parentBinding = replacementRoom.incomingReward;
+  return Object.freeze({
+    kind: 'ephyraCombat',
+    offer:
+      parentBinding.kind === 'countedChoice' &&
+      countedOfferIsAdmitted(parentBinding, previousState.offer)
+        ? previousState.offer
+        : replacementState.offer,
+    sideRooms: Object.freeze(sideRooms),
+  });
+}
+
 /**
  * Reconciles one replacement occurrence's existing leaves into a complete
  * replacement default state. Compatibility is declaration-bounded: this
@@ -191,6 +279,15 @@ export function reconcileReplacementRoomState(
           )
         : replacementState;
     case 'ephyraCombat':
-      return replacementState;
+      return previousState.kind === 'ephyraCombat' &&
+        roomUsesTemplate(replacementRoom, 'EphyraCombat')
+        ? reconcileEphyraCombatState(
+            catalog,
+            previousRoom,
+            previousState,
+            replacementRoom,
+            replacementState,
+          )
+        : replacementState;
   }
 }

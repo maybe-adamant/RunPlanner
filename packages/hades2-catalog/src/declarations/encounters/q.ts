@@ -1,59 +1,44 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
-export const qEncounterProfiles = [
+export const qEncounterDefinitions = [
+  { key: 'GeneratedQ', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
   {
-    key: 'Q_MiniBoss02',
-    phases: [
-      {
-        key: 'Q_MiniBoss02',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossBrute',
-      },
-    ],
+    key: 'GeneratedQ_Islands',
+    label: 'Islands combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
   },
   {
-    key: 'Q_MiniBoss05',
-    phases: [
-      {
-        key: 'Q_MiniBoss05',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'MiniBossStalker',
-      },
-    ],
+    key: 'GeneratedQ_Large',
+    label: 'Preboss combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+  },
+  { key: 'MiniBossBrute', label: 'Brute', kind: 'miniboss', countsEncounterDepth: true },
+  {
+    key: 'MiniBossStalker',
+    label: 'Stalker',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
   },
   {
-    key: 'Q_MiniBoss03',
-    phases: [
-      {
-        key: 'Q_MiniBoss03',
-        kind: 'miniboss',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'BossTyphonTail01',
-      },
-    ],
+    key: 'BossTyphonTail01',
+    label: 'Typhon tail',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
   },
   {
-    key: 'Q_MiniBoss04',
-    phases: [
-      {
-        key: 'Q_MiniBoss04',
-        kind: 'miniboss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossTyphonEye01',
-      },
-    ],
+    key: 'BossTyphonEye01',
+    label: 'Typhon eye',
+    kind: 'miniboss',
+    countsEncounterDepth: false,
   },
   {
-    key: 'Q_Boss01',
-    phases: [
-      {
-        key: 'Q_Boss01',
-        kind: 'boss',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'BossTyphonHead01',
-      },
-    ],
+    key: 'BossTyphonHead01',
+    label: 'Typhon',
+    kind: 'boss',
+    countsEncounterDepth: false,
   },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const qEncounterSets = [] as const satisfies readonly RawEncounterSetDeclaration[];

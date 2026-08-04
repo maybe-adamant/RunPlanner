@@ -23,14 +23,14 @@ export interface RouteDeclaration {
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
 
-export interface EncounterPhasePresence {
-  readonly kind: 'authoredOptional';
-  readonly decisionPoint: 'prepareRoom';
-  readonly requirement: RequirementExpression;
-  readonly defaultActive: boolean;
-}
+/**
+ * The envelope declares that a slot is potentially present. The owning room
+ * template evaluates its current structural activation from authored state;
+ * lifecycle execution never uses this disposition as a second evaluator.
+ */
+export type EncounterSlotActivation = 'always' | 'templateControlled';
 
-export interface RewardWheelOfferPoint {
+export interface EncounterRewardWheelAttachment {
   readonly kind: 'rewardWheel';
   readonly key: string;
   readonly reward: CountedRewardBinding;
@@ -42,29 +42,78 @@ export interface RewardWheelOfferPoint {
     readonly defaultValue: number;
   };
   readonly picked: 'exactlyOne';
-  readonly offerTiming: 'encounterStart';
-  readonly acquisitionTiming: 'postCombat';
 }
 
-export interface EncounterPhase {
+/** A Fields-style local reward owned by an exact local-child slot. */
+export interface EncounterLocalRewardAttachment {
+  readonly kind: 'localReward';
+  readonly groupKey: string;
+  readonly slotKey: string;
+}
+
+export type EncounterSlotRewardAttachment =
+  EncounterLocalRewardAttachment | EncounterRewardWheelAttachment;
+
+/** A stable authored position in a room-local encounter envelope. */
+export interface EncounterEnvelopeSlot {
   readonly key: string;
+  readonly activation: EncounterSlotActivation;
+  /**
+   * A structural gate for a template-controlled potential slot. It is read
+   * from the predecessor preparation checkpoint, before any phase in this
+   * room can start or advance encounter counters.
+   */
+  readonly activationRequirement?: RequirementExpression;
+  readonly rewardAttachment?: EncounterSlotRewardAttachment;
+}
+
+/**
+ * Reusable room-local encounter topology. It owns neither selected identity,
+ * requirement policy, effective kind, nor counter effects.
+ */
+export interface EncounterEnvelope {
+  readonly key: string;
+  readonly slots: readonly EncounterEnvelopeSlot[];
+}
+
+/** One concrete normalized game encounter selected by a fixed or pool slot. */
+export interface EncounterDefinition {
+  readonly key: string;
+  readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
-  readonly baselineEncounterKey?: string;
-  readonly presence?: EncounterPhasePresence;
-  readonly offerPoint?: RewardWheelOfferPoint;
+  readonly requirements?: RequirementExpression;
+  readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
+  /** Presentation-only grouping for the later read-only NPC route index. */
+  readonly npcPresentationKey?: string;
 }
 
-export interface EncounterProfile {
+/** Unique possibility support for one selectable slot, with a static default. */
+export interface EncounterSet {
   readonly key: string;
-  readonly phases: readonly EncounterPhase[];
+  readonly encounterDefinitionKeys: readonly string[];
+  readonly defaultEncounterDefinitionKey: string;
 }
+
+/** Complete room-declaration binding for one stable envelope slot. */
+export type EncounterSlotBinding =
+  | {
+      readonly slotKey: string;
+      readonly kind: 'set';
+      readonly encounterSetKey: string;
+    }
+  | {
+      readonly slotKey: string;
+      readonly kind: 'fixed';
+      readonly encounterDefinitionKey: string;
+    };
 
 export type RoomLifecycleEffectKind =
   | 'advanceEncounterDepth'
   | 'advanceRoomCounters'
   | 'recordAppearance'
   | 'recordCommit'
+  | 'recordEncounter'
   | 'recordEncounterCompletion'
   | 'recordEncounterStart'
   | 'recordEnteredRewardStore'
@@ -79,11 +128,11 @@ export type RoomLifecycleEffectKind =
   | 'recordRequiredObjectSpawns'
   | 'recordShopPurchases';
 
-export interface OnlyEncounterPhaseSelector {
+export interface OnlyEncounterSlotSelector {
   readonly kind: 'only';
 }
 
-export type EncounterPhaseSelector = OnlyEncounterPhaseSelector;
+export type EncounterSlotSelector = OnlyEncounterSlotSelector;
 
 interface RoomLifecycleOperationBase {
   readonly effects: readonly RoomLifecycleEffectKind[];
@@ -99,11 +148,11 @@ export type RoomLifecycleOperation =
   | (RoomLifecycleOperationBase & { readonly kind: 'spawnRequiredObjects' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'startEncounter';
-      readonly encounter: EncounterPhaseSelector;
+      readonly encounter: EncounterSlotSelector;
     })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'completeEncounter';
-      readonly encounter: EncounterPhaseSelector;
+      readonly encounter: EncounterSlotSelector;
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
   | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
@@ -129,7 +178,7 @@ export type RoomLifecycleProducerPolicy =
 
 export interface RoomLifecycleProfile {
   readonly key: string;
-  readonly encounterProfileKeys: readonly string[];
+  readonly encounterEnvelopeKeys: readonly string[];
   readonly producer: RoomLifecycleProducerPolicy;
   readonly operations: readonly RoomLifecycleOperation[];
 }
@@ -250,7 +299,8 @@ export interface RoomDeclaration {
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
-  readonly encounterProfileKey: string;
+  readonly encounterEnvelopeKey: string;
+  readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
@@ -328,7 +378,7 @@ export type RewardStorePolicy =
 export type SourceOfferPointSelector = 'lastActiveWheel';
 
 export interface SourceRewardStorePolicyOverride {
-  readonly sourceEncounterProfileKey: string;
+  readonly sourceRoomTemplateKey: RoomTemplateKey;
   readonly policy: RewardStorePolicy;
 }
 
@@ -499,7 +549,9 @@ export interface Catalog {
   readonly biomes: CatalogCollection<BiomeDeclaration>;
   readonly routes: CatalogCollection<RouteDeclaration>;
   readonly rewards: RewardKernelCatalog;
-  readonly encounterProfiles: CatalogCollection<EncounterProfile>;
+  readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
+  readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
+  readonly encounterSets: CatalogCollection<EncounterSet>;
   readonly roomLifecycleProfiles: CatalogCollection<RoomLifecycleProfile>;
   readonly exitCompatibilityPolicies: CatalogCollection<ExitCompatibilityPolicy>;
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;

@@ -429,7 +429,7 @@ function validateRequirementRewardReferences(
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':
-    case 'recentEncounterPhaseCount':
+    case 'recentEnvelopeSlotCount':
       return;
   }
 }

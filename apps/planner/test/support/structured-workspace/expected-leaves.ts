@@ -1,4 +1,5 @@
 import {
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -10,6 +11,7 @@ import {
   createShopPurchaseAddress,
   type AuthoredBiomePlan,
   type BiomeAddress,
+  type EncounterPhaseAddress,
   type ExitDecision,
   type OccurrenceId,
   type SemanticAddress,
@@ -24,11 +26,12 @@ import { workspaceSideRoomEntryOrderTestKey, workspaceTestOwnerKey } from './tes
  * while tests use this oracle to make omitted products observable.
  */
 export type ExpectedWorkspaceLeafInteractionKind =
+  | 'encounterPhase'
   | 'reward'
   | 'rewardWheelOfferCount'
   | 'rewardWheelPick'
   | 'rewardWheelStore'
-  | 'shipEncounterCount'
+  | 'shipCombatPhaseCount'
   | 'shopPurchase'
   | 'sideRoomEntryOrder'
   | 'sideRoomGeneration';
@@ -42,6 +45,15 @@ export interface ExpectedWorkspaceLeafRequirement {
   readonly address: SemanticAddress;
   readonly interactions: readonly ExpectedWorkspaceLeafInteraction[];
 }
+
+/**
+ * Test-only capability from the exact engine evaluation. The oracle uses its
+ * presence as the complete active-phase fact; it does not re-evaluate slot
+ * activation, encounter requirements, or lifecycle history.
+ */
+export type ExpectedEncounterPhaseCandidateAt = (
+  phase: EncounterPhaseAddress,
+) => unknown | undefined;
 
 function requireExpectedRoom(catalog: Catalog, gameName: string): RoomDeclaration {
   const room = catalog.rooms.byKey[gameName];
@@ -214,16 +226,16 @@ export function expectedWorkspaceLeafRequirements(
         break;
       }
       case 'shipCombat': {
-        const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-        if (profile === undefined)
-          throw new Error(`${room.gameName} Ship state has no encounter profile`);
+        const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+        if (envelope === undefined)
+          throw new Error(`${room.gameName} Ship state has no encounter envelope`);
         requireLeaf(
           occurrenceAddress,
-          expectedLeafInteraction('shipEncounterCount', workspaceTestOwnerKey(occurrenceAddress)),
+          expectedLeafInteraction('shipCombatPhaseCount', workspaceTestOwnerKey(occurrenceAddress)),
         );
-        for (const phase of profile.phases) {
-          const wheel = phase.offerPoint;
-          if (wheel === undefined) continue;
+        for (const slot of envelope.slots) {
+          const wheel = slot.rewardAttachment;
+          if (wheel?.kind !== 'rewardWheel') continue;
           const wheelAddress = createRewardWheelAddress(biome, occurrence.occurrenceId, wheel.key);
           const wheelKey = workspaceTestOwnerKey(wheelAddress);
           requireLeaf(
@@ -271,4 +283,60 @@ export function expectedWorkspaceLeafRequirements(
       }),
     ),
   );
+}
+
+/**
+ * Independently enumerate every declaration-addressable pooled phase, then
+ * retain only phase identities the exact engine publication exposes. This
+ * closes the application handoff (marker, destination, interaction) without
+ * copying engine candidate or lifecycle policy into test support.
+ */
+export function expectedWorkspaceEncounterPhaseLeafRequirements(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+  encounterCandidateAt: ExpectedEncounterPhaseCandidateAt,
+): readonly ExpectedWorkspaceLeafRequirement[] {
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const requirements = new Map<string, ExpectedWorkspaceLeafRequirement>();
+  const append = (phase: EncounterPhaseAddress): void => {
+    if (encounterCandidateAt(phase) === undefined) return;
+    const key = workspaceTestOwnerKey(phase);
+    if (requirements.has(key)) {
+      throw new Error(`duplicate expected encounter phase ${key}`);
+    }
+    requirements.set(
+      key,
+      Object.freeze({
+        address: phase,
+        interactions: Object.freeze([
+          expectedLeafInteraction('encounterPhase', workspaceTestOwnerKey(phase)),
+        ]),
+      }),
+    );
+  };
+  const appendRoom = (room: RoomDeclaration, owner: EncounterPhaseAddress['owner']): void => {
+    for (const binding of room.encounterSlotBindings) {
+      if (binding.kind !== 'set') continue;
+      append(createEncounterPhaseAddress(biome, owner, binding.slotKey));
+    }
+  };
+
+  for (const occurrence of topology.occurrences) {
+    const room = requireExpectedRoom(catalog, occurrence.gameName);
+    appendRoom(room, { kind: 'occurrence', occurrenceId: occurrence.occurrenceId });
+    for (const group of room.localChildren) {
+      if (group.kind !== 'fixedRoomSlots') continue;
+      for (const slot of group.slots) {
+        appendRoom(requireExpectedRoom(catalog, slot.roomGameName), {
+          kind: 'localChild',
+          occurrenceId: occurrence.occurrenceId,
+          groupKey: group.key,
+          slotKey: slot.slotKey,
+        });
+      }
+    }
+  }
+  return Object.freeze([...requirements.values()]);
 }

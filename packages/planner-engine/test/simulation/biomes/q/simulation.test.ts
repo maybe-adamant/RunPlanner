@@ -31,6 +31,7 @@ function completeQ(project = createRepresentativeNOPQProject()) {
 describe('Q simulation', () => {
   it('replays the scripted Summit stages and width-one takeover through the common evaluator', () => {
     const { evaluation, route, biome: q } = completeQ();
+    if (q.validity !== 'valid') throw new Error('Q fixture must be valid');
 
     expect(evaluation.status, JSON.stringify(evaluation.findings, null, 2)).toBe('valid');
     expect(route).toMatchObject({

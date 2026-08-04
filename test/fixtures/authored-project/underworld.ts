@@ -4,6 +4,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -17,6 +18,10 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import {
+  createEncounterCommandAuthorization,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 export const goldenFBiome = createBiomeAddress('Underworld', 'F');
@@ -617,10 +622,34 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
   next = appendUnstoredBatch(next, goldenIBiome, combat06, [
     { occurrenceId: combat09, gameName: 'I_Combat09' },
   ]);
-  return appendUnstoredBatch(next, goldenIBiome, combat09, [
+  next = appendUnstoredBatch(next, goldenIBiome, combat09, [
     { occurrenceId: createOccurrenceId('golden-i-preboss'), gameName: 'I_PreBoss02' },
     { occurrenceId: createOccurrenceId('golden-i-miniboss01'), gameName: 'I_MiniBoss01' },
   ]);
+  for (const [occurrenceId, encounterKey] of [
+    [combat01, 'GeneratedI_GoalReward'],
+    [combat03, 'GeneratedI_Small_GoalReward'],
+    [combat05, 'GeneratedI_Small_GoalReward'],
+    [combat06, 'GeneratedI_GoalReward'],
+    [combat09, 'GeneratedI_GoalReward'],
+  ] as const) {
+    const assembly = simulateProjectAssembly(catalog, next);
+    next = applyProjectCommand(
+      next,
+      catalog,
+      {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(
+          goldenIBiome,
+          { kind: 'occurrence', occurrenceId },
+          'Encounter',
+        ),
+        encounterKey,
+      },
+      { encounterAuthorization: createEncounterCommandAuthorization(catalog, assembly) },
+    );
+  }
+  return next;
 }
 
 /** Complete F-through-H authored-project fixture. */

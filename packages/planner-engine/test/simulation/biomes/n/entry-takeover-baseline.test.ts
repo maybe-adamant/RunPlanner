@@ -118,6 +118,13 @@ describe('N B1 entry and terminal baseline', () => {
         semanticAddressKey(room.origin) ===
         semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.preHub)),
     );
+    if (
+      openingHistory?.postCommit === undefined ||
+      preHubHistory?.postCommit === undefined ||
+      preHubHistory.exit === undefined
+    ) {
+      throw new Error('N lifecycle baseline lost its opening or PreHub checkpoint');
+    }
 
     expect(entryBatch).toMatchObject({
       kind: 'batch',
@@ -141,15 +148,15 @@ describe('N B1 entry and terminal baseline', () => {
       }),
       targets: [],
     });
-    expect(openingHistory?.postCommit.ledgers.counters).toMatchObject({
+    expect(openingHistory.postCommit.ledgers.counters).toMatchObject({
       biomeDepthCache: 1,
       roomHistoryOrdinal: 1,
     });
-    expect(preHubHistory?.postCommit.ledgers.counters).toMatchObject({
+    expect(preHubHistory.postCommit.ledgers.counters).toMatchObject({
       biomeDepthCache: 2,
       roomHistoryOrdinal: 2,
     });
-    expect(preHubHistory?.exit.ledgers.counters).toMatchObject({
+    expect(preHubHistory.exit.ledgers.counters).toMatchObject({
       biomeDepthCache: 2,
       roomHistoryOrdinal: 2,
     });

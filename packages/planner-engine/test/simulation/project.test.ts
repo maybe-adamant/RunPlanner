@@ -5,14 +5,21 @@ import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  createEncounterCommandAuthorization,
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 
 import {
   createRepresentativeNOProject,
@@ -117,9 +124,13 @@ describe('project simulation composition', () => {
     const [f, g, h, i] = underworld.biomes;
     if (
       f?.authoring !== 'complete' ||
+      f.validity !== 'valid' ||
       g?.authoring !== 'complete' ||
+      g.validity !== 'valid' ||
       h?.authoring !== 'complete' ||
-      i?.authoring !== 'complete'
+      h.validity !== 'valid' ||
+      i?.authoring !== 'complete' ||
+      i.validity !== 'valid'
     ) {
       throw new Error('complete Underworld fixture lost a canonical biome');
     }
@@ -163,15 +174,95 @@ describe('project simulation composition', () => {
     });
   });
 
+  it('keeps an invalid static I Goal selection visible until its exact correction is selected', () => {
+    const occurrenceId = createOccurrenceId('golden-i-combat01');
+    const phase = createEncounterPhaseAddress(
+      goldenIBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const initial = createGoldenFGHIProject();
+    const initialAssembly = simulateProjectAssembly(catalog, initial);
+    expect(
+      encounterPhaseCandidateSupportForProjectEvaluationAssembly(initialAssembly, phase),
+    ).toMatchObject({
+      active: true,
+      selectedEncounterKey: 'GeneratedI_GoalReward',
+      selectedPossible: true,
+      candidateEncounterKeys: ['GeneratedI_GoalReward'],
+    });
+
+    const reset = applyProjectCommand(
+      initial,
+      catalog,
+      { kind: 'ResetEncounter', phase },
+      { encounterAuthorization: createEncounterCommandAuthorization(catalog, initialAssembly) },
+    );
+    const { result, route: underworld } = route(reset, 'Underworld');
+    const i = underworld.biomes.find((biome) => biome.biomeKey === 'I');
+    if (i?.authoring !== 'complete' || i.validity !== 'invalid' || !('materializedPrefix' in i)) {
+      throw new Error('reset I Goal selection did not retain an invalid editable prefix');
+    }
+
+    expect(result.status).toBe('invalid');
+    expect(i.coverage).toMatchObject({ kind: 'prefix', blockedAt: phase });
+    expect(i.findings).toContainEqual(
+      expect.objectContaining({ code: 'encounterUnavailable', origin: phase }),
+    );
+    const blockedLifecycle = i.history.events.filter(
+      (event) =>
+        'origin' in event &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === occurrenceId &&
+        (event.kind === 'roomPrepared' ||
+          event.kind === 'encounterRecorded' ||
+          event.kind === 'encounterStarted' ||
+          event.kind === 'encounterDepthAdvanced' ||
+          event.kind === 'encounterCompleted'),
+    );
+    expect(blockedLifecycle.map((event) => event.kind)).toEqual(['roomPrepared']);
+    expect(
+      i.history.events.some(
+        (event) =>
+          event.kind === 'clockworkGoalAcquired' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === occurrenceId,
+      ),
+    ).toBe(false);
+
+    const resetAssembly = simulateProjectAssembly(catalog, reset);
+    expect(
+      encounterPhaseCandidateSupportForProjectEvaluationAssembly(resetAssembly, phase),
+    ).toMatchObject({
+      active: true,
+      activationSatisfied: true,
+      selectedEncounterKey: 'GeneratedI',
+      selectedPossible: false,
+      candidateEncounterKeys: ['GeneratedI_GoalReward'],
+    });
+    const corrected = applyProjectCommand(
+      reset,
+      catalog,
+      { kind: 'SelectEncounter', phase, encounterKey: 'GeneratedI_GoalReward' },
+      { encounterAuthorization: createEncounterCommandAuthorization(catalog, resetAssembly) },
+    );
+
+    expect(simulateProject(catalog, corrected).status).toBe('valid');
+  });
+
   it('composes N through Q with a completed Hub as the O history seed', () => {
     const project = createRepresentativeNOPQProject();
     const { result, route: surface } = route(project, 'Surface');
     const [n, o, p, q] = surface.biomes;
     if (
       n?.authoring !== 'complete' ||
+      n.validity !== 'valid' ||
       o?.authoring !== 'complete' ||
+      o.validity !== 'valid' ||
       p?.authoring !== 'complete' ||
-      q?.authoring !== 'complete'
+      p.validity !== 'valid' ||
+      q?.authoring !== 'complete' ||
+      q.validity !== 'valid'
     ) {
       throw new Error('complete Surface fixture lost a canonical biome');
     }
@@ -288,7 +379,7 @@ describe('project simulation composition', () => {
     });
     const { route: underworld } = route(project, 'Underworld');
     const [f, g] = underworld.biomes;
-    if (f?.authoring !== 'complete' || g?.authoring !== 'complete') {
+    if (f?.authoring !== 'complete' || f.validity !== 'valid' || g?.authoring !== 'complete') {
       throw new Error('complete invalid G route lost its products');
     }
 

@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createBatchRewardStoreAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
@@ -21,7 +22,10 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -47,7 +51,10 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures';
-import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
+import {
+  candidateSupport,
+  createCandidateSessionFactory,
+} from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
@@ -74,7 +81,9 @@ function bind(
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
-  const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
+  const assembly = assembleWorkspaceBiomeSemantics(catalog, source, (phase) =>
+    encounterPhaseCandidateSupportForProjectEvaluationAssembly(projectAssembly, phase),
+  );
   return {
     assembly,
     interactions: bindWorkspaceInteractions({
@@ -1043,6 +1052,97 @@ describe('structured workspace interaction binding', () => {
     );
   });
 
+  it('binds active encounter phases to their exact top-level and local-child commands', () => {
+    const topLevelInteractions = bind(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'O',
+    ).interactions;
+    const localInteractions = bind(createRepresentativeNOPQProject(), 'Surface', 'N').interactions;
+    const topLevel = [...topLevelInteractions.encounterPhases.values()].find(
+      (interaction) =>
+        interaction.owner.kind === 'encounterPhase' &&
+        interaction.owner.owner.kind === 'occurrence',
+    );
+    const localChild = [...localInteractions.encounterPhases.values()].find(
+      (interaction) =>
+        interaction.owner.kind === 'encounterPhase' &&
+        interaction.owner.owner.kind === 'localChild',
+    );
+    if (
+      topLevel === undefined ||
+      localChild === undefined ||
+      topLevel.owner.kind !== 'encounterPhase' ||
+      topLevel.owner.owner.kind !== 'occurrence' ||
+      localChild.owner.kind !== 'encounterPhase' ||
+      localChild.owner.owner.kind !== 'localChild'
+    ) {
+      throw new Error('active top-level and local-child encounter interactions are missing');
+    }
+    const selected = topLevel.selected;
+    if (selected === undefined) throw new Error('top-level encounter has no selected definition');
+
+    expect(topLevel.choices).not.toHaveLength(0);
+    expect(topLevel.intentFor(selected).command).toEqual({
+      encounterKey: selected,
+      kind: 'SelectEncounter',
+      phase: topLevel.owner,
+    });
+    expect(topLevel.resetIntent.command).toEqual({
+      kind: 'ResetEncounter',
+      phase: topLevel.owner,
+    });
+    expect(localChild.owner.owner).toMatchObject({
+      kind: 'localChild',
+      occurrenceId: expect.any(String),
+    });
+  });
+
+  it('withholds dormant Ship Combat2 but publishes its active declaration-invalid phase', () => {
+    const initial = createRepresentativeNOPQProject();
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const combat2 = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+      'Combat2',
+    );
+
+    expect(
+      bind(initial, 'Surface', 'O').interactions.encounterPhases.has(semanticAddressKey(combat2)),
+    ).toBe(false);
+
+    const expanded = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const { assembly, interactions } = bind(expanded, 'Surface', 'O');
+    const interaction = interactions.encounterPhases.get(semanticAddressKey(combat2));
+    const node = assembly.nodes.find(
+      (candidate) =>
+        candidate.kind === 'occurrenceWorkbench' &&
+        candidate.room.occurrenceId === oOccurrenceIds.combat04,
+    );
+
+    if (interaction === undefined) throw new Error('active declaration-invalid Combat2 is missing');
+    const candidates = interaction.load();
+    expect(interaction).toMatchObject({ owner: combat2, selected: expect.any(String) });
+    expect(candidates).not.toHaveLength(0);
+    expect(candidates.every((candidate) => candidateSupport(candidate) === 'impossible')).toBe(
+      true,
+    );
+    expect(interaction.resetIntent.command).toEqual({ kind: 'ResetEncounter', phase: combat2 });
+    expect(node).toMatchObject({
+      kind: 'occurrenceWorkbench',
+      room: {
+        encounterPhases: expect.arrayContaining([
+          expect.objectContaining({ address: combat2, marker: expect.any(Object) }),
+        ]),
+      },
+    });
+    expect(assembly.preliminaryFocusDestinations.has(semanticAddressKey(combat2))).toBe(true);
+  });
+
   it('binds Ship-wheel and Shop-purchase authored values from occurrence requirements', () => {
     const surface = createRepresentativeNOPQProject();
     const ship = bind(surface, 'Surface', 'O').interactions;
@@ -1051,7 +1151,7 @@ describe('structured workspace interaction binding', () => {
     const purchase = createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
 
     expect(
-      ship.shipEncounterCounts.get(
+      ship.shipCombatPhaseCounts.get(
         semanticAddressKey(createOccurrenceAddress(oBiome, oOccurrenceIds.combat04)),
       ),
     ).toMatchObject({ selected: 2 });

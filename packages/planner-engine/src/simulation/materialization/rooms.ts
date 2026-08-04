@@ -9,12 +9,10 @@ import {
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredRoomState, RoomOccurrence, ShopState } from '../../authored-project/model';
-import type {
-  Catalog,
-  EncounterPhase,
-  RoomDeclaration,
-  RoomTemplateKey,
-} from '../../catalog-schema';
+import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
+import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
+import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
+import type { ResolvedEncounterPhase } from '../encounters';
 import type {
   CanonicalAuthoredRoom,
   CanonicalLocalReward,
@@ -61,8 +59,8 @@ export interface AuthoredRoomMaterializationContext {
 
 interface MaterializedRoomLeaf {
   readonly lifecycleProfileKey: string;
-  readonly encounterProfileKey?: string;
-  readonly encounterPhases?: readonly EncounterPhase[];
+  readonly activeEncounterSlotKeys?: readonly string[];
+  readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
@@ -71,7 +69,7 @@ interface MaterializedRoomLeaf {
 }
 
 export interface MaterializedShipCombatState {
-  readonly encounterPhases: readonly EncounterPhase[];
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly rewardWheels: readonly CanonicalRewardWheel[];
 }
 
@@ -122,7 +120,9 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
     fail(`${context.room.gameName} counted template has ${binding.kind} producer`);
   }
   return Object.freeze({
-    lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
+    lifecycleProfileKey:
+      context.lifecycleProfileKey ??
+      (context.room.encounterEnvelopeKey === 'PEncounter' ? 'PCombatRoom' : 'StandardRewardRoom'),
     incomingReward: resolvedIncomingReward(
       context,
       'countedChoice',
@@ -205,35 +205,12 @@ function materializeRewardlessRoom(
   if (context.room.incomingReward.kind !== 'none') {
     fail(`${context.room.gameName} rewardless template has a reward producer`);
   }
-  return Object.freeze({ lifecycleProfileKey: 'RewardlessRoom' });
-}
-
-function fieldsEncounterProfileKey(
-  catalog: Catalog,
-  biomeKey: string,
-  activeCageCount: number,
-): string {
-  const candidateKeys = new Set(
-    catalog.rooms.values.flatMap((room) =>
-      room.biomeKey === biomeKey &&
-      room.mode.kind === 'authored' &&
-      room.mode.templateKey === 'FieldsCombat'
-        ? [room.encounterProfileKey]
-        : [],
-    ),
-  );
-  const matches = [...candidateKeys].filter((key) => {
-    const profile = catalog.encounterProfiles.byKey[key];
-    return (
-      profile !== undefined &&
-      profile.phases[0]?.key === 'Passive' &&
-      profile.phases.filter((phase) => phase.countsEncounterDepth).length === activeCageCount
-    );
+  return Object.freeze({
+    lifecycleProfileKey:
+      context.room.encounterEnvelopeKey === 'EmptyEncounter'
+        ? 'RewardlessRoom'
+        : 'RewardlessCombatRoom',
   });
-  if (matches.length !== 1 || matches[0] === undefined) {
-    fail(`${biomeKey} has no unique Fields encounter profile for ${activeCageCount} cages`);
-  }
-  return matches[0];
 }
 
 function materializeFieldsCombat(
@@ -257,35 +234,41 @@ function materializeFieldsCombat(
   if (storeKey === undefined) {
     fail(`${context.room.gameName} has no Fields cage reward store`);
   }
-  const encounterProfileKey = fieldsEncounterProfileKey(
-    context.catalog,
-    context.room.biomeKey,
-    activeCageCount,
+  const slots = encounterEnvelopeSlots(context.catalog, context.room, context.room.gameName);
+  const passive = slots.find((slot) => slot.key === 'Passive');
+  const cageSlots = slots.filter(
+    (slot) =>
+      slot.rewardAttachment?.kind === 'localReward' &&
+      slot.rewardAttachment.groupKey === descriptor.key,
   );
-  const encounter = context.catalog.encounterProfiles.byKey[encounterProfileKey];
-  const cagePhases = encounter?.phases.filter((phase) => phase.countsEncounterDepth) ?? [];
-  if (cagePhases.length !== activeCageCount) {
-    fail(`${context.room.gameName} has no complete active cage encounter sequence`);
+  if (
+    context.room.encounterEnvelopeKey !== 'FieldsEncounter' ||
+    passive === undefined ||
+    passive.activation !== 'always' ||
+    cageSlots.length < descriptor.maxActiveSlots
+  ) {
+    fail(`${context.room.gameName} has no complete Fields encounter envelope`);
   }
-  const localRewards = descriptor.slotKeys.slice(0, activeCageCount).map((slotKey, index) => {
-    const offer = state.cages[slotKey];
-    const encounterPhase = cagePhases[index];
-    if (offer === undefined) {
-      fail(`${context.room.gameName} is missing authored cage ${slotKey}`);
+  const activeCageSlots = cageSlots.slice(0, activeCageCount);
+  const localRewards = activeCageSlots.map((encounterSlot) => {
+    const attachment = encounterSlot.rewardAttachment;
+    if (attachment?.kind !== 'localReward') {
+      return fail(`${context.room.gameName}.${encounterSlot.key} lacks a cage reward attachment`);
     }
-    if (encounterPhase === undefined) {
-      fail(`${context.room.gameName} is missing encounter phase for ${slotKey}`);
+    const offer = state.cages[attachment.slotKey];
+    if (offer === undefined) {
+      fail(`${context.room.gameName} is missing authored cage ${attachment.slotKey}`);
     }
     return Object.freeze({
       origin: createLocalRewardAddress(
         context.biome,
         context.occurrence.occurrenceId,
-        descriptor.key,
-        slotKey,
+        attachment.groupKey,
+        attachment.slotKey,
       ),
-      groupKey: descriptor.key,
-      slotKey,
-      encounterPhaseKey: encounterPhase.key,
+      groupKey: attachment.groupKey,
+      slotKey: attachment.slotKey,
+      encounterPhaseKey: encounterSlot.key,
       producerLifecycleKey: descriptor.reward.producerLifecycleKey,
       offer,
       resolvedStoreKey: storeKey,
@@ -293,7 +276,10 @@ function materializeFieldsCombat(
   });
   return Object.freeze({
     lifecycleProfileKey: 'FieldsCombatRoom',
-    encounterProfileKey,
+    activeEncounterSlotKeys: Object.freeze([
+      passive.key,
+      ...activeCageSlots.map((slot) => slot.key),
+    ]),
     localRewards: Object.freeze(localRewards),
   });
 }
@@ -308,22 +294,43 @@ export function materializeShipCombatState(
     fail(`${occurrence.gameName} expected shipCombat state, received ${occurrence.state.kind}`);
   }
   const state = occurrence.state;
-  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (profile === undefined || profile.key !== 'ShipCombat') {
-    fail(`${room.gameName} has no ShipCombat encounter profile`);
+  const slots = encounterEnvelopeSlots(catalog, room, room.gameName);
+  if (
+    room.encounterEnvelopeKey !== 'ShipEncounter' ||
+    slots[0]?.key !== 'Intro' ||
+    slots[0].activation !== 'always' ||
+    slots[1]?.key !== 'Combat1' ||
+    slots[1].activation !== 'always' ||
+    slots[2]?.key !== 'Combat2' ||
+    slots[2].activation !== 'templateControlled' ||
+    slots.length !== 3
+  ) {
+    fail(`${room.gameName} has no ShipCombat encounter envelope`);
   }
-  const encounterPhases = profile.phases.slice(0, state.encounterCount);
+  const activeSlotKeys = Object.freeze(
+    state.encounterCount === 2 ? ['Intro', 'Combat1'] : ['Intro', 'Combat1', 'Combat2'],
+  );
+  const encounterPhases = resolveEncounterPhases(
+    catalog,
+    room,
+    occurrence.encounters,
+    activeSlotKeys,
+    room.gameName,
+  );
   if (
     encounterPhases.length !== state.encounterCount ||
-    encounterPhases[0]?.key !== 'Intro' ||
-    encounterPhases[1]?.offerPoint?.key !== 'wheel1' ||
-    (state.encounterCount === 3 && encounterPhases[2]?.offerPoint?.key !== 'wheel2')
+    encounterPhases[0]?.slotKey !== 'Intro' ||
+    encounterPhases[1]?.rewardAttachment?.kind !== 'rewardWheel' ||
+    encounterPhases[1].rewardAttachment.key !== 'wheel1' ||
+    (state.encounterCount === 3 &&
+      (encounterPhases[2]?.rewardAttachment?.kind !== 'rewardWheel' ||
+        encounterPhases[2].rewardAttachment.key !== 'wheel2'))
   ) {
     fail(`${room.gameName} cannot materialize ${state.encounterCount} encounters`);
   }
   const rewardWheels: CanonicalRewardWheel[] = encounterPhases.flatMap((phase) => {
-    const descriptor = phase.offerPoint;
-    if (descriptor === undefined) {
+    const descriptor = phase.rewardAttachment;
+    if (descriptor?.kind !== 'rewardWheel') {
       return [];
     }
     const wheel = state.wheels[descriptor.key];
@@ -354,7 +361,7 @@ export function materializeShipCombatState(
       Object.freeze({
         origin: createRewardWheelAddress(biome, occurrence.occurrenceId, descriptor.key),
         wheelKey: descriptor.key,
-        encounterPhaseKey: phase.key,
+        encounterPhaseKey: phase.slotKey,
         producerLifecycleKey: descriptor.reward.producerLifecycleKey,
         storeKey: wheel.storeKey,
         offers: Object.freeze(offers),
@@ -377,7 +384,6 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
   );
   return Object.freeze({
     lifecycleProfileKey: 'ShipCombatRoom',
-    encounterProfileKey: 'ShipCombat',
     encounterPhases: ship.encounterPhases,
     rewardWheels: ship.rewardWheels,
   });
@@ -517,14 +523,14 @@ function requireLifecycleSelection(
   catalog: Catalog,
   room: RoomDeclaration,
   leaf: MaterializedRoomLeaf,
-  encounterProfileKey: string,
+  encounterEnvelopeKey: string,
 ): void {
   const profile = catalog.roomLifecycleProfiles.byKey[leaf.lifecycleProfileKey];
   if (profile === undefined) {
     fail(`${room.gameName} selected unknown lifecycle ${leaf.lifecycleProfileKey}`);
   }
-  if (!profile.encounterProfileKeys.includes(encounterProfileKey)) {
-    fail(`${room.gameName} encounter ${encounterProfileKey} is incompatible with ${profile.key}`);
+  if (!profile.encounterEnvelopeKeys.includes(encounterEnvelopeKey)) {
+    fail(`${room.gameName} envelope ${encounterEnvelopeKey} is incompatible with ${profile.key}`);
   }
   const producer = leaf.incomingReward;
   if (producer === undefined) {
@@ -541,18 +547,6 @@ function requireLifecycleSelection(
   }
 }
 
-function encounterPhases(
-  catalog: Catalog,
-  room: RoomDeclaration,
-  encounterProfileKey: string = room.encounterProfileKey,
-) {
-  const profile = catalog.encounterProfiles.byKey[encounterProfileKey];
-  if (profile === undefined) {
-    fail(`${room.gameName} references unknown encounter profile ${encounterProfileKey}`);
-  }
-  return profile.phases;
-}
-
 export function materializeAuthoredRoom(
   context: AuthoredRoomMaterializationContext,
 ): CanonicalAuthoredRoom {
@@ -560,17 +554,25 @@ export function materializeAuthoredRoom(
     fail(`${context.room.gameName} is not an authored room`);
   }
   const leaf = authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
-  const encounterProfileKey = leaf.encounterProfileKey ?? context.room.encounterProfileKey;
   const selectedEncounterPhases =
-    leaf.encounterPhases ?? encounterPhases(context.catalog, context.room, encounterProfileKey);
+    leaf.encounterPhases ??
+    resolveEncounterPhases(
+      context.catalog,
+      context.room,
+      context.occurrence.encounters,
+      leaf.activeEncounterSlotKeys ??
+        alwaysActiveEncounterSlotKeys(context.catalog, context.room, context.room.gameName),
+      context.room.gameName,
+    );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
-  requireLifecycleSelection(context.catalog, context.room, leaf, encounterProfileKey);
+  requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
   return Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
-    encounterProfileKey,
+    encounters: context.occurrence.encounters,
+    encounterEnvelopeKey: context.room.encounterEnvelopeKey,
     encounterPhases: selectedEncounterPhases,
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,

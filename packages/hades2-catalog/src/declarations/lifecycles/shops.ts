@@ -3,10 +3,10 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const shopsRoomLifecycleProfiles = [
   {
     key: 'WorldShopRoom',
-    encounterProfileKeys: ['Shop'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       {
         kind: 'materializeOfferPoint',
         offerPoint: 'shopInventory',

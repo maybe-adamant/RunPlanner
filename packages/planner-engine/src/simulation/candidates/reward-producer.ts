@@ -135,6 +135,11 @@ function repairAssemblyForOwner(
   selected: RewardProducerSource,
   owner: RewardProducerOwnerAddress,
 ): ProgressiveBiomeEvaluationAssembly | undefined {
+  // Incoming/free rewards are produced when their target is generated. The
+  // progressive assembly now retains that exact offer-time boundary without
+  // the target's lifecycle; reopening the raw full prefix here would add
+  // acquisition and downstream reward facts back into a blocked route.
+  if (owner.kind === 'incomingReward') return undefined;
   const blockedAt = candidateBlockedAt(selected.evaluation);
   if (blockedAt === undefined || semanticAddressKey(blockedAt) !== semanticAddressKey(owner)) {
     return undefined;

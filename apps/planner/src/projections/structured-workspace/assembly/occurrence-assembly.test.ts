@@ -91,6 +91,7 @@ function assemble(
   const assembly = assembleWorkspaceOccurrence({
     biome: source.biome,
     catalog,
+    encounterCandidateAt: () => undefined,
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     markerDestinations: markers.emitter,
@@ -411,7 +412,7 @@ describe('structured workspace occurrence assembly', () => {
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');
     expect(Object.isFrozen(ship.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(ship.node.room.roomLocal.wheels)).toBe(true);
-    expect(ship.node.room.roomLocal.encounterCount).toBe(2);
+    expect(ship.node.room.roomLocal.combatPhaseCount).toBe(2);
     expect(
       ship.node.room.roomLocal.wheels.map((wheel) => [
         wheel.key,
@@ -449,7 +450,7 @@ describe('structured workspace occurrence assembly', () => {
           wheel.offers.every((offer) => Object.isFrozen(offer) && Object.isFrozen(offer.control)),
       ),
     ).toBe(true);
-    expect(ship.occurrenceInteractionRequirements[0]?.kind).toBe('shipCombat');
+    expect(ship.occurrenceInteractionRequirements[0]?.kind).toBe('shipCombatPhaseCount');
   });
 
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {

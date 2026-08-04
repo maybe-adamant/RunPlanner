@@ -3,39 +3,10 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const standardRoomLifecycleProfiles = [
   {
     key: 'StandardRewardRoom',
-    encounterProfileKeys: [
-      'F_Opening',
-      'SingleCountedCombat',
-      'F_Story01',
-      'G_Story01',
-      'HealthRestore',
-      'F_MiniBoss01',
-      'F_MiniBoss02',
-      'F_MiniBoss03',
-      'G_MiniBoss01',
-      'G_MiniBoss02',
-      'G_MiniBoss03',
-      'H_MiniBoss01',
-      'H_MiniBoss02',
-      'H_Bridge01',
-      'I_Story01',
-      'I_MiniBoss01',
-      'I_MiniBoss02',
-      'N_PreHub',
-      'O_MiniBoss01',
-      'O_MiniBoss02',
-      'O_Story01',
-      'P_Story01',
-      'P_MiniBoss01',
-      'P_MiniBoss02',
-      'Q_MiniBoss02',
-      'Q_MiniBoss05',
-      'Q_MiniBoss03',
-      'Q_MiniBoss04',
-    ],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'advanceProducer',
@@ -72,10 +43,10 @@ export const standardRoomLifecycleProfiles = [
   },
   {
     key: 'RewardlessCombatRoom',
-    encounterProfileKeys: ['SingleCountedCombat'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'startEncounter',
@@ -95,15 +66,49 @@ export const standardRoomLifecycleProfiles = [
       { kind: 'exitRoom', effects: ['recordExit'] },
     ],
   },
+  {
+    key: 'PCombatRoom',
+    encounterEnvelopeKeys: ['PEncounter'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'advanceProducer',
+        point: 'beforeCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'runEncounterSequence',
+        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'afterCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'roomRewardPickup',
+        effects: ['recordProducerPoint'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
 ] as const satisfies readonly RawRoomLifecycleProfileDeclaration[];
 
 export const specializedRewardRoomLifecycleProfiles = [
   {
     key: 'RewardlessRoom',
-    encounterProfileKeys: ['NoEncounter'],
+    encounterEnvelopeKeys: ['EmptyEncounter'],
     producer: { kind: 'none' },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
@@ -115,10 +120,10 @@ export const specializedRewardRoomLifecycleProfiles = [
   },
   {
     key: 'DevotionRoom',
-    encounterProfileKeys: ['O_Devotion01'],
+    encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
         kind: 'advanceProducer',

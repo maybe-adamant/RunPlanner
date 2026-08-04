@@ -4,6 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import { createDefaultRoomState } from '../../../src/authored-project/room-state/defaults';
+import {
+  createDefaultRoomEncounterState,
+  reconcileRoomEncounterState,
+} from '../../../src/authored-project/room-state/encounters';
 import { reconcileReplacementRoomState } from '../../../src/authored-project/room-state/replacement';
 
 function room(gameName: string): RoomDeclaration {
@@ -13,6 +17,39 @@ function room(gameName: string): RoomDeclaration {
 }
 
 describe('authored room-state replacement', () => {
+  it('retains exact compatible encounter leaves and resets only an incompatible stable slot', () => {
+    const previousRoom = room('P_Combat03');
+    const previousDefault = createDefaultRoomEncounterState(catalog, previousRoom);
+    const selected = Object.freeze({
+      encounterKeyByPhase: Object.freeze({
+        ...previousDefault.encounterKeyByPhase,
+        Intro: 'P_Combat03_PreCombat01',
+        Combat: 'GeneratedP_Large',
+      }),
+    });
+
+    expect(
+      reconcileRoomEncounterState(catalog, previousRoom, selected, previousRoom, previousDefault),
+    ).toEqual(selected);
+
+    const replacementRoom = room('P_Combat04');
+    const replacementDefault = createDefaultRoomEncounterState(catalog, replacementRoom);
+    expect(
+      reconcileRoomEncounterState(
+        catalog,
+        previousRoom,
+        selected,
+        replacementRoom,
+        replacementDefault,
+      ),
+    ).toEqual({
+      encounterKeyByPhase: {
+        Intro: 'GeneratedP_PreCombat',
+        Combat: 'GeneratedP_Large',
+      },
+    });
+  });
+
   it('retains an admitted counted offer and resets one outside the replacement declaration', () => {
     const previousRoom = room('F_Combat02');
     const previousState = createDefaultRoomState(catalog, previousRoom, {
@@ -109,7 +146,7 @@ describe('authored room-state replacement', () => {
     ).toEqual(previousState);
   });
 
-  it('uses complete replacement defaults for Shop and Ephyra state', () => {
+  it('uses complete replacement defaults for Shop while retaining declaration-compatible Ephyra children', () => {
     const shopRoom = room('F_Shop01');
     const shopDefault = createDefaultRoomState(catalog, shopRoom, {
       role: 'ordinary',
@@ -145,11 +182,23 @@ describe('authored room-state replacement', () => {
           ...sideDoor1,
           generation: 'generated' as const,
           enteredOrdinal: 1,
+          encounters: Object.freeze({
+            encounterKeyByPhase: Object.freeze({ Encounter: 'GeneratedNSubRoom_Bigger' }),
+          }),
         }),
       }),
     });
     expect(
       reconcileReplacementRoomState(catalog, ephyraRoom, enteredEphyra, ephyraRoom, ephyraDefault),
-    ).toBe(ephyraDefault);
+    ).toMatchObject({
+      kind: 'ephyraCombat',
+      sideRooms: {
+        sideDoor1: {
+          generation: 'generated',
+          enteredOrdinal: 1,
+          encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom_Bigger' } },
+        },
+      },
+    });
   });
 });

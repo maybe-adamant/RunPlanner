@@ -262,14 +262,17 @@ describe('Hub progressive biome evaluation', () => {
     );
     if (retainedBoard?.kind !== 'hub') throw new Error('invalid board lost its Hub decision');
 
-    expect(board.materializedPrefix.frontier).toMatchObject({ kind: 'hubBoard' });
+    expect(board.assessmentPrefix?.frontier).toMatchObject({ kind: 'hubBoard' });
     expect(retainedBoard.board.targets).toHaveLength(9);
-    expect(retainedBoard.visits).toEqual([]);
+    expect(retainedBoard.visits.map((visit) => visit.visitIndex)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(
       board.history.events.filter(
         (event) => event.kind === 'roomCreated' && event.source === 'hubTarget',
       ),
     ).toHaveLength(9);
+    // The authored visit roster stays visible, but the invalid board does not
+    // manufacture any entered Hub traversal or return lifecycle.
+    expect(board.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
     expect(board.rewards.findings).toContainEqual(
       expect.objectContaining({
         code: 'rewardBagEntryUnavailable',
@@ -294,7 +297,7 @@ describe('Hub progressive biome evaluation', () => {
       generation: 'notGenerated',
     });
     const side = progressiveN(sideProject as ReturnType<typeof openHub>);
-    const frontier = side.materializedPrefix.frontier;
+    const frontier = side.assessmentPrefix?.frontier;
 
     expect(frontier).toMatchObject({
       kind: 'hubVisit',
@@ -330,7 +333,7 @@ describe('Hub progressive biome evaluation', () => {
       });
     }
     const progressive = progressiveN(project as ReturnType<typeof openHub>);
-    const frontier = progressive.materializedPrefix.frontier;
+    const frontier = progressive.assessmentPrefix?.frontier;
 
     expect(frontier).toMatchObject({
       kind: 'hubVisit',

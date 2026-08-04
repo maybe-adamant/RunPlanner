@@ -1,34 +1,95 @@
-import type { RawEncounterProfileDeclaration } from '../types';
+import type {
+  RawEncounterDefinitionDeclaration,
+  RawEncounterEnvelopeDeclaration,
+  RawEncounterSetDeclaration,
+} from '../types';
 
-export const sharedEncounterProfiles = [
+const roomReward = {
+  kind: 'countedChoice',
+  storeKeys: ['RunProgress', 'MetaProgress'],
+  eligibleRewardTypes: [],
+  ineligibleRewardTypes: [],
+  producerLifecycleKey: 'RoomReward',
+} as const;
+
+function rewardWheel(key: string) {
+  return {
+    kind: 'rewardWheel' as const,
+    key,
+    reward: roomReward,
+    defaultStoreKey: 'RunProgress',
+    offerKeys: ['offer1', 'offer2'],
+    offerCount: { min: 1, max: 2, defaultValue: 1 },
+    picked: 'exactlyOne' as const,
+  };
+}
+
+export const sharedEncounterEnvelopes = [
+  { key: 'EmptyEncounter', slots: [] },
   {
-    key: 'SingleCountedCombat',
-    phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
+    key: 'SingleEncounter',
+    slots: [{ key: 'Encounter', activation: 'always' }],
   },
   {
-    key: 'NoEncounter',
-    phases: [],
+    key: 'ShipEncounter',
+    slots: [
+      { key: 'Intro', activation: 'always' },
+      {
+        key: 'Combat1',
+        activation: 'always',
+        rewardAttachment: rewardWheel('wheel1'),
+      },
+      {
+        key: 'Combat2',
+        activation: 'templateControlled',
+        activationRequirement: {
+          kind: 'counterRange',
+          axis: 'biomeEncounterDepth',
+          range: { min: 2, max: 5 },
+        },
+        rewardAttachment: rewardWheel('wheel2'),
+      },
+    ],
   },
+  {
+    key: 'PEncounter',
+    slots: [
+      { key: 'Intro', activation: 'always' },
+      { key: 'Combat', activation: 'always' },
+    ],
+  },
+  {
+    key: 'FieldsEncounter',
+    slots: [
+      { key: 'Passive', activation: 'always' },
+      {
+        key: 'Cage01',
+        activation: 'templateControlled',
+        rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage1' },
+      },
+      {
+        key: 'Cage02',
+        activation: 'templateControlled',
+        rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage2' },
+      },
+      {
+        key: 'Cage03',
+        activation: 'templateControlled',
+        rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage3' },
+      },
+    ],
+  },
+] as const satisfies readonly RawEncounterEnvelopeDeclaration[];
+
+export const sharedEncounterDefinitions = [
+  { key: 'Empty', label: 'Empty', kind: 'nonCombat', countsEncounterDepth: false },
   {
     key: 'HealthRestore',
-    phases: [
-      {
-        key: 'HealthRestore',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'HealthRestore',
-      },
-    ],
+    label: 'Health Restore',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
   },
-  {
-    key: 'Shop',
-    phases: [
-      {
-        key: 'Shop',
-        kind: 'nonCombat',
-        countsEncounterDepth: false,
-        baselineEncounterKey: 'Shop',
-      },
-    ],
-  },
-] as const satisfies readonly RawEncounterProfileDeclaration[];
+  { key: 'Shop', label: 'Shop', kind: 'nonCombat', countsEncounterDepth: false },
+] as const satisfies readonly RawEncounterDefinitionDeclaration[];
+
+export const sharedEncounterSets = [] as const satisfies readonly RawEncounterSetDeclaration[];

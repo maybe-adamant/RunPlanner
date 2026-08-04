@@ -61,6 +61,14 @@ function countedBinding(gameName: string): CountedRewardBinding {
   return binding;
 }
 
+function shipWheelBinding(): CountedRewardBinding {
+  const attachment = catalog.encounterEnvelopes.byKey.ShipEncounter?.slots.find(
+    (slot) => slot.key === 'Combat1',
+  )?.rewardAttachment;
+  if (attachment?.kind !== 'rewardWheel') throw new Error('Ship Combat1 wheel is missing');
+  return attachment.reward;
+}
+
 function catalogWithRoom(room: RoomDeclaration): Catalog {
   return Object.freeze({
     ...catalog,
@@ -354,12 +362,14 @@ describe('counted reward authoring domains', () => {
 
     expect(
       resolveCountedRewardTypeDomain(authoredMetaCatalog, project, owner, binding, {
+        acquisitionHorizon: 'ownEnteredLifecycle',
         resolvedStoreKey: 'RunProgress',
         evaluateOffer: () => ({ supported: true, findings: [] }),
       }),
     ).toContain('MaxHealthDrop');
     expect(() =>
       resolveCountedRewardTypeDomain(authoredMetaCatalog, project, owner, binding, {
+        acquisitionHorizon: 'generationOnly',
         evaluateOffer: () => ({ supported: true, findings: [] }),
       }),
     ).toThrow('evaluated reward producer');
@@ -499,7 +509,7 @@ describe('counted reward authoring domains', () => {
         catalog,
         simulateProjectAssembly(catalog, surface),
         createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
-        catalog.encounterProfiles.byKey.ShipCombat!.phases[1]!.offerPoint!.reward,
+        shipWheelBinding(),
       ),
     ).toContain('MaxHealthDrop');
 

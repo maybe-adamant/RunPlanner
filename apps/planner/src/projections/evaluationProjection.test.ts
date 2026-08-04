@@ -47,6 +47,8 @@ const allFindingCodes = [
   'targetMissing',
   'targetRoomSupportEmpty',
   'targetRoomUnavailable',
+  'encounterUnavailable',
+  'encounterSlotActivationUnavailable',
   'sideRoomGenerationUnavailable',
   'baseRewardStoreUnavailable',
   'rewardAcquisitionUnavailable',
@@ -72,7 +74,7 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 
 describe('evaluation presentation', () => {
   it('provides explicit player copy for every Phase 3 finding code', () => {
-    expect(allFindingCodes).toHaveLength(18);
+    expect(allFindingCodes).toHaveLength(20);
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);
@@ -135,6 +137,16 @@ describe('evaluation presentation', () => {
         'targetRoomUnavailable',
         'Room cannot appear here',
         'The selected room is not among the rooms that can be offered for this door.',
+      ],
+      [
+        'encounterUnavailable',
+        'Encounter cannot occur here',
+        'The selected encounter is unavailable when this room begins.',
+      ],
+      [
+        'encounterSlotActivationUnavailable',
+        'Encounter phase is not active',
+        'The selected room setup does not activate this encounter phase.',
       ],
       [
         'sideRoomGenerationUnavailable',

@@ -116,12 +116,12 @@ function shipInteractionRequirement(): WorkspaceOccurrenceInteractionRequirement
     createOccurrenceId('duplicate-ship-interaction'),
   );
   return Object.freeze({
-    encounterCount: 2,
-    encounterCountChoices: Object.freeze([
+    combatPhaseCount: 2,
+    combatPhaseCountChoices: Object.freeze([
       Object.freeze({ label: 'Intro + 1 combat', value: 2 as const }),
       Object.freeze({ label: 'Intro + 2 combats', value: 3 as const }),
     ]),
-    kind: 'shipCombat' as const,
+    kind: 'shipCombatPhaseCount' as const,
     owner,
     wheels: Object.freeze([]),
   });
@@ -276,7 +276,7 @@ describe('structured workspace assembly products', () => {
 
   it('rejects duplicate occurrence interaction packages by kind and semantic owner', () => {
     const requirement = shipInteractionRequirement();
-    const identity = `shipCombat:${semanticAddressKey(requirement.owner)}`;
+    const identity = `shipCombatPhaseCount:${semanticAddressKey(requirement.owner)}`;
     const requirements = new Map<string, WorkspaceOccurrenceInteractionRequirement>();
 
     appendUniqueOccurrenceInteractionRequirements(requirements, [requirement]);

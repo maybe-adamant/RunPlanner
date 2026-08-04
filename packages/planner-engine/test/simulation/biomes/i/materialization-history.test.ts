@@ -268,6 +268,7 @@ function carriedHHistory(): CanonicalBiomeHistory {
   const ledgers: HistoryLedgers = Object.freeze({
     roomCreations: Object.freeze([]),
     roomAppearances: Object.freeze([]),
+    encounterRecords: Object.freeze([]),
     encounterStarts: Object.freeze([]),
     encounterCompletions: Object.freeze([]),
     enteredRewardStores: Object.freeze([]),
@@ -497,6 +498,7 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(pickedNonGoalEvents.map((event) => event.kind)).toEqual([
       'roomCreated',
       'roomPrepared',
+      'encounterRecorded',
       'roomEntered',
       'encounterStarted',
       'encounterDepthAdvanced',
@@ -664,6 +666,7 @@ describe('canonical I Clockwork materialization and history', () => {
     ).toEqual([
       'roomCreated',
       'roomPrepared',
+      'encounterRecorded',
       'roomEntered',
       'clockworkNonGoalRewardSpawned',
       'producerRoleAdvanced',

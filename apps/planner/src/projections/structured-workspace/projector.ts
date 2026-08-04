@@ -1,7 +1,12 @@
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type EncounterPhaseAddress,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  type EncounterPhaseCandidateSupport,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -49,6 +54,9 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
+  encounterCandidateAt: (
+    phase: EncounterPhaseAddress,
+  ) => EncounterPhaseCandidateSupport | undefined,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -78,7 +86,7 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
+  const semantic = assembleWorkspaceBiomeSemantics(catalog, source, encounterCandidateAt);
   const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
@@ -141,7 +149,9 @@ export function createStructuredWorkspaceProjection(
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
-          const projected = projectBiome(catalog, biomeSource);
+          const projected = projectBiome(catalog, biomeSource, (phase) =>
+            encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
+          );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueOccurrenceInteractionRequirements(
             occurrenceInteractionRequirements,

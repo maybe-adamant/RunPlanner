@@ -4,6 +4,8 @@ import type {
   LocalChildDescriptor,
   RoomDeclaration,
 } from '../../catalog-schema';
+import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounters';
+import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
 import {
   createHubDecisionAddress,
   createHubOpenSetAddress,
@@ -68,10 +70,14 @@ function requireOccurrence(
   return occurrence;
 }
 
-function encounterPhases(catalog: Catalog, room: RoomDeclaration) {
-  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (profile === undefined) fail(`${room.gameName} references unknown encounter profile`);
-  return profile.phases;
+function fixedEncounterPhases(catalog: Catalog, room: RoomDeclaration) {
+  return resolveEncounterPhases(
+    catalog,
+    room,
+    createDefaultRoomEncounterState(catalog, room, `${room.gameName}.encounters`),
+    alwaysActiveEncounterSlotKeys(catalog, room, room.gameName),
+    room.gameName,
+  );
 }
 
 function requireLifecycle(
@@ -83,7 +89,7 @@ function requireLifecycle(
   const lifecycle = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   if (
     lifecycle === undefined ||
-    !lifecycle.encounterProfileKeys.includes(room.encounterProfileKey)
+    !lifecycle.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey)
   ) {
     fail(`${room.gameName} cannot use lifecycle ${lifecycleProfileKey}`);
   }
@@ -117,8 +123,8 @@ function materializeHubRoom(
     kind: 'hub',
     origin: createHubRoomAddress(biome, descriptor.hubKey),
     gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
-    encounterPhases: encounterPhases(catalog, room),
+    encounterEnvelopeKey: room.encounterEnvelopeKey,
+    encounterPhases: fixedEncounterPhases(catalog, room),
     lifecycleProfileKey: 'EphyraHubRoom',
     counterEffects: room.counters,
     entered: true,
@@ -231,8 +237,15 @@ function materializeLocalSlots(
         availabilityRank: slot.availabilityRank,
         generation: authored.generation,
         enteredOrdinal: authored.enteredOrdinal,
-        encounterProfileKey: sideRoom.encounterProfileKey,
-        encounterPhases: encounterPhases(catalog, sideRoom),
+        encounters: authored.encounters,
+        encounterEnvelopeKey: sideRoom.encounterEnvelopeKey,
+        encounterPhases: resolveEncounterPhases(
+          catalog,
+          sideRoom,
+          authored.encounters,
+          alwaysActiveEncounterSlotKeys(catalog, sideRoom, sideRoom.gameName),
+          sideRoom.gameName,
+        ),
         lifecycleProfileKey: 'EphyraSideRoom',
         counterEffects: sideRoom.counters,
         entered: authored.enteredOrdinal !== null,
