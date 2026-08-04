@@ -321,8 +321,9 @@ devotionSpacing -> lastDevotionDepth = current runDepthCache
 ```
 
 Encounter selection performed while setting up Devotion remains part of the
-resolved offer and encounter profile. Presentation-only global encounter
-records have no supported downstream consumer and are not projected.
+resolved offer and the room's concrete encounter composition. Presentation-only
+global encounter records have no supported downstream consumer and are not
+projected.
 
 ## Concrete History Projection Profiles
 

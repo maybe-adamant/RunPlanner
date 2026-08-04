@@ -7,8 +7,8 @@ picker, physical-door, cap, force, offer/acquisition, generated-store,
 generated-decision, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
-Exact room-local exits, requirements, caps, labels, encounter-profile keys,
-and reward bindings appear explicitly in catalog declarations. This document
+Exact room-local exits, requirements, caps, labels, Encounter Envelope/slot
+bindings, and reward bindings appear explicitly in catalog declarations. This document
 owns how those facts form the F biome and how vanilla behavior projects into
 the planner.
 
@@ -85,6 +85,22 @@ counter's mutation point.
 Every opening forces RunProgress and excludes `Devotion`, `RoomMoneyDrop`,
 `MaxHealthDrop`, and `MaxManaDrop`.
 
+### Concrete encounter selection
+
+Every F room binds its concrete encounter slots explicitly. Pool-backed ordinary
+combat phases retain their exact selected definition; fixed and empty slots do
+not acquire a redundant selection. `FEncountersDefault` additionally supports
+`ArtemisCombatF`, `ArachneCombatF`, and `NemesisCombatF` beside `GeneratedF`.
+The fixed opening and `F_Combat01` use their own ordinary bindings and do not
+expose those field-NPC candidates.
+
+The three NPC combat definitions use the same exact-key requirements and
+history machinery as ordinary definitions. Their raw source multiplicity,
+external progression predicates, and deferred random/event behavior remain in
+[`ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md`](../audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md).
+The normalized F surface deliberately excludes NPC interactions, reward
+outcomes, random events, Shop appearances, and enemy-wave authoring.
+
 ## Physical Exits
 
 - every F opening has one exit;
@@ -99,8 +115,9 @@ therefore expose at most one free preboss reward.
 ## Room Families and Caps
 
 - 22 ordinary combat declarations use the `StandardCombat` room template and
-  shared `SingleCountedCombat` encounter profile;
-- three miniboss declarations use `Miniboss` with concrete encounter profiles;
+  a shared single-slot Encounter Envelope with declaration-bound sets;
+- three miniboss declarations use `Miniboss` with direct fixed encounter
+  definitions;
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;
 - one Midshop uses `Shop` and `WorldShop`;

@@ -3,7 +3,7 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Mount Olympus Summit (`Q`) under
-the progressed-save, NPC-free baseline. The shared cross-biome contract lives
+the progressed-save static baseline. The shared cross-biome contract lives
 in [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); Q
 declarations own its staged room pools and exact physical exits.
 
@@ -42,9 +42,10 @@ target unavailable retains that target until explicit capacity reconciliation;
 the repair command owns removal and downstream cleanup.
 
 The planner represents possible and forced support, declaration-defined
-history effects, and physical door order. It omits weighted RNG, unmodeled
-combat composition, NPC variants, natural Chaos, anomalies, and optional
-player interactions from the canonical baseline.
+history effects, concrete encounter selection, and physical door order. It
+omits weighted RNG, unmodeled combat composition, NPC event/interactions,
+natural Chaos, anomalies, and optional player interactions from the canonical
+baseline.
 
 ## Exact stage body
 
@@ -70,9 +71,11 @@ physical normal exit. Its width-one batch has only the entry-time `Q_WorldShop`
 occurrence and no synthetic free reward. Selecting that occurrence closes the
 editable Q body and starts the derived `Q_Boss01` completion declaration.
 
-The canonical baseline retains the progressed-save, NPC-free summit maps,
-stage pools, physical door order, Typhon miniboss rewards, Shop lifecycle, and
-completion counters. Weighted room-set replay, external profile conditions,
-natural Chaos, optional actions, combat-wave details, and persistent encounter
-variants remain deliberately outside the product until they have explicit
-catalog and authored-state ownership.
+The canonical baseline retains the progressed-save summit maps, stage pools,
+physical door order, Typhon miniboss rewards, Shop lifecycle, and completion
+counters. Q binds exact concrete encounter definitions for its rooms, but no
+Q Encounter Set contains a supported field-NPC member. Weighted room-set
+replay, external profile conditions, natural Chaos, optional actions,
+combat-wave details, and NPC event or interaction variants remain deliberately
+outside the product until they have explicit catalog and authored-state
+ownership.

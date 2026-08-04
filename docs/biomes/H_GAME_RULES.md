@@ -3,7 +3,7 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Mourning Fields (`H`) under the
-progressed-save, NPC-free baseline. Shared generation and reward rules are in
+progressed-save static baseline with supported Nemesis combat. Shared generation and reward rules are in
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); the H room
 and layout declarations own concrete candidates, exits, counters, and caps.
 
@@ -96,16 +96,33 @@ resets are applied only after the selected Preboss has entered.
 
 ### Baseline boundaries
 
-The canonical H model preserves the progressed-save, NPC-free Fields route:
+The canonical H model preserves the progressed-save Fields route:
 physical doors, cage bounds, forced windows, normal reward support, the bridge,
 the WorldShop, and completion counters. It does not model weighted room-set
-replay, optional Fields rewards, natural Chaos, NPC replacements, combat-wave
-composition, rerolls, or profile-dependent variants. Those are explicit
+replay, optional Fields rewards, natural Chaos, NPC random/interaction or
+Shop/Bridge behavior, combat-wave composition, rerolls, or profile-dependent
+variants. Those are explicit
 future modeling inputs, not hidden eligibility predicates.
+
+### Concrete encounter selection
+
+Fields rooms use one complete `FieldsEncounter` envelope: `Passive`,
+`Cage01`, `Cage02`, and `Cage03`. The selected Fields outcome structurally
+activates a cage prefix while retaining inactive selections dormantly. Cage
+rewards remain attached to their exact cage slots independently of the selected
+encounter definition's depth effect.
+
+`NemesisCombatH` is a member of `HEncountersDefault` only. It can therefore
+resolve on an active cage, never on either Passive set, an inactive cage, the
+bridge, Shop, or another non-cage room. Its exact-key requirements participate
+in the same preparation history as every other concrete definition. Gold wager,
+random-event, interaction, Shop, and Bridge behavior remain outside the
+planner's modeled surface.
 
 ## Product boundary
 
-The canonical product owns H catalog facts, authored Fields state, semantic
-commands, validation, candidates, and workspace projection. Persistent NPCs,
-natural Chaos, anomaly detours, and optional player systems remain outside the
-baseline until they are modeled explicitly.
+The canonical product owns H catalog facts, authored Fields state, concrete
+encounter selection, semantic commands, validation, candidates, and workspace
+projection. NPC events and interactions beyond selected Nemesis combat, natural
+Chaos, anomaly detours, and optional player systems remain outside the baseline
+until they are modeled explicitly.

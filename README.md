@@ -137,6 +137,7 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
+  [encounter selection and composition findings](docs/audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md),
   [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md),
   [user-facing vocabulary audit](docs/audits/USER_FACING_VOCABULARY_AUDIT.md),
   and

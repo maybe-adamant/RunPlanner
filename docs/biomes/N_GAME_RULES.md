@@ -3,8 +3,8 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Ephyra (`N`) under the
-progressed-save, NPC-free baseline. It distinguishes the game's literal route
-mechanism from the implemented schema-10 planner normalization. Shared
+progressed-save static baseline with supported Artemis and Heracles combat. It distinguishes the game's literal route
+mechanism from the implemented schema-12 planner normalization. Shared
 occurrence, reward, and completion rules are
 defined by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). N
@@ -168,20 +168,37 @@ rank, and one parent occurrence remains the authority across side-room
 restores. Side visits are not Hub visits and must not become a second global
 topology or a graph-canvas edge set.
 
+### Concrete encounter selection
+
+Every N room and local child binds its concrete encounter slots explicitly.
+Pool-backed main combat phases use `NEncountersDefault`,
+`NEncountersSmaller`, or `NEncountersBigger`, each of which supports
+`ArtemisCombatN` and `HeraclesCombatN` beside its ordinary definition. Opening,
+PreHub, Story, miniboss, Shop, Preboss, and completion bindings remain fixed
+or empty and are not NPC candidate surfaces.
+
+Ephyra side rooms retain parent-local encounter selections on their exact
+`LocalChildAddress`. Their SubRoom/Light sets and heavy fixed binding contain
+only their normalized ordinary or `Empty` identities; entering a generated
+side room activates its room-local encounter selection without promoting it to
+global topology. Artemis and Heracles requirements use exact definition
+history, not a Hub-specific NPC ledger.
+
 ### Canonical baseline and exclusions
 
-N preserves the progressed-save, neutral-boss, NPC-free board behavior,
+N preserves the progressed-save, neutral-boss board behavior,
 including the opening and PreHub producers, fixed Hub slots, full-board reward
 lookup, pylon rules, side-room pressure, and WorldShop lifecycle. It excludes
-the commented midshop assignment, persistent encounter replacements,
-save/profile force predicates, natural Chaos, optional actions, and automatic
-boss-drop state until they have modeled inputs and owners.
+the commented midshop assignment, NPC random/interaction or Shop/Bridge
+behavior, save/profile force predicates, natural Chaos, optional actions, and
+automatic boss-drop state until they have modeled inputs and owners.
 
 ## Product boundary
 
-The product owns N catalog normalization, authored Hub decisions, semantic
-commands, validation, candidates, workspace projection, and React editing.
-The board is not a graph-canvas authority and no UI position or rendered visit
-index is persisted domain state. Weighted RNG, unmodeled combat composition,
-NPC variants, natural Chaos, anomalies, and optional player interactions
-remain outside the baseline.
+The product owns N catalog normalization, authored Hub decisions, concrete
+encounter selection, semantic commands, validation, candidates, workspace
+projection, and React editing. The board is not a graph-canvas authority and
+no UI position or rendered visit index is persisted domain state. Weighted RNG,
+unmodeled combat composition, NPC events/interactions beyond selected combat,
+natural Chaos, anomalies, and optional player interactions remain outside the
+baseline.

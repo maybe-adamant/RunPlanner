@@ -197,6 +197,33 @@ an unavailable evaluator cannot erase authored detail ownership. Dormant
 optional state is retained and becomes editable again if the same occurrence is
 reactivated.
 
+### Room-Local Customize and Encounter Phases
+
+A details-active room exposes `Customize` only when it has at least one
+meaningful active room-local section. For encounter selection, meaningful means
+a set-backed phase with two or more declaration-owned choices; it does not mean
+that two candidates happen to be eligible in the current evaluation. The
+control projects the exact `EncounterPhaseAddress`, selected concrete
+definition, bound candidate interaction, marker, and reset intent. React does
+not inspect a set, evaluate a requirement, or decide whether a phase terminates
+another phase.
+
+A singleton set remains a semantic phase owner with an exact marker and focus
+destination, but it does not produce a one-option picker or no-op reset button.
+If its retained selection has a phase-owned finding, the containing Customize
+surface shows it as read-only diagnostic information. Empty placeholder
+sections are not rendered merely because a room has potential detail state.
+
+An active invalid phase remains visible and correctable even when an upstream
+evaluation prefix is blocked. Conversely, a structurally dormant phase retains
+its authored selection without a control, candidate, finding, history, or NPC
+row. This is an activation rule, not a validity-based visibility rule.
+
+The route NPC index is read-only. It groups resolved standard NPC definitions
+by declaration-owned `npcPresentationKey` and navigates to the exact phase in
+its containing inspector. The grouping never selects candidates, defines
+history, or creates an NPC-specific authoring path.
+
 ## Structured Workspace Presentation
 
 The primary editor presents a route rail, one shared biome-structure region, and

@@ -20,6 +20,23 @@ authority use one biome layout, exit and Hub decisions, normal-door batches,
 and declaration-derived completion. Do not reintroduce a historical name into
 production merely because it appears in this ledger.
 
+## Schema 12 Encounter-Composition Supersession
+
+The rows below also preserve the encounter-profile and NPC-free terminology
+that was accurate before concrete encounter authoring. Schema 12 supersedes
+that live contract: every Room Declaration now binds an Encounter Envelope and
+exact fixed or set-backed slots; pool-backed room instances persist exact
+definition selections; and supported field-NPC combat definitions resolve by
+the ordinary lifecycle and exact-key history path. `EncounterProfile`, profile
+baselines, and NPC-specific history or candidate machinery are not current
+production authorities.
+
+This supersession does not port external progression state or every NPC system.
+It covers the static progressed, non-bounty combat projection only. NPC random,
+Shop, Bridge, interaction, wager, and enemy-composition paths remain deferred
+or excluded as recorded by the concrete biome rules and encounter audit. Older
+`deferred` rows remain migration evidence, not live feature status.
+
 ## Status Vocabulary
 
 `ready`
@@ -327,22 +344,22 @@ uses its Hub editor and canonical evaluator; O and P use the shared linear
 editor and evaluator. Q uses the same linear boundary with
 declaration-controlled stages and closes the active Surface route.
 
-The following remaining dispositions are deliberate and exhaustive at this
+The following current dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:
 
-- **Simplified:** simulation proves possibility rather than probability; the
-  catalog uses a progressed-save, neutral-difficulty, NPC-free baseline; combat
-  encounter variants collapse only when they have no modeled topology,
-  counter, reward, or history distinction.
-- **Deferred:** persistent NPC entities, Chaos and other structural detours,
-  optional interactions, concrete boon/trait identities, affordability, and
-  the remaining P/Q/O history/editor consumers remain additive future work.
+- **Simplified:** simulation proves possibility rather than probability. The
+  catalog uses a fully progressed, neutral-difficulty, non-bounty static
+  projection; raw encounter weights collapse to unique support where they do
+  not affect later state.
+- **Deferred:** natural Chaos and other structural detours, NPC random/Shop/
+  Bridge/interactions/wagers, enemy composition, optional interactions,
+  concrete boon/trait identities, and affordability remain additive work.
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
-- **Dormant:** P/Q/O have complete declarations but no active product loop.
-  N is active as the first Surface biome; later Surface configuration remains
-  blocked at O so route prefixes stay contiguous.
+- **Active:** F through Q each have catalog, authored, simulation, candidate,
+  workspace, and editor product loops. Supported field-NPC combat is ordinary
+  exact-definition selection; no biome is kept dormant for that feature.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.

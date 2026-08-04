@@ -3,7 +3,7 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Mount Olympus (`P`) under the
-progressed-save, NPC-free baseline. Shared picker, door, cap, reward,
+progressed-save static baseline with supported Heracles, Icarus, and Athena combat. Shared picker, door, cap, reward,
 occurrence, and completion rules are defined in
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). Concrete
 declarations are the authority for the supported P room set.
@@ -84,17 +84,33 @@ their own individual store. A P Preboss free offer is always resolved through
 its forced RunProgress binding, even when the source entered through a
 MetaProgress batch; the first Preboss occurrence is the entry-time WorldShop.
 
-The supported baseline includes the progressed-save, NPC-free Olympus map
+The supported baseline includes the progressed-save Olympus map
 set, physical indoor/outdoor doors, reward producers, force pressure, and the
 fixed boss/postboss completion transition. Persistent NPC composition,
-profile-gated variants, natural Chaos, weighted RNG replay, combat-wave
-details, rerolls, and optional interactions remain excluded until modeled
-explicitly.
+NPC events/interactions beyond selected combat, profile-gated variants, natural
+Chaos, weighted RNG replay, combat-wave details, rerolls, and optional
+interactions remain excluded until modeled explicitly.
+
+### Concrete encounter selection
+
+Ordinary P room-local composition has an `Intro` slot and a `Combat` slot.
+`HeraclesCombatP` is selectable only from the declaration-bound first-position
+support and, when valid, counts for encounter depth and terminates the
+remaining Combat suffix. The trimmed Combat selection remains dormant and
+returns unchanged if the Intro selection changes.
+
+`IcarusCombatP` and `AthenaCombatP` are Combat-slot definitions. Their normal
+requirements retain the source indoor/outdoor and exact-history distinctions;
+Icarus is therefore eligible only on its supported Outdoor Combat surface.
+These definitions replace neither P Intro nor room reward ownership. All
+requirements operate on exact concrete definition keys, not an NPC-family
+ledger.
 
 ## Product boundary
 
 The supported product includes catalog normalization, authored topology,
-semantic commands, validation, candidates, workspace projection, and React
-editing for this envelope. NPC encounters, natural Chaos, anomaly detours,
-and optional player interactions remain outside the canonical P baseline until
-they acquire explicit modeled inputs and ownership.
+concrete encounter selection, semantic commands, validation, candidates,
+workspace projection, and React editing for this envelope. NPC events and
+interactions beyond selected combat, natural Chaos, anomaly detours, and
+optional player interactions remain outside the canonical P baseline until they
+acquire explicit modeled inputs and ownership.
