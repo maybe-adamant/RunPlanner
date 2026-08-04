@@ -73,7 +73,48 @@ describe('encounter envelope catalog', () => {
       ],
     });
     expect(catalog.encounterSets.byKey.NEncountersSubRoomHeavy).toBeUndefined();
-    expect(catalog.encounterDefinitions.byKey.ArtemisCombatF).toBeUndefined();
+    expect(catalog.encounterSets.byKey.FEncountersDefault?.encounterDefinitionKeys).toEqual([
+      'GeneratedF',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+    ]);
+    expect(catalog.encounterSets.byKey.GEncountersDefault?.encounterDefinitionKeys).toEqual([
+      'GeneratedG',
+      'ArtemisCombatG',
+      'ArachneCombatG',
+    ]);
+    for (const setKey of ['NEncountersDefault', 'NEncountersSmaller', 'NEncountersBigger']) {
+      expect(catalog.encounterSets.byKey[setKey]?.encounterDefinitionKeys).toContain(
+        'ArtemisCombatN',
+      );
+    }
+    expect(catalog.encounterSets.byKey.NEncountersSubRoom?.encounterDefinitionKeys).not.toContain(
+      'ArtemisCombatN',
+    );
+    expect(catalog.encounterDefinitions.byKey.ArtemisCombatF).toMatchObject({
+      countsEncounterDepth: true,
+      npcPresentationKey: 'Artemis',
+    });
+    expect(catalog.encounterDefinitions.byKey.ArachneCombatF).toMatchObject({
+      countsEncounterDepth: false,
+      npcPresentationKey: 'Arachne',
+    });
+    const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;
+    if (artemisRequirements?.kind !== 'all') {
+      throw new Error('Artemis F requirements are missing');
+    }
+    expect(artemisRequirements.requirements).toContainEqual({
+      kind: 'encounterKeyCount',
+      scope: 'route',
+      encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG', 'ArtemisCombatN'],
+      range: { max: 0 },
+    });
+    expect(artemisRequirements.requirements).toContainEqual({
+      kind: 'previousRoomEncounterKeyCount',
+      encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG', 'ArtemisCombatN'],
+      roomWindow: 6,
+      range: { max: 0 },
+    });
     expect(catalog.encounterDefinitions.byKey.GeneratedP_Large?.requirements).toEqual({
       kind: 'counterRange',
       axis: 'biomeDepthCache',

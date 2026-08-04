@@ -1,4 +1,11 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  arachneEncounterKeys,
+  arachneIncomingRewardExclusions,
+  artemisEncounterKeys,
+  artemisIncomingRewardExclusions,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 export const fEncounterDefinitions = [
   {
@@ -8,6 +15,64 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: true,
   },
   { key: 'GeneratedF', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'ArtemisCombatF',
+    label: 'Artemis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Artemis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: artemisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: artemisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
+    key: 'ArachneCombatF',
+    label: 'Arachne cocoon',
+    kind: 'combat',
+    countsEncounterDepth: false,
+    npcPresentationKey: 'Arachne',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4, max: 8 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: arachneIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'biome',
+          encounterKeys: ['ArachneCombatF'],
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: arachneEncounterKeys,
+          roomWindow: 5,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
   {
     key: 'Story_Arachne_01',
     label: 'Arachne story',
@@ -44,7 +109,7 @@ export const fEncounterDefinitions = [
 export const fEncounterSets = [
   {
     key: 'FEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedF'],
+    encounterDefinitionKeys: ['GeneratedF', 'ArtemisCombatF', 'ArachneCombatF'],
     defaultEncounterDefinitionKey: 'GeneratedF',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];
