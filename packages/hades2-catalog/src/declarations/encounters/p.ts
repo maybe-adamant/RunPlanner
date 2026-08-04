@@ -1,4 +1,12 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  athenaEncounterKeys,
+  fieldNpcIncomingRewardExclusions,
+  heraclesEncounterKeys,
+  heraclesIncomingRewardExclusions,
+  icarusEncounterKeys,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 function nonCountingCombat(key: string, label: string) {
   return { key, label, kind: 'combat' as const, countsEncounterDepth: false };
@@ -88,6 +96,101 @@ export const pEncounterDefinitions = [
     requirements: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 9 } },
   },
   {
+    key: 'HeraclesCombatP',
+    label: 'Heracles combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    sequenceEffect: { kind: 'terminateSuffix' },
+    npcPresentationKey: 'Heracles',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'currentRoomStructuralTagsInclude', tags: ['Indoor'] },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: heraclesIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: heraclesEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: heraclesEncounterKeys,
+          roomWindow: 20,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
+    key: 'IcarusCombatP',
+    label: 'Icarus combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Icarus',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 3 } },
+        { kind: 'currentRoomStructuralTagsInclude', tags: ['Outdoor'] },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: fieldNpcIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: icarusEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
+    key: 'AthenaCombatP',
+    label: 'Athena combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Athena',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: fieldNpcIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: athenaEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
     key: 'Story_Dionysus_01',
     label: 'Dionysus story',
     kind: 'story',
@@ -138,13 +241,14 @@ export const pEncounterSets = [
   },
   {
     key: 'PEncountersIntros',
-    encounterDefinitionKeys: ['GeneratedP_PreCombat'],
+    encounterDefinitionKeys: ['GeneratedP_PreCombat', 'HeraclesCombatP'],
     defaultEncounterDefinitionKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat01IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat01_PreCombat01',
       'P_Combat01_PreCombat02',
       'P_Combat01_PreCombat03',
@@ -156,6 +260,7 @@ export const pEncounterSets = [
     key: 'PCombat02IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat02_PreCombat01',
       'P_Combat02_PreCombat02',
       'P_Combat02_PreCombat03',
@@ -166,6 +271,7 @@ export const pEncounterSets = [
     key: 'PCombat03IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat03_PreCombat01',
       'P_Combat03_PreCombat02',
       'P_Combat03_PreCombat03',
@@ -176,6 +282,7 @@ export const pEncounterSets = [
     key: 'PCombat04IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat04_PreCombat01',
       'P_Combat04_PreCombat02',
       'P_Combat04_PreCombat03',
@@ -186,6 +293,7 @@ export const pEncounterSets = [
     key: 'PCombat05IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat05_PreCombat01',
       'P_Combat05_PreCombat02',
       'P_Combat05_PreCombat03',
@@ -196,6 +304,7 @@ export const pEncounterSets = [
     key: 'PCombat06IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat06_PreCombat01',
       'P_Combat06_PreCombat02',
       'P_Combat06_PreCombat03',
@@ -207,6 +316,7 @@ export const pEncounterSets = [
     key: 'PCombat07IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat07_PreCombat01',
       'P_Combat07_PreCombat02',
       'P_Combat07_PreCombat03',
@@ -217,6 +327,7 @@ export const pEncounterSets = [
     key: 'PCombat08IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat08_PreCombat01',
       'P_Combat08_PreCombat02',
       'P_Combat08_PreCombat03',
@@ -227,6 +338,7 @@ export const pEncounterSets = [
     key: 'PCombat09IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat09_PreCombat01',
       'P_Combat09_PreCombat02',
       'P_Combat09_PreCombat03',
@@ -237,6 +349,7 @@ export const pEncounterSets = [
     key: 'PCombat10IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat10_PreCombat01',
       'P_Combat10_PreCombat02',
       'P_Combat10_PreCombat03',
@@ -247,6 +360,7 @@ export const pEncounterSets = [
     key: 'PCombat11IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat11_PreCombat01',
       'P_Combat11_PreCombat02',
       'P_Combat11_PreCombat03',
@@ -258,6 +372,7 @@ export const pEncounterSets = [
     key: 'PCombat12IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat12_PreCombat01',
       'P_Combat12_PreCombat02',
       'P_Combat12_PreCombat03',
@@ -268,6 +383,7 @@ export const pEncounterSets = [
     key: 'PCombat13IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat13_PreCombat01',
       'P_Combat13_PreCombat02',
       'P_Combat13_PreCombat03',
@@ -278,6 +394,7 @@ export const pEncounterSets = [
     key: 'PCombat14IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat14_PreCombat01',
       'P_Combat14_PreCombat02',
       'P_Combat14_PreCombat03',
@@ -288,6 +405,7 @@ export const pEncounterSets = [
     key: 'PCombat15IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat15_PreCombat01',
       'P_Combat15_PreCombat02',
       'P_Combat15_PreCombat03',
@@ -299,6 +417,7 @@ export const pEncounterSets = [
     key: 'PCombat16IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'HeraclesCombatP',
       'P_Combat16_PreCombat01',
       'P_Combat16_PreCombat02',
       'P_Combat16_PreCombat03',
@@ -307,7 +426,7 @@ export const pEncounterSets = [
   },
   {
     key: 'PEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large'],
+    encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large', 'AthenaCombatP', 'IcarusCombatP'],
     defaultEncounterDefinitionKey: 'GeneratedP',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

@@ -572,7 +572,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('retains an activation-invalid Ship phase for diagnosis without an authorable encounter choice', async () => {
+  it('retains an activation-invalid multi-choice Ship phase as an unavailable encounter selector', async () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       encounterCount: 3,
@@ -616,18 +616,24 @@ describe('OccurrenceWorkbench', () => {
       expect(count.options[0]?.disabled).toBe(false);
       expect(count.options[1]?.disabled).toBe(true);
     });
-    expect(phase.dataset.readOnly).toBe('true');
-    expect(within(phase).getByText('Encounter: Ship combat')).toBeTruthy();
-    expect(phase.querySelector('[data-semantic-owner]')?.getAttribute('data-semantic-owner')).toBe(
-      semanticAddressKey(phaseAddress),
-    );
-    expect(within(phase).queryByRole('combobox', { name: /^Encounter/ })).toBeNull();
+    expect(phase.dataset.readOnly).toBeUndefined();
+    const encounter = within(phase).getByRole('combobox', { name: /^Encounter/ });
+    await view.user.click(encounter);
+    await waitFor(() => {
+      expect(encounter.getAttribute('data-candidate-support')).toBe('impossible');
+      expect(
+        Array.from((encounter as HTMLSelectElement).options).map((option) => option.value),
+      ).toEqual(['GeneratedO']);
+      expect(
+        Array.from((encounter as HTMLSelectElement).options).every((option) => option.disabled),
+      ).toBe(true);
+    });
     expect(within(phase).queryByRole('button', { name: 'Reset to default' })).toBeNull();
     expect(
       workspaceProjection(view.application).interactions.encounterPhases.has(
         semanticAddressKey(phaseAddress),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('keeps an invalid I default selected while exposing only its exact Goal correction', async () => {

@@ -14,6 +14,9 @@ export type HistoryRecord = 'biomeUseRecord' | 'lootTypeHistory' | 'roomsEntered
 
 export type CurrentRunFlag = 'allSpellInvested' | 'pendingSpellDrop';
 
+/** Static room topology facts usable by declaration-owned requirements. */
+export type RoomStructuralTag = 'Indoor' | 'Outdoor';
+
 export type RequirementExpression =
   | {
       readonly kind: 'all';
@@ -89,6 +92,11 @@ export type RequirementExpression =
   | {
       readonly kind: 'currentRoomRewardExcludes';
       readonly rewardTypes: readonly string[];
+    }
+  | {
+      /** Requires every listed static tag on the room whose phase is resolving. */
+      readonly kind: 'currentRoomStructuralTagsInclude';
+      readonly tags: readonly RoomStructuralTag[];
     }
   | {
       readonly kind: 'currentBatchTargetCount';

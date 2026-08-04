@@ -127,7 +127,7 @@ describe('P core loop', () => {
       active: true,
       selectedEncounterKey: 'GeneratedP',
       selectedPossible: true,
-      candidateEncounterKeys: ['GeneratedP', 'GeneratedP_Large'],
+      candidateEncounterKeys: ['GeneratedP', 'GeneratedP_Large', 'AthenaCombatP'],
     });
   });
 

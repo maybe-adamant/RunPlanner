@@ -2,6 +2,8 @@ import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } fr
 import {
   artemisEncounterKeys,
   artemisIncomingRewardExclusions,
+  heraclesEncounterKeys,
+  heraclesIncomingRewardExclusions,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
@@ -37,6 +39,40 @@ export const nEncounterDefinitions = [
           kind: 'encounterKeyCount',
           scope: 'route',
           encounterKeys: artemisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
+    key: 'HeraclesCombatN',
+    label: 'Heracles combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Heracles',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: heraclesIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: heraclesEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: heraclesEncounterKeys,
+          roomWindow: 20,
           range: { max: 0 },
         },
         {
@@ -96,17 +132,17 @@ export const nEncounterDefinitions = [
 export const nEncounterSets = [
   {
     key: 'NEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedN', 'ArtemisCombatN'],
+    encounterDefinitionKeys: ['GeneratedN', 'ArtemisCombatN', 'HeraclesCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN',
   },
   {
     key: 'NEncountersSmaller',
-    encounterDefinitionKeys: ['GeneratedN_Smaller', 'ArtemisCombatN'],
+    encounterDefinitionKeys: ['GeneratedN_Smaller', 'ArtemisCombatN', 'HeraclesCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN_Smaller',
   },
   {
     key: 'NEncountersBigger',
-    encounterDefinitionKeys: ['GeneratedN_Bigger', 'ArtemisCombatN'],
+    encounterDefinitionKeys: ['GeneratedN_Bigger', 'ArtemisCombatN', 'HeraclesCombatN'],
     defaultEncounterDefinitionKey: 'GeneratedN_Bigger',
   },
   {

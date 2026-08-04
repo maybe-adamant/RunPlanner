@@ -262,6 +262,7 @@ function projectRoomGenerationRequirementContext(
     }),
     currentRoomShopOptionNames: shopOptions,
     currentRoomRewardType: source.incomingReward?.offer.rewardType,
+    currentRoomStructuralTags: sourceDeclaration.structuralTags,
     rewardLookups: Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),

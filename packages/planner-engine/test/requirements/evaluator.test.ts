@@ -23,6 +23,7 @@ const baseContext = {
   },
   currentRoomShopOptionNames: new Set<string>(),
   currentRoomRewardType: undefined,
+  currentRoomStructuralTags: [],
   rewardLookups: {},
   runDepthCache: 10,
   lastEventRunDepthCaches: {},
@@ -53,6 +54,7 @@ describe('requirement evaluator registry', () => {
       'minRoomsSinceEvent',
       'minExits',
       'currentRoomRewardExcludes',
+      'currentRoomStructuralTagsInclude',
       'currentBatchTargetCount',
       'currentBatchRoomCount',
       'clockworkGoalsRemaining',
@@ -148,6 +150,18 @@ describe('requirement evaluator registry', () => {
       evaluateRequirement(
         { kind: 'currentRoomRewardExcludes', rewardTypes: ['SpellDrop'] },
         context,
+      ),
+    ).toBe(false);
+    expect(
+      evaluateRequirement(
+        { kind: 'currentRoomStructuralTagsInclude', tags: ['Indoor'] },
+        { ...context, currentRoomStructuralTags: ['Indoor'] },
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        { kind: 'currentRoomStructuralTagsInclude', tags: ['Indoor'] },
+        { ...context, currentRoomStructuralTags: ['Outdoor'] },
       ),
     ).toBe(false);
     expect(evaluateRequirement({ kind: 'minExits', count: 2 }, context)).toBe(true);

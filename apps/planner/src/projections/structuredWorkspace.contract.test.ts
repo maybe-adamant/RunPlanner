@@ -683,7 +683,7 @@ describe('structured workspace overlay contract', () => {
     }
   });
 
-  it('closes exact top-level, local-child, and invalid active Ship encounter phase leaves', () => {
+  it('closes exact top-level, local-child, and invalid active multi-choice Ship encounter phase leaves', () => {
     const valid = createRepresentativeNOPQProject();
     const validAssembly = simulateProjectAssembly(catalog, valid);
     const nPlan = valid.routes
@@ -745,8 +745,9 @@ describe('structured workspace overlay contract', () => {
     );
     if (expected === undefined)
       throw new Error('invalid active Ship Combat2 phase is not expected');
-    expect(expected.interactions).toEqual([]);
-    expect(projected.interactions.encounterPhases.has(semanticAddressKey(combat2))).toBe(false);
+    expect(expected.interactions).toHaveLength(1);
+    expect(expected.interactions[0]).toMatchObject({ kind: 'encounterPhase' });
+    expect(projected.interactions.encounterPhases.has(semanticAddressKey(combat2))).toBe(true);
 
     const observed = observeWorkspaceProducts({
       focusByOwner: projected.focusByOwner,

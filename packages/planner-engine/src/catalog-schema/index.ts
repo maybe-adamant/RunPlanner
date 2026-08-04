@@ -4,11 +4,12 @@ import type {
   RewardProducerBinding,
 } from '../reward-kernel/bindings';
 import type { RewardKernelCatalog } from '../reward-kernel/model';
-import type { CounterAxis, RequirementExpression } from '../requirements/model';
+import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../requirements/model';
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
 
 export type { CatalogCollection } from '../normalized/collection';
+export type { RoomStructuralTag } from '../requirements/model';
 
 export interface BiomeDeclaration {
   readonly key: string;
@@ -221,8 +222,6 @@ export type DerivedRoomClassification = 'completion' | 'hub';
 export type RoomMode =
   | { readonly kind: 'authored'; readonly templateKey: RoomTemplateKey }
   | { readonly kind: 'derived'; readonly classification: DerivedRoomClassification };
-
-export type RoomStructuralTag = 'Indoor' | 'Outdoor';
 
 export type ExitCompatibilityPolicy =
   | { readonly key: string; readonly kind: 'unconstrained' }

@@ -1091,7 +1091,7 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('withholds dormant Ship Combat2 and keeps its active declaration-invalid singleton semantic', () => {
+  it('withholds dormant Ship Combat2 and binds its active declaration-invalid multi-choice semantic', () => {
     const initial = createRepresentativeNOPQProject();
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const combat2 = createEncounterPhaseAddress(
@@ -1117,14 +1117,17 @@ describe('structured workspace interaction binding', () => {
         candidate.room.occurrenceId === oOccurrenceIds.combat04,
     );
 
-    expect(interaction).toBeUndefined();
+    expect(interaction).toMatchObject({
+      owner: combat2,
+      selected: 'GeneratedO',
+    });
     expect(node).toMatchObject({
       kind: 'occurrenceWorkbench',
       room: {
         encounterPhases: expect.arrayContaining([
           expect.objectContaining({
             address: combat2,
-            customizable: false,
+            customizable: true,
             marker: expect.any(Object),
           }),
         ]),

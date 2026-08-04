@@ -134,6 +134,7 @@ export function createRewardFacts({
       currentRoom !== undefined && 'incomingReward' in currentRoom
         ? currentRoom.incomingReward?.offer.rewardType
         : undefined,
+    currentRoomStructuralTags: sourceDeclaration.structuralTags,
     rewardLookups,
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze(

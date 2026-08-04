@@ -1,5 +1,9 @@
 import type { CatalogCollection, EncounterDefinition } from '@run-planner/engine/catalog-schema';
-import type { NumericRange, RequirementExpression } from '@run-planner/engine/requirements';
+import type {
+  NumericRange,
+  RequirementExpression,
+  RoomStructuralTag,
+} from '@run-planner/engine/requirements';
 import type { RewardTypeDeclaration } from '@run-planner/engine/reward-kernel';
 import { hasRequirementEvaluator } from '@run-planner/engine/requirements';
 
@@ -30,6 +34,24 @@ function normalizeRange(range: NumericRange, path: string): NumericRange {
     ...(range.min === undefined ? {} : { min: range.min }),
     ...(range.max === undefined ? {} : { max: range.max }),
   });
+}
+
+const knownRoomStructuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
+
+function normalizeRoomStructuralTags(
+  tags: readonly RoomStructuralTag[],
+  path: string,
+): readonly RoomStructuralTag[] {
+  if (tags.length === 0) {
+    fail(path, 'must not be empty');
+  }
+  const normalized = freezeUniqueStrings(tags, path);
+  for (const tag of normalized) {
+    if (!knownRoomStructuralTags.has(tag as RoomStructuralTag)) {
+      fail(path, `unknown room structural tag ${String(tag)}`);
+    }
+  }
+  return normalized as readonly RoomStructuralTag[];
 }
 
 export function normalizeRequirement(
@@ -138,6 +160,11 @@ export function normalizeRequirement(
         kind: 'currentRoomRewardExcludes',
         rewardTypes: freezeUniqueStrings(requirement.rewardTypes, `${path}.rewardTypes`),
       });
+    case 'currentRoomStructuralTagsInclude':
+      return Object.freeze({
+        kind: 'currentRoomStructuralTagsInclude',
+        tags: normalizeRoomStructuralTags(requirement.tags, `${path}.tags`),
+      });
     case 'currentBatchTargetCount':
     case 'clockworkGoalsRemaining':
       return Object.freeze({
@@ -194,6 +221,8 @@ export function validateRequirementReferences(
           fail(`${path}.rewardTypes[${index}]`, `unknown reward type ${rewardType}`);
         }
       });
+      return;
+    case 'currentRoomStructuralTagsInclude':
       return;
     case 'recordCount':
     case 'distinctRecordKeyCount':
