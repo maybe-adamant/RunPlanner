@@ -562,8 +562,15 @@ export interface WorkspaceEphyraSideRoomEntryOrderControl {
 export interface WorkspaceEncounterPhase {
   readonly address: EncounterPhaseAddress;
   readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+  /**
+   * Declaration-owned selector affordance. Singleton pools remain semantic
+   * phase owners, but cannot create a meaningful encounter selection UI.
+   */
+  readonly customizable: boolean;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** A reset is useful only after the authored selection diverges from its static default. */
+  readonly resettable: boolean;
   readonly selectedEncounter: {
     readonly key: string;
     readonly label: string;
@@ -660,8 +667,15 @@ export interface WorkspaceRoomSummary {
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
   readonly gameName: string;
+  /**
+   * Whether this details-active room has a meaningful editable or diagnostic
+   * room-local surface. Main rewards remain outside this boundary.
+   */
+  readonly hasRoomLocalCustomization: boolean;
   readonly kind: RoomDeclaration['kind'];
   readonly label: string;
+  /** Exact local-owner markers contained by the Customize disclosure. */
+  readonly localDetailMarkers: readonly WorkspaceMarker[];
   readonly marker: WorkspaceMarker;
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;

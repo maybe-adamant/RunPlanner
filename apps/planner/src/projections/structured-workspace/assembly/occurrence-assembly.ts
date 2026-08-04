@@ -417,8 +417,10 @@ function activeEncounterPhasesForOwner(
       Object.freeze({
         address,
         candidateChoices,
+        customizable: set.encounterDefinitionKeys.length > 1,
         label: binding.slotKey,
         marker: input.markerDestinations.marker(address),
+        resettable: support.selectedEncounterKey !== set.defaultEncounterDefinitionKey,
         selectedEncounter: Object.freeze({
           key: selectedDefinition.key,
           label: selectedDefinition.label,
@@ -828,12 +830,13 @@ function encounterPhaseInteractionRequirement(
   owner: LocalChildAddress | WorkspaceRoomSummary['address'],
   phases: readonly WorkspaceEncounterPhase[],
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
-  if (phases.length === 0) return undefined;
+  const customizablePhases = phases.filter((phase) => phase.customizable);
+  if (customizablePhases.length === 0) return undefined;
   return Object.freeze({
     kind: 'encounterPhases' as const,
     owner,
     phases: Object.freeze(
-      phases.map((phase) =>
+      customizablePhases.map((phase) =>
         Object.freeze({
           candidateChoices: phase.candidateChoices,
           owner: phase.address,
@@ -842,6 +845,37 @@ function encounterPhaseInteractionRequirement(
       ),
     ),
   });
+}
+
+/**
+ * A room-local surface exists only when its authored detail is meaningful to
+ * change or explain. A singleton encounter remains an exact semantic owner,
+ * but its selector would be a no-op; a live phase finding still earns a
+ * read-only diagnostic surface.
+ */
+function hasRoomLocalCustomization(
+  detailsActive: boolean,
+  encounterPhases: readonly WorkspaceEncounterPhase[],
+  roomLocal: WorkspaceRoomLocal,
+): boolean {
+  if (!detailsActive) return false;
+  if (encounterPhases.some((phase) => phase.customizable || phase.marker.findingCount > 0)) {
+    return true;
+  }
+  switch (roomLocal.kind) {
+    case 'ephyra':
+      return roomLocal.sideRooms.kind === 'published';
+    case 'fields':
+      return roomLocal.cages.some((cage) => cage.active);
+    case 'ship':
+      return true;
+    case 'shop':
+      return roomLocal.materialized && roomLocal.offers.length > 0;
+    case 'none':
+    case 'fixed':
+    case 'incomingReward':
+      return false;
+  }
 }
 
 function occurrenceInteractionRequirements(
@@ -991,28 +1025,36 @@ export function assembleWorkspaceOccurrence(
     kind: 'occurrence',
     occurrenceId: occurrence.occurrenceId,
   });
+  const roomLocal = roomLocalForOccurrence(input, room, rewardControls);
+  const localDetailMarkers = Object.freeze([
+    ...encounterPhases.map((phase) => phase.marker),
+    ...workspaceLocalDetailMarkers(roomLocal),
+  ]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     detailsActive: input.facts.detailsActive,
     encounterPhases,
     entered,
     gameName: occurrence.gameName,
+    hasRoomLocalCustomization: hasRoomLocalCustomization(
+      input.facts.detailsActive,
+      encounterPhases,
+      roomLocal,
+    ),
     kind: room.kind,
     label: room.label,
+    localDetailMarkers,
     marker: input.markerDestinations.marker(address),
     occurrenceId: occurrence.occurrenceId,
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
-    roomLocal: roomLocalForOccurrence(input, room, rewardControls),
+    roomLocal,
     rewardControls,
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
-    localDetailMarkers: Object.freeze([
-      ...roomSummary.encounterPhases.map((phase) => phase.marker),
-      ...workspaceLocalDetailMarkers(roomSummary.roomLocal),
-    ]),
+    localDetailMarkers: roomSummary.localDetailMarkers,
     marker: roomSummary.marker,
     room: roomSummary,
   });

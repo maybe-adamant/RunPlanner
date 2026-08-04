@@ -39,9 +39,12 @@ import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { findingSelected } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenHBiome,
   goldenHStartId,
 } from '@run-planner/test-fixtures';
@@ -58,6 +61,8 @@ import {
 import {
   renderOccurrenceWorkbench,
   renderStaticOccurrenceWorkbench,
+  workspaceBiome,
+  workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
@@ -252,7 +257,7 @@ describe('OccurrenceWorkbench', () => {
     expect(within(context).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
-  it('withholds dormant Ephyra side controls and renders rooms without local detail plainly', () => {
+  it('withholds dormant Ephyra side controls and leaves rooms without local detail compact', () => {
     renderStaticOccurrenceWorkbench(
       createRepresentativeNOPQProject(),
       'Surface',
@@ -274,8 +279,46 @@ describe('OccurrenceWorkbench', () => {
       'N',
       occurrenceById(nOccurrenceId('miniBoss01')),
     );
-    expect(screen.getByText('No additional room details.')).toBeTruthy();
+    expect(screen.queryByText('No additional room details.')).toBeNull();
+    expect(screen.queryByLabelText('Customize')).toBeNull();
     expect(screen.queryByText('Fixed reward:')).toBeNull();
+  });
+
+  it('keeps singleton encounter phases semantic without adding a no-op Customize surface', () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const node = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    );
+    if (node === undefined) throw new Error('F occurrence workbench is missing');
+
+    expect(node.room.encounterPhases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ address: phase, customizable: false, resettable: false }),
+      ]),
+    );
+    expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(phase))).toBe(
+      true,
+    );
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(phase),
+      ),
+    ).toBe(false);
+    expect(screen.queryByLabelText('Customize')).toBeNull();
+    expect(screen.queryByLabelText('Encounter encounter phase')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 
   it('keeps impossible side-room positions visible and disabled when not generated', async () => {
@@ -544,10 +587,28 @@ describe('OccurrenceWorkbench', () => {
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     const phase = screen.getByLabelText('Combat2 encounter phase');
-    const select = within(phase).getByRole('combobox', {
-      name: /^Encounter/,
-    }) as HTMLSelectElement;
+    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
+    const phaseAddress = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+      'Combat2',
+    );
+    const finding = simulateProject(catalog, project).findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
+    );
+    if (finding === undefined) throw new Error('invalid Ship Combat2 finding is missing');
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
 
+    expect(customize.open).toBe(false);
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(customize.open).toBe(true));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
     await view.user.click(count);
     await waitFor(() => {
       expect(count.dataset.candidateSupport).toBe('impossible');
@@ -555,14 +616,18 @@ describe('OccurrenceWorkbench', () => {
       expect(count.options[0]?.disabled).toBe(false);
       expect(count.options[1]?.disabled).toBe(true);
     });
-    await view.user.click(select);
-    await waitFor(() => {
-      expect(select.dataset.candidateSupport).toBe('impossible');
-      expect(Array.from(select.options)).toHaveLength(1);
-      expect(select.options[0]?.disabled).toBe(true);
-    });
-    await view.user.click(within(phase).getByRole('button', { name: 'Reset to default' }));
-    expect(select.value).toBe('GeneratedO');
+    expect(phase.dataset.readOnly).toBe('true');
+    expect(within(phase).getByText('Encounter: Ship combat')).toBeTruthy();
+    expect(phase.querySelector('[data-semantic-owner]')?.getAttribute('data-semantic-owner')).toBe(
+      semanticAddressKey(phaseAddress),
+    );
+    expect(within(phase).queryByRole('combobox', { name: /^Encounter/ })).toBeNull();
+    expect(within(phase).queryByRole('button', { name: 'Reset to default' })).toBeNull();
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(phaseAddress),
+      ),
+    ).toBe(false);
   });
 
   it('keeps an invalid I default selected while exposing only its exact Goal correction', async () => {
@@ -585,6 +650,37 @@ describe('OccurrenceWorkbench', () => {
       },
     );
     const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
+    const finding = simulateProject(catalog, reset).findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
+    );
+    if (finding === undefined) throw new Error('invalid I encounter finding is missing');
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
+
+    expect(customize.open).toBe(false);
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(customize.open).toBe(true));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
+    await view.user.click(screen.getByText('Customize'));
+    await waitFor(() => expect(customize.open).toBe(false));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(customize.open).toBe(true));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
     const encounter = screen.getByLabelText('Encounter encounter phase');
     const select = within(encounter).getByRole('combobox') as HTMLSelectElement;
 
