@@ -1015,7 +1015,7 @@ export const fRooms = [
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Chronos_01' },
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

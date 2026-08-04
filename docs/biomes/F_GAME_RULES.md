@@ -176,9 +176,10 @@ F completes through the layout-derived sequence `F_Boss01` then
 and remains excluded under the neutral baseline. Automatic Mixer and
 weapon-dependent boss drops are intentionally outside the modeled reward
 surface. `F_Boss01` also records no reward-store history contribution because
-the game marks the boss ignored for that ledger. `F_PostBoss01` owns its fixed
-non-counting story encounter, no modeled reward, and no store contribution
-before the route enters `G_Intro`.
+the game marks the boss ignored for that ledger. The normalized `F_PostBoss01`
+binds shared `Empty`, with no modeled reward or store contribution, before the
+route enters `G_Intro`. The raw `Story_Chronos_01` binding is a progression-event
+carrier over `Empty` and remains outside the static planner baseline.
 
 Both rooms are derived Room Declarations referenced by the layout completion
 sequence. They are not generated candidates, authored topology, or editor
