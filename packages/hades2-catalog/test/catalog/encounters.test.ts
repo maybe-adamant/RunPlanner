@@ -200,4 +200,40 @@ describe('encounter envelope catalog', () => {
       ),
     );
   });
+
+  it('closes encounter-history operands over definitions and keeps them definition-owned', () => {
+    const unknown = input();
+    const generatedIndex = unknown.encounterDefinitions.findIndex(
+      (definition) => definition.key === 'GeneratedF',
+    );
+    if (generatedIndex < 0) throw new Error('GeneratedF declaration is missing');
+    (unknown.encounterDefinitions[generatedIndex] as { requirements: unknown }).requirements = {
+      kind: 'encounterKeyCount',
+      scope: 'route',
+      encounterKeys: ['MissingEncounter'],
+      range: { max: 0 },
+    };
+    expect(() => createCatalog(unknown)).toThrow(
+      new CatalogContractError(
+        `encounterDefinitions[${generatedIndex}].requirements.encounterKeys[0]`,
+        'unknown encounter definition MissingEncounter',
+      ),
+    );
+
+    const wrongContext = input();
+    const roomIndex = wrongContext.rooms.findIndex((room) => room.gameName === 'F_Combat02');
+    if (roomIndex < 0) throw new Error('F Combat 02 declaration is missing');
+    (wrongContext.rooms[roomIndex] as { eligibility: unknown }).eligibility = {
+      kind: 'previousRoomEncounterKeyCount',
+      encounterKeys: ['GeneratedF'],
+      roomWindow: 1,
+      range: { max: 0 },
+    };
+    expect(() => createCatalog(wrongContext)).toThrow(
+      new CatalogContractError(
+        `rooms[${roomIndex}].eligibility.encounterKeys`,
+        'encounter-history requirements are only supported by encounter definitions',
+      ),
+    );
+  });
 });

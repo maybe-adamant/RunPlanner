@@ -8,6 +8,76 @@ export interface RecentEncounterEnvelopeSlotFact {
   readonly slotKeys: readonly string[];
 }
 
+function encounterKeyCounts(
+  encounters: readonly EncounterHistoryEntry[],
+): Readonly<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const encounter of encounters) {
+    counts[encounter.encounterKey] = (counts[encounter.encounterKey] ?? 0) + 1;
+  }
+  return Object.freeze(counts);
+}
+
+/** Exact Encounter Definition occurrence counts across the available route prefix. */
+export function projectRouteEncounterKeyCounts(
+  view: HistoryStateView,
+  routeKey: string,
+): Readonly<Record<string, number>> {
+  return encounterKeyCounts(
+    view.ledgers.encounterRecords.filter((encounter) => encounter.origin.routeKey === routeKey),
+  );
+}
+
+/** Exact Encounter Definition occurrence counts for one biome in the available route prefix. */
+export function projectBiomeEncounterKeyCounts(
+  view: HistoryStateView,
+  routeKey: string,
+  biomeKey: string,
+): Readonly<Record<string, number>> {
+  return encounterKeyCounts(
+    view.ledgers.encounterRecords.filter(
+      (encounter) =>
+        encounter.origin.routeKey === routeKey && encounter.origin.biomeKey === biomeKey,
+    ),
+  );
+}
+
+/**
+ * Ordered exact encounter identities for each committed predecessor room
+ * appearance. The owner under preparation is deliberately omitted from the
+ * room window even when an earlier phase already recorded an identity.
+ */
+export function projectPreviousRoomEncounterKeys(
+  view: HistoryStateView,
+  currentOrigin: RoomHistoryOrigin,
+): readonly (readonly string[])[] {
+  const encounterKeysByOrigin = new Map<string, Set<string>>();
+  for (const encounter of view.ledgers.encounterRecords) {
+    const originKey = semanticAddressKey(encounter.origin);
+    let encounterKeys = encounterKeysByOrigin.get(originKey);
+    if (encounterKeys === undefined) {
+      encounterKeys = new Set<string>();
+      encounterKeysByOrigin.set(originKey, encounterKeys);
+    }
+    encounterKeys.add(encounter.encounterKey);
+  }
+  const currentOriginKey = semanticAddressKey(currentOrigin);
+  const routeKey = currentOrigin.routeKey;
+  return Object.freeze(
+    view.ledgers.roomAppearances
+      .filter(
+        (appearance) =>
+          appearance.origin.routeKey === routeKey &&
+          semanticAddressKey(appearance.origin) !== currentOriginKey,
+      )
+      .map((appearance) =>
+        Object.freeze([
+          ...(encounterKeysByOrigin.get(semanticAddressKey(appearance.origin)) ?? new Set()),
+        ]),
+      ),
+  );
+}
+
 /**
  * The room preparation event establishes the lifecycle checkpoint at which
  * encounter identities are recorded. It has no ledger effect of its own, but

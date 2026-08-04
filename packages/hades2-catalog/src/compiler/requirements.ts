@@ -1,4 +1,4 @@
-import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
+import type { CatalogCollection, EncounterDefinition } from '@run-planner/engine/catalog-schema';
 import type { NumericRange, RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardTypeDeclaration } from '@run-planner/engine/reward-kernel';
 import { hasRequirementEvaluator } from '@run-planner/engine/requirements';
@@ -82,6 +82,29 @@ export function normalizeRequirement(
         kind: 'recentEnvelopeSlotCount',
         envelopeKey: requireNonEmpty(requirement.envelopeKey, `${path}.envelopeKey`),
         slotKey: requireNonEmpty(requirement.slotKey, `${path}.slotKey`),
+        roomWindow: requirePositiveInteger(requirement.roomWindow, `${path}.roomWindow`),
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
+    case 'encounterKeyCount':
+      if (requirement.scope !== 'route' && requirement.scope !== 'biome') {
+        fail(`${path}.scope`, `unknown encounter history scope ${String(requirement.scope)}`);
+      }
+      if (requirement.encounterKeys.length === 0) {
+        fail(`${path}.encounterKeys`, 'must not be empty');
+      }
+      return Object.freeze({
+        kind: 'encounterKeyCount',
+        scope: requirement.scope,
+        encounterKeys: freezeUniqueStrings(requirement.encounterKeys, `${path}.encounterKeys`),
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
+    case 'previousRoomEncounterKeyCount':
+      if (requirement.encounterKeys.length === 0) {
+        fail(`${path}.encounterKeys`, 'must not be empty');
+      }
+      return Object.freeze({
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: freezeUniqueStrings(requirement.encounterKeys, `${path}.encounterKeys`),
         roomWindow: requirePositiveInteger(requirement.roomWindow, `${path}.roomWindow`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
@@ -182,6 +205,8 @@ export function validateRequirementReferences(
         });
       }
       return;
+    case 'encounterKeyCount':
+    case 'previousRoomEncounterKeyCount':
     case 'counterRange':
     case 'clockworkGoalsRemaining':
     case 'clockworkNonGoalCapacity':
@@ -193,4 +218,65 @@ export function validateRequirementReferences(
     case 'recentEnvelopeSlotCount':
       return;
   }
+}
+
+function visitEncounterHistoryRequirementKeys(
+  requirement: RequirementExpression,
+  visit: (keys: readonly string[], path: string) => void,
+  path: string,
+): void {
+  switch (requirement.kind) {
+    case 'all':
+    case 'any':
+      requirement.requirements.forEach((child, index) =>
+        visitEncounterHistoryRequirementKeys(child, visit, `${path}.requirements[${index}]`),
+      );
+      return;
+    case 'not':
+      visitEncounterHistoryRequirementKeys(requirement.requirement, visit, `${path}.requirement`);
+      return;
+    case 'encounterKeyCount':
+    case 'previousRoomEncounterKeyCount':
+      visit(requirement.encounterKeys, `${path}.encounterKeys`);
+      return;
+    default:
+      return;
+  }
+}
+
+/** Verifies exact Encounter Definition references after their full collection exists. */
+export function validateEncounterRequirementReferences(
+  requirement: RequirementExpression,
+  encounterDefinitions: CatalogCollection<EncounterDefinition>,
+  path: string,
+): void {
+  visitEncounterHistoryRequirementKeys(
+    requirement,
+    (keys, keysPath) => {
+      keys.forEach((key, index) => {
+        if (encounterDefinitions.byKey[key] === undefined) {
+          fail(`${keysPath}[${index}]`, `unknown encounter definition ${key}`);
+        }
+      });
+    },
+    path,
+  );
+}
+
+/**
+ * Encounter occurrence facts are intentionally available only while resolving
+ * Encounter Definitions. Other catalog consumers do not fabricate an
+ * encounter-history view merely because the expression type can represent one.
+ */
+export function rejectEncounterHistoryRequirements(
+  requirement: RequirementExpression,
+  path: string,
+): void {
+  visitEncounterHistoryRequirementKeys(
+    requirement,
+    (_keys, keysPath) => {
+      fail(keysPath, 'encounter-history requirements are only supported by encounter definitions');
+    },
+    path,
+  );
 }

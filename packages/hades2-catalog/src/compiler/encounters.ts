@@ -22,7 +22,12 @@ import {
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
-import { normalizeRequirement, validateRequirementReferences } from './requirements';
+import {
+  normalizeRequirement,
+  rejectEncounterHistoryRequirements,
+  validateEncounterRequirementReferences,
+  validateRequirementReferences,
+} from './requirements';
 import { normalizeRewardBinding } from './rewardBindings';
 
 const encounterPhaseKinds = new Set<EncounterPhaseKind>([
@@ -109,6 +114,7 @@ function normalizeEnvelopeSlot(
       rewards.rewardTypes,
       `${path}.activationRequirement`,
     );
+    rejectEncounterHistoryRequirements(activationRequirement, `${path}.activationRequirement`);
   }
   return Object.freeze({
     key,
@@ -165,7 +171,7 @@ export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
   rewards: RewardKernelCatalog,
 ): CatalogCollection<EncounterDefinition> {
-  return createCollection(
+  const definitions = createCollection(
     rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
       const path = `encounterDefinitions[${definitionIndex}]`;
       const key = requireNonEmpty(raw.key, `${path}.key`);
@@ -208,6 +214,16 @@ export function normalizeEncounterDefinitions(
     'encounterDefinitions',
     (definition) => definition.key,
   );
+  definitions.values.forEach((definition, index) => {
+    if (definition.requirements !== undefined) {
+      validateEncounterRequirementReferences(
+        definition.requirements,
+        definitions,
+        `encounterDefinitions[${index}].requirements`,
+      );
+    }
+  });
+  return definitions;
 }
 
 export function normalizeEncounterSets(
