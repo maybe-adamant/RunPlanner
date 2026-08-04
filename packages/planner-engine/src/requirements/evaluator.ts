@@ -4,6 +4,7 @@ import type {
   HistoryRecord,
   NumericRange,
   RequirementExpression,
+  RoomStructuralTag,
 } from './model';
 
 export type RequirementKind = RequirementExpression['kind'];
@@ -25,6 +26,7 @@ export interface RequirementEvaluationContext {
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;
+  readonly currentRoomStructuralTags: readonly RoomStructuralTag[];
   readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly runDepthCache: number;
   readonly lastEventRunDepthCaches: Readonly<Record<string, number>>;
@@ -147,6 +149,8 @@ export const requirementEvaluatorRegistry = Object.freeze({
   currentRoomRewardExcludes: (requirement, context) =>
     context.currentRoomRewardType === undefined ||
     !requirement.rewardTypes.includes(context.currentRoomRewardType),
+  currentRoomStructuralTagsInclude: (requirement, context) =>
+    requirement.tags.every((tag) => context.currentRoomStructuralTags.includes(tag)),
   currentBatchTargetCount: (requirement, context) =>
     isInRange(context.currentBatchRoomGameNames.length, requirement.range),
   currentBatchRoomCount: (requirement, context) => {
@@ -201,6 +205,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.minExits(requirement, context);
     case 'currentRoomRewardExcludes':
       return requirementEvaluatorRegistry.currentRoomRewardExcludes(requirement, context);
+    case 'currentRoomStructuralTagsInclude':
+      return requirementEvaluatorRegistry.currentRoomStructuralTagsInclude(requirement, context);
     case 'currentBatchTargetCount':
       return requirementEvaluatorRegistry.currentBatchTargetCount(requirement, context);
     case 'currentBatchRoomCount':

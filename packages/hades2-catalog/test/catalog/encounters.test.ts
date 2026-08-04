@@ -59,7 +59,7 @@ describe('encounter envelope catalog', () => {
       defaultEncounterDefinitionKey: 'GeneratedI',
     });
     expect(catalog.encounterSets.byKey.PEncountersDefault).toMatchObject({
-      encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large'],
+      encounterDefinitionKeys: ['GeneratedP', 'GeneratedP_Large', 'AthenaCombatP', 'IcarusCombatP'],
       defaultEncounterDefinitionKey: 'GeneratedP',
     });
     expect(catalog.rooms.byKey.N_Sub09).toMatchObject({
@@ -87,9 +87,35 @@ describe('encounter envelope catalog', () => {
       expect(catalog.encounterSets.byKey[setKey]?.encounterDefinitionKeys).toContain(
         'ArtemisCombatN',
       );
+      expect(catalog.encounterSets.byKey[setKey]?.encounterDefinitionKeys).toContain(
+        'HeraclesCombatN',
+      );
     }
     expect(catalog.encounterSets.byKey.NEncountersSubRoom?.encounterDefinitionKeys).not.toContain(
       'ArtemisCombatN',
+    );
+    expect(catalog.encounterSets.byKey.NEncountersSubRoom?.encounterDefinitionKeys).not.toContain(
+      'HeraclesCombatN',
+    );
+    expect(catalog.encounterSets.byKey.OEncountersIntros?.encounterDefinitionKeys).toEqual([
+      'GeneratedO_Intro01',
+      'HeraclesCombatO',
+    ]);
+    expect(catalog.encounterSets.byKey.OEncountersDefault?.encounterDefinitionKeys).toEqual([
+      'GeneratedO',
+      'IcarusCombatO',
+    ]);
+    const pIntroSets = catalog.encounterSets.values.filter((candidate) =>
+      /^P(?:Combat(?:0[1-9]|1[0-6])IntroEncounters|EncountersIntros)$/.test(candidate.key),
+    );
+    expect(pIntroSets).toHaveLength(17);
+    for (const set of pIntroSets) {
+      expect(set.encounterDefinitionKeys).toContain('HeraclesCombatP');
+      expect(set.encounterDefinitionKeys).not.toContain('IcarusCombatP');
+      expect(set.encounterDefinitionKeys).not.toContain('AthenaCombatP');
+    }
+    expect(catalog.encounterSets.byKey.POpeningEncounters?.encounterDefinitionKeys).not.toContain(
+      'HeraclesCombatP',
     );
     expect(catalog.encounterDefinitions.byKey.ArtemisCombatF).toMatchObject({
       countsEncounterDepth: true,
@@ -98,6 +124,19 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterDefinitions.byKey.ArachneCombatF).toMatchObject({
       countsEncounterDepth: false,
       npcPresentationKey: 'Arachne',
+    });
+    expect(catalog.encounterDefinitions.byKey.HeraclesCombatP).toMatchObject({
+      countsEncounterDepth: true,
+      npcPresentationKey: 'Heracles',
+      sequenceEffect: { kind: 'terminateSuffix' },
+    });
+    expect(catalog.encounterDefinitions.byKey.IcarusCombatP).toMatchObject({
+      countsEncounterDepth: true,
+      npcPresentationKey: 'Icarus',
+    });
+    expect(catalog.encounterDefinitions.byKey.AthenaCombatP).toMatchObject({
+      countsEncounterDepth: true,
+      npcPresentationKey: 'Athena',
     });
     const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;
     if (artemisRequirements?.kind !== 'all') {
@@ -111,15 +150,143 @@ describe('encounter envelope catalog', () => {
     });
     expect(artemisRequirements.requirements).toContainEqual({
       kind: 'previousRoomEncounterKeyCount',
-      encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG', 'ArtemisCombatN'],
+      encounterKeys: [
+        'ArtemisCombatF',
+        'ArtemisCombatG',
+        'ArtemisCombatN',
+        'HeraclesCombatN',
+        'HeraclesCombatO',
+        'HeraclesCombatP',
+        'IcarusCombatO',
+        'IcarusCombatP',
+        'AthenaCombatP',
+      ],
       roomWindow: 6,
       range: { max: 0 },
+    });
+    const heraclesPRequirements = catalog.encounterDefinitions.byKey.HeraclesCombatP?.requirements;
+    if (heraclesPRequirements?.kind !== 'all') {
+      throw new Error('Heracles P requirements are missing');
+    }
+    expect(heraclesPRequirements.requirements).toContainEqual({
+      kind: 'currentRoomStructuralTagsInclude',
+      tags: ['Indoor'],
+    });
+    expect(heraclesPRequirements.requirements).toContainEqual({
+      kind: 'previousRoomEncounterKeyCount',
+      encounterKeys: ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'],
+      roomWindow: 20,
+      range: { max: 0 },
+    });
+    const icarusPRequirements = catalog.encounterDefinitions.byKey.IcarusCombatP?.requirements;
+    if (icarusPRequirements?.kind !== 'all') {
+      throw new Error('Icarus P requirements are missing');
+    }
+    expect(icarusPRequirements.requirements).toContainEqual({
+      kind: 'currentRoomStructuralTagsInclude',
+      tags: ['Outdoor'],
     });
     expect(catalog.encounterDefinitions.byKey.GeneratedP_Large?.requirements).toEqual({
       kind: 'counterRange',
       axis: 'biomeDepthCache',
       range: { min: 9 },
     });
+  });
+
+  it('keeps Gate C NPC eligibility as exact declaration-owned requirements', () => {
+    const catalog = createCatalog(declarations);
+    const fieldNpcKeys = [
+      'ArtemisCombatF',
+      'ArtemisCombatG',
+      'ArtemisCombatN',
+      'HeraclesCombatN',
+      'HeraclesCombatO',
+      'HeraclesCombatP',
+      'IcarusCombatO',
+      'IcarusCombatP',
+      'AthenaCombatP',
+    ];
+    const heraclesKeys = ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'];
+    const icarusKeys = ['IcarusCombatO', 'IcarusCombatP'];
+    const requirementsFor = (key: string) => {
+      const requirements = catalog.encounterDefinitions.byKey[key]?.requirements;
+      if (requirements?.kind !== 'all') {
+        throw new Error(`${key} requirements are missing`);
+      }
+      return requirements.requirements;
+    };
+    const heraclesBase = [
+      { kind: 'currentRoomRewardExcludes', rewardTypes: ['Devotion'] },
+      {
+        kind: 'encounterKeyCount',
+        scope: 'route',
+        encounterKeys: heraclesKeys,
+        range: { max: 0 },
+      },
+      {
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: heraclesKeys,
+        roomWindow: 20,
+        range: { max: 0 },
+      },
+      {
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: fieldNpcKeys,
+        roomWindow: 6,
+        range: { max: 0 },
+      },
+    ];
+    expect(requirementsFor('HeraclesCombatN')).toEqual(heraclesBase);
+    expect(requirementsFor('HeraclesCombatO')).toEqual(heraclesBase);
+    expect(requirementsFor('HeraclesCombatP')).toEqual([
+      { kind: 'currentRoomStructuralTagsInclude', tags: ['Indoor'] },
+      ...heraclesBase,
+    ]);
+
+    const icarusBase = [
+      { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 3 } },
+      {
+        kind: 'currentRoomRewardExcludes',
+        rewardTypes: ['Boon', 'SpellDrop', 'Devotion', 'HermesUpgrade', 'WeaponUpgrade'],
+      },
+      {
+        kind: 'encounterKeyCount',
+        scope: 'route',
+        encounterKeys: icarusKeys,
+        range: { max: 0 },
+      },
+      {
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: fieldNpcKeys,
+        roomWindow: 6,
+        range: { max: 0 },
+      },
+    ];
+    expect(requirementsFor('IcarusCombatO')).toEqual(icarusBase);
+    expect(requirementsFor('IcarusCombatP')).toEqual([
+      icarusBase[0],
+      { kind: 'currentRoomStructuralTagsInclude', tags: ['Outdoor'] },
+      ...icarusBase.slice(1),
+    ]);
+    expect(requirementsFor('AthenaCombatP')).toEqual([
+      { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+      {
+        kind: 'currentRoomRewardExcludes',
+        rewardTypes: ['Boon', 'SpellDrop', 'Devotion', 'HermesUpgrade', 'WeaponUpgrade'],
+      },
+      {
+        kind: 'encounterKeyCount',
+        scope: 'route',
+        encounterKeys: ['AthenaCombatP'],
+        range: { max: 0 },
+      },
+      {
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: fieldNpcKeys,
+        roomWindow: 6,
+        range: { max: 0 },
+      },
+    ]);
   });
 
   it('keeps all supported fixed slots direct and non-authored', () => {
@@ -274,6 +441,25 @@ describe('encounter envelope catalog', () => {
       new CatalogContractError(
         `rooms[${roomIndex}].eligibility.encounterKeys`,
         'encounter-history requirements are only supported by encounter definitions',
+      ),
+    );
+  });
+
+  it('rejects unknown structural tags in declaration-owned requirements', () => {
+    const malformed = input();
+    const definitionIndex = malformed.encounterDefinitions.findIndex(
+      (definition) => definition.key === 'GeneratedF',
+    );
+    if (definitionIndex < 0) throw new Error('GeneratedF declaration is missing');
+    (malformed.encounterDefinitions[definitionIndex] as { requirements: unknown }).requirements = {
+      kind: 'currentRoomStructuralTagsInclude',
+      tags: ['Unknown'],
+    };
+
+    expect(() => createCatalog(malformed)).toThrow(
+      new CatalogContractError(
+        `encounterDefinitions[${definitionIndex}].requirements.tags`,
+        'unknown room structural tag Unknown',
       ),
     );
   });

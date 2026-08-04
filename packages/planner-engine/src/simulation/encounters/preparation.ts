@@ -104,6 +104,7 @@ function requirementContext(
     }),
     currentRoomShopOptionNames: new Set<string>(),
     currentRoomRewardType: effectiveCurrentRoomRewardType(room),
+    currentRoomStructuralTags: declaration.structuralTags,
     rewardLookups: Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),

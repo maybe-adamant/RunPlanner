@@ -97,15 +97,30 @@ export const sharedEncounterSets = [] as const satisfies readonly RawEncounterSe
 /** Artemis route exclusion is permanently limited to its three concrete variants. */
 export const artemisEncounterKeys = ['ArtemisCombatF', 'ArtemisCombatG', 'ArtemisCombatN'] as const;
 
+export const heraclesEncounterKeys = [
+  'HeraclesCombatN',
+  'HeraclesCombatO',
+  'HeraclesCombatP',
+] as const;
+
+export const icarusEncounterKeys = ['IcarusCombatO', 'IcarusCombatP'] as const;
+
+export const athenaEncounterKeys = ['AthenaCombatP'] as const;
+
 /**
- * Gate B's currently supported field-NPC spacing identities. Later delivery
+ * The supported field-NPC spacing identities. Later delivery
  * gates extend this exact list when they add their own declared combat encounters.
  */
-export const supportedFieldNpcEncounterKeys = [...artemisEncounterKeys] as const;
+export const supportedFieldNpcEncounterKeys = [
+  ...artemisEncounterKeys,
+  ...heraclesEncounterKeys,
+  ...icarusEncounterKeys,
+  ...athenaEncounterKeys,
+] as const;
 
 export const arachneEncounterKeys = ['ArachneCombatF', 'ArachneCombatG'] as const;
 
-export const artemisIncomingRewardExclusions = [
+export const fieldNpcIncomingRewardExclusions = [
   'Boon',
   'SpellDrop',
   'Devotion',
@@ -113,8 +128,12 @@ export const artemisIncomingRewardExclusions = [
   'WeaponUpgrade',
 ] as const;
 
+export const artemisIncomingRewardExclusions = fieldNpcIncomingRewardExclusions;
+
+export const heraclesIncomingRewardExclusions = ['Devotion'] as const;
+
 export const arachneIncomingRewardExclusions = [
-  ...artemisIncomingRewardExclusions,
+  ...fieldNpcIncomingRewardExclusions,
   'StackUpgrade',
   'TalentDrop',
 ] as const;
