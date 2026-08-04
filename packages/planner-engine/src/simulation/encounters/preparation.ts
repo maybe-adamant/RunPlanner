@@ -11,8 +11,11 @@ import {
 } from '../../authored-project/room-state/encounters';
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirements';
 import {
+  projectBiomeEncounterKeyCounts,
   projectEncounterRecordPreparation,
+  projectPreviousRoomEncounterKeys,
   projectRecentEncounterEnvelopeSlots,
+  projectRouteEncounterKeyCounts,
 } from '../history/facts';
 import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom, CanonicalLocalChildRoom } from '../materialization';
@@ -105,6 +108,15 @@ function requirementContext(
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
+    encounterHistory: Object.freeze({
+      routeEncounterKeyCounts: projectRouteEncounterKeyCounts(view, room.origin.routeKey),
+      biomeEncounterKeyCounts: projectBiomeEncounterKeyCounts(
+        view,
+        room.origin.routeKey,
+        room.origin.biomeKey,
+      ),
+      previousRoomEncounterKeys: projectPreviousRoomEncounterKeys(view, room.origin),
+    }),
     offeredExitCount: declaration.exits.length,
     currentBatchRoomGameNames: Object.freeze([]),
     clockwork: hasClockwork

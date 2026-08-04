@@ -3,6 +3,7 @@ export {
   hasRequirementEvaluator,
   requirementEvaluatorRegistry,
   type ClockworkRequirementFacts,
+  type EncounterHistoryRequirementFacts,
   type RequirementEvaluationContext,
   type RequirementEvaluator,
   type RequirementEvaluatorRegistry,

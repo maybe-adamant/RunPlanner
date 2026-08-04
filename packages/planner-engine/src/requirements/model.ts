@@ -52,6 +52,23 @@ export type RequirementExpression =
       readonly range: NumericRange;
     }
   | {
+      /** Counts exact Encounter Definition records in a bounded history scope. */
+      readonly kind: 'encounterKeyCount';
+      readonly scope: 'route' | 'biome';
+      readonly encounterKeys: readonly string[];
+      readonly range: NumericRange;
+    }
+  | {
+      /**
+       * Counts exact Encounter Definition records in the preceding committed
+       * room appearances, deliberately excluding the room being prepared.
+       */
+      readonly kind: 'previousRoomEncounterKeyCount';
+      readonly encounterKeys: readonly string[];
+      readonly roomWindow: number;
+      readonly range: NumericRange;
+    }
+  | {
       readonly kind: 'notInCurrentRoomShopOptions';
       readonly rewardType: string;
     }

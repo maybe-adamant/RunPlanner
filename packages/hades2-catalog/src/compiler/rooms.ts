@@ -38,7 +38,11 @@ import {
 } from './common';
 import { fail } from './errors';
 import { normalizeLocalChildren } from './descriptors';
-import { normalizeRequirement, validateRequirementReferences } from './requirements';
+import {
+  normalizeRequirement,
+  rejectEncounterHistoryRequirements,
+  validateRequirementReferences,
+} from './requirements';
 import { normalizeRewardBinding, requireRewardStoreKey } from './rewardBindings';
 
 function normalizeEnteredStoreHistory(
@@ -232,6 +236,7 @@ function normalizeForce(force: RoomForce, rewards: RewardKernelCatalog, path: st
   if (force.kind === 'requirement') {
     const requirement = normalizeRequirement(force.requirement, `${path}.requirement`);
     validateRequirementReferences(requirement, rewards.rewardTypes, `${path}.requirement`);
+    rejectEncounterHistoryRequirements(requirement, `${path}.requirement`);
     return Object.freeze({ kind: 'requirement', requirement });
   }
   if (force.kind !== 'depthWindow') {
@@ -420,6 +425,7 @@ export function normalizeRooms(
         : normalizeRequirement(room.eligibility, `${path}.eligibility`);
     if (eligibility !== undefined) {
       validateRequirementReferences(eligibility, rewards.rewardTypes, `${path}.eligibility`);
+      rejectEncounterHistoryRequirements(eligibility, `${path}.eligibility`);
     }
     const incomingReward = normalizeRewardBinding(
       room.incomingReward,

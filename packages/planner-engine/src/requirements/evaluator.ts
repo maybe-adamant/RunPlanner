@@ -14,6 +14,12 @@ export interface ClockworkRequirementFacts {
   readonly nonGoalRewardsAcquired: number;
 }
 
+export interface EncounterHistoryRequirementFacts {
+  readonly routeEncounterKeyCounts: Readonly<Record<string, number>>;
+  readonly biomeEncounterKeyCounts: Readonly<Record<string, number>>;
+  readonly previousRoomEncounterKeys: readonly (readonly string[])[];
+}
+
 export interface RequirementEvaluationContext {
   readonly counters: Readonly<Record<CounterAxis, number>>;
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
@@ -26,6 +32,7 @@ export interface RequirementEvaluationContext {
     readonly envelopeKey: string;
     readonly slotKeys: readonly string[];
   }[];
+  readonly encounterHistory?: EncounterHistoryRequirementFacts;
   readonly offeredExitCount: number;
   readonly currentBatchRoomGameNames: readonly string[];
   readonly clockwork: ClockworkRequirementFacts | undefined;
@@ -60,6 +67,15 @@ function requireClockwork(context: RequirementEvaluationContext): ClockworkRequi
   return context.clockwork;
 }
 
+function requireEncounterHistory(
+  context: RequirementEvaluationContext,
+): EncounterHistoryRequirementFacts {
+  if (context.encounterHistory === undefined) {
+    throw new Error('Encounter-history requirement evaluated without encounter history facts');
+  }
+  return context.encounterHistory;
+}
+
 export const requirementEvaluatorRegistry = Object.freeze({
   all: (requirement, context) =>
     requirement.requirements.every((child) => evaluateRequirement(child, context)),
@@ -86,6 +102,26 @@ export const requirementEvaluatorRegistry = Object.freeze({
         (room.envelopeKey === requirement.envelopeKey && room.slotKeys.includes(requirement.slotKey)
           ? 1
           : 0),
+      0,
+    );
+    return isInRange(count, requirement.range);
+  },
+  encounterKeyCount: (requirement, context) => {
+    const history = requireEncounterHistory(context);
+    const counts =
+      requirement.scope === 'route'
+        ? history.routeEncounterKeyCounts
+        : history.biomeEncounterKeyCounts;
+    const count = requirement.encounterKeys.reduce((total, key) => total + (counts[key] ?? 0), 0);
+    return isInRange(count, requirement.range);
+  },
+  previousRoomEncounterKeyCount: (requirement, context) => {
+    const previousRooms = requireEncounterHistory(context).previousRoomEncounterKeys.slice(
+      -requirement.roomWindow,
+    );
+    const count = previousRooms.reduce(
+      (total, encounterKeys) =>
+        total + encounterKeys.filter((key) => requirement.encounterKeys.includes(key)).length,
       0,
     );
     return isInRange(count, requirement.range);
@@ -151,6 +187,10 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.distinctRecordKeyCount(requirement, context);
     case 'recentEnvelopeSlotCount':
       return requirementEvaluatorRegistry.recentEnvelopeSlotCount(requirement, context);
+    case 'encounterKeyCount':
+      return requirementEvaluatorRegistry.encounterKeyCount(requirement, context);
+    case 'previousRoomEncounterKeyCount':
+      return requirementEvaluatorRegistry.previousRoomEncounterKeyCount(requirement, context);
     case 'notInCurrentRoomShopOptions':
       return requirementEvaluatorRegistry.notInCurrentRoomShopOptions(requirement, context);
     case 'rewardLookupExcludes':

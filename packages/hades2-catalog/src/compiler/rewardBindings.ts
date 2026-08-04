@@ -15,7 +15,11 @@ import type {
 import type { RawRewardProducerBinding } from '../declarations';
 import { freezeUniqueStrings, requireNonEmpty } from './common';
 import { fail } from './errors';
-import { normalizeRequirement, validateRequirementReferences } from './requirements';
+import {
+  normalizeRequirement,
+  rejectEncounterHistoryRequirements,
+  validateRequirementReferences,
+} from './requirements';
 
 function defaultOffer(rewardType: RewardTypeDeclaration): ResolvedRewardOffer {
   return Object.freeze({
@@ -213,6 +217,7 @@ export function normalizeRewardBinding(
     const requirementPath = `${path}.additionalOptionRequirements.${optionKey}`;
     const requirement = normalizeRequirement(rawRequirement, requirementPath);
     validateRequirementReferences(requirement, rewards.rewardTypes, requirementPath);
+    rejectEncounterHistoryRequirements(requirement, requirementPath);
     additionalOptionRequirements[optionKey] = requirement;
   }
   requireProducerLifecycle(

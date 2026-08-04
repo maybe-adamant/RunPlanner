@@ -12,8 +12,11 @@ export type {
 } from './composition';
 export {
   projectEncounterRecordPreparation,
+  projectBiomeEncounterKeyCounts,
+  projectPreviousRoomEncounterKeys,
   projectRoomPreparationCheckpoint,
   projectRecentEncounterEnvelopeSlots,
+  projectRouteEncounterKeyCounts,
   type RecentEncounterEnvelopeSlotFact,
 } from './facts';
 export { foldHistoryEvents, HistoryFoldContractError } from './fold';

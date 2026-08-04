@@ -46,6 +46,8 @@ describe('requirement evaluator registry', () => {
       'recordCount',
       'distinctRecordKeyCount',
       'recentEnvelopeSlotCount',
+      'encounterKeyCount',
+      'previousRoomEncounterKeyCount',
       'notInCurrentRoomShopOptions',
       'rewardLookupExcludes',
       'minRoomsSinceEvent',
@@ -172,6 +174,73 @@ describe('requirement evaluator registry', () => {
         ],
       }),
     ).toBe(true);
+  });
+
+  it('keeps exact encounter occurrence scopes separate from predecessor-room spacing', () => {
+    const context = {
+      ...baseContext,
+      encounterHistory: {
+        routeEncounterKeyCounts: { ArtemisCombatF: 1, ArtemisCombatG: 1 },
+        biomeEncounterKeyCounts: { ArtemisCombatG: 1 },
+        previousRoomEncounterKeys: [['ArtemisCombatF'], [], ['ArtemisCombatG', 'GeneratedG']],
+      },
+    } satisfies RequirementEvaluationContext;
+
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG'],
+          range: { min: 2, max: 2 },
+        },
+        context,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'encounterKeyCount',
+          scope: 'biome',
+          encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG'],
+          range: { min: 1, max: 1 },
+        },
+        context,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG'],
+          roomWindow: 2,
+          range: { min: 1, max: 1 },
+        },
+        context,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG'],
+          roomWindow: 3,
+          range: { min: 2, max: 2 },
+        },
+        context,
+      ),
+    ).toBe(true);
+    expect(() =>
+      evaluateRequirement(
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: ['ArtemisCombatF'],
+          range: { max: 0 },
+        },
+        baseContext,
+      ),
+    ).toThrowError('Encounter-history requirement evaluated without encounter history facts');
   });
 
   it('evaluates current-batch and Clockwork generation facts without authored room state', () => {

@@ -8,7 +8,11 @@ import {
 import {
   foldHistoryEvents,
   HistoryFoldContractError,
+  projectBiomeEncounterKeyCounts,
+  projectPreviousRoomEncounterKeys,
+  projectRouteEncounterKeyCounts,
   type HistoryEvent,
+  type HistoryStateView,
 } from '@run-planner/engine/simulation';
 
 import { foldBiomeHistoryPrefixEvents } from '../../src/simulation/history/fold';
@@ -16,6 +20,8 @@ import { foldBiomeHistoryPrefixEvents } from '../../src/simulation/history/fold'
 const biome = createBiomeAddress('Underworld', 'F');
 const origin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-combat'));
 const secondOrigin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-second'));
+const gBiome = createBiomeAddress('Underworld', 'G');
+const gOrigin = createOccurrenceAddress(gBiome, createOccurrenceId('history-fold-g-combat'));
 
 type UnsequencedHistoryEvent = HistoryEvent extends infer Event
   ? Event extends HistoryEvent
@@ -194,5 +200,55 @@ describe('history fold encounter checkpoint closure', () => {
     expect(() => foldBiomeHistoryPrefixEvents(malformed)).toThrow(
       new HistoryFoldContractError('prefix history has more than one unentered prepared room'),
     );
+  });
+
+  it('projects exact encounter facts from records while retaining empty predecessor positions', () => {
+    const canonical = foldHistoryEvents(canonicalEvents());
+    const recorded = canonical.ledgers.encounterRecords[0];
+    if (recorded === undefined) throw new Error('canonical history lost its encounter record');
+    const gRecord = Object.freeze({
+      ...recorded,
+      sequence: recorded.sequence + 10,
+      origin: gOrigin,
+      gameName: 'G_Combat02',
+      encounterKey: 'ArtemisCombatG',
+    });
+    const view: HistoryStateView = Object.freeze({
+      sequence: gRecord.sequence,
+      ledgers: Object.freeze({
+        ...canonical.ledgers,
+        encounterRecords: Object.freeze([...canonical.ledgers.encounterRecords, gRecord]),
+        roomAppearances: Object.freeze([
+          canonical.ledgers.roomAppearances[0]!,
+          Object.freeze({
+            sequence: recorded.sequence + 2,
+            origin: secondOrigin,
+            gameName: 'F_Combat03',
+          }),
+          Object.freeze({
+            sequence: recorded.sequence + 3,
+            origin,
+            gameName: 'F_Combat02',
+          }),
+          Object.freeze({
+            sequence: gRecord.sequence - 1,
+            origin: gOrigin,
+            gameName: 'G_Combat02',
+          }),
+        ]),
+      }),
+    });
+
+    expect(projectRouteEncounterKeyCounts(view, 'Underworld')).toEqual({
+      ArtemisCombatG: 1,
+      GeneratedF: 1,
+    });
+    expect(projectBiomeEncounterKeyCounts(view, 'Underworld', 'F')).toEqual({ GeneratedF: 1 });
+    expect(projectBiomeEncounterKeyCounts(view, 'Underworld', 'G')).toEqual({ ArtemisCombatG: 1 });
+    expect(projectPreviousRoomEncounterKeys(view, gOrigin)).toEqual([
+      ['GeneratedF'],
+      [],
+      ['GeneratedF'],
+    ]);
   });
 });

@@ -23,7 +23,7 @@ import type {
 
 import { createCollection, requireNonEmpty, requirePositiveInteger } from '../common';
 import { fail } from '../errors';
-import { normalizeRequirement } from '../requirements';
+import { normalizeRequirement, rejectEncounterHistoryRequirements } from '../requirements';
 import type {
   RawRewardKernelInput,
   RawRewardTypeDeclaration,
@@ -441,6 +441,7 @@ function normalizeAndValidateRequirement(
 ): RequirementExpression {
   const normalized = normalizeRequirement(requirement, path);
   validateRequirementRewardReferences(normalized, rewardTypes, path);
+  rejectEncounterHistoryRequirements(normalized, path);
   return normalized;
 }
 
