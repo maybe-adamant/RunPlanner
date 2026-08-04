@@ -7,12 +7,13 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 11 Boundary
+## Schema 12 Boundary
 
-Schema 11 is the sole persisted authored-project contract. The codec rejects
-schema 10 and earlier documents rather than manufacturing N's normalized PreHub
-decision, terminal Hub envelope, source-bearing Hub, or another missing
-authored choice for a stale document. Catalog versions must match exactly.
+Schema 12 is the sole persisted authored-project contract. The codec rejects
+schema 11 and earlier documents rather than manufacturing N's normalized PreHub
+decision, terminal Hub envelope, source-bearing Hub, or concrete room-local
+encounter selections for a stale document. There is no migration path; catalog
+versions must match exactly.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -60,9 +61,9 @@ lists, canvas positions, selected tabs, and history controls do not enter it.
 ## Core Terms and Ownership
 
 `Room Declaration` is an immutable catalog fact keyed by game room name. It
-owns kind, authored or derived mode, exits, requirements, force, caps,
-encounter profile, incoming reward binding, local-child descriptors, and
-complete declaration defaults.
+owns kind, authored or derived mode, exits, requirements, force, caps, an
+Encounter Envelope with exact slot bindings, incoming reward binding,
+local-child descriptors, and complete declaration defaults.
 
 `Room Occurrence` is one repeatable persisted appearance of a declaration in
 one biome. It owns an opaque `occurrenceId`, selected `gameName`, and complete
@@ -84,8 +85,9 @@ does. Boss and optional Postboss rooms are catalog-derived completion tail
 rooms, not authored decisions or occurrences.
 
 Topology owns occurrence relationships and decisions. Room state owns rewards,
-Shop inventory and exact purchase order when materialized, encounter choices, wheels,
-cages, and side-room state. UI state owns no domain topology.
+Shop inventory and exact purchase order when materialized, exact concrete
+encounter selections, wheels, cages, and side-room state. UI state owns no
+domain topology.
 
 ## Route Scope
 
@@ -236,7 +238,10 @@ be authored again only after the board is restored to its completion predicate.
 
 ## Occurrence State and Replacement
 
-Every occurrence begins with complete declaration-owned offer-time defaults.
+Every occurrence begins with complete declaration-owned offer-time defaults and
+complete static selections for each of its declaration's pool-backed potential
+encounter slots. Fixed slots and slots in an empty Encounter Envelope carry no
+redundant authored selection.
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
 it; changing selection removes unselected inventory. Its materialized state
 owns declaration-keyed offers and one exact `purchaseOrder`; membership and
@@ -254,26 +259,52 @@ They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, and Shop offers/purchase order. Leaf
 edits do not rewrite topology.
 
+### Concrete Encounter Selections
+
+`RoomOccurrence.encounters.encounterKeyByPhase` persists the exact normalized
+Encounter Definition key for every pool-backed potential slot of that room's
+envelope. A parent-local N side room keeps the corresponding map on its own
+`EphyraSideRoomState.encounters`; it remains a local child, never an
+independent Room Occurrence or global topology entry. The map does not store
+an Encounter Set key, category sentinel, NPC family, or rendered phase ordinal.
+
+Potential selections remain with their owning room through unpick/repick,
+side-room generation and entry-order changes, optional-slot trimming, Undo,
+and Redo. A structurally dormant slot emits no active control, candidate,
+finding, history, counter, phase-owned reward effect, or NPC index row, but its
+selection remains ready for reactivation. Replacing a declaration reconciles
+only compatible stable phase keys and gives newly introduced or incompatible
+slots their declaration defaults. Deleting an occurrence deletes its owned
+selections and nested local-child state together.
+
+An active retained selection may become context-invalid after a different
+semantic edit. It remains persisted and repairable; the authored model never
+falls back to another definition. `SelectEncounter` accepts an exact eligible
+candidate at one active `EncounterPhaseAddress`. `ResetEncounter` restores the
+set's static declared default even when that default is currently invalid; it
+is a reset, not an automatic repair.
+
 ## Semantic Addresses
 
 Addresses are immutable discriminated values. `semanticAddressKey` is a
 canonical projection for maps and markers, not another identity source.
 
-| Owner                             | Address                                      |
-| --------------------------------- | -------------------------------------------- |
-| start and occurrence-local leaves | `OccurrenceAddress`                          |
-| room-sourced decision             | `ExitDecisionAddress` with occurrence source |
-| N handoff decision                | `ExitDecisionAddress` with Hub source        |
-| normal target                     | `TargetAddress` with source and exit key     |
-| decision selection                | `ExitSelectionAddress` with source           |
-| batch reward store                | `BatchRewardStoreAddress` with source        |
-| Hub board                         | `HubDecisionAddress`                         |
-| Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`       |
-| local child/reward and wheel      | occurrence plus declaration-owned child key  |
-| derived completion                | `CompletionRoomAddress`                      |
+| Owner                             | Address                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| start and occurrence-local leaves | `OccurrenceAddress`                                                               |
+| room-sourced decision             | `ExitDecisionAddress` with occurrence source                                      |
+| N handoff decision                | `ExitDecisionAddress` with Hub source                                             |
+| normal target                     | `TargetAddress` with source and exit key                                          |
+| decision selection                | `ExitSelectionAddress` with source                                                |
+| batch reward store                | `BatchRewardStoreAddress` with source                                             |
+| Hub board                         | `HubDecisionAddress`                                                              |
+| Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                            |
+| local child/reward and wheel      | occurrence plus declaration-owned child key                                       |
+| pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence or local-child owner and stable phase key |
+| derived completion                | `CompletionRoomAddress`                                                           |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-11 addresses.
+batch-store identity, and rendered target indexes are not schema-12 addresses.
 
 ## Commands
 
@@ -284,7 +315,7 @@ its semantic owner and never leaves partial topology.
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
 replacement, Hub board and visit commands; and occurrence-local state
-commands. The current union is defined by
+commands including `SelectEncounter` and `ResetEncounter`. The current union is defined by
 `packages/planner-engine/src/authored-project/commands/types.ts`.
 
 `RemoveExitDecision` explicitly removes its targets and downstream selected
@@ -299,7 +330,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 11;
+  schemaVersion: 12;
   projectId: string;
   name: string;
   catalogVersion: string;

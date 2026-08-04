@@ -3,9 +3,10 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Thessaly (`O`) under the
-progressed-save, NPC-free baseline. Shared behavior is owned by
+progressed-save static baseline with supported Heracles and Icarus combat. Shared behavior is owned by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); O
-declarations own its fixed count, ShipCombat profile, physical exits, and
+declarations own its fixed count, ShipCombat room template and Encounter
+Envelope bindings, physical exits, and
 completion rooms.
 
 The rules were checked against `RoomSets.lua`, `RoomDataO.lua`, ship map data,
@@ -44,17 +45,18 @@ without discarding its retained authored state.
 Room creation, entered acquisition, force pressure, and completion counters
 remain distinct. The planner keeps possible/forced room support and the
 declaration-defined reward timing, but deliberately omits weighted RNG,
-unmodeled combat waves, NPC variants, Chaos, and optional player systems.
+unmodeled combat waves, NPC event/interactions beyond selected combat, Chaos,
+and optional player systems.
 
 ### ShipCombat phase and wheel contract
 
-Every O combat occurrence uses the ordered ShipCombat profile: a non-counting
-Intro phase, a counting Combat1 phase with `wheel1`, and an optional counting
-Combat2 phase with `wheel2`. The optional third phase is prepared from the
-pre-room encounter-depth history. The authored encounter count is therefore a
-real room-local value: two means Intro plus Combat1; three includes Combat2.
-It may be context-invalid and produce a finding, but it is not silently
-coerced by the UI.
+Every O combat occurrence uses the ordered Ship Encounter Envelope: an Intro
+slot, a Combat1 slot with `wheel1`, and an optional Combat2 slot with `wheel2`.
+The selected concrete definition owns whether a slot counts. The optional third
+phase is prepared from the pre-room encounter-depth history. The authored
+encounter count is therefore a real room-local value: two means Intro plus
+Combat1; three includes Combat2. It may be context-invalid and produce a
+finding, but it is not silently coerced by the UI.
 
 Each active wheel owns one RunProgress or MetaProgress store, one or two
 complete resolved offers, and one picked offer index. Unpicked wheel options
@@ -83,9 +85,23 @@ Miniboss, Story, Reprieve, Devotion, and Shop declarations retain their own
 physical one-door shape, caps, force pressure, and producers. Wheel offer
 count is not a second room exit. The sixth ordinary one-door target reaches
 the declared Preboss frontier; the width-one O takeover creates the entered
-WorldShop and then the derived `O_Boss01`, `O_PostBoss01` tail. NPC encounter
-variants, weighted replay, optional actions, and automatic boss drops remain
-outside the canonical projection.
+WorldShop and then the derived `O_Boss01`, `O_PostBoss01` tail. Weighted replay,
+NPC random/interaction behavior, optional actions, and automatic boss drops
+remain outside the canonical projection.
+
+### Concrete encounter selection
+
+`OEncountersIntros` permits `HeraclesCombatO` only at Intro;
+`OEncountersDefault` permits `IcarusCombatO` only at an active Combat1 or
+Combat2 slot. A valid Heracles Intro counts for encounter depth but does not
+terminate the later O slots. An Icarus record in an earlier active main slot
+uses ordinary exact-key history and prevents an Icarus selection in a later
+active main slot. Both identities leave the existing wheel ownership and
+selected reward behavior on their exact Combat slots unchanged.
+
+The remaining NPC event, interaction, reward, and external-profile paths are
+not encounter candidates. The raw source composition remains documented in the
+encounter audit rather than reproduced here.
 
 ## Product boundary
 

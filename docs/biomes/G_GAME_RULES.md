@@ -7,8 +7,8 @@ picker, physical-door, cap, force, offer/acquisition, generated-store,
 generated-decision, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
-Exact room-local exits, requirements, caps, labels, encounter-profile keys,
-and reward bindings appear explicitly in catalog declarations. This document
+Exact room-local exits, requirements, caps, labels, Encounter Envelope/slot
+bindings, and reward bindings appear explicitly in catalog declarations. This document
 owns how those facts form the G biome and how vanilla behavior projects into
 the planner.
 
@@ -46,7 +46,7 @@ coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 | Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                            |
 | Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced        |
 | Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | implemented           | --                                                            |
-| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and encounter profiles                                               | implemented           | --                                                            |
+| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and direct encounter definitions                                     | implemented           | --                                                            |
 | Takeover Preboss                       | `G_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and later exits are free rewards when present    | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                            |
 | Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Deferred:** retain the fixed Story offer but do not author or consume the internal benefit choice    | documented boundary   | Concrete NPC gifts and trait state are modeled                |
 | Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input              |
@@ -144,7 +144,7 @@ layouts can represent leaving and returning to a biome spine.
 ## Room Families and Caps
 
 - 20 ordinary combat declarations use the `StandardCombat` room template and
-  shared `SingleCountedCombat` encounter profile;
+  a shared single-slot Encounter Envelope with declaration-bound sets;
 - `G_MiniBoss01`, `G_MiniBoss02`, and `G_MiniBoss03` are production rooms;
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;
@@ -238,6 +238,20 @@ no store contribution.
 `G_MiniBoss02` lifetime encounter-completion gates, Narcissus prior-run force,
 progression and bounty gates, and the Fountain world-upgrade gate are excluded.
 Their current-run room, counter, cap, force, and reward rules remain exact.
+
+### Concrete encounter selection
+
+Every G room binds its concrete encounter slots explicitly. Pool-backed
+ordinary combat phases select one exact definition from `GEncountersDefault`,
+which supports `GeneratedG`, `ArtemisCombatG`, `ArachneCombatG`, and
+`NemesisCombatG`. Fixed starts, specials, minibosses, Shops, and completion
+rooms resolve their direct definitions and are not NPC candidate surfaces.
+
+The NPC definitions use ordinary exact-key eligibility and history requirements;
+the planner does not add a G-specific NPC resolver or family ledger. Raw set
+weights, external predicates, NPC interactions, random/Shop events, and
+enemy-wave detail remain audit or future-feature concerns rather than
+production authored state.
 
 ## Current Product Boundary
 

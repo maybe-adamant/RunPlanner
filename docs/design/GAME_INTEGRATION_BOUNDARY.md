@@ -59,8 +59,10 @@ which facts are actually necessary.
 - decode and validate its transport/schema boundary;
 - reject unknown versions, operations, identifiers, and unsafe bounds;
 - translate semantic facts through fixed runtime adapters;
-- suppress natural Chaos and persistent NPC encounter substitution while those
-  systems are absent from the execution plan;
+- realize the plan's selected concrete encounter definition, including supported
+  field-NPC combat, through fixed runtime adapters;
+- suppress natural Chaos and unmodeled NPC random, Shop, Bridge, interaction,
+  and wager systems while those systems are absent from the execution plan;
 - suppress Anomaly replacement while route-structural detours are absent from
   the execution plan;
 - compare expected and observed game state at known checkpoints;
@@ -115,16 +117,18 @@ and prevent the editor from becoming the only interpretation of a project.
 
 ### Shared v1 suppression and no-action contract
 
-The app's v1 canonical history excludes three spontaneous systems whose presence
+The app's v1 canonical history excludes spontaneous systems whose presence
 would otherwise change modeled history:
 
 - natural Chaos generation;
 - Anomaly replacement;
-- persistent NPC encounter substitution.
+- NPC random events, Shop/Bridge appearances, interactions, and wager outcomes.
 
-The future game module must disable all three unless a later schema explicitly
-represents them. Observing any of them during a v1 trace is a conformance
-mismatch, not permission for the runtime to reinterpret the plan.
+The future game module must disable these systems unless a later schema
+explicitly represents them. It must still realize the exact supported
+field-NPC combat definition selected by the plan. Observing an excluded system
+during a v1 trace is a conformance mismatch, not permission for the runtime to
+reinterpret the plan.
 
 Challenges, wells, gathering points, and rerolls use a no-action contract
 instead. They may exist in the world, but the traced player never activates a
@@ -183,8 +187,8 @@ for execution.
 - clipboard wrapper or compression;
 - game hook selection;
 - exact runtime mechanism that realizes G's open-picked-exit baseline;
-- exact runtime adapters that suppress natural Chaos, Anomaly replacement, and
-  persistent NPC encounter substitution;
+- exact runtime adapters that realize selected combat definitions and suppress
+  natural Chaos, Anomaly replacement, and unmodeled NPC event systems;
 - runtime command handlers;
 - strict versus diagnostic mismatch policy;
 - automatic diagnostic import;

@@ -83,6 +83,20 @@ are deleted; exact visit markers and nested room-local navigation remain. Its
 durable contracts are absorbed into the authored-project, candidate, editor,
 structured-workspace, and N authorities, so the temporary Hub plan is retired.
 
+Concrete encounter authoring and field-NPC combat selection are complete.
+Schema 12 replaces profile baselines with declaration-bound Encounter
+Envelopes, exact concrete definitions, unique static-default sets, and
+room-instance-owned selections. The shared lifecycle now records, starts,
+applies definition-owned counter effects, and completes exact phase identities
+through one history fold. Artemis, Arachne, Heracles, Icarus, Athena, and
+Nemesis use ordinary exact-key requirements and candidate correction; the
+route NPC index is presentation-only. The closing documentation gate absorbs
+the durable catalog, authored, lifecycle, simulation, biome, candidate, and
+editor contracts, retires the temporary encounter plan, and retains raw source
+matrices and unmodeled NPC event behavior in the encounter audit.
+The final repository gate passed 107 test files / 985 tests, typecheck, lint,
+formatting, and the production build.
+
 Phase 8's narrow portable-shell implementation is complete. The
 permission-minimal Tauri host wraps the existing Vite application without
 plugins, frontend capabilities, or Rust-side application behavior. The Windows

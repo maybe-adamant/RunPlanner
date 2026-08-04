@@ -3,7 +3,7 @@
 ## Scope and evidence
 
 This document is the game-rule authority for Tartarus (`I`) under the
-progressed-save, NPC-free baseline. Shared occurrence, picker, reward, and
+progressed-save static baseline with supported Nemesis combat. Shared occurrence, picker, reward, and
 completion rules are defined by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). I
 declarations own the Clockwork policy, candidate facts, caps, exits, and shop
@@ -43,9 +43,10 @@ eligible support, and physical exit keys remain catalog facts; the authored
 project stores only occurrences, decisions, selected exits, and owned leaves.
 
 The planner models possible and forced support, capped candidate creation,
-complete offer defaults, and the fixed completion tail. It deliberately omits
-weighted RNG, combat-wave composition, persistent NPCs, natural Chaos,
-anomalies, and optional player interactions from the canonical baseline.
+complete offer defaults, concrete encounter selection, and the fixed completion
+tail. It deliberately omits weighted RNG, combat-wave composition, NPC events
+and interactions beyond selected combat, natural Chaos, anomalies, and optional
+player interactions from the canonical baseline.
 
 ### Clockwork state and physical capacity
 
@@ -66,6 +67,21 @@ Goal and NonGoal are derived realizations of one occurrence-owned room state,
 not alternate persisted topology. A dormant non-goal leaf survives while the
 same room currently resolves to Goal, so a compatible upstream edit can change
 the realization without destroying authored room-local intent.
+
+### Concrete encounter selection
+
+I's ordinary combat phase binds `IEncountersDefault` or
+`IEncountersSmaller` according to its declaration. Each set includes
+`NemesisCombatI` beside its exact ordinary/Goal definitions, so Nemesis can
+replace only a supported active combat phase. Fixed starts, specials, Shops,
+minibosses, Preboss, and completion rooms remain direct-definition slots with
+no encounter picker.
+
+Nemesis selection leaves the room's Clockwork reward realization and ordinary
+reward ownership intact. Its requirements use exact definition history and the
+same lifecycle counter timing as other encounters; the Gold wager, NPC
+interaction, random/Shop/Bridge event paths, and enemy composition are not
+modeled.
 
 ### Producers, special rooms, and Preboss
 

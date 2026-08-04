@@ -10,10 +10,13 @@ It owns declaration families, provenance, normalization policy, requirement
 scope, labels, defaults, and catalog versioning. It does not own concrete
 authored choices or lifecycle simulation algorithms.
 
-## Schema 11 Unified Biome Decisions
+## Schema 12 Unified Biome Decisions and Encounter Composition
 
-Schema 11 is the current authored contract over one `BiomeLayout` envelope
-instead of a layout-specific split:
+Schema 12 is the current authored contract over one `BiomeLayout` envelope
+instead of a layout-specific split. It also gives every Room Declaration one
+explicit room-local encounter composition; concrete authored encounter choices
+are defined below rather than inferred from a room template or baseline
+profile:
 
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
 - `progression` is either ordinary `generated` normal-door batches or the N
@@ -132,7 +135,10 @@ const F_Combat04 = {
     { index: 1, type: 'ErebusExitDoor' },
     { index: 2, type: 'ErebusExitDoor' },
   ],
-  encounterProfileKey: 'SingleCountedCombat',
+  encounterEnvelopeKey: 'SingleEncounter',
+  encounterSlotBindings: [
+    { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
+  ],
   incomingReward: {
     kind: 'countedChoice',
     stores: ['RunProgress', 'MetaProgress'],
@@ -162,7 +168,7 @@ The catalog contains at least:
 - physical exit-type declarations;
 - room declarations;
 - room-template descriptors;
-- encounter profiles and phase descriptors;
+- encounter envelopes, concrete encounter definitions, and encounter sets;
 - reusable room lifecycle profiles, closed operations, and declaration-owned
   effect references;
 - local child-slot descriptors;
@@ -207,9 +213,9 @@ Biome layout declarations own one immutable common envelope:
 - standard, Fields, or Clockwork generated-batch policy, including any
   policy-owned authored fields and the Fields Min/Max support contract;
 - generated reward-store policy: authored base store, source offer point, or
-  explicit no-store, plus optional source-encounter-profile overrides; O maps
-  ShipCombat sources to their active wheel and otherwise requires an authored
-  store;
+  explicit no-store, plus optional source-room-template overrides; O maps
+  `ShipCombat` sources to their active wheel and otherwise requires an
+  authored store;
 - declaration-proven generated batch and target bounds;
 - persistent Hub structure where applicable: semantic Hub key, fixed physical
   slots, open-set constraints, visit rules, restores, and its dedicated fixed
@@ -257,7 +263,7 @@ Every supported concrete room declaration owns:
 - eligibility requirements;
 - force behavior;
 - creation and appearance caps;
-- encounter-profile key;
+- encounter-envelope key and exact per-slot definition or set bindings;
 - modeled incoming reward binding;
 - any declaration-selected derived realization policy and its complete dormant
   leaf default;
@@ -334,55 +340,66 @@ room eligibility range or dispatch on door-name strings in the simulator.
 Unconstrained F/G exit types still receive explicit normalized policies rather
 than relying on a missing-policy fallback.
 
-## Encounter Profiles
+## Encounter Composition
 
-Encounter profiles own the baseline ordered room sequence:
+Every Room Declaration binds exactly one `EncounterEnvelope`. An envelope is
+reusable room-local topology only: its ordered stable slots, any declarative
+structural-activation condition, and a slot's named local-reward or wheel
+attachment. It owns neither a concrete identity, eligibility, effective kind,
+counter effect, nor lifecycle timing.
 
-- stable phase keys;
-- phase kind and optional presence;
-- canonical modeled encounter identity when exact identity is relevant;
-- `biomeEncounterDepth` effect;
-- lifecycle timing;
-- phase-owned reward offer points;
-- the named point at which optional presence is decided.
+Every envelope slot has one exact Room Declaration binding:
 
-Every fixed Story room uses a biome-specific encounter profile carrying its
-concrete game encounter identity. The shared `Story` reward type remains a
-reward-domain concept and must not be reused as a generic encounter identity.
+- a fixed binding names one `EncounterDefinition`; or
+- a set binding names one `EncounterSet`.
 
-`SingleCountedCombat` is the shared canonical one-phase encounter projection
-for ordinary main combat rooms in F, G, I, N, P, and Q. Those rooms may retain
-different room templates, rewards, lifecycle profiles, eligibility, and
-topology without duplicating an encounter profile whose only modeled fact is
-one counting combat phase. H and O retain specialized profiles because their
-multi-phase structures are observable to current consumers.
+An `EncounterDefinition` is one normalized game identity. It owns its label,
+effective kind, requirements, encounter-depth effect, optional sequence effect,
+and optional `npcPresentationKey`. The presentation key groups resolved NPC
+rows only; requirement and history operands always use exact definition keys.
 
-`NoEncounter` is the shared empty canonical sequence for rooms whose supported
-projection emits no encounter phase. It is not the game's concrete `Empty`
-encounter and is not tied to an Intro room role. Preboss rooms reference the
-concrete `Shop` encounter; their shop or free-reward realization belongs to
-the declaration-owned Preboss batch lifecycle rather than a synthetic Preboss
-encounter profile.
+An `EncounterSet` owns a unique, ordered support of definition keys and one
+static declaration-owned default. Source list multiplicity and weighting are
+evidence for the audit, not planner state: an encounter set is not a consumed
+bag and contains no probability, count, weight, or ratio field. The default is
+complete deterministic authored state, not an eligibility promise.
 
-Rooms reference profiles instead of copying phase sequences. This is required
-for O multi-encounter rooms and future persistent NPC replacement. A future NPC
-assignment may replace an addressed phase before simulation; history consumes
-the resolved phase sequence rather than baseline plus a side channel.
+The normalized composition is deliberately explicit:
 
-An encounter profile is a canonical planner projection, not necessarily a
-transcription of every internal game encounter. Internal phases may collapse
-when they are intentionally simplified under the disposition contract. O and
-future NPC composition may require real ordered phases because their phases
-change modeled rewards or counters; P's baseline does not require them merely
-because the game internally uses them.
+```text
+Room Declaration
+  + Encounter Envelope
+  + exact slot -> fixed Encounter Definition | Encounter Set
+  -> complete room-local encounter contract
+```
 
-Future concrete encounter selection extends this boundary without cloning the
-shared phase topology. A Room Declaration will bind each addressed profile
-phase to a declared candidate source, an authored room occurrence will own the
-selected concrete encounter key, and materialization will validate that choice
-against the room-bound candidates before emitting resolved encounter history.
-Until that feature is implemented, declarations must not carry dormant pools
-or pretend that a collapsed profile names a concrete generated encounter.
+No consumer recovers a slot binding from an envelope name, room template,
+biome, game name, rendered order, or a baseline identity. Empty envelopes and
+fixed slots are part of the same universal contract, but have no redundant
+authored choice. Pool-backed slots are the only ones with a persisted selected
+definition.
+
+`RoomLifecycleProfile` remains the authority for operation order. It may
+declare which envelope shapes it can execute, but it cannot supply a concrete
+identity, kind, counter effect, set, or eligibility policy. A selected
+definition determines those facts when its structurally active slot resolves.
+This keeps O's `Intro`/`Combat1`/optional `Combat2`, P's `Intro`/`Combat`, and
+H's `Passive` plus cage prefix as explicit slot topology without reintroducing
+a parallel encounter-identity authority.
+
+The catalog is a fully progressed, non-bounty static projection. It excludes
+source identities whose only distinction is unmodeled save/profile progression,
+first-time narrative state, reweighting, or pre-run Shrine/difficulty choice.
+It retains supported concrete ordinary and field-NPC combat definitions. NPC
+random events, Shop/Bridge appearances, interactions, Gold-wager outcomes,
+enemy waves, and other unmodeled room details are not silently represented by
+an `unsupported` identity or a runtime resolver branch.
+
+O's outgoing reward-store override is intentionally selected by
+`sourceRoomTemplateKey: 'ShipCombat'`, not by an encounter envelope or
+definition. The room template owns its wheel-bearing authored state; the
+envelope declares phase attachment points. These are related composition facts,
+not aliases for each other.
 
 ## Reward Declarations
 
@@ -547,7 +564,13 @@ Catalog construction must verify:
 - every room declares exactly one authored or derived mode, and derived rooms
   are referenced only from compatible layout roles;
 - every active leaf has a complete deterministic default;
-- encounter phases and local slots have unique stable keys;
+- every Room Declaration names one Encounter Envelope and each envelope slot
+  has exactly one fixed-definition or set binding;
+- envelope slots, local slots, and bindings have unique stable keys;
+- every Encounter Set contains unique existing definitions and its default is
+  a member of that set;
+- every fixed slot names one existing definition, while empty and fixed slots
+  have no selectable authored state;
 - requirement trees are typed and supported at their contacts;
 - reward sources, filters, payloads, and defaults agree;
 - every source-bearing payload selects a registered source-support policy and
@@ -580,7 +603,9 @@ Leaf activation follows lifecycle rather than declaration presence. Incoming
 and free-reward leaves are active when their door offer exists; a shop leaf is
 active only when its occurrence is picked for entry. Catalog defaults must be
 complete for either activation point without forcing entry-only state onto an
-unpicked occurrence.
+unpicked occurrence. Pool-backed encounter selections remain complete even
+while a potential slot is dormant, but they become an active room-local product
+only when their structural room and slot activation conditions hold.
 
 ## Catalog Versioning
 
@@ -625,7 +650,8 @@ for both complete routes:
   the supported biome projections;
 - required reward types, payloads, concrete acquisitions, stores, bags,
   bindings, and shops;
-- required encounter profiles;
+- required Encounter Envelopes, Encounter Definitions, Encounter Sets, and
+  exact Room Declaration slot bindings;
 - eligibility, force, and cap evaluators exercised by all eight biomes;
 - explicit labels and recursive defaults.
 

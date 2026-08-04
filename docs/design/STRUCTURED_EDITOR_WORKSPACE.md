@@ -124,8 +124,8 @@ that shared workspace; it does not create a second editor surface.
 The rail is a selective decision-highlight and navigation projection, not
 workspace authority. Omitting a semantic owner from the rail changes neither
 its authored data nor its workspace node, findings, contextual controls, focus
-destination, or editability. Room rewards and any future encounters, features,
-items, or other room-local products remain available through the containing
+destination, or editability. Room rewards, encounter phases, and any future
+features, items, or other room-local products remain available through the containing
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight.
 
@@ -147,6 +147,24 @@ navigation.
 Finding navigation selects the owning route and biome, focuses the semantic
 owner, and brings its inspector surface into view. The inspector never searches
 for a rendered room label or decision number.
+
+### Encounter Phase Products
+
+Each structurally active pool-backed encounter phase is a first-class
+workspace owner. Its exact `EncounterPhaseAddress` resolves to the containing
+occurrence or local-child inspector, one marker, one focus destination, and—if
+the declared set has meaningful choice cardinality—one bound selection
+interaction. The projector consumes engine candidate support and lifecycle
+activation facts; it never derives phase activity from a rendered ordinal,
+finding, or room template.
+
+The workspace publishes active phases even behind an invalid evaluated prefix,
+so a retained invalid selection can be corrected. A dormant potential phase
+retains its persisted selection but has no live interaction, marker, finding,
+or route-NPC index entry. Singleton phases preserve their exact semantic
+destination without producing no-op controls. This gives finding navigation and
+closure the same phase identity regardless of whether the presentation has a
+visible picker.
 
 ## Application Projection Boundary
 

@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-11 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-12 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same canonical biome product.
 The application publishes those derived results to the editor, profiles, and
@@ -94,7 +94,8 @@ The normalized catalog contains immutable possible facts:
 - global biome declarations and route-owned ordered biome references;
 - layout variants and structural policies;
 - room identity, label, kind, template, exits, eligibility, force, and caps;
-- encounter profiles and phase timing;
+- Encounter Envelopes, exact slot bindings, concrete Encounter Definitions,
+  unique Encounter Sets, and room lifecycle timing;
 - local child slots;
 - reward types, payload domains, source-support policies, concrete acquisition
   declarations, stores, bags, bindings, and shops;
@@ -409,7 +410,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-11's non-authoritative decision-array order and keeps shared
+preserves schema-12's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -514,9 +515,9 @@ authored cage leaves.
 History emits that typed Fields outcome immediately before its physical target
 creation events. Folding the event increments the biome-local
 `fieldsMaxDoorsRolled` counter for Max without inferring the outcome from
-visible cage count. Room-creation history also retains the actual materialized
-encounter profile, because a Min outcome can select a two-cage profile that
-differs from the room declaration's maximum-capacity profile.
+visible cage count. Encounter preparation records the actual active envelope
+prefix, so a Min outcome can resolve only two cage slots while the room
+declaration retains the complete three-cage envelope.
 
 Selected Fields validation reads the source room's pre-commit history view.
 It combines that view's `biomeDepthCache`, the prior derived
@@ -560,8 +561,8 @@ biome.complete
 next biome entry or route completion
 ```
 
-Encounter profiles emit ordered phase events. A counting combat phase may
-produce:
+Prepared Encounter Envelope phases emit ordered, resolved-definition-owned
+events. A counting combat phase may produce:
 
 ```text
 encounter.start
@@ -743,6 +744,30 @@ at least the declared count beyond `lastDevotionDepth`.
 Selected facts and candidate projections use the same evaluator functions.
 There is no permissive candidate rule beside a stricter selected rule.
 
+### Encounter Selection and Validation
+
+For every structurally active pool-backed encounter phase, simulation evaluates
+the exact authored definition against its declared Encounter Set and the
+preparation checkpoint supplied by the shared lifecycle. The candidate domain
+is the complete declared set; its valid members are evaluated by the same
+requirements as the selected definition. Exact route and biome occurrence
+requirements consume recorded definition keys, while a previous-room window
+consumes only committed predecessor room origins. `npcPresentationKey` is not
+an input to either rule.
+
+An active selected definition that becomes invalid remains an addressed
+candidate and finding owner. It does not fall back to the set default or another
+possible member; it contributes no substitute encounter, start, completion,
+counter, phase-owned reward effect, or NPC index row, and blocks canonical
+execution at that phase. Earlier valid phases may retain their preparation
+records, so later structurally active phase controls remain correctable from
+their reached prefix. A structurally dormant potential slot retains authored
+state but publishes no candidate, finding, history, or editor control.
+
+This is normal selected-plan validation, not an NPC evaluator or a second
+history. Candidate authorization and correction remain part of the existing
+project-bound candidate session.
+
 ## Structural and Eligibility Validation
 
 Validation checks complete canonical facts in lifecycle order:
@@ -752,7 +777,8 @@ Validation checks complete canonical facts in lifecycle order:
 - room eligibility at the correct generation point;
 - creation and appearance caps on separate ledgers;
 - force pressure over complete peer batches;
-- encounter profile presence and counter effects;
+- active Encounter Envelope slots, exact definitions, and definition-owned
+  counter effects;
 - selected traversal and visit order;
 - fixed hub-slot availability, persistent-board, restore, and visit-count
   invariants;
@@ -1192,7 +1218,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
-  schema-11 fixtures across F through Q;
+  schema-12 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

@@ -43,6 +43,8 @@ Production now prepares one semantic context per contacted owner:
 - room targets use their selected-simulation generation context;
 - rewards use typed producer frontiers;
 - O lifecycle controls use opaque occurrence-local lifecycle capabilities;
+- active pool-backed encounter phases use their lifecycle preparation
+  checkpoint and the preceding valid same-room record prefix;
 - N controls use joint-board, ordered-visit, or parent-local regions;
 - shops use joint inventory or ordered purchase contexts;
 - batch-level controls consume their typed selected-simulation contexts.
@@ -309,6 +311,15 @@ Some changes alter more than one local support calculation:
 - N membership, visits, and side-room state alter joint-board, visit, or
   parent-local regions.
 
+An encounter phase is narrower than an occurrence lifecycle replay. Its
+declaration-owned set is evaluated at the exact active phase address from the
+prepared checkpoint. A prior valid phase contributes its recorded exact
+definition to the same-room preparation view but no started counter effect;
+previous-room requirements still exclude the current room. A retained invalid
+selection remains an addressable correction target, while a structurally
+dormant slot has no candidate contact at all. React receives the bound result
+and does not inspect set membership or requirements.
+
 These candidates replay the smallest declared semantic region that contains
 their effect. No current candidate family owns a full addressed-biome replay.
 A future genuinely broad interaction would need to introduce that authority
@@ -366,23 +377,24 @@ Boon-source, and Devotion-source steps. It does not implement reward support.
 
 Each candidate family has an explicit semantic horizon:
 
-| Candidate family              | Required horizon                                           |
-| ----------------------------- | ---------------------------------------------------------- |
-| Start room                    | Declaration-owned start domain                             |
-| Room target                   | Target generation support                                  |
-| Takeover Preboss batch        | Source pre-generation support across all physical exits    |
-| Batch reward store            | Pre-generation store support                               |
-| Incoming or local reward      | Offer generation and its own entered acquisition lifecycle |
-| Sequential sibling reward     | Earlier sibling generation plus the addressed offer        |
-| Joint unordered rewards       | Complete atomic sibling generation region                  |
-| Shop offer                    | Complete joint inventory generation                        |
-| Shop purchase order           | Ordered purchase application                               |
-| Fields Min/Max                | Pre-outcome support ledger                                 |
-| O encounter or wheel setting  | Addressed occurrence lifecycle region                      |
-| Hub membership                | Joint open-board constraint region                         |
-| Hub visit order               | Complete proposed prefix through the Hub visit region      |
-| Side-room generation or entry | Parent-local side-room region                              |
-| Broad biome field             | Smallest biome suffix whose rules consume the field        |
+| Candidate family              | Required horizon                                            |
+| ----------------------------- | ----------------------------------------------------------- |
+| Start room                    | Declaration-owned start domain                              |
+| Room target                   | Target generation support                                   |
+| Takeover Preboss batch        | Source pre-generation support across all physical exits     |
+| Batch reward store            | Pre-generation store support                                |
+| Incoming or local reward      | Offer generation and its own entered acquisition lifecycle  |
+| Sequential sibling reward     | Earlier sibling generation plus the addressed offer         |
+| Joint unordered rewards       | Complete atomic sibling generation region                   |
+| Shop offer                    | Complete joint inventory generation                         |
+| Shop purchase order           | Ordered purchase application                                |
+| Fields Min/Max                | Pre-outcome support ledger                                  |
+| Encounter phase               | Active phase preparation checkpoint and valid record prefix |
+| O encounter or wheel setting  | Addressed occurrence lifecycle region                       |
+| Hub membership                | Joint open-board constraint region                          |
+| Hub visit order               | Complete proposed prefix through the Hub visit region       |
+| Side-room generation or entry | Parent-local side-room region                               |
+| Broad biome field             | Smallest biome suffix whose rules consume the field         |
 
 A candidate does not become impossible merely because retained downstream
 authorship would require later repair. Room replacement, structural capacity,

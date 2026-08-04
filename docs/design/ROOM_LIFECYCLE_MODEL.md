@@ -158,19 +158,19 @@ is threaded into the already-generated picked target's preparation.
 
 ## Ownership
 
-| Concern                                                     | Owner                             |
-| ----------------------------------------------------------- | --------------------------------- |
-| Ordered room operations and their state visibility          | Room lifecycle profile            |
-| Concrete room, encounter, exit, and profile selection facts | Room Declaration                  |
-| Encounter counting and phase-local effects                  | Encounter/phase declaration       |
-| Target structure and outgoing batch attachment              | Biome layout                      |
-| Biome transition resets                                     | Route/biome layout                |
-| Incoming and room-owned authored reward values              | Room Occurrence leaf state        |
-| Acquisition roles emitted at lifecycle points               | Reward producer/type declarations |
-| Counter and ledger effect implementations                   | Pure simulator registries         |
-| Event folding and possibility branching                     | Simulator                         |
-| Legality at an operation's pre-state                        | Validator                         |
-| Rendered controls and sequencing explanation                | Editor projection                 |
+| Concern                                                 | Owner                             |
+| ------------------------------------------------------- | --------------------------------- |
+| Ordered room operations and their state visibility      | Room lifecycle profile            |
+| Concrete room, envelope-slot, encounter, and exit facts | Room Declaration                  |
+| Encounter counting and phase-local effects              | Encounter/phase declaration       |
+| Target structure and outgoing batch attachment          | Biome layout                      |
+| Biome transition resets                                 | Route/biome layout                |
+| Incoming and room-owned authored reward values          | Room Occurrence leaf state        |
+| Acquisition roles emitted at lifecycle points           | Reward producer/type declarations |
+| Counter and ledger effect implementations               | Pure simulator registries         |
+| Event folding and possibility branching                 | Simulator                         |
+| Legality at an operation's pre-state                    | Validator                         |
+| Rendered controls and sequencing explanation            | Editor projection                 |
 
 The simulator must not switch on a concrete room name to reconstruct ordering.
 The editor must not persist lifecycle operations or history snapshots.
@@ -209,8 +209,8 @@ advances an already-resolved producer and emits the acquisition roles bound to
 that point. `commitRoom` appends declared history and updates commit-time
 caches before the selected target prepares.
 
-`runEncounterSequence` executes every phase of one already-materialized
-multi-phase encounter profile in declaration order. It emits start, optional
+`runEncounterSequence` executes every already-prepared active phase of one
+Encounter Envelope in declaration order. It emits start, definition-owned
 depth advancement, and completion for each phase. H uses it for the passive
 Fields phase followed by the active two- or three-cage prefix. Cage reward
 offer and acquisition events remain separate local producers rather than being
@@ -220,11 +220,12 @@ hidden inside this encounter operation.
 that same encounter sequence. For every selected O ShipCombat phase it emits
 the phase offer before encounter start and the picked acquisition after
 encounter completion when the phase declares an offer point. Intro has no
-offer and no encounter-depth increment; Combat1 and the conditionally selected
-Combat2 each increment encounter depth once, materialize one complete active
-wheel jointly, and acquire only its selected offer. The canonical room passes
-the selected encounter-phase prefix to the executor; the executor rejects a
-non-prefix selection or omission of a required phase.
+offer: the ordinary Intro definition is non-counting, while a selected
+Heracles Intro increments encounter depth once. Combat1 and the conditionally
+selected Combat2 each increment encounter depth once, materialize one complete
+active wheel jointly, and acquire only its selected offer. The canonical room
+passes the selected encounter-phase prefix to the executor; the executor
+rejects a non-prefix selection or omission of a required phase.
 
 History exposes both materialization and acquisition checkpoints for each
 phase offer point. Reward simulation evaluates all active offers at the former
@@ -235,14 +236,48 @@ later phase or room can evaluate reward-ratio support. A two-wheel room
 therefore contributes two ordered store entries; dormant wheel capacity emits
 no lifecycle or store-ledger event.
 
-Room-creation history retains the concrete materialized encounter-profile key.
-Consumers must not recover it from the maximum-capacity Room Declaration: an H
-Min outcome can select the two-cage profile for a room whose declaration names
-the three-cage maximum.
+Encounter record history retains the concrete definition, envelope, stable slot,
+and exact room origin. Consumers must not recover those facts from a maximum
+capacity Room Declaration: an H Min outcome activates only its two-cage prefix
+even though the declaration's complete envelope retains the third cage.
 
 Do not introduce an unrestricted callback or event DSL. Add or split an
 operation, effect, or event kind only when audited game behavior has an
 observable distinction that the closed vocabulary cannot represent correctly.
+
+### Concrete Encounter Preparation
+
+`prepareRoom` resolves an active room's Envelope slots from the
+post-predecessor-commit checkpoint. A fixed binding supplies its exact
+definition; a pool-backed binding supplies the room instance's exact authored
+definition. For each valid active slot, preparation appends an
+`encounterRecorded` event before entry. The event carries the definition key,
+envelope key, stable slot key, and exact room-instance origin.
+
+A later slot in the same room evaluates against the preceding recorded prefix.
+It can therefore observe exact earlier encounter identities, while encounter
+counters remain at the post-predecessor snapshot until the matching
+`encounterStarted` event. Previous-room spacing is a different view: it
+examines committed predecessor room origins and excludes every slot owned by
+the room currently being prepared. These are checkpointed projections of one
+canonical event fold, not a profile baseline, provisional counter slate, or
+NPC-specific ledger.
+
+An active retained selection that fails its requirements is not replaced.
+Preparation keeps its exact phase address available for correction, emits no
+substitute definition, and stops canonical execution before that phase's
+start, counter, reward, completion, or room commit. Later structurally active
+slots remain authorable from the valid record prefix. A valid
+definition-owned `terminateSuffix` effect may end the remaining active
+sequence; an invalid selection never performs that trim. Dormant slots retain
+their authored choice but emit no lifecycle product.
+
+`encounterStarted` applies only the resolved definition's encounter-depth
+effect. `encounterCompleted` stays at its declared later lifecycle point. N
+entered side rooms execute their local-child preparation and lifecycle in
+authored `enteredOrdinal` order before the corresponding parent restore. The
+same ordered history therefore supports ordinary rooms, O/P/H multi-phase
+rooms, and N local children without a second encounter engine.
 
 ## Operations, Effects, and Events
 
@@ -258,11 +293,10 @@ RoomLifecycleProfile selects an operation
 ```
 
 For example, `startEncounter(main)` does not hard-code counter arithmetic into
-the `SingleCountedCombat` profile. It resolves the declared main encounter phase.
-When that phase has the normalized equivalent of
-`CountsForRoomEncounterDepth`, the operation applies the room, biome, and route
-encounter-depth effects and emits addressed counter-change events before combat
-continues.
+a one-phase room profile. It resolves the already-prepared concrete encounter
+definition. When that definition counts for encounter depth, the operation
+applies the room, biome, and route encounter-depth effects and emits addressed
+counter-change events before combat continues.
 
 Likewise, `commitRoom` does not blindly increment every depth axis. It applies
 the Room Declaration and layout's commit policy, appends the appropriate room-
@@ -693,7 +727,10 @@ initial conformance set must include:
   batch, including the fourth-shop-source/fifth-door-source trace;
 - an unpicked target whose offer affects offer history but never acquisition
   history;
-- an O multi-encounter room once its lifecycle profile is implemented.
+- an O `ShipCombatRoom` with selected `HeraclesCombatO` at Intro, proving that
+  its counting record precedes the later active main phases without trimming
+  the suffix, and with the active Combat2 wheel retaining its independent
+  offer/acquisition timing.
 
 Each profile audit should use this compact record:
 
