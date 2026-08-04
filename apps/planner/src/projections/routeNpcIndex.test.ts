@@ -38,6 +38,11 @@ const gArtemisPhase = createEncounterPhaseAddress(
   { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(4, 1) },
   'Encounter',
 );
+const fNemesisPhase = createEncounterPhaseAddress(
+  goldenFBiome,
+  { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+  'Encounter',
+);
 
 function selectEncounter(
   project: ProjectDocument,
@@ -128,6 +133,30 @@ describe('route NPC index projection', () => {
         },
       ]);
       expect(index.groups[0]?.entries).toHaveLength(1);
+    } finally {
+      fixture.application.dispose();
+    }
+  });
+
+  it('projects Nemesis through the same metadata grouping and exact phase destination', () => {
+    const project = selectEncounter(createCompleteFGProject(), fNemesisPhase, 'NemesisCombatF');
+    const fixture = routeIndexFixture(project);
+    try {
+      expect(
+        projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner).groups,
+      ).toEqual([
+        {
+          presentationKey: 'Nemesis',
+          entries: [
+            expect.objectContaining({
+              encounterKey: 'NemesisCombatF',
+              label: 'Nemesis combat',
+              locationLabel: 'Erebus · Encounter',
+              phase: fNemesisPhase,
+            }),
+          ],
+        },
+      ]);
     } finally {
       fixture.application.dispose();
     }

@@ -5,7 +5,7 @@
 Implementation-ready temporary progress plan, rewritten 2026-08-03 and revised
 2026-08-04.
 
-Implementation is active. Gates A through C are complete; Gate D is next.
+Implementation is active. Gates A through D are complete; Gate E is next.
 
 This document owns the Run Planner interpretation, implementation sequence,
 commit boundaries, and acceptance gates for concrete encounter authoring. NPC

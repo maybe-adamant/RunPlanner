@@ -55,7 +55,7 @@ describe('encounter envelope catalog', () => {
       ],
     });
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
-      encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+      encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
       defaultEncounterDefinitionKey: 'GeneratedI',
     });
     expect(catalog.encounterSets.byKey.PEncountersDefault).toMatchObject({
@@ -77,12 +77,57 @@ describe('encounter envelope catalog', () => {
       'GeneratedF',
       'ArtemisCombatF',
       'ArachneCombatF',
+      'NemesisCombatF',
     ]);
     expect(catalog.encounterSets.byKey.GEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedG',
       'ArtemisCombatG',
       'ArachneCombatG',
+      'NemesisCombatG',
     ]);
+    expect(catalog.encounterSets.byKey.HEncountersDefault?.encounterDefinitionKeys).toEqual([
+      'GeneratedH',
+      'GeneratedH_Treant2',
+      'GeneratedH_Screamer2',
+      'NemesisCombatH',
+    ]);
+    expect(catalog.encounterSets.byKey.HEncountersPassive?.encounterDefinitionKeys).not.toContain(
+      'NemesisCombatH',
+    );
+    expect(
+      catalog.encounterSets.byKey.HEncountersPassiveSmall?.encounterDefinitionKeys,
+    ).not.toContain('NemesisCombatH');
+    expect(catalog.encounterSets.byKey.IEncountersSmaller?.encounterDefinitionKeys).toContain(
+      'NemesisCombatI',
+    );
+    const nemesisCombatKeys = [
+      'NemesisCombatF',
+      'NemesisCombatG',
+      'NemesisCombatH',
+      'NemesisCombatI',
+    ];
+    const encounterKeysForRoom = (gameName: string) => {
+      const room = catalog.rooms.byKey[gameName];
+      if (room === undefined) throw new Error(`${gameName} declaration is missing`);
+      return room.encounterSlotBindings.flatMap((binding) =>
+        binding.kind === 'fixed'
+          ? [binding.encounterDefinitionKey]
+          : (catalog.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? []),
+      );
+    };
+    expect(encounterKeysForRoom('H_Bridge01')).not.toContain('NemesisCombatH');
+    for (const room of catalog.rooms.values.filter((candidate) => candidate.biomeKey === 'Q')) {
+      for (const encounterKey of nemesisCombatKeys) {
+        expect(encounterKeysForRoom(room.gameName)).not.toContain(encounterKey);
+      }
+    }
+    for (const room of catalog.rooms.values.filter(
+      (candidate) => candidate.incomingReward.kind === 'shop',
+    )) {
+      for (const encounterKey of nemesisCombatKeys) {
+        expect(encounterKeysForRoom(room.gameName)).not.toContain(encounterKey);
+      }
+    }
     for (const setKey of ['NEncountersDefault', 'NEncountersSmaller', 'NEncountersBigger']) {
       expect(catalog.encounterSets.byKey[setKey]?.encounterDefinitionKeys).toContain(
         'ArtemisCombatN',
@@ -138,6 +183,15 @@ describe('encounter envelope catalog', () => {
       countsEncounterDepth: true,
       npcPresentationKey: 'Athena',
     });
+    for (const encounterKey of nemesisCombatKeys) {
+      expect(catalog.encounterDefinitions.byKey[encounterKey]).toMatchObject({
+        countsEncounterDepth: true,
+        npcPresentationKey: 'Nemesis',
+      });
+    }
+    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisRandomEvent');
+    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('BridgeNemesisRandomEvent');
+    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisShopping');
     const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;
     if (artemisRequirements?.kind !== 'all') {
       throw new Error('Artemis F requirements are missing');
@@ -160,6 +214,10 @@ describe('encounter envelope catalog', () => {
         'IcarusCombatO',
         'IcarusCombatP',
         'AthenaCombatP',
+        'NemesisCombatF',
+        'NemesisCombatG',
+        'NemesisCombatH',
+        'NemesisCombatI',
       ],
       roomWindow: 6,
       range: { max: 0 },
@@ -193,7 +251,7 @@ describe('encounter envelope catalog', () => {
     });
   });
 
-  it('keeps Gate C NPC eligibility as exact declaration-owned requirements', () => {
+  it('keeps supported field NPC eligibility as exact declaration-owned requirements', () => {
     const catalog = createCatalog(declarations);
     const fieldNpcKeys = [
       'ArtemisCombatF',
@@ -205,9 +263,14 @@ describe('encounter envelope catalog', () => {
       'IcarusCombatO',
       'IcarusCombatP',
       'AthenaCombatP',
+      'NemesisCombatF',
+      'NemesisCombatG',
+      'NemesisCombatH',
+      'NemesisCombatI',
     ];
     const heraclesKeys = ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'];
     const icarusKeys = ['IcarusCombatO', 'IcarusCombatP'];
+    const nemesisKeys = ['NemesisCombatF', 'NemesisCombatG', 'NemesisCombatH', 'NemesisCombatI'];
     const requirementsFor = (key: string) => {
       const requirements = catalog.encounterDefinitions.byKey[key]?.requirements;
       if (requirements?.kind !== 'all') {
@@ -286,6 +349,43 @@ describe('encounter envelope catalog', () => {
         roomWindow: 6,
         range: { max: 0 },
       },
+    ]);
+
+    const nemesisBase = [
+      {
+        kind: 'currentRoomRewardExcludes',
+        rewardTypes: [
+          'Boon',
+          'SpellDrop',
+          'Devotion',
+          'HermesUpgrade',
+          'WeaponUpgrade',
+          'StackUpgrade',
+          'TalentDrop',
+        ],
+      },
+      {
+        kind: 'encounterKeyCount',
+        scope: 'route',
+        encounterKeys: nemesisKeys,
+        range: { max: 0 },
+      },
+      {
+        kind: 'previousRoomEncounterKeyCount',
+        encounterKeys: fieldNpcKeys,
+        roomWindow: 6,
+        range: { max: 0 },
+      },
+    ];
+    for (const encounterKey of ['NemesisCombatF', 'NemesisCombatG', 'NemesisCombatI']) {
+      expect(requirementsFor(encounterKey)).toEqual([
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        ...nemesisBase,
+      ]);
+    }
+    expect(requirementsFor('NemesisCombatH')).toEqual([
+      { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 1 } },
+      ...nemesisBase,
     ]);
   });
 

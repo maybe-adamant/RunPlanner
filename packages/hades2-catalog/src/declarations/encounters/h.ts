@@ -1,4 +1,9 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
+import {
+  nemesisEncounterKeys,
+  nemesisIncomingRewardExclusions,
+  supportedFieldNpcEncounterKeys,
+} from './shared';
 
 export const hEncounterDefinitions = [
   {
@@ -27,6 +32,35 @@ export const hEncounterDefinitions = [
     countsEncounterDepth: true,
   },
   {
+    key: 'NemesisCombatH',
+    label: 'Nemesis combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    npcPresentationKey: 'Nemesis',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 1 } },
+        {
+          kind: 'currentRoomRewardExcludes',
+          rewardTypes: nemesisIncomingRewardExclusions,
+        },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: nemesisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
     key: 'MiniBossVampire',
     label: 'Vampire',
     kind: 'miniboss',
@@ -50,7 +84,12 @@ export const hEncounterDefinitions = [
 export const hEncounterSets = [
   {
     key: 'HEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedH', 'GeneratedH_Treant2', 'GeneratedH_Screamer2'],
+    encounterDefinitionKeys: [
+      'GeneratedH',
+      'GeneratedH_Treant2',
+      'GeneratedH_Screamer2',
+      'NemesisCombatH',
+    ],
     defaultEncounterDefinitionKey: 'GeneratedH',
   },
   {
