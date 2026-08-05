@@ -35,40 +35,6 @@ import {
 import { normalizeAuthoredFields } from './descriptors';
 import { fail } from './errors';
 
-const oceanusAnomalySourceRoomExclusions = [
-  'G_Shop01',
-  'G_Story01',
-  'G_PreBoss01',
-  'C_Boss01',
-] as const;
-const oceanusAnomalySourceEncounterExclusions = ['ArtemisCombatG', 'NemesisRandomEvent'] as const;
-const oceanusAnomalyTargets = Array.from(
-  { length: 20 },
-  (_, index) => `G_Combat${String(index + 1).padStart(2, '0')}`,
-);
-const oceanusAnomalyReplacements = [
-  'B_Combat01',
-  'B_Combat05',
-  'B_Combat06',
-  'B_Combat07',
-  'B_Combat08',
-  'B_Combat10',
-  'B_Combat21',
-] as const;
-
-function requireExactStrings(
-  received: readonly string[],
-  expected: readonly string[],
-  path: string,
-): void {
-  if (
-    received.length !== expected.length ||
-    received.some((value, index) => value !== expected[index])
-  ) {
-    fail(path, `must equal ${expected.join(', ')}`);
-  }
-}
-
 function requireRoom(
   gameName: string,
   biomeKey: string,
@@ -659,9 +625,6 @@ function normalizeGeneratedProgression(
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
   path: string,
 ): GeneratedProgressionDescriptor {
-  if (biomeKey === 'G' && raw.anomalyReplacement === undefined) {
-    fail(`${path}.anomalyReplacement`, 'G must declare Oceanus Anomaly replacement');
-  }
   const progressionPolicy = normalizeProgressionPolicy(
     raw.progressionPolicy,
     biomeKey,
@@ -697,9 +660,6 @@ function normalizeAnomalyReplacement(
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
 ): OceanusAnomalyReplacementDescriptor {
-  if (biomeKey !== 'G') {
-    fail(path, 'Oceanus Anomaly replacement is only valid for G');
-  }
   if (raw.kind !== 'oceanusAnomaly') {
     fail(`${path}.kind`, `unknown target replacement ${String((raw as { kind?: unknown }).kind)}`);
   }
@@ -707,29 +667,12 @@ function normalizeAnomalyReplacement(
     raw.source.minimumBiomeDepthCache,
     `${path}.source.minimumBiomeDepthCache`,
   );
-  if (minimumBiomeDepthCache !== 3) {
-    fail(`${path}.source.minimumBiomeDepthCache`, 'Oceanus Anomaly source depth must be 3');
-  }
   const maxEnteredReplacementsThisRoute = requireNonNegativeInteger(
     raw.source.maxEnteredReplacementsThisRoute,
     `${path}.source.maxEnteredReplacementsThisRoute`,
   );
-  if (maxEnteredReplacementsThisRoute !== 0) {
-    fail(
-      `${path}.source.maxEnteredReplacementsThisRoute`,
-      'Oceanus Anomaly requires zero prior entered replacements',
-    );
-  }
   const excludedRoomGameNames = freezeUniqueStrings(
     raw.source.excludedRoomGameNames,
-    `${path}.source.excludedRoomGameNames`,
-  );
-  if (excludedRoomGameNames.length === 0) {
-    fail(`${path}.source.excludedRoomGameNames`, 'must not be empty');
-  }
-  requireExactStrings(
-    excludedRoomGameNames,
-    oceanusAnomalySourceRoomExclusions,
     `${path}.source.excludedRoomGameNames`,
   );
   excludedRoomGameNames.forEach((gameName, index) => {
@@ -741,14 +684,6 @@ function normalizeAnomalyReplacement(
     raw.source.excludedSourceEncounterGameNames,
     `${path}.source.excludedSourceEncounterGameNames`,
   );
-  if (excludedSourceEncounterGameNames.length === 0) {
-    fail(`${path}.source.excludedSourceEncounterGameNames`, 'must not be empty');
-  }
-  requireExactStrings(
-    excludedSourceEncounterGameNames,
-    oceanusAnomalySourceEncounterExclusions,
-    `${path}.source.excludedSourceEncounterGameNames`,
-  );
   const replaceableTargetRoomGameNames = freezeUniqueStrings(
     raw.replaceableTargetRoomGameNames,
     `${path}.replaceableTargetRoomGameNames`,
@@ -756,22 +691,17 @@ function normalizeAnomalyReplacement(
   if (replaceableTargetRoomGameNames.length === 0) {
     fail(`${path}.replaceableTargetRoomGameNames`, 'must not be empty');
   }
-  requireExactStrings(
-    replaceableTargetRoomGameNames,
-    oceanusAnomalyTargets,
-    `${path}.replaceableTargetRoomGameNames`,
-  );
   replaceableTargetRoomGameNames.forEach((gameName, index) => {
     const room = rooms.byKey[gameName];
     if (
       room === undefined ||
-      room.roomSetKey !== 'G' ||
+      room.roomSetKey !== biomeKey ||
       room.mode.kind !== 'authored' ||
       room.kind !== 'Combat'
     ) {
       fail(
         `${path}.replaceableTargetRoomGameNames[${index}]`,
-        `${gameName} must be an authored G combat room`,
+        `${gameName} must be an authored ${biomeKey} combat room`,
       );
     }
   });
@@ -782,11 +712,6 @@ function normalizeAnomalyReplacement(
   if (replacementRoomGameNames.length === 0) {
     fail(`${path}.replacementRoomGameNames`, 'must not be empty');
   }
-  requireExactStrings(
-    replacementRoomGameNames,
-    oceanusAnomalyReplacements,
-    `${path}.replacementRoomGameNames`,
-  );
   replacementRoomGameNames.forEach((gameName, index) => {
     const room = rooms.byKey[gameName];
     if (
@@ -809,9 +734,6 @@ function normalizeAnomalyReplacement(
   );
   if (!replacementRoomGameNames.includes(defaultReplacementRoomGameName)) {
     fail(`${path}.defaultReplacementRoomGameName`, 'must belong to the replacement room domain');
-  }
-  if (defaultReplacementRoomGameName !== 'B_Combat01') {
-    fail(`${path}.defaultReplacementRoomGameName`, 'Oceanus Anomaly default must be B_Combat01');
   }
   return Object.freeze({
     kind: 'oceanusAnomaly',

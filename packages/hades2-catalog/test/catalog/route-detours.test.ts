@@ -228,31 +228,30 @@ describe('route detour catalog declarations', () => {
     );
   });
 
-  it('rejects an incomplete or altered closed Anomaly matrix', () => {
-    const missingReplacement = input();
-    const gLayoutIndex = layoutIndex(missingReplacement, 'G');
-    delete (
-      missingReplacement.biomeLayouts[gLayoutIndex]?.progression as {
-        anomalyReplacement?: unknown;
+  it('rejects malformed Anomaly declaration structure and references', () => {
+    const duplicateSourceEncounter = input();
+    (
+      gAnomalyDeclaration(duplicateSourceEncounter).source as unknown as {
+        excludedSourceEncounterGameNames: string[];
       }
-    ).anomalyReplacement;
-    expect(() => createCatalog(missingReplacement)).toThrow(
+    ).excludedSourceEncounterGameNames = ['ArtemisCombatG', 'ArtemisCombatG'];
+    expect(() => createCatalog(duplicateSourceEncounter)).toThrow(
       new CatalogContractError(
-        `biomeLayouts[${gLayoutIndex}].progression.anomalyReplacement`,
-        'G must declare Oceanus Anomaly replacement',
+        `biomeLayouts[${layoutIndex(duplicateSourceEncounter, 'G')}].progression.anomalyReplacement.source.excludedSourceEncounterGameNames[1]`,
+        'duplicates ArtemisCombatG',
       ),
     );
 
-    const alteredSourceEncounter = input();
+    const defaultOutsideReplacementDomain = input();
     (
-      gAnomalyDeclaration(alteredSourceEncounter).source as unknown as {
-        excludedSourceEncounterGameNames: string[];
+      gAnomalyDeclaration(defaultOutsideReplacementDomain) as unknown as {
+        defaultReplacementRoomGameName: string;
       }
-    ).excludedSourceEncounterGameNames = ['ArtemisCombatG', 'NemesisCombatG'];
-    expect(() => createCatalog(alteredSourceEncounter)).toThrow(
+    ).defaultReplacementRoomGameName = 'NotAReplacement';
+    expect(() => createCatalog(defaultOutsideReplacementDomain)).toThrow(
       new CatalogContractError(
-        `biomeLayouts[${layoutIndex(alteredSourceEncounter, 'G')}].progression.anomalyReplacement.source.excludedSourceEncounterGameNames`,
-        'must equal ArtemisCombatG, NemesisRandomEvent',
+        `biomeLayouts[${layoutIndex(defaultOutsideReplacementDomain, 'G')}].progression.anomalyReplacement.defaultReplacementRoomGameName`,
+        'must belong to the replacement room domain',
       ),
     );
 
@@ -264,20 +263,13 @@ describe('route detour catalog declarations', () => {
     ).replacementRoomGameNames = [...anomalyRoomGameNames.slice(0, -1), 'G_Combat20'];
     expect(() => createCatalog(alteredReplacementDomain)).toThrow(
       new CatalogContractError(
-        `biomeLayouts[${layoutIndex(alteredReplacementDomain, 'G')}].progression.anomalyReplacement.replacementRoomGameNames`,
-        `must equal ${anomalyRoomGameNames.join(', ')}`,
+        `biomeLayouts[${layoutIndex(alteredReplacementDomain, 'G')}].progression.anomalyReplacement.replacementRoomGameNames[6]`,
+        'G_Combat20 must be an authored Anomaly combat room with automatic host return',
       ),
     );
   });
 
-  it('rejects missing, misplaced, and retargeted Zagreus contracts', () => {
-    const missingSource = input();
-    const gShopIndex = roomIndex(missingSource, 'G_Shop01');
-    delete (missingSource.rooms[gShopIndex] as { additionalExits?: unknown }).additionalExits;
-    expect(() => createCatalog(missingSource)).toThrow(
-      new CatalogContractError('rooms', 'G_Shop01 must declare exactly one Zagreus contract exit'),
-    );
-
+  it('rejects misplaced and retargeted Zagreus contracts', () => {
     const misplaced = input();
     const combatIndex = roomIndex(misplaced, 'F_Combat01');
     (misplaced.rooms[combatIndex] as { additionalExits: unknown }).additionalExits = [
@@ -306,7 +298,7 @@ describe('route detour catalog declarations', () => {
     expect(() => createCatalog(retargeted)).toThrow(
       new CatalogContractError(
         `rooms[${fShopIndex}].additionalExits[0].targetRoomGameName`,
-        'Zagreus contract target must be authored C_Boss01 with automatic host return',
+        'Zagreus contract target must be an authored C ContractBoss with automatic host return',
       ),
     );
   });
