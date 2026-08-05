@@ -63,15 +63,19 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
     const packages = input.observed.roomPackagesByOccurrence.get(occurrence.occurrenceId);
     if (packages === undefined || packages.length === 0) {
       throw new Error(
-        `${occurrence.detail} occurrence ${occurrence.occurrenceId} has no reachable workspace room package`,
+        `${occurrence.detail} occurrence ${occurrence.occurrenceId} has no workspace room package`,
       );
     }
+    const canonicalRoom = packages[0]!.room;
     const conflictingPackage = packages.find(
-      (roomPackage) => roomPackage.room.gameName !== occurrence.gameName,
+      (roomPackage) =>
+        roomPackage.room !== canonicalRoom ||
+        roomPackage.room.occurrenceId !== occurrence.occurrenceId ||
+        roomPackage.room.gameName !== occurrence.gameName,
     );
     if (conflictingPackage !== undefined) {
       throw new Error(
-        `${occurrence.detail} occurrence ${occurrence.occurrenceId} projects ${conflictingPackage.room.gameName} instead of ${occurrence.gameName}`,
+        `${occurrence.detail} occurrence ${occurrence.occurrenceId} has conflicting workspace room package identity or game`,
       );
     }
     assertObservedOwner(
@@ -106,6 +110,38 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
       target.address,
       input.observed,
       `${workspaceTestOwnerKey(target.decisionAddress)} target ${target.exitKey}`,
+      true,
+    );
+  }
+
+  for (const additional of input.expected.additionalExits) {
+    const decision = observedExitDecision(input.observed, additional.decisionAddress);
+    const contract = decision.zagreusContract;
+    if (contract?.owner.additionalExitKey !== additional.address.additionalExitKey) {
+      throw new Error(
+        `${workspaceTestOwnerKey(additional.address)} is not contained by its authored decision`,
+      );
+    }
+    if (contract.contractRoom.occurrenceId !== additional.occurrenceId) {
+      throw new Error(
+        `${workspaceTestOwnerKey(additional.address)} omits its authored contract occurrence`,
+      );
+    }
+    const packages = input.observed.roomPackagesByOccurrence.get(additional.occurrenceId);
+    if (
+      packages === undefined ||
+      packages.length !== 1 ||
+      packages[0]?.nodeKey !== decision.key ||
+      packages[0]?.room !== contract.contractRoom
+    ) {
+      throw new Error(
+        `${workspaceTestOwnerKey(additional.address)} contract occurrence must have one canonical package in its containing decision`,
+      );
+    }
+    assertObservedOwner(
+      additional.address,
+      input.observed,
+      `additional exit ${additional.address.additionalExitKey}`,
       true,
     );
   }

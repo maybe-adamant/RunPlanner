@@ -156,7 +156,7 @@ function TargetRow({
   const replaceable =
     node.targetInteraction === 'replaceable' && target.physicalState === 'available';
   const selectionInteraction =
-    node.targets.length === 1
+    node.targets.length === 1 && node.zagreusContract === undefined
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -301,6 +301,66 @@ function MissingTargetRow({
             </select>
           </label>
         )}
+      </div>
+    </article>
+  );
+}
+
+/** The authored additional exit is rendered by the decision that owns it. */
+function ZagreusContractExit({
+  control,
+  interactions,
+  selectionName,
+}: {
+  readonly control: NonNullable<BatchNode['zagreusContract']>;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly selectionName: string;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.zagreusContracts,
+    workspaceInteractionKey(control.owner),
+  );
+  return (
+    <article aria-label="Zagreus contract exit" className="exit-row zagreus-contract-exit">
+      <label className="picked-control">
+        <input
+          aria-label="Take Zagreus contract"
+          checked={control.selected}
+          name={selectionName}
+          onChange={() => executeIntent(interaction.selectIntent)}
+          type="radio"
+        />
+        <span>Take the contract exit</span>
+      </label>
+      <div className="exit-content">
+        <div className="exit-heading">
+          <div>
+            <p className="card-kicker">Additional exit</p>
+            <h4>{control.contractRoom.label}</h4>
+          </div>
+          <div className="owner-markers">
+            <SemanticOwnerMarker address={control.owner} />
+          </div>
+        </div>
+        <p className="fixed-room-state">Encounter: {control.encounterLabel}</p>
+        <p className="fixed-room-state">
+          Its following decision returns automatically to this biome.
+        </p>
+        <RoomOfferEditor
+          idPrefix={`zagreus-${control.contractRoom.occurrenceId}`}
+          interactions={interactions}
+          presentation="full"
+          room={control.contractRoom}
+        />
+        <button
+          className="danger-action action-compact"
+          data-command="RemoveZagreusContract"
+          onClick={() => executeIntent(interaction.removeIntent)}
+          type="button"
+        >
+          Remove contract
+        </button>
       </div>
     </article>
   );
@@ -539,7 +599,7 @@ export function BatchWorkbench({
     workspaceInteractionKey(node.owner),
   );
   const exitSelection =
-    node.targets.length === 1
+    node.targets.length === 1 && node.zagreusContract === undefined
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -598,6 +658,13 @@ export function BatchWorkbench({
                   target={target}
                 />
               ))
+            )}
+            {node.zagreusContract === undefined ? null : (
+              <ZagreusContractExit
+                control={node.zagreusContract}
+                interactions={interactions}
+                selectionName={`selection-${node.key}`}
+              />
             )}
           </div>
         </>

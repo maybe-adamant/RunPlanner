@@ -14,6 +14,7 @@ import {
   type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRoomSummary,
+  type WorkspaceZagreusSpawnControl,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -550,6 +551,39 @@ function ShopWorkbench({
   );
 }
 
+/** The selected Midshop owns only the available spawn affordance. */
+function ZagreusSpawnWorkbench({
+  control,
+  interactions,
+}: {
+  readonly control: WorkspaceZagreusSpawnControl;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.zagreusSpawns,
+    workspaceInteractionKey(control.owner),
+  );
+  return (
+    <section aria-label="Zagreus contract availability" className="zagreus-contract-workbench">
+      <div className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>Zagreus contract</h4>
+          <SemanticOwnerMarker address={control.owner} />
+        </div>
+      </div>
+      <button
+        className="quiet-action action-compact"
+        data-command="AddZagreusContract"
+        onClick={() => executeIntent(interaction.spawnIntent())}
+        type="button"
+      >
+        Add Zagreus contract
+      </button>
+    </section>
+  );
+}
+
 /**
  * The workspace has already established this is an authored Anomaly and has
  * supplied its closed declaration map domain. These controls intentionally do
@@ -768,7 +802,12 @@ export function RoomOfferEditor({
             <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
           ) : null}
           {state.kind === 'shop' ? (
-            <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+            <>
+              <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+              {room.zagreusSpawn?.materialized === true ? (
+                <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
+              ) : null}
+            </>
           ) : null}
         </RoomCustomizationDisclosure>
       ) : null}

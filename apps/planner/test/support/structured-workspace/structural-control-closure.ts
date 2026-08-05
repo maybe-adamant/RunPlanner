@@ -44,6 +44,8 @@ function expectedStructuralInteraction(
       return interactions.takeoverBatches.get(key);
     case 'topologyRemoval':
       return interactions.topologyRemovals.get(key);
+    case 'zagreusSpawn':
+      return interactions.zagreusSpawns.get(key);
   }
 }
 
@@ -91,14 +93,24 @@ function assertRenderedRoomControls(
   interactions: WorkspaceInteractionCatalog,
 ): void {
   const picker = room.roomPicker;
-  if (picker === undefined) return;
-  const key = workspaceTestOwnerKey(picker.address);
-  assertExactObservedInteraction(
-    interactions.rooms.get(key),
-    key,
-    picker.address,
-    `room picker ${key}`,
-  );
+  if (picker !== undefined) {
+    const key = workspaceTestOwnerKey(picker.address);
+    assertExactObservedInteraction(
+      interactions.rooms.get(key),
+      key,
+      picker.address,
+      `room picker ${key}`,
+    );
+  }
+  if (room.zagreusSpawn?.materialized === true) {
+    const spawn = room.zagreusSpawn;
+    assertExactObservedInteraction(
+      interactions.zagreusSpawns.get(spawn.marker.focusKey),
+      spawn.marker.focusKey,
+      spawn.owner,
+      `Zagreus contract ${spawn.marker.focusKey}`,
+    );
+  }
 }
 
 function unreachable(value: never): never {
@@ -165,6 +177,40 @@ function assertRenderedNodeControls(
           node.owner,
           `Hub takeover ${node.hubTakeover.interactionKey}`,
         );
+      }
+      if (node.zagreusContract !== undefined) {
+        const contract = node.zagreusContract;
+        const interaction = interactions.zagreusContracts.get(contract.marker.focusKey);
+        assertExactObservedInteraction(
+          interaction,
+          contract.marker.focusKey,
+          contract.owner,
+          `Zagreus contract ${contract.marker.focusKey}`,
+        );
+        if (interaction === undefined) {
+          throw new Error(`Zagreus contract ${contract.marker.focusKey} has no exact interaction`);
+        }
+        if (
+          interaction.removeIntent.command.kind !== 'RemoveZagreusContract' ||
+          workspaceTestOwnerKey(interaction.removeIntent.command.additional) !==
+            workspaceTestOwnerKey(contract.owner)
+        ) {
+          throw new Error(
+            `Zagreus contract ${contract.marker.focusKey} has no exact remove intent`,
+          );
+        }
+        if (
+          interaction.selectIntent.command.kind !== 'SetExitSelection' ||
+          workspaceTestOwnerKey(interaction.selectIntent.command.selection) !==
+            workspaceTestOwnerKey(node.selection.address) ||
+          interaction.selectIntent.command.value.kind !== 'additional' ||
+          interaction.selectIntent.command.value.additionalExitKey !==
+            contract.owner.additionalExitKey
+        ) {
+          throw new Error(
+            `Zagreus contract ${contract.marker.focusKey} has no exact select intent`,
+          );
+        }
       }
       assertExactObservedInteraction(
         interactions.topologyRemovals.get(ownerKey),

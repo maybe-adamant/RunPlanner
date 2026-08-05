@@ -3,6 +3,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
@@ -224,6 +226,38 @@ function requiredTakeoverOwner(
 }
 
 describe('DecisionWorkbench', () => {
+  it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', () => {
+    const base = createGoldenFGHIProject();
+    const located = base.routes.flatMap((route) =>
+      route.biomes.flatMap((plan) =>
+        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+          const room = catalog.rooms.byKey[occurrence.gameName];
+          return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+            ? [{ occurrence, plan, route }]
+            : [];
+        }),
+      ),
+    )[0];
+    if (located === undefined) throw new Error('Golden selected Midshop is missing');
+    const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+    const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+    const additional = createAdditionalExitAddress(biome, source, 'zagreusContract');
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'AddZagreusContract',
+      additional,
+      occurrenceId: createOccurrenceId('decision-workbench-zagreus'),
+    });
+    renderDecisionWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      subjectForOwner(createExitDecisionAddress(biome, source)),
+    );
+
+    expect(screen.getByRole('article', { name: 'Zagreus contract exit' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove contract' })).toBeTruthy();
+    expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
+  });
   it('authors the fixed N start through the ordinary batch frontier', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
     expect(screen.getByText('Start with Opening')).toBeTruthy();

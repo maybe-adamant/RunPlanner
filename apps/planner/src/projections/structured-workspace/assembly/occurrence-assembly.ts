@@ -1,4 +1,5 @@
 import {
+  createAdditionalExitAddress,
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createLocalChildAddress,
@@ -63,6 +64,7 @@ import { workspaceRewardStoreLabel } from './reward-labels';
  * this occurrence. Expected-owner enumeration remains intentionally elsewhere.
  */
 export interface WorkspaceOccurrenceProjectionFacts {
+  readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
 }
 
@@ -862,6 +864,7 @@ function hasRoomLocalCustomization(
   detailsActive: boolean,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   roomLocal: WorkspaceRoomLocal,
+  zagreusMaterialized: boolean,
 ): boolean {
   if (!detailsActive) return false;
   if (encounterPhases.some((phase) => phase.customizable || phase.marker.findingCount > 0)) {
@@ -875,7 +878,7 @@ function hasRoomLocalCustomization(
     case 'ship':
       return true;
     case 'shop':
-      return roomLocal.materialized && roomLocal.offers.length > 0;
+      return roomLocal.materialized && (roomLocal.offers.length > 0 || zagreusMaterialized);
     case 'none':
     case 'fixed':
     case 'incomingReward':
@@ -893,6 +896,12 @@ function occurrenceInteractionRequirements(
     room.encounterPhases,
   );
   if (topLevelEncounterRequirement !== undefined) requirements.push(topLevelEncounterRequirement);
+
+  if (room.zagreusSpawn?.materialized === true) {
+    requirements.push(
+      Object.freeze({ kind: 'zagreusSpawn' as const, owner: room.zagreusSpawn.owner }),
+    );
+  }
 
   if (room.roomLocal.kind === 'ephyra' && room.roomLocal.sideRooms.kind === 'published') {
     for (const sideRoom of room.roomLocal.sideRooms.group.slots) {
@@ -1031,9 +1040,32 @@ export function assembleWorkspaceOccurrence(
     occurrenceId: occurrence.occurrenceId,
   });
   const roomLocal = roomLocalForOccurrence(input, room, rewardControls);
+  const zagreusDeclaration = room.additionalExits.find(
+    (candidate) => candidate.kind === 'zagreusContract',
+  );
+  const zagreusSpawn =
+    zagreusDeclaration === undefined ||
+    input.facts.authoredAdditionalExitKeys.includes(zagreusDeclaration.key) ||
+    !input.facts.detailsActive ||
+    roomLocal.kind !== 'shop' ||
+    !roomLocal.materialized
+      ? undefined
+      : (() => {
+          const owner = createAdditionalExitAddress(
+            input.biome,
+            { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+            zagreusDeclaration.key,
+          );
+          return Object.freeze({
+            marker: input.markerDestinations.marker(owner),
+            materialized: true,
+            owner,
+          });
+        })();
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.map((phase) => phase.marker),
     ...workspaceLocalDetailMarkers(roomLocal),
+    ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
   ]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
@@ -1045,6 +1077,7 @@ export function assembleWorkspaceOccurrence(
       input.facts.detailsActive,
       encounterPhases,
       roomLocal,
+      zagreusSpawn?.materialized === true,
     ),
     kind: room.kind,
     label: room.label,
@@ -1095,6 +1128,7 @@ export function assembleWorkspaceOccurrence(
           };
         })()),
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
+    ...(zagreusSpawn === undefined ? {} : { zagreusSpawn }),
     roomLocal,
     rewardControls,
   });

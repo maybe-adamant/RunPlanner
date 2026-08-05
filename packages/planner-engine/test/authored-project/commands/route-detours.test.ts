@@ -274,4 +274,48 @@ describe('authored-project route detour commands', () => {
       returnTarget,
     );
   });
+
+  it('rejects switching away from a selected Midshop contract with a downstream decision', () => {
+    const { project: initial, shop } = fSelectedMidshop();
+    const source = { kind: 'occurrence' as const, occurrenceId: shop };
+    const additional = createAdditionalExitAddress(fBiome, source, 'zagreusContract');
+    const contract = createOccurrenceId('detour-switch-selected-contract');
+    const normalTarget = createOccurrenceId('detour-switch-normal-target');
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'AddZagreusContract',
+      additional,
+      occurrenceId: contract,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit1'),
+      occurrenceId: normalTarget,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, source),
+      value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, {
+        kind: 'occurrence',
+        occurrenceId: contract,
+      }),
+    });
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, source),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      }),
+    ).toThrow(/remove the prior selected target’s downstream decision first/);
+  });
 });

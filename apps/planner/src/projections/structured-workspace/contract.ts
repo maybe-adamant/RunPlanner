@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type AuthoredBatchState,
+  type AdditionalExitAddress,
   type BiomeAddress,
   type BiomeFieldAddress,
   type EncounterPhaseAddress,
@@ -365,6 +366,8 @@ export interface WorkspaceHubTakeoverInteraction {
 }
 
 export interface WorkspaceInteractionCatalog {
+  readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
+  readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
@@ -401,6 +404,27 @@ export interface WorkspaceInteractionCatalog {
   readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
+}
+
+/** The Midshop workbench presents the declared additional door without making it a normal target. */
+export interface WorkspaceZagreusContractInteraction {
+  readonly key: string;
+  readonly owner: AdditionalExitAddress;
+  readonly removeIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemoveZagreusContract' }>
+  >;
+  readonly selectIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
+  >;
+}
+
+/** Source-room availability binds only the creation command. */
+export interface WorkspaceZagreusSpawnInteraction {
+  readonly key: string;
+  readonly owner: AdditionalExitAddress;
+  readonly spawnIntent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'AddZagreusContract' }>
+  >;
 }
 
 export class StructuredWorkspaceProjectionContractError extends Error {
@@ -685,8 +709,25 @@ export interface WorkspaceRoomSummary {
    * gate, replacement cap, or reward legality.
    */
   readonly anomaly?: WorkspaceAnomalyControl;
+  /** Declared Midshop spawn capability; the authored door is decision-owned. */
+  readonly zagreusSpawn?: WorkspaceZagreusSpawnControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
+}
+
+export interface WorkspaceZagreusContractControl {
+  readonly contractRoom: WorkspaceRoomSummary;
+  readonly encounterLabel: string;
+  readonly marker: WorkspaceMarker;
+  readonly owner: AdditionalExitAddress;
+  readonly selected: boolean;
+}
+
+/** Availability is source-room-local; the additional exit remains decision-owned. */
+export interface WorkspaceZagreusSpawnControl {
+  readonly marker: WorkspaceMarker;
+  readonly materialized: boolean;
+  readonly owner: AdditionalExitAddress;
 }
 
 export interface WorkspaceAnomalyControl {
@@ -765,6 +806,8 @@ interface WorkspaceBatchNodeBase {
   /** Present only when a forced room changes an evaluated authored base store. */
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
+  /** An authored additional exit is a sibling of normal targets, never a target row. */
+  readonly zagreusContract?: WorkspaceZagreusContractControl;
   readonly fieldsCageOutcome?: WorkspaceMarker;
   /** Present only for the declared exact terminal Hub envelope. */
   readonly hubTakeover?: WorkspaceHubTakeoverControl;

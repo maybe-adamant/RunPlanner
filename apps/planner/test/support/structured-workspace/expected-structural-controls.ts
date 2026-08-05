@@ -1,5 +1,6 @@
 import {
   createBatchRewardStoreAddress,
+  createAdditionalExitAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -11,6 +12,7 @@ import {
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   normalDecisionProgressionForLayout,
+  selectedExitTarget,
   type AuthoredBiomePlan,
   type BiomeAddress,
   type ExitDecision,
@@ -42,7 +44,8 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'start'
   | 'structural'
   | 'takeoverBatch'
-  | 'topologyRemoval';
+  | 'topologyRemoval'
+  | 'zagreusSpawn';
 
 export interface ExpectedWorkspaceStructuralControl {
   /** Present only when Door 1 embeds a decision-owned takeover option. */
@@ -160,6 +163,14 @@ export function expectedWorkspaceStructuralControls(
   }
 
   const decisions = authoredExitDecisions(plan);
+  const occurrencesById = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
+  );
+  const activeOccurrenceIds = new Set([topology.startOccurrenceId]);
+  for (const decision of decisions) {
+    const selected = selectedExitTarget(decision);
+    if (selected !== undefined) activeOccurrenceIds.add(selected.occurrenceId);
+  }
   const decisionsByOwner = authoredDecisionIndex(biome, decisions);
   const takeoverOwners = new Set<string>();
   const addTakeover = (owner: ExitDecisionAddress): void => {
@@ -184,6 +195,26 @@ export function expectedWorkspaceStructuralControls(
     const owner = createExitDecisionAddress(biome, decision.source);
     const ownerKey = workspaceTestOwnerKey(owner);
     add('topologyRemoval', ownerKey, owner);
+    if (decision.source.kind === 'occurrence') {
+      const sourceOccurrence = occurrencesById.get(decision.source.occurrenceId);
+      const sourceRoom =
+        sourceOccurrence === undefined
+          ? undefined
+          : requireRoom(catalog, sourceOccurrence.gameName);
+      const contract = sourceRoom?.additionalExits.find(
+        (candidate) => candidate.kind === 'zagreusContract',
+      );
+      if (
+        contract !== undefined &&
+        decision.additional.length === 0 &&
+        activeOccurrenceIds.has(decision.source.occurrenceId) &&
+        sourceOccurrence?.state.kind === 'shop' &&
+        sourceOccurrence.state.shop !== undefined
+      ) {
+        const additional = createAdditionalExitAddress(biome, decision.source, contract.key);
+        add('zagreusSpawn', workspaceTestOwnerKey(additional), additional);
+      }
+    }
     const takeover = batchTakesOverNormalDoors(catalog, plan, decision);
     if (decision.selection.kind !== 'derived') {
       add(

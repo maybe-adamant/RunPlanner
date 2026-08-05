@@ -47,6 +47,8 @@ import type {
   WorkspaceStructuralInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnInteraction,
 } from '../contract';
 import type {
   WorkspaceBatchInteractionRequirement,
@@ -149,9 +151,11 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceCandidateInteraction<SideRoomGeneration>
   >;
+  readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
 }
 
 function bindOccurrenceLocalInteractions(
+  allocateOccurrenceId: OccurrenceIdFactory,
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
@@ -163,6 +167,7 @@ function bindOccurrenceLocalInteractions(
   const shopPurchaseOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
+  const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
   const set = <T>(
     target: Map<string, WorkspaceCandidateInteraction<T>>,
     key: string,
@@ -178,6 +183,30 @@ function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'zagreusSpawn': {
+        const key = semanticAddressKey(requirement.owner);
+        if (zagreusSpawns.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound Zagreus spawn interactions`,
+          );
+        }
+        zagreusSpawns.set(
+          key,
+          Object.freeze({
+            key,
+            owner: requirement.owner,
+            spawnIntent: () =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'AddZagreusContract' as const,
+                  additional: requirement.owner,
+                  occurrenceId: allocateOccurrenceId(),
+                }),
+              }),
+          }),
+        );
+        break;
+      }
       case 'encounterPhases': {
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
@@ -344,6 +373,7 @@ function bindOccurrenceLocalInteractions(
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
+    zagreusSpawns,
   });
 }
 
@@ -351,6 +381,7 @@ interface WorkspaceBatchInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+  readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
 }
 
 function bindBatchInteractions(
@@ -360,6 +391,7 @@ function bindBatchInteractions(
   const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
   const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
+  const zagreusContracts = new Map<string, WorkspaceZagreusContractInteraction>();
   for (const requirement of requirements) {
     if (requirement.exitSelection !== undefined) {
       const { exitSelection } = requirement;
@@ -419,8 +451,42 @@ function bindBatchInteractions(
         ),
       );
     }
+    if (requirement.zagreusContract !== undefined) {
+      const { owner } = requirement.zagreusContract;
+      const key = semanticAddressKey(owner);
+      if (zagreusContracts.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound Zagreus contract interactions`,
+        );
+      }
+      zagreusContracts.set(
+        key,
+        Object.freeze({
+          key,
+          owner,
+          removeIntent: Object.freeze({
+            command: Object.freeze({ kind: 'RemoveZagreusContract' as const, additional: owner }),
+          }),
+          selectIntent: Object.freeze({
+            command: Object.freeze({
+              kind: 'SetExitSelection' as const,
+              selection: Object.freeze({
+                kind: 'exitSelection' as const,
+                routeKey: owner.routeKey,
+                biomeKey: owner.biomeKey,
+                source: owner.source,
+              }),
+              value: Object.freeze({
+                kind: 'additional' as const,
+                additionalExitKey: owner.additionalExitKey,
+              }),
+            }),
+          }),
+        }),
+      );
+    }
   }
-  return Object.freeze({ batchRewardStores, exitSelections, fieldsCageOutcomes });
+  return Object.freeze({ batchRewardStores, exitSelections, fieldsCageOutcomes, zagreusContracts });
 }
 
 interface WorkspaceHubInteractionCatalog {
@@ -1019,11 +1085,14 @@ export function bindWorkspaceInteractions(
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
-  } = bindOccurrenceLocalInteractions(candidates, occurrenceInteractionRequirements.values());
-  const { batchRewardStores, exitSelections, fieldsCageOutcomes } = bindBatchInteractions(
+    zagreusSpawns,
+  } = bindOccurrenceLocalInteractions(
+    allocateOccurrenceId,
     candidates,
-    batchInteractionRequirements.values(),
+    occurrenceInteractionRequirements.values(),
   );
+  const { batchRewardStores, exitSelections, fieldsCageOutcomes, zagreusContracts } =
+    bindBatchInteractions(candidates, batchInteractionRequirements.values());
   const { hubSlots, hubVisitOrders } = bindHubInteractions(
     allocateOccurrenceId,
     candidates,
@@ -1335,6 +1404,8 @@ export function bindWorkspaceInteractions(
     shopPurchaseOrders,
     sideRoomEntryOrders,
     sideRoomGenerations,
+    zagreusContracts,
+    zagreusSpawns,
     starts,
     structural,
     takeoverBatches,
