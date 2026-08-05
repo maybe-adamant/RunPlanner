@@ -1,311 +1,652 @@
-# Route Detour Findings
+# Route Detour Game-Data Findings
 
-## Status
+## Status and scope
 
-This is a forward-looking game-data audit and extension-readiness document. It
-does not add detours to the production catalog, authored schema, simulator, or
-editor, and it does not authorize runtime integration work.
+This is a source-backed game-data audit. It records how Chaos, Oceanus
+Anomalies, and the Zagreus contract leave and resume a host route. It does not
+own planner schema, implementation sequencing, or UI contracts; the temporary
+implementation plans own those decisions. Where the discussion has settled a
+planner baseline against these facts, the disposition is recorded separately
+from the source behavior.
 
-The current product remains conditioned on natural Chaos and Anomaly
-replacement being suppressed. Zagreus contract rooms are likewise outside the
-authored route.
+The current product still suppresses all three systems. Delivery is now split
+between:
 
-## Question
+- an implementation-ready plan for Oceanus Anomaly replacement and the
+  Zagreus contract from its declared Midshop sources;
+- a provisional natural-Chaos follow-up for `N`, `F`, `G`, and `P` that must
+  be revalidated after the first plan lands.
 
-Chaos, Oceanus Anomaly rooms, and the Zagreus contract fight all leave the
-current biome route and later resume it. Can they use one extension boundary
-without erasing the differences in how the game offers them?
+Spark of Ixion forced Chaos is recorded because it uses the same game entry
+function and explains otherwise surprising Chaos gates. It is explicitly not
+an implementation candidate. The planner is not being expanded to author Well
+items or forced Chaos in `H` or any other zero-chance source.
 
-Yes, at the level of route ownership and resume behavior. No, at the level of
-entry generation.
+The evidence was checked against the installed game scripts and map assets on
+2026-08-04. Primary sources are:
 
-The useful common concept is:
+- `RunLogic.lua`, especially `CreateRoom`, `ChooseNextRoomData`,
+  `UpdateRunHistoryCache`, `GetRunDepth`, and `GetBiomeDepth`;
+- `RoomLogic.lua`, especially `HandleSecretSpawns`,
+  `IsSecretDoorEligible`, `AttemptUseAutoExitDoor`, and `LeaveRoom`;
+- `RewardLogic.lua`, especially `ChooseRoomReward`, and
+  `EncounterLogic.lua`, especially `EndCapturePointChallengeEncounter`;
+- `RoomData.lua`, `RoomDataChaos.lua`, `RoomDataAnomaly.lua`,
+  `RoomDataC.lua`, and biome room declarations;
+- `EncounterData_Challenge.lua`, `EncounterData_Boss.lua`, `EventLogic.lua`,
+  `RequirementsData.lua`, `StoreData.lua`, `TraitData.lua`,
+  `TraitData_Store.lua`, `ObstacleData.lua`, and `EncounterSets.lua`;
+- the concrete `.thing_bin` map assets for Chaos, Anomaly, Zagreus, and
+  candidate source rooms.
 
-> A detour is a real room occurrence reached through an explicitly modeled
-> departure from a host biome and followed by an explicitly modeled return to
-> that host biome's progression.
+Chance values below are evidence about game generation. They do not imply that
+the planner should replay probability; the planner currently models possible
+authored outcomes.
 
-The entry mechanism must remain a closed declaration-owned variant. A generic
-graph edge, callback, or `special` escape hatch would hide game facts the
-planner needs to validate.
+## Terms
 
-## Current Planner Boundary
+- **Host source**: the current route room in which a detour offer or
+  replacement is prepared.
+- **Resume target**: the new host-room-set room generated after the detour.
+- **Offered**: a room was created and attached to an exit. It need not have
+  been entered.
+
+These distinctions matter because the natural Chaos spacing rule is based on
+an offered gate, while route history and depth are based on entered rooms.
+
+## Current planner boundary
 
 The current authored topology has:
 
 - one start occurrence;
 - `ExitDecision` for linked exits and a normal lane, including a zero-target
-  generated envelope before its first ordinary target or takeover resolves it;
+  generated envelope before its first ordinary target or takeover resolves;
 - `HubDecision` for Ephyra;
 - one selection among the normal targets of a realized `ExitDecision`;
 - derived biome completion after a selected Preboss.
 
-`ExitDecision.normal` deliberately owns only normal exits. There is no Chaos
-gate, replacement target, detached room-set node, or generic route edge.
-Natural Chaos and Anomaly are suppressed by the current game-integration
-contract.
+`ExitDecision.normal` owns only normal exits. There is no additional Chaos or
+contract exit, normal-target replacement, detached room-set node, automatic
+hidden resume, or generic route edge. A Room Declaration also has one route
+`biomeKey`, and current topology decoding requires an occurrence's declaration
+to match its owning authored biome.
 
-This is the correct baseline. Detours should extend the decision envelope; they
-should not become room-local checkboxes or a second biome-plan family.
+Those are current-code facts, not the desired detour contract. This audit does
+not resolve them by adding fake `Chaos`, `B`, or `C` route biomes.
 
-A zero-target generated envelope is current normal-lane authoring state, not a
-missing edge, special-exit placeholder, or detour. Its eventual ordinary target
-and any atomic normal-door takeover remain in that normal lane.
+## Natural Chaos
 
-## Game Findings
+### Creation and entry form
 
-### Natural Chaos: an additional exit
+`CreateRoom` rolls `SecretChanceSuccess` when the host source is created.
+During setup, `HandleSecretSpawns` requires at least one physical
+`SecretPoint` in that concrete map and calls `IsSecretDoorEligible`.
 
-Relevant source:
+For natural Chaos, eligibility requires:
 
-- `RunLogic.lua::CreateRoom`
-- `RoomLogic.lua::HandleSecretSpawns`
-- `RoomLogic.lua::IsSecretDoorEligible`
-- `RoomDataChaos.lua::BaseChaos`
+1. a successful room-specific Chaos chance roll;
+2. the room's `SecretDoorRequirements`;
+3. the physical `SecretPoint` capability.
 
-`CreateRoom` records a `SecretChanceSuccess` roll. During room setup,
-`HandleSecretSpawns` checks for a physical `SecretPoint` and evaluates the
-room's Chaos requirements. When eligible, it:
+On success, `HandleSecretSpawns`:
 
-1. chooses a target from the `Chaos` room set;
-2. creates a separate `SecretDoor`;
-3. creates the Chaos room;
+1. sets `currentRoom.ForceSecretDoor = true` on the host source;
+2. chooses a room from the `Chaos` room set;
+3. creates a separate `SecretDoor` and concrete Chaos room;
 4. assigns that room to the special door.
 
-The normal doors are not replaced. The Chaos door is an additional offered
-continuation beside them.
+The normal exits are neither replaced nor consumed. A Chaos gate is an
+additional continuation beside them. `ObstacleData.SecretDoor` hides its room
+reward preview, so the gate does not reveal which Chaos reward was generated.
 
-`BaseChaos` has `UsePreviousRoomSet = true`, so its outgoing generation resumes
-the prior room set. It also has `PauseBiomeState = true`, a forced `Secrets`
-reward store, and the `Empty_Chaos` encounter.
+### Natural biome matrix in scope
 
-The focused Preboss probe establishes three boundary facts for future work:
+| Host biome | Declared chance      | Additional source restrictions                                                                                                        |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `N`        | `N_Opening01 = 0.09` | `BaseN.SecretDoorRequirements` permits only `N_Opening01`; `N_PreHub01` also declares `0.09` but fails that source-name requirement   |
+| `F`        | `BaseF = 0.10`       | inherited normal eligibility, the shared named-room exclusions, room-specific zero overrides, and physical map capability still apply |
+| `G`        | `BaseG = 0.12`       | inherited normal eligibility, the shared named-room exclusions, room-specific zero overrides, and physical map capability still apply |
+| `P`        | `BaseP = 0.05`       | requires `BiomeDepthCache <= 5`, rejects `P_PreBoss01` and `P_Boss01`, and carries Surface progression predicates                     |
 
-- Chaos is a separately offered special exit beside the source's normal exits;
-  an atomic Preboss takeover controls the normal exits only.
-- Taking Chaos can leave an offered normal-door Preboss batch unentered. A
-  later normal generation creates a fresh Preboss batch and fresh reward draws;
-  the earlier unentered batch is not resumed or reused.
-- Natural Chaos is suppressed when any of the prior ten host rooms spawned or
-  offered a Chaos door, even when that door was not entered.
+The shared baseline excludes room sets `I`, `O`, and `Q`; `H` declares a zero
+natural chance. `N` and `P` override the shared baseline with their own Surface
+requirements. This leaves `N`, `F`, `G`, and `P` as the natural Chaos biome
+set relevant to this audit.
 
-`PauseBiomeState` must not be translated as "pause all counters." Its observed
-game implementation removes and later restores biome-state traits. The exact
-room-history, depth, reward, and trait effects of a Chaos visit need a focused
-lifecycle fixture before implementation.
+Several gates are external save/profile progression facts: Chaos must be
+unlocked, and Surface Chaos additionally depends on progressed-save flags.
+They are real game requirements but are not automatically planner inputs.
+Their eventual disposition is an implementation decision.
 
-### Oceanus Anomaly: replacement during normal-target generation
+### Concrete supported-source inventory
 
-Relevant source:
+The map assets and current catalog declarations close the physical capability
+question for the natural sources presently relevant to the planner:
 
-- `RunLogic.lua::CreateRoom`
-- `RoomLogic.lua::HandleSecretSpawns`
-- `RunLogic.lua::ChooseNextRoomData`
-- `RoomDataG.lua` ordinary combat declarations
-- `RoomDataAnomaly.lua::BaseAnomaly`
+| Host biome | Currently supported declarations that can naturally offer Chaos                                                  |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| `N`        | `N_Opening01` only                                                                                               |
+| `F`        | `F_Opening01`–`F_Opening03`, `F_Combat01`–`F_Combat22`, `F_Story01`, `F_Reprieve01`, and `F_Shop01`              |
+| `G`        | `G_Intro`, `G_Combat01`–`G_Combat20`, `G_MiniBoss01`–`G_MiniBoss03`, `G_Story01`, `G_Reprieve01`, and `G_Shop01` |
+| `P`        | `P_Intro`, `P_Combat01`–`P_Combat19`, `P_Reprieve01`, and `P_Shop01`, subject to the depth-five ceiling          |
 
-`CreateRoom` records an `AnomalyDoorChanceSuccess` roll.
-`HandleSecretSpawns` turns an eligible success into `currentRoom.DoAnomalies`.
+Every room listed above has a concrete `SecretPoint` in its `.thing_bin` map
+asset and inherits a nonzero natural chance. The inventory deliberately does
+not infer capability from room category:
 
-`ChooseNextRoomData` first chooses an otherwise-valid normal target. If the
-source is anomaly-enabled and that target has `AllowAnomalyReplacement`, it
-replaces the returned target with a room from the `Anomaly` room set.
+- F minibosses override the chance to zero, while G minibosses retain the
+  inherited `0.12` chance;
+- P minibosses and `P_Story01` override the chance to zero;
+- named Preboss and boss rooms are rejected or have a zero override;
+- postboss rooms have zero natural chance and are route transitions;
+- Story, Fountain/Reprieve, and Midshop are valid natural sources in the
+  biomes where they appear in the table.
 
-This is not an additional door and it is not an encounter variant inside the
-chosen G room. The discarded normal candidate is never created as a room
-occurrence. The Anomaly room owns its own identity, encounter, reward, and
-history contribution. `BaseAnomaly.UsePreviousRoomSet` resumes Oceanus after
-the Anomaly room.
+Normal-door generation eligibility can still make one of these declarations
+unavailable at a particular authored point. This table answers the narrower
+Chaos-source question: if that room is the entered host source and its natural
+Chaos requirements pass, the declaration and map can offer the gate.
 
-The planner may need the replaced target's eligibility class to prove that
-replacement was possible. It should not persist a ghost normal occurrence
-unless a later probe identifies an observable consumer for that exact room
-identity.
+### The ten-room rule is offer spacing, not minimum depth
 
-### Zagreus contract: an additional exit from supported rooms
+`NoRecentChaosEncounter` examines the previous ten room-history records for
+`ForceSecretDoor = true` and requires zero matches. That flag is set on the
+host source when a Chaos gate is successfully created.
 
-Relevant source:
+Consequences:
 
-- `RunLogic.lua::CreateRoom`
-- `EventLogic.lua::SpawnZagContract`
-- `EventLogic.lua::SpawnZagContractRewards`
-- `StoreData.lua::ZagreusContractRequirement`
-- `RoomDataC.lua::C_Boss01`
+- the rule suppresses another natural gate after an offered gate, even if the
+  player did not enter Chaos;
+- it is a sliding window over prior room records, not a
+  `RunDepthCache >= 10`, `BiomeDepthCache >= 10`, or entered-Chaos predicate;
+- a Chaos room itself is a room-history record, so the window is not limited
+  to host-biome rooms;
+- a forced gate also marks its host source and therefore restarts the later
+  natural-offer window.
 
-The supported entry rooms currently include the four midshops
-`F_Shop01`, `G_Shop01`, `O_Shop01`, and `P_Shop01`, each with a
-`ZagContractDestinationId`.
+Spark of Ixion can bypass this check, as documented separately below.
 
-When the profile requirements and chance pass, `CreateRoom` marks the room.
-`SpawnZagContract` then creates an additional contract exit whose fixed target
-is `C_Boss01`. The ordinary exit flow remains present.
+### Chaos room, reward, encounter, and return
 
-`C_Boss01` has `PauseBiomeState = true` and `UsePreviousRoomSet = true`, so it
-returns to the host biome after the fight.
+The `Chaos` room set contains `Chaos_01` through `Chaos_06`, each inheriting
+`BaseChaos`. Their target requirements are:
 
-`ZagContractRewardDestinationId` is a separate later-room placement contract
-for a free contract benefit after the fight. It is not another entry edge and
-must not be folded into detour availability.
+| Chaos map  | Eligibility from an N source                     | Eligibility from F/G/P                           |
+| ---------- | ------------------------------------------------ | ------------------------------------------------ |
+| `Chaos_01` | never                                            | always eligible at the map-selection layer       |
+| `Chaos_02` | never                                            | requires prior profile `RoomCountCache.Chaos_01` |
+| `Chaos_03` | requires prior profile `RoomCountCache.Chaos_01` | requires prior profile `RoomCountCache.Chaos_01` |
+| `Chaos_04` | never                                            | requires prior profile `RoomCountCache.Chaos_01` |
+| `Chaos_05` | never                                            | requires prior profile `RoomCountCache.Chaos_01` |
+| `Chaos_06` | requires prior profile `RoomCountCache.Chaos_01` | requires prior profile `RoomCountCache.Chaos_01` |
 
-## Classification
+The first-ever eligible Chaos map outside N is therefore `Chaos_01`. Once that
+profile fact exists, all six maps can participate outside N, while an N gate
+can select only `Chaos_03` or `Chaos_06`. N's own natural availability already
+requires progressed Surface state, so the absence of a first-visit N target is
+intentional rather than an empty production pool.
 
-| Feature          | Entry form                               | Normal target remains offered? | Detour target         | Return            |
-| ---------------- | ---------------------------------------- | ------------------------------ | --------------------- | ----------------- |
-| Chaos            | additional special exit                  | yes                            | selected Chaos room   | previous room set |
-| G Anomaly        | replacement of an eligible normal target | no                             | selected Anomaly room | previous room set |
-| Zagreus contract | additional supported-room exit           | yes                            | fixed `C_Boss01`      | previous room set |
+`BaseChaos` declares:
 
-The first and third features can share an additional-exit form. Anomaly needs a
-target-replacement form. Both forms can share occurrence, lifecycle, history,
-resume, validation, and selection infrastructure.
+- `ForcedRewardStore = "Secrets"`; the `Secrets` store contains
+  `TrialUpgrade`;
+- `LegalEncounters = { "Empty_Chaos" }`;
+- `PauseBiomeState = true`;
+- `UsePreviousRoomSet = true`.
 
-## Recommended Extension Contract
+`Empty_Chaos` inherits the ordinary `Empty` encounter. Its only additional
+semantic content is an optional, progression-gated Nyx activation and
+conversation. Under the current progressed-save baseline, its supported
+behavior is equivalent to `Empty`, but the planner retains the exact
+`Empty_Chaos` encounter identity as declaration data while collapsing the Nyx
+behavior. That does not create a separate lifecycle path.
 
-### Catalog
+`UsePreviousRoomSet` makes the Chaos room generate a fresh target from the
+host source's room set. Chaos maps use ordinary `ExitDoor` objects rather than
+`AnomalyAutoExitDoor`: the resumed target is a normal generated continuation,
+and its reward preview is not generically hidden or auto-selected by the Chaos
+room contract.
 
-Introduce a finite detour declaration vocabulary only when implementation
-starts. Each declaration must identify:
+The earlier focused Preboss probe also established:
 
-- stable detour key and player-facing label;
-- concrete target room source;
-- entry form: additional exit or normal-target replacement;
-- supported source rooms, placement capability, or target eligibility class;
-- requirement expression over modeled inputs;
-- return policy;
-- room lifecycle, reward, and encounter declarations;
-- maximum appearance and other creation constraints.
+- normal-door Preboss takeover and an additional Chaos gate can coexist;
+- taking Chaos can leave an offered normal Preboss batch unentered;
+- the resumed generation creates a fresh normal/Preboss target and fresh
+  reward draw rather than reusing the earlier unentered occurrence.
 
-Chance weights are game evidence, not authored state. The planner models
-possible authored outcomes, not probability replay.
+### History, depth, and biome state
 
-Detour rooms need concrete Room Declarations, but they are not new route
-biomes. The catalog must separate a room's game room-set identity from the host
-route-biome plan that owns its occurrence. Do not add fake `C`, `Chaos`, or
-`Anomaly` route tabs merely to satisfy the current `biomeKey` field.
+Chaos is not transparent history and does not pause counters.
 
-### Authored topology
+On exit, generic `LeaveRoom` inserts the Chaos room into `RoomHistory` and
+`UpdateRunHistoryCache` recomputes:
 
-Extend the existing outgoing decision boundary. Do not add a parallel detour
-list detached from reachability.
+- run depth as `1 + #RoomHistory`;
+- biome depth by counting prior room records back to the last biome
+  transition, without excluding the Chaos room by room-set name.
 
-For an additional exit:
+The Chaos visit therefore contributes a real route ordinal, run-depth step,
+and host-biome-depth step. `PauseBiomeState` has a narrower meaning: entering
+Chaos removes biome-state traits, and leaving it restores the current biome
+state trait. It does not suspend room history, depth, rewards, or encounters.
 
-- the source decision retains its normal lane, whether it is an empty envelope,
-  a realized ordinary batch, or a complete takeover batch;
-- the detour target is a real offered occurrence;
-- the enclosing selection chooses one normal or detour continuation;
-- an unpicked detour remains a real dead leaf, like an unpicked normal target.
+## Spark of Ixion forced Chaos
 
-For replacement:
+The player-facing Spark of Ixion is
+`TemporaryForcedSecretDoorTrait`, a one-use `RoomShop`/Stygian Well item with
+`ForceSecretDoor = true`. Its own availability requires prior Chaos
+progression and a non-Dream run.
 
-- the physical normal exit remains the host exit;
-- the created target is the detour occurrence, not a hidden normal occurrence;
-- replacement provenance identifies the declaration and host exit;
-- selection and reachability continue through the detour occurrence.
+When the trait is held, `IsSecretDoorEligible` takes a force branch before
+checking `SecretChanceSuccess` or the room's natural
+`SecretDoorRequirements`. The force branch checks only
+`ForceSecretDoorRequirements`:
 
-Every selected detour occurrence owns an outgoing resume decision. Resume
-identity must point to the semantic host context, not an array index or a raw
-`UsePreviousRoomSet` string.
+- the current room is not one of the named Preboss, boss, or postboss
+  exclusions;
+- the current room set is not `Anomaly`.
 
-### Simulation and history
+A physical `SecretPoint` is still mandatory because `HandleSecretSpawns`
+checks map capability before calling eligibility. Once an eligible gate is
+created, the trait use is consumed and the gate's health cost is set to zero.
 
-Canonical materialization must emit observable facts in game order:
+This means Spark of Ixion can:
 
-1. detour availability and target creation;
-2. selection of normal or detour continuation;
-3. detour-room entry and preparation;
-4. its reward and encounter lifecycle;
-5. its room-history and counter effects;
-6. outgoing generation resumed under the host biome context.
+- bypass the natural ten-room offer spacing;
+- bypass a room's zero natural chance;
+- bypass natural biome, depth, and room-specific requirements;
+- wait until the next map that has a `SecretPoint` and satisfies the narrower
+  force exclusions.
 
-The detour is not transparent history. Any room, encounter, reward, run-depth,
-biome-state, or acquisition effect must be declared and emitted.
+That explains forced gates in `H` and other naturally disabled contexts. This
+entire forced mode is outside the intended planner feature, including its Well
+purchase, trait lifetime, zero-health-cost distinction, and extra source
+biomes. It must not leak into natural Chaos eligibility as a guessed override.
 
-Normal-door takeover remains normal-door takeover. A generated Preboss can
-take over normal doors without consuming or rewriting a separately declared
-special exit. The Chaos probe confirms that the two can coexist and that an
-unentered Preboss batch is not a reusable continuation. Exact source-map and
-runtime configuration remain declaration-owned; the topology engine must not
-infer them from rendered door order.
+## Oceanus Anomaly
 
-A `takeOverNormalDoors` Preboss is atomic across its complete declared
-normal-exit set, even though the current editor enters the choice at the first
-normal target. Engine evaluation validates every normal exit and the aggregate
-creation cap before takeover is possible or required. A future special exit is
-neither replaced, counted, nor selected by that policy.
+### Trigger and replacement point
 
-### Validation and editing
+`CreateRoom` rolls `AnomalyDoorChanceSuccess` for a G host source. The shared
+chance is `0.06`, or `0.33` before the profile has recorded an Anomaly visit.
+At room setup, `HandleSecretSpawns` sets `currentRoom.DoAnomalies` when the
+chance and `AnomalyDoorRequirements` pass.
 
-Candidate evaluation must distinguish:
+The source-room requirements include:
 
-- source cannot physically host the special exit;
-- source or target requirements fail;
-- replacement target class is ineligible;
-- detour appearance cap is exhausted;
-- authored detour is possible but the selected continuation is unresolved;
-- return context is structurally missing or contextually unavailable.
+- one Anomaly at most in the current run;
+- a current G route at `BiomeDepthCache >= 3`;
+- source-room exclusions for `G_Shop01`, `G_Story01`, `G_PreBoss01`, and
+  `C_Boss01`;
+- source-encounter exclusions for `ArtemisCombatG` and
+  `NemesisRandomEvent`;
+- several profile/narrative progression predicates.
 
-Commands should add/remove a declared detour and select its continuation as
-semantic undoable edits. The UI can present “Add Chaos gate” or a
-feature-specific equivalent, but UI terminology does not define the domain
-shape.
+These are requirements on the entered host source, not a declaration that the
+source itself can become an Anomaly room. The source side is not restricted to
+ordinary G combat declarations: any current G room that reaches depth three,
+passes the named room and encounter exclusions, and can generate an eligible
+next target can prepare replacement. For example, a sufficiently deep G
+miniboss or Reprieve is not source-excluded, while `G_Intro` cannot satisfy the
+depth floor and Midshop, Story, and Preboss are explicitly excluded.
 
-## Implementation-Probe Order
+The trigger does not immediately create an extra exit. During ordinary target
+generation, `ChooseNextRoomData` first chooses an otherwise-valid target from
+the G room set. Only when that target has `AllowAnomalyReplacement` is it
+replaced with a room from the `Anomaly` room set. In current declarations,
+`AllowAnomalyReplacement` belongs to `BaseG_Combat`. Every ordinary combat
+declaration from `G_Combat01` through `G_Combat20` inherits that capability;
+no other G declaration does. The complete replacement-target class is
+therefore those twenty declarations, subject to their ordinary eligibility.
 
-### Probe 1: lifecycle and counter trace
+This creates two independent gates:
 
-Record one vanilla trace for each feature from source-room creation through the
-first resumed host-biome target. Capture:
+1. the previously entered source must be allowed to prepare Anomaly;
+2. the otherwise-selected next target must be one of `G_Combat01` through
+   `G_Combat20`.
 
-- room and encounter creation records;
-- run, biome-depth, and biome-encounter-depth values;
-- reward-store selection and acquisition;
-- biome-state trait removal/restoration;
-- physical exit identity;
-- return-room-set selection.
+Calling the feature an Anomaly “offer” can hide that distinction. The source
+prepares a forced replacement of an eligible normal target; Anomaly is not an
+additional player-selectable door beside that target.
 
-This closes the meaning of “resume” before schema work.
+The discarded G candidate is never passed to `CreateRoom`. It has no room
+occurrence, encounter, reward, or history identity. The physical normal exit
+instead owns the created Anomaly room and shows that Anomaly room's generated
+reward through the ordinary door-preview path.
 
-### Probe 2: additional-exit control
+The selected planner baseline deliberately differs at the authoring-command
+boundary: switching an already-authored G target to Anomaly preserves that
+target occurrence's current reward as the Anomaly reward. This is an editor
+handoff, not a second game lifecycle. Canonical simulation must record and
+consume the retained leaf only as the Anomaly offer; it must not emit a phantom
+G creation, G reward offer, or second reward-store consumption. A retained
+`Devotion` or `SpellDrop` remains editable but invalid until the author changes
+it.
 
-Prove that a runtime adapter can deterministically:
+### Anomaly room and automatic hidden return
 
-- suppress natural appearance;
-- create one requested Chaos or Zagreus exit only on a supported source;
-- preserve normal-door generation;
-- observe which continuation was taken;
-- resume the correct room set.
+The `Anomaly` room set contains seven reused Asphodel maps:
 
-### Probe 3: replacement control
+- `B_Combat01`;
+- `B_Combat05`;
+- `B_Combat06`;
+- `B_Combat07`;
+- `B_Combat08`;
+- `B_Combat10`;
+- `B_Combat21`.
 
-Prove that Anomaly replacement can be forced or suppressed after normal-target
-eligibility is known without creating or recording a phantom normal room.
+All inherit `BaseAnomaly`, use the single `GeneratedAnomalyB` encounter, and
+choose their own ordinary room reward. `BaseAnomaly` excludes `Devotion` and
+`SpellDrop` but does not force a special reward store.
 
-### First implementation slice
+`EncounterSets.AnomalyEncountersB` contains only `GeneratedAnomalyB`, which
+inherits `GeneratedAnomalyBase` and uses the Biome B enemy set. Through the
+ordinary `Generated` base it declares `CountsForRoomEncounterDepth = true`.
+An Anomaly room therefore has a genuine encounter identity and advances biome
+encounter depth, but it offers no encounter choice: all seven maps force the
+same legal encounter. Map selection and challenge outcome are independent
+authored facts; an encounter picker would invent a choice that the declarations
+do not provide.
 
-Use one additional-exit feature as the vertical proof. Chaos is the richer
-modeling proof; Zagreus is the narrower fixed-target proof. The slice must
-include declaration normalization, authored topology, commands and codec,
-simulation/history, candidates/findings, UI projection, and focused runtime
-probe evidence before the feature is called supported.
+That reward is selected and removed from its reward store when the Anomaly
+room is created for the host's ordinary exit. The capture-point result controls
+acquisition, not selection:
 
-Add Anomaly only after the common resume contract is stable. Its replacement
-entry form should be an additive extension, not a rewrite of the additional
-exit implementation.
+- when `CapturePointProgress >= 100`, `EndCapturePointChallengeEncounter`
+  calls `SpawnRoomReward`, making the selected reward available;
+- otherwise it marks the objective failed and does not spawn the room reward;
+- the failed reward is not put back into the reward store.
 
-## Open Questions
+Anomaly therefore distinguishes a consumed offer from an acquired reward. A
+loss advances the bag without adding that reward to the player's acquisition
+history.
 
-- Which current room declarations contain a usable `SecretPoint`, and is that
-  map capability stable enough to normalize in the catalog?
-- What exact counters and caches change in Chaos, Anomaly, and `C_Boss01`?
-- Which source-map and runtime configurations can host each additional special
-  exit beside a particular normal-door shape, beyond the confirmed
-  Chaos/Preboss behavior?
-- Which external save/profile predicates require explicit modeled inputs
-  before natural eligibility can be validated?
-- Is a detour's resumed outgoing reward store based on the host source, the
-  detour reward, or another game-owned checkpoint?
-- What is the smallest safe game adapter for forcing Anomaly replacement?
+`BaseAnomaly.UsePreviousRoomSet = true`, so its outgoing target is freshly
+generated from G. Every declared B map contains one
+`AnomalyAutoExitDoor`. That door:
 
-Unknown answers remain audit work. They must not become generic
-`unsupported`, guessed defaults, or runtime-only repair.
+- has `HideRewardPreview = true`;
+- calls `AttemptUseAutoExitDoor` as soon as it unlocks;
+- enters the generated G target without presenting its reward beforehand.
+
+There is one such physical exit. Its target room and reward are selected by the
+ordinary next-room and reward-store machinery; only preview and player choice
+are suppressed.
+
+The Anomaly room and the hidden resumed G room are therefore two distinct
+created and entered occurrences. The replacement does not mean “run a B map
+inside a G occurrence,” and the resumed G target is not the original discarded
+candidate.
+
+Anomaly has no `PauseBiomeState`. It remains a real room-history entry and
+advances run and biome depth through the same generic cache path as Chaos.
+`CurrentRun.BiomesReached.Anomaly` is established by entering the Anomaly room.
+Preparing a replacement or creating an unentered Anomaly target does not set
+that history fact. The run-level appearance requirement is consequently
+consumed on entry, not on preparation or offer.
+
+## Zagreus contract
+
+### Midshop-only additional entry
+
+Only four room declarations contain `ZagContractDestinationId`:
+
+| Host route | Source room |
+| ---------- | ----------- |
+| `F`        | `F_Shop01`  |
+| `G`        | `G_Shop01`  |
+| `O`        | `O_Shop01`  |
+| `P`        | `P_Shop01`  |
+
+This confirms that the contract always starts from a declared Midshop source.
+`CreateRoom` marks the Midshop when `ZagreusContractRequirement` passes: the
+contract is unlocked, no standard-package bounty blocks it, `C_Boss01` has not
+already occurred this run, and the `0.4` chance succeeds.
+
+`SpawnZagContract` creates a separate contract exit with the fixed target
+`C_Boss01`. The Midshop's ordinary exit flow remains available.
+`ObstacleData.ZagContract` hides the target reward preview.
+
+The contract's special behavior ends at the door. It is outside the ordinary
+normal-door batch, so normal-door force pressure and Preboss takeover do not
+replace or own it. That distinction has no practical Preboss collision at the
+four supported Midshops. Once entered, `C_Boss01` uses the shared room
+encounter, reward, counter, history, and exit processing.
+
+`ZagreusContractRequirement` tests the current run's entered-room count for
+`C_Boss01`. `SpawnZagContract` creates the room and exit but does not add that
+room to the entered-room history. A contract door that is offered and skipped
+therefore does not consume the run allowance and does not prevent a later
+eligible Midshop from preparing another offer. Entering `C_Boss01` does consume
+the allowance, making this another once-per-run-on-entry rule rather than a
+once-per-offer rule.
+
+### Contract room and automatic hidden return
+
+`C_Boss01` owns:
+
+- the `BossZagreus01` encounter;
+- forced reward `GemPointsBigDrop`;
+- `PauseBiomeState = true`;
+- `UsePreviousRoomSet = true`.
+
+`BossZagreus01` inherits `BossEncounter` and does not declare
+`CountsForRoomEncounterDepth`. The room advances the normal room-history,
+run-depth, and biome-depth effects, but its encounter does not advance biome
+encounter depth.
+
+After `BossZagreus01` resolves, its encounter event sequence calls
+`AwardContractTrait` and then `SpawnRoomReward`. These are two distinct room
+outputs:
+
+- `AwardContractTrait` adds `InfernalContractBoon` to the hero;
+- `SpawnRoomReward` materializes the room's forced `GemPointsBigDrop`.
+
+The boon is not decorative state. `SpawnZagContractRewards` later requires
+`InfernalContractBoon` and a room-specific `ZagContractRewardDestinationId`
+before it creates one free option from `StoreData.ZagPedestalOptions`.
+
+The `C_Boss01` map contains an `AnomalyAutoExitDoor`. As with Anomaly, the
+outgoing host target is freshly generated, its reward preview is hidden, and
+the door is used automatically after it unlocks. The player therefore returns
+directly to a new room in the Midshop's host room set without seeing that
+room's reward beforehand. There is one physical automatic exit, and its target
+room and reward use the ordinary host-room-set generation rules.
+
+`C_Boss01` is inserted into room history and advances run and biome depth.
+`PauseBiomeState` suspends and restores the biome-state trait but does not
+pause those counters.
+
+Entry and commit are distinct source checkpoints. `StartRoom` records the
+entered-room fact for `C_Boss01`; `LeaveRoom` later appends it to
+`RoomHistory` and refreshes `RoomCountCache`, `RunDepthCache`, and
+`BiomeDepthCache`. Its automatic target is generated before that later commit,
+so it can observe entry-time facts and completed room-local effects, including
+encounter and acquisition effects, but not `C_Boss01`'s own history/cache
+contribution.
+
+`ZagContractRewardDestinationId` is therefore a separate later-room placement
+contract for the free post-fight benefit enabled by the awarded trait. It is
+not another route edge, not the resume target, and not part of contract-entry
+availability.
+
+## Reward-store behavior of automatic continuations
+
+The automatic exit used by Anomaly and `C_Boss01` does not bypass the reward
+bag. When either occurrence unlocks its exit, `DoUnlockRoomExits` follows the
+normal sequence:
+
+1. choose a fresh target with `ChooseNextRoomData`;
+2. create that target and identify its reward store;
+3. call `ChooseRoomReward` for the target;
+4. remove the selected entry from `CurrentRun.RewardStores`;
+5. configure the room reward;
+6. hide the preview because the obstacle is `AnomalyAutoExitDoor`;
+7. automatically enter that already-created target.
+
+`HideRewardPreview` is presentation state. It does not defer reward selection,
+preserve the selected bag entry, or make the continuation rewardless. Each
+automatic continuation consumes the reward for exactly one freshly generated
+normal target before the player is teleported into it.
+
+### Depth-five O contract trace
+
+At the latest supported `O_Shop01` depth, the ordinary Shop exit still creates
+its ordinary O target and consumes that target's reward-store entry even when
+the Zagreus door is taken. `C_Boss01` is a separate room created at Midshop
+start. Its automatic exit then creates a fresh second O target from the
+previous room set before `C_Boss01` commits. The return therefore remains a
+distinct target rather than a reuse of the unpicked Shop target.
+
+At that automatic-generation checkpoint, the host depth is still six, below
+`O_PreBoss01`'s exact depth-seven force. After `C_Boss01` commits, the returned
+O target starts at depth seven; its own later ordinary exit reaches the
+Preboss. This is ordinary host progression, not a special O return rule.
+
+The complete reward-store distinction is:
+
+- Anomaly entry consumes its visible conditional reward when the Anomaly room
+  is offered; success acquires it and failure does not;
+- Anomaly return consumes another reward for its one hidden G target;
+- `C_Boss01` uses a forced meta reward and therefore does not remove an entry
+  from the ordinary host reward store for its own payout;
+- Zagreus return consumes one ordinary reward for its one hidden host target.
+
+Thus Anomaly and Zagreus share a real one-exit-room return shape: one ordinary
+target and reward are generated, the reward is hidden, and traversal is
+automatic. They do not share the reward lifecycle of their entry rooms.
+
+## Comparative fact matrix
+
+| Feature            | Entry form                              | Room output                                                        | Resume form                                       | Resume reward behavior            | Pauses biome-state trait? |
+| ------------------ | --------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- | --------------------------------- | ------------------------- |
+| Natural Chaos      | additional secret exit                  | `TrialUpgrade` through the `Secrets` store; empty encounter        | ordinary exit to a fresh previous-room-set target | ordinarily previewed and consumed | yes                       |
+| Spark-forced Chaos | additional forced secret exit           | same Chaos output                                                  | ordinary exit to a fresh previous-room-set target | ordinarily previewed and consumed | yes                       |
+| G Anomaly          | replacement on the existing normal exit | ordinary reward consumed on offer, acquired only on success        | one automatic exit to a fresh G target            | consumed normally, preview hidden | no                        |
+| Zagreus contract   | additional Midshop contract exit        | `InfernalContractBoon` plus forced `GemPointsBigDrop` in game data | one automatic exit to a fresh previous-set target | consumed normally, preview hidden | yes                       |
+
+All three supported detour families create real entered room occurrences,
+record their own reward and encounter lifecycle, contribute history and depth,
+and generate a fresh host-room-set target on return. That is their meaningful
+common boundary.
+
+They do not share entry eligibility, target selection, incoming preview,
+outgoing interaction, outgoing preview, biome-state treatment, or reward and
+encounter declarations. A future model that reduces them to an undifferentiated
+`special` edge would erase player-visible and history-visible facts.
+
+## Facts any later model must account for
+
+Without choosing a schema yet, the live evidence creates these constraints:
+
+- A room's game room-set identity is declaration data. The containing topology
+  supplies route context; neither fact creates a second room class or
+  lifecycle.
+- Additional-exit entry and normal-target replacement are observably distinct.
+- Offered special doors and rooms entered through them are different lifecycle
+  events. Natural Chaos spacing consumes the former; room history consumes the
+  latter.
+- `UsePreviousRoomSet` is a generation rule for a fresh return target, not a
+  pointer to a previously authored or discarded occurrence.
+- The return continuation has at least two player-visible forms: ordinary
+  reward-bearing selection after Chaos and one-target automatic hidden-reward
+  entry after Anomaly/Zagreus.
+- Hidden automatic continuation still performs ordinary target and reward
+  selection and consumes the selected reward-store entry before traversal.
+- Anomaly reward selection and reward acquisition are different events; a
+  failed challenge consumes but does not award its visible reward.
+- `C_Boss01` awards `InfernalContractBoon` separately from its forced meta
+  reward, and that trait gates a later free contract benefit.
+- Normal-door force pressure and Preboss takeover own only normal doors. They
+  do not own or erase an additional Chaos or Zagreus door.
+- Once a special door is selected, its target is a room occurrence processed
+  by the shared lifecycle; depth and history include it even when biome-state
+  traits are temporarily suspended.
+- Concrete map capability matters. Neither a nonzero chance nor a forced trait
+  can produce a Chaos gate without a `SecretPoint`.
+
+These are source constraints on the temporary implementation plans, not a
+commitment by this audit to one topology type or command surface.
+
+## Deliberate planner disposition
+
+| System                                     | Audit disposition                                                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Natural Chaos in `N`, `F`, `G`, and `P`    | preserve as a natural-only provisional follow-up after Anomaly/Zagreus; do not implement from the audit        |
+| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                                |
+| Oceanus Anomaly                            | selected for the first implementation plan as normal-target replacement with one automatic hidden continuation |
+| Zagreus contract                           | selected for the first implementation plan as a Midshop additional exit with one automatic hidden continuation |
+
+### Settled Anomaly and Zagreus planner baseline
+
+The implementation plan may treat the following as closed scope decisions
+rather than reopen them as game-data questions:
+
+- assume the ordinary save/profile and narrative progression requirements for
+  both systems have been met;
+- preserve their run-level, room-history, depth, source-room,
+  source-encounter, and target-capability requirements;
+- author possible outcomes rather than replaying the game's chance rolls;
+- consume each feature's once-per-run limit on entry into its Anomaly or
+  `C_Boss01` occurrence, not when its door or replacement is prepared;
+- use the progressed complete seven-map Anomaly pool, defaulting a newly
+  authored takeover to the first declared map, `B_Combat01`;
+- force `GeneratedAnomalyB` as the Anomaly encounter and default its authored
+  challenge result to success;
+- use fixed `C_Boss01` and `BossZagreus01` for the Zagreus room;
+- model its relevant payout as `InfernalContractBoon` and omit the separate
+  meta-progression `GemPointsBigDrop` from the planner's supported reward
+  lifecycle;
+- preserve `GeneratedAnomalyB`'s encounter-depth increment and
+  `BossZagreus01`'s lack of one;
+- omit `C_Boss01.PauseBiomeState` from production modeling because the planner
+  has no biome-state trait lifecycle input or consumer.
+
+Those are deliberate product simplifications over the complete source facts
+recorded above. They do not change the game's actual progression predicates,
+chance rolls, or dual Zagreus-room outputs.
+
+The temporary Anomaly/Zagreus plan owns the selected schema, command, engine,
+and editor delivery gates. Those implementation choices are not game-data
+facts and therefore do not move into this audit.
+
+### Settled natural Chaos planner baseline
+
+The provisional natural Chaos plan may treat these product choices as closed:
+
+- collapse profile-gated targets to the progressed-save pools:
+  `Chaos_03`/`Chaos_06` from N and `Chaos_01`–`Chaos_06` from F/G/P;
+- default N to `Chaos_03` and F/G/P to `Chaos_01`;
+- normalize the game `Secrets` forced store, whose supported entry is
+  `TrialUpgrade`, to one direct fixed planner reward presented as **Chaos
+  Blessing**;
+- preserve fixed `Empty_Chaos`, the source-level offer marker, the
+  prior-ten-room spacing window, and the ordinary visible fresh continuation;
+- omit `BaseChaos.PauseBiomeState` from production modeling because the planner
+  has no biome-state trait lifecycle input or consumer;
+- exclude Ixion, chance replay, save/profile inputs, and Chaos trait payloads.
+
+The direct reward is a deliberate one-entry-store normalization, not evidence
+that the game bypasses `Secrets`.
+
+## Required fixture ownership
+
+The Anomaly/Zagreus implementation must add focused lifecycle fixtures for one
+Anomaly replacement and one Zagreus Midshop. The later natural-Chaos
+implementation must separately add one ordinary natural source and the
+`N_Opening01` route case. The source already establishes the expected
+history/depth and return behavior; fixtures should protect each selected
+planner interpretation rather than stand in for missing production semantics.
+
+The automatic hidden continuation editor policy is also closed: its exact
+authored target and reward remain visible to the planner author while the UI
+labels their in-game preview and traversal as hidden/automatic. Simulation
+still selects and consumes the reward before automatic entry.
+
+The Anomaly target inventory, forced encounter, source/target eligibility
+split, and Anomaly/Zagreus entry-consumed run caps are closed. They are not
+remaining audit questions.
+
+Runtime adapter control is intentionally not an audit completion gate. The
+standalone app must first settle a declarative plan and simulation contract;
+game-module forcing and conformance belong to the later integration boundary.
