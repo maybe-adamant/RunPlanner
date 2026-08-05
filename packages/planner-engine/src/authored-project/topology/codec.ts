@@ -27,7 +27,7 @@ import { decodeRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
-  automaticHostContinuationExitForForeignRoom,
+  automaticHostContinuationExitForDetourRoom,
   declaredPhysicalExitsForSourceRoom,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
@@ -911,7 +911,7 @@ function ownerForAdditionalExit(
   ) {
     failProjectDocument(
       `${rawOccurrence.path}.gameName`,
-      `${additional.key} requires its declared foreign contract room`,
+      `${additional.key} requires its declared Zagreus contract room`,
     );
   }
   if (rawOccurrence.hasAnomalyReplacement) {
@@ -928,7 +928,7 @@ function ownerForAdditionalExit(
   });
 }
 
-function validateForeignAutomaticContinuationDecision(
+function validateDetourAutomaticContinuationDecision(
   decision: ExitDecision,
   decisionPath: string,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
@@ -940,11 +940,11 @@ function validateForeignAutomaticContinuationDecision(
   if (source === undefined) return;
   const sourceRoom = requireKnownRoom(source, catalog);
   if (sourceRoom.roomSetKey === layout.biomeKey) return;
-  const automatic = automaticHostContinuationExitForForeignRoom(sourceRoom);
+  const automatic = automaticHostContinuationExitForDetourRoom(sourceRoom);
   if (automatic === undefined) {
     failProjectDocument(
       `${decisionPath}.source.occurrenceId`,
-      `${sourceRoom.gameName} has no admitted foreign automatic continuation`,
+      `${sourceRoom.gameName} has no admitted detour automatic continuation`,
     );
   }
   if (
@@ -966,7 +966,7 @@ function validateForeignAutomaticContinuationDecision(
   ) {
     failProjectDocument(
       decisionPath,
-      'a foreign automatic continuation requires one derived exit1 host target and no additional exits',
+      'a detour automatic continuation requires one derived exit1 host target and no additional exits',
     );
   }
   if (target === undefined) return;
@@ -1232,7 +1232,7 @@ export function decodeBiomeTopology(
   }
   for (const [index, decision] of decisions.entries()) {
     if (decision.kind !== 'exit') continue;
-    validateForeignAutomaticContinuationDecision(
+    validateDetourAutomaticContinuationDecision(
       decision,
       rawDecisions[index]?.path ?? path,
       occurrences,

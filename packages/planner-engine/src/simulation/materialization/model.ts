@@ -87,7 +87,7 @@ export interface CanonicalAuthoredRoom {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
   /**
-   * A foreign Anomaly map still evaluates the normal G target it displaced.
+   * An Anomaly replacement still evaluates the normal G target it displaced.
    * Keep that authored provenance on the canonical room rather than asking a
    * later simulation stage to rediscover topology ownership from a game name.
    */

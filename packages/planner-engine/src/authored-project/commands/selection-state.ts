@@ -43,7 +43,7 @@ export function reconcileNormalTargetEntryStates(
     if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
 
     // A normal G target may be an Anomaly replacement. Its own state does not
-    // have a selection-activated leaf, and no foreign room is admitted here
+    // have a selection-activated leaf, and no route-detour room is admitted here
     // merely because this reconciliation needs to inspect it.
     if (room.roomSetKey !== located.layout.biomeKey) return occurrence;
     if (room.kind !== 'Preboss' && room.kind !== 'Shop') return occurrence;

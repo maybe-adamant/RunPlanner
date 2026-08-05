@@ -154,7 +154,7 @@ Selection belongs to the enclosing decision: a width-one normal-only batch uses
 `normal` selects one declared normal target; and `additional` selects one
 closed sibling continuation. The only supported additional exit is a declared
 Zagreus contract beside a Midshop's normal lane. It is never a synthetic normal
-target or a generic foreign-room escape hatch.
+target or a generic cross-room-set escape hatch.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -273,10 +273,11 @@ rule.
 Route detours use narrower commands than general room replacement. An Anomaly
 retains one normal G target occurrence identity, remembers its displaced G
 declaration, and owns its retained incoming offer plus success state. A
-Zagreus contract owns one foreign `C_Boss01` occurrence as a declared
-additional exit. Those are the only foreign room-set occurrences admitted by
-decoded topology; each has one declaration-owned automatic hidden host return
-that remains a normal host target and batch for accounting.
+Zagreus contract owns one `C_Boss01` occurrence as a declared additional exit.
+Anomaly replacements and the Zagreus contract are the only declared detour
+ownership forms admitted by decoded topology; each has one declaration-owned
+automatic hidden host return that remains a normal host target and batch for
+accounting.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,

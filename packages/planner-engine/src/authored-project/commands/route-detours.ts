@@ -132,7 +132,7 @@ function anomalyDescriptor(
   return descriptor;
 }
 
-function requireForeignAnomalyRoom(
+function requireAnomalyRoom(
   catalog: Catalog,
   gameName: string,
   command: RouteDetourCommand,
@@ -191,7 +191,7 @@ function requireAnomalyOccurrence(
     readonly anomalyReplacement: AnomalyReplacementProvenance;
     readonly state: AnomalyRoomState;
   };
-  requireForeignAnomalyRoom(catalog, anomalyOccurrence.gameName, command);
+  requireAnomalyRoom(catalog, anomalyOccurrence.gameName, command);
   if (!descriptor.replacementRoomGameNames.includes(anomalyOccurrence.gameName)) {
     failCommand(command, `${anomalyOccurrence.gameName} is not a declared Anomaly replacement map`);
   }
@@ -256,7 +256,7 @@ function switchTargetToAnomaly(
   if (!descriptor.replaceableTargetRoomGameNames.includes(rememberedRoom.gameName)) {
     failCommand(command, `${rememberedRoom.gameName} is not an Anomaly-replaceable target`);
   }
-  const replacementRoom = requireForeignAnomalyRoom(
+  const replacementRoom = requireAnomalyRoom(
     catalog,
     descriptor.defaultReplacementRoomGameName,
     command,
@@ -295,7 +295,7 @@ function replaceAnomalyMap(
     failCommand(command, `${command.gameName} is not a declared Anomaly replacement map`);
   }
   if (occurrence.gameName === command.gameName) return document;
-  const replacementRoom = requireForeignAnomalyRoom(catalog, command.gameName, command);
+  const replacementRoom = requireAnomalyRoom(catalog, command.gameName, command);
   return updateTopology(
     document,
     located,
