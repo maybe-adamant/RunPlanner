@@ -124,11 +124,13 @@ function anomalyDescriptor(
 ): NonNullable<
   Extract<typeof located.layout.progression, { readonly kind: 'generated' }>['anomalyReplacement']
 > {
-  if (located.layout.biomeKey !== 'G' || located.layout.progression.kind !== 'generated') {
-    failCommand(command, 'Anomaly replacement is only declared by the G layout');
+  if (located.layout.progression.kind !== 'generated') {
+    failCommand(command, `${located.layout.biomeKey} has no declared Anomaly replacement`);
   }
   const descriptor = located.layout.progression.anomalyReplacement;
-  if (descriptor === undefined) failCommand(command, 'G has no declared Anomaly replacement');
+  if (descriptor === undefined) {
+    failCommand(command, `${located.layout.biomeKey} has no declared Anomaly replacement`);
+  }
   return descriptor;
 }
 
@@ -245,7 +247,7 @@ function switchTargetToAnomaly(
   }
   const occurrence = requireOccurrence(located.plan, target.occurrenceId, command);
   if (occurrence.anomalyReplacement !== undefined || occurrence.state.kind !== 'counted') {
-    failCommand(command, 'target is not a replaceable counted G room');
+    failCommand(command, 'target is not a replaceable counted host room');
   }
   const rememberedRoom = requireRoom(
     catalog,
