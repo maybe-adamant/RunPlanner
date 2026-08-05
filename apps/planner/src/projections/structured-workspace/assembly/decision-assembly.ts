@@ -1,5 +1,6 @@
 import {
   createBatchRewardStoreAddress,
+  createAdditionalExitAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
@@ -17,6 +18,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
+  CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalTarget,
   FieldsBatchFacts,
@@ -513,7 +515,7 @@ function batchInteractionRequirements(
   batch: WorkspaceDecisionBatchNode,
 ): readonly WorkspaceBatchInteractionRequirement[] {
   const exitSelection =
-    decision.selection.kind === 'derived'
+    decision.selection.kind === 'derived' && batch.zagreusContract === undefined
       ? undefined
       : Object.freeze({
           owner: createExitSelectionAddress(input.source.biome, decision.source),
@@ -563,7 +565,16 @@ function batchInteractionRequirements(
             ? {}
             : { selected: decision.normal.batchState.cageOutcome }),
         });
-  if (exitSelection === undefined && rewardStore === undefined && fieldsCageOutcome === undefined) {
+  const zagreusContract =
+    batch.zagreusContract === undefined
+      ? undefined
+      : Object.freeze({ owner: batch.zagreusContract.owner });
+  if (
+    exitSelection === undefined &&
+    rewardStore === undefined &&
+    fieldsCageOutcome === undefined &&
+    zagreusContract === undefined
+  ) {
     return Object.freeze([]);
   }
   return Object.freeze([
@@ -573,6 +584,7 @@ function batchInteractionRequirements(
       kind: 'batchControls' as const,
       owner: batch.owner,
       ...(rewardStore === undefined ? {} : { rewardStore }),
+      ...(zagreusContract === undefined ? {} : { zagreusContract }),
     }),
   ]);
 }
@@ -598,6 +610,46 @@ function assembleBatchDecision(
       );
     }
     evaluatedTargets.set(target.exit.exitKey, target);
+  }
+  const evaluatedAdditional = new Map<string, CanonicalAdditionalContinuation>();
+  for (const additional of evaluated?.batch.additional ?? []) {
+    if (evaluatedAdditional.has(additional.key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} has duplicate evaluated additional exit ${additional.key}`,
+      );
+    }
+    evaluatedAdditional.set(additional.key, additional);
+  }
+  const canonicalAdditionalByKey = new Map<string, CanonicalAdditionalContinuation>();
+  for (const additional of decision.additional) {
+    const evaluatedAdditionalExit = evaluatedAdditional.get(additional.key);
+    if (evaluatedAdditionalExit === undefined) continue;
+    evaluatedAdditional.delete(additional.key);
+    const occurrence = source.occurrence(additional.occurrenceId);
+    const additionalOwner = createAdditionalExitAddress(
+      source.biome,
+      decision.source,
+      additional.key,
+    );
+    const occurrenceOwner = createOccurrenceAddress(source.biome, additional.occurrenceId);
+    if (
+      occurrence === undefined ||
+      semanticAddressKey(evaluatedAdditionalExit.origin) !== semanticAddressKey(additionalOwner) ||
+      evaluatedAdditionalExit.room.occurrenceId !== additional.occurrenceId ||
+      evaluatedAdditionalExit.room.gameName !== occurrence.gameName ||
+      semanticAddressKey(evaluatedAdditionalExit.room.origin) !==
+        semanticAddressKey(occurrenceOwner)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(additionalOwner)} evaluated additional exit does not match its authored occurrence`,
+      );
+    }
+    canonicalAdditionalByKey.set(additional.key, evaluatedAdditionalExit);
+  }
+  if (evaluatedAdditional.size > 0) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner)} has evaluated additional exits with no authored exit`,
+    );
   }
   const kind = rawBatchKind(input, decision);
   const fieldsBatchOwnsOutcome = fieldsBatchOwnsCageOutcome(
@@ -681,11 +733,72 @@ function assembleBatchDecision(
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
   const effectiveRewardStore = effectiveRewardStoreForBatch(decision, evaluated);
+  const zagreusAdditional = decision.additional.find(
+    (additional) => additional.kind === 'zagreusContract',
+  );
+  const zagreusContract =
+    zagreusAdditional === undefined
+      ? undefined
+      : (() => {
+          const occurrence = source.occurrence(zagreusAdditional.occurrenceId);
+          if (occurrence === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} has no authored Zagreus contract occurrence`,
+            );
+          }
+          const evaluatedContract = canonicalAdditionalByKey.get(zagreusAdditional.key);
+          const contractAssembly = input.assembleOccurrence(
+            Object.freeze({
+              ...(evaluatedContract === undefined ? {} : { evaluatedRoom: evaluatedContract.room }),
+              occurrence,
+            }),
+          );
+          const room = requireWorkspaceRoom(input.catalog, occurrence.gameName);
+          const fixed = room.encounterSlotBindings.find((binding) => binding.kind === 'fixed');
+          if (fixed?.kind !== 'fixed') {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} Zagreus contract has no fixed encounter`,
+            );
+          }
+          const encounter = input.catalog.encounterDefinitions.byKey[fixed.encounterDefinitionKey];
+          if (encounter === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} Zagreus contract fixed encounter is unknown`,
+            );
+          }
+          return Object.freeze({
+            contractRoom: contractAssembly.node.room,
+            encounterLabel: encounter.label,
+            marker: input.markerDestinations.marker(
+              createAdditionalExitAddress(source.biome, decision.source, zagreusAdditional.key),
+            ),
+            owner: createAdditionalExitAddress(
+              source.biome,
+              decision.source,
+              zagreusAdditional.key,
+            ),
+            selected:
+              decision.selection.kind === 'additional' &&
+              decision.selection.additionalExitKey === zagreusAdditional.key,
+            assembly: contractAssembly,
+          });
+        })();
   const base = {
     batchState: decision.normal.batchState,
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
     ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
+    ...(zagreusContract === undefined
+      ? {}
+      : {
+          zagreusContract: Object.freeze({
+            contractRoom: zagreusContract.contractRoom,
+            encounterLabel: zagreusContract.encounterLabel,
+            marker: zagreusContract.marker,
+            owner: zagreusContract.owner,
+            selected: zagreusContract.selected,
+          }),
+        }),
     ...(input.hubTakeover === undefined
       ? {}
       : {
@@ -746,14 +859,20 @@ function assembleBatchDecision(
     batch,
     batchInteractionRequirements: batchInteractionRequirements(input, decision, batch),
     kind: 'batch' as const,
-    occurrenceInteractionRequirements: Object.freeze(
-      projectedTargets.flatMap((target) => target.occurrenceInteractionRequirements),
-    ),
+    occurrenceInteractionRequirements: Object.freeze([
+      ...projectedTargets.flatMap((target) => target.occurrenceInteractionRequirements),
+      ...(zagreusContract === undefined
+        ? []
+        : zagreusContract.assembly.occurrenceInteractionRequirements),
+    ]),
     roomControls: Object.freeze([
       ...projectedTargets.flatMap((target) => target.roomControls),
       ...targetRoomControls,
     ]),
-    rewardControls: Object.freeze(projectedTargets.flatMap((target) => target.rewardControls)),
+    rewardControls: Object.freeze([
+      ...projectedTargets.flatMap((target) => target.rewardControls),
+      ...(zagreusContract === undefined ? [] : zagreusContract.assembly.rewardControls),
+    ]),
     workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
   });
 }

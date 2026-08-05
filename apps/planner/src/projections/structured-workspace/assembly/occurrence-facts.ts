@@ -1,8 +1,8 @@
 import {
   createOccurrenceAddress,
-  selectedExitTarget,
   semanticAddressKey,
   type AuthoredBiomePlan,
+  selectedExitContinuation,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 
@@ -11,6 +11,7 @@ import type { WorkspaceBiomeSource } from '../source-index';
 
 /** The only biome-wide fact an occurrence package needs from authored topology. */
 export interface WorkspaceOccurrenceAssemblyFact {
+  readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
   readonly occurrenceId: OccurrenceId;
 }
@@ -42,8 +43,9 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
       }
       continue;
     }
-    const target = selectedExitTarget(decision);
-    if (target !== undefined) active.add(target.occurrenceId);
+    const continuation = selectedExitContinuation(decision);
+    if (continuation?.kind === 'normal') active.add(continuation.target.occurrenceId);
+    if (continuation?.kind === 'additional') active.add(continuation.exit.occurrenceId);
   }
   return active;
 }
@@ -52,6 +54,15 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
   source: WorkspaceBiomeSource,
 ): WorkspaceBiomeOccurrenceAssemblyFacts {
   const active = authoredDetailsActiveOccurrenceIds(source.plan);
+  const additionalKeysBySource = new Map<OccurrenceId, readonly string[]>();
+  for (const decision of source.plan.topology?.decisions ?? []) {
+    if (decision.kind === 'exit' && decision.source.kind === 'occurrence') {
+      additionalKeysBySource.set(
+        decision.source.occurrenceId,
+        Object.freeze(decision.additional.map((additional) => additional.key)),
+      );
+    }
+  }
   const byOccurrence = new Map<OccurrenceId, WorkspaceOccurrenceAssemblyFact>();
   for (const occurrence of source.plan.topology?.occurrences ?? []) {
     if (byOccurrence.has(occurrence.occurrenceId)) {
@@ -62,6 +73,8 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
     byOccurrence.set(
       occurrence.occurrenceId,
       Object.freeze({
+        authoredAdditionalExitKeys:
+          additionalKeysBySource.get(occurrence.occurrenceId) ?? Object.freeze([]),
         detailsActive: active.has(occurrence.occurrenceId),
         occurrenceId: occurrence.occurrenceId,
       }),

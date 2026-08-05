@@ -40,6 +40,7 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   appendMarker(markers, room.marker);
   for (const phase of room.encounterPhases) appendMarker(markers, phase.marker);
   for (const control of room.rewardControls) appendMarker(markers, control.marker);
+  appendMarker(markers, room.zagreusSpawn?.marker);
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':
@@ -112,11 +113,15 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
     case 'takeoverBatch':
       appendMarker(markers, node.selection);
       appendMarker(markers, node.hubTakeover?.marker);
+      appendMarker(markers, node.zagreusContract?.marker);
       if (node.rewardStore !== undefined) appendMarker(markers, node.rewardStore);
       if (node.fieldsCageOutcome !== undefined) appendMarker(markers, node.fieldsCageOutcome);
       for (const target of node.targets) {
         appendMarker(markers, target.marker);
         markers.push(...roomMarkers(target.room));
+      }
+      if (node.zagreusContract !== undefined) {
+        markers.push(...roomMarkers(node.zagreusContract.contractRoom));
       }
       for (const target of node.missingTargets) appendMarker(markers, target.marker);
       break;
@@ -145,18 +150,23 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
 }
 
 function roomPackagesForNode(node: WorkspaceNode): readonly ObservedWorkspaceRoomPackage[] {
-  const packageFor = (room: WorkspaceRoomSummary): ObservedWorkspaceRoomPackage =>
-    Object.freeze({ nodeKey: node.key, room });
+  const packageFor = (room: WorkspaceRoomSummary): readonly ObservedWorkspaceRoomPackage[] =>
+    Object.freeze([Object.freeze({ nodeKey: node.key, room })]);
   switch (node.kind) {
     case 'occurrenceWorkbench':
-      return Object.freeze([packageFor(node.room)]);
+      return packageFor(node.room);
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':
-      return Object.freeze(node.targets.map((target) => packageFor(target.room)));
+      return Object.freeze([
+        ...node.targets.flatMap((target) => packageFor(target.room)),
+        ...(node.zagreusContract === undefined
+          ? []
+          : packageFor(node.zagreusContract.contractRoom)),
+      ]);
     case 'hubDecision':
       return Object.freeze(
-        node.slots.flatMap((slot) => (slot.room === undefined ? [] : [packageFor(slot.room)])),
+        node.slots.flatMap((slot) => (slot.room === undefined ? [] : packageFor(slot.room))),
       );
     case 'completion':
       return Object.freeze([]);

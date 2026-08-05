@@ -1,5 +1,6 @@
 import {
   createExitDecisionAddress,
+  createAdditionalExitAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -14,6 +15,7 @@ import {
   type OccurrenceAddress,
   type OccurrenceId,
   type TargetAddress,
+  type AdditionalExitAddress,
 } from '@run-planner/engine/authored-project';
 
 export interface ExpectedWorkspaceOccurrenceOwner {
@@ -32,6 +34,11 @@ export interface ExpectedWorkspaceTargetOwner {
   readonly address: TargetAddress;
   readonly decisionAddress: ExitDecisionAddress;
   readonly exitKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+export interface ExpectedWorkspaceAdditionalExitOwner {
+  readonly address: AdditionalExitAddress;
+  readonly decisionAddress: ExitDecisionAddress;
   readonly occurrenceId: OccurrenceId;
 }
 
@@ -61,6 +68,7 @@ export interface ExpectedWorkspaceTopologyManifest {
   readonly hubVisits: readonly ExpectedWorkspaceHubVisitOwner[];
   readonly occurrences: readonly ExpectedWorkspaceOccurrenceOwner[];
   readonly targets: readonly ExpectedWorkspaceTargetOwner[];
+  readonly additionalExits: readonly ExpectedWorkspaceAdditionalExitOwner[];
 }
 
 /**
@@ -81,6 +89,7 @@ export function expectedWorkspaceTopologyManifest(
       hubVisits: Object.freeze([]),
       occurrences: Object.freeze([]),
       targets: Object.freeze([]),
+      additionalExits: Object.freeze([]),
     });
   }
 
@@ -117,6 +126,7 @@ export function expectedWorkspaceTopologyManifest(
   const hubSlots: ExpectedWorkspaceHubSlotOwner[] = [];
   const hubVisits: ExpectedWorkspaceHubVisitOwner[] = [];
   const targets: ExpectedWorkspaceTargetOwner[] = [];
+  const additionalExits: ExpectedWorkspaceAdditionalExitOwner[] = [];
 
   ownOccurrence(topology.startOccurrenceId, `${plan.biomeKey} start`);
   for (const decision of topology.decisions) {
@@ -163,6 +173,16 @@ export function expectedWorkspaceTopologyManifest(
         }),
       );
     }
+    for (const additional of decision.additional) {
+      ownOccurrence(additional.occurrenceId, `${plan.biomeKey} additional ${additional.key}`);
+      additionalExits.push(
+        Object.freeze({
+          address: createAdditionalExitAddress(biome, decision.source, additional.key),
+          decisionAddress: createExitDecisionAddress(biome, decision.source),
+          occurrenceId: additional.occurrenceId,
+        }),
+      );
+    }
   }
 
   return Object.freeze({
@@ -172,5 +192,6 @@ export function expectedWorkspaceTopologyManifest(
     hubVisits: Object.freeze(hubVisits),
     occurrences: Object.freeze([...occurrences.values()]),
     targets: Object.freeze(targets),
+    additionalExits: Object.freeze(additionalExits),
   });
 }

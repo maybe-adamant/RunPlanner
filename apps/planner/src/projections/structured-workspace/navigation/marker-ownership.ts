@@ -59,6 +59,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...room.encounterPhases.map((phase) => phase.marker),
     ...room.rewardControls.map((control) => control.marker),
     ...workspaceLocalDetailMarkers(room.roomLocal),
+    ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);
 }
@@ -72,6 +73,12 @@ export function workspaceDecisionOwnedMarkers(
     node.selection,
     ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker]),
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
+    ...(node.zagreusContract === undefined
+      ? []
+      : [
+          node.zagreusContract.marker,
+          ...workspaceOccurrenceOwnedMarkers(node.zagreusContract.contractRoom),
+        ]),
     ...node.targets.flatMap((target) => [
       target.marker,
       ...workspaceOccurrenceOwnedMarkers(target.room),

@@ -1,9 +1,12 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createLocalChildAddress,
@@ -24,6 +27,7 @@ import {
   type CanonicalBatch,
   type CanonicalBiome,
   type CanonicalHubDecision,
+  type MaterializedBiomePrefix,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
   type SemanticFinding,
@@ -67,7 +71,13 @@ import { StructuredWorkspaceProjectionContractError } from './structured-workspa
 import {
   createStructuredWorkspaceProjection,
   type WorkspaceInteractionCatalog,
+  type WorkspaceMixedBatchNode,
+  type WorkspaceOrdinaryBatchNode,
+  type WorkspaceTakeoverBatchNode,
 } from './structured-workspace';
+
+type WorkspaceBatchNode =
+  WorkspaceMixedBatchNode | WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode;
 
 /**
  * These tests deliberately bypass only assembly provenance. Production still
@@ -180,6 +190,30 @@ function withMalformedFSnapshot(
   return { ...evaluation, routes };
 }
 
+function withMalformedPrefix(
+  evaluation: ProjectEvaluation,
+  routeKey: string,
+  biomeKey: string,
+  transform: (prefix: MaterializedBiomePrefix) => MaterializedBiomePrefix,
+): ProjectEvaluation {
+  let replaced = false;
+  const routes = evaluation.routes.map((route) => {
+    if (route.routeKey !== routeKey) return route;
+    return {
+      ...route,
+      biomes: route.biomes.map((biome) => {
+        if (biome.biomeKey !== biomeKey) return biome;
+        if (!('materializedPrefix' in biome))
+          throw new Error(`${biomeKey} fixture must have a prefix`);
+        replaced = true;
+        return { ...biome, materializedPrefix: transform(biome.materializedPrefix) };
+      }),
+    };
+  });
+  if (!replaced) throw new Error(`${biomeKey} prefix fixture was not evaluated`);
+  return { ...evaluation, routes };
+}
+
 function withMalformedNSnapshot(
   evaluation: ProjectEvaluation,
   transform: (snapshot: CanonicalBiome) => CanonicalBiome,
@@ -288,6 +322,8 @@ function withoutStructuralInteraction(
       return { ...interactions, takeoverBatches: without(interactions.takeoverBatches) };
     case 'topologyRemoval':
       return { ...interactions, topologyRemovals: without(interactions.topologyRemovals) };
+    case 'zagreusSpawn':
+      return { ...interactions, zagreusSpawns: without(interactions.zagreusSpawns) };
   }
 }
 
@@ -828,6 +864,191 @@ describe('structured workspace overlay contract', () => {
     }
   });
 
+  it('closes the selected Midshop Zagreus sibling through its containing workbench', () => {
+    const base = createGoldenFGHIProject();
+    const declaration = base.routes.flatMap((route) =>
+      route.biomes.flatMap((plan) =>
+        expectedWorkspaceStructuralControls(
+          catalog,
+          createBiomeAddress(route.routeKey, plan.biomeKey),
+          plan,
+        ).filter((control) => control.kind === 'zagreusSpawn'),
+      ),
+    )[0];
+    if (declaration?.kind !== 'zagreusSpawn' || declaration.owner.kind !== 'additionalExit') {
+      throw new Error('selected Midshop contract declaration is missing');
+    }
+    const additional = declaration.owner;
+    const authored = applyProjectCommand(base, catalog, {
+      kind: 'AddZagreusContract',
+      additional,
+      occurrenceId: createOccurrenceId('workspace-zagreus-contract'),
+    });
+    const projected = projectWorkspace(authored);
+    const workspace = projected.routes
+      .find((route) => route.routeKey === additional.routeKey)
+      ?.biomes.find((biome) => biome.biomeKey === additional.biomeKey);
+    if (workspace === undefined) throw new Error('selected Midshop workspace is missing');
+    const observed = observeWorkspaceProducts({
+      focusByOwner: projected.focusByOwner,
+      interactions: projected.interactions,
+      nodes: workspace.nodes,
+    });
+    expect(() =>
+      assertExpectedWorkspaceTopologyClosure({
+        expected: expectedWorkspaceTopologyManifest(
+          createBiomeAddress(additional.routeKey, additional.biomeKey),
+          authored.routes
+            .find((route) => route.routeKey === additional.routeKey)!
+            .biomes.find((biome) => biome.biomeKey === additional.biomeKey)!,
+        ),
+        observed,
+      }),
+    ).not.toThrow();
+    expect(
+      projected.interactions.zagreusContracts.get(semanticAddressKey(additional))?.owner,
+    ).toEqual(additional);
+    expect(projected.interactions.zagreusSpawns.has(semanticAddressKey(additional))).toBe(false);
+  });
+
+  it('keeps selected-contract and automatic-return packages in their respective decisions', () => {
+    const base = createGoldenFGHIProject();
+    const located = base.routes.flatMap((route) =>
+      route.biomes.flatMap((plan) =>
+        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+          const room = catalog.rooms.byKey[occurrence.gameName];
+          return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+            ? [{ occurrence, plan, route }]
+            : [];
+        }),
+      ),
+    )[0];
+    if (located === undefined) throw new Error('selected Midshop is missing');
+    const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+    const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+    const decision = createExitDecisionAddress(biome, source);
+    const additional = createAdditionalExitAddress(biome, source, 'zagreusContract');
+    const contractId = createOccurrenceId('workspace-zagreus-selected-contract');
+    const returnId = createOccurrenceId('workspace-zagreus-selected-return');
+    const normalId = createOccurrenceId('workspace-zagreus-normal-peer');
+    const combat = `${located.plan.biomeKey}_Combat01`;
+    const returnedCombat = `${located.plan.biomeKey}_Combat02`;
+    let project = applyProjectCommand(base, catalog, { kind: 'RemoveExitDecision', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddZagreusContract',
+      additional,
+      occurrenceId: contractId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source, 'exit1'),
+      occurrenceId: normalId,
+      gameName: combat,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, source),
+      value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    });
+    const contractSource = { kind: 'occurrence' as const, occurrenceId: contractId };
+    const contractDecision = createExitDecisionAddress(biome, contractSource);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: contractDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, contractSource),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, contractSource, 'exit1'),
+      occurrenceId: returnId,
+      gameName: returnedCombat,
+    });
+
+    const projected = projectWorkspace(project);
+    const workspace = projected.routes
+      .find((route) => route.routeKey === biome.routeKey)
+      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+    if (workspace === undefined) throw new Error('Midshop workspace is missing');
+    const observed = observeWorkspaceProducts({
+      focusByOwner: projected.focusByOwner,
+      interactions: projected.interactions,
+      nodes: workspace.nodes,
+    });
+    const selectedContract = workspace.nodes.find(
+      (node): node is WorkspaceBatchNode =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        semanticAddressKey(node.owner) === semanticAddressKey(decision),
+    );
+    expect(selectedContract?.zagreusContract?.contractRoom.entered).toBe(true);
+    const contractPackages = observed.roomPackagesByOccurrence.get(contractId);
+    expect(contractPackages).toHaveLength(1);
+    expect(contractPackages?.[0]?.nodeKey).toBe(`batch:${semanticAddressKey(decision)}`);
+    const returnPackages = observed.roomPackagesByOccurrence.get(returnId);
+    expect(returnPackages?.length).toBeGreaterThanOrEqual(1);
+    expect(
+      returnPackages?.every((roomPackage) => roomPackage.room === returnPackages[0]?.room),
+    ).toBe(true);
+    expect(
+      returnPackages?.some(
+        (roomPackage) => roomPackage.nodeKey === `batch:${semanticAddressKey(contractDecision)}`,
+      ),
+    ).toBe(true);
+    expect(
+      projected.interactions.zagreusContracts.get(semanticAddressKey(additional))?.owner,
+    ).toEqual(additional);
+
+    const malformed = withMalformedPrefix(
+      simulateProject(catalog, project),
+      biome.routeKey,
+      biome.biomeKey,
+      (prefix) => {
+        const frontier = prefix.frontier;
+        const batch =
+          frontier?.kind === 'exitDecision' &&
+          semanticAddressKey(frontier.origin) === semanticAddressKey(decision)
+            ? frontier.partialBatch
+            : undefined;
+        const additionalContinuation = batch?.additional[0];
+        if (
+          frontier?.kind !== 'exitDecision' ||
+          batch === undefined ||
+          additionalContinuation === undefined
+        ) {
+          throw new Error('selected Midshop canonical contract batch is missing');
+        }
+        return {
+          ...prefix,
+          frontier: {
+            ...frontier,
+            partialBatch: {
+              ...batch,
+              additional: [
+                {
+                  ...additionalContinuation,
+                  room: { ...additionalContinuation.room, occurrenceId: normalId },
+                },
+              ],
+            },
+          },
+        };
+      },
+    );
+    expect(() => projectWorkspace(project, malformed)).toThrow(
+      /evaluated additional exit does not match its authored occurrence/,
+    );
+  });
+
   it('closes structural occurrence packages without requiring standalone workbench nodes', () => {
     const project = createGoldenFGHIProject();
     const projected = projectWorkspace(project);
@@ -1236,6 +1457,7 @@ describe('structured workspace overlay contract', () => {
         'structural',
         'takeoverBatch',
         'topologyRemoval',
+        'zagreusSpawn',
       ].sort(),
     );
 
@@ -1291,6 +1513,47 @@ describe('structured workspace overlay contract', () => {
         routes: projected.routes,
       }),
     ).toThrow(/Hub visit order .* has no exact workspace interaction/);
+
+    const base = createGoldenFGHIProject();
+    const declaration = base.routes.flatMap((route) =>
+      route.biomes.flatMap((plan) =>
+        expectedWorkspaceStructuralControls(
+          catalog,
+          createBiomeAddress(route.routeKey, plan.biomeKey),
+          plan,
+        ).filter((control) => control.kind === 'zagreusSpawn'),
+      ),
+    )[0];
+    if (declaration?.kind !== 'zagreusSpawn' || declaration.owner.kind !== 'additionalExit') {
+      throw new Error('Zagreus structural mutation declaration is missing');
+    }
+    const withContract = applyProjectCommand(base, catalog, {
+      kind: 'AddZagreusContract',
+      additional: declaration.owner,
+      occurrenceId: createOccurrenceId('structural-mutation-zagreus-contract'),
+    });
+    const contractProjected = projectWorkspace(withContract);
+    const contractNode = contractProjected.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.nodes)
+      .find(
+        (node): node is WorkspaceBatchNode =>
+          (node.kind === 'ordinaryBatch' ||
+            node.kind === 'mixedBatch' ||
+            node.kind === 'takeoverBatch') &&
+          node.zagreusContract !== undefined,
+      );
+    if (contractNode?.zagreusContract === undefined) {
+      throw new Error('Zagreus structural mutation node is missing');
+    }
+    const zagreusContracts = new Map(contractProjected.interactions.zagreusContracts);
+    zagreusContracts.delete(contractNode.zagreusContract.marker.focusKey);
+    expect(() =>
+      assertRenderedWorkspaceStructuralControlClosure({
+        interactions: { ...contractProjected.interactions, zagreusContracts },
+        routes: contractProjected.routes,
+      }),
+    ).toThrow(/Zagreus contract .* has no exact workspace interaction/);
   });
 
   it('independently closes Door 1 and decision-owner routes for an empty decision entry', () => {

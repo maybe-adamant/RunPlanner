@@ -75,7 +75,9 @@ import {
 } from '../navigation/marker-builder';
 import {
   assembleWorkspaceOccurrence,
+  type WorkspaceOccurrenceAssembly,
   type WorkspaceOccurrenceAssembler,
+  type WorkspaceOccurrenceAssemblyRequest,
 } from './occurrence-assembly';
 import {
   createWorkspaceBiomeOccurrenceAssemblyFacts,
@@ -133,6 +135,34 @@ export interface WorkspaceBiomeSemanticAssembly {
     string,
     WorkspaceTopologyRemovalInteractionRequirement
   >;
+}
+
+interface CachedOccurrenceAssembly {
+  readonly assembly: WorkspaceOccurrenceAssembly;
+  readonly request: WorkspaceOccurrenceAssemblyRequest;
+}
+
+/**
+ * One occurrence has one projection package within a biome assembly. Request
+ * overlays are part of that package's semantic input, so a second requester
+ * may reuse it only when it asks for the exact same facts.
+ */
+function requireCompatibleOccurrenceAssemblyRequest(
+  biome: BiomeAddress,
+  cached: WorkspaceOccurrenceAssemblyRequest,
+  request: WorkspaceOccurrenceAssemblyRequest,
+): void {
+  if (
+    cached.occurrence !== request.occurrence ||
+    cached.evaluatedRoom !== request.evaluatedRoom ||
+    cached.fieldsBatchFacts !== request.fieldsBatchFacts ||
+    cached.roomPicker !== request.roomPicker ||
+    cached.anomalyReplacementRoomGameNames !== request.anomalyReplacementRoomGameNames
+  ) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(createOccurrenceAddress(biome, request.occurrence.occurrenceId))} received conflicting occurrence assembly inputs`,
+    );
+  }
 }
 
 function statusFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceStatus {
@@ -440,8 +470,14 @@ export function assembleWorkspaceBiomeSemantics(
       );
     }
   }
+  const occurrenceAssemblies = new Map<string, CachedOccurrenceAssembly>();
   const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
-    return assembleWorkspaceOccurrence({
+    const cached = occurrenceAssemblies.get(request.occurrence.occurrenceId);
+    if (cached !== undefined) {
+      requireCompatibleOccurrenceAssemblyRequest(biome, cached.request, request);
+      return cached.assembly;
+    }
+    const assembly = assembleWorkspaceOccurrence({
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
@@ -455,6 +491,8 @@ export function assembleWorkspaceBiomeSemantics(
       occurrence: request.occurrence,
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
+    occurrenceAssemblies.set(request.occurrence.occurrenceId, Object.freeze({ assembly, request }));
+    return assembly;
   };
   const nodes: WorkspaceNode[] = [];
   let entry: WorkspaceOccurrenceWorkbenchNode | undefined;

@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type BatchRewardStoreAddress,
+  type AdditionalExitAddress,
   type BiomeAddress,
   type EncounterPhaseAddress,
   type ExitDecisionAddress,
@@ -31,6 +32,10 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
  * the A2 transition, while a dormant Shop produces no requirement at all.
  */
 export type WorkspaceOccurrenceInteractionRequirement =
+  | {
+      readonly kind: 'zagreusSpawn';
+      readonly owner: AdditionalExitAddress;
+    }
   | {
       readonly generationChoices: readonly WorkspaceInteractionChoice<SideRoomGeneration>[];
       readonly kind: 'ephyraSideRooms';
@@ -100,6 +105,9 @@ export interface WorkspaceBatchInteractionRequirement {
     readonly owner: BatchRewardStoreAddress;
     readonly selected?: string;
     readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+  };
+  readonly zagreusContract?: {
+    readonly owner: AdditionalExitAddress;
   };
 }
 

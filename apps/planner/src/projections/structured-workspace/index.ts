@@ -58,6 +58,10 @@ export type {
   WorkspaceTakeoverBatchNode,
   WorkspaceTakeoverRepairInteraction,
   WorkspaceTopologyRemovalInteraction,
+  WorkspaceZagreusContractControl,
+  WorkspaceZagreusContractInteraction,
+  WorkspaceZagreusSpawnControl,
+  WorkspaceZagreusSpawnInteraction,
 } from './contract';
 export type {
   HubBoardDropTarget,
