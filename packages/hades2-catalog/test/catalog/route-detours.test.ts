@@ -196,6 +196,26 @@ describe('route detour catalog declarations', () => {
       new CatalogContractError(`rooms[${cBossIndex}].roomSetKey`, 'unknown room set B'),
     );
 
+    const misplacedAnomaly = input();
+    const anomalyRoomIndex = roomIndex(misplacedAnomaly, 'B_Combat01');
+    (misplacedAnomaly.rooms[anomalyRoomIndex] as { roomSetKey: string }).roomSetKey = 'G';
+    expect(() => createCatalog(misplacedAnomaly)).toThrow(
+      new CatalogContractError(
+        `rooms[${anomalyRoomIndex}].roomSetKey`,
+        'Anomaly template requires the Anomaly room set',
+      ),
+    );
+
+    const misplacedContractBoss = input();
+    const contractBossIndex = roomIndex(misplacedContractBoss, 'C_Boss01');
+    (misplacedContractBoss.rooms[contractBossIndex] as { roomSetKey: string }).roomSetKey = 'F';
+    expect(() => createCatalog(misplacedContractBoss)).toThrow(
+      new CatalogContractError(
+        `rooms[${contractBossIndex}].roomSetKey`,
+        'ContractBoss template requires the C room set',
+      ),
+    );
+
     const nonAutomaticAnomaly = input();
     const anomalyIndex = roomIndex(nonAutomaticAnomaly, 'B_Combat01');
     (

@@ -506,6 +506,12 @@ export function normalizeRooms(
           : 'automatic host continuation is not supported by this room',
       );
     }
+    if (mode.kind === 'authored' && mode.templateKey === 'Anomaly' && roomSetKey !== 'Anomaly') {
+      fail(`${path}.roomSetKey`, 'Anomaly template requires the Anomaly room set');
+    }
+    if (mode.kind === 'authored' && mode.templateKey === 'ContractBoss' && roomSetKey !== 'C') {
+      fail(`${path}.roomSetKey`, 'ContractBoss template requires the C room set');
+    }
     if (roomSetKey === 'Anomaly') {
       if (mode.kind !== 'authored' || mode.templateKey !== 'Anomaly') {
         fail(`${path}.roomSetKey`, 'Anomaly room set requires authored Anomaly rooms');
