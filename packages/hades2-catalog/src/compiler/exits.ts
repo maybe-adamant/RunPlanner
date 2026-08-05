@@ -1,9 +1,11 @@
 import type {
   CatalogCollection,
+  ExitBehavior,
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
   RoomStructuralTag,
 } from '@run-planner/engine/catalog-schema';
+import type { RawExitTypeDeclaration } from '../declarations';
 
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';
@@ -18,7 +20,7 @@ function requireStructuralTag(value: RoomStructuralTag, path: string): RoomStruc
 }
 
 export function normalizeExitTypes(
-  rawExitTypes: readonly ExitTypeDeclaration[],
+  rawExitTypes: readonly RawExitTypeDeclaration[],
   policies: CatalogCollection<ExitCompatibilityPolicy>,
 ): CatalogCollection<ExitTypeDeclaration> {
   const exitTypes = rawExitTypes.map((exitType, index): ExitTypeDeclaration => {
@@ -34,9 +36,29 @@ export function normalizeExitTypes(
         `unknown exit compatibility policy ${compatibilityPolicyKey}`,
       );
     }
-    return Object.freeze({ key, compatibilityPolicyKey });
+    const behavior = normalizeExitBehavior(exitType.behavior, `${path}.behavior`);
+    return Object.freeze({ key, compatibilityPolicyKey, behavior });
   });
   return createCollection(exitTypes, 'exitTypes', (exitType) => exitType.key, 'key');
+}
+
+function normalizeExitBehavior(raw: ExitBehavior | undefined, path: string): ExitBehavior {
+  if (raw === undefined) {
+    return Object.freeze({ kind: 'playerSelected', rewardPreview: 'visible' });
+  }
+  if (raw.kind === 'playerSelected') {
+    if (raw.rewardPreview !== 'visible' && raw.rewardPreview !== 'hidden') {
+      fail(`${path}.rewardPreview`, `unknown reward preview ${String(raw.rewardPreview)}`);
+    }
+    return Object.freeze({ kind: 'playerSelected', rewardPreview: raw.rewardPreview });
+  }
+  if (raw.kind === 'automaticHostContinuation') {
+    if (raw.rewardPreview !== 'hidden') {
+      fail(`${path}.rewardPreview`, 'automatic host continuations must hide reward preview');
+    }
+    return Object.freeze({ kind: 'automaticHostContinuation', rewardPreview: 'hidden' });
+  }
+  fail(`${path}.kind`, `unknown exit behavior ${String((raw as { kind?: unknown }).kind)}`);
 }
 
 export function normalizeExitCompatibilityPolicies(

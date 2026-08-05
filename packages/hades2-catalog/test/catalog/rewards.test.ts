@@ -524,6 +524,7 @@ describe('reward-kernel declaration parity', () => {
       StoreRewardRandomStack: 'Pom Slice',
       LastStandDrop: 'Death Defiance',
       ChaosWeaponUpgrade: 'Chaos Hammer',
+      InfernalContractBoon: 'Infernal Contract',
       GiftDrop: 'Nectar',
       MetaCurrencyDrop: 'Bones',
       MetaCurrencyBigDrop: 'Big Bones',
@@ -703,6 +704,7 @@ describe('reward-kernel declaration parity', () => {
       'StackUpgradeBig',
       'StackUpgradeTriple',
       'WeaponUpgrade',
+      'InfernalContractBoon',
     ]);
     expect(
       rewardKernelCatalog.acquisitions.values
@@ -754,7 +756,7 @@ describe('reward-kernel declaration parity', () => {
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(48);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(49);
   });
 
   it('normalizes room-reward acquisition timing without reward-name dispatch', () => {
@@ -765,6 +767,9 @@ describe('reward-kernel declaration parity', () => {
     expect(roomReward?.rewardTypes.byKey.Devotion?.acquisitionLifecycle).toEqual([
       { role: 'chosenSource', lifecyclePoint: 'beforeCombat' },
       { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
+    ]);
+    expect(roomReward?.rewardTypes.byKey.InfernalContractBoon?.acquisitionLifecycle).toEqual([
+      { role: 'self', lifecyclePoint: 'roomRewardPickup' },
     ]);
     expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
   });

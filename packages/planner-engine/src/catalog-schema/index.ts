@@ -200,6 +200,8 @@ export type RoomKind =
   | 'Story';
 
 export type RoomTemplateKey =
+  | 'Anomaly'
+  | 'ContractBoss'
   | 'Devotion'
   | 'EphyraCombat'
   | 'EphyraSideRoom'
@@ -240,13 +242,35 @@ export type ExitCompatibilityPolicy =
 export interface ExitTypeDeclaration {
   readonly key: string;
   readonly compatibilityPolicyKey: string;
+  readonly behavior: ExitBehavior;
 }
+
+export type ExitBehavior =
+  | {
+      readonly kind: 'playerSelected';
+      readonly rewardPreview: 'visible' | 'hidden';
+    }
+  | {
+      readonly kind: 'automaticHostContinuation';
+      readonly rewardPreview: 'hidden';
+    };
 
 export interface RoomExit {
   readonly index: number;
   readonly type: string;
   readonly compatibilityPolicyKey: string;
+  readonly behavior: ExitBehavior;
 }
+
+export interface ZagreusContractAdditionalExitDeclaration {
+  readonly kind: 'zagreusContract';
+  readonly key: 'zagreusContract';
+  readonly physicalExit: Omit<RoomExit, 'index'>;
+  readonly targetRoomGameName: string;
+  readonly maxEnteredThisRoute: number;
+}
+
+export type AdditionalExitDeclaration = ZagreusContractAdditionalExitDeclaration;
 
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;
@@ -288,11 +312,13 @@ export type PrebossBatchPolicy =
 export interface RoomDeclaration {
   readonly gameName: string;
   readonly label: string;
-  readonly biomeKey: string;
+  /** Exact game RoomSet identity; authored topology supplies the host route biome. */
+  readonly roomSetKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
+  readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
@@ -433,6 +459,20 @@ export interface NormalDecisionProgressionDescriptor {
 
 export interface GeneratedProgressionDescriptor extends NormalDecisionProgressionDescriptor {
   readonly kind: 'generated';
+  readonly anomalyReplacement?: OceanusAnomalyReplacementDescriptor;
+}
+
+export interface OceanusAnomalyReplacementDescriptor {
+  readonly kind: 'oceanusAnomaly';
+  readonly source: {
+    readonly minimumBiomeDepthCache: number;
+    readonly excludedRoomGameNames: readonly string[];
+    readonly excludedSourceEncounterGameNames: readonly string[];
+    readonly maxEnteredReplacementsThisRoute: number;
+  };
+  readonly replaceableTargetRoomGameNames: readonly string[];
+  readonly replacementRoomGameNames: readonly string[];
+  readonly defaultReplacementRoomGameName: string;
 }
 
 export interface HubEntryNormalDecisionDescriptor extends NormalDecisionProgressionDescriptor {

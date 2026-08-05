@@ -57,7 +57,7 @@ function declarationFor(
   owner: CountedRewardOwnerAddress,
 ): RoomDeclaration {
   const declaration = catalog.rooms.byKey[occurrence.gameName];
-  if (declaration === undefined || declaration.biomeKey !== owner.biomeKey) {
+  if (declaration === undefined || declaration.roomSetKey !== owner.biomeKey) {
     fail(`reward producer ${semanticAddressKey(owner)} has no room declaration`);
   }
   return declaration;

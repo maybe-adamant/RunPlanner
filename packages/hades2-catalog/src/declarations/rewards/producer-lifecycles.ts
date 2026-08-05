@@ -33,6 +33,7 @@ export const producerLifecycles = [
       'EarthBoost',
       'FireBoost',
       'WaterBoost',
+      'InfernalContractBoon',
       'Story',
       'Shop',
     ],

@@ -93,7 +93,7 @@ describe('G generation and takeover', () => {
     const ordinaryGameNames = cappedCatalog.rooms.values
       .filter(
         (room) =>
-          room.biomeKey === 'G' &&
+          room.roomSetKey === 'G' &&
           room.mode.kind === 'authored' &&
           room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors',
       )

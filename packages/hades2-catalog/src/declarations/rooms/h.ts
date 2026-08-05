@@ -4,7 +4,7 @@ export const hRooms = [
   {
     gameName: 'H_Intro',
     label: 'Entrance',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: [],
@@ -20,7 +20,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat01',
     label: 'Combat 01',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -58,7 +58,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat02',
     label: 'Combat 02',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -104,7 +104,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat03',
     label: 'Combat 03',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -145,7 +145,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat04',
     label: 'Combat 04',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -186,7 +186,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat05',
     label: 'Combat 05',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -227,7 +227,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat06',
     label: 'Combat 06',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -268,7 +268,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat07',
     label: 'Combat 07',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -309,7 +309,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat08',
     label: 'Combat 08',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -350,7 +350,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat09',
     label: 'Combat 09',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -396,7 +396,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat10',
     label: 'Combat 10',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -437,7 +437,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat11',
     label: 'Combat 11',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -478,7 +478,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat12',
     label: 'Combat 12',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -519,7 +519,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat13',
     label: 'Combat 13',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -565,7 +565,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat14',
     label: 'Combat 14',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -611,7 +611,7 @@ export const hRooms = [
   {
     gameName: 'H_Combat15',
     label: 'Combat 15',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
     structuralTags: [],
@@ -657,7 +657,7 @@ export const hRooms = [
   {
     gameName: 'H_MiniBoss01',
     label: 'Phantom',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -692,7 +692,7 @@ export const hRooms = [
   {
     gameName: 'H_MiniBoss02',
     label: 'Queen Lamia',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -724,7 +724,7 @@ export const hRooms = [
   {
     gameName: 'H_Bridge01',
     label: 'Echo',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -774,7 +774,7 @@ export const hRooms = [
   {
     gameName: 'H_PreBoss01',
     label: 'Preboss',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
@@ -837,7 +837,7 @@ export const hRooms = [
   {
     gameName: 'H_Boss01',
     label: 'Cerberus',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -855,7 +855,7 @@ export const hRooms = [
   {
     gameName: 'H_PostBoss01',
     label: 'Postboss',
-    biomeKey: 'H',
+    roomSetKey: 'H',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

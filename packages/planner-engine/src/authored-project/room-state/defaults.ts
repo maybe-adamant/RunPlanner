@@ -182,6 +182,7 @@ export function createDefaultRoomState(
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
+    case 'Anomaly':
     case 'StandardCombat':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({
@@ -193,6 +194,7 @@ export function createDefaultRoomState(
         ),
       });
     case 'Devotion':
+    case 'ContractBoss':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       if (room.incomingReward.kind !== 'fixed') {

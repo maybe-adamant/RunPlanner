@@ -4,7 +4,7 @@ export const qRooms = [
   {
     gameName: 'Q_Intro',
     label: 'Entrance',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: ['Outdoor'],
@@ -25,7 +25,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat01',
     label: 'Combat 01',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -47,7 +47,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat02',
     label: 'Combat 02',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -69,7 +69,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat03',
     label: 'Combat 03',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -95,7 +95,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat04',
     label: 'Combat 04',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -117,7 +117,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat05',
     label: 'Combat 05',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -143,7 +143,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat06',
     label: 'Combat 06',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -165,7 +165,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat07',
     label: 'Combat 07',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -187,7 +187,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat08',
     label: 'Combat 08',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -209,7 +209,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat09',
     label: 'Combat 09',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -231,7 +231,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat10',
     label: 'Combat 10',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -253,7 +253,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat11',
     label: 'Combat 11',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -275,7 +275,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat12',
     label: 'Combat 12',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -301,7 +301,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat13',
     label: 'Combat 13',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -327,7 +327,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat14',
     label: 'Combat 14',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -353,7 +353,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat15',
     label: 'Combat 15',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -379,7 +379,7 @@ export const qRooms = [
   {
     gameName: 'Q_Combat16',
     label: 'Combat 16',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
     structuralTags: [],
@@ -401,7 +401,7 @@ export const qRooms = [
   {
     gameName: 'Q_MiniBoss02',
     label: 'Brute',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -426,7 +426,7 @@ export const qRooms = [
   {
     gameName: 'Q_MiniBoss05',
     label: 'Stalker',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -451,7 +451,7 @@ export const qRooms = [
   {
     gameName: 'Q_MiniBoss03',
     label: 'Tail',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -476,7 +476,7 @@ export const qRooms = [
   {
     gameName: 'Q_MiniBoss04',
     label: 'Eye',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -501,7 +501,7 @@ export const qRooms = [
   {
     gameName: 'Q_PreBoss01',
     label: 'Preboss',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
@@ -530,7 +530,7 @@ export const qRooms = [
   {
     gameName: 'Q_Boss01',
     label: 'Typhon',
-    biomeKey: 'Q',
+    roomSetKey: 'Q',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

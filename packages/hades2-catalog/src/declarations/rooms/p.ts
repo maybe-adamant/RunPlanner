@@ -4,7 +4,7 @@ export const pRooms = [
   {
     gameName: 'P_Intro',
     label: 'Entrance',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: ['Outdoor'],
@@ -24,7 +24,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat01',
     label: 'Combat 01',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -60,7 +60,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat02',
     label: 'Combat 02',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -91,7 +91,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat03',
     label: 'Combat 03',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -127,7 +127,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat04',
     label: 'Combat 04',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -158,7 +158,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat05',
     label: 'Combat 05',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -189,7 +189,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat06',
     label: 'Combat 06',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -220,7 +220,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat07',
     label: 'Combat 07',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -251,7 +251,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat08',
     label: 'Combat 08',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -282,7 +282,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat09',
     label: 'Combat 09',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -313,7 +313,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat10',
     label: 'Combat 10',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -344,7 +344,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat11',
     label: 'Combat 11',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -375,7 +375,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat12',
     label: 'Combat 12',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -406,7 +406,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat13',
     label: 'Combat 13',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -437,7 +437,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat14',
     label: 'Combat 14',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -468,7 +468,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat15',
     label: 'Combat 15',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -499,7 +499,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat16',
     label: 'Combat 16',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -530,7 +530,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat17',
     label: 'Combat 17',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -566,7 +566,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat18',
     label: 'Combat 18',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Indoor'],
@@ -602,7 +602,7 @@ export const pRooms = [
   {
     gameName: 'P_Combat19',
     label: 'Combat 19',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: ['Outdoor'],
@@ -633,7 +633,7 @@ export const pRooms = [
   {
     gameName: 'P_Story01',
     label: 'Dionysus',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: ['Indoor'],
@@ -664,7 +664,7 @@ export const pRooms = [
   {
     gameName: 'P_Reprieve01',
     label: 'Fountain',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
     structuralTags: ['Indoor'],
@@ -695,13 +695,22 @@ export const pRooms = [
   {
     gameName: 'P_Shop01',
     label: 'Midshop',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Shop',
     mode: { kind: 'authored', templateKey: 'Shop' },
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
       { index: 2, type: 'OlympusOutdoorExitDoor' },
+    ],
+    additionalExits: [
+      {
+        kind: 'zagreusContract',
+        key: 'zagreusContract',
+        exitType: 'ZagContract',
+        targetRoomGameName: 'C_Boss01',
+        maxEnteredThisRoute: 0,
+      },
     ],
     incomingReward: {
       kind: 'shop',
@@ -727,7 +736,7 @@ export const pRooms = [
   {
     gameName: 'P_MiniBoss01',
     label: 'Talos',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: ['Indoor'],
@@ -768,7 +777,7 @@ export const pRooms = [
   {
     gameName: 'P_MiniBoss02',
     label: 'Mega-Dracon',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: ['Indoor'],
@@ -806,7 +815,7 @@ export const pRooms = [
   {
     gameName: 'P_PreBoss01',
     label: 'Preboss',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: ['Indoor', 'Outdoor'],
@@ -848,7 +857,7 @@ export const pRooms = [
   {
     gameName: 'P_Boss01',
     label: 'Prometheus',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: ['Indoor', 'Outdoor'],
@@ -865,7 +874,7 @@ export const pRooms = [
   {
     gameName: 'P_PostBoss01',
     label: 'Postboss',
-    biomeKey: 'P',
+    roomSetKey: 'P',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: ['Indoor', 'Outdoor'],
