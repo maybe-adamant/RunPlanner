@@ -68,6 +68,8 @@ export interface WorkspaceOccurrenceProjectionFacts {
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
+  /** Closed declaration-owned map domain for an Anomaly replacement in this biome. */
+  readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   /** Exact engine-owned active candidate capability for one pool-backed phase. */
@@ -96,6 +98,7 @@ export interface WorkspaceOccurrenceAssembly {
  * to the biome-local lifecycle facts or marker registration builder.
  */
 export interface WorkspaceOccurrenceAssemblyRequest {
+  readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Present only when this occurrence belongs to a configured Fields batch. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -135,7 +138,7 @@ function incomingRewardBinding(
   room: RoomDeclaration,
   state: Extract<
     RoomOccurrence['state'],
-    { readonly kind: 'counted' | 'ephyraCombat' | 'freeReward' }
+    { readonly kind: 'anomaly' | 'counted' | 'ephyraCombat' | 'freeReward' }
   >,
 ): CountedRewardBinding {
   if (state.kind === 'freeReward') {
@@ -165,7 +168,7 @@ function controlsForOccurrence(
   const addIncoming = (
     state: Extract<
       RoomOccurrence['state'],
-      { readonly kind: 'counted' | 'ephyraCombat' | 'freeReward' }
+      { readonly kind: 'anomaly' | 'counted' | 'ephyraCombat' | 'freeReward' }
     >,
   ) => {
     controls.push(
@@ -178,6 +181,7 @@ function controlsForOccurrence(
     );
   };
   switch (occurrence.state.kind) {
+    case 'anomaly':
     case 'counted':
     case 'freeReward':
       addIncoming(occurrence.state);
@@ -1047,6 +1051,49 @@ export function assembleWorkspaceOccurrence(
     localDetailMarkers,
     marker: input.markerDestinations.marker(address),
     occurrenceId: occurrence.occurrenceId,
+    ...(occurrence.state.kind !== 'anomaly'
+      ? {}
+      : (() => {
+          if (input.anomalyReplacementRoomGameNames === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(address)} Anomaly has no declared replacement map domain`,
+            );
+          }
+          if (occurrence.anomalyReplacement === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(address)} Anomaly has no replacement provenance`,
+            );
+          }
+          const binding = room.encounterSlotBindings.find(
+            (candidate) => candidate.kind === 'fixed',
+          );
+          const encounter =
+            binding?.kind !== 'fixed'
+              ? undefined
+              : input.catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey];
+          if (encounter === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(address)} Anomaly has no declared encounter presentation`,
+            );
+          }
+          const remembered = requireRoom(
+            input.catalog,
+            occurrence.anomalyReplacement.replacedRoomGameName,
+          );
+          return {
+            anomaly: Object.freeze({
+              encounterLabel: encounter.label,
+              mapChoices: Object.freeze(
+                input.anomalyReplacementRoomGameNames.map((gameName) => {
+                  const map = requireRoom(input.catalog, gameName);
+                  return Object.freeze({ label: map.label, value: map.gameName });
+                }),
+              ),
+              rememberedRoomLabel: remembered.label,
+              success: occurrence.state.success,
+            }),
+          };
+        })()),
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     roomLocal,
     rewardControls,

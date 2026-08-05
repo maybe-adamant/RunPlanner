@@ -679,8 +679,21 @@ export interface WorkspaceRoomSummary {
   readonly marker: WorkspaceMarker;
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
+  /**
+   * Closed Anomaly takeover controls. The semantic assembly derives this from
+   * the containing generated-host declaration; React never evaluates the source
+   * gate, replacement cap, or reward legality.
+   */
+  readonly anomaly?: WorkspaceAnomalyControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
+}
+
+export interface WorkspaceAnomalyControl {
+  readonly encounterLabel: string;
+  readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly rememberedRoomLabel: string;
+  readonly success: boolean;
 }
 
 export interface WorkspacePhysicalTarget {
@@ -693,6 +706,10 @@ export interface WorkspacePhysicalTarget {
   readonly retained: boolean;
   readonly nextPath: 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
   readonly room: WorkspaceRoomSummary;
+  /** A declaration-owned target capability, not a React eligibility result. */
+  readonly anomalyTakeover?: {
+    readonly label: string;
+  };
 }
 
 export type WorkspaceMissingTargetAuthoring =

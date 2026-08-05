@@ -388,6 +388,10 @@ export function assembleWorkspaceBiomeSemantics(
   ) => EncounterPhaseCandidateSupport | undefined = () => undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
+  const anomalyReplacementRoomGameNames =
+    layout.progression.kind === 'generated'
+      ? layout.progression.anomalyReplacement?.replacementRoomGameNames
+      : undefined;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
   const markerBuilder = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) => assessmentForSource(source, address),
@@ -438,6 +442,7 @@ export function assembleWorkspaceBiomeSemantics(
   }
   const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
     return assembleWorkspaceOccurrence({
+      ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),

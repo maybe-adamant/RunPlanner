@@ -551,6 +551,83 @@ function ShopWorkbench({
 }
 
 /**
+ * The workspace has already established this is an authored Anomaly and has
+ * supplied its closed declaration map domain. These controls intentionally do
+ * not ask React to re-evaluate replacement eligibility or reward legality.
+ */
+function AnomalyWorkbench({ room }: { readonly room: WorkspaceRoomSummary }) {
+  const dispatch = useAppDispatch();
+  const anomaly = room.anomaly;
+  if (anomaly === undefined) return null;
+  return (
+    <section aria-label="Anomaly details" className="anomaly-editor">
+      <div className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>Anomaly</h4>
+          <SemanticOwnerMarker address={room.marker.address} />
+        </div>
+      </div>
+      <p className="fixed-room-state">Replaces {anomaly.rememberedRoomLabel}.</p>
+      <p className="fixed-room-state">Encounter: {anomaly.encounterLabel}</p>
+      <label className="field-control" htmlFor={`anomaly-map-${room.occurrenceId}`}>
+        <span>Map</span>
+        <select
+          id={`anomaly-map-${room.occurrenceId}`}
+          onChange={(event) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                gameName: event.target.value,
+                kind: 'ReplaceAnomalyMap',
+                occurrence: room.address,
+              }),
+            )
+          }
+          value={room.gameName}
+        >
+          {anomaly.mapChoices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field-control anomaly-outcome-control">
+        <input
+          checked={anomaly.success}
+          onChange={(event) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceAnomalySuccess',
+                occurrence: room.address,
+                success: event.target.checked,
+              }),
+            )
+          }
+          type="checkbox"
+        />
+        <span>Clear Anomaly</span>
+      </label>
+      <p className="fixed-room-state">The next host door is generated automatically.</p>
+      <button
+        className="danger-action action-compact"
+        data-command="RevertAnomaly"
+        onClick={() =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'RevertAnomaly',
+              occurrence: room.address,
+            }),
+          )
+        }
+        type="button"
+      >
+        Restore {anomaly.rememberedRoomLabel}
+      </button>
+    </section>
+  );
+}
+
+/**
  * Local disclosure state is intentionally UI-only. Exact semantic focus opens
  * the containing surface without adding navigation or expansion to history.
  */
@@ -659,6 +736,7 @@ export function RoomOfferEditor({
           />
         </div>
       ) : null}
+      <AnomalyWorkbench room={room} />
       {presentation === 'hubRoomLocal' &&
       state.kind === 'ephyra' &&
       state.sideRooms.kind === 'withheld' ? (

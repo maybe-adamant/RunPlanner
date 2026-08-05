@@ -24,7 +24,11 @@ import {
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace';
-import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectReplaced,
+  authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -953,5 +957,40 @@ describe('DecisionWorkbench', () => {
       'disabled',
       true,
     );
+  });
+
+  it('takes an Anomaly-capable target over with one exact semantic command', async () => {
+    const project = createGoldenFGHIProject();
+    // The golden fixture is deliberately complete enough to include several
+    // ordinary G batches; locate the declaration-projected target rather than
+    // duplicating target eligibility in this UI fixture.
+    const initial = createApplication();
+    initial.store.dispatch(authoredProjectReplaced(project));
+    const initialBiome = workspaceBiome(initial, 'Underworld', 'G');
+    const node = initialBiome.nodes.find(
+      (item): item is DecisionWorkbenchNode =>
+        (item.kind === 'ordinaryBatch' || item.kind === 'mixedBatch') &&
+        item.targets.some((target) => target.anomalyTakeover !== undefined),
+    );
+    initial.dispose();
+    if (node === undefined) throw new Error('golden G fixture has no Anomaly-capable target');
+    const target = node.targets.find((item) => item.anomalyTakeover !== undefined);
+    if (target === undefined) throw new Error('Anomaly-capable target is missing');
+    const application = createApplication();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      subjectForOwner(node.owner),
+      application,
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Replace with Anomaly' }));
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([{ kind: 'SwitchTargetToAnomaly', target: target.marker.address }]);
   });
 });
