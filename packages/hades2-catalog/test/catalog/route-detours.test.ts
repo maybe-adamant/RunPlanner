@@ -53,7 +53,7 @@ function gAnomalyDeclaration(raw: RawCatalogInput) {
 }
 
 describe('route detour catalog declarations', () => {
-  it('keeps foreign room-set identity separate from the supported route layouts', () => {
+  it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
     expect(catalog.version).toBe('0.16.0-route-detours');
