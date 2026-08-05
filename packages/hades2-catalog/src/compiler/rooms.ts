@@ -180,17 +180,6 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
 
 const structuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
 const supportedRoomSetKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q', 'Anomaly', 'C']);
-const anomalyRoomGameNames = [
-  'B_Combat01',
-  'B_Combat05',
-  'B_Combat06',
-  'B_Combat07',
-  'B_Combat08',
-  'B_Combat10',
-  'B_Combat21',
-] as const;
-const automaticHostRoomGameNames = new Set([...anomalyRoomGameNames, 'C_Boss01']);
-const zagreusSourceRoomGameNames = new Set(['F_Shop01', 'G_Shop01', 'O_Shop01', 'P_Shop01']);
 
 function normalizeStructuralTags(
   rawTags: readonly RoomStructuralTag[],
@@ -502,7 +491,9 @@ export function normalizeRooms(
     const automaticExits = exits.filter(
       (exit) => exit.behavior.kind === 'automaticHostContinuation',
     );
-    const requiresAutomaticHostExit = automaticHostRoomGameNames.has(room.gameName);
+    const requiresAutomaticHostExit =
+      mode.kind === 'authored' &&
+      (mode.templateKey === 'Anomaly' || mode.templateKey === 'ContractBoss');
     if (
       requiresAutomaticHostExit
         ? exits.length !== 1 || automaticExits.length !== 1
@@ -516,21 +507,13 @@ export function normalizeRooms(
       );
     }
     if (roomSetKey === 'Anomaly') {
-      if (
-        !automaticHostRoomGameNames.has(room.gameName) ||
-        mode.kind !== 'authored' ||
-        mode.templateKey !== 'Anomaly'
-      ) {
-        fail(`${path}.roomSetKey`, 'Anomaly room set contains only the seven supported maps');
+      if (mode.kind !== 'authored' || mode.templateKey !== 'Anomaly') {
+        fail(`${path}.roomSetKey`, 'Anomaly room set requires authored Anomaly rooms');
       }
     }
     if (roomSetKey === 'C') {
-      if (
-        room.gameName !== 'C_Boss01' ||
-        mode.kind !== 'authored' ||
-        mode.templateKey !== 'ContractBoss'
-      ) {
-        fail(`${path}.roomSetKey`, 'C room set contains only authored ContractBoss C_Boss01');
+      if (mode.kind !== 'authored' || mode.templateKey !== 'ContractBoss') {
+        fail(`${path}.roomSetKey`, 'C room set requires authored ContractBoss rooms');
       }
     }
     const additionalExits = normalizeAdditionalExits(
@@ -683,28 +666,7 @@ export function normalizeRooms(
   });
 
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
-  for (const gameName of automaticHostRoomGameNames) {
-    if (collection.byKey[gameName] === undefined) {
-      fail('rooms', `missing automatic host-return room ${gameName}`);
-    }
-  }
-  for (const gameName of zagreusSourceRoomGameNames) {
-    const source = collection.byKey[gameName];
-    if (
-      source === undefined ||
-      source.additionalExits.length !== 1 ||
-      source.additionalExits[0]?.kind !== 'zagreusContract'
-    ) {
-      fail('rooms', `${gameName} must declare exactly one Zagreus contract exit`);
-    }
-  }
   collection.values.forEach((room, roomIndex) => {
-    if (room.additionalExits.length > 0 && !zagreusSourceRoomGameNames.has(room.gameName)) {
-      fail(
-        `rooms[${roomIndex}].additionalExits`,
-        'Zagreus contract exits are supported only by the four declared Midshops',
-      );
-    }
     room.additionalExits.forEach((exit, exitIndex) => {
       const target = collection.byKey[exit.targetRoomGameName];
       const path = `rooms[${roomIndex}].additionalExits[${exitIndex}].targetRoomGameName`;
@@ -712,7 +674,6 @@ export function normalizeRooms(
         fail(path, `unknown room ${exit.targetRoomGameName}`);
       }
       if (
-        target.gameName !== 'C_Boss01' ||
         target.roomSetKey !== 'C' ||
         target.kind !== 'Boss' ||
         target.mode.kind !== 'authored' ||
@@ -720,7 +681,10 @@ export function normalizeRooms(
         target.exits.length !== 1 ||
         target.exits[0]?.behavior.kind !== 'automaticHostContinuation'
       ) {
-        fail(path, 'Zagreus contract target must be authored C_Boss01 with automatic host return');
+        fail(
+          path,
+          'Zagreus contract target must be an authored C ContractBoss with automatic host return',
+        );
       }
     });
   });
