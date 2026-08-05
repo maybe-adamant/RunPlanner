@@ -375,6 +375,10 @@ function projectAuthoredTargetWithOverlay(
     requireWorkspaceRoom(input.catalog, occurrence.gameName).kind,
   );
   const markerForTarget = input.markerDestinations.marker(address);
+  const anomalyReplacement =
+    input.source.layout.progression.kind === 'generated'
+      ? input.source.layout.progression.anomalyReplacement
+      : undefined;
   const occurrenceAssembly = input.assembleOccurrence(
     Object.freeze({
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
@@ -407,6 +411,11 @@ function projectAuthoredTargetWithOverlay(
       retained: evaluatedTarget === undefined || physicalState === 'unavailable',
       nextPath: evaluatedTarget?.continuation ?? fallbackContinuation,
       room: node.room,
+      ...(occurrence.state.kind === 'counted' &&
+      occurrence.anomalyReplacement === undefined &&
+      anomalyReplacement?.replaceableTargetRoomGameNames.includes(occurrence.gameName)
+        ? { anomalyTakeover: Object.freeze({ label: 'Replace with Anomaly' }) }
+        : {}),
     }),
   });
 }

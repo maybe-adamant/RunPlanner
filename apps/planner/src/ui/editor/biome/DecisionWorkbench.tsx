@@ -2,6 +2,7 @@ import type {
   BatchRewardStoreAddress,
   ExitSelectionAddress,
   ProjectCommand,
+  TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
@@ -42,6 +43,13 @@ type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | Workspac
 function exitSelectionAddress(marker: WorkspaceMarker): ExitSelectionAddress {
   if (marker.address.kind !== 'exitSelection') {
     throw new BiomeWorkspaceContractError('A batch selection must own an exit-selection address.');
+  }
+  return marker.address;
+}
+
+function targetAddress(marker: WorkspaceMarker): TargetAddress {
+  if (marker.address.kind !== 'target') {
+    throw new BiomeWorkspaceContractError('An Anomaly takeover must own a normal target address.');
   }
   return marker.address;
 }
@@ -216,6 +224,23 @@ function TargetRow({
             interactions={interactions}
             label={`Door ${target.index} room`}
           />
+        )}
+        {target.anomalyTakeover === undefined ? null : (
+          <button
+            className="quiet-action action-compact"
+            data-command="SwitchTargetToAnomaly"
+            onClick={() =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'SwitchTargetToAnomaly',
+                  target: targetAddress(target.marker),
+                }),
+              )
+            }
+            type="button"
+          >
+            {target.anomalyTakeover.label}
+          </button>
         )}
         <RoomOfferEditor
           idPrefix={`target-${target.room.occurrenceId}-reward`}

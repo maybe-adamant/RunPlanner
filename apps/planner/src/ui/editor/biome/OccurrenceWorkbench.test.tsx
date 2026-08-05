@@ -19,6 +19,7 @@ import {
   createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
+  type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -29,7 +30,7 @@ import {
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PlannerApplication } from '@planner/composition/createApplication';
+import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
@@ -114,6 +115,46 @@ function emptyFProject(): ProjectDocument {
     name: 'Occurrence workbench empty F',
     configuredBiomeCounts: { Underworld: 1 },
   });
+}
+
+function authoredAnomalyProject(): {
+  readonly occurrenceId: OccurrenceId;
+  readonly project: ProjectDocument;
+} {
+  const biome = createBiomeAddress('Underworld', 'G');
+  const start = createOccurrenceId('occurrence-workbench-g-intro');
+  const target = createOccurrenceId('occurrence-workbench-g-anomaly');
+  const source = { kind: 'occurrence' as const, occurrenceId: start };
+  let project = createProjectDocument(catalog, {
+    projectId: 'occurrence-workbench-anomaly',
+    name: 'Occurrence workbench Anomaly',
+    configuredBiomeCounts: { Underworld: 2 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: start,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(biome, source),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, source),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, source, 'exit1'),
+    occurrenceId: target,
+    gameName: 'G_Combat01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SwitchTargetToAnomaly',
+    target: createTargetAddress(biome, source, 'exit1'),
+  });
+  return { occurrenceId: target, project };
 }
 
 function occurrenceState(
@@ -205,6 +246,67 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('renders retained Anomaly map, outcome, fixed encounter, and revert controls as exact commands', async () => {
+    const { occurrenceId, project } = authoredAnomalyProject();
+    const application = createApplication();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(occurrenceId),
+      application,
+    );
+    expect(screen.getByText('Encounter: Anomaly combat')).toBeTruthy();
+    expect((screen.getByLabelText('Map') as HTMLSelectElement).value).toBe('B_Combat01');
+    expect(
+      (screen.getByRole('checkbox', { name: 'Clear Anomaly' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    await view.user.selectOptions(screen.getByLabelText('Map'), 'B_Combat05');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Clear Anomaly' }));
+    await view.user.click(screen.getByRole('button', { name: 'Restore Combat 01' }));
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([
+      {
+        gameName: 'B_Combat05',
+        kind: 'ReplaceAnomalyMap',
+        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+      },
+      {
+        kind: 'ReplaceAnomalySuccess',
+        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+        success: false,
+      },
+      {
+        kind: 'RevertAnomaly',
+        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+      },
+    ]);
+  });
+
+  it('keeps Anomaly controls available for a retained invalid reward state', () => {
+    const { occurrenceId, project } = authoredAnomalyProject();
+    const invalid = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ApolloUpgrade',
+          spurnedSource: 'AphroditeUpgrade',
+        },
+      },
+    });
+    renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
+    expect(screen.getByLabelText('Map')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Clear Anomaly' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
+  });
   it('shows a Hub room main reward read-only and focuses its board owner without authoring', async () => {
     const view = renderOccurrenceWorkbench(
       createRepresentativeNOPQProject(),

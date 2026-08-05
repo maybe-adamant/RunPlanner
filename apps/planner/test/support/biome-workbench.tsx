@@ -233,18 +233,25 @@ export function renderOccurrenceWorkbench(
   routeKey: string,
   biomeKey: string,
   select: (biome: WorkspaceBiome) => WorkspaceOccurrenceWorkbenchNode | undefined,
+  application?: PlannerApplication,
 ) {
-  return renderProjectedHarness(project, routeKey, biomeKey, (biome, workspace) => {
-    const node = select(biome);
-    if (node === undefined) return <p>No occurrence workbench</p>;
-    return (
-      <OccurrenceWorkbench
-        interactions={workspace.interactions}
-        presentation={node.inspectorPresentation}
-        room={node.room}
-      />
-    );
-  });
+  return renderProjectedHarness(
+    project,
+    routeKey,
+    biomeKey,
+    (biome, workspace) => {
+      const node = select(biome);
+      if (node === undefined) return <p>No occurrence workbench</p>;
+      return (
+        <OccurrenceWorkbench
+          interactions={workspace.interactions}
+          presentation={node.inspectorPresentation}
+          room={node.room}
+        />
+      );
+    },
+    application,
+  );
 }
 
 export function renderStaticOccurrenceWorkbench(
