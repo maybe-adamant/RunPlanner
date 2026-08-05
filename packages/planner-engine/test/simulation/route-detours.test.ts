@@ -633,12 +633,7 @@ describe('route-detour simulation', () => {
       kind: 'ReplaceIncomingReward',
       reward: incoming,
       value: {
-        rewardType: 'Devotion',
-        payload: {
-          kind: 'DevotionPair',
-          chosenSource: 'AphroditeUpgrade',
-          spurnedSource: 'ApolloUpgrade',
-        },
+        rewardType: 'SpellDrop',
       },
     });
     const { snapshot, history } = prefix(project, gBiome);
@@ -648,7 +643,7 @@ describe('route-detour simulation', () => {
       .filter((decision) => decision.kind === 'batch')
       .flatMap((decision) => decision.targets)
       .find((target) => target.room.occurrenceId === anomaly)?.room;
-    expect(anomalyRoom?.incomingReward?.offer).toMatchObject({ rewardType: 'Devotion' });
+    expect(anomalyRoom?.incomingReward?.offer).toMatchObject({ rewardType: 'SpellDrop' });
     expect(rewards.findings).toContainEqual(
       expect.objectContaining({
         origin: incoming,

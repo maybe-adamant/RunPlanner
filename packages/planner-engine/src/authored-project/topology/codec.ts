@@ -4,6 +4,7 @@ import type {
   Catalog,
   RoomDeclaration,
 } from '../../catalog-schema';
+import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { decodeBatchState } from '../batchState';
 import type {
   AdditionalExit,
@@ -23,7 +24,7 @@ import type {
 } from '../model';
 import { decodeRoomState } from '../room-state/codec';
 import { decodeRoomEncounterState } from '../room-state/encounters';
-import type { RoomOccurrenceRole } from '../room-state/declaration';
+import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
   automaticHostContinuationExitForForeignRoom,
@@ -62,6 +63,7 @@ interface OccurrenceOwner {
   readonly role: RoomOccurrenceRole;
   readonly entryActive: boolean;
   readonly anomalyReplacement?: AnomalyReplacementProvenance;
+  readonly rememberedCountedBinding?: CountedRewardBinding;
   readonly path: string;
 }
 
@@ -869,11 +871,22 @@ function ownerForNormalTarget(
       `${anomalyReplacement.replacedRoomGameName} is not an Anomaly-replaceable normal target`,
     );
   }
+  const rememberedRoom = catalog.rooms.byKey[anomalyReplacement.replacedRoomGameName];
+  if (rememberedRoom === undefined || rememberedRoom.roomSetKey !== layout.biomeKey) {
+    failProjectDocument(
+      `${rawOccurrence.path}.anomalyReplacement.replacedRoomGameName`,
+      `${anomalyReplacement.replacedRoomGameName} is not a known ${layout.biomeKey} room`,
+    );
+  }
   return Object.freeze({
     gameName: room.gameName,
     role: 'ordinary',
     entryActive,
     anomalyReplacement,
+    rememberedCountedBinding: requireCountedBinding(
+      rememberedRoom,
+      `${rawOccurrence.path}.anomalyReplacement.replacedRoomGameName`,
+    ),
     path,
   });
 }
