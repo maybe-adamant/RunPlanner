@@ -134,6 +134,30 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
   });
 }
 
+/**
+ * Anomaly takes over an already-authored normal target. Its retained offer is
+ * still consumed when the replacement is created, but failure deliberately
+ * suppresses the later producer acquisition rather than rerolling or
+ * refunding that authored offer.
+ */
+function materializeAnomaly(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  const state = requireStateKind(context, 'anomaly');
+  const binding = context.room.incomingReward;
+  if (binding.kind !== 'countedChoice') {
+    fail(`${context.room.gameName} Anomaly has ${binding.kind} producer`);
+  }
+  const incoming = resolvedIncomingReward(
+    context,
+    'countedChoice',
+    binding.producerLifecycleKey,
+    state.offer,
+  );
+  return Object.freeze({
+    lifecycleProfileKey: 'StandardRewardRoom',
+    incomingReward: Object.freeze({ ...incoming, acquisitionEnabled: state.success }),
+  });
+}
+
 function materializeClockworkCombat(
   context: AuthoredRoomMaterializationContext,
 ): MaterializedRoomLeaf {
@@ -478,7 +502,7 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
 }
 
 const authoredTemplateMaterializers = Object.freeze({
-  Anomaly: materializeCountedRoom,
+  Anomaly: materializeAnomaly,
   ClockworkCombat: materializeClockworkCombat,
   ContractBoss: materializeFixedRoom,
   Devotion: materializeDevotion,
@@ -575,6 +599,9 @@ export function materializeAuthoredRoom(
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
+    ...(context.occurrence.anomalyReplacement === undefined
+      ? {}
+      : { anomalyReplacement: context.occurrence.anomalyReplacement }),
     encounters: context.occurrence.encounters,
     encounterEnvelopeKey: context.room.encounterEnvelopeKey,
     encounterPhases: selectedEncounterPhases,

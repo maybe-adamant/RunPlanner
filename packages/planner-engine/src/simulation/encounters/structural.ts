@@ -5,6 +5,7 @@ import type {
   CanonicalLocalChildRoom,
   MaterializedBiomePrefix,
 } from '../materialization';
+import { selectedBatchContinuation } from '../materialization';
 
 export type EncounterStructuralSnapshot =
   CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
@@ -34,11 +35,18 @@ export function structurallyActiveEncounterRooms(
   for (const decision of decisions(snapshot)) {
     if (decision.kind === 'batch') {
       rooms.push(...decision.targets.map((target) => target.room));
+      const selected = selectedBatchContinuation(decision);
+      if (selected?.kind === 'additional') {
+        rooms.push(selected.continuation.room);
+      }
       continue;
     }
     for (const visit of decision.visits) {
       rooms.push(visit.target.room, ...visit.enteredLocalRooms);
     }
+  }
+  if (snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision') {
+    rooms.push(...snapshot.frontier.additional.map((continuation) => continuation.room));
   }
   const seen = new Set<string>();
   return Object.freeze(

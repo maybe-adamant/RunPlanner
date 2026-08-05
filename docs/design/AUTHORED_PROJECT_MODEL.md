@@ -110,12 +110,22 @@ type ExitDecisionSource =
   { kind: 'occurrence'; occurrenceId: OccurrenceId } | { kind: 'hubDecision'; decisionKey: string };
 
 type ExitSelection =
-  { kind: 'derived' } | { kind: 'unresolved' } | { kind: 'normal'; exitKey: string };
+  | { kind: 'derived' }
+  | { kind: 'unresolved' }
+  | { kind: 'normal'; exitKey: string }
+  | { kind: 'additional'; additionalExitKey: string };
+
+type AdditionalExit = {
+  kind: 'zagreusContract';
+  key: 'zagreusContract';
+  occurrenceId: OccurrenceId;
+};
 
 interface ExitDecision {
   kind: 'exit';
   source: ExitDecisionSource;
   normal: NormalDoorBatch;
+  additional: readonly AdditionalExit[];
   selection: ExitSelection;
 }
 
@@ -139,11 +149,12 @@ An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
 belong to a layout's normal-decision policy, including N's bounded entry;
 Hub-sourced batches belong only to N's completed-Hub Preboss handoff.
 
-Selection belongs to the enclosing decision: a width-one batch uses `derived`;
-a multi-target batch begins `unresolved`; and `normal` selects one declared
-target key in a multi-target batch. The codec rejects a derived selection with
-other than one target, unresolved or normal selection for one target, and a
-normal key outside the batch.
+Selection belongs to the enclosing decision: a width-one normal-only batch uses
+`derived`; a multi-target or sibling-additional decision may be `unresolved`;
+`normal` selects one declared normal target; and `additional` selects one
+closed sibling continuation. The only supported additional exit is a declared
+Zagreus contract beside a Midshop's normal lane. It is never a synthetic normal
+target or a generic foreign-room escape hatch.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -183,6 +194,11 @@ terminal resolution. F/G/H/O/P/Q admit a takeover Preboss; N admits its
 required Hub takeover after the bounded PreHub stage; I admits neither because
 its Preboss is an ordinary retained peer. These exceptions belong to
 declaration-derived topology rules rather than the empty shape itself.
+
+The supported Zagreus command may atomically create a selected Midshop's empty
+normal envelope with its closed additional contract sibling. That incomplete
+normal lane remains authored and finding-backed until ordinary targets are
+added; the additional exit neither consumes nor repairs normal progression.
 
 The first Door 1 choice resolves the envelope. An ordinary or
 `retainNormalPeers` choice realizes an ordinary batch and must satisfy the
@@ -254,6 +270,14 @@ guesses a reward. It resets incompatible state to complete defaults and cannot
 bypass a staged candidate pool, fixed start/Hub identity, or atomic takeover
 rule.
 
+Route detours use narrower commands than general room replacement. An Anomaly
+retains one normal G target occurrence identity, remembers its displaced G
+declaration, and owns its retained incoming offer plus success state. A
+Zagreus contract owns one foreign `C_Boss01` occurrence as a declared
+additional exit. Those are the only foreign room-set occurrences admitted by
+decoded topology; each has one declaration-owned automatic hidden host return
+that remains a normal host target and batch for accounting.
+
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, and Shop offers/purchase order. Leaf
@@ -295,6 +319,7 @@ canonical projection for maps and markers, not another identity source.
 | room-sourced decision             | `ExitDecisionAddress` with occurrence source                                      |
 | N handoff decision                | `ExitDecisionAddress` with Hub source                                             |
 | normal target                     | `TargetAddress` with source and exit key                                          |
+| additional continuation           | `AdditionalExitAddress` with source and declared additional-exit key              |
 | decision selection                | `ExitSelectionAddress` with source                                                |
 | batch reward store                | `BatchRewardStoreAddress` with source                                             |
 | Hub board                         | `HubDecisionAddress`                                                              |
@@ -304,7 +329,7 @@ canonical projection for maps and markers, not another identity source.
 | derived completion                | `CompletionRoomAddress`                                                           |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-12 addresses.
+batch-store identity, and rendered target indexes are not schema-13 addresses.
 
 ## Commands
 
@@ -315,7 +340,8 @@ its semantic owner and never leaves partial topology.
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
 replacement, Hub board and visit commands; and occurrence-local state
-commands including `SelectEncounter` and `ResetEncounter`. The current union is defined by
+commands including `SelectEncounter` and `ResetEncounter`, plus the closed
+Anomaly and Zagreus detour commands. The current union is defined by
 `packages/planner-engine/src/authored-project/commands/types.ts`.
 
 `RemoveExitDecision` explicitly removes its targets and downstream selected
@@ -330,7 +356,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 12;
+  schemaVersion: 13;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -339,8 +365,8 @@ interface ProjectDocument {
 ```
 
 Unknown fields, malformed discriminants, wrong schema or catalog versions,
-cross-biome rooms, invalid leaf state, and malformed structural ownership fail
-at decode contact. The codec preserves structurally representable incomplete
+unauthorized cross-biome rooms, invalid leaf state, and malformed structural
+ownership fail at decode contact. The codec preserves structurally representable incomplete
 and context-invalid authored choices; simulation findings, not fallback,
 describe context invalidity.
 

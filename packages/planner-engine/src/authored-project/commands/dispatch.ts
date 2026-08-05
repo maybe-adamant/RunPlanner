@@ -7,6 +7,7 @@ import type { ProjectCommandApplyOptions } from './encounter-authorization';
 import { applyOccurrenceCommand } from './occurrence';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
+import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
 import type { ProjectCommand } from './types';
 
@@ -46,6 +47,18 @@ function applyUnchecked(
       );
     case 'ReplaceOccurrenceRoom':
       return applyRoomReplacementCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'SwitchTargetToAnomaly':
+    case 'ReplaceAnomalyMap':
+    case 'ReplaceAnomalySuccess':
+    case 'RevertAnomaly':
+    case 'AddZagreusContract':
+    case 'RemoveZagreusContract':
+      return applyRouteDetourCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

@@ -1,15 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, RoomOccurrence } from '../model';
 
-import {
-  failCommand,
-  requireOccurrence,
-  requireRoom,
-  requireTopology,
-  type LocatedBiome,
-} from './contract';
+import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
+import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
 
 export function applyIncomingRewardCommand(
@@ -20,7 +15,15 @@ export function applyIncomingRewardCommand(
 ): ProjectDocument {
   const current = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.reward.occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  const room = legalTopologyOccurrenceRoom(
+    catalog,
+    located.layout,
+    current,
+    occurrence.occurrenceId,
+  );
+  if (room === undefined) {
+    failCommand(command, `${occurrence.gameName} is not a legal topology room occurrence`);
+  }
   let state: RoomOccurrence['state'];
   if (occurrence.state.kind === 'fixed') {
     if (
@@ -35,6 +38,7 @@ export function applyIncomingRewardCommand(
     });
   } else if (
     occurrence.state.kind === 'counted' ||
+    occurrence.state.kind === 'anomaly' ||
     occurrence.state.kind === 'freeReward' ||
     occurrence.state.kind === 'ephyraCombat'
   ) {

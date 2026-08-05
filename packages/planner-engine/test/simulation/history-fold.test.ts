@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createAdditionalExitAddress,
   createBiomeAddress,
+  createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
@@ -22,6 +24,15 @@ const origin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-c
 const secondOrigin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-second'));
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gOrigin = createOccurrenceAddress(gBiome, createOccurrenceId('history-fold-g-combat'));
+const additionalOrigin = createAdditionalExitAddress(
+  biome,
+  createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: origin.occurrenceId,
+  }).source,
+  'zagreusContract',
+);
+const contractOrigin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-zagreus'));
 
 type UnsequencedHistoryEvent = HistoryEvent extends infer Event
   ? Event extends HistoryEvent
@@ -199,6 +210,43 @@ describe('history fold encounter checkpoint closure', () => {
 
     expect(() => foldBiomeHistoryPrefixEvents(malformed)).toThrow(
       new HistoryFoldContractError('prefix history has more than one unentered prepared room'),
+    );
+  });
+
+  it('rejects a Zagreus contract creation before its Midshop has entered', () => {
+    const malformed = numbered([
+      {
+        kind: 'biomeStarted',
+        origin: biome,
+        counters: {
+          biomeDepthCache: 0,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 0,
+        },
+      },
+      {
+        kind: 'roomCreated',
+        origin,
+        gameName: 'F_Shop01',
+        encounterEnvelopeKey: 'SingleEncounter',
+        source: 'biomeEntry',
+        picked: true,
+      },
+      {
+        kind: 'roomCreated',
+        origin: contractOrigin,
+        gameName: 'C_Boss01',
+        encounterEnvelopeKey: 'SingleEncounter',
+        source: 'additionalExit',
+        picked: true,
+        parentOrigin: origin,
+        additionalOrigin,
+      },
+    ]);
+
+    expect(() => foldBiomeHistoryPrefixEvents(malformed)).toThrow(
+      'was created before its entered parent',
     );
   });
 

@@ -224,6 +224,61 @@ function unresolvedFProject(): ProjectDocument {
   return document;
 }
 
+/**
+ * Builds the persisted contract shape before the Midshop's ordinary branch
+ * has been authored. The command to add the contract lands separately; this
+ * fixture protects the schema boundary that must retain that incomplete
+ * branch rather than repairing it during decode.
+ */
+function incompleteZagreusEnvelopeProject(): ProjectDocument {
+  let document = applyProjectCommand(
+    project('codec-zagreus-envelope', { Underworld: 1 }),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: createOccurrenceId('zagreus-opening'),
+      gameName: 'F_Opening01',
+    },
+  );
+  document = createBatchTargets(document, {
+    biome: fBiome,
+    sourceOccurrenceId: 'zagreus-opening',
+    rewardStoreKey: 'RunProgress',
+    targets: [{ exitKey: 'exit1', occurrenceId: 'zagreus-shop', gameName: 'F_Shop01' }],
+  });
+  const shopSource = {
+    kind: 'occurrence' as const,
+    occurrenceId: createOccurrenceId('zagreus-shop'),
+  };
+  document = applyProjectCommand(document, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(fBiome, shopSource),
+  });
+
+  const encoded = encodedTopology(document, 'Underworld', 'F');
+  const shopDecision = encoded.topology.decisions.find(
+    (candidate) =>
+      candidate.kind === 'exit' &&
+      (candidate.source as { occurrenceId?: string }).occurrenceId === 'zagreus-shop',
+  );
+  if (shopDecision === undefined) throw new Error('missing Zagreus Midshop decision');
+  encoded.topology.occurrences.push({
+    occurrenceId: 'zagreus-contract',
+    gameName: 'C_Boss01',
+    state: { kind: 'fixed' },
+    encounters: { encounterKeyByPhase: {} },
+  });
+  shopDecision.additional = [
+    {
+      kind: 'zagreusContract',
+      key: 'zagreusContract',
+      occurrenceId: 'zagreus-contract',
+    },
+  ];
+  return decodeProjectDocument(encoded.document, catalog);
+}
+
 function selectedFTakeoverProject(): ProjectDocument {
   let document = applyProjectCommand(project('codec-selected-f', { Underworld: 1 }), catalog, {
     kind: 'CreateStart',
@@ -465,6 +520,67 @@ describe('persisted authored topology codec', () => {
     },
   );
 
+  it('retains an incomplete Zagreus normal branch and admits its closed automatic host return', () => {
+    let document = incompleteZagreusEnvelopeProject();
+    const shopSource = {
+      kind: 'occurrence' as const,
+      occurrenceId: createOccurrenceId('zagreus-shop'),
+    };
+    const envelope = planFor(document, 'Underworld', 'F').topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === shopSource.occurrenceId,
+    );
+    expect(envelope).toMatchObject({
+      normal: { targets: [] },
+      additional: [
+        { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'zagreus-contract' },
+      ],
+      selection: { kind: 'unresolved' },
+    });
+    expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+
+    document = applyProjectCommand(document, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, shopSource),
+      value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    });
+    const contractSource = {
+      kind: 'occurrence' as const,
+      occurrenceId: createOccurrenceId('zagreus-contract'),
+    };
+    const contractDecision = createExitDecisionAddress(fBiome, contractSource);
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      decision: contractDecision,
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, contractSource),
+      storeKey: 'RunProgress',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, contractSource, 'exit1'),
+      occurrenceId: createOccurrenceId('zagreus-host-return'),
+      gameName: 'F_Combat02',
+    });
+
+    expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+    const returnDecision = planFor(document, 'Underworld', 'F').topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === contractSource.occurrenceId,
+    );
+    expect(returnDecision).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'zagreus-host-return' }] },
+      additional: [],
+      selection: { kind: 'derived' },
+    });
+  });
+
   it.each([
     ['H', completeHProject, 9],
     ['O', completeOProject, 7],
@@ -631,6 +747,7 @@ describe('persisted authored topology codec', () => {
         batchState: normal.batchState,
         targets: [],
       },
+      additional: [],
       selection: { kind: 'unresolved' },
     });
 
@@ -829,6 +946,7 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [],
       },
+      additional: [],
       selection: { kind: 'unresolved' },
     });
     expectDocumentError(competingHubOwner.document, {
@@ -884,6 +1002,7 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [{ exitKey: 'exit1', occurrenceId: 'f-width-one-target' }],
       },
+      additional: [],
       selection: { kind: 'normal', exitKey: 'exit1' },
     });
     expectDocumentError(widthOne.document, {
@@ -922,6 +1041,7 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [],
       },
+      additional: [],
       selection: { kind: 'unresolved' },
     });
     expectDocumentError(deadLeaf.document, {

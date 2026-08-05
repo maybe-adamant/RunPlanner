@@ -308,6 +308,14 @@ function foldHistoryEventStream(
         namesByOrigin.set(key, event.gameName);
         encounterEnvelopesByOrigin.set(key, event.encounterEnvelopeKey);
         ledgers.roomCreations.push(event);
+        if (event.source === 'additionalExit') {
+          const parentViews = viewsByOrigin.get(semanticAddressKey(event.parentOrigin));
+          if (parentViews?.entry === undefined) {
+            throw new HistoryFoldContractError(
+              `additional exit ${semanticAddressKey(event.additionalOrigin)} was created before its entered parent`,
+            );
+          }
+        }
         if (event.source === 'localChild') {
           if (ledgers.counters.numSubRoomsSpawned === undefined) {
             throw new HistoryFoldContractError(

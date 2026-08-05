@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-12 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-13 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same canonical biome product.
 The application publishes those derived results to the editor, profiles, and
@@ -410,7 +410,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-12's non-authoritative decision-array order and keeps shared
+preserves schema-13's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -1218,7 +1218,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
-  schema-12 fixtures across F through Q;
+  schema-13 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

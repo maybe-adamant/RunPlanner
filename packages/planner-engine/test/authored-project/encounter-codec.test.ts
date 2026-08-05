@@ -59,20 +59,20 @@ function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): 
   return value;
 }
 
-describe('schema-12 encounter persistence', () => {
+describe('schema-13 encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(12);
+    expect(decoded.schemaVersion).toBe(13);
   });
 
-  it('rejects schema 11 rather than inventing an encounter migration', () => {
+  it('rejects schema 12 rather than inventing an encounter migration', () => {
     const document = encoded(createRepresentativeNOPProject());
-    document.schemaVersion = 11;
+    document.schemaVersion = 12;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 12, received 11');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 13, received 12');
   });
 
   it.each([

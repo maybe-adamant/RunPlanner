@@ -57,6 +57,13 @@ export interface TargetAddress extends BiomeOwnedAddress {
   readonly exitKey: string;
 }
 
+/** A closed, first-class owner for one authored additional continuation. */
+export interface AdditionalExitAddress extends BiomeOwnedAddress {
+  readonly kind: 'additionalExit';
+  readonly source: ExitDecisionSourceAddress;
+  readonly additionalExitKey: string;
+}
+
 export interface HubDecisionAddress extends BiomeOwnedAddress {
   readonly kind: 'hubDecision';
   readonly hubKey: string;
@@ -144,6 +151,7 @@ export type SemanticAddress =
   | ExitSelectionAddress
   | BatchRewardStoreAddress
   | TargetAddress
+  | AdditionalExitAddress
   | HubDecisionAddress
   | LocalRewardAddress
   | LocalChildAddress
@@ -261,6 +269,18 @@ export function createTargetAddress(
     ...owner(biome),
     source: source(decisionSource),
     exitKey: nonBlank(exitKey, 'exitKey'),
+  });
+}
+export function createAdditionalExitAddress(
+  biome: BiomeAddress,
+  decisionSource: ExitDecisionSourceAddress,
+  additionalExitKey: string,
+): AdditionalExitAddress {
+  return Object.freeze({
+    kind: 'additionalExit',
+    ...owner(biome),
+    source: source(decisionSource),
+    additionalExitKey: nonBlank(additionalExitKey, 'additionalExitKey'),
   });
 }
 export function createHubDecisionAddress(biome: BiomeAddress, hubKey: string): HubDecisionAddress {
@@ -444,6 +464,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.source]);
     case 'target':
       return JSON.stringify([...base, address.source, address.exitKey]);
+    case 'additionalExit':
+      return JSON.stringify([...base, address.source, address.additionalExitKey]);
     case 'hubDecision':
       return JSON.stringify([...base, address.hubKey]);
     case 'hubSlot':

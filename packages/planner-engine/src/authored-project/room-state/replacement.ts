@@ -259,6 +259,7 @@ export function reconcileReplacementRoomState(
         countedOfferIsAdmitted(replacementRoom.incomingReward, previousState.offer)
         ? Object.freeze({ kind: 'counted', offer: previousState.offer })
         : replacementState;
+    case 'anomaly':
     case 'fixed':
     case 'shop':
     case 'freeReward':

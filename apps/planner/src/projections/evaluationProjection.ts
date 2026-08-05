@@ -365,6 +365,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       const physicalIndex = /^exit(\d+)$/.exec(origin.exitKey)?.[1];
       return `${biomeLabel} · Door ${physicalIndex === undefined ? origin.exitKey : Number(physicalIndex)}`;
     }
+    case 'additionalExit':
+      return `${biomeLabel} · Special door`;
     case 'incomingReward':
       return `${biomeLabel} · Room reward`;
     case 'localReward':

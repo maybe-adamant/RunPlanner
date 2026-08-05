@@ -29,6 +29,7 @@ import {
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   normalDecisionProgressionForLayout,
+  selectedExitContinuation,
   selectedExitTarget,
 } from '../authored-project/topology/query';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
@@ -377,7 +378,7 @@ export function evaluateBiomeCompleteness(
     );
     if (batchFindings.length !== 0) return incomplete([...findings, ...batchFindings]);
 
-    const selected = selectedExitTarget(decision);
+    const selected = selectedExitContinuation(decision);
     if (selected === undefined) {
       const origin = createExitSelectionAddress(biome, sourceAddress(decision.source));
       return incomplete([
@@ -387,10 +388,14 @@ export function evaluateBiomeCompleteness(
         }),
       ]);
     }
-    const selectedOccurrence = occurrences.get(selected.occurrenceId);
+    const selectedOccurrence = occurrences.get(
+      selected.kind === 'normal' ? selected.target.occurrenceId : selected.exit.occurrenceId,
+    );
     if (selectedOccurrence === undefined) {
+      const selectedOccurrenceId =
+        selected.kind === 'normal' ? selected.target.occurrenceId : selected.exit.occurrenceId;
       throw new CompletenessContractError(
-        `trusted decision lost occurrence ${selected.occurrenceId}`,
+        `trusted decision lost occurrence ${selectedOccurrenceId}`,
       );
     }
     findPickedShopState(findings, biome, selectedOccurrence);

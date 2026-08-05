@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createBatchRewardStoreAddress,
+  createAdditionalExitAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
   createCompletionRoomAddress,
@@ -50,6 +51,10 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
   { name: 'exit selection', address: createExitSelectionAddress(fBiome, fSource) },
   { name: 'batch reward store', address: createBatchRewardStoreAddress(fBiome, fSource) },
   { name: 'ordinary target', address: createTargetAddress(fBiome, fSource, 'exit2') },
+  {
+    name: 'additional exit',
+    address: createAdditionalExitAddress(fBiome, fSource, 'zagreusContract'),
+  },
   { name: 'Hub target', address: createTargetAddress(nBiome, nHubSource, 'preboss') },
   { name: 'Hub decision', address: createHubDecisionAddress(nBiome, 'hub') },
   { name: 'Hub slot', address: createHubSlotAddress(nBiome, 'hub', 'combat01') },
@@ -96,6 +101,11 @@ describe('semantic addresses', () => {
     );
     expect(semanticAddressKey(createTargetAddress(fBiome, fSource, 'exit2'))).toBe(
       '["target","Underworld","F",{"kind":"occurrence","occurrenceId":"address-f"},"exit2"]',
+    );
+    expect(
+      semanticAddressKey(createAdditionalExitAddress(fBiome, fSource, 'zagreusContract')),
+    ).toBe(
+      '["additionalExit","Underworld","F",{"kind":"occurrence","occurrenceId":"address-f"},"zagreusContract"]',
     );
     expect(semanticAddressKey(createExitDecisionAddress(nBiome, nHubSource))).toBe(
       '["exitDecision","Surface","N",{"kind":"hubDecision","decisionKey":"hub"}]',

@@ -21,6 +21,7 @@ import type {
 } from '../model';
 import {
   expectExactKeys,
+  expectBoolean,
   expectPositiveInteger,
   expectRecord,
   expectString,
@@ -410,7 +411,6 @@ export function decodeRoomState(
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
-    case 'Anomaly':
     case 'StandardCombat':
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'counted', path);
@@ -424,12 +424,23 @@ export function decodeRoomState(
           `${path}.offer`,
         ),
       });
+    case 'Anomaly':
+      requireOrdinaryRole(role, room, path);
+      expectedKind(state.kind, 'anomaly', path);
+      expectExactKeys(state, ['kind', 'offer', 'success'], path);
+      return Object.freeze({
+        kind: 'anomaly',
+        // The takeover can retain a normal G reward that Anomaly itself would
+        // not normally offer. Keep it authored so evaluation can report the
+        // incompatibility and the user can edit it deliberately.
+        offer: decodeOffer(state.offer, catalog, `${path}.offer`),
+        success: expectBoolean(state.success, `${path}.success`),
+      });
     case 'Devotion':
     case 'ContractBoss':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fixed', path);
-      expectExactKeys(state, ['kind', 'payload'], path);
       if (room.incomingReward.kind !== 'fixed') {
         failProjectDocument(
           path,
@@ -440,6 +451,11 @@ export function decodeRoomState(
       if (rewardType === undefined) {
         failProjectDocument(path, `unknown fixed reward ${room.incomingReward.offer.rewardType}`);
       }
+      expectExactKeys(
+        state,
+        rewardType.payloadDomain === undefined ? ['kind'] : ['kind', 'payload'],
+        path,
+      );
       const payload = decodePayload(state.payload, rewardType, catalog, `${path}.payload`);
       return Object.freeze({ kind: 'fixed', ...(payload === undefined ? {} : { payload }) });
     }

@@ -1,5 +1,6 @@
 import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catalog-schema';
 import type {
+  AdditionalExitAddress,
   BiomeAddress,
   ExitDecisionAddress,
   HubDecisionAddress,
@@ -15,6 +16,7 @@ interface HistoryEventBase {
 }
 
 export type RoomCreationSource =
+  | 'additionalExit'
   | 'biomeEntry'
   | 'generatedTarget'
   | 'hubTarget'
@@ -74,6 +76,13 @@ export type RoomCreatedHistoryEvent =
       readonly targetOrigin: TargetAddress;
       readonly generationIndex: number;
       readonly generationCount: number;
+    })
+  | (RoomCreatedHistoryEventBase & {
+      /** A Midshop contract is created at the entered source's room-start checkpoint. */
+      readonly source: 'additionalExit';
+      readonly picked: boolean;
+      readonly parentOrigin: RoomHistoryOrigin;
+      readonly additionalOrigin: AdditionalExitAddress;
     })
   | (RoomCreatedHistoryEventBase & {
       readonly source: 'hubTarget';

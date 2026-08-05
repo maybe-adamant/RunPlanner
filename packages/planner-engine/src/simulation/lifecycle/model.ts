@@ -94,6 +94,11 @@ export type RoomLifecycleEvent =
 export interface RoomLifecycleProducerInput {
   readonly lifecycleProfileKey: string;
   readonly offer: ResolvedRewardOffer;
+  /**
+   * A materialized room may expose an offer without reaching its producer
+   * acquisition point. Oceanus Anomaly failure is the current closed case.
+   */
+  readonly acquisitionEnabled?: boolean;
 }
 
 export interface RoomLifecycleExecutionInput {

@@ -2,6 +2,7 @@ export {
   BiomeMaterializationContractError,
   materializeBiome,
   materializeBiomePrefix,
+  selectedBatchContinuation,
 } from './biome';
 export {
   fieldsBatchFacts,
@@ -13,6 +14,7 @@ export { HubMaterializationContractError, materializeHubDecision } from './hub';
 export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms';
 export type {
   CanonicalAuthoredRoom,
+  CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBatchState,
   CanonicalBatchRewardStore,
@@ -43,6 +45,7 @@ export type {
   CanonicalRoomRestore,
   CanonicalShopEntryState,
   CanonicalShopOffer,
+  CanonicalSelectedBatchContinuation,
   CanonicalTarget,
   CanonicalTargetContinuation,
 } from './model';

@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 12 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 13 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -64,10 +64,22 @@ export interface EphyraCombatState {
   readonly sideRooms: Readonly<Record<string, EphyraSideRoomState>>;
 }
 
+/**
+ * An Anomaly retains the normal-door offer it displaced, even when that offer
+ * is not presently admitted by the Anomaly declaration. Evaluation owns the
+ * resulting finding; persistence must never silently reroll or discard it.
+ */
+export interface AnomalyRoomState {
+  readonly kind: 'anomaly';
+  readonly offer: ResolvedRewardOffer;
+  readonly success: boolean;
+}
+
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
   | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
   | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
+  | AnomalyRoomState
   | EphyraCombatState
   | FieldsCombatState
   | ShipCombatState
@@ -92,8 +104,18 @@ export type AuthoredBiomeState = Readonly<Record<string, AuthoredFieldValue | nu
 export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
+  /**
+   * Present only on an Anomaly room occupying a normal G target. The owning
+   * target remains the topology identity; this remembers the displaced G
+   * declaration for semantic revert without creating a shadow occurrence.
+   */
+  readonly anomalyReplacement?: AnomalyReplacementProvenance;
   readonly state: AuthoredRoomState;
   readonly encounters: RoomEncounterState;
+}
+
+export interface AnomalyReplacementProvenance {
+  readonly replacedRoomGameName: string;
 }
 
 export interface ExitTargetReference {
@@ -108,7 +130,8 @@ export type ExitDecisionSource =
 export type ExitSelection =
   | { readonly kind: 'derived' }
   | { readonly kind: 'unresolved' }
-  | { readonly kind: 'normal'; readonly exitKey: string };
+  | { readonly kind: 'normal'; readonly exitKey: string }
+  | { readonly kind: 'additional'; readonly additionalExitKey: string };
 
 export interface NormalDoorBatch {
   readonly kind: 'batch';
@@ -117,10 +140,24 @@ export interface NormalDoorBatch {
   readonly targets: readonly ExitTargetReference[];
 }
 
+/**
+ * Persisted additional exits are intentionally closed to the one currently
+ * supported game feature. This is an authored sibling of `normal`, not a
+ * normal target with a synthetic exit key.
+ */
+export interface ZagreusContractAdditionalExit {
+  readonly kind: 'zagreusContract';
+  readonly key: 'zagreusContract';
+  readonly occurrenceId: OccurrenceId;
+}
+
+export type AdditionalExit = ZagreusContractAdditionalExit;
+
 export interface ExitDecision {
   readonly kind: 'exit';
   readonly source: ExitDecisionSource;
   readonly normal: NormalDoorBatch;
+  readonly additional: readonly AdditionalExit[];
   readonly selection: ExitSelection;
 }
 

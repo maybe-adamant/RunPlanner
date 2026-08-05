@@ -146,10 +146,16 @@ export function prefixAuthoredRooms(
     ...prefix.decisions.flatMap((decision): readonly CanonicalAuthoredRoom[] => {
       switch (decision.kind) {
         case 'batch':
-          return decision.targets.map((target) => target.room);
+          return [
+            ...decision.targets.map((target) => target.room),
+            ...decision.additional.map((continuation) => continuation.room),
+          ];
         case 'hub':
           return decision.board.targets.map((target) => target.room);
       }
     }),
+    ...(prefix.frontier?.kind === 'exitDecision'
+      ? prefix.frontier.additional.map((continuation) => continuation.room)
+      : []),
   ]);
 }

@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type {
+  CanonicalAdditionalContinuation,
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalBiome,
@@ -14,7 +15,8 @@ import type {
   MaterializedBiomePrefix,
   MaterializedHubVisitFrontier,
 } from '../materialization';
-import type { RoomHistoryOrigin } from '../lifecycle';
+import { selectedBatchContinuation } from '../materialization';
+import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
@@ -59,6 +61,16 @@ function selectedTarget(batch: CanonicalBatch): CanonicalTarget {
   const target = batch.targets.find((candidate) => candidate.picked);
   if (target === undefined) fail(`${semanticAddressKey(batch.origin)} has no selected target`);
   return target;
+}
+
+function selectedContinuation(
+  batch: CanonicalBatch,
+): CanonicalTarget | CanonicalAdditionalContinuation {
+  const continuation = selectedBatchContinuation(batch);
+  if (continuation === undefined) {
+    fail(`${semanticAddressKey(batch.origin)} has no selected continuation`);
+  }
+  return continuation.kind === 'normal' ? continuation.target : continuation.continuation;
 }
 
 function appendBatchState(
@@ -120,6 +132,25 @@ function appendGeneratedTargets(
       generationCount,
     });
   });
+}
+
+function appendAdditionalContinuations(
+  writer: HistorySegmentWriter,
+  parent: CanonicalAuthoredRoom,
+  continuations: readonly CanonicalAdditionalContinuation[],
+): void {
+  for (const continuation of continuations) {
+    writer.append({
+      kind: 'roomCreated',
+      origin: continuation.room.origin,
+      gameName: continuation.room.gameName,
+      encounterEnvelopeKey: continuation.room.encounterEnvelopeKey,
+      source: 'additionalExit',
+      picked: continuation.picked,
+      parentOrigin: parent.origin,
+      additionalOrigin: continuation.origin,
+    });
+  }
 }
 
 function appendHubCreated(
@@ -355,6 +386,8 @@ function appendHubDecision(
 interface ClockworkAwareLifecycleOptions {
   readonly outgoing?: (writer: HistorySegmentWriter) => void;
   readonly stopAfterOutgoing?: boolean;
+  readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
+  readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
 }
 
 /**
@@ -385,6 +418,7 @@ function appendClockworkAwareRoomLifecycle(
       ? {}
       : { stopAfterOutgoing: options.stopAfterOutgoing }),
     beforeEvent(beforeWriter, event) {
+      options.beforeEvent?.(beforeWriter, event);
       if (
         room.clockworkReward === 'nonGoal' &&
         room.incomingReward?.offer.rewardType === 'Devotion' &&
@@ -395,15 +429,17 @@ function appendClockworkAwareRoomLifecycle(
       }
     },
     afterEvent(afterWriter, event) {
-      if (room.clockworkReward === undefined) return;
-      if (
-        (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
-        (room.clockworkReward === 'nonGoal' &&
-          room.incomingReward?.offer.rewardType !== 'Devotion' &&
-          event.kind === 'encounterCompleted')
-      ) {
-        emitClockworkReward(afterWriter);
+      if (room.clockworkReward !== undefined) {
+        if (
+          (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
+          (room.clockworkReward === 'nonGoal' &&
+            room.incomingReward?.offer.rewardType !== 'Devotion' &&
+            event.kind === 'encounterCompleted')
+        ) {
+          emitClockworkReward(afterWriter);
+        }
       }
+      options.afterEvent?.(afterWriter, event);
     },
   });
   if (room.clockworkReward !== undefined && !emitted) {
@@ -418,6 +454,11 @@ function appendRoomWithBatch(
   batch: CanonicalBatch,
 ): void {
   appendClockworkAwareRoomLifecycle(writer, catalog, room, {
+    afterEvent(afterWriter, event) {
+      if (event.kind === 'roomEntered') {
+        appendAdditionalContinuations(afterWriter, room, batch.additional);
+      }
+    },
     outgoing(outgoingWriter) {
       appendBatchState(outgoingWriter, batch);
       appendGeneratedTargets(outgoingWriter, room.origin, batch.targets);
@@ -481,7 +522,7 @@ function appendCompletedDecision(
     if (current.kind !== 'authored') fail('normal-door batch source must be authored');
     appendRoomWithBatch(writer, catalog, current, decision);
   }
-  return selectedTarget(decision).room;
+  return selectedContinuation(decision).room;
 }
 
 function composeBiomeHistoryResult(
@@ -537,10 +578,13 @@ function composeBiomeHistoryResult(
           if (current.kind !== 'authored') fail('normal-door batch source must be authored');
           appendRoomWithBatch(writer, catalog, current, decision);
         }
-        const target = selectedTarget(decision);
-        current = target.room;
-        if (target.continuation === 'startsCompletion') {
-          completionPredecessor = target.room;
+        const selected = selectedBatchContinuation(decision);
+        if (selected === undefined) {
+          fail(`${semanticAddressKey(decision.origin)} has no selected continuation`);
+        }
+        current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
+        if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
+          completionPredecessor = selected.target.room;
           break;
         }
       }
@@ -636,6 +680,11 @@ function composeBiomeHistoryPrefixResult(
             // entry or terminal candidate. The empty projection preserves the
             // normal outgoing-generation closure without inventing a target.
             appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+              afterEvent(afterWriter, event) {
+                if (event.kind === 'roomEntered') {
+                  appendAdditionalContinuations(afterWriter, current, frontier.additional);
+                }
+              },
               outgoing(outgoingWriter) {
                 outgoingWriter.append({
                   kind: 'emptyOutgoingGenerationCompleted',
@@ -645,11 +694,21 @@ function composeBiomeHistoryPrefixResult(
             });
           } else {
             appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+              afterEvent(afterWriter, event) {
+                if (event.kind === 'roomEntered') {
+                  appendAdditionalContinuations(afterWriter, current, frontier.additional);
+                }
+              },
               stopAfterOutgoing: true,
             });
           }
         } else {
           appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+            afterEvent(afterWriter, event) {
+              if (event.kind === 'roomEntered') {
+                appendAdditionalContinuations(afterWriter, current, frontier.additional);
+              }
+            },
             outgoing(outgoingWriter) {
               if (frontier.batchState !== undefined) {
                 appendBatchState(outgoingWriter, {

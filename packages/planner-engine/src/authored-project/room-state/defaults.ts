@@ -182,7 +182,6 @@ export function createDefaultRoomState(
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
-    case 'Anomaly':
     case 'StandardCombat':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({
@@ -192,6 +191,17 @@ export function createDefaultRoomState(
           defaultCountedStoreKey(room, context.resolvedStoreKey),
           path,
         ),
+      });
+    case 'Anomaly':
+      requireOrdinaryRole(role, room, path);
+      return Object.freeze({
+        kind: 'anomaly',
+        offer: defaultCountedOffer(
+          requireCountedBinding(room, path),
+          defaultCountedStoreKey(room, context.resolvedStoreKey),
+          path,
+        ),
+        success: true,
       });
     case 'Devotion':
     case 'ContractBoss':
