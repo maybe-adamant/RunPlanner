@@ -1435,7 +1435,7 @@ interface AnomalyReplacementEligibility {
  * evaluation remains responsible for the remembered target declaration. This
  * companion check owns only the source-side game rule that makes the
  * replacement available. Keeping the two products separate prevents the
- * foreign B map from accidentally entering G's ordinary candidate pool.
+ * Anomaly map from accidentally entering G's ordinary candidate pool.
  */
 function anomalyReplacementEligibility(
   layout: BiomeLayout,

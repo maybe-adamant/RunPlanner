@@ -46,7 +46,7 @@ export type OrdinaryTargetAuthoringEligibility =
         | 'targetIsNotDeclared'
         | 'takeoverBatch'
         | 'takeoverRoom'
-        | 'unknownOrForeignRoom';
+        | 'unknownOrNonHostRoom';
     };
 
 /** The authored ordinary-batch capacity before a new empty envelope is added. */
@@ -98,12 +98,12 @@ function physicalExit(
 }
 
 /**
- * The two currently supported foreign rooms each own exactly one automatic
- * return. This deliberately recognizes their closed authored templates, not
+ * The two currently supported route-detour rooms each own exactly one
+ * automatic return. This deliberately recognizes their closed authored templates, not
  * every declaration that happens to use an automatic exit behavior. Callers
  * must still establish the room's Anomaly/additional-exit structural owner.
  */
-export function automaticHostContinuationExitForForeignRoom(
+export function automaticHostContinuationExitForDetourRoom(
   room: RoomDeclaration,
 ): DeclaredPhysicalExit | undefined {
   if (
@@ -145,7 +145,7 @@ export function declaredPhysicalExitsForSourceRoom(
   }
   if (sourceRoom === undefined) return undefined;
   if (sourceRoom.roomSetKey !== layout.biomeKey) {
-    const automatic = automaticHostContinuationExitForForeignRoom(sourceRoom);
+    const automatic = automaticHostContinuationExitForDetourRoom(sourceRoom);
     return automatic === undefined ? undefined : Object.freeze([automatic]);
   }
   if (layout.progression.kind === 'hub') {
@@ -318,7 +318,7 @@ export function ordinaryTargetAuthoringEligibility(
   }
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined || room.roomSetKey !== layout.biomeKey || room.mode.kind !== 'authored') {
-    return Object.freeze({ kind: 'unavailable', reason: 'unknownOrForeignRoom' });
+    return Object.freeze({ kind: 'unavailable', reason: 'unknownOrNonHostRoom' });
   }
   if (room.kind === 'Intro' || room.kind === 'Opening') {
     return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });

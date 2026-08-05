@@ -26,7 +26,7 @@ import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import {
   admitsTerminalTakeoverEnvelope,
-  automaticHostContinuationExitForForeignRoom,
+  automaticHostContinuationExitForDetourRoom,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
@@ -94,7 +94,7 @@ function sourceRoom(
   if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
   if (
     room.roomSetKey !== located.layout.biomeKey &&
-    automaticHostContinuationExitForForeignRoom(room) === undefined
+    automaticHostContinuationExitForDetourRoom(room) === undefined
   ) {
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }
@@ -415,7 +415,7 @@ function failUnavailableOrdinaryTarget(
         command,
         `${command.gameName} is not available in stage ${eligibility.stageKey ?? '?'}`,
       );
-    case 'unknownOrForeignRoom':
+    case 'unknownOrNonHostRoom':
       return failCommand(command, `${command.gameName} is not an authored room in this biome`);
   }
   const unhandled: never = eligibility.reason;

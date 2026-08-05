@@ -74,8 +74,8 @@ function isContractAdditionalTarget(
 
 /**
  * Resolves a declaration for one already-decoded authored occurrence in its
- * host topology. A matching room set is the ordinary case. The only foreign
- * cases are the two closed route-detour ownership forms; this is deliberately
+ * host topology. A matching room set is the ordinary case. The only
+ * cross-room-set cases are the two closed route-detour ownership forms; this is deliberately
  * not a general relaxation of room-set identity.
  */
 export function legalTopologyOccurrenceRoom(
