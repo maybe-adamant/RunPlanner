@@ -604,7 +604,7 @@ function normalCandidatePool(catalog: Catalog, layout: BiomeLayout): readonly Ro
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
-        room.biomeKey === layout.biomeKey &&
+        room.roomSetKey === layout.biomeKey &&
         room.mode.kind === 'authored' &&
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
         !startNames.has(room.gameName),
@@ -1411,7 +1411,7 @@ function takeoverCandidatePool(catalog: Catalog, biomeKey: string): readonly Roo
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
-        room.biomeKey === biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+        room.roomSetKey === biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
     ),
   );
 }

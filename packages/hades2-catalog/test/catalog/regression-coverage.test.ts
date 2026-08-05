@@ -148,18 +148,18 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '2f4f9d8f9f4bffd4'],
-  ['G', '1ab56f3398abf494'],
-  ['H', '757558455fdd5c55'],
-  ['I', '9bac20136a7a73fa'],
-  ['N', '2ca1a767c4a6e83d'],
-  ['O', '0c62f7808fac97b9'],
-  ['P', '62ca8238e7e55585'],
-  ['Q', 'c12b7024220a9c39'],
+  ['F', 'c62c086a0e762de9'],
+  ['G', '82173b207737872c'],
+  ['H', 'ccc519094b1b7bc6'],
+  ['I', '48d819096ba71c31'],
+  ['N', 'cef6cf89dc445eec'],
+  ['O', 'bd80beae02ea9802'],
+  ['P', 'beba557d9bbd87b9'],
+  ['Q', 'de69acde2e86359f'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
-  const rooms = catalog.rooms.values.filter((room) => room.biomeKey === biomeKey);
+  const rooms = catalog.rooms.values.filter((room) => room.roomSetKey === biomeKey);
   const encounterEnvelopeKeys = [...new Set(rooms.map((room) => room.encounterEnvelopeKey))];
   const encounterSetKeys: string[] = [];
   const encounterDefinitionKeys: string[] = [];
@@ -239,7 +239,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
     (fixture) => {
       for (const gameName of fixture.completion) {
         expect(catalog.rooms.byKey[gameName]).toMatchObject({
-          biomeKey: fixture.biomeKey,
+          roomSetKey: fixture.biomeKey,
           mode: { kind: 'derived', classification: 'completion' },
         });
       }
@@ -249,7 +249,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
   it.each(roomCounts)(
     '%s keeps its declared room and authored-room totals',
     (biomeKey, total, authored) => {
-      const rooms = catalog.rooms.values.filter((room) => room.biomeKey === biomeKey);
+      const rooms = catalog.rooms.values.filter((room) => room.roomSetKey === biomeKey);
       expect(rooms).toHaveLength(total);
       expect(rooms.filter((room) => room.mode.kind === 'authored')).toHaveLength(authored);
     },
@@ -271,7 +271,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
     (gameName, biomeKey, kind, exitCount) => {
       const room = catalog.rooms.byKey[gameName];
       expect(room).toMatchObject({
-        biomeKey,
+        roomSetKey: biomeKey,
         kind,
         mode:
           kind === 'Boss'

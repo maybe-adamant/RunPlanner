@@ -1,7 +1,5 @@
-import type {
-  ExitCompatibilityPolicy,
-  ExitTypeDeclaration,
-} from '@run-planner/engine/catalog-schema';
+import type { ExitCompatibilityPolicy } from '@run-planner/engine/catalog-schema';
+import type { RawExitTypeDeclaration } from './types';
 
 export const exitCompatibilityPolicies = [
   {
@@ -39,4 +37,14 @@ export const exitTypes = [
   { key: 'EphyraExitDoorReturn', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'EphyraExitBossDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'N_SubRoomDoor', compatibilityPolicyKey: 'Unconstrained' },
-] as const satisfies readonly ExitTypeDeclaration[];
+  {
+    key: 'AnomalyAutoExitDoor',
+    compatibilityPolicyKey: 'Unconstrained',
+    behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
+  },
+  {
+    key: 'ZagContract',
+    compatibilityPolicyKey: 'Unconstrained',
+    behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
+  },
+] as const satisfies readonly RawExitTypeDeclaration[];

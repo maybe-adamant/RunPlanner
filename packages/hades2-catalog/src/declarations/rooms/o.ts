@@ -4,7 +4,7 @@ export const oRooms = [
   {
     gameName: 'O_Intro',
     label: 'Entrance',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: [],
@@ -20,7 +20,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat01',
     label: 'Combat 01',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -46,7 +46,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat02',
     label: 'Combat 02',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -72,7 +72,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat03',
     label: 'Combat 03',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -98,7 +98,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat04',
     label: 'Combat 04',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -118,7 +118,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat05',
     label: 'Combat 05',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -144,7 +144,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat06',
     label: 'Combat 06',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -170,7 +170,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat07',
     label: 'Combat 07',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -190,7 +190,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat08',
     label: 'Combat 08',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -216,7 +216,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat09',
     label: 'Combat 09',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -242,7 +242,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat10',
     label: 'Combat 10',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -268,7 +268,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat11',
     label: 'Combat 11',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -288,7 +288,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat12',
     label: 'Combat 12',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -314,7 +314,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat13',
     label: 'Combat 13',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -346,7 +346,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat14',
     label: 'Combat 14',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -372,7 +372,7 @@ export const oRooms = [
   {
     gameName: 'O_Combat15',
     label: 'Combat 15',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ShipCombat' },
     structuralTags: [],
@@ -392,7 +392,7 @@ export const oRooms = [
   {
     gameName: 'O_MiniBoss01',
     label: 'Charybdis',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -428,7 +428,7 @@ export const oRooms = [
   {
     gameName: 'O_MiniBoss02',
     label: 'The Yargonaut',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -464,11 +464,20 @@ export const oRooms = [
   {
     gameName: 'O_Shop01',
     label: 'Midshop',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Shop',
     mode: { kind: 'authored', templateKey: 'Shop' },
     structuralTags: [],
     exits: [{ index: 1, type: 'ShipsExitDoor' }],
+    additionalExits: [
+      {
+        kind: 'zagreusContract',
+        key: 'zagreusContract',
+        exitType: 'ZagContract',
+        targetRoomGameName: 'C_Boss01',
+        maxEnteredThisRoute: 0,
+      },
+    ],
     incomingReward: {
       kind: 'shop',
       rewardType: 'Shop',
@@ -508,7 +517,7 @@ export const oRooms = [
   {
     gameName: 'O_Reprieve01',
     label: 'Fountain',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
     structuralTags: [],
@@ -536,7 +545,7 @@ export const oRooms = [
   {
     gameName: 'O_Story01',
     label: 'Circe',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -579,7 +588,7 @@ export const oRooms = [
   {
     gameName: 'O_Devotion01',
     label: 'Trial',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Devotion',
     mode: { kind: 'authored', templateKey: 'Devotion' },
     structuralTags: [],
@@ -622,7 +631,7 @@ export const oRooms = [
   {
     gameName: 'O_PreBoss01',
     label: 'Preboss',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
@@ -651,7 +660,7 @@ export const oRooms = [
   {
     gameName: 'O_Boss01',
     label: 'Eris',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -668,7 +677,7 @@ export const oRooms = [
   {
     gameName: 'O_PostBoss01',
     label: 'Postboss',
-    biomeKey: 'O',
+    roomSetKey: 'O',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

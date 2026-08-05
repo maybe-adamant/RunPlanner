@@ -60,6 +60,7 @@ export const acquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
   },
+  { gameName: 'InfernalContractBoon', kind: 'loot', historyProjection: 'lootAndUse' },
   { gameName: 'BlindBoxLoot', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'GiftDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'MetaCurrencyDrop', kind: 'resource', historyProjection: 'consumableAndUse' },

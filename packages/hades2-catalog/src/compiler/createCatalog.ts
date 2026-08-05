@@ -42,7 +42,6 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const exitTypes = normalizeExitTypes(input.exitTypes, exitCompatibilityPolicies);
   const rooms = normalizeRooms(
     input.rooms,
-    new Set(biomes.values.map((biome) => biome.key)),
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

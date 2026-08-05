@@ -22,7 +22,7 @@ export function roomSelectorCategories(
   biomeKey: string,
 ): readonly RoomSelectorCategory[] {
   const ordinaryPreboss = catalog.rooms.values.some(
-    (room) => room.biomeKey === biomeKey && room.prebossBatchPolicy?.kind === 'retainNormalPeers',
+    (room) => room.roomSetKey === biomeKey && room.prebossBatchPolicy?.kind === 'retainNormalPeers',
   );
   return ordinaryPreboss ? generatedTargetRoomCategories : ordinaryRoomCategories;
 }
@@ -58,7 +58,7 @@ export function selectRoomsForCategory(
   category: RoomSelectorCategory,
 ): readonly RoomDeclaration[] {
   return catalog.rooms.values.filter((room) => {
-    if (room.biomeKey !== biomeKey) {
+    if (room.roomSetKey !== biomeKey) {
       return false;
     }
     if (room.mode.kind !== 'authored') {

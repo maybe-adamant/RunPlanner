@@ -1,4 +1,5 @@
 import type {
+  AdditionalExitDeclaration,
   CatalogCollection,
   EncounterDefinition,
   EncounterEnvelope,
@@ -25,6 +26,7 @@ import type {
 } from '@run-planner/engine/reward-kernel';
 
 import type {
+  RawAdditionalExitDeclaration,
   RawEncounterSlotBinding,
   RawPrebossBatchPolicy,
   RawRoomDeclaration,
@@ -93,6 +95,8 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 }
 
 const roomTemplateKinds = {
+  Anomaly: 'Combat',
+  ContractBoss: 'Boss',
   Devotion: 'Devotion',
   EphyraCombat: 'Combat',
   EphyraSideRoom: 'Combat',
@@ -112,6 +116,8 @@ const roomTemplateKinds = {
 } as const satisfies Readonly<Record<RoomTemplateKey, RoomDeclaration['kind']>>;
 
 const roomTemplateRewardKinds = {
+  Anomaly: 'countedChoice',
+  ContractBoss: 'fixed',
   Devotion: 'fixed',
   EphyraCombat: 'countedChoice',
   EphyraSideRoom: 'countedChoice',
@@ -173,6 +179,18 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
 }
 
 const structuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
+const supportedRoomSetKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q', 'Anomaly', 'C']);
+const anomalyRoomGameNames = [
+  'B_Combat01',
+  'B_Combat05',
+  'B_Combat06',
+  'B_Combat07',
+  'B_Combat08',
+  'B_Combat10',
+  'B_Combat21',
+] as const;
+const automaticHostRoomGameNames = new Set([...anomalyRoomGameNames, 'C_Boss01']);
+const zagreusSourceRoomGameNames = new Set(['F_Shop01', 'G_Shop01', 'O_Shop01', 'P_Shop01']);
 
 function normalizeStructuralTags(
   rawTags: readonly RoomStructuralTag[],
@@ -365,9 +383,69 @@ function normalizeEncounterSlotBindings(
   return Object.freeze(bindings);
 }
 
+function normalizeAdditionalExits(
+  rawExits: readonly RawAdditionalExitDeclaration[],
+  exitTypes: CatalogCollection<ExitTypeDeclaration>,
+  path: string,
+): readonly AdditionalExitDeclaration[] {
+  const keys = freezeUniqueStrings(
+    rawExits.map((exit) => exit.key),
+    `${path}.keys`,
+  );
+  return Object.freeze(
+    rawExits.map((raw, index): AdditionalExitDeclaration => {
+      const exitPath = `${path}[${index}]`;
+      if (raw.kind !== 'zagreusContract') {
+        fail(
+          `${exitPath}.kind`,
+          `unknown additional exit ${String((raw as { kind?: unknown }).kind)}`,
+        );
+      }
+      const key = keys[index];
+      if (key !== 'zagreusContract') {
+        fail(`${exitPath}.key`, 'Zagreus contract exit key must be zagreusContract');
+      }
+      const exitTypeKey = requireNonEmpty(raw.exitType, `${exitPath}.exitType`);
+      const exitType = exitTypes.byKey[exitTypeKey];
+      if (exitType === undefined) {
+        fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
+      }
+      if (
+        exitType.behavior.kind !== 'playerSelected' ||
+        exitType.behavior.rewardPreview !== 'hidden'
+      ) {
+        fail(`${exitPath}.exitType`, 'Zagreus contract exits must be player-selected and hidden');
+      }
+      const maxEnteredThisRoute = requireNonNegativeInteger(
+        raw.maxEnteredThisRoute,
+        `${exitPath}.maxEnteredThisRoute`,
+      );
+      if (maxEnteredThisRoute !== 0) {
+        fail(
+          `${exitPath}.maxEnteredThisRoute`,
+          'Zagreus contract entry limit must be zero prior entries',
+        );
+      }
+      return Object.freeze({
+        kind: 'zagreusContract',
+        key: 'zagreusContract',
+        physicalExit: Object.freeze({
+          type: exitType.key,
+          compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+          behavior: exitType.behavior,
+        }),
+        targetRoomGameName: requireNonEmpty(
+          raw.targetRoomGameName,
+          `${exitPath}.targetRoomGameName`,
+        ),
+        maxEnteredThisRoute,
+      });
+    }),
+  );
+}
+
 export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
-  biomeKeys: ReadonlySet<string>,
   rewards: RewardKernelCatalog,
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
@@ -378,8 +456,9 @@ export function normalizeRooms(
     const path = `rooms[${roomIndex}]`;
     requireNonEmpty(room.gameName, `${path}.gameName`);
     requireNonEmpty(room.label, `${path}.label`);
-    if (!biomeKeys.has(room.biomeKey)) {
-      fail(`${path}.biomeKey`, `unknown biome ${room.biomeKey}`);
+    const roomSetKey = requireNonEmpty(room.roomSetKey, `${path}.roomSetKey`);
+    if (!supportedRoomSetKeys.has(roomSetKey)) {
+      fail(`${path}.roomSetKey`, `unknown room set ${roomSetKey}`);
     }
     if (room.structuralTags === undefined) {
       fail(`${path}.structuralTags`, 'is required');
@@ -417,8 +496,54 @@ export function normalizeRooms(
         index: exit.index,
         type,
         compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+        behavior: exitType.behavior,
       });
     });
+    const automaticExits = exits.filter(
+      (exit) => exit.behavior.kind === 'automaticHostContinuation',
+    );
+    const requiresAutomaticHostExit = automaticHostRoomGameNames.has(room.gameName);
+    if (
+      requiresAutomaticHostExit
+        ? exits.length !== 1 || automaticExits.length !== 1
+        : automaticExits.length !== 0
+    ) {
+      fail(
+        `${path}.exits`,
+        requiresAutomaticHostExit
+          ? `${room.gameName} must declare exactly one automatic host continuation`
+          : 'automatic host continuation is not supported by this room',
+      );
+    }
+    if (roomSetKey === 'Anomaly') {
+      if (
+        !automaticHostRoomGameNames.has(room.gameName) ||
+        mode.kind !== 'authored' ||
+        mode.templateKey !== 'Anomaly'
+      ) {
+        fail(`${path}.roomSetKey`, 'Anomaly room set contains only the seven supported maps');
+      }
+    }
+    if (roomSetKey === 'C') {
+      if (
+        room.gameName !== 'C_Boss01' ||
+        mode.kind !== 'authored' ||
+        mode.templateKey !== 'ContractBoss'
+      ) {
+        fail(`${path}.roomSetKey`, 'C room set contains only authored ContractBoss C_Boss01');
+      }
+    }
+    const additionalExits = normalizeAdditionalExits(
+      room.additionalExits ?? [],
+      exitTypes,
+      `${path}.additionalExits`,
+    );
+    if (
+      additionalExits.length > 0 &&
+      (room.kind !== 'Shop' || room.incomingReward.kind !== 'shop')
+    ) {
+      fail(`${path}.additionalExits`, 'additional Zagreus exits require a Shop room');
+    }
     const eligibility =
       room.eligibility === undefined
         ? undefined
@@ -510,11 +635,12 @@ export function normalizeRooms(
     return Object.freeze({
       gameName: room.gameName,
       label: room.label,
-      biomeKey: room.biomeKey,
+      roomSetKey,
       kind: room.kind,
       mode,
       structuralTags: normalizeStructuralTags(room.structuralTags, `${path}.structuralTags`),
       exits: Object.freeze(exits),
+      additionalExits,
       incomingReward,
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
@@ -557,6 +683,47 @@ export function normalizeRooms(
   });
 
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
+  for (const gameName of automaticHostRoomGameNames) {
+    if (collection.byKey[gameName] === undefined) {
+      fail('rooms', `missing automatic host-return room ${gameName}`);
+    }
+  }
+  for (const gameName of zagreusSourceRoomGameNames) {
+    const source = collection.byKey[gameName];
+    if (
+      source === undefined ||
+      source.additionalExits.length !== 1 ||
+      source.additionalExits[0]?.kind !== 'zagreusContract'
+    ) {
+      fail('rooms', `${gameName} must declare exactly one Zagreus contract exit`);
+    }
+  }
+  collection.values.forEach((room, roomIndex) => {
+    if (room.additionalExits.length > 0 && !zagreusSourceRoomGameNames.has(room.gameName)) {
+      fail(
+        `rooms[${roomIndex}].additionalExits`,
+        'Zagreus contract exits are supported only by the four declared Midshops',
+      );
+    }
+    room.additionalExits.forEach((exit, exitIndex) => {
+      const target = collection.byKey[exit.targetRoomGameName];
+      const path = `rooms[${roomIndex}].additionalExits[${exitIndex}].targetRoomGameName`;
+      if (target === undefined) {
+        fail(path, `unknown room ${exit.targetRoomGameName}`);
+      }
+      if (
+        target.gameName !== 'C_Boss01' ||
+        target.roomSetKey !== 'C' ||
+        target.kind !== 'Boss' ||
+        target.mode.kind !== 'authored' ||
+        target.mode.templateKey !== 'ContractBoss' ||
+        target.exits.length !== 1 ||
+        target.exits[0]?.behavior.kind !== 'automaticHostContinuation'
+      ) {
+        fail(path, 'Zagreus contract target must be authored C_Boss01 with automatic host return');
+      }
+    });
+  });
   collection.values.forEach((room, roomIndex) => {
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'Preboss') {
       const path = `rooms[${roomIndex}]`;
@@ -703,8 +870,8 @@ export function normalizeRooms(
         if (referenced === undefined) {
           fail(path, `unknown room ${slot.roomGameName}`);
         }
-        if (referenced.biomeKey !== room.biomeKey || referenced.mode.kind !== 'authored') {
-          fail(path, `${slot.roomGameName} must be an authored room in ${room.biomeKey}`);
+        if (referenced.roomSetKey !== room.roomSetKey || referenced.mode.kind !== 'authored') {
+          fail(path, `${slot.roomGameName} must be an authored room in ${room.roomSetKey}`);
         }
       }
     }

@@ -410,6 +410,7 @@ export function decodeRoomState(
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
+    case 'Anomaly':
     case 'StandardCombat':
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'counted', path);
@@ -424,6 +425,7 @@ export function decodeRoomState(
         ),
       });
     case 'Devotion':
+    case 'ContractBoss':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fixed', path);

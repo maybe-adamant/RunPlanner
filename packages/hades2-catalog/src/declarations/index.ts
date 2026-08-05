@@ -3,6 +3,8 @@ import { encounterDefinitions, encounterEnvelopes, encounterSets } from './encou
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
+import { anomalyRooms } from './rooms/anomaly';
+import { cRooms } from './rooms/c';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
@@ -16,6 +18,8 @@ import { routes } from './routes';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 
 const rooms: readonly RawRoomDeclaration[] = [
+  ...anomalyRooms,
+  ...cRooms,
   ...fRooms,
   ...gRooms,
   ...pRooms,
@@ -27,7 +31,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.15.0-unified-biome-decisions',
+  version: '0.16.0-route-detours',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
@@ -43,6 +47,7 @@ export const declarations = {
 
 export type {
   RawCatalogInput,
+  RawAdditionalExitDeclaration,
   RawCountedRewardBinding,
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
@@ -50,6 +55,7 @@ export type {
   RawEncounterSetDeclaration,
   RawEncounterSlotBinding,
   RawFixedRewardBinding,
+  RawExitTypeDeclaration,
   RawBiomeLayoutDeclaration,
   RawLocalChildDescriptor,
   RawNoneRewardBinding,
@@ -59,4 +65,5 @@ export type {
   RawRoomDeclaration,
   RawRoomLifecycleProfileDeclaration,
   RawShopRewardBinding,
+  RawZagreusContractAdditionalExitDeclaration,
 } from './types';

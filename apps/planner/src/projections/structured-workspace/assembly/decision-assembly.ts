@@ -320,7 +320,7 @@ function rawBatchTopologyState(
 function takeoverGameNames(catalog: Catalog, biomeKey: string): readonly string[] {
   return Object.freeze(
     catalog.rooms.values
-      .filter((room) => room.biomeKey === biomeKey && workspaceRoomTakesOverNormalDoors(room))
+      .filter((room) => room.roomSetKey === biomeKey && workspaceRoomTakesOverNormalDoors(room))
       .map((room) => room.gameName),
   );
 }

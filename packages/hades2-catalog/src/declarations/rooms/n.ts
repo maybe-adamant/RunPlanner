@@ -10,7 +10,7 @@ export const nRooms = [
   {
     gameName: 'N_Opening01',
     label: 'Opening',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     structuralTags: [],
@@ -38,7 +38,7 @@ export const nRooms = [
   {
     gameName: 'N_PreHub01',
     label: 'Pre-Hub',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'PreHub',
     mode: { kind: 'authored', templateKey: 'FixedPreHub' },
     structuralTags: [],
@@ -71,7 +71,7 @@ export const nRooms = [
   {
     gameName: 'N_Hub',
     label: 'Ephyra Hub',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Hub',
     mode: { kind: 'derived', classification: 'hub' },
     structuralTags: [],
@@ -86,7 +86,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat01',
     label: 'Combat 01',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -111,7 +111,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat02',
     label: 'Combat 02',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -158,7 +158,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat03',
     label: 'Combat 03',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -199,7 +199,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat04',
     label: 'Combat 04',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -246,7 +246,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat05',
     label: 'Combat 05',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -299,7 +299,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat06',
     label: 'Combat 06',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -346,7 +346,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat07',
     label: 'Combat 07',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -371,7 +371,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat08',
     label: 'Combat 08',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -396,7 +396,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat09',
     label: 'Combat 09',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -449,7 +449,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat10',
     label: 'Combat 10',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -496,7 +496,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat11',
     label: 'Combat 11',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -537,7 +537,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat12',
     label: 'Combat 12',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -590,7 +590,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat13',
     label: 'Combat 13',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -615,7 +615,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat14',
     label: 'Combat 14',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -640,7 +640,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat15',
     label: 'Combat 15',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -681,7 +681,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat16',
     label: 'Combat 16',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -722,7 +722,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat17',
     label: 'Combat 17',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -763,7 +763,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat18',
     label: 'Combat 18',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -804,7 +804,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat19',
     label: 'Combat 19',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -829,7 +829,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat20',
     label: 'Combat 20',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -870,7 +870,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat21',
     label: 'Combat 21',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -895,7 +895,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat22',
     label: 'Combat 22',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -942,7 +942,7 @@ export const nRooms = [
   {
     gameName: 'N_Combat23',
     label: 'Combat 23',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraCombat' },
     structuralTags: [],
@@ -995,7 +995,7 @@ export const nRooms = [
   {
     gameName: 'N_MiniBoss01',
     label: 'Satyr Champion',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -1021,7 +1021,7 @@ export const nRooms = [
   {
     gameName: 'N_MiniBoss02',
     label: 'Erymanthian Boar',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -1047,7 +1047,7 @@ export const nRooms = [
   {
     gameName: 'N_Story01',
     label: 'Medea',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -1069,7 +1069,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub01',
     label: 'Side Room 01',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1093,7 +1093,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub02',
     label: 'Side Room 02',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1117,7 +1117,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub03',
     label: 'Side Room 03',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1141,7 +1141,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub04',
     label: 'Side Room 04',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1165,7 +1165,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub05',
     label: 'Side Room 05',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1189,7 +1189,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub06',
     label: 'Side Room 06',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1213,7 +1213,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub07',
     label: 'Side Room 07',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1237,7 +1237,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub08',
     label: 'Side Room 08',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1261,7 +1261,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub09',
     label: 'Side Room 09',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1289,7 +1289,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub10',
     label: 'Side Room 10',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1317,7 +1317,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub11',
     label: 'Side Room 11',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1345,7 +1345,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub12',
     label: 'Side Room 12',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1369,7 +1369,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub13',
     label: 'Side Room 13',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1393,7 +1393,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub14',
     label: 'Side Room 14',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1421,7 +1421,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub15',
     label: 'Side Room 15',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'EphyraSideRoom' },
     structuralTags: [],
@@ -1445,7 +1445,7 @@ export const nRooms = [
   {
     gameName: 'N_PreBoss01',
     label: 'Preboss',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
@@ -1480,7 +1480,7 @@ export const nRooms = [
   {
     gameName: 'N_Boss01',
     label: 'Polyphemus',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -1497,7 +1497,7 @@ export const nRooms = [
   {
     gameName: 'N_PostBoss01',
     label: 'Postboss',
-    biomeKey: 'N',
+    roomSetKey: 'N',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

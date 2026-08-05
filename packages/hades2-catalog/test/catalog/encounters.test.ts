@@ -123,7 +123,7 @@ describe('encounter envelope catalog', () => {
       );
     };
     expect(encounterKeysForRoom('H_Bridge01')).not.toContain('NemesisCombatH');
-    for (const room of catalog.rooms.values.filter((candidate) => candidate.biomeKey === 'Q')) {
+    for (const room of catalog.rooms.values.filter((candidate) => candidate.roomSetKey === 'Q')) {
       for (const encounterKey of nemesisCombatKeys) {
         expect(encounterKeysForRoom(room.gameName)).not.toContain(encounterKey);
       }
@@ -499,8 +499,11 @@ describe('encounter envelope catalog', () => {
     expect(() => createCatalog(incomplete)).toThrow(CatalogContractError);
 
     const unknownSlot = input();
-    const oCombat = unknownSlot.rooms.find((room) => room.gameName === 'O_Combat01');
-    if (oCombat === undefined) throw new Error('missing O Combat 01 fixture');
+    const oCombatIndex = unknownSlot.rooms.findIndex((room) => room.gameName === 'O_Combat01');
+    const oCombat = unknownSlot.rooms[oCombatIndex];
+    if (oCombatIndex < 0 || oCombat === undefined) {
+      throw new Error('missing O Combat 01 fixture');
+    }
     (oCombat as { eligibility: unknown }).eligibility = {
       kind: 'recentEnvelopeSlotCount',
       envelopeKey: 'ShipEncounter',
@@ -510,7 +513,7 @@ describe('encounter envelope catalog', () => {
     };
     expect(() => createCatalog(unknownSlot)).toThrow(
       new CatalogContractError(
-        'rooms[138].eligibility.slotKey',
+        `rooms[${oCombatIndex}].eligibility.slotKey`,
         'unknown slot Missing in ShipEncounter',
       ),
     );

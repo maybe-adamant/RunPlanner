@@ -71,10 +71,10 @@ function requireRoom(
   if (room === undefined) {
     failProjectDocument(`${occurrence.path}.gameName`, `unknown room ${occurrence.gameName}`);
   }
-  if (room.biomeKey !== biomeKey) {
+  if (room.roomSetKey !== biomeKey) {
     failProjectDocument(
       `${occurrence.path}.gameName`,
-      `${occurrence.gameName} belongs to ${room.biomeKey}`,
+      `${occurrence.gameName} belongs to ${room.roomSetKey}`,
     );
   }
   if (room.mode.kind !== 'authored') {

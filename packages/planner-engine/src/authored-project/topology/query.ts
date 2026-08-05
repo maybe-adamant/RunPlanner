@@ -115,7 +115,7 @@ export function declaredPhysicalExitsForSourceRoom(
     const completed = layout.progression.completedExit;
     return Object.freeze([physicalExit('completedHub', completed.exitKey, completed.physicalExit)]);
   }
-  if (sourceRoom === undefined || sourceRoom.biomeKey !== layout.biomeKey) return undefined;
+  if (sourceRoom === undefined || sourceRoom.roomSetKey !== layout.biomeKey) return undefined;
   if (layout.progression.kind === 'hub') {
     // The current bounded Hub data has one normal entry decision. Every later
     // occurrence source is the declaration-owned terminal envelope, which has
@@ -180,7 +180,7 @@ export function possibleGeneratedNormalExitKeys(
   return Object.freeze([
     ...new Set(
       Object.values(catalog.rooms.byKey)
-        .filter((room) => room.biomeKey === layout.biomeKey && room.mode.kind === 'authored')
+        .filter((room) => room.roomSetKey === layout.biomeKey && room.mode.kind === 'authored')
         .flatMap((room) => room.exits.map((exit) => `exit${exit.index}`)),
     ),
   ]);
@@ -285,7 +285,7 @@ export function ordinaryTargetAuthoringEligibility(
     return Object.freeze({ kind: 'unavailable', reason: 'targetAlreadyAuthored' });
   }
   const room = catalog.rooms.byKey[gameName];
-  if (room === undefined || room.biomeKey !== layout.biomeKey || room.mode.kind !== 'authored') {
+  if (room === undefined || room.roomSetKey !== layout.biomeKey || room.mode.kind !== 'authored') {
     return Object.freeze({ kind: 'unavailable', reason: 'unknownOrForeignRoom' });
   }
   if (room.kind === 'Intro' || room.kind === 'Opening') {
@@ -540,7 +540,7 @@ export function admitsTerminalTakeoverEnvelope(
   }
   return catalog.rooms.values.some(
     (room) =>
-      room.biomeKey === layout.biomeKey &&
+      room.roomSetKey === layout.biomeKey &&
       room.mode.kind === 'authored' &&
       room.kind === 'Preboss' &&
       room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
@@ -562,7 +562,8 @@ export function fixedWidthOneTakeoverForLayout(
   if (policy.kind !== 'fixedCount' && policy.kind !== 'staged') return undefined;
   const candidates = catalog.rooms.values.filter(
     (room) =>
-      room.biomeKey === layout.biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+      room.roomSetKey === layout.biomeKey &&
+      room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
   );
   const [candidate] = candidates;
   const candidatePolicy = candidate?.prebossBatchPolicy;

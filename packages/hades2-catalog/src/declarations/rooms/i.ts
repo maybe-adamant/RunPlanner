@@ -4,7 +4,7 @@ export const iRooms = [
   {
     gameName: 'I_Intro',
     label: 'Entrance',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: [],
@@ -20,7 +20,7 @@ export const iRooms = [
   {
     gameName: 'I_Story01',
     label: 'Hades',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -49,7 +49,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat01',
     label: 'Combat 01',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -77,7 +77,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat02',
     label: 'Combat 02',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -101,7 +101,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat03',
     label: 'Combat 03',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -129,7 +129,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat04',
     label: 'Combat 04',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -157,7 +157,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat05',
     label: 'Combat 05',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -181,7 +181,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat06',
     label: 'Combat 06',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -205,7 +205,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat07',
     label: 'Combat 07',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -229,7 +229,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat08',
     label: 'Combat 08',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -253,7 +253,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat09',
     label: 'Combat 09',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -281,7 +281,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat10',
     label: 'Combat 10',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -309,7 +309,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat11',
     label: 'Combat 11',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -337,7 +337,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat12',
     label: 'Combat 12',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -365,7 +365,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat13',
     label: 'Combat 13',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -389,7 +389,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat14',
     label: 'Combat 14',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -413,7 +413,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat15',
     label: 'Combat 15',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -441,7 +441,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat16',
     label: 'Combat 16',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -465,7 +465,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat17',
     label: 'Combat 17',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -489,7 +489,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat18',
     label: 'Combat 18',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -517,7 +517,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat19',
     label: 'Combat 19',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -541,7 +541,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat20',
     label: 'Combat 20',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -565,7 +565,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat21',
     label: 'Combat 21',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -593,7 +593,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat22',
     label: 'Combat 22',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -621,7 +621,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat23',
     label: 'Combat 23',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -645,7 +645,7 @@ export const iRooms = [
   {
     gameName: 'I_Combat24',
     label: 'Combat 24',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
     structuralTags: [],
@@ -671,7 +671,7 @@ export const iRooms = [
   {
     gameName: 'I_Reprieve01',
     label: 'Fountain',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
     structuralTags: [],
@@ -711,7 +711,7 @@ export const iRooms = [
   {
     gameName: 'I_MiniBoss01',
     label: 'The Verminancer',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -759,7 +759,7 @@ export const iRooms = [
   {
     gameName: 'I_MiniBoss02',
     label: 'Goldwrath',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -807,7 +807,7 @@ export const iRooms = [
   {
     gameName: 'I_PreBoss02',
     label: 'Preboss',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
@@ -832,7 +832,7 @@ export const iRooms = [
   {
     gameName: 'I_Boss01',
     label: 'Chronos',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -849,7 +849,7 @@ export const iRooms = [
   {
     gameName: 'I_PostBoss01',
     label: 'Postboss',
-    biomeKey: 'I',
+    roomSetKey: 'I',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

@@ -148,7 +148,9 @@ export function requireRoom(
 ): RoomDeclaration {
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) failCommand(command, `unknown room ${gameName}`);
-  if (room.biomeKey !== biomeKey) failCommand(command, `${gameName} belongs to ${room.biomeKey}`);
+  if (room.roomSetKey !== biomeKey) {
+    failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
+  }
   if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
   return room;
 }

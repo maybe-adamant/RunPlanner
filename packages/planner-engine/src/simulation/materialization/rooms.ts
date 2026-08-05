@@ -26,7 +26,9 @@ function fail(detail: string): never {
 }
 
 type AuthoredTemplateKey =
+  | 'Anomaly'
   | 'ClockworkCombat'
+  | 'ContractBoss'
   | 'Devotion'
   | 'EphyraCombat'
   | 'FixedIntro'
@@ -476,7 +478,9 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
 }
 
 const authoredTemplateMaterializers = Object.freeze({
+  Anomaly: materializeCountedRoom,
   ClockworkCombat: materializeClockworkCombat,
+  ContractBoss: materializeFixedRoom,
   Devotion: materializeDevotion,
   EphyraCombat: materializeEphyraCombat,
   FixedIntro: materializeRewardlessRoom,

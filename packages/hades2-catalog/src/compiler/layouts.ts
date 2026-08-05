@@ -13,6 +13,7 @@ import type {
   HubTerminalTakeoverDescriptor,
   NormalDoorBatchPolicy,
   NormalDecisionProgressionDescriptor,
+  OceanusAnomalyReplacementDescriptor,
   ProgressionDescriptor,
   RewardStorePolicy,
   RoomDeclaration,
@@ -34,6 +35,40 @@ import {
 import { normalizeAuthoredFields } from './descriptors';
 import { fail } from './errors';
 
+const oceanusAnomalySourceRoomExclusions = [
+  'G_Shop01',
+  'G_Story01',
+  'G_PreBoss01',
+  'C_Boss01',
+] as const;
+const oceanusAnomalySourceEncounterExclusions = ['ArtemisCombatG', 'NemesisRandomEvent'] as const;
+const oceanusAnomalyTargets = Array.from(
+  { length: 20 },
+  (_, index) => `G_Combat${String(index + 1).padStart(2, '0')}`,
+);
+const oceanusAnomalyReplacements = [
+  'B_Combat01',
+  'B_Combat05',
+  'B_Combat06',
+  'B_Combat07',
+  'B_Combat08',
+  'B_Combat10',
+  'B_Combat21',
+] as const;
+
+function requireExactStrings(
+  received: readonly string[],
+  expected: readonly string[],
+  path: string,
+): void {
+  if (
+    received.length !== expected.length ||
+    received.some((value, index) => value !== expected[index])
+  ) {
+    fail(path, `must equal ${expected.join(', ')}`);
+  }
+}
+
 function requireRoom(
   gameName: string,
   biomeKey: string,
@@ -45,7 +80,7 @@ function requireRoom(
   if (room === undefined) {
     fail(path, `unknown room ${gameName}`);
   }
-  if (room.biomeKey !== biomeKey) {
+  if (room.roomSetKey !== biomeKey) {
     fail(path, `${gameName} must belong to ${biomeKey}`);
   }
   return room;
@@ -117,7 +152,7 @@ function normalizeRewardStoreOverrides(
       if (
         !rooms.values.some(
           (room) =>
-            room.biomeKey === biomeKey &&
+            room.roomSetKey === biomeKey &&
             room.mode.kind === 'authored' &&
             room.mode.templateKey === sourceRoomTemplateKey,
         )
@@ -357,6 +392,7 @@ function normalizeCompletedHubExit(
       index,
       type: exitType.key,
       compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+      behavior: exitType.behavior,
     }),
   });
 }
@@ -439,7 +475,7 @@ function normalizeNormalDecisionProgression(
   if (batchPolicy.kind === 'fields') {
     for (const room of rooms.values) {
       if (
-        room.biomeKey !== biomeKey ||
+        room.roomSetKey !== biomeKey ||
         room.mode.kind !== 'authored' ||
         room.mode.templateKey !== 'FieldsCombat'
       ) {
@@ -623,6 +659,9 @@ function normalizeGeneratedProgression(
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
   path: string,
 ): GeneratedProgressionDescriptor {
+  if (biomeKey === 'G' && raw.anomalyReplacement === undefined) {
+    fail(`${path}.anomalyReplacement`, 'G must declare Oceanus Anomaly replacement');
+  }
   const progressionPolicy = normalizeProgressionPolicy(
     raw.progressionPolicy,
     biomeKey,
@@ -639,6 +678,152 @@ function normalizeGeneratedProgression(
       rewardStores,
       path,
     ),
+    ...(raw.anomalyReplacement === undefined
+      ? {}
+      : {
+          anomalyReplacement: normalizeAnomalyReplacement(
+            raw.anomalyReplacement,
+            biomeKey,
+            rooms,
+            `${path}.anomalyReplacement`,
+          ),
+        }),
+  });
+}
+
+function normalizeAnomalyReplacement(
+  raw: OceanusAnomalyReplacementDescriptor,
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  path: string,
+): OceanusAnomalyReplacementDescriptor {
+  if (biomeKey !== 'G') {
+    fail(path, 'Oceanus Anomaly replacement is only valid for G');
+  }
+  if (raw.kind !== 'oceanusAnomaly') {
+    fail(`${path}.kind`, `unknown target replacement ${String((raw as { kind?: unknown }).kind)}`);
+  }
+  const minimumBiomeDepthCache = requireNonNegativeInteger(
+    raw.source.minimumBiomeDepthCache,
+    `${path}.source.minimumBiomeDepthCache`,
+  );
+  if (minimumBiomeDepthCache !== 3) {
+    fail(`${path}.source.minimumBiomeDepthCache`, 'Oceanus Anomaly source depth must be 3');
+  }
+  const maxEnteredReplacementsThisRoute = requireNonNegativeInteger(
+    raw.source.maxEnteredReplacementsThisRoute,
+    `${path}.source.maxEnteredReplacementsThisRoute`,
+  );
+  if (maxEnteredReplacementsThisRoute !== 0) {
+    fail(
+      `${path}.source.maxEnteredReplacementsThisRoute`,
+      'Oceanus Anomaly requires zero prior entered replacements',
+    );
+  }
+  const excludedRoomGameNames = freezeUniqueStrings(
+    raw.source.excludedRoomGameNames,
+    `${path}.source.excludedRoomGameNames`,
+  );
+  if (excludedRoomGameNames.length === 0) {
+    fail(`${path}.source.excludedRoomGameNames`, 'must not be empty');
+  }
+  requireExactStrings(
+    excludedRoomGameNames,
+    oceanusAnomalySourceRoomExclusions,
+    `${path}.source.excludedRoomGameNames`,
+  );
+  excludedRoomGameNames.forEach((gameName, index) => {
+    if (rooms.byKey[gameName] === undefined) {
+      fail(`${path}.source.excludedRoomGameNames[${index}]`, `unknown room ${gameName}`);
+    }
+  });
+  const excludedSourceEncounterGameNames = freezeUniqueStrings(
+    raw.source.excludedSourceEncounterGameNames,
+    `${path}.source.excludedSourceEncounterGameNames`,
+  );
+  if (excludedSourceEncounterGameNames.length === 0) {
+    fail(`${path}.source.excludedSourceEncounterGameNames`, 'must not be empty');
+  }
+  requireExactStrings(
+    excludedSourceEncounterGameNames,
+    oceanusAnomalySourceEncounterExclusions,
+    `${path}.source.excludedSourceEncounterGameNames`,
+  );
+  const replaceableTargetRoomGameNames = freezeUniqueStrings(
+    raw.replaceableTargetRoomGameNames,
+    `${path}.replaceableTargetRoomGameNames`,
+  );
+  if (replaceableTargetRoomGameNames.length === 0) {
+    fail(`${path}.replaceableTargetRoomGameNames`, 'must not be empty');
+  }
+  requireExactStrings(
+    replaceableTargetRoomGameNames,
+    oceanusAnomalyTargets,
+    `${path}.replaceableTargetRoomGameNames`,
+  );
+  replaceableTargetRoomGameNames.forEach((gameName, index) => {
+    const room = rooms.byKey[gameName];
+    if (
+      room === undefined ||
+      room.roomSetKey !== 'G' ||
+      room.mode.kind !== 'authored' ||
+      room.kind !== 'Combat'
+    ) {
+      fail(
+        `${path}.replaceableTargetRoomGameNames[${index}]`,
+        `${gameName} must be an authored G combat room`,
+      );
+    }
+  });
+  const replacementRoomGameNames = freezeUniqueStrings(
+    raw.replacementRoomGameNames,
+    `${path}.replacementRoomGameNames`,
+  );
+  if (replacementRoomGameNames.length === 0) {
+    fail(`${path}.replacementRoomGameNames`, 'must not be empty');
+  }
+  requireExactStrings(
+    replacementRoomGameNames,
+    oceanusAnomalyReplacements,
+    `${path}.replacementRoomGameNames`,
+  );
+  replacementRoomGameNames.forEach((gameName, index) => {
+    const room = rooms.byKey[gameName];
+    if (
+      room === undefined ||
+      room.roomSetKey !== 'Anomaly' ||
+      room.mode.kind !== 'authored' ||
+      room.kind !== 'Combat' ||
+      room.exits.length !== 1 ||
+      room.exits[0]?.behavior.kind !== 'automaticHostContinuation'
+    ) {
+      fail(
+        `${path}.replacementRoomGameNames[${index}]`,
+        `${gameName} must be an authored Anomaly combat room with automatic host return`,
+      );
+    }
+  });
+  const defaultReplacementRoomGameName = requireNonEmpty(
+    raw.defaultReplacementRoomGameName,
+    `${path}.defaultReplacementRoomGameName`,
+  );
+  if (!replacementRoomGameNames.includes(defaultReplacementRoomGameName)) {
+    fail(`${path}.defaultReplacementRoomGameName`, 'must belong to the replacement room domain');
+  }
+  if (defaultReplacementRoomGameName !== 'B_Combat01') {
+    fail(`${path}.defaultReplacementRoomGameName`, 'Oceanus Anomaly default must be B_Combat01');
+  }
+  return Object.freeze({
+    kind: 'oceanusAnomaly',
+    source: Object.freeze({
+      minimumBiomeDepthCache,
+      excludedRoomGameNames,
+      excludedSourceEncounterGameNames,
+      maxEnteredReplacementsThisRoute,
+    }),
+    replaceableTargetRoomGameNames,
+    replacementRoomGameNames,
+    defaultReplacementRoomGameName,
   });
 }
 
@@ -846,7 +1031,7 @@ function knownTakeoverSourceWidths(
     return rooms.values
       .filter(
         (room) =>
-          room.biomeKey === preboss.biomeKey &&
+          room.roomSetKey === preboss.roomSetKey &&
           room.mode.kind === 'authored' &&
           room.kind !== 'Preboss' &&
           room.exits.length > 0,
@@ -872,12 +1057,12 @@ export function validatePrebossBatchPolicies(
 ): void {
   for (const preboss of rooms.values) {
     if (preboss.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') continue;
-    const layout = layouts.byKey[preboss.biomeKey];
+    const layout = layouts.byKey[preboss.roomSetKey];
     if (layout === undefined) continue;
     const path = `prebossBatchPolicy.${preboss.gameName}`;
     const sources = rooms.values.filter(
       (room) =>
-        room.biomeKey === preboss.biomeKey &&
+        room.roomSetKey === preboss.roomSetKey &&
         room.mode.kind === 'authored' &&
         room.kind !== 'Preboss' &&
         room.exits.length > 0,
@@ -1071,7 +1256,7 @@ export function validateRewardLookupOwnership(
     ) {
       return;
     }
-    const layout = layouts.byKey[room.biomeKey];
+    const layout = layouts.byKey[room.roomSetKey];
     for (const [optionKey, requirement] of Object.entries(
       room.incomingReward.additionalOptionRequirements,
     )) {
@@ -1082,7 +1267,7 @@ export function validateRewardLookupOwnership(
         ) {
           fail(
             `rooms[${roomIndex}].incomingReward.additionalOptionRequirements.${optionKey}.lookupKey`,
-            `${lookupKey} is not produced by ${room.biomeKey}`,
+            `${lookupKey} is not produced by ${room.roomSetKey}`,
           );
         }
       });

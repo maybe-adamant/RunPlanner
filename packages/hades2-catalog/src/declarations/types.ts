@@ -5,10 +5,11 @@ import type {
   EncounterSlotActivation,
   EncounterPhaseKind,
   ExitCompatibilityPolicy,
-  ExitTypeDeclaration,
+  ExitBehavior,
   GeneratedProgressionPolicy,
   HubDecisionDescriptor,
   NormalDoorBatchPolicy,
+  OceanusAnomalyReplacementDescriptor,
   RewardStorePolicy,
   RoomForce,
   RoomCaps,
@@ -161,14 +162,31 @@ export interface RawRoomExitDeclaration {
   readonly type: string;
 }
 
+export interface RawExitTypeDeclaration {
+  readonly key: string;
+  readonly compatibilityPolicyKey: string;
+  readonly behavior?: ExitBehavior;
+}
+
+export interface RawZagreusContractAdditionalExitDeclaration {
+  readonly kind: 'zagreusContract';
+  readonly key: 'zagreusContract';
+  readonly exitType: string;
+  readonly targetRoomGameName: string;
+  readonly maxEnteredThisRoute: number;
+}
+
+export type RawAdditionalExitDeclaration = RawZagreusContractAdditionalExitDeclaration;
+
 export interface RawRoomDeclaration {
   readonly gameName: string;
   readonly label: string;
-  readonly biomeKey: string;
+  readonly roomSetKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RawRoomExitDeclaration[];
+  readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
@@ -186,6 +204,7 @@ export interface RawRoomDeclaration {
 
 export interface RawGeneratedProgressionDeclaration {
   readonly kind: 'generated';
+  readonly anomalyReplacement?: OceanusAnomalyReplacementDescriptor;
   readonly progressionPolicy: GeneratedProgressionPolicy;
   readonly batchPolicy: NormalDoorBatchPolicy;
   readonly rewardStorePolicy: RewardStorePolicy;
@@ -244,7 +263,7 @@ export interface RawCatalogInput {
   readonly encounterSets: readonly RawEncounterSetDeclaration[];
   readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
-  readonly exitTypes: readonly ExitTypeDeclaration[];
+  readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
 }

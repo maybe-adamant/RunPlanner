@@ -81,7 +81,7 @@ function localChildRoom(
   const room = catalog.rooms.byKey[slot.roomGameName];
   if (
     room === undefined ||
-    room.biomeKey !== located.layout.biomeKey ||
+    room.roomSetKey !== located.layout.biomeKey ||
     room.mode.kind !== 'authored'
   ) {
     failCommand(command, `invalid declared side-room ${slot.roomGameName}`);
