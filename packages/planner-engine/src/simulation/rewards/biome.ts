@@ -22,6 +22,7 @@ import type {
 } from '../history';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBiome,
   CanonicalHubRoom,
@@ -158,6 +159,14 @@ function frontierBatch(snapshot: BiomeRewardSnapshot): readonly CanonicalBatch[]
     : Object.freeze([]);
 }
 
+function frontierAdditional(
+  snapshot: BiomeRewardSnapshot,
+): readonly CanonicalAdditionalContinuation[] {
+  return snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
+    ? snapshot.frontier.additional
+    : Object.freeze([]);
+}
+
 function rewardDecisions(snapshot: BiomeRewardSnapshot): readonly CanonicalDecision[] {
   return Object.freeze([...snapshot.decisions, ...frontierBatch(snapshot)]);
 }
@@ -190,16 +199,33 @@ function rewardRooms(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, Canonic
     snapshot.entryRoom,
     ...rewardDecisions(snapshot).flatMap((decision) =>
       decision.kind === 'batch'
-        ? decision.targets.map((target) => target.room)
+        ? [
+            ...decision.targets.map((target) => target.room),
+            ...decision.additional.map((continuation) => continuation.room),
+          ]
         : [
             decision.room,
             ...decision.board.targets.map((target) => target.room),
             ...decision.visits.flatMap((visit) => visit.localSlots),
           ],
     ),
+    ...frontierAdditional(snapshot).map((continuation) => continuation.room),
     ...hubFrontierRooms(snapshot),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
+}
+
+function canonicalAdditionalContinuations(
+  snapshot: BiomeRewardSnapshot,
+): ReadonlyMap<string, CanonicalAdditionalContinuation> {
+  return new Map(
+    [
+      ...rewardDecisions(snapshot).flatMap((decision) =>
+        decision.kind === 'batch' ? decision.additional : [],
+      ),
+      ...frontierAdditional(snapshot),
+    ].map((continuation) => [semanticAddressKey(continuation.origin), continuation]),
+  );
 }
 
 function hubTargets(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalHubTarget> {
@@ -662,6 +688,7 @@ export function evaluateBiomeRewardsAssembly(
   const rooms = rewardRooms(snapshot);
   const views = roomViews(history);
   const targets = canonicalTargets(snapshot);
+  const additionalContinuations = canonicalAdditionalContinuations(snapshot);
   const hubTargetByOrigin = hubTargets(snapshot);
   const batchesByParent = new Map(
     batches(snapshot).map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
@@ -866,6 +893,31 @@ export function evaluateBiomeRewardsAssembly(
               `${room.gameName} resolved a reward store other than ${String(expectedStore)}`,
             );
           }
+        } else if (event.source === 'additionalExit') {
+          const continuation = additionalContinuations.get(
+            semanticAddressKey(event.additionalOrigin),
+          );
+          const parent = rooms.get(semanticAddressKey(event.parentOrigin));
+          const parentViews = views.get(semanticAddressKey(event.parentOrigin));
+          if (
+            continuation === undefined ||
+            parent === undefined ||
+            parent.kind !== 'authored' ||
+            parentViews?.entry === undefined ||
+            semanticAddressKey(continuation.room.origin) !== semanticAddressKey(event.origin)
+          ) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} lost its entry-time additional continuation source`,
+            );
+          }
+          source = parent;
+          currentRoom = parent;
+          view = parentViews.entry;
+          currentShopNames = new Set(
+            (parent.entryState?.kind === 'shop' ? parent.entryState.offers : []).map(
+              (offer) => offer.offer.rewardType,
+            ),
+          );
         } else if (event.source === 'hubTarget') {
           const parentViews = views.get(semanticAddressKey(event.parentOrigin));
           const parent = rooms.get(semanticAddressKey(event.parentOrigin));
@@ -952,9 +1004,18 @@ export function evaluateBiomeRewardsAssembly(
               semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
           );
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
-          const acquisitionView = candidateRoomView?.preOutgoing ?? candidateRoomView?.entry;
+          // An Anomaly failure still owns a consumed door offer, but its
+          // lifecycle deliberately omits the producer acquisition. Candidate
+          // evaluation must not manufacture that missing event from the
+          // room's generic lifecycle view.
+          const acquisitionView =
+            incoming.acquisitionEnabled === false
+              ? undefined
+              : (candidateRoomView?.preOutgoing ?? candidateRoomView?.entry);
           const acquisitionSequence =
-            acquisitionEvents.at(-1)?.sequence ?? acquisitionView?.sequence;
+            incoming.acquisitionEnabled === false
+              ? undefined
+              : (acquisitionEvents.at(-1)?.sequence ?? acquisitionView?.sequence);
           indexRewardProducerFrontier(
             producerFrontiers,
             Object.freeze({

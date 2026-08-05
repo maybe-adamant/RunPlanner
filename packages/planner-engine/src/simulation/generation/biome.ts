@@ -35,6 +35,7 @@ import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBiome,
   CanonicalDecision,
@@ -737,13 +738,108 @@ function targetRewardHistories(
 function generationRooms(
   snapshot: BiomeGenerationSnapshot,
 ): ReadonlyMap<string, CanonicalGenerationSource> {
+  const frontierAdditional =
+    snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
+      ? snapshot.frontier.additional
+      : Object.freeze([]);
   const rooms = [
     snapshot.entryRoom,
     ...generationDecisions(snapshot).flatMap((decision) =>
-      decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
+      decision.kind === 'batch'
+        ? [
+            ...decision.targets.map((target) => target.room),
+            ...decision.additional.map((entry) => entry.room),
+          ]
+        : [],
     ),
+    ...frontierAdditional.map((entry) => entry.room),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
+}
+
+interface AdditionalContinuationEntry {
+  readonly continuation: CanonicalAdditionalContinuation;
+  readonly parentOrigin: RoomHistoryOrigin;
+}
+
+function additionalContinuationEntries(
+  snapshot: BiomeGenerationSnapshot,
+): readonly AdditionalContinuationEntry[] {
+  const entries = new Map<string, AdditionalContinuationEntry>();
+  for (const decision of generationDecisions(snapshot)) {
+    if (decision.kind !== 'batch' || decision.parent.origin.kind !== 'occurrence') continue;
+    for (const continuation of decision.additional) {
+      entries.set(
+        semanticAddressKey(continuation.origin),
+        Object.freeze({ continuation, parentOrigin: decision.parent.origin }),
+      );
+    }
+  }
+  if (snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision') {
+    for (const continuation of snapshot.frontier.additional) {
+      entries.set(
+        semanticAddressKey(continuation.origin),
+        Object.freeze({ continuation, parentOrigin: snapshot.frontier.parent.origin }),
+      );
+    }
+  }
+  return Object.freeze([...entries.values()]);
+}
+
+/**
+ * A Zagreus door may exist unpicked indefinitely, but its Midshop creation
+ * checkpoint is still where a later door learns whether an earlier entered
+ * C_Boss has consumed the route allowance. Use the parent Midshop entry view:
+ * it precedes this door's C room and therefore never counts the current
+ * selection, while the seeded route history includes every earlier contract.
+ */
+function evaluateAdditionalContinuationEntries(
+  catalog: Catalog,
+  snapshot: BiomeGenerationSnapshot,
+  history: BiomeGenerationHistory,
+  rooms: ReadonlyMap<string, CanonicalGenerationSource>,
+  findings: SemanticFinding[],
+): void {
+  for (const { continuation, parentOrigin } of additionalContinuationEntries(snapshot)) {
+    const source = rooms.get(semanticAddressKey(parentOrigin));
+    const sourceDeclaration =
+      source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+    const declaration = sourceDeclaration?.additionalExits.find(
+      (candidate) => candidate.kind === 'zagreusContract' && candidate.key === continuation.key,
+    );
+    if (
+      source === undefined ||
+      sourceDeclaration === undefined ||
+      declaration === undefined ||
+      declaration.targetRoomGameName !== continuation.room.gameName
+    ) {
+      throw new BiomeRoomGenerationContractError(
+        `${semanticAddressKey(continuation.origin)} lost its declared Midshop contract source`,
+      );
+    }
+    const parentHistory = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(parentOrigin),
+    );
+    // An authored later Midshop may be retained beyond an incomplete or
+    // invalid prefix. Its declaration remains structurally valid, but its
+    // entry-time cap checkpoint is not yet assessable.
+    if (parentHistory?.entry === undefined) continue;
+    const priorEnteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
+      (appearance) => appearance.gameName === continuation.room.gameName,
+    ).length;
+    if (priorEnteredContractCount > declaration.maxEnteredThisRoute) {
+      findings.push(
+        finding('targetRoomUnavailable', continuation.origin, {
+          kind: 'zagreusContract',
+          sourceGameName: source.gameName,
+          contractRoomGameName: continuation.room.gameName,
+          priorEnteredContractCount,
+          maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
+          failedConditions: Object.freeze(['enteredContractCap']),
+        }),
+      );
+    }
+  }
 }
 
 function finding(
@@ -1329,8 +1425,80 @@ function normalPhysicalExitsForSource(
   );
 }
 
+interface AnomalyReplacementEligibility {
+  readonly selectedPossible: boolean;
+  readonly evidence: FindingEvidence;
+}
+
+/**
+ * An Anomaly occupies an otherwise ordinary G target, so ordinary candidate
+ * evaluation remains responsible for the remembered target declaration. This
+ * companion check owns only the source-side game rule that makes the
+ * replacement available. Keeping the two products separate prevents the
+ * foreign B map from accidentally entering G's ordinary candidate pool.
+ */
+function anomalyReplacementEligibility(
+  layout: BiomeLayout,
+  source: CanonicalGenerationSource,
+  target: CanonicalTarget,
+  before: HistoryStateView,
+): AnomalyReplacementEligibility | undefined {
+  const provenance = target.room.anomalyReplacement;
+  if (provenance === undefined) return undefined;
+  const descriptor =
+    layout.progression.kind === 'generated' ? layout.progression.anomalyReplacement : undefined;
+  if (descriptor === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${target.room.gameName} has Anomaly provenance outside a declared Anomaly host`,
+    );
+  }
+  if (
+    !descriptor.replacementRoomGameNames.includes(target.room.gameName) ||
+    !descriptor.replaceableTargetRoomGameNames.includes(provenance.replacedRoomGameName)
+  ) {
+    throw new BiomeRoomGenerationContractError(
+      `${target.room.gameName} does not match the declared Anomaly replacement matrix`,
+    );
+  }
+  const excludedEncounterKeys = source.encounterPhases
+    .map((phase) => phase.encounterKey)
+    .filter((key) => descriptor.source.excludedSourceEncounterGameNames.includes(key));
+  const priorEnteredReplacementCount = before.ledgers.roomAppearances.filter((appearance) =>
+    descriptor.replacementRoomGameNames.includes(appearance.gameName),
+  ).length;
+  const failedConditions: string[] = [];
+  if (before.ledgers.counters.biomeDepthCache < descriptor.source.minimumBiomeDepthCache) {
+    failedConditions.push('minimumBiomeDepthCache');
+  }
+  if (descriptor.source.excludedRoomGameNames.includes(source.gameName)) {
+    failedConditions.push('sourceRoomExcluded');
+  }
+  if (excludedEncounterKeys.length > 0) {
+    failedConditions.push('sourceEncounterExcluded');
+  }
+  if (priorEnteredReplacementCount > descriptor.source.maxEnteredReplacementsThisRoute) {
+    failedConditions.push('enteredReplacementCap');
+  }
+  return Object.freeze({
+    selectedPossible: failedConditions.length === 0,
+    evidence: Object.freeze({
+      kind: 'oceanusAnomaly',
+      rememberedTargetGameName: provenance.replacedRoomGameName,
+      replacementRoomGameName: target.room.gameName,
+      sourceGameName: source.gameName,
+      sourceBiomeDepthCache: before.ledgers.counters.biomeDepthCache,
+      minimumBiomeDepthCache: descriptor.source.minimumBiomeDepthCache,
+      excludedSourceEncounterKeys: Object.freeze(excludedEncounterKeys),
+      priorEnteredReplacementCount,
+      maximumEnteredReplacementsThisRoute: descriptor.source.maxEnteredReplacementsThisRoute,
+      failedConditions: Object.freeze(failedConditions),
+    }),
+  });
+}
+
 function evaluateTargetSlots(
   catalog: Catalog,
+  layout: BiomeLayout,
   pool: readonly RoomDeclaration[],
   source: CanonicalGenerationSource,
   sourceBeforeGeneration: HistoryStateView,
@@ -1370,9 +1538,28 @@ function evaluateTargetSlots(
       rewardHistory,
     );
     candidateContexts.set(targetKey, candidateContext);
-    const result = candidateContext.evaluateGameName(target.room.gameName);
+    const rememberedGameName =
+      target.room.anomalyReplacement?.replacedRoomGameName ?? target.room.gameName;
+    const result = candidateContext.evaluateGameName(rememberedGameName);
     pressure.push(result.pressure);
-    findings.push(...result.findings);
+    const anomaly = anomalyReplacementEligibility(layout, source, target, before);
+    if (anomaly?.selectedPossible !== false) {
+      findings.push(...result.findings);
+      return view.after;
+    }
+    // Preserve any ordinary support-empty diagnosis, but consolidate the
+    // normal target and Anomaly source failures at the target's one stable
+    // semantic owner.  A second generic unavailable finding would otherwise
+    // be deduplicated later and discard the source-side evidence.
+    findings.push(
+      ...result.findings.filter((findingEntry) => findingEntry.code !== 'targetRoomUnavailable'),
+    );
+    findings.push(
+      finding('targetRoomUnavailable', target.origin, {
+        ...selectedEvidence(result.pressure),
+        anomalyReplacement: anomaly.evidence,
+      }),
+    );
     return view.after;
   };
   let before = sourceBeforeGeneration;
@@ -1809,6 +1996,7 @@ export function evaluateBiomeRoomGenerationAssembly(
     }
     evaluateTargetSlots(
       catalog,
+      layout,
       stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
       source,
       sourceBeforeGeneration,
@@ -1824,6 +2012,8 @@ export function evaluateBiomeRoomGenerationAssembly(
     );
     ordinaryBatchIndex += 1;
   }
+
+  evaluateAdditionalContinuationEntries(catalog, snapshot, history, rooms, findings);
 
   const validation: GeneratedRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,

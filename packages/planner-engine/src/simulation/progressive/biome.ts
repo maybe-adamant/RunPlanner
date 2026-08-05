@@ -244,6 +244,11 @@ function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFindi
         (target) =>
           semanticAddressKey(target.origin) === semanticAddressKey(origin) ||
           ownsOccurrence(origin, target.room.occurrenceId),
+      ) ||
+      decision.additional.some(
+        (continuation) =>
+          semanticAddressKey(continuation.origin) === semanticAddressKey(origin) ||
+          ownsOccurrence(origin, continuation.room.occurrenceId),
       )
     );
   }
@@ -558,6 +563,7 @@ function exitFrontier(
     origin: decision.origin,
     parent: decision.parent,
     targets: Object.freeze([...targets]),
+    additional: decision.additional,
     ...(partialBatch === undefined ? {} : { partialBatch, batchState: partialBatch.batchState }),
     selectedExitKey: decision.selectedExitKey,
     selectedOrigin: decision.selectedOrigin,

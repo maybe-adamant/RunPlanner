@@ -51,6 +51,15 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.decision;
     case 'CreateTarget':
       return command.target;
+    case 'SwitchTargetToAnomaly':
+      return command.target;
+    case 'ReplaceAnomalyMap':
+    case 'ReplaceAnomalySuccess':
+    case 'RevertAnomaly':
+      return command.occurrence;
+    case 'AddZagreusContract':
+    case 'RemoveZagreusContract':
+      return command.additional;
     case 'RemoveHubDecision':
       return command.hub;
     case 'OpenHubSlot':

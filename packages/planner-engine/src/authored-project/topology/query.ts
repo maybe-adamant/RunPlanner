@@ -8,6 +8,7 @@ import type {
 } from '../../catalog-schema';
 import type { TargetAddress } from '../addresses';
 import type {
+  AdditionalExit,
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
@@ -16,7 +17,7 @@ import type {
   OccurrenceId,
 } from '../model';
 
-/** The selected-spine queries need no occurrence-local state. */
+/** The selected-spine queries need no room-local authored state. */
 export type SelectedSpineTopology = Pick<BiomeTopology, 'startOccurrenceId' | 'decisions'>;
 
 /**
@@ -97,6 +98,33 @@ function physicalExit(
 }
 
 /**
+ * The two currently supported foreign rooms each own exactly one automatic
+ * return. This deliberately recognizes their closed authored templates, not
+ * every declaration that happens to use an automatic exit behavior. Callers
+ * must still establish the room's Anomaly/additional-exit structural owner.
+ */
+export function automaticHostContinuationExitForForeignRoom(
+  room: RoomDeclaration,
+): DeclaredPhysicalExit | undefined {
+  if (
+    room.mode.kind !== 'authored' ||
+    (room.mode.templateKey !== 'Anomaly' && room.mode.templateKey !== 'ContractBoss')
+  ) {
+    return undefined;
+  }
+  const exit = room.exits[0];
+  if (
+    room.exits.length !== 1 ||
+    exit === undefined ||
+    exit.index !== 1 ||
+    exit.behavior.kind !== 'automaticHostContinuation'
+  ) {
+    return undefined;
+  }
+  return physicalExit('normal', 'exit1', exit);
+}
+
+/**
  * Resolves declared physical exits from a source room already known by the
  * caller. The codec uses this without reconstructing an N-specific key from
  * raw topology; the topology wrapper below performs the room lookup for
@@ -115,7 +143,11 @@ export function declaredPhysicalExitsForSourceRoom(
     const completed = layout.progression.completedExit;
     return Object.freeze([physicalExit('completedHub', completed.exitKey, completed.physicalExit)]);
   }
-  if (sourceRoom === undefined || sourceRoom.roomSetKey !== layout.biomeKey) return undefined;
+  if (sourceRoom === undefined) return undefined;
+  if (sourceRoom.roomSetKey !== layout.biomeKey) {
+    const automatic = automaticHostContinuationExitForForeignRoom(sourceRoom);
+    return automatic === undefined ? undefined : Object.freeze([automatic]);
+  }
   if (layout.progression.kind === 'hub') {
     // The current bounded Hub data has one normal entry decision. Every later
     // occurrence source is the declaration-owned terminal envelope, which has
@@ -364,6 +396,31 @@ export function selectedExitTarget(decision: ExitDecision): ExitTargetReference 
   return decision.normal.targets.find((target) => target.exitKey === selected);
 }
 
+/** Resolves an explicitly selected sibling continuation without normalizing it. */
+export function selectedAdditionalExit(decision: ExitDecision): AdditionalExit | undefined {
+  const selection = decision.selection;
+  if (selection.kind !== 'additional') return undefined;
+  return decision.additional.find((exit) => exit.key === selection.additionalExitKey);
+}
+
+export type SelectedExitContinuation =
+  | { readonly kind: 'normal'; readonly target: ExitTargetReference }
+  | { readonly kind: 'additional'; readonly exit: AdditionalExit };
+
+/**
+ * Resolves the selected topology edge across both normal and closed
+ * additional continuations. Consumers that specifically need a normal door
+ * should keep using `selectedExitTarget`.
+ */
+export function selectedExitContinuation(
+  decision: ExitDecision,
+): SelectedExitContinuation | undefined {
+  const target = selectedExitTarget(decision);
+  if (target !== undefined) return Object.freeze({ kind: 'normal', target });
+  const exit = selectedAdditionalExit(decision);
+  return exit === undefined ? undefined : Object.freeze({ kind: 'additional', exit });
+}
+
 /**
  * Decision-array order is serialization detail. Generated staged progression
  * instead advances through the selected ordinary-batch spine from the start.
@@ -387,10 +444,13 @@ export function selectedOrdinaryBatchIndex(
       occurrenceId: currentOccurrenceId,
     });
     if (decision === undefined) return undefined;
-    const target = selectedExitTarget(decision);
-    if (target === undefined) return undefined;
+    const continuation = selectedExitContinuation(decision);
+    if (continuation === undefined) return undefined;
     batchIndex += 1;
-    currentOccurrenceId = target.occurrenceId;
+    currentOccurrenceId =
+      continuation.kind === 'normal'
+        ? continuation.target.occurrenceId
+        : continuation.exit.occurrenceId;
   }
   return undefined;
 }
@@ -482,6 +542,7 @@ export function isExactTerminalTakeoverEnvelope(decision: ExitDecision): boolean
     decision.normal.rewardStore.kind === 'none' &&
     decision.normal.batchState === null &&
     decision.normal.targets.length === 0 &&
+    decision.additional.length === 0 &&
     decision.selection.kind === 'unresolved'
   );
 }

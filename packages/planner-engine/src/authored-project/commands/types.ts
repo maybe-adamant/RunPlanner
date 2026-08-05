@@ -1,5 +1,6 @@
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
+  AdditionalExitAddress,
   BatchRewardStoreAddress,
   BiomeAddress,
   BiomeFieldAddress,
@@ -108,6 +109,40 @@ export type RoomReplacementCommand = {
   readonly gameName: string;
 };
 
+/**
+ * The two currently supported route detours have closed, declaration-owned
+ * command shapes. They intentionally do not generalize normal target
+ * replacement or additional exits into an ambient feature family.
+ */
+export type RouteDetourCommand =
+  | {
+      readonly kind: 'SwitchTargetToAnomaly';
+      readonly target: TargetAddress;
+    }
+  | {
+      readonly kind: 'ReplaceAnomalyMap';
+      readonly occurrence: OccurrenceAddress;
+      readonly gameName: string;
+    }
+  | {
+      readonly kind: 'ReplaceAnomalySuccess';
+      readonly occurrence: OccurrenceAddress;
+      readonly success: boolean;
+    }
+  | {
+      readonly kind: 'RevertAnomaly';
+      readonly occurrence: OccurrenceAddress;
+    }
+  | {
+      readonly kind: 'AddZagreusContract';
+      readonly additional: AdditionalExitAddress;
+      readonly occurrenceId: OccurrenceId;
+    }
+  | {
+      readonly kind: 'RemoveZagreusContract';
+      readonly additional: AdditionalExitAddress;
+    };
+
 export type IncomingRewardCommand = {
   readonly kind: 'ReplaceIncomingReward';
   readonly reward: IncomingRewardAddress;
@@ -191,7 +226,11 @@ export type OccurrenceLeafCommand =
   | EncounterOccurrenceCommand;
 
 export type ProjectCommand =
-  ProjectStateCommand | TopologyCommand | RoomReplacementCommand | OccurrenceLeafCommand;
+  | ProjectStateCommand
+  | TopologyCommand
+  | RoomReplacementCommand
+  | RouteDetourCommand
+  | OccurrenceLeafCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

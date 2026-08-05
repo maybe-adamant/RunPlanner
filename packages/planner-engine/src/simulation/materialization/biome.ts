@@ -6,6 +6,7 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import {
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -34,9 +35,11 @@ import {
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   possibleGeneratedNormalExitKeys,
+  selectedAdditionalExit,
+  selectedExitContinuation,
   selectedExitKey,
-  selectedExitTarget,
 } from '../../authored-project/topology/query';
+import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import type { CompleteBiomeCompletenessResult } from '../completeness';
 import { materializeCompletionRooms } from './completion';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
@@ -44,6 +47,7 @@ import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBatchRewardStore,
   CanonicalBatchState,
@@ -53,6 +57,7 @@ import type {
   CanonicalDecisionParent,
   CanonicalPhysicalExit,
   CanonicalRoomReference,
+  CanonicalSelectedBatchContinuation,
   CanonicalTarget,
   MaterializedBiomePrefix,
   MaterializedExitDecisionFrontier,
@@ -100,7 +105,18 @@ function requireOccurrence(
   return occurrence;
 }
 
-function requireRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclaration {
+function requireRoom(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  occurrence: RoomOccurrence,
+): RoomDeclaration {
+  const room = legalTopologyOccurrenceRoom(catalog, layout, topology, occurrence.occurrenceId);
+  if (room === undefined) fail(`trusted topology lost legal room ${occurrence.gameName}`);
+  return room;
+}
+
+function requireCatalogRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclaration {
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) fail(`trusted topology lost room ${occurrence.gameName}`);
   return room;
@@ -243,7 +259,7 @@ export function finalSharedBatchStoreKey(
 ): string | undefined {
   let storeKey = initialStoreKey;
   for (const target of targets) {
-    const room = requireRoom(catalog, requireOccurrence(occurrences, target.occurrenceId));
+    const room = requireCatalogRoom(catalog, requireOccurrence(occurrences, target.occurrenceId));
     if (room.forcedRewardStoreKey !== undefined) storeKey = room.forcedRewardStoreKey;
   }
   return storeKey;
@@ -339,6 +355,8 @@ function prebossRole(room: RoomDeclaration, targetIndex: number): AuthoredRoomRo
 function materializeTarget(
   catalog: Catalog,
   biome: BiomeAddress,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   source: ExitDecisionSourceAddress,
   target: ExitTargetReference,
@@ -350,7 +368,7 @@ function materializeTarget(
   physicalExit: CanonicalPhysicalExit,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
-  const room = requireRoom(catalog, occurrence);
+  const room = requireRoom(catalog, layout, topology, occurrence);
   const picked = target.exitKey === selectedExitKey;
   return Object.freeze({
     origin: createTargetAddress(biome, source, target.exitKey),
@@ -371,10 +389,73 @@ function materializeTarget(
   });
 }
 
+/**
+ * The only supported sibling continuation is the Midshop's declared Zagreus
+ * contract. It stays outside the normal target set so its entry-time creation
+ * cannot be mistaken for a physical normal-door generation.
+ */
+function materializeAdditionalContinuations(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  decision: ExitDecision,
+  source: ExitDecisionSourceAddress,
+): readonly CanonicalAdditionalContinuation[] {
+  if (decision.additional.length === 0) return Object.freeze([]);
+  if (decision.source.kind !== 'occurrence') {
+    fail('only an authored occurrence may own an additional continuation');
+  }
+  const sourceRoom = requireRoom(
+    catalog,
+    layout,
+    topology,
+    requireOccurrence(occurrences, decision.source.occurrenceId),
+  );
+  const selected = selectedAdditionalExit(decision)?.key;
+  return Object.freeze(
+    decision.additional.map((additional) => {
+      if (additional.kind !== 'zagreusContract') {
+        fail(`unsupported additional continuation ${additional.kind}`);
+      }
+      const declaration = sourceRoom.additionalExits.find(
+        (candidate) => candidate.kind === 'zagreusContract' && candidate.key === additional.key,
+      );
+      if (declaration === undefined) {
+        fail(`${sourceRoom.gameName} did not declare ${additional.key}`);
+      }
+      const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
+      const room = requireRoom(catalog, layout, topology, occurrence);
+      if (
+        room.gameName !== declaration.targetRoomGameName ||
+        room.mode.kind !== 'authored' ||
+        room.mode.templateKey !== 'ContractBoss'
+      ) {
+        fail(`${additional.key} has the wrong declared contract room`);
+      }
+      return Object.freeze({
+        origin: createAdditionalExitAddress(biome, source, additional.key),
+        key: additional.key,
+        picked: selected === additional.key,
+        room: materializeAuthoredRoom({
+          catalog,
+          biome,
+          room,
+          occurrence,
+          role: 'ordinary',
+          entered: selected === additional.key,
+        }),
+      });
+    }),
+  );
+}
+
 function materializeBatch(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: BiomeLayout,
+  topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
   parent: CanonicalDecisionParent,
@@ -415,7 +496,12 @@ function materializeBatch(
   const rewards = new Map<string, 'goal' | 'nonGoal' | undefined>();
   if (batchState.kind === 'clockwork') {
     for (const target of ordered) {
-      const room = requireRoom(catalog, requireOccurrence(occurrences, target.occurrenceId));
+      const room = requireRoom(
+        catalog,
+        layout,
+        topology,
+        requireOccurrence(occurrences, target.occurrenceId),
+      );
       const reward = clockworkReward(room, batchState, goalAlreadyOffered);
       if (reward === 'goal') goalAlreadyOffered = true;
       rewards.set(target.exitKey, reward);
@@ -432,6 +518,8 @@ function materializeBatch(
       return materializeTarget(
         catalog,
         biome,
+        layout,
+        topology,
         occurrences,
         source,
         target,
@@ -444,8 +532,22 @@ function materializeBatch(
       );
     }),
   );
+  const additional = materializeAdditionalContinuations(
+    catalog,
+    biome,
+    layout,
+    topology,
+    occurrences,
+    decision,
+    source,
+  );
   const selectedTarget = targets.find((target) => target.picked);
-  if (selectedTarget === undefined && options.allowUnselected !== true) {
+  const selectedAdditional = additional.find((continuation) => continuation.picked);
+  if (
+    selectedTarget === undefined &&
+    selectedAdditional === undefined &&
+    options.allowUnselected !== true
+  ) {
     fail(`complete ${layout.biomeKey} batch lost selected target`);
   }
   const nextClockwork =
@@ -464,11 +566,33 @@ function materializeBatch(
         : { resolvedSharedRewardStoreKey: sharedBatchStoreKey }),
       batchState,
       targets,
+      additional,
       selectedExitKey: selected ?? null,
       selectedOrigin: createExitSelectionAddress(biome, source),
     }),
     nextClockwork,
   });
+}
+
+/**
+ * A canonical decision has exactly one selected continuation. Keeping this
+ * resolver beside materialization prevents downstream chronology from
+ * rebuilding the normal-versus-additional selection policy from UI-shaped
+ * fields.
+ */
+export function selectedBatchContinuation(
+  batch: CanonicalBatch,
+): CanonicalSelectedBatchContinuation | undefined {
+  const normal = batch.targets.filter((target) => target.picked);
+  const additional = batch.additional.filter((continuation) => continuation.picked);
+  if (normal.length + additional.length === 0) return undefined;
+  if (normal.length + additional.length !== 1) {
+    fail(`${batch.origin.source.kind} batch has multiple selected continuations`);
+  }
+  const target = normal[0];
+  return target === undefined
+    ? Object.freeze({ kind: 'additional', continuation: additional[0]! })
+    : Object.freeze({ kind: 'normal', target });
 }
 
 function hubDecisionForSource(
@@ -498,9 +622,10 @@ function materializeStart(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: BiomeLayout,
+  topology: BiomeTopology,
   occurrence: RoomOccurrence,
 ): CanonicalAuthoredRoom {
-  const room = requireRoom(catalog, occurrence);
+  const room = requireRoom(catalog, layout, topology, occurrence);
   return materializeAuthoredRoom({
     catalog,
     biome,
@@ -572,6 +697,7 @@ function decisionFrontier(
   parent: CanonicalDecisionParent,
   partial?: CanonicalBatch,
   hubContinuation?: MaterializedHubContinuationFrontier,
+  additional: readonly CanonicalAdditionalContinuation[] = Object.freeze([]),
 ): MaterializedExitDecisionFrontier {
   const address = sourceAddress(source);
   const pickedExitKey = decision === undefined ? null : selectedExitKey(decision);
@@ -583,6 +709,7 @@ function decisionFrontier(
     origin: createExitDecisionAddress(biome, address),
     parent,
     targets: partial?.targets ?? Object.freeze([]),
+    additional,
     ...(partial === undefined ? {} : { partialBatch: partial, batchState: partial.batchState }),
     selectedExitKey: pickedExitKey ?? null,
     selectedOrigin: createExitSelectionAddress(biome, address),
@@ -612,15 +739,20 @@ function isCompleteBatch(
     takeover ||
     normal.rewardStore.kind !== 'authoredBaseStore' ||
     normal.rewardStore.baseRewardStoreKey !== null;
-  const picked = selectedExitTarget(decision);
-  if (decision.selection.kind === 'derived' && picked === undefined) {
+  const selected = selectedExitContinuation(decision);
+  if (decision.selection.kind === 'derived' && selected?.kind !== 'normal') {
     fail('complete width-one batch has no target');
   }
-  const pickedOccurrence = picked === undefined ? undefined : occurrences.get(picked.occurrenceId);
+  const pickedOccurrence =
+    selected?.kind === 'normal'
+      ? occurrences.get(selected.target.occurrenceId)
+      : selected?.kind === 'additional'
+        ? occurrences.get(selected.exit.occurrenceId)
+        : undefined;
   return (
     allPhysicalTargets &&
     hasStore &&
-    picked !== undefined &&
+    selected !== undefined &&
     !(pickedOccurrence?.state.kind === 'shop' && pickedOccurrence.state.shop === undefined)
   );
 }
@@ -669,6 +801,7 @@ function materializeContiguousBatchPrefix(
     catalog,
     biome,
     layout,
+    topology,
     occurrences,
     partialDecision,
     parent,
@@ -695,7 +828,7 @@ export function materializeBiomePrefix(
   if (topology === null) return prefix(biome, biomeState, undefined, []);
   const occurrences = occurrenceMap(topology);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, startOccurrence);
+  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence);
   const decisions: CanonicalDecision[] = [];
   let current = entryRoom;
   let clockwork =
@@ -710,7 +843,12 @@ export function materializeBiomePrefix(
       occurrenceId: current.occurrenceId,
     });
     const decision = exitDecisionForSource(topology, source);
-    const sourceRoom = requireRoom(catalog, requireOccurrence(occurrences, current.occurrenceId));
+    const sourceRoom = requireRoom(
+      catalog,
+      layout,
+      topology,
+      requireOccurrence(occurrences, current.occurrenceId),
+    );
     if (decision === undefined) {
       const authoredHub =
         layout.progression.kind === 'hub'
@@ -779,6 +917,7 @@ export function materializeBiomePrefix(
           catalog,
           biome,
           layout,
+          topology,
           occurrences,
           handoff,
           parent,
@@ -811,18 +950,38 @@ export function materializeBiomePrefix(
         current,
         clockwork,
       );
+      const additional =
+        partial?.additional ??
+        materializeAdditionalContinuations(
+          catalog,
+          biome,
+          layout,
+          topology,
+          occurrences,
+          decision,
+          sourceAddress(source),
+        );
       return prefix(
         biome,
         biomeState,
         entryRoom,
         decisions,
-        decisionFrontier(biome, decision, source, roomReference(current), partial, hubContinuation),
+        decisionFrontier(
+          biome,
+          decision,
+          source,
+          roomReference(current),
+          partial,
+          hubContinuation,
+          additional,
+        ),
       );
     }
     const materialized = materializeBatch(
       catalog,
       biome,
       layout,
+      topology,
       occurrences,
       decision,
       roomReference(current),
@@ -832,11 +991,14 @@ export function materializeBiomePrefix(
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
-    const selected = materialized.batch.targets.find((target) => target.picked);
-    if (selected === undefined || selected.continuation === 'startsCompletion') {
+    const selected = selectedBatchContinuation(materialized.batch);
+    if (
+      selected === undefined ||
+      (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion')
+    ) {
       return prefix(biome, biomeState, entryRoom, decisions);
     }
-    current = selected.room;
+    current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
   }
   fail(`${layout.biomeKey} prefix selected spine contains a cycle`);
 }
@@ -852,7 +1014,7 @@ export function materializeBiome(
   const occurrences = occurrenceMap(topology);
   const biomeState = canonicalBiomeState(layout.biomeKey, completeness.biomeState);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, startOccurrence);
+  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence);
   const decisions: CanonicalDecision[] = [];
   let currentRoom = entryRoom;
   let clockwork =
@@ -888,6 +1050,7 @@ export function materializeBiome(
           catalog,
           biome,
           layout,
+          topology,
           occurrences,
           handoff,
           Object.freeze({ origin: hub.room.origin, gameName: hub.room.gameName }),
@@ -905,6 +1068,7 @@ export function materializeBiome(
       catalog,
       biome,
       layout,
+      topology,
       occurrences,
       decision,
       roomReference(currentRoom),
@@ -914,13 +1078,13 @@ export function materializeBiome(
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
-    const selected = materialized.batch.targets.find((target) => target.picked);
+    const selected = selectedBatchContinuation(materialized.batch);
     if (selected === undefined) fail(`${currentRoom.gameName} lost selected target`);
-    if (selected.continuation === 'startsCompletion') {
-      enteredPreboss = selected.room;
+    if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
+      enteredPreboss = selected.target.room;
       break;
     }
-    currentRoom = selected.room;
+    currentRoom = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
   }
   if (enteredPreboss === undefined) fail(`${layout.biomeKey} has no selected Preboss`);
   const completionRooms = materializeCompletionRooms({

@@ -528,6 +528,7 @@ function roomLocalForOccurrence(
       });
     }
     case 'counted':
+    case 'anomaly':
     case 'freeReward': {
       const control = requireProjectedRewardControl(controls, incoming, 'countedReward');
       return Object.freeze({

@@ -11,6 +11,7 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../../authored-project/model';
+import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel';
 import { finalSharedBatchStoreKey, orderedTargets } from '../materialization/biome';
@@ -53,11 +54,17 @@ function occurrenceFor(plan: AuthoredBiomePlan, owner: CountedRewardOwnerAddress
 
 function declarationFor(
   catalog: Catalog,
+  plan: AuthoredBiomePlan,
   occurrence: RoomOccurrence,
   owner: CountedRewardOwnerAddress,
 ): RoomDeclaration {
-  const declaration = catalog.rooms.byKey[occurrence.gameName];
-  if (declaration === undefined || declaration.roomSetKey !== owner.biomeKey) {
+  const layout = catalog.biomeLayouts.byKey[owner.biomeKey];
+  const topology = plan.topology;
+  const declaration =
+    layout === undefined || topology === null
+      ? undefined
+      : legalTopologyOccurrenceRoom(catalog, layout, topology, occurrence.occurrenceId);
+  if (declaration === undefined) {
     fail(`reward producer ${semanticAddressKey(owner)} has no room declaration`);
   }
   return declaration;
@@ -86,7 +93,7 @@ function sourceOfferPointStoreKey(
       if (source === undefined) {
         fail(`reward producer ${semanticAddressKey(owner)} lost its offer-point source`);
       }
-      const declaration = declarationFor(catalog, source, owner);
+      const declaration = declarationFor(catalog, plan, source, owner);
       const wheel = materializeShipCombatState(
         catalog,
         createBiomeAddress(owner.routeKey, owner.biomeKey),
@@ -167,7 +174,7 @@ function authoredStoreKey(
 ): string | undefined {
   const plan = planFor(project, owner);
   const occurrence = occurrenceFor(plan, owner);
-  const declaration = declarationFor(catalog, occurrence, owner);
+  const declaration = declarationFor(catalog, plan, occurrence, owner);
   switch (owner.kind) {
     case 'incomingReward':
       return incomingStoreKey(catalog, plan, occurrence, declaration, owner);

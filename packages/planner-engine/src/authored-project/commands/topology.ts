@@ -26,6 +26,7 @@ import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import {
   admitsTerminalTakeoverEnvelope,
+  automaticHostContinuationExitForForeignRoom,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
@@ -34,6 +35,7 @@ import {
   normalDecisionProgressionForLayout,
   ordinaryBatchCreationEligibility,
   ordinaryTargetAuthoringEligibility,
+  selectedExitContinuation,
   selectedExitKey,
 } from '../topology/query';
 import {
@@ -45,6 +47,7 @@ import {
   type LocatedBiome,
 } from './contract';
 import type { TopologyCommand } from './types';
+import { reconcileNormalTargetEntryStates } from './selection-state';
 
 function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSourceAddress): boolean {
   if (left.kind === 'occurrence' && right.kind === 'occurrence') {
@@ -85,12 +88,17 @@ function sourceRoom(
   command: TopologyCommand,
 ): RoomDeclaration | undefined {
   if (source.kind === 'hubDecision') return undefined;
-  return requireRoom(
-    catalog,
-    requireOccurrence(located.plan, source.occurrenceId, command).gameName,
-    located.layout.biomeKey,
-    command,
-  );
+  const gameName = requireOccurrence(located.plan, source.occurrenceId, command).gameName;
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined) failCommand(command, `unknown room ${gameName}`);
+  if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
+  if (
+    room.roomSetKey !== located.layout.biomeKey &&
+    automaticHostContinuationExitForForeignRoom(room) === undefined
+  ) {
+    failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
+  }
+  return room;
 }
 
 function initialRewardStore(
@@ -354,6 +362,7 @@ function createBatch(
       batchState,
       targets: Object.freeze([]),
     }),
+    additional: Object.freeze([]),
     selection: Object.freeze({ kind: 'unresolved' }),
   });
   return updateTopology(document, located, appendDecision(topology, decision));
@@ -457,9 +466,9 @@ function createTarget(
     allowed,
   );
   const selection: ExitSelection =
-    targets.length === 1
+    targets.length === 1 && decision.additional.length === 0
       ? Object.freeze({ kind: 'derived' })
-      : decision.selection.kind === 'normal'
+      : decision.selection.kind === 'normal' || decision.selection.kind === 'additional'
         ? decision.selection
         : Object.freeze({ kind: 'unresolved' });
   const nextDecision: ExitDecision = Object.freeze({
@@ -617,11 +626,13 @@ function replaceTakeoverBatch(
     (occurrence) => !removed.has(occurrence.occurrenceId),
   );
   const selection: ExitSelection =
-    ids.length === 1
+    ids.length === 1 && (existing?.additional.length ?? 0) === 0
       ? Object.freeze({ kind: 'derived' })
       : existing?.selection.kind === 'normal' && exitKeys.includes(existing.selection.exitKey)
         ? existing.selection
-        : Object.freeze({ kind: 'unresolved' });
+        : existing?.selection.kind === 'additional'
+          ? existing.selection
+          : Object.freeze({ kind: 'unresolved' });
   const targets = Object.freeze(
     exitKeys.map((exitKey, index) =>
       Object.freeze({ exitKey, occurrenceId: ids[index] as OccurrenceId }),
@@ -652,6 +663,7 @@ function replaceTakeoverBatch(
       batchState: null,
       targets,
     }),
+    additional: existing?.additional ?? Object.freeze([]),
     selection,
   });
   const selectedTakeoverExitKey = selectedExitKey(decision);
@@ -713,60 +725,52 @@ function setExitSelection(
     failCommand(command, 'normal-door batch does not exist');
   const batch = decision.normal;
   const keys = batch.targets.map((target) => target.exitKey);
-  if (command.value.kind === 'derived' && keys.length !== 1)
+  const hasAdditional = decision.additional.length > 0;
+  if (command.value.kind === 'derived' && (keys.length !== 1 || hasAdditional))
     failCommand(command, 'derived selection requires one normal exit');
-  if (command.value.kind === 'unresolved' && keys.length === 1)
+  if (command.value.kind === 'unresolved' && keys.length === 1 && !hasAdditional)
     failCommand(command, 'width-one selection is declaration-derived');
-  if (command.value.kind === 'normal' && keys.length === 1)
+  if (command.value.kind === 'normal' && keys.length === 1 && !hasAdditional)
     failCommand(command, 'width-one selection is declaration-derived');
   if (command.value.kind === 'normal' && !keys.includes(command.value.exitKey))
     failCommand(command, `${command.value.exitKey} is not a target exit`);
+  if (command.value.kind === 'additional') {
+    const { additionalExitKey } = command.value;
+    if (!decision.additional.some((exit) => exit.key === additionalExitKey)) {
+      failCommand(command, `${additionalExitKey} is not an authored additional exit`);
+    }
+  }
   const nextDecision = Object.freeze({ ...decision, selection: command.value });
-  const nextSelectedExitKey = selectedExitKey(nextDecision);
-  const previouslySelectedExitKey = selectedExitKey(decision);
-  if (previouslySelectedExitKey !== nextSelectedExitKey) {
-    const previousTarget = batch.targets.find(
-      (target) => target.exitKey === previouslySelectedExitKey,
-    );
+  const selectedOccurrenceId = (continuation: ReturnType<typeof selectedExitContinuation>) =>
+    continuation?.kind === 'normal'
+      ? continuation.target.occurrenceId
+      : continuation?.kind === 'additional'
+        ? continuation.exit.occurrenceId
+        : undefined;
+  const nextSelectedOccurrenceId = selectedOccurrenceId(selectedExitContinuation(nextDecision));
+  const previousSelectedOccurrenceId = selectedOccurrenceId(selectedExitContinuation(decision));
+  if (previousSelectedOccurrenceId !== nextSelectedOccurrenceId) {
     if (
-      previousTarget !== undefined &&
+      previousSelectedOccurrenceId !== undefined &&
       topology.decisions.some(
         (candidate) =>
-          candidate.kind === 'exit' &&
           candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === previousTarget.occurrenceId,
+          candidate.source.occurrenceId === previousSelectedOccurrenceId,
       )
     ) {
       failCommand(command, 'remove the prior selected target’s downstream decision first');
     }
   }
-  const occurrences = topology.occurrences.map((occurrence) => {
-    const targetIndex = batch.targets.findIndex(
-      (target) => target.occurrenceId === occurrence.occurrenceId,
-    );
-    if (targetIndex < 0) return occurrence;
-    const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-    if (room.kind !== 'Preboss' && room.kind !== 'Shop') return occurrence;
-    const role: RoomOccurrenceRole =
-      room.kind === 'Preboss' && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
-        ? expectedPrebossRole(room, targetIndex, command)
-        : room.kind === 'Preboss'
-          ? 'prebossShop'
-          : 'ordinary';
-    if (role !== 'prebossShop' && room.kind !== 'Shop') return occurrence;
-    const entryActive = batch.targets[targetIndex]?.exitKey === nextSelectedExitKey;
-    const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
-    if (hasInventory === entryActive) return occurrence;
-    return defaultOccurrence(catalog, room, occurrence.occurrenceId, role, entryActive);
-  });
-  return updateTopology(
-    document,
+  const nextSelectedExitKey = selectedExitKey(nextDecision);
+  const withSelectionState = reconcileNormalTargetEntryStates(
+    catalog,
     located,
-    replaceDecision(
-      Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) }),
-      nextDecision,
-    ),
+    topology,
+    nextDecision,
+    nextSelectedExitKey,
+    command,
   );
+  return updateTopology(document, located, replaceDecision(withSelectionState, nextDecision));
 }
 
 function replaceBatchRewardStore(
@@ -925,12 +929,14 @@ function reconcileBatchExitCapacity(
   const withoutDownstream = removeDownstreamDecisions(topology, removed);
   let selection: ExitSelection = Object.freeze({ kind: 'unresolved' });
   const existingSelection = decision.selection;
-  if (retained.length === 1) {
+  if (retained.length === 1 && decision.additional.length === 0) {
     selection = Object.freeze({ kind: 'derived' });
   } else if (
     existingSelection.kind === 'normal' &&
     retained.some((target) => target.exitKey === existingSelection.exitKey)
   ) {
+    selection = existingSelection;
+  } else if (existingSelection.kind === 'additional') {
     selection = existingSelection;
   }
   return updateTopology(
@@ -964,6 +970,7 @@ function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
       batchState: null,
       targets: Object.freeze([]),
     }),
+    additional: Object.freeze([]),
     selection: Object.freeze({ kind: 'unresolved' }),
   });
 }

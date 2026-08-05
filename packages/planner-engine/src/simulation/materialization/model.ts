@@ -1,5 +1,6 @@
 import type { RequiredRoomObjectDescriptor, RoomCounterEffects } from '../../catalog-schema';
 import type {
+  AdditionalExitAddress,
   BatchRewardStoreAddress,
   CompletionRoomAddress,
   ExitDecisionAddress,
@@ -31,6 +32,12 @@ export interface CanonicalResolvedIncomingReward {
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly resolvedStoreKey?: string;
+  /**
+   * An Anomaly always creates and consumes its retained offer. Its authored
+   * outcome alone decides whether the ordinary reward producer reaches an
+   * acquisition point during the entered lifecycle.
+   */
+  readonly acquisitionEnabled?: boolean;
 }
 
 export interface CanonicalShopOffer {
@@ -79,6 +86,12 @@ export interface CanonicalAuthoredRoom {
   readonly origin: OccurrenceAddress;
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
+  /**
+   * A foreign Anomaly map still evaluates the normal G target it displaced.
+   * Keep that authored provenance on the canonical room rather than asking a
+   * later simulation stage to rediscover topology ownership from a game name.
+   */
+  readonly anomalyReplacement?: { readonly replacedRoomGameName: string };
   readonly encounters: RoomEncounterState;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
@@ -172,6 +185,24 @@ export interface CanonicalTarget {
   readonly room: CanonicalAuthoredRoom;
 }
 
+/**
+ * A closed, entry-time sibling continuation. It intentionally has its own
+ * semantic owner rather than borrowing a normal-door target address: the
+ * source still generates its complete normal batch at the later outgoing
+ * checkpoint, while this room is created when the entered source exposes the
+ * contract.
+ */
+export interface CanonicalAdditionalContinuation {
+  readonly origin: AdditionalExitAddress;
+  readonly key: 'zagreusContract';
+  readonly picked: boolean;
+  readonly room: CanonicalAuthoredRoom;
+}
+
+export type CanonicalSelectedBatchContinuation =
+  | { readonly kind: 'normal'; readonly target: CanonicalTarget }
+  | { readonly kind: 'additional'; readonly continuation: CanonicalAdditionalContinuation };
+
 export type CanonicalBatchRewardStore =
   | {
       readonly origin: BatchRewardStoreAddress;
@@ -207,6 +238,7 @@ export interface CanonicalBatch {
   readonly resolvedSharedRewardStoreKey?: string;
   readonly batchState: CanonicalBatchState;
   readonly targets: readonly CanonicalTarget[];
+  readonly additional: readonly CanonicalAdditionalContinuation[];
   /**
    * A materialized prefix may have generated its physical doors before an
    * authored selection exists. Complete batches always carry a concrete key.
@@ -278,6 +310,13 @@ export interface MaterializedExitDecisionFrontier {
    * entered, so they remain on the decision frontier rather than the spine.
    */
   readonly targets: readonly CanonicalTarget[];
+  /**
+   * Entry-time sibling continuations belong to the decision even when its
+   * ordinary normal lane has not produced a contiguous target prefix.  The
+   * Midshop contract is created at room start, so hiding it behind a partial
+   * normal batch would incorrectly erase an already-authored room.
+   */
+  readonly additional: readonly CanonicalAdditionalContinuation[];
   /**
    * The partial normal batch that owns the generated target prefix. Keeping
    * its reward-store contract lets history and reward replay treat physical

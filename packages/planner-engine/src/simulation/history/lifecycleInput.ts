@@ -85,6 +85,9 @@ export function createRoomLifecycleInput(
           producer: {
             lifecycleProfileKey: incomingReward.producerLifecycleKey,
             offer: incomingReward.offer,
+            ...(incomingReward.acquisitionEnabled === undefined
+              ? {}
+              : { acquisitionEnabled: incomingReward.acquisitionEnabled }),
           },
         }),
     ...(storeKey === undefined ? {} : { enteredRewardStoreKey: storeKey }),

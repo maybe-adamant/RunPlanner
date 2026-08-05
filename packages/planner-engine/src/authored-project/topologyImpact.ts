@@ -24,7 +24,10 @@ function sourceKey(source: ExitDecisionSource): string {
 }
 
 function targetsForDecision(decision: ExitDecision): readonly OccurrenceId[] {
-  return decision.normal.targets.map((target) => target.occurrenceId);
+  return Object.freeze([
+    ...decision.normal.targets.map((target) => target.occurrenceId),
+    ...decision.additional.map((exit) => exit.occurrenceId),
+  ]);
 }
 
 function exitSourceIsRemoved(

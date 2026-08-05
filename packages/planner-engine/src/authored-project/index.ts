@@ -13,6 +13,7 @@ export {
   createBiomeAddress,
   createBiomeFieldAddress,
   createBatchRewardStoreAddress,
+  createAdditionalExitAddress,
   createCompletionRoomAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -40,6 +41,7 @@ export {
   type BiomeAddress,
   type BiomeFieldAddress,
   type BatchRewardStoreAddress,
+  type AdditionalExitAddress,
   type CompletionRoomAddress,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
@@ -76,6 +78,7 @@ export {
 } from './commands/dispatch';
 export {
   declaredPhysicalExits,
+  automaticHostContinuationExitForForeignRoom,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   hubTerminalTakeoverForSource,
@@ -83,11 +86,15 @@ export {
   normalDecisionProgressionForLayout,
   ordinaryTargetAuthoringEligibility,
   selectedExitKey,
+  selectedAdditionalExit,
+  selectedExitContinuation,
   selectedExitTarget,
   type DeclaredPhysicalExit,
   type FixedWidthOneTakeoverTransition,
   type OrdinaryTargetAuthoringEligibility,
+  type SelectedExitContinuation,
 } from './topology/query';
+export { legalTopologyOccurrenceRoom } from './topology/room-ownership';
 export {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
@@ -114,6 +121,9 @@ export {
   type AuthoredRoomState,
   type AuthoredRoutePlan,
   type AuthoredBatchState,
+  type AdditionalExit,
+  type AnomalyReplacementProvenance,
+  type AnomalyRoomState,
   type BatchRewardStoreState,
   type FieldsCageBatchState,
   type FieldsCombatState,
@@ -128,6 +138,7 @@ export {
   type ExitDecisionSource,
   type ExitSelection,
   type ExitTargetReference,
+  type ZagreusContractAdditionalExit,
   type HubDecision,
   type NextRoomDecision,
   type NormalDoorBatch,
