@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
@@ -10,7 +11,12 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectHistory,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createTargetAddress,
+  redoProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, gBiome, gProject } from '../support/configured-projects';
@@ -119,6 +125,33 @@ describe('authored-project route detour commands', () => {
         },
       },
     });
+    expect(() =>
+      applyProjectCommand(edited, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(gBiome, target),
+        value: { rewardType: 'InfernalContractBoon' },
+      }),
+    ).toThrow(/InfernalContractBoon is filtered from this room/);
+
+    const encoded = JSON.parse(encodeProjectDocument(switched)) as {
+      routes: Array<{
+        biomes: Array<{
+          topology?: {
+            occurrences: Array<{ occurrenceId: string; state: Record<string, unknown> }>;
+          };
+        }>;
+      }>;
+    };
+    const encodedAnomaly = encoded.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === target);
+    if (encodedAnomaly === undefined) throw new Error('encoded Anomaly occurrence is missing');
+    encodedAnomaly.state.offer = { rewardType: 'InfernalContractBoon' };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      /InfernalContractBoon is filtered from this room/,
+    );
+
     const remapped = applyProjectCommand(edited, catalog, {
       kind: 'ReplaceAnomalyMap',
       occurrence: createOccurrenceAddress(gBiome, target),
@@ -133,14 +166,23 @@ describe('authored-project route detour commands', () => {
       kind: 'RevertAnomaly',
       occurrence: createOccurrenceAddress(gBiome, target),
     });
-    expect(
-      biomeTopology(reverted, 'Underworld', 'G').occurrences.find(
-        (occurrence) => occurrence.occurrenceId === target,
-      ),
-    ).toMatchObject({
+    const revertedOccurrence = biomeTopology(reverted, 'Underworld', 'G').occurrences.find(
+      (occurrence) => occurrence.occurrenceId === target,
+    );
+    expect(revertedOccurrence).toMatchObject({
       occurrenceId: target,
       gameName: 'G_Combat01',
-      state: { kind: 'counted' },
+    });
+    expect(revertedOccurrence?.state).toEqual({
+      kind: 'counted',
+      offer: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'ApolloUpgrade',
+        },
+      },
     });
   });
 
@@ -202,10 +244,17 @@ describe('authored-project route detour commands', () => {
       gameName: 'F_Combat02',
     });
 
-    project = applyProjectCommand(project, catalog, {
+    const history = createProjectHistory(project);
+    const removed = applyProjectHistoryCommand(history, catalog, {
       kind: 'RemoveZagreusContract',
       additional,
     });
+    const restored = undoProjectHistory(removed);
+    const redone = redoProjectHistory(restored);
+    expect(restored.present).toEqual(project);
+    expect(redone.present).toEqual(removed.present);
+
+    project = removed.present;
     const topology = biomeTopology(project, 'Underworld', 'F');
     decision = topology.decisions.find(
       (candidate) =>

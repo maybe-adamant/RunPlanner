@@ -369,11 +369,11 @@ export function decodeRoomState(
   value: unknown,
   catalog: Catalog,
   room: RoomDeclaration,
-  context: Pick<RoomStateContext, 'role' | 'entryActive'>,
+  context: Pick<RoomStateContext, 'role' | 'entryActive' | 'rememberedCountedBinding'>,
   path: string,
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
-  const { role, entryActive } = context;
+  const { role, entryActive, rememberedCountedBinding } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
     case 'RewardlessCombat':
@@ -428,12 +428,15 @@ export function decodeRoomState(
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'anomaly', path);
       expectExactKeys(state, ['kind', 'offer', 'success'], path);
+      if (rememberedCountedBinding === undefined) {
+        failProjectDocument(path, 'Anomaly requires its remembered counted reward binding');
+      }
       return Object.freeze({
         kind: 'anomaly',
-        // The takeover can retain a normal G reward that Anomaly itself would
-        // not normally offer. Keep it authored so evaluation can report the
-        // incompatibility and the user can edit it deliberately.
-        offer: decodeOffer(state.offer, catalog, `${path}.offer`),
+        // The takeover can retain a normal G reward that this Anomaly map
+        // would not normally offer. The remembered G declaration remains the
+        // persisted offer domain; evaluation reports the Anomaly mismatch.
+        offer: decodeCountedOffer(state.offer, catalog, rememberedCountedBinding, `${path}.offer`),
         success: expectBoolean(state.success, `${path}.success`),
       });
     case 'Devotion':
