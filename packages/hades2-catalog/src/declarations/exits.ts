@@ -47,4 +47,14 @@ export const exitTypes = [
     compatibilityPolicyKey: 'Unconstrained',
     behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
   },
+  {
+    key: 'ChaosExitDoor',
+    compatibilityPolicyKey: 'Unconstrained',
+    behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+  },
+  {
+    key: 'ChaosReturnExitDoor',
+    compatibilityPolicyKey: 'Unconstrained',
+    behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+  },
 ] as const satisfies readonly RawExitTypeDeclaration[];

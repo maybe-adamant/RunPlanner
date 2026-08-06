@@ -441,6 +441,7 @@ export function decodeRoomState(
       });
     case 'Devotion':
     case 'ContractBoss':
+    case 'Chaos':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fixed', path);

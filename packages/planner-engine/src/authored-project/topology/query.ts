@@ -104,17 +104,19 @@ function physicalExit(
 }
 
 /**
- * The two currently supported route-detour rooms each own exactly one
- * automatic return. This deliberately recognizes their closed authored templates, not
- * every declaration that happens to use an automatic exit behavior. Callers
- * must still establish the room's Anomaly/additional-exit structural owner.
+ * Closed detour rooms own one declaration-defined host continuation. Anomaly
+ * and the Zagreus contract return automatically; Chaos returns through its
+ * visible ordinary door. This deliberately recognizes only the closed
+ * authored templates, not every declaration with a similar exit behavior.
  */
-export function automaticHostContinuationExitForDetourRoom(
+export function hostContinuationExitForDetourRoom(
   room: RoomDeclaration,
 ): DeclaredPhysicalExit | undefined {
   if (
     room.mode.kind !== 'authored' ||
-    (room.mode.templateKey !== 'Anomaly' && room.mode.templateKey !== 'ContractBoss')
+    (room.mode.templateKey !== 'Anomaly' &&
+      room.mode.templateKey !== 'ContractBoss' &&
+      room.mode.templateKey !== 'Chaos')
   ) {
     return undefined;
   }
@@ -123,7 +125,9 @@ export function automaticHostContinuationExitForDetourRoom(
     room.exits.length !== 1 ||
     exit === undefined ||
     exit.index !== 1 ||
-    exit.behavior.kind !== 'automaticHostContinuation'
+    (room.mode.templateKey === 'Chaos'
+      ? exit.behavior.kind !== 'playerSelected' || exit.behavior.rewardPreview !== 'visible'
+      : exit.behavior.kind !== 'automaticHostContinuation')
   ) {
     return undefined;
   }
@@ -151,8 +155,8 @@ export function declaredPhysicalExitsForSourceRoom(
   }
   if (sourceRoom === undefined) return undefined;
   if (sourceRoom.roomSetKey !== layout.biomeKey) {
-    const automatic = automaticHostContinuationExitForDetourRoom(sourceRoom);
-    return automatic === undefined ? undefined : Object.freeze([automatic]);
+    const continuation = hostContinuationExitForDetourRoom(sourceRoom);
+    return continuation === undefined ? undefined : Object.freeze([continuation]);
   }
   if (layout.progression.kind === 'hub') {
     // The current bounded Hub data has one normal entry decision. Every later

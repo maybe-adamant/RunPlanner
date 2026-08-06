@@ -1,12 +1,19 @@
 import type { RawRoomDeclaration } from '../types';
 
-export const fRooms = [
+const naturalChaosExit = {
+  kind: 'naturalChaos' as const,
+  key: 'naturalChaos' as const,
+  exitType: 'ChaosExitDoor',
+};
+
+const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Opening01',
     label: 'Opening 01',
     roomSetKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -35,6 +42,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -63,6 +71,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -91,6 +100,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -120,6 +130,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -151,6 +162,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -182,6 +194,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -213,6 +226,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -244,6 +258,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -270,6 +285,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -296,6 +312,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -327,6 +344,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -355,6 +373,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -383,6 +402,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -414,6 +434,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -445,6 +466,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -471,6 +493,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -502,6 +525,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -533,6 +557,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -564,6 +589,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -595,6 +621,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -626,6 +653,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -657,6 +685,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -688,6 +717,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -719,6 +749,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -861,6 +892,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -886,6 +918,7 @@ export const fRooms = [
     roomSetKey: 'F',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -923,6 +956,7 @@ export const fRooms = [
       { index: 2, type: 'ErebusExitDoor' },
     ],
     additionalExits: [
+      naturalChaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',
@@ -1030,3 +1064,5 @@ export const fRooms = [
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];
+
+export const fRooms = fRoomDeclarations;

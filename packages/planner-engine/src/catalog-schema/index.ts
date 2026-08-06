@@ -201,6 +201,7 @@ export type RoomKind =
 
 export type RoomTemplateKey =
   | 'Anomaly'
+  | 'Chaos'
   | 'ContractBoss'
   | 'Devotion'
   | 'EphyraCombat'
@@ -270,7 +271,17 @@ export interface ZagreusContractAdditionalExitDeclaration {
   readonly maxEnteredThisRoute: number;
 }
 
-export type AdditionalExitDeclaration = ZagreusContractAdditionalExitDeclaration;
+export interface NaturalChaosAdditionalExitDeclaration {
+  readonly kind: 'naturalChaos';
+  readonly key: 'naturalChaos';
+  readonly physicalExit: Omit<RoomExit, 'index'>;
+  /** A source-local prerequisite; host spacing remains evaluator-owned. */
+  readonly requirement?: RequirementExpression;
+}
+
+export type AdditionalExitDeclaration =
+  | ZagreusContractAdditionalExitDeclaration
+  | NaturalChaosAdditionalExitDeclaration;
 
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;
@@ -579,6 +590,12 @@ export interface BiomeLayout {
   };
   readonly start: StartDescriptor;
   readonly progression: ProgressionDescriptor;
+  /** Closed target domain and default for authored natural-Chaos exits in this host. */
+  readonly naturalChaos?: {
+    readonly roomGameNames: readonly [string, ...string[]];
+    readonly defaultRoomGameName: string;
+    readonly offerSpacingWindow: number;
+  };
   readonly completion: CompletionDescriptor;
   readonly fields: readonly AuthoredFieldDescriptor[];
 }

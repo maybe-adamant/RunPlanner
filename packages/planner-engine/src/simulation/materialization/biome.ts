@@ -391,9 +391,8 @@ function materializeTarget(
 }
 
 /**
- * The only supported sibling continuation is the Midshop's declared Zagreus
- * contract. It stays outside the normal target set so its entry-time creation
- * cannot be mistaken for a physical normal-door generation.
+ * Closed sibling continuations stay outside the normal target set so their
+ * entry-time creation cannot be mistaken for physical normal-door generation.
  */
 function materializeAdditionalContinuations(
   catalog: Catalog,
@@ -412,17 +411,23 @@ function materializeAdditionalContinuations(
   const selected = selectedAdditionalExit(decision, additionalExits)?.key;
   return Object.freeze(
     additionalExits.map((additional) => {
-      if (additional.kind !== 'zagreusContract') {
-        fail(`unsupported additional continuation ${additional.kind}`);
-      }
       const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
       const room = requireRoom(catalog, layout, topology, occurrence);
-      if (
-        room.gameName !== 'C_Boss01' ||
+      if (additional.kind === 'zagreusContract') {
+        if (
+          room.gameName !== 'C_Boss01' ||
+          room.mode.kind !== 'authored' ||
+          room.mode.templateKey !== 'ContractBoss'
+        ) {
+          fail(`${additional.key} has the wrong contract room`);
+        }
+      } else if (
+        layout.naturalChaos === undefined ||
+        !layout.naturalChaos.roomGameNames.includes(room.gameName) ||
         room.mode.kind !== 'authored' ||
-        room.mode.templateKey !== 'ContractBoss'
+        room.mode.templateKey !== 'Chaos'
       ) {
-        fail(`${additional.key} has the wrong contract room`);
+        fail(`${additional.key} has the wrong Chaos room`);
       }
       return Object.freeze({
         origin: createAdditionalExitAddress(biome, sourceOccurrenceId, additional.key),

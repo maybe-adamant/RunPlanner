@@ -141,6 +141,20 @@ export type RouteDetourCommand =
   | {
       readonly kind: 'RemoveZagreusContract';
       readonly additional: AdditionalExitAddress;
+    }
+  | {
+      readonly kind: 'AddNaturalChaos';
+      readonly additional: AdditionalExitAddress;
+      readonly occurrenceId: OccurrenceId;
+    }
+  | {
+      readonly kind: 'RemoveNaturalChaos';
+      readonly additional: AdditionalExitAddress;
+    }
+  | {
+      readonly kind: 'ReplaceNaturalChaosMap';
+      readonly occurrence: OccurrenceAddress;
+      readonly gameName: string;
     };
 
 export type IncomingRewardCommand = {

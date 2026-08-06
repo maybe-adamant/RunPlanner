@@ -78,7 +78,7 @@ export {
 } from './commands/dispatch';
 export {
   declaredPhysicalExits,
-  automaticHostContinuationExitForDetourRoom,
+  hostContinuationExitForDetourRoom,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   hubTerminalTakeoverForSource,

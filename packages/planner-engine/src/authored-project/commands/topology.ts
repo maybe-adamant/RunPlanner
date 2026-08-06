@@ -26,7 +26,7 @@ import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import {
   admitsTerminalTakeoverEnvelope,
-  automaticHostContinuationExitForDetourRoom,
+  hostContinuationExitForDetourRoom,
   additionalExitsForDecision,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
@@ -95,7 +95,7 @@ function sourceRoom(
   if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
   if (
     room.roomSetKey !== located.layout.biomeKey &&
-    automaticHostContinuationExitForDetourRoom(room) === undefined
+    hostContinuationExitForDetourRoom(room) === undefined
   ) {
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }

@@ -802,11 +802,17 @@ function evaluateAdditionalContinuationEntries(
   findings: SemanticFinding[],
 ): void {
   for (const { continuation, parentOrigin } of additionalContinuationEntries(snapshot)) {
+    if (continuation.key !== 'zagreusContract') continue;
     const source = rooms.get(semanticAddressKey(parentOrigin));
     const sourceDeclaration =
       source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
     const declaration = sourceDeclaration?.additionalExits.find(
-      (candidate) => candidate.kind === 'zagreusContract' && candidate.key === continuation.key,
+      (
+        candidate,
+      ): candidate is Extract<
+        (typeof sourceDeclaration.additionalExits)[number],
+        { readonly kind: 'zagreusContract' }
+      > => candidate.kind === 'zagreusContract' && candidate.key === continuation.key,
     );
     if (
       source === undefined ||

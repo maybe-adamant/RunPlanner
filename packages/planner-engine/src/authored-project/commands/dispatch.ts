@@ -58,6 +58,9 @@ function applyUnchecked(
     case 'RevertAnomaly':
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
+    case 'AddNaturalChaos':
+    case 'RemoveNaturalChaos':
+    case 'ReplaceNaturalChaosMap':
       return applyRouteDetourCommand(
         document,
         catalog,

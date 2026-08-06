@@ -70,10 +70,41 @@ function isContractAdditionalTarget(
   });
 }
 
+function isNaturalChaosAdditionalTarget(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  occurrence: RoomOccurrence,
+  room: RoomDeclaration,
+): boolean {
+  if (
+    layout.naturalChaos === undefined ||
+    room.roomSetKey !== 'Chaos' ||
+    room.mode.kind !== 'authored' ||
+    room.mode.templateKey !== 'Chaos' ||
+    occurrence.state.kind !== 'fixed' ||
+    occurrence.anomalyReplacement !== undefined ||
+    !layout.naturalChaos.roomGameNames.includes(room.gameName)
+  ) {
+    return false;
+  }
+  return topology.occurrences.some((source) => {
+    const sourceRoom = catalog.rooms.byKey[source.gameName];
+    return (
+      sourceRoom !== undefined &&
+      sourceRoom.roomSetKey === layout.biomeKey &&
+      source.additionalExits.some(
+        (additional) =>
+          additional.kind === 'naturalChaos' && additional.occurrenceId === occurrence.occurrenceId,
+      )
+    );
+  });
+}
+
 /**
  * Resolves a declaration for one already-decoded authored occurrence in its
  * host topology. A matching room set is the ordinary case. The only
- * cross-room-set cases are the two closed route-detour ownership forms; this is deliberately
+ * cross-room-set cases are the three closed route-detour ownership forms; this is deliberately
  * not a general relaxation of room-set identity.
  */
 export function legalTopologyOccurrenceRoom(
@@ -88,5 +119,8 @@ export function legalTopologyOccurrenceRoom(
   if (room === undefined || room.mode.kind !== 'authored') return undefined;
   if (room.roomSetKey === layout.biomeKey) return room;
   if (isAnomalyReplacementOccurrence(layout, topology, occurrence, room)) return room;
-  return isContractAdditionalTarget(catalog, layout, topology, occurrence, room) ? room : undefined;
+  if (isContractAdditionalTarget(catalog, layout, topology, occurrence, room)) return room;
+  return isNaturalChaosAdditionalTarget(catalog, layout, topology, occurrence, room)
+    ? room
+    : undefined;
 }

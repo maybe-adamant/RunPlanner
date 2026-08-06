@@ -96,6 +96,7 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 
 const roomTemplateKinds = {
   Anomaly: 'Combat',
+  Chaos: 'Combat',
   ContractBoss: 'Boss',
   Devotion: 'Devotion',
   EphyraCombat: 'Combat',
@@ -117,6 +118,7 @@ const roomTemplateKinds = {
 
 const roomTemplateRewardKinds = {
   Anomaly: 'countedChoice',
+  Chaos: 'fixed',
   ContractBoss: 'fixed',
   Devotion: 'fixed',
   EphyraCombat: 'countedChoice',
@@ -179,7 +181,19 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
 }
 
 const structuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
-const supportedRoomSetKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q', 'Anomaly', 'C']);
+const supportedRoomSetKeys = new Set([
+  'F',
+  'G',
+  'H',
+  'I',
+  'N',
+  'O',
+  'P',
+  'Q',
+  'Anomaly',
+  'C',
+  'Chaos',
+]);
 
 function normalizeStructuralTags(
   rawTags: readonly RoomStructuralTag[],
@@ -375,6 +389,7 @@ function normalizeEncounterSlotBindings(
 function normalizeAdditionalExits(
   rawExits: readonly RawAdditionalExitDeclaration[],
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
+  rewards: RewardKernelCatalog,
   path: string,
 ): readonly AdditionalExitDeclaration[] {
   const keys = freezeUniqueStrings(
@@ -384,20 +399,52 @@ function normalizeAdditionalExits(
   return Object.freeze(
     rawExits.map((raw, index): AdditionalExitDeclaration => {
       const exitPath = `${path}[${index}]`;
-      if (raw.kind !== 'zagreusContract') {
+      if (raw.kind !== 'zagreusContract' && raw.kind !== 'naturalChaos') {
         fail(
           `${exitPath}.kind`,
           `unknown additional exit ${String((raw as { kind?: unknown }).kind)}`,
         );
       }
       const key = keys[index];
-      if (key !== 'zagreusContract') {
-        fail(`${exitPath}.key`, 'Zagreus contract exit key must be zagreusContract');
-      }
       const exitTypeKey = requireNonEmpty(raw.exitType, `${exitPath}.exitType`);
       const exitType = exitTypes.byKey[exitTypeKey];
       if (exitType === undefined) {
         fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
+      }
+      if (raw.kind === 'naturalChaos') {
+        if (key !== 'naturalChaos') {
+          fail(`${exitPath}.key`, 'natural Chaos exit key must be naturalChaos');
+        }
+        if (exitType.key !== 'ChaosExitDoor') {
+          fail(`${exitPath}.exitType`, 'natural Chaos exits must use ChaosExitDoor');
+        }
+        if (
+          exitType.behavior.kind !== 'playerSelected' ||
+          exitType.behavior.rewardPreview !== 'visible'
+        ) {
+          fail(`${exitPath}.exitType`, 'natural Chaos exits must be player-selected and visible');
+        }
+        const requirement =
+          raw.requirement === undefined
+            ? undefined
+            : normalizeRequirement(raw.requirement, `${exitPath}.requirement`);
+        if (requirement !== undefined) {
+          validateRequirementReferences(requirement, rewards.rewardTypes, `${exitPath}.requirement`);
+          rejectEncounterHistoryRequirements(requirement, `${exitPath}.requirement`);
+        }
+        return Object.freeze({
+          kind: 'naturalChaos',
+          key: 'naturalChaos',
+          physicalExit: Object.freeze({
+            type: exitType.key,
+            compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+            behavior: exitType.behavior,
+          }),
+          ...(requirement === undefined ? {} : { requirement }),
+        });
+      }
+      if (key !== 'zagreusContract') {
+        fail(`${exitPath}.key`, 'Zagreus contract exit key must be zagreusContract');
       }
       if (
         exitType.behavior.kind !== 'playerSelected' ||
@@ -512,6 +559,9 @@ export function normalizeRooms(
     if (mode.kind === 'authored' && mode.templateKey === 'ContractBoss' && roomSetKey !== 'C') {
       fail(`${path}.roomSetKey`, 'ContractBoss template requires the C room set');
     }
+    if (mode.kind === 'authored' && mode.templateKey === 'Chaos' && roomSetKey !== 'Chaos') {
+      fail(`${path}.roomSetKey`, 'Chaos template requires the Chaos room set');
+    }
     if (roomSetKey === 'Anomaly') {
       if (mode.kind !== 'authored' || mode.templateKey !== 'Anomaly') {
         fail(`${path}.roomSetKey`, 'Anomaly room set requires authored Anomaly rooms');
@@ -522,13 +572,45 @@ export function normalizeRooms(
         fail(`${path}.roomSetKey`, 'C room set requires authored ContractBoss rooms');
       }
     }
+    if (roomSetKey === 'Chaos') {
+      if (mode.kind !== 'authored' || mode.templateKey !== 'Chaos') {
+        fail(`${path}.roomSetKey`, 'Chaos room set requires authored Chaos rooms');
+      }
+      if (
+        exits.length !== 1 ||
+        exits[0]?.type !== 'ChaosReturnExitDoor' ||
+        exits[0].behavior.kind !== 'playerSelected' ||
+        exits[0].behavior.rewardPreview !== 'visible'
+      ) {
+        fail(`${path}.exits`, 'Chaos rooms require one visible player-selected ChaosReturnExitDoor');
+      }
+      const encounter = encounterSlotBindings[0];
+      if (
+        encounterEnvelopeKey !== 'SingleEncounter' ||
+        encounterSlotBindings.length !== 1 ||
+        encounter?.slotKey !== 'Encounter' ||
+        encounter.kind !== 'fixed' ||
+        encounter.encounterDefinitionKey !== 'Empty_Chaos'
+      ) {
+        fail(`${path}.encounterSlotBindings`, 'Chaos rooms require fixed Empty_Chaos');
+      }
+      if (
+        room.incomingReward.kind !== 'fixed' ||
+        room.incomingReward.rewardType !== 'TrialUpgrade' ||
+        room.incomingReward.producerLifecycleKey !== 'RoomReward'
+      ) {
+        fail(`${path}.incomingReward`, 'Chaos rooms require fixed TrialUpgrade RoomReward');
+      }
+    }
     const additionalExits = normalizeAdditionalExits(
       room.additionalExits ?? [],
       exitTypes,
+      rewards,
       `${path}.additionalExits`,
     );
     if (
       additionalExits.length > 0 &&
+      room.additionalExits?.some((exit) => exit.kind === 'zagreusContract') &&
       (room.kind !== 'Shop' || room.incomingReward.kind !== 'shop')
     ) {
       fail(`${path}.additionalExits`, 'additional Zagreus exits require a Shop room');
@@ -674,6 +756,7 @@ export function normalizeRooms(
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
   collection.values.forEach((room, roomIndex) => {
     room.additionalExits.forEach((exit, exitIndex) => {
+      if (exit.kind !== 'zagreusContract') return;
       const target = collection.byKey[exit.targetRoomGameName];
       const path = `rooms[${roomIndex}].additionalExits[${exitIndex}].targetRoomGameName`;
       if (target === undefined) {

@@ -24,6 +24,87 @@ const zagreusSources = [
   ['P_Shop01', ['OlympusIndoorExitDoor', 'OlympusOutdoorExitDoor']],
 ] as const;
 
+const naturalChaosSources = [
+  'N_Opening01',
+  'F_Opening01',
+  'F_Opening02',
+  'F_Opening03',
+  'F_Combat01',
+  'F_Combat02',
+  'F_Combat03',
+  'F_Combat04',
+  'F_Combat05',
+  'F_Combat06',
+  'F_Combat07',
+  'F_Combat08',
+  'F_Combat09',
+  'F_Combat10',
+  'F_Combat11',
+  'F_Combat12',
+  'F_Combat13',
+  'F_Combat14',
+  'F_Combat15',
+  'F_Combat16',
+  'F_Combat17',
+  'F_Combat18',
+  'F_Combat19',
+  'F_Combat20',
+  'F_Combat21',
+  'F_Combat22',
+  'F_Story01',
+  'F_Reprieve01',
+  'F_Shop01',
+  'G_Intro',
+  'G_Combat01',
+  'G_Combat02',
+  'G_Combat03',
+  'G_Combat04',
+  'G_Combat05',
+  'G_Combat06',
+  'G_Combat07',
+  'G_Combat08',
+  'G_Combat09',
+  'G_Combat10',
+  'G_Combat11',
+  'G_Combat12',
+  'G_Combat13',
+  'G_Combat14',
+  'G_Combat15',
+  'G_Combat16',
+  'G_Combat17',
+  'G_Combat18',
+  'G_Combat19',
+  'G_Combat20',
+  'G_MiniBoss01',
+  'G_MiniBoss02',
+  'G_MiniBoss03',
+  'G_Story01',
+  'G_Reprieve01',
+  'G_Shop01',
+  'P_Intro',
+  'P_Combat01',
+  'P_Combat02',
+  'P_Combat03',
+  'P_Combat04',
+  'P_Combat05',
+  'P_Combat06',
+  'P_Combat07',
+  'P_Combat08',
+  'P_Combat09',
+  'P_Combat10',
+  'P_Combat11',
+  'P_Combat12',
+  'P_Combat13',
+  'P_Combat14',
+  'P_Combat15',
+  'P_Combat16',
+  'P_Combat17',
+  'P_Combat18',
+  'P_Combat19',
+  'P_Reprieve01',
+  'P_Shop01',
+] as const;
+
 function input(): RawCatalogInput {
   return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
 }
@@ -56,7 +137,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.16.0-route-detours');
+    expect(catalog.version).toBe('0.17.0-natural-chaos');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');
@@ -159,9 +240,11 @@ describe('route detour catalog declarations', () => {
     }
   });
 
-  it('normalizes Zagreus as the only closed, hidden additional door on the four Midshops', () => {
+  it('normalizes the closed Zagreus contracts on the four Midshops', () => {
     const catalog = createCatalog(declarations);
-    const sources = catalog.rooms.values.filter((room) => room.additionalExits.length > 0);
+    const sources = catalog.rooms.values.filter((room) =>
+      room.additionalExits.some((exit) => exit.kind === 'zagreusContract'),
+    );
 
     expect(sources.map((room) => room.gameName).sort()).toEqual(
       zagreusSources.map(([gameName]) => gameName).sort(),
@@ -172,7 +255,7 @@ describe('route detour catalog declarations', () => {
       expect(source?.exits.map((exit) => exit.behavior)).toEqual(
         normalExitTypes.map(() => ({ kind: 'playerSelected', rewardPreview: 'visible' })),
       );
-      expect(source?.additionalExits).toEqual([
+      expect(source?.additionalExits.find((exit) => exit.kind === 'zagreusContract')).toEqual(
         {
           kind: 'zagreusContract',
           key: 'zagreusContract',
@@ -184,7 +267,7 @@ describe('route detour catalog declarations', () => {
           targetRoomGameName: 'C_Boss01',
           maxEnteredThisRoute: 0,
         },
-      ]);
+      );
     }
   });
 
@@ -246,6 +329,69 @@ describe('route detour catalog declarations', () => {
         'automatic host continuations must hide reward preview',
       ),
     );
+  });
+
+  it('normalizes the exact natural Chaos source and host-map matrices', () => {
+    const catalog = createCatalog(declarations);
+    const sources = catalog.rooms.values
+      .filter((room) => room.additionalExits.some((exit) => exit.kind === 'naturalChaos'))
+      .map((room) => room.gameName)
+      .sort();
+
+    expect(sources).toEqual([...naturalChaosSources].sort());
+    for (const gameName of naturalChaosSources) {
+      expect(
+        catalog.rooms.byKey[gameName]?.additionalExits.find(
+          (exit) => exit.kind === 'naturalChaos',
+        ),
+      ).toMatchObject({
+        kind: 'naturalChaos',
+        key: 'naturalChaos',
+        physicalExit: {
+          type: 'ChaosExitDoor',
+          compatibilityPolicyKey: 'Unconstrained',
+          behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+        },
+      });
+    }
+    expect(catalog.biomeLayouts.byKey.F?.naturalChaos).toEqual({
+      roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
+      defaultRoomGameName: 'Chaos_01',
+      offerSpacingWindow: 10,
+    });
+    expect(catalog.biomeLayouts.byKey.G?.naturalChaos).toEqual(
+      catalog.biomeLayouts.byKey.F?.naturalChaos,
+    );
+    expect(catalog.biomeLayouts.byKey.N?.naturalChaos).toEqual({
+      roomGameNames: ['Chaos_03', 'Chaos_06'],
+      defaultRoomGameName: 'Chaos_03',
+      offerSpacingWindow: 10,
+    });
+    expect(catalog.biomeLayouts.byKey.P?.naturalChaos).toEqual(
+      catalog.biomeLayouts.byKey.F?.naturalChaos,
+    );
+    for (const gameName of ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06']) {
+      expect(catalog.rooms.byKey[gameName]).toMatchObject({
+        roomSetKey: 'Chaos',
+        mode: { kind: 'authored', templateKey: 'Chaos' },
+        exits: [
+          {
+            type: 'ChaosReturnExitDoor',
+            behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+          },
+        ],
+        incomingReward: { kind: 'fixed', offer: { rewardType: 'TrialUpgrade' } },
+      });
+    }
+    expect(
+      catalog.rooms.byKey.P_Intro?.additionalExits.find((exit) => exit.kind === 'naturalChaos'),
+    ).toMatchObject({
+      requirement: {
+        kind: 'counterRange',
+        axis: 'biomeDepthCache',
+        range: { max: 5 },
+      },
+    });
   });
 
   it('rejects malformed Anomaly declaration structure and references', () => {
@@ -312,12 +458,13 @@ describe('route detour catalog declarations', () => {
     const fShopIndex = roomIndex(retargeted, 'F_Shop01');
     (
       retargeted.rooms[fShopIndex] as unknown as {
-        additionalExits: { targetRoomGameName: string }[];
+        additionalExits: { kind: string; targetRoomGameName?: string }[];
       }
-    ).additionalExits[0]!.targetRoomGameName = 'B_Combat01';
+    ).additionalExits.find((exit) => exit.kind === 'zagreusContract')!.targetRoomGameName =
+      'B_Combat01';
     expect(() => createCatalog(retargeted)).toThrow(
       new CatalogContractError(
-        `rooms[${fShopIndex}].additionalExits[0].targetRoomGameName`,
+        `rooms[${fShopIndex}].additionalExits[1].targetRoomGameName`,
         'Zagreus contract target must be an authored C ContractBoss with automatic host return',
       ),
     );

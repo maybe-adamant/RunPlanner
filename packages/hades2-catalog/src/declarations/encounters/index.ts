@@ -1,5 +1,6 @@
 import { anomalyEncounterDefinitions } from './anomaly';
 import { cEncounterDefinitions } from './c';
+import { chaosEncounterDefinitions } from './chaos';
 import { fEncounterDefinitions, fEncounterSets } from './f';
 import { gEncounterDefinitions, gEncounterSets } from './g';
 import { hEncounterDefinitions, hEncounterSets } from './h';
@@ -20,6 +21,7 @@ export const encounterDefinitions = [
   ...sharedEncounterDefinitions,
   ...anomalyEncounterDefinitions,
   ...cEncounterDefinitions,
+  ...chaosEncounterDefinitions,
   ...fEncounterDefinitions,
   ...gEncounterDefinitions,
   ...hEncounterDefinitions,

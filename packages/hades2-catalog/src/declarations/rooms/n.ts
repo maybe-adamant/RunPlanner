@@ -1,5 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 
+const naturalChaosExit = {
+  kind: 'naturalChaos' as const,
+  key: 'naturalChaos' as const,
+  exitType: 'ChaosExitDoor',
+};
+
 const soulPylon = {
   key: 'SoulPylon',
   spawnTiming: 'roomEntry',
@@ -13,6 +19,7 @@ export const nRooms = [
     roomSetKey: 'N',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'N_OpeningDoor' }],
     incomingReward: {

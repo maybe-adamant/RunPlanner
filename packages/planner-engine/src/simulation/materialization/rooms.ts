@@ -27,6 +27,7 @@ function fail(detail: string): never {
 
 type AuthoredTemplateKey =
   | 'Anomaly'
+  | 'Chaos'
   | 'ClockworkCombat'
   | 'ContractBoss'
   | 'Devotion'
@@ -503,6 +504,7 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
 
 const authoredTemplateMaterializers = Object.freeze({
   Anomaly: materializeAnomaly,
+  Chaos: materializeFixedRoom,
   ClockworkCombat: materializeClockworkCombat,
   ContractBoss: materializeFixedRoom,
   Devotion: materializeDevotion,

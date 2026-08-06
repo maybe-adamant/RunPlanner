@@ -152,7 +152,13 @@ export interface ZagreusContractAdditionalExit {
   readonly occurrenceId: OccurrenceId;
 }
 
-export type AuthoredAdditionalExit = ZagreusContractAdditionalExit;
+export interface NaturalChaosAdditionalExit {
+  readonly kind: 'naturalChaos';
+  readonly key: 'naturalChaos';
+  readonly occurrenceId: OccurrenceId;
+}
+
+export type AuthoredAdditionalExit = ZagreusContractAdditionalExit | NaturalChaosAdditionalExit;
 /** @deprecated Use AuthoredAdditionalExit at occurrence ownership boundaries. */
 export type AdditionalExit = AuthoredAdditionalExit;
 

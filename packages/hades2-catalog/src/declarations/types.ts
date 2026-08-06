@@ -176,7 +176,16 @@ export interface RawZagreusContractAdditionalExitDeclaration {
   readonly maxEnteredThisRoute: number;
 }
 
-export type RawAdditionalExitDeclaration = RawZagreusContractAdditionalExitDeclaration;
+export interface RawNaturalChaosAdditionalExitDeclaration {
+  readonly kind: 'naturalChaos';
+  readonly key: 'naturalChaos';
+  readonly exitType: string;
+  readonly requirement?: RequirementExpression;
+}
+
+export type RawAdditionalExitDeclaration =
+  | RawZagreusContractAdditionalExitDeclaration
+  | RawNaturalChaosAdditionalExitDeclaration;
 
 export interface RawRoomDeclaration {
   readonly gameName: string;
@@ -249,6 +258,11 @@ export interface RawBiomeLayoutDeclaration {
       }
     | { readonly kind: 'fixedAuthored'; readonly roomGameName: string };
   readonly progression: RawProgressionDeclaration;
+  readonly naturalChaos?: {
+    readonly roomGameNames: readonly [string, ...string[]];
+    readonly defaultRoomGameName: string;
+    readonly offerSpacingWindow: number;
+  };
   readonly completion: CompletionDescriptor;
   readonly fields?: readonly AuthoredFieldDescriptor[];
 }
