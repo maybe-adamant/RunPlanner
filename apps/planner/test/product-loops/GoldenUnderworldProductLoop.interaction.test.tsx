@@ -472,7 +472,7 @@ describe('underworld product loop', () => {
       ),
     );
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Clear Anomaly' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
     const failed = application.store.getState().projectWorkspace.history.present;
     expect(
       failed.routes
@@ -480,7 +480,23 @@ describe('underworld product loop', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === anomaly)?.state,
     ).toMatchObject({ kind: 'anomaly', success: false });
-    expect(screen.getByText('The next host door is generated automatically.')).toBeTruthy();
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(
+          createExitDecisionAddress(goldenGBiome, {
+            kind: 'occurrence',
+            occurrenceId: anomaly,
+          }),
+        ),
+      ),
+    );
+    const automaticReturn = screen.getByRole('group', {
+      name: /^Decision \d+ room offers$/,
+    });
+    expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
+    expect(within(automaticReturn).queryByRole('radio')).toBeNull();
+    expect(within(automaticReturn).getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
+    expect(within(automaticReturn).getByRole('button', { name: 'Reward' })).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
     const gEvaluation = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
