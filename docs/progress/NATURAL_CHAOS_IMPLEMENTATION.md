@@ -2,344 +2,502 @@
 
 ## Status
 
-**Provisional. Do not implement from this document yet.**
+**Implementation-ready.**
 
-Promote this plan to implementation-ready only after re-running its Gate A
-against the completed Anomaly/Zagreus live code.
-The plan exists now to preserve the settled product and game-model decisions;
-it does not require the preceding work to build dormant Chaos types, commands,
-state, or UI.
+The post-Anomaly/Zagreus preflight is complete against schema 13 and the live
+structured workspace. Natural Chaos remains absent from production state. The
+first implementation gate deliberately corrects the ownership of the existing
+Zagreus additional exit before adding a second family.
 
-This is a temporary delivery document. Stable game facts currently live in
-`docs/audits/ROUTE_DETOUR_FINDINGS.md`; completed modeling and ownership
-contracts must be absorbed into the appropriate design and biome authorities
-before this document is retired.
+This is a temporary delivery document. Stable game facts remain in
+`docs/audits/ROUTE_DETOUR_FINDINGS.md`. Completed authored, lifecycle,
+simulation, editor, and biome contracts must be absorbed into their owning
+design and biome documents before this plan is retired.
 
 ## Objective
 
 Support authored **natural** Chaos gates in `N`, `F`, `G`, and `P` as real
-additional exits beside the source room's normal exits. A gate may be offered
-and skipped, or selected to enter a concrete Chaos room and then resume the
-host biome through a fresh ordinary continuation. Gate offer, gate selection,
-Chaos entry, and resumed target generation remain distinct lifecycle events.
+additional exits emitted by a source Room Occurrence beside its normal exits.
+A gate may be offered and skipped, or selected to enter a concrete Chaos room
+and then resume the host biome through a fresh ordinary continuation.
+
+Gate authorship, gate offer, branch selection, Chaos entry, and resumed target
+generation are distinct facts. The selected source occurrence emits the door;
+the outgoing decision owns only the choice among its normal lane and the
+source's emitted additional exits.
 
 ## Scope
 
-Included: exact source capability, ten-prior-room offer spacing, concrete
-Chaos-map selection, fixed encounter/reward identity, normal-versus-Chaos
-selection, fresh host-biome continuation, Opening/Intro continuation UX, and
-the complete persisted/simulated/editor product loop.
+Included:
+
+- occurrence-owned Zagreus and natural-Chaos additional-exit state;
+- exact declaration-backed natural source capability;
+- the preceding-ten-committed-room offer-spacing rule;
+- concrete Chaos-map selection and defaults;
+- fixed `Empty_Chaos` encounter and direct `TrialUpgrade` reward;
+- normal-versus-Chaos branch selection;
+- a fresh, ordinary, visible host-biome continuation after Chaos;
+- source-room spawn actions, decision presentation, findings, persistence,
+  recovery, and the complete product loop;
+- focused N Opening/Hub and normal-door Preboss coexistence witnesses.
 
 Excluded:
 
 - Spark of Ixion and every forced-Chaos path;
-- Stygian Well items, trait lifetime, and zero-health-cost gates, including
-  Chaos in `H` or another source enabled only by forced placement;
+- Stygian Well items, trait lifetime, zero-health-cost gates, and Chaos in `H`
+  or another source enabled only by forced placement;
 - chance or RNG replay;
 - external save/profile progression inputs;
-- Nyx narrative activation in Chaos;
+- Nyx narrative activation;
 - detailed Chaos curse, blessing, or trait-payload simulation;
-- game-runtime forcing, adapters, and conformance execution.
+- a generic room-feature bag, generic special edge, or generic detour graph;
+- game-runtime forcing, adapters, and conformance execution;
+- a broad entry/first-decision inspector reorganization unless manual Chaos
+  acceptance demonstrates a concrete remaining UX problem.
 
 Natural eligibility must not inherit any bypass from the excluded Ixion path.
+An eligible source without an authored gate remains valid and finding-free.
 
-## Locked planner baseline
+## Locked game and product baseline
 
-The planner assumes ordinary Chaos and Surface progression requirements have
-been met and authors possible outcomes rather than their probabilities.
+The planner authors possible outcomes rather than replaying probability. It
+assumes ordinary Chaos and Surface progression requirements have been met, but
+retains the modeled current-route conditions below.
 
-### Source capability
+### Static source capability
 
-The supported natural-source inventory is:
+The catalog must declare natural-Chaos capability only for concrete maps that
+have the supported physical `SecretPoint` and pass the game's static natural
+source restrictions:
 
-| Host biome | Supported source declarations                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `N`        | `N_Opening01` only                                                                                                              |
-| `F`        | `F_Opening01`–`F_Opening03`, `F_Combat01`–`F_Combat22`, `F_Story01`, `F_Reprieve01`, and `F_Shop01`                             |
-| `G`        | `G_Intro`, `G_Combat01`–`G_Combat20`, `G_MiniBoss01`–`G_MiniBoss03`, `G_Story01`, `G_Reprieve01`, and `G_Shop01`                |
-| `P`        | `P_Intro`, `P_Combat01`–`P_Combat19`, `P_Reprieve01`, and `P_Shop01`, while the source satisfies the natural depth-five ceiling |
+| Host biome | Supported source declarations                                                                                    |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| `N`        | `N_Opening01` only                                                                                               |
+| `F`        | `F_Opening01`–`F_Opening03`, `F_Combat01`–`F_Combat22`, `F_Story01`, `F_Reprieve01`, and `F_Shop01`              |
+| `G`        | `G_Intro`, `G_Combat01`–`G_Combat20`, `G_MiniBoss01`–`G_MiniBoss03`, `G_Story01`, `G_Reprieve01`, and `G_Shop01` |
+| `P`        | `P_Intro`, `P_Combat01`–`P_Combat19`, `P_Reprieve01`, and `P_Shop01`                                             |
 
-Every supported source must retain its concrete physical `SecretPoint`
-capability. Room category, nonzero biome chance, or a UI label is not a
-substitute for that declaration-backed fact.
+Room category, nonzero chance, or a UI label is not a substitute for this
+declaration-backed fact. `N_PreHub01`, `H`, and all other Ixion-only or
+unsupported sources declare no natural capability.
 
-### Chaos targets and defaults
+Static capability and contextual eligibility are separate:
 
-Use the progressed-save target pools:
+- the command may create a gate only on a declaration with natural capability;
+- P's natural depth-five ceiling and route offer spacing are evaluated against
+  the current history;
+- a structurally valid authored gate that becomes context-invalid remains
+  visible and removable when its source is active;
+- dormant features on unpicked rooms remain persisted without producing
+  active lifecycle facts or findings until their room becomes active again.
 
-| Host source      | Authored Chaos maps    | Default    |
+### Host policy and Chaos targets
+
+The normalized host-biome policy owns the progressed-save target domain and
+default, while each Room Declaration owns whether its concrete map can emit
+the door:
+
+| Host topology    | Authored Chaos maps    | Default    |
 | ---------------- | ---------------------- | ---------- |
 | `N`              | `Chaos_03`, `Chaos_06` | `Chaos_03` |
 | `F`, `G`, or `P` | `Chaos_01`–`Chaos_06`  | `Chaos_01` |
 
+The catalog should expose this as a narrow natural-Chaos host descriptor on
+the supported `BiomeLayout`, not as a global service or a duplicate topology
+read model. The descriptor contains the target domain, default, and ten-room
+offer window. A source declaration contains the physical natural-exit
+capability and any source-local requirement such as P's depth ceiling.
+
 Each Chaos room owns:
 
-- fixed encounter `Empty_Chaos`, with no encounter picker and no modeled Nyx
-  progression behavior;
+- room-set identity `Chaos` and authored template `Chaos`;
+- one player-selected ordinary outgoing exit with visible reward preview;
+- fixed encounter `Empty_Chaos`, with no picker or modeled Nyx behavior;
 - fixed direct reward `TrialUpgrade`, presented as **Chaos Blessing**;
-- one ordinary outgoing continuation in the previous host room set;
-- one room-history ordinal and its ordinary declared biome-depth effect.
+- one room-history ordinal and its declared biome-depth effect.
 
-`BaseChaos.PauseBiomeState` is deliberately collapsed because the planner has
-no biome-state trait lifecycle input or consumer. Do not introduce a generic
-biome-state suspension abstraction solely for this declaration.
+`BaseChaos.PauseBiomeState` remains deliberately collapsed because the planner
+has no biome-state trait lifecycle input or consumer. The game reaches
+`TrialUpgrade` through the one-entry `Secrets` store; the planner normalizes
+that store to a direct fixed leaf rather than introducing a reusable `Secrets`
+reward-store abstraction.
 
-The game reaches `TrialUpgrade` through `BaseChaos.ForcedRewardStore =
-"Secrets"`, whose supported entry is that reward. The planner deliberately
-normalizes this one-entry forced store to a direct fixed `TrialUpgrade` leaf; it
-does not introduce a reusable `Secrets` reward-store abstraction. The reward
-is acquired as a named fact. This slice does not model its curse/blessing
-payload or make it affect unrelated eligibility.
+## Additional-exit ownership correction
 
-An eligible source without a gate is valid and produces no finding. An
-authored gate that later becomes invalid remains visible with an owned finding
-and removal control.
+### Persisted authored shape
 
-## Authored topology contract
+Schema 14 moves additional-exit authorship from `ExitDecision` to the source
+Room Occurrence:
 
-A source decision contains one normal lane and, when authored, one natural
-Chaos additional exit:
+```ts
+type AuthoredAdditionalExit =
+  | {
+      kind: 'zagreusContract';
+      key: 'zagreusContract';
+      occurrenceId: OccurrenceId;
+    }
+  | {
+      kind: 'naturalChaos';
+      key: 'naturalChaos';
+      occurrenceId: OccurrenceId;
+    };
 
-```text
-source occurrence
-  -> normal batch and its offered targets
-  -> natural Chaos exit and Chaos occurrence
-  -> one selected continuation across both branches
+interface RoomOccurrence {
+  occurrenceId: OccurrenceId;
+  gameName: string;
+  state: AuthoredRoomState;
+  encounters: RoomEncounterState;
+  additionalExits: readonly AuthoredAdditionalExit[];
+}
+
+interface ExitDecision {
+  kind: 'exit';
+  source: ExitDecisionSource;
+  normal: NormalDoorBatch;
+  selection: ExitSelection;
+}
 ```
 
-The required command behavior is:
+This is the final schema-14 shape. Gate A lands the occurrence-owned collection
+with only the already-supported `zagreusContract` member; Gate B expands the
+closed union in the same vertical slice that delivers real natural-Chaos
+declarations and commands. No dormant Chaos type is introduced in Gate A.
 
-- adding a Chaos gate creates its occurrence but preserves the current
-  selection;
-- normal targets remain created, offered, inspectable, and reward-consuming;
-- selecting Chaos retains the normal branch as unentered authored structure;
-- selecting normal retains the Chaos gate as an offered but unentered branch;
-- removing Chaos deletes only its occurrence and selected descendants;
-- undo restores the exact removed branch and selection;
-- replacing or invalidating the source retains structurally representable
-  Chaos authorship and reports contextual invalidity;
-- a normal-door Preboss takeover owns only the normal lane and cannot replace,
-  remove, or count the Chaos exit.
+`AdditionalExitAddress` addresses an occurrence directly with
+`occurrenceId + additionalExitKey`. It cannot name a Hub decision or imply
+that the outgoing decision owns the feature.
 
-The special behavior ends at the door boundary. Normal-door force pressure and
-Preboss takeover operate only on the normal lane. Once the Chaos door is
-selected, its target is a room occurrence whose declaration drives encounter,
-reward, counters, history, and outgoing generation. Chaos is not another normal
-target, a host-room encounter, a fake route biome, a detached list, or a generic
-graph edge with policy hidden elsewhere.
+The top-level occurrence array remains the occurrence registry. A source
+occurrence's authored additional exit is the unique structural owner of its
+target occurrence. Codec closure follows that forward edge, rejects duplicate
+ownership and cycles, and admits the exact closed target templates without
+requiring the target to inspect a previous room.
 
-The exact persisted type and command names remain provisional until Gate A.
+### Active decision projection
+
+Authored decisions do not persist a second list of emitted exits. Canonical
+materialization reads the active source occurrence's `additionalExits` and
+projects a typed union into `CanonicalBatch.additional`:
+
+```ts
+type CanonicalAdditionalContinuation =
+  CanonicalZagreusContractContinuation | CanonicalNaturalChaosContinuation;
+```
+
+This canonical list remains the supported input to history, generation,
+rewards, findings, and the application workspace. Those consumers do not read
+the occurrence registry independently.
+
+An add command may create the source's empty outgoing decision envelope when
+none exists, as the current Zagreus command does. The envelope supplies the
+selection owner; it does not own the emitted feature.
+
+### Reanchor and dormancy
+
+Changing an upstream picked normal target reanchors only the outgoing normal
+decision:
+
+- source A keeps every authored additional exit and its target occurrence;
+- source B emits only B's authored additional exits;
+- normal targets and descendants remain with the reanchored decision;
+- no additional target or room-local state moves between A and B;
+- an additional selection unavailable on B becomes `derived` when the
+  resulting choice is one normal exit, otherwise `unresolved`;
+- reselecting A makes its preserved feature and exact target state active
+  again.
+
+The current rejection that requires the new source to declare every retained
+decision-owned additional exit is deleted with this migration. The ordinary
+reanchor contract remains unchanged for normal targets and descendants.
+
+### Invalid retained features
+
+Codec validation establishes structural shape, ownership, and the closed
+target template. It must not require the source's current Room Declaration to
+still advertise the feature. Creation commands require declared capability;
+evaluation owns later source-capability, source-requirement, target-domain,
+spacing, and entry-cap findings.
+
+This keeps a feature editable after a room replacement without teaching Redux,
+React, or the target room to reconstruct its source relationship.
+
+## Natural Chaos topology and commands
+
+The closed command surface is:
+
+- `AddNaturalChaos` — address the source occurrence, allocate the default
+  Chaos occurrence, retain/create its outgoing decision envelope, and preserve
+  the selected continuation (making a width-one derived normal selection
+  explicit when the new sibling requires it);
+- `RemoveNaturalChaos` — remove the feature target and its selected descendants,
+  then normalize the enclosing selection;
+- `ReplaceNaturalChaosMap` — replace only the owned Chaos occurrence's map
+  within the host policy's exact target domain;
+- existing `SetExitSelection` — select the normal lane or `naturalChaos`;
+- migrated `AddZagreusContract` and `RemoveZagreusContract` — preserve their
+  current product behavior while addressing occurrence-owned state.
+
+Adding a gate preserves all normal targets and their offers. Selecting Chaos
+retains the normal branch as unentered authored structure; selecting normal
+retains Chaos as an offered but unentered branch. Removing Chaos deletes only
+its occurrence and descendants. Undo/redo restore exact state.
+
+Normal-door force pressure, capacity, repair, and Preboss takeover operate only
+on the normal lane. They neither own nor erase occurrence-emitted additional
+exits. Once Chaos is selected, the Chaos occurrence uses ordinary room,
+encounter, reward, counter, history, and outgoing-generation processing.
 
 ## Offer-spacing and lifecycle contract
 
 Natural Chaos uses an **offer-consumed** spacing rule. Eligibility requires no
-Chaos-offering source among the previous ten committed room-history records.
+natural-Chaos offering source among the preceding ten committed room
+appearances.
 
-When an authored gate is created for an entered source:
+The existing history contract already records the authoritative offer:
 
-1. the gate and Chaos target become offered source facts;
-2. the source records that it offered natural Chaos;
-3. leaving the source commits that marker with its room-history record;
-4. the next ten-room window observes the marker even if the player selected a
-   normal door;
-5. entering Chaos separately records the Chaos occurrence, encounter, reward,
-   history ordinal, and depth effects.
+```text
+roomCreated
+  source = additionalExit
+  additionalOrigin = source occurrence + naturalChaos key
+  parentOrigin = offering source occurrence
+```
 
-The offer marker belongs in simulation history and cannot be reconstructed
-from entered Chaos history, Redux, rendered topology, or an application
-sidecar.
+No second production marker, shadow ledger, Redux flag, or rendered-topology
+inference is added. The room-creation ledger records the offered Chaos target
+even when it is skipped. Spacing cross-references those natural-Chaos creation
+records with their parent origins in the preceding ten committed
+`roomAppearances`.
+
+The boundary fixture must prove:
+
+- while the offering source remains among the preceding ten committed room
+  appearances, another gate is invalid;
+- after ten later rooms have committed and the offering source has left that
+  window, the next otherwise-valid source is eligible;
+- selecting or skipping the first gate gives the same spacing result;
+- entering Chaos separately records its occurrence, encounter, reward,
+  counters, and appearance exactly once.
+
+Do not implement spacing as entered-Chaos history, a raw depth subtraction, or
+a second independently maintained counter.
 
 ## Return contract
 
-Chaos uses an ordinary outgoing door, not the automatic hidden continuation
-used by Anomaly and Zagreus.
+Chaos uses one ordinary outgoing door, not the automatic hidden continuation
+used by Anomaly and `C_Boss01`.
 
-Leaving a selected Chaos occurrence:
+The current detour-room query is generalized narrowly from “automatic detour
+return” to a declaration-owned **host continuation** that preserves each
+template's exit behavior:
 
-- generates a fresh target from the host room set;
-- applies normal-door target eligibility, force, creation, reward-store, and
-  reward-preview behavior at that new checkpoint;
+- Anomaly and ContractBoss: width one, automatic, hidden preview;
+- Chaos: width one, player-selected, visible preview.
+
+This is not a generic route edge. It admits only the three closed authored
+templates and still requires their exact structural owner.
+
+Leaving selected Chaos:
+
+- authors a fresh target in the containing host topology;
+- applies ordinary host target eligibility, force, batch, reward-store, and
+  reward-preview behavior at that checkpoint;
 - never reuses the earlier unpicked normal target or its reward;
-- uses the ordinary decision workbench for the generated room and reward.
+- presents the return through the ordinary width-one decision workbench.
 
 ### Preboss coexistence
 
-A forced normal-door Preboss batch and a Chaos gate may coexist. If Chaos is
-selected, that Preboss batch remains an unentered offer. The return generation
-may create a fresh Preboss batch with fresh rewards because appearance caps
-observe entered rooms, not the abandoned creation. A focused fixture must
-protect this distinction in at least one takeover biome.
+A forced normal-door Preboss batch and a Chaos gate may coexist. Selecting
+Chaos leaves the offered Preboss batch unentered. The return may produce a
+fresh Preboss batch with fresh rewards because entered-room history, rather
+than abandoned creation, owns its appearance cap. One takeover-biome fixture
+must protect this distinction.
 
-### Ephyra (`N`) entry
+### Ephyra (`N`)
 
-`N_Opening01` may offer its normal PreHub exit and an additional Chaos gate.
-The supported outcomes are:
+`N_Opening01` may emit natural Chaos beside its normal PreHub exit:
 
 ```text
-normal selection: N_Opening01 -> N_PreHub01 -> N_Hub
-Chaos selection:  N_Opening01 -> Chaos -> fresh N_Hub
+normal: N_Opening01 -> N_PreHub01 -> N_Hub
+Chaos:  N_Opening01 -> Chaos -> fresh N_Hub
 ```
 
-Chaos contributes the depth step that reaches N's depth-two Hub takeover. The
-return must therefore skip PreHub and produce a fresh Hub through the existing
-N eligibility/takeover authority. Do not persist PreHub as a hidden resume
-target or add a Chaos-specific `ForceNextRoom = N_Hub` repair.
+Chaos contributes the depth step that reaches the existing N depth-two Hub
+takeover. Its outgoing host decision must therefore resolve through the normal
+N eligibility/takeover authority. Do not preserve PreHub as a hidden resume
+target or introduce a Chaos-specific `ForceNextRoom = N_Hub` rule.
 
-## Entry workbench UX correction
+## Workspace and UX contract
 
-Opening and Intro inspectors currently edit the entry room and reward, then
-expose outgoing generation through a detached `Add next decision` frontier.
-Natural Chaos requires the source's normal and additional exits to be
-selectable together.
+The current selected-occurrence inspector already receives its nearby
+`Add next decision` frontier intent. Natural Chaos extends that existing action
+row with a bound `Spawn Chaos door` action where the engine projects static
+capability. It does not first reorganize every entry inspector.
 
-Before adding Chaos UI, project every route entry through one containing
-workbench:
+After a gate exists, the ordinary decision workbench contains:
 
 ```text
-Opening / Intro
-├─ current room and incoming reward
-└─ next route choice
-   ├─ normal offered rooms and rewards
-   ├─ picked normal-door target
-   └─ additional exits, when authored
+Room selection
+├─ normal room/reward offers
+└─ Chaos door
+   └─ Chaos room card, map choice, fixed encounter, fixed reward
 ```
 
 Requirements:
 
-- create and edit the first outgoing decision in place;
-- show the exact picked continuation rather than only the entry reward;
-- reuse ordinary decision controls and semantic owners;
-- keep one control package per semantic owner;
-- allow the Opening/Entrance and first-decision rail highlights to resolve to
-  the same containing inspector without duplicating controls;
-- apply the containing workbench consistently to all route entry rooms;
-- expose Chaos controls only where the engine projects supported capability;
-- preserve current behavior in non-Chaos biomes.
+- the source action appears beside outgoing authoring, including N Opening and
+  supported G/P Intros;
+- normal and Chaos branches use the same single-choice interaction;
+- selected and unselected branches remain inspectable;
+- the Chaos card exposes map selection, fixed encounter/reward facts, removal,
+  selection, and findings without inventing editable fixed leaves;
+- invalid active gates retain their controls;
+- dormant gates on unpicked rooms retain state but do not expose active
+  customization or findings;
+- rail and finding focus resolve to the containing decision/occurrence
+  inspectors without duplicated controls;
+- non-Chaos routes and unsupported sources expose no invented action;
+- React dispatches bound intents and performs no capability, spacing, target,
+  force, or reward evaluation.
 
-This is a presentation/composition correction, not a second topology model.
-React must not determine Chaos eligibility or construct domain commands from
-catalog facts.
+If manual N Opening or Intro testing still shows costly navigation after this
+product loop exists, record the exact problem and deliver a focused containing
+inspector follow-up. It is not a prerequisite or a speculative cross-route
+composition refactor.
 
 ## Delivery gates
 
-### Gate A — Post-Anomaly/Zagreus preflight
+### Gate A — Occurrence-owned additional exits
 
-Do not start implementation until this gate replaces provisional assumptions
-with evidence from the live code.
+Migrate the existing Zagreus contract end to end without adding Chaos data:
 
-Audit:
+- schema 14 and mandatory `RoomOccurrence.additionalExits`;
+- occurrence-owned `AdditionalExitAddress`;
+- codec ownership, closure, selection, cycle, and topology-impact traversal;
+- `AddZagreusContract`/`RemoveZagreusContract` and workspace source facts;
+- canonical additional-continuation derivation from the active source;
+- reanchor normalization and dormant feature restoration;
+- removal of decision-owned additional-exit assumptions and the current
+  incompatible-source reanchor rejection.
 
-- the delivered separation between a room's game room set and its host route;
-- ownership and selection of Zagreus's additional exit;
-- whether additional-exit infrastructure assumes fixed targets, automatic
-  continuation, hidden preview, or an entry-consumed cap;
-- the delivered ordinary occurrence, additional-door address, codec, removal,
-  and focus contracts;
-- the structured workspace's live entry/frontier/decision composition;
-- schema and catalog-version impact;
-- the narrow change neighborhood and primary test owners.
+Primary neighborhoods:
 
-Then amend this document with exact types, commands, files, commit boundaries,
-and expected displaced UI paths. If the delivered contracts cannot express an
-ordinary-return additional exit without special cases, stop and correct the
-plan rather than widening a Zagreus-specific path implicitly.
-
-Acceptance: mark this document implementation-ready with exact types,
-commands, files, displaced paths, commit boundaries, and primary test lanes;
-leave no unresolved ownership or persistence decision.
-
-### Gate B — Entry decision workbench
-
-Deliver the behavior-preserving Opening/Intro containing workbench before
-introducing Chaos controls.
-
-Acceptance: every route can author its first picked continuation from the
-entry inspector; entry and first-decision focus share one control package;
-existing command, reward, finding, and keyboard behavior remains unchanged;
-no Chaos production state exists yet.
-
-### Gate C — Catalog, authored topology, and commands
-
-Deliver:
-
-- Chaos maps, room-set identity, encounter, reward identity, special-door
-  source capability, and natural requirements;
-- the natural additional-exit authored form;
-- add, remove, and selection commands;
-- exact codec, defaults, destructive impact, and undo/redo behavior.
-
-Acceptance: unsupported and Ixion-only sources cannot author natural Chaos;
-source changes retain invalid-but-structural authorship with findings; normal
-and Chaos branches have distinct ownership; consumers do not recreate catalog
-source capability.
-
-### Gate D — Simulation, requirements, and candidates
-
-Deliver:
-
-- the source-level natural-Chaos-offered history fact;
-- ten-prior-room spacing evaluation;
-- selected and unselected gate lifecycle;
-- Chaos entry, encounter, reward, history, and depth;
-- ordinary fresh host-biome return generation;
-- candidate support and exact semantic findings.
+- `packages/planner-engine/src/authored-project/{model,addresses}.ts`;
+- `authored-project/topology/{codec,query,room-ownership}.ts` and
+  `topologyImpact.ts`;
+- `authored-project/commands/{route-detours,topology,room-replacement}.ts`;
+- `simulation/materialization/{model,biome}.ts`;
+- `apps/planner/src/projections/structured-workspace/assembly/` occurrence and
+  decision assembly/facts;
+- their existing authored, detour, materialization, workspace, UI, and product
+  witnesses.
 
 Acceptance:
 
-- an unpicked gate makes another natural gate ineligible at every source whose
-  previous-ten-record window still contains the marked host record;
-- after ten later room-history records of any room set have committed, the
-  first otherwise-eligible source may offer natural Chaos again;
-- a selected gate records both source offer and Chaos entry;
-- normal branch offers retain their creation and reward effects when Chaos is
-  selected;
+- every existing Anomaly/Zagreus product test remains behaviorally equivalent;
+- a Midshop-to-ordinary reanchor succeeds, leaves the contract dormant on the
+  old Midshop, and preserves its target package;
+- reselecting that Midshop restores the exact contract;
+- no persisted or application sidecar duplicates occurrence feature ownership;
+- `npm run test:engine`, `npm run test:planner`, and the full repository gate
+  pass.
+
+### Gate B — Chaos declarations, authored state, and commands
+
+Deliver:
+
+- `Chaos_01`–`Chaos_06`, `Empty_Chaos`, `TrialUpgrade`, Chaos exit behavior,
+  and the `Chaos` room/template identity;
+- exact F/G/N/P source capability declarations;
+- normalized host target domains/defaults and P depth requirement;
+- `naturalChaos` authored union member and canonical continuation member;
+- add, remove, map replacement, selection, defaults, codec, destructive impact,
+  undo/redo, and recovery behavior;
+- the catalog-version update associated with the new declarations.
+
+Acceptance:
+
+- unsupported and Ixion-only sources cannot create natural Chaos;
+- context-invalid active gates remain structurally representable;
+- normal and Chaos occurrences have unique semantic owners;
+- consumers do not recreate the source inventory or host target domain.
+
+### Gate C — Generation, history, requirements, and findings
+
+Deliver:
+
+- natural-Chaos additional-room creation at the entered source checkpoint;
+- exact offer-spacing evaluation from existing creation/appearance history;
+- P depth evaluation;
+- selected and unselected offer lifecycle;
+- Chaos entry, encounter, direct reward, counters, and appearance;
+- fresh ordinary host continuation;
+- exact source, spacing, target-domain, and lifecycle findings.
+
+Acceptance:
+
+- the ten-room boundary, skipped/selected equivalence, and cross-biome route
+  history are protected;
+- normal offers retain their creation and reward effects when Chaos is selected;
 - Chaos return never reuses an abandoned normal occurrence;
-- N Chaos resumes at a fresh Hub and skips PreHub;
-- Chaos can delay an offered takeover Preboss and allow a fresh later batch.
+- one takeover fixture proves Chaos can delay an offered Preboss and later
+  produce a fresh batch;
+- one N fixture proves the fresh depth-two Hub takeover with no special repair.
 
-### Gate E — Workspace, React, and product closure
+### Gate D — Workspace and React product loop
 
 Deliver:
 
-- `Spawn Chaos Door`, removal, and normal-versus-Chaos selection through bound
-  workspace interactions;
-- a Chaos occurrence workbench with fixed encounter/reward facts and map
-  selection;
-- an ordinary continuation workbench after selected Chaos;
-- decision and rail summaries for offered, selected, invalid, and removed
-  gates;
-- finding focus, editor-session reconciliation, persistence recovery, and
-  representative product workflows.
+- bound spawn, remove, map, and selection interactions;
+- the source action beside existing outgoing authoring;
+- typed Chaos decision/card presentation and summaries;
+- finding focus and editor-session reconciliation;
+- persistence recovery and representative browser workflows.
 
 Acceptance:
 
-- invalid or unselected gates retain visible controls;
-- selecting either branch leaves the other inspectable;
-- N Opening presents PreHub versus Chaos in the same next-route package;
-- non-Chaos routes and unsupported sources show no invented action;
-- all repository gates pass;
-- stable contracts are absorbed into owning design and biome documents and
-  this temporary plan is retired.
+- selected, unselected, and invalid active gates remain operable;
+- N Opening presents and traverses PreHub versus Chaos through one decision;
+- the Chaos continuation exposes its fresh normal target and reward;
+- unsupported sources expose no action;
+- React contains no domain-policy branch for Chaos.
 
-## Provisional commit expectation
+### Gate E — Closure and absorption
 
-Expect approximately four to six focused commits after Gate A:
+Run the complete repository gate and audit the live diff for duplicated policy,
+parallel topology paths, test-only production surfaces, and unexplained growth.
+Absorb completed contracts into the authored-project, generation, lifecycle,
+simulation, editor, integration-boundary, and affected biome documents. Update
+the implementation progress frontier, then retire this file.
 
-1. entry-workbench correction;
-2. catalog and authored contract;
-3. simulation/history/candidates;
+Manual acceptance decides whether a narrowly described entry-inspector UX
+follow-up is warranted. It does not hold domain closure open if the existing
+occurrence action row and decision workbench are sufficient.
+
+## Commit expectation
+
+Expect approximately five to seven focused commits:
+
+1. occurrence-owned Zagreus migration and schema 14;
+2. Chaos catalog plus authored command contract;
+3. generation/history/findings;
 4. workspace and React;
-5. focused behavioral correction if integration exposes one;
-6. closure and documentation absorption.
+5. N/Preboss/product-loop closure;
+6. focused behavioral or UX correction only if integration exposes one;
+7. documentation absorption and plan retirement.
 
-Gate A must revise the estimate rather than mix behavior-preserving movement
-with a domain change or leave a parallel path for later repair.
+Keep the Gate A ownership migration behavior-preserving for Zagreus. Do not
+mix an all-entry presentation reorganization into the domain gates, and do not
+land dormant interfaces or forwarding paths for later commits to repair.
 
 ## Closure audit
 
-Before retirement, verify that no Ixion, chance, save-profile, React/Redux
-eligibility, automatic-return assumption, generic `special` edge, fake Chaos
-biome, shadow audit, or test-only production surface entered the product.
-Offered-gate and entered-room histories must remain distinct; takeover must
-still own only normal exits; each decision control must have one semantic
-owner; complete policy matrices must remain with catalog/engine authority.
+Before retirement, verify that no Ixion bypass, chance replay, save-profile
+input, React/Redux eligibility, automatic Chaos return, generic `special`
+edge, fake Chaos route biome, shadow offer ledger, source-backward target
+validation, or duplicated feature/decision ownership entered production.
+
+Offered-gate and entered-room histories must remain distinct; normal-door
+takeover must still own only normal exits; occurrence-owned additional-exit
+state must remain with its occurrence through unpick/repick; each semantic
+control must have one reachable inspector; and complete policy matrices must
+remain with catalog or engine authority.
