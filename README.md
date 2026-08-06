@@ -40,12 +40,11 @@ Tauri 2 shell packages the same application as a no-install Windows preview;
 native desktop file integration and the app/game execution boundary remain
 deliberate later steps.
 
-Natural Chaos is explicit future special-exit work. Oceanus Anomaly replacement
-and the selected Midshop Zagreus contract are supported closed detours: they
-reuse ordinary occurrences and lifecycle processing, and return through one
-declaration-owned hidden host continuation. A future Chaos slice must extend
-the exit-decision envelope without changing normal-door takeover or completion
-ownership.
+Oceanus Anomaly replacement, the selected Midshop Zagreus contract, and
+natural Chaos are supported closed detours. Natural Chaos is an occurrence-owned
+additional exit on declared N/F/G/P source rooms: it may be skipped or selected,
+enters a concrete Chaos room, then resumes through a fresh ordinary host target.
+All detours preserve normal-door takeover and completion ownership.
 
 ## Architecture
 

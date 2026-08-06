@@ -47,6 +47,8 @@ import type {
   WorkspaceStructuralInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
+  WorkspaceNaturalChaosExitInteraction,
+  WorkspaceNaturalChaosSpawnInteraction,
   WorkspaceZagreusContractInteraction,
   WorkspaceZagreusSpawnInteraction,
 } from '../contract';
@@ -152,6 +154,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     WorkspaceCandidateInteraction<SideRoomGeneration>
   >;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
+  readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
 }
 
 function bindOccurrenceLocalInteractions(
@@ -168,6 +171,7 @@ function bindOccurrenceLocalInteractions(
   const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
+  const naturalChaosSpawns = new Map<string, WorkspaceNaturalChaosSpawnInteraction>();
   const set = <T>(
     target: Map<string, WorkspaceCandidateInteraction<T>>,
     key: string,
@@ -183,6 +187,30 @@ function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'naturalChaosSpawn': {
+        const key = semanticAddressKey(requirement.owner);
+        if (naturalChaosSpawns.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound natural Chaos spawn interactions`,
+          );
+        }
+        naturalChaosSpawns.set(
+          key,
+          Object.freeze({
+            key,
+            owner: requirement.owner,
+            spawnIntent: () =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'AddNaturalChaos' as const,
+                  additional: requirement.owner,
+                  occurrenceId: allocateOccurrenceId(),
+                }),
+              }),
+          }),
+        );
+        break;
+      }
       case 'zagreusSpawn': {
         const key = semanticAddressKey(requirement.owner);
         if (zagreusSpawns.has(key)) {
@@ -374,6 +402,7 @@ function bindOccurrenceLocalInteractions(
     sideRoomEntryOrders,
     sideRoomGenerations,
     zagreusSpawns,
+    naturalChaosSpawns,
   });
 }
 
@@ -382,6 +411,7 @@ interface WorkspaceBatchInteractionCatalog {
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
+  readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
 }
 
 function bindBatchInteractions(
@@ -392,6 +422,7 @@ function bindBatchInteractions(
   const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
   const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
   const zagreusContracts = new Map<string, WorkspaceZagreusContractInteraction>();
+  const naturalChaosExits = new Map<string, WorkspaceNaturalChaosExitInteraction>();
   for (const requirement of requirements) {
     if (requirement.exitSelection !== undefined) {
       const { exitSelection } = requirement;
@@ -485,8 +516,56 @@ function bindBatchInteractions(
         }),
       );
     }
+    if (requirement.naturalChaos !== undefined) {
+      const { owner, occurrence } = requirement.naturalChaos;
+      const key = semanticAddressKey(owner);
+      if (naturalChaosExits.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound natural Chaos exit interactions`,
+        );
+      }
+      naturalChaosExits.set(
+        key,
+        Object.freeze({
+          key,
+          owner,
+          mapIntent: (gameName: string) =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceNaturalChaosMap' as const,
+                occurrence,
+                gameName,
+              }),
+            }),
+          removeIntent: Object.freeze({
+            command: Object.freeze({ kind: 'RemoveNaturalChaos' as const, additional: owner }),
+          }),
+          selectIntent: Object.freeze({
+            command: Object.freeze({
+              kind: 'SetExitSelection' as const,
+              selection: Object.freeze({
+                kind: 'exitSelection' as const,
+                routeKey: owner.routeKey,
+                biomeKey: owner.biomeKey,
+                source: { kind: 'occurrence' as const, occurrenceId: owner.occurrenceId },
+              }),
+              value: Object.freeze({
+                kind: 'additional' as const,
+                additionalExitKey: owner.additionalExitKey,
+              }),
+            }),
+          }),
+        }),
+      );
+    }
   }
-  return Object.freeze({ batchRewardStores, exitSelections, fieldsCageOutcomes, zagreusContracts });
+  return Object.freeze({
+    batchRewardStores,
+    exitSelections,
+    fieldsCageOutcomes,
+    zagreusContracts,
+    naturalChaosExits,
+  });
 }
 
 interface WorkspaceHubInteractionCatalog {
@@ -1086,13 +1165,19 @@ export function bindWorkspaceInteractions(
     sideRoomEntryOrders,
     sideRoomGenerations,
     zagreusSpawns,
+    naturalChaosSpawns,
   } = bindOccurrenceLocalInteractions(
     allocateOccurrenceId,
     candidates,
     occurrenceInteractionRequirements.values(),
   );
-  const { batchRewardStores, exitSelections, fieldsCageOutcomes, zagreusContracts } =
-    bindBatchInteractions(candidates, batchInteractionRequirements.values());
+  const {
+    batchRewardStores,
+    exitSelections,
+    fieldsCageOutcomes,
+    zagreusContracts,
+    naturalChaosExits,
+  } = bindBatchInteractions(candidates, batchInteractionRequirements.values());
   const { hubSlots, hubVisitOrders } = bindHubInteractions(
     allocateOccurrenceId,
     candidates,
@@ -1392,6 +1477,8 @@ export function bindWorkspaceInteractions(
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
+    naturalChaosExits,
+    naturalChaosSpawns,
     hubTakeovers,
     hubSlots,
     hubVisitOrders,

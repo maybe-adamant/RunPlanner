@@ -366,6 +366,8 @@ export interface WorkspaceHubTakeoverInteraction {
 }
 
 export interface WorkspaceInteractionCatalog {
+  readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
+  readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -424,6 +426,30 @@ export interface WorkspaceZagreusSpawnInteraction {
   readonly owner: AdditionalExitAddress;
   readonly spawnIntent: () => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'AddZagreusContract' }>
+  >;
+}
+
+/** A natural Chaos gate is authored at its source and selected at its outgoing decision. */
+export interface WorkspaceNaturalChaosExitInteraction {
+  readonly key: string;
+  readonly owner: AdditionalExitAddress;
+  readonly mapIntent: (
+    gameName: string,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceNaturalChaosMap' }>>;
+  readonly removeIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemoveNaturalChaos' }>
+  >;
+  readonly selectIntent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
+  >;
+}
+
+/** Availability belongs to the active source room; the authored gate remains occurrence-owned. */
+export interface WorkspaceNaturalChaosSpawnInteraction {
+  readonly key: string;
+  readonly owner: AdditionalExitAddress;
+  readonly spawnIntent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'AddNaturalChaos' }>
   >;
 }
 
@@ -709,8 +735,10 @@ export interface WorkspaceRoomSummary {
    * gate, replacement cap, or reward legality.
    */
   readonly anomaly?: WorkspaceAnomalyControl;
-  /** Declared Midshop spawn capability; the authored door is decision-owned. */
+  /** Declared Midshop spawn capability; the authored door remains occurrence-owned. */
   readonly zagreusSpawn?: WorkspaceZagreusSpawnControl;
+  /** Declared natural Chaos spawn capability; the authored door remains occurrence-owned. */
+  readonly naturalChaosSpawn?: WorkspaceNaturalChaosSpawnControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
@@ -726,6 +754,19 @@ export interface WorkspaceZagreusContractControl {
 export interface WorkspaceZagreusSpawnControl {
   readonly marker: WorkspaceMarker;
   readonly materialized: boolean;
+  readonly owner: AdditionalExitAddress;
+}
+
+export interface WorkspaceNaturalChaosExitControl {
+  readonly chaosRoom: WorkspaceRoomSummary;
+  readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly marker: WorkspaceMarker;
+  readonly owner: AdditionalExitAddress;
+  readonly selected: boolean;
+}
+
+export interface WorkspaceNaturalChaosSpawnControl {
+  readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
 }
 
@@ -805,6 +846,7 @@ interface WorkspaceBatchNodeBase {
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
   /** An authored additional exit is a sibling of normal targets, never a target row. */
+  readonly naturalChaos?: WorkspaceNaturalChaosExitControl;
   readonly zagreusContract?: WorkspaceZagreusContractControl;
   readonly fieldsCageOutcome?: WorkspaceMarker;
   /** Present only for the declared exact terminal Hub envelope. */

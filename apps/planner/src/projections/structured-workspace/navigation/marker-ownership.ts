@@ -60,6 +60,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...room.rewardControls.map((control) => control.marker),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
+    ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);
 }
@@ -78,6 +79,12 @@ export function workspaceDecisionOwnedMarkers(
       : [
           node.zagreusContract.marker,
           ...workspaceOccurrenceOwnedMarkers(node.zagreusContract.contractRoom),
+        ]),
+    ...(node.naturalChaos === undefined
+      ? []
+      : [
+          node.naturalChaos.marker,
+          ...workspaceOccurrenceOwnedMarkers(node.naturalChaos.chaosRoom),
         ]),
     ...node.targets.flatMap((target) => [
       target.marker,

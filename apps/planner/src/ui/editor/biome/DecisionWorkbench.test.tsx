@@ -226,6 +226,42 @@ function requiredTakeoverOwner(
 }
 
 describe('DecisionWorkbench', () => {
+  it('renders an authored natural Chaos exit beside normal exits in its source decision', () => {
+    const base = createGoldenFGHIProject();
+    const located = base.routes.flatMap((route) =>
+      route.biomes.flatMap((plan) =>
+        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+          const room = catalog.rooms.byKey[occurrence.gameName];
+          return room?.additionalExits.some((exit) => exit.kind === 'naturalChaos')
+            ? [{ occurrence, plan, route }]
+            : [];
+        }),
+      ),
+    )[0];
+    if (located === undefined) throw new Error('Golden natural Chaos source is missing');
+    const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+    const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'naturalChaos');
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: createOccurrenceId('decision-workbench-natural-chaos'),
+    });
+    renderDecisionWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      subjectForOwner(createExitDecisionAddress(biome, source)),
+    );
+
+    const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
+    expect(gate.dataset.picked).toBe('false');
+    expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
+    expect(within(gate).getByLabelText('Map')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove Chaos gate' })).toBeTruthy();
+    expect(screen.getByLabelText('Take Chaos gate')).toBeTruthy();
+  });
+
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', () => {
     const base = createGoldenFGHIProject();
     const located = base.routes.flatMap((route) =>

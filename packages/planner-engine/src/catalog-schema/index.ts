@@ -280,8 +280,7 @@ export interface NaturalChaosAdditionalExitDeclaration {
 }
 
 export type AdditionalExitDeclaration =
-  | ZagreusContractAdditionalExitDeclaration
-  | NaturalChaosAdditionalExitDeclaration;
+  ZagreusContractAdditionalExitDeclaration | NaturalChaosAdditionalExitDeclaration;
 
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;

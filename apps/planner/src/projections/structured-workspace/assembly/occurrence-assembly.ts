@@ -864,9 +864,10 @@ function hasRoomLocalCustomization(
   detailsActive: boolean,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   roomLocal: WorkspaceRoomLocal,
-  zagreusMaterialized: boolean,
+  additionalSpawnAvailable: boolean,
 ): boolean {
   if (!detailsActive) return false;
+  if (additionalSpawnAvailable) return true;
   if (encounterPhases.some((phase) => phase.customizable || phase.marker.findingCount > 0)) {
     return true;
   }
@@ -878,7 +879,7 @@ function hasRoomLocalCustomization(
     case 'ship':
       return true;
     case 'shop':
-      return roomLocal.materialized && zagreusMaterialized;
+      return false;
     case 'none':
     case 'fixed':
     case 'incomingReward':
@@ -900,6 +901,11 @@ function occurrenceInteractionRequirements(
   if (room.zagreusSpawn?.materialized === true) {
     requirements.push(
       Object.freeze({ kind: 'zagreusSpawn' as const, owner: room.zagreusSpawn.owner }),
+    );
+  }
+  if (room.naturalChaosSpawn !== undefined) {
+    requirements.push(
+      Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
   }
 
@@ -1062,10 +1068,30 @@ export function assembleWorkspaceOccurrence(
             owner,
           });
         })();
+  const naturalChaosDeclaration = room.additionalExits.find(
+    (candidate) => candidate.kind === 'naturalChaos',
+  );
+  const naturalChaosSpawn =
+    naturalChaosDeclaration === undefined ||
+    input.facts.authoredAdditionalExitKeys.includes(naturalChaosDeclaration.key) ||
+    !input.facts.detailsActive
+      ? undefined
+      : (() => {
+          const owner = createAdditionalExitAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            naturalChaosDeclaration.key,
+          );
+          return Object.freeze({
+            marker: input.markerDestinations.marker(owner),
+            owner,
+          });
+        })();
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.map((phase) => phase.marker),
     ...workspaceLocalDetailMarkers(roomLocal),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
+    ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
@@ -1077,7 +1103,7 @@ export function assembleWorkspaceOccurrence(
       input.facts.detailsActive,
       encounterPhases,
       roomLocal,
-      zagreusSpawn?.materialized === true,
+      zagreusSpawn?.materialized === true || naturalChaosSpawn !== undefined,
     ),
     kind: room.kind,
     label: room.label,
@@ -1116,6 +1142,7 @@ export function assembleWorkspaceOccurrence(
         })()),
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     ...(zagreusSpawn === undefined ? {} : { zagreusSpawn }),
+    ...(naturalChaosSpawn === undefined ? {} : { naturalChaosSpawn }),
     roomLocal,
     rewardControls,
   });

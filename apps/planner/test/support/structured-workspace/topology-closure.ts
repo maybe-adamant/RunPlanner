@@ -116,13 +116,20 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
 
   for (const additional of input.expected.additionalExits) {
     const decision = observedExitDecision(input.observed, additional.decisionAddress);
-    const contract = decision.zagreusContract;
-    if (contract?.owner.additionalExitKey !== additional.address.additionalExitKey) {
+    const additionalExit =
+      additional.address.additionalExitKey === 'zagreusContract'
+        ? decision.zagreusContract === undefined
+          ? undefined
+          : { room: decision.zagreusContract.contractRoom, ...decision.zagreusContract }
+        : decision.naturalChaos === undefined
+          ? undefined
+          : { room: decision.naturalChaos.chaosRoom, ...decision.naturalChaos };
+    if (additionalExit?.owner.additionalExitKey !== additional.address.additionalExitKey) {
       throw new Error(
         `${workspaceTestOwnerKey(additional.address)} is not contained by its authored decision`,
       );
     }
-    if (contract.contractRoom.occurrenceId !== additional.occurrenceId) {
+    if (additionalExit.room.occurrenceId !== additional.occurrenceId) {
       throw new Error(
         `${workspaceTestOwnerKey(additional.address)} omits its authored contract occurrence`,
       );
@@ -132,10 +139,10 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
       packages === undefined ||
       packages.length !== 1 ||
       packages[0]?.nodeKey !== decision.key ||
-      packages[0]?.room !== contract.contractRoom
+      packages[0]?.room !== additionalExit.room
     ) {
       throw new Error(
-        `${workspaceTestOwnerKey(additional.address)} contract occurrence must have one canonical package in its containing decision`,
+        `${workspaceTestOwnerKey(additional.address)} occurrence must have one canonical package in its containing decision`,
       );
     }
     assertObservedOwner(

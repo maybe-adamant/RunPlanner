@@ -801,11 +801,77 @@ function evaluateAdditionalContinuationEntries(
   rooms: ReadonlyMap<string, CanonicalGenerationSource>,
   findings: SemanticFinding[],
 ): void {
+  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
+  if (layout === undefined) {
+    throw new BiomeRoomGenerationContractError(`catalog lost ${snapshot.biomeKey} layout`);
+  }
   for (const { continuation, parentOrigin } of additionalContinuationEntries(snapshot)) {
-    if (continuation.key !== 'zagreusContract') continue;
     const source = rooms.get(semanticAddressKey(parentOrigin));
     const sourceDeclaration =
       source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+    const parentHistory = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(parentOrigin),
+    );
+    if (continuation.key === 'naturalChaos') {
+      if (source === undefined || parentHistory?.entry === undefined) continue;
+      const declaration = sourceDeclaration?.additionalExits.find(
+        (
+          candidate,
+        ): candidate is Extract<
+          (typeof sourceDeclaration.additionalExits)[number],
+          { readonly kind: 'naturalChaos' }
+        > => candidate.kind === 'naturalChaos' && candidate.key === continuation.key,
+      );
+      const host = layout.naturalChaos;
+      const failedConditions: string[] = [];
+      if (declaration === undefined) failedConditions.push('sourceCapability');
+      if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
+        failedConditions.push('targetDomain');
+      }
+      if (
+        declaration?.requirement !== undefined &&
+        sourceDeclaration !== undefined &&
+        !evaluateRequirement(
+          declaration.requirement,
+          projectRoomGenerationRequirementContext(
+            source,
+            sourceDeclaration,
+            parentHistory.entry,
+            0,
+          ),
+        )
+      ) {
+        failedConditions.push('sourceRequirement');
+      }
+      const window = host?.offerSpacingWindow;
+      if (window !== undefined) {
+        const recentOrigins = new Set(
+          parentHistory.entry.ledgers.roomAppearances
+            .slice(-window)
+            .map((appearance) => semanticAddressKey(appearance.origin)),
+        );
+        const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
+          (creation) =>
+            creation.source === 'additionalExit' &&
+            creation.additionalOrigin.additionalExitKey === 'naturalChaos' &&
+            recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
+        );
+        if (recentOffer !== undefined) failedConditions.push('offerSpacing');
+      }
+      if (failedConditions.length > 0) {
+        findings.push(
+          finding('targetRoomUnavailable', continuation.origin, {
+            kind: 'naturalChaos',
+            sourceGameName: source.gameName,
+            chaosRoomGameName: continuation.room.gameName,
+            offerSpacingWindow: host?.offerSpacingWindow ?? null,
+            failedConditions: Object.freeze(failedConditions),
+          }),
+        );
+      }
+      continue;
+    }
+    if (continuation.key !== 'zagreusContract') continue;
     const declaration = sourceDeclaration?.additionalExits.find(
       (
         candidate,
@@ -824,9 +890,6 @@ function evaluateAdditionalContinuationEntries(
         `${semanticAddressKey(continuation.origin)} lost its declared Midshop contract source`,
       );
     }
-    const parentHistory = history.rooms.find(
-      (room) => semanticAddressKey(room.origin) === semanticAddressKey(parentOrigin),
-    );
     // An authored later Midshop may be retained beyond an incomplete or
     // invalid prefix. Its declaration remains structurally valid, but its
     // entry-time cap checkpoint is not yet assessable.

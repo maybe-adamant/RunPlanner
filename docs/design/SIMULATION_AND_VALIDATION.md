@@ -434,6 +434,17 @@ host policy can resolve `O_PreBoss01`. Validation consumes both detour caps on
 entered-room history only, so skipped authored alternatives do not block a
 later offer.
 
+Natural Chaos uses the same additional-room creation ledger but a distinct
+declared host policy. Its offer is recorded at the entered source checkpoint
+even when the normal lane remains selected. The preceding-ten room-appearance
+window and any source-local requirement (P's depth ceiling) are evaluated from
+that history; a retained invalid gate stays materialized and receives an exact
+additional-exit finding. When selected, the concrete Chaos room enters with
+`Empty_Chaos` and direct `TrialUpgrade`, then its ordinary outgoing decision
+creates a fresh visible host target. Chaos never consumes normal-door force or
+Preboss takeover ownership, and that fresh target never reuses an abandoned
+normal occurrence.
+
 ### Prefix Snapshots
 
 An incomplete but materializable biome has a prefix product:

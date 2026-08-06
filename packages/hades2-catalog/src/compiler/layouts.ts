@@ -1119,7 +1119,10 @@ export function normalizeBiomeLayouts(
                 room.mode.kind !== 'authored' ||
                 room.mode.templateKey !== 'Chaos'
               ) {
-                fail(`${path}.naturalChaos.roomGameNames[${index}]`, 'must name an authored Chaos room');
+                fail(
+                  `${path}.naturalChaos.roomGameNames[${index}]`,
+                  'must name an authored Chaos room',
+                );
               }
             }
             const defaultRoomGameName = requireNonEmpty(

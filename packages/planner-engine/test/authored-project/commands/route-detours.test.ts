@@ -19,7 +19,14 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
-import { fBiome, fProject, gBiome, gProject, nBiome, nProject } from '../support/configured-projects';
+import {
+  fBiome,
+  fProject,
+  gBiome,
+  gProject,
+  nBiome,
+  nProject,
+} from '../support/configured-projects';
 
 function biomeTopology(
   project: ReturnType<typeof fProject>,
@@ -296,24 +303,30 @@ describe('authored-project route detour commands', () => {
       additional,
       occurrenceId: chaos,
     });
-    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
-      (occurrence) => occurrence.occurrenceId === opening,
-    )?.additionalExits).toEqual([
-      { kind: 'naturalChaos', key: 'naturalChaos', occurrenceId: chaos },
-    ]);
-    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
-      (occurrence) => occurrence.occurrenceId === chaos,
-    )).toMatchObject({ gameName: 'Chaos_01', state: { kind: 'fixed' } });
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === opening,
+      )?.additionalExits,
+    ).toEqual([{ kind: 'naturalChaos', key: 'naturalChaos', occurrenceId: chaos }]);
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === chaos,
+      ),
+    ).toMatchObject({ gameName: 'Chaos_01', state: { kind: 'fixed' } });
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceNaturalChaosMap',
       occurrence: createOccurrenceAddress(fBiome, chaos),
       gameName: 'Chaos_06',
     });
-    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
-      (occurrence) => occurrence.occurrenceId === chaos,
-    )?.gameName).toBe('Chaos_06');
-    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(project);
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === chaos,
+      )?.gameName,
+    ).toBe('Chaos_06');
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
 
     const history = createProjectHistory(project);
     const removed = applyProjectHistoryCommand(history, catalog, {
@@ -324,9 +337,11 @@ describe('authored-project route detour commands', () => {
     const redone = redoProjectHistory(restored);
     expect(restored.present).toEqual(project);
     expect(redone.present).toEqual(removed.present);
-    expect(biomeTopology(removed.present, 'Underworld', 'F').occurrences.map(
-      (occurrence) => occurrence.occurrenceId,
-    )).not.toContain(chaos);
+    expect(
+      biomeTopology(removed.present, 'Underworld', 'F').occurrences.map(
+        (occurrence) => occurrence.occurrenceId,
+      ),
+    ).not.toContain(chaos);
   });
 
   it('rejects a natural Chaos map outside N’s declared target domain', () => {
@@ -392,7 +407,9 @@ describe('authored-project route detour commands', () => {
       additional,
     });
     const topology = biomeTopology(project, 'Underworld', 'G');
-    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === target)).toMatchObject({
+    expect(
+      topology.occurrences.find((occurrence) => occurrence.occurrenceId === target),
+    ).toMatchObject({
       gameName: 'B_Combat01',
       additionalExits: [],
     });

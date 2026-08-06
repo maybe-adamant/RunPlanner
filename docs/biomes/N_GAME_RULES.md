@@ -31,15 +31,15 @@ depth 1. Leaving PreHub produces the history step `Opening, PreHub` and depth 2.
 Entering `N_Hub` then creates the persistent Ephyra board used by the visit
 loop.
 
-Natural Chaos is outside the supported planner baseline, but its source facts
-remain relevant evidence. N permits the natural additional Chaos gate from
-Opening; it does not replace the normal PreHub exit. A Chaos room contributes
-its own history ordinal and biome-depth step, uses the previous N room set on
-return, and can therefore resume N at depth 2. Player-observed behavior reaches
-a fresh Hub while skipping PreHub. Static source confirms the counter and
-resumed-room-set facts but does not expose a literal `ForceNextRoom = N_Hub`
-assignment. Future Chaos support must re-establish its complete runtime and
-planner contract from the data present at that time.
+Natural Chaos is supported as one declared additional exit from `N_Opening01`.
+The host policy admits `Chaos_03` or `Chaos_06` (default `Chaos_03`); selected
+Chaos reaches the declaration-owned fresh depth-two `N_Hub` takeover while
+skipping PreHub. N permits the natural additional Chaos gate from Opening; it
+does not replace the normal PreHub exit. A Chaos room contributes its own
+history ordinal and biome-depth step, uses the previous N room set on return,
+and can therefore resume N at depth 2. Player-observed behavior reaches a fresh
+Hub while skipping PreHub. Static source confirms the counter and resumed-room-
+set facts but does not expose a literal `ForceNextRoom = N_Hub` assignment.
 
 The game's fixed links are source evidence. They do not require the planner to
 persist a distinct linked-exit family when another authored representation
@@ -190,7 +190,7 @@ N preserves the progressed-save, neutral-boss board behavior,
 including the opening and PreHub producers, fixed Hub slots, full-board reward
 lookup, pylon rules, side-room pressure, and WorldShop lifecycle. It excludes
 the commented midshop assignment, NPC random/interaction or Shop/Bridge
-behavior, save/profile force predicates, natural Chaos, optional actions, and
+behavior, save/profile force predicates, optional actions, and
 automatic boss-drop state until they have modeled inputs and owners.
 
 ## Product boundary
@@ -200,5 +200,5 @@ encounter selection, semantic commands, validation, candidates, workspace
 projection, and React editing. The board is not a graph-canvas authority and
 no UI position or rendered visit index is persisted domain state. Weighted RNG,
 unmodeled combat composition, NPC events/interactions beyond selected combat,
-natural Chaos, anomalies, and optional player interactions remain outside the
+anomalies and optional player interactions remain outside the
 baseline.

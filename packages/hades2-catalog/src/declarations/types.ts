@@ -184,8 +184,7 @@ export interface RawNaturalChaosAdditionalExitDeclaration {
 }
 
 export type RawAdditionalExitDeclaration =
-  | RawZagreusContractAdditionalExitDeclaration
-  | RawNaturalChaosAdditionalExitDeclaration;
+  RawZagreusContractAdditionalExitDeclaration | RawNaturalChaosAdditionalExitDeclaration;
 
 export interface RawRoomDeclaration {
   readonly gameName: string;

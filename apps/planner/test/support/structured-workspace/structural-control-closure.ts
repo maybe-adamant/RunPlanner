@@ -34,6 +34,8 @@ function expectedStructuralInteraction(
       return interactions.hubSlots.get(key);
     case 'hubVisitOrder':
       return interactions.hubVisitOrders.get(key);
+    case 'naturalChaosSpawn':
+      return interactions.naturalChaosSpawns.get(key);
     case 'roomPicker':
       return interactions.rooms.get(key);
     case 'start':
@@ -111,6 +113,15 @@ function assertRenderedRoomControls(
       `Zagreus contract ${spawn.marker.focusKey}`,
     );
   }
+  if (room.naturalChaosSpawn !== undefined) {
+    const spawn = room.naturalChaosSpawn;
+    assertExactObservedInteraction(
+      interactions.naturalChaosSpawns.get(spawn.marker.focusKey),
+      spawn.marker.focusKey,
+      spawn.owner,
+      `natural Chaos spawn ${spawn.marker.focusKey}`,
+    );
+  }
 }
 
 function unreachable(value: never): never {
@@ -138,7 +149,11 @@ function assertRenderedNodeControls(
     case 'mixedBatch':
     case 'takeoverBatch': {
       const ownerKey = workspaceTestOwnerKey(node.owner);
-      if (node.targets.length !== 1) {
+      if (
+        node.targets.length !== 1 ||
+        node.zagreusContract !== undefined ||
+        node.naturalChaos !== undefined
+      ) {
         assertExactObservedInteraction(
           interactions.exitSelections.get(node.selection.focusKey),
           node.selection.focusKey,
@@ -211,6 +226,36 @@ function assertRenderedNodeControls(
             `Zagreus contract ${contract.marker.focusKey} has no exact select intent`,
           );
         }
+      }
+      if (node.naturalChaos !== undefined) {
+        const chaos = node.naturalChaos;
+        const interaction = interactions.naturalChaosExits.get(chaos.marker.focusKey);
+        assertExactObservedInteraction(
+          interaction,
+          chaos.marker.focusKey,
+          chaos.owner,
+          `natural Chaos ${chaos.marker.focusKey}`,
+        );
+        if (
+          interaction === undefined ||
+          interaction.removeIntent.command.kind !== 'RemoveNaturalChaos' ||
+          workspaceTestOwnerKey(interaction.removeIntent.command.additional) !==
+            workspaceTestOwnerKey(chaos.owner) ||
+          interaction.selectIntent.command.kind !== 'SetExitSelection' ||
+          workspaceTestOwnerKey(interaction.selectIntent.command.selection) !==
+            workspaceTestOwnerKey(node.selection.address) ||
+          interaction.selectIntent.command.value.kind !== 'additional' ||
+          interaction.selectIntent.command.value.additionalExitKey !==
+            chaos.owner.additionalExitKey ||
+          interaction.mapIntent(chaos.chaosRoom.gameName).command.kind !==
+            'ReplaceNaturalChaosMap' ||
+          workspaceTestOwnerKey(
+            interaction.mapIntent(chaos.chaosRoom.gameName).command.occurrence,
+          ) !== workspaceTestOwnerKey(chaos.chaosRoom.address)
+        ) {
+          throw new Error(`natural Chaos ${chaos.marker.focusKey} has no exact bound intents`);
+        }
+        assertRenderedRoomControls(chaos.chaosRoom, interactions);
       }
       assertExactObservedInteraction(
         interactions.topologyRemovals.get(ownerKey),

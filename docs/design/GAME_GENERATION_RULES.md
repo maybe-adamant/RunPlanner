@@ -194,7 +194,13 @@ transient expansion state.
 
 The canonical product does not model weighted RNG replay, combat-wave
 composition, NPC event/interactions outside selected combat definitions,
-Natural Chaos and other unsupported detours, optional player interactions, or
-external profile gates. Each can enter only
+unsupported detours, optional player interactions, or external profile gates.
+Natural Chaos is explicit: declared N/F/G/P source rooms may own one authored
+additional gate, while the host layout declares its concrete map domain,
+default, and preceding-ten-room offer window. The current source entry records
+the offer whether Chaos is selected or skipped; selected Chaos enters its fixed
+room and resumes through a fresh ordinary host target. P's source declaration
+adds its depth ceiling. Invalid retained gates report exact source, spacing, or
+map-domain findings rather than disappearing. Other features can enter only
 with an explicit catalog/input model, authored owner, lifecycle rule,
 validation behavior, and UI projection.

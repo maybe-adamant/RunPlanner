@@ -519,7 +519,9 @@ function batchInteractionRequirements(
   batch: WorkspaceDecisionBatchNode,
 ): readonly WorkspaceBatchInteractionRequirement[] {
   const exitSelection =
-    decision.selection.kind === 'derived' && batch.zagreusContract === undefined
+    decision.selection.kind === 'derived' &&
+    batch.zagreusContract === undefined &&
+    batch.naturalChaos === undefined
       ? undefined
       : Object.freeze({
           owner: createExitSelectionAddress(input.source.biome, decision.source),
@@ -573,11 +575,20 @@ function batchInteractionRequirements(
     batch.zagreusContract === undefined
       ? undefined
       : Object.freeze({ owner: batch.zagreusContract.owner });
+  const naturalChaos =
+    batch.naturalChaos === undefined
+      ? undefined
+      : Object.freeze({
+          owner: batch.naturalChaos.owner,
+          occurrence: batch.naturalChaos.chaosRoom.address,
+          mapChoices: batch.naturalChaos.mapChoices,
+        });
   if (
     exitSelection === undefined &&
     rewardStore === undefined &&
     fieldsCageOutcome === undefined &&
-    zagreusContract === undefined
+    zagreusContract === undefined &&
+    naturalChaos === undefined
   ) {
     return Object.freeze([]);
   }
@@ -589,6 +600,7 @@ function batchInteractionRequirements(
       owner: batch.owner,
       ...(rewardStore === undefined ? {} : { rewardStore }),
       ...(zagreusContract === undefined ? {} : { zagreusContract }),
+      ...(naturalChaos === undefined ? {} : { naturalChaos }),
     }),
   ]);
 }
@@ -787,6 +799,58 @@ function assembleBatchDecision(
             assembly: contractAssembly,
           });
         })();
+  const naturalChaosAdditional = authoredAdditional.find(
+    (additional) => additional.kind === 'naturalChaos',
+  );
+  const naturalChaos =
+    naturalChaosAdditional === undefined
+      ? undefined
+      : (() => {
+          if (decision.source.kind !== 'occurrence') {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} has a Chaos exit without an occurrence source`,
+            );
+          }
+          const occurrence = source.occurrence(naturalChaosAdditional.occurrenceId);
+          if (occurrence === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} has no authored natural Chaos occurrence`,
+            );
+          }
+          const evaluatedChaos = canonicalAdditionalByKey.get(naturalChaosAdditional.key);
+          const chaosAssembly = input.assembleOccurrence(
+            Object.freeze({
+              ...(evaluatedChaos === undefined ? {} : { evaluatedRoom: evaluatedChaos.room }),
+              occurrence,
+            }),
+          );
+          const host = source.layout.naturalChaos;
+          if (host === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} has Chaos without a host map domain`,
+            );
+          }
+          const additionalOwner = createAdditionalExitAddress(
+            source.biome,
+            decision.source.occurrenceId,
+            naturalChaosAdditional.key,
+          );
+          return Object.freeze({
+            chaosRoom: chaosAssembly.node.room,
+            marker: input.markerDestinations.marker(additionalOwner),
+            mapChoices: Object.freeze(
+              host.roomGameNames.map((gameName) => {
+                const room = requireWorkspaceRoom(input.catalog, gameName);
+                return Object.freeze({ label: room.label, value: room.gameName });
+              }),
+            ),
+            owner: additionalOwner,
+            selected:
+              decision.selection.kind === 'additional' &&
+              decision.selection.additionalExitKey === naturalChaosAdditional.key,
+            assembly: chaosAssembly,
+          });
+        })();
   const base = {
     batchState: decision.normal.batchState,
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
@@ -800,6 +864,17 @@ function assembleBatchDecision(
             marker: zagreusContract.marker,
             owner: zagreusContract.owner,
             selected: zagreusContract.selected,
+          }),
+        }),
+    ...(naturalChaos === undefined
+      ? {}
+      : {
+          naturalChaos: Object.freeze({
+            chaosRoom: naturalChaos.chaosRoom,
+            mapChoices: naturalChaos.mapChoices,
+            marker: naturalChaos.marker,
+            owner: naturalChaos.owner,
+            selected: naturalChaos.selected,
           }),
         }),
     ...(input.hubTakeover === undefined
@@ -867,6 +942,9 @@ function assembleBatchDecision(
       ...(zagreusContract === undefined
         ? []
         : zagreusContract.assembly.occurrenceInteractionRequirements),
+      ...(naturalChaos === undefined
+        ? []
+        : naturalChaos.assembly.occurrenceInteractionRequirements),
     ]),
     roomControls: Object.freeze([
       ...projectedTargets.flatMap((target) => target.roomControls),
@@ -875,6 +953,7 @@ function assembleBatchDecision(
     rewardControls: Object.freeze([
       ...projectedTargets.flatMap((target) => target.rewardControls),
       ...(zagreusContract === undefined ? [] : zagreusContract.assembly.rewardControls),
+      ...(naturalChaos === undefined ? [] : naturalChaos.assembly.rewardControls),
     ]),
     workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
   });
