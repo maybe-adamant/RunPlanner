@@ -1097,25 +1097,12 @@ export function assembleWorkspaceOccurrence(
               `${semanticAddressKey(address)} Anomaly has no replacement provenance`,
             );
           }
-          const binding = room.encounterSlotBindings.find(
-            (candidate) => candidate.kind === 'fixed',
-          );
-          const encounter =
-            binding?.kind !== 'fixed'
-              ? undefined
-              : input.catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey];
-          if (encounter === undefined) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${semanticAddressKey(address)} Anomaly has no declared encounter presentation`,
-            );
-          }
           const remembered = requireRoom(
             input.catalog,
             occurrence.anomalyReplacement.replacedRoomGameName,
           );
           return {
             anomaly: Object.freeze({
-              encounterLabel: encounter.label,
               mapChoices: Object.freeze(
                 input.anomalyReplacementRoomGameNames.map((gameName) => {
                   const map = requireRoom(input.catalog, gameName);

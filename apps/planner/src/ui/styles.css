@@ -1411,6 +1411,24 @@ select {
   gap: 5px;
 }
 
+.anomaly-outcome-control {
+  display: inline-flex;
+  align-items: center;
+  align-self: start;
+  gap: 7px;
+  color: #aaa7af;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.anomaly-outcome-control input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #e2b971;
+}
+
 .room-selector {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
