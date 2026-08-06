@@ -787,6 +787,9 @@ export function RoomOfferEditor({
       {state.kind === 'shop' && !state.materialized ? (
         <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
       ) : null}
+      {state.kind === 'shop' && state.materialized ? (
+        <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      ) : null}
       {room.hasRoomLocalCustomization ? (
         <RoomCustomizationDisclosure
           initiallyOpen={presentation === 'hubRoomLocal'}
@@ -807,13 +810,8 @@ export function RoomOfferEditor({
           {state.kind === 'ship' ? (
             <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
           ) : null}
-          {state.kind === 'shop' ? (
-            <>
-              <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
-              {room.zagreusSpawn?.materialized === true ? (
-                <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
-              ) : null}
-            </>
+          {state.kind === 'shop' && room.zagreusSpawn?.materialized === true ? (
+            <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
           ) : null}
         </RoomCustomizationDisclosure>
       ) : null}
