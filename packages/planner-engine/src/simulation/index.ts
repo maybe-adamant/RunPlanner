@@ -120,6 +120,7 @@ export {
   type FieldsCageOutcomeCandidateSupport,
   type FieldsCageOutcomeSupportEntry,
   type ForcePressureLedgerEntry,
+  type AnomalyTakeoverCandidateSupport,
   type GeneratedRoomGenerationValidation,
   type HubOpenSlotConstraintSupportEntry,
   type HubTerminalTakeoverCandidateSupport,

@@ -18,6 +18,7 @@ export {
 } from './hub';
 export type {
   ForcePressureLedgerEntry,
+  AnomalyTakeoverCandidateSupport,
   GeneratedRoomGenerationValidation,
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,

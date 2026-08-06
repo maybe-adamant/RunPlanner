@@ -153,9 +153,32 @@ export interface FieldsCageOutcomeSupportEntry extends FieldsCageOutcomeCandidat
   readonly selectedPossible: boolean;
 }
 
+/**
+ * Source-side availability for replacing one otherwise ordinary target with
+ * Oceanus Anomaly. The result is recorded at the source's normal-door
+ * generation checkpoint, rather than inferred later from the rendered room.
+ */
+export interface AnomalyTakeoverCandidateSupport {
+  readonly origin: TargetAddress;
+  readonly selectedPossible: boolean;
+  readonly sourceGameName: string;
+  readonly sourceBiomeDepthCache: number;
+  readonly minimumBiomeDepthCache: number;
+  readonly excludedSourceEncounterKeys: readonly string[];
+  readonly priorEnteredReplacementCount: number;
+  readonly maximumEnteredReplacementsThisRoute: number;
+  readonly failedConditions: readonly (
+    | 'minimumBiomeDepthCache'
+    | 'sourceRoomExcluded'
+    | 'sourceEncounterExcluded'
+    | 'enteredReplacementCap'
+  )[];
+}
+
 export interface GeneratedRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
+  readonly anomalyTakeovers: readonly AnomalyTakeoverCandidateSupport[];
   readonly forcePressure: readonly ForcePressureLedgerEntry[];
   readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
   readonly findings: readonly SemanticFinding[];

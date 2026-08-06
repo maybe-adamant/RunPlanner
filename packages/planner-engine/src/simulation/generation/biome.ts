@@ -48,6 +48,7 @@ import type {
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,
+  AnomalyTakeoverCandidateSupport,
   ForcePressureLedgerEntry,
   GeneratedRoomGenerationValidation,
   HubTerminalTakeoverCandidateSupport,
@@ -1425,11 +1426,6 @@ function normalPhysicalExitsForSource(
   );
 }
 
-interface AnomalyReplacementEligibility {
-  readonly selectedPossible: boolean;
-  readonly evidence: FindingEvidence;
-}
-
 /**
  * An Anomaly occupies an otherwise ordinary G target, so ordinary candidate
  * evaluation remains responsible for the remembered target declaration. This
@@ -1437,36 +1433,27 @@ interface AnomalyReplacementEligibility {
  * replacement available. Keeping the two products separate prevents the
  * Anomaly map from accidentally entering G's ordinary candidate pool.
  */
-function anomalyReplacementEligibility(
+function anomalyTakeoverCandidateSupport(
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
-  target: CanonicalTarget,
+  targetOrigin: CanonicalTarget['origin'],
+  rememberedTargetGameName: string,
   before: HistoryStateView,
-): AnomalyReplacementEligibility | undefined {
-  const provenance = target.room.anomalyReplacement;
-  if (provenance === undefined) return undefined;
+): AnomalyTakeoverCandidateSupport | undefined {
   const descriptor =
     layout.progression.kind === 'generated' ? layout.progression.anomalyReplacement : undefined;
-  if (descriptor === undefined) {
-    throw new BiomeRoomGenerationContractError(
-      `${target.room.gameName} has Anomaly provenance outside a declared Anomaly host`,
-    );
-  }
   if (
-    !descriptor.replacementRoomGameNames.includes(target.room.gameName) ||
-    !descriptor.replaceableTargetRoomGameNames.includes(provenance.replacedRoomGameName)
-  ) {
-    throw new BiomeRoomGenerationContractError(
-      `${target.room.gameName} does not match the declared Anomaly replacement matrix`,
-    );
-  }
+    descriptor === undefined ||
+    !descriptor.replaceableTargetRoomGameNames.includes(rememberedTargetGameName)
+  )
+    return undefined;
   const excludedEncounterKeys = source.encounterPhases
     .map((phase) => phase.encounterKey)
     .filter((key) => descriptor.source.excludedSourceEncounterGameNames.includes(key));
   const priorEnteredReplacementCount = before.ledgers.roomAppearances.filter((appearance) =>
     descriptor.replacementRoomGameNames.includes(appearance.gameName),
   ).length;
-  const failedConditions: string[] = [];
+  const failedConditions: AnomalyTakeoverCandidateSupport['failedConditions'][number][] = [];
   if (before.ledgers.counters.biomeDepthCache < descriptor.source.minimumBiomeDepthCache) {
     failedConditions.push('minimumBiomeDepthCache');
   }
@@ -1480,18 +1467,62 @@ function anomalyReplacementEligibility(
     failedConditions.push('enteredReplacementCap');
   }
   return Object.freeze({
+    origin: targetOrigin,
     selectedPossible: failedConditions.length === 0,
+    sourceGameName: source.gameName,
+    sourceBiomeDepthCache: before.ledgers.counters.biomeDepthCache,
+    minimumBiomeDepthCache: descriptor.source.minimumBiomeDepthCache,
+    excludedSourceEncounterKeys: Object.freeze(excludedEncounterKeys),
+    priorEnteredReplacementCount,
+    maximumEnteredReplacementsThisRoute: descriptor.source.maxEnteredReplacementsThisRoute,
+    failedConditions: Object.freeze(failedConditions),
+  });
+}
+
+function anomalyReplacementEligibility(
+  layout: BiomeLayout,
+  source: CanonicalGenerationSource,
+  target: CanonicalTarget,
+  before: HistoryStateView,
+): { readonly selectedPossible: boolean; readonly evidence: FindingEvidence } | undefined {
+  const provenance = target.room.anomalyReplacement;
+  if (provenance === undefined) return undefined;
+  const descriptor =
+    layout.progression.kind === 'generated' ? layout.progression.anomalyReplacement : undefined;
+  if (
+    descriptor === undefined ||
+    !descriptor.replacementRoomGameNames.includes(target.room.gameName) ||
+    !descriptor.replaceableTargetRoomGameNames.includes(provenance.replacedRoomGameName)
+  ) {
+    throw new BiomeRoomGenerationContractError(
+      `${target.room.gameName} does not match the declared Anomaly replacement matrix`,
+    );
+  }
+  const support = anomalyTakeoverCandidateSupport(
+    layout,
+    source,
+    target.origin,
+    provenance.replacedRoomGameName,
+    before,
+  );
+  if (support === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${target.room.gameName} has Anomaly provenance without a declared takeover target`,
+    );
+  }
+  return Object.freeze({
+    selectedPossible: support.selectedPossible,
     evidence: Object.freeze({
       kind: 'oceanusAnomaly',
       rememberedTargetGameName: provenance.replacedRoomGameName,
       replacementRoomGameName: target.room.gameName,
-      sourceGameName: source.gameName,
-      sourceBiomeDepthCache: before.ledgers.counters.biomeDepthCache,
-      minimumBiomeDepthCache: descriptor.source.minimumBiomeDepthCache,
-      excludedSourceEncounterKeys: Object.freeze(excludedEncounterKeys),
-      priorEnteredReplacementCount,
-      maximumEnteredReplacementsThisRoute: descriptor.source.maxEnteredReplacementsThisRoute,
-      failedConditions: Object.freeze(failedConditions),
+      sourceGameName: support.sourceGameName,
+      sourceBiomeDepthCache: support.sourceBiomeDepthCache,
+      minimumBiomeDepthCache: support.minimumBiomeDepthCache,
+      excludedSourceEncounterKeys: support.excludedSourceEncounterKeys,
+      priorEnteredReplacementCount: support.priorEnteredReplacementCount,
+      maximumEnteredReplacementsThisRoute: support.maximumEnteredReplacementsThisRoute,
+      failedConditions: support.failedConditions,
     }),
   });
 }
@@ -1507,6 +1538,7 @@ function evaluateTargetSlots(
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, TargetGenerationView>,
   candidateContexts: Map<string, RoomTargetCandidateContext>,
+  anomalyTakeovers: AnomalyTakeoverCandidateSupport[],
   pressure: ForcePressureLedgerEntry[],
   findings: SemanticFinding[],
   enteredBiomeCount: number,
@@ -1540,6 +1572,14 @@ function evaluateTargetSlots(
     candidateContexts.set(targetKey, candidateContext);
     const rememberedGameName =
       target.room.anomalyReplacement?.replacedRoomGameName ?? target.room.gameName;
+    const anomalyTakeover = anomalyTakeoverCandidateSupport(
+      layout,
+      source,
+      target.origin,
+      rememberedGameName,
+      before,
+    );
+    if (anomalyTakeover !== undefined) anomalyTakeovers.push(anomalyTakeover);
     const result = candidateContext.evaluateGameName(rememberedGameName);
     pressure.push(result.pressure);
     const anomaly = anomalyReplacementEligibility(layout, source, target, before);
@@ -1893,6 +1933,7 @@ export function evaluateBiomeRoomGenerationAssembly(
   const candidateContexts = new Map<string, RoomTargetCandidateContext>();
   const pressure: ForcePressureLedgerEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
+  const anomalyTakeovers: AnomalyTakeoverCandidateSupport[] = [];
   const findings: SemanticFinding[] = [];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -2005,6 +2046,7 @@ export function evaluateBiomeRoomGenerationAssembly(
       batch.targets,
       views,
       candidateContexts,
+      anomalyTakeovers,
       pressure,
       findings,
       enteredBiomeCount,
@@ -2018,6 +2060,7 @@ export function evaluateBiomeRoomGenerationAssembly(
   const validation: GeneratedRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
+    anomalyTakeovers: Object.freeze(anomalyTakeovers),
     forcePressure: Object.freeze(pressure),
     fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),

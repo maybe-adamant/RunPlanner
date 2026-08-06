@@ -259,7 +259,12 @@ function buildAnomalyProject(success: boolean) {
     'G_Combat07',
     'RunProgress',
   );
-  return { project, anomaly, returned };
+  return {
+    project,
+    anomaly,
+    returned,
+    earlyTarget: createTargetAddress(gBiome, source(combat01), 'exit1'),
+  };
 }
 
 function buildMidshopProject(options: {
@@ -662,8 +667,13 @@ describe('route-detour simulation', () => {
           finding.code === 'targetRoomUnavailable' &&
           semanticAddressKey(finding.origin) === semanticAddressKey(laterTarget),
       );
+      const takeover = generation.anomalyTakeovers.find(
+        (support) => semanticAddressKey(support.origin) === semanticAddressKey(laterTarget),
+      );
+      expect(takeover).toBeDefined();
 
       if (!firstAnomalySelected) {
+        expect(takeover).toMatchObject({ selectedPossible: true, failedConditions: [] });
         expect(unavailable).not.toMatchObject({
           evidence: expect.objectContaining({
             anomalyReplacement: expect.objectContaining({
@@ -673,6 +683,12 @@ describe('route-detour simulation', () => {
         });
         return;
       }
+      expect(takeover).toMatchObject({
+        selectedPossible: false,
+        priorEnteredReplacementCount: 1,
+        maximumEnteredReplacementsThisRoute: 0,
+        failedConditions: expect.arrayContaining(['enteredReplacementCap']),
+      });
       expect(unavailable).toMatchObject({
         evidence: expect.objectContaining({
           anomalyReplacement: expect.objectContaining({
@@ -685,10 +701,32 @@ describe('route-detour simulation', () => {
     },
   );
 
+  it('publishes a below-depth normal target takeover as unavailable before it is authored', () => {
+    const { project, earlyTarget } = buildAnomalyProject(true);
+    const { snapshot, history } = prefix(project, gBiome);
+    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
+
+    expect(generation.anomalyTakeovers).toContainEqual(
+      expect.objectContaining({
+        origin: earlyTarget,
+        selectedPossible: false,
+        failedConditions: expect.arrayContaining(['minimumBiomeDepthCache']),
+      }),
+    );
+  });
+
   it('keeps an Anomaly authored and finding-backed when its G_Shop source is excluded', () => {
     const { project, target } = buildShopSourceAnomalyProject();
     const { snapshot, history } = prefix(project, gBiome);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
+
+    expect(generation.anomalyTakeovers).toContainEqual(
+      expect.objectContaining({
+        origin: target,
+        selectedPossible: false,
+        failedConditions: expect.arrayContaining(['sourceRoomExcluded']),
+      }),
+    );
 
     expect(generation.findings).toContainEqual(
       expect.objectContaining({

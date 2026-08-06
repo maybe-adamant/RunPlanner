@@ -47,6 +47,35 @@ function emptyNProject(): ProjectDocument {
   });
 }
 
+function withBelowDepthAnomalyTakeovers(source: WorkspaceBiomeSource): WorkspaceBiomeSource {
+  const evaluation = source.evaluation;
+  if (evaluation === undefined || !('roomGeneration' in evaluation)) {
+    throw new Error('Anomaly workspace witness requires evaluated generation.');
+  }
+  return Object.freeze({
+    ...source,
+    evaluation: Object.freeze({
+      ...evaluation,
+      roomGeneration: Object.freeze({
+        ...evaluation.roomGeneration,
+        ordinary: Object.freeze({
+          ...evaluation.roomGeneration.ordinary,
+          anomalyTakeovers: Object.freeze(
+            evaluation.roomGeneration.ordinary.anomalyTakeovers.map((support) =>
+              Object.freeze({
+                ...support,
+                selectedPossible: false,
+                sourceBiomeDepthCache: support.minimumBiomeDepthCache - 1,
+                failedConditions: Object.freeze(['minimumBiomeDepthCache'] as const),
+              }),
+            ),
+          ),
+        }),
+      }),
+    }),
+  });
+}
+
 function indexOfNode(
   assembly: ReturnType<typeof assembleWorkspaceBiomeSemantics>,
   predicate: (node: (typeof assembly.nodes)[number]) => boolean,
@@ -58,6 +87,60 @@ function indexOfNode(
 }
 
 describe('structured workspace biome semantic assembly', () => {
+  it('publishes only engine-available Anomaly takeovers while retaining authored Anomaly controls', () => {
+    const project = createGoldenFGHIProject();
+    const source = biomeSource(project, 'Underworld', 'G');
+    const available = assembleWorkspaceBiomeSemantics(catalog, source);
+    const decision = available.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof available.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+        node.targets.some((target) => target.anomalyTakeover !== undefined),
+    );
+    if (decision === undefined) throw new Error('Anomaly-capable G target is missing');
+    const target = decision.targets.find((candidate) => candidate.anomalyTakeover !== undefined);
+    if (target === undefined) throw new Error('Anomaly takeover control is missing');
+
+    const unavailable = assembleWorkspaceBiomeSemantics(
+      catalog,
+      withBelowDepthAnomalyTakeovers(source),
+    );
+    const unavailableDecision = unavailable.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof unavailable.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') && node.key === decision.key,
+    );
+    expect(
+      unavailableDecision?.targets.find((candidate) => candidate.exitKey === target.exitKey),
+    ).not.toHaveProperty('anomalyTakeover');
+
+    const takenOver = applyProjectCommand(project, catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: target.marker.address as Extract<
+        typeof target.marker.address,
+        { readonly kind: 'target' }
+      >,
+    });
+    const retained = assembleWorkspaceBiomeSemantics(
+      catalog,
+      withBelowDepthAnomalyTakeovers(biomeSource(takenOver, 'Underworld', 'G')),
+    );
+    const retainedTarget = retained.nodes
+      .flatMap((node) =>
+        node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' ? node.targets : [],
+      )
+      .find((candidate) => candidate.room.occurrenceId === target.room.occurrenceId);
+    expect(retainedTarget?.room.anomaly).toBeDefined();
+  });
+
   it('composes N in authored Opening → PreHub → Hub → Preboss order without duplicate occurrences', () => {
     const source = biomeSource(appendCompleteN(emptyNProject()));
     const assembly = assembleWorkspaceBiomeSemantics(catalog, source);

@@ -717,7 +717,6 @@ export interface WorkspaceRoomSummary {
 
 export interface WorkspaceZagreusContractControl {
   readonly contractRoom: WorkspaceRoomSummary;
-  readonly encounterLabel: string;
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
   readonly selected: boolean;
