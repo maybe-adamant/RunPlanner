@@ -730,7 +730,6 @@ export interface WorkspaceZagreusSpawnControl {
 }
 
 export interface WorkspaceAnomalyControl {
-  readonly encounterLabel: string;
   readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   readonly rememberedRoomLabel: string;
   readonly success: boolean;

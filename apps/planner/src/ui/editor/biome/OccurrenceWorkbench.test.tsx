@@ -246,7 +246,7 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
-  it('renders retained Anomaly map, outcome, fixed encounter, and revert controls as exact commands', async () => {
+  it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -257,13 +257,18 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrenceId),
       application,
     );
-    expect(screen.getByText('Encounter: Anomaly combat')).toBeTruthy();
-    expect((screen.getByLabelText('Map') as HTMLSelectElement).value).toBe('B_Combat01');
-    expect(
-      (screen.getByRole('checkbox', { name: 'Clear Anomaly' }) as HTMLInputElement).checked,
-    ).toBe(true);
+    const map = screen.getByLabelText('Map');
+    const reward = screen.getByLabelText('Reward');
+    const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
+    const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
+    expect((map as HTMLSelectElement).value).toBe('B_Combat01');
+    expect((cleared as HTMLInputElement).checked).toBe(true);
+    expect(map.compareDocumentPosition(reward) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(reward.compareDocumentPosition(cleared) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(cleared.compareDocumentPosition(restore) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(screen.queryByLabelText('Customize')).toBeNull();
     await view.user.selectOptions(screen.getByLabelText('Map'), 'B_Combat05');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Clear Anomaly' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
     await view.user.click(screen.getByRole('button', { name: 'Restore Combat 01' }));
     expect(
       dispatch.mock.calls
@@ -304,7 +309,7 @@ describe('OccurrenceWorkbench', () => {
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
     expect(screen.getByLabelText('Map')).toBeTruthy();
-    expect(screen.getByRole('checkbox', { name: 'Clear Anomaly' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Cleared' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
   it('shows a Hub room main reward read-only and focuses its board owner without authoring', async () => {
