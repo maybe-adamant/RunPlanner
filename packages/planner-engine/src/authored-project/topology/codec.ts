@@ -1,9 +1,4 @@
-import type {
-  AdditionalExitDeclaration,
-  BiomeLayout,
-  Catalog,
-  RoomDeclaration,
-} from '../../catalog-schema';
+import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { decodeBatchState } from '../batchState';
 import type {
@@ -55,6 +50,7 @@ interface RawOccurrence {
   readonly hasAnomalyReplacement: boolean;
   readonly state: unknown;
   readonly encounters: unknown;
+  readonly additionalExits: unknown;
   readonly path: string;
 }
 
@@ -182,14 +178,10 @@ function decodeSelection(
 
 function decodeAdditionalExits(
   value: unknown,
-  sourceRoom: RoomDeclaration | undefined,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
   path: string,
 ): readonly AdditionalExit[] {
   const rawAdditional = expectArray(value, path);
-  const declarationsByKey = new Map<string, AdditionalExitDeclaration>(
-    (sourceRoom?.additionalExits ?? []).map((declaration) => [declaration.key, declaration]),
-  );
   const seen = new Set<string>();
   const additional = rawAdditional.map((rawValue, index): AdditionalExit => {
     const additionalPath = `${path}[${index}]`;
@@ -200,9 +192,8 @@ function decodeAdditionalExits(
     }
     expectExactKeys(additional, ['kind', 'key', 'occurrenceId'], additionalPath);
     const key = expectNonBlankString(additional.key, `${additionalPath}.key`);
-    const declaration = declarationsByKey.get(key);
-    if (declaration === undefined || declaration.kind !== 'zagreusContract') {
-      failProjectDocument(`${additionalPath}.key`, `${key} is not declared by this source room`);
+    if (key !== 'zagreusContract') {
+      failProjectDocument(`${additionalPath}.key`, `unknown additional exit ${key}`);
     }
     if (seen.has(key)) {
       failProjectDocument(`${additionalPath}.key`, `duplicates additional exit ${key}`);
@@ -213,23 +204,12 @@ function decodeAdditionalExits(
     if (target === undefined) {
       failProjectDocument(`${additionalPath}.occurrenceId`, `unknown occurrence ${id}`);
     }
-    if (target.gameName !== declaration.targetRoomGameName) {
-      failProjectDocument(
-        `${additionalPath}.occurrenceId`,
-        `${key} requires ${declaration.targetRoomGameName}`,
-      );
+    if (target.gameName !== 'C_Boss01') {
+      failProjectDocument(`${additionalPath}.occurrenceId`, `${key} requires C_Boss01`);
     }
-    return Object.freeze({ kind, key: declaration.key, occurrenceId: id });
+    return Object.freeze({ kind, key: 'zagreusContract', occurrenceId: id });
   });
-  return Object.freeze(
-    [...additional].sort(
-      (left, right) =>
-        (sourceRoom?.additionalExits.findIndex((declaration) => declaration.key === left.key) ??
-          -1) -
-        (sourceRoom?.additionalExits.findIndex((declaration) => declaration.key === right.key) ??
-          -1),
-    ),
-  );
+  return Object.freeze(additional);
 }
 
 function decodeAnomalyReplacementProvenance(
@@ -351,8 +331,24 @@ function isTakeoverBatch(
   );
 }
 
+function selectedContinuationForDecision(
+  decision: ExitDecision,
+  occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+): ReturnType<typeof selectedExitContinuation> {
+  const additional =
+    decision.source.kind === 'occurrence'
+      ? decodeAdditionalExits(
+          occurrences.get(decision.source.occurrenceId)?.additionalExits,
+          occurrences,
+          `${occurrences.get(decision.source.occurrenceId)?.path ?? '$'}.additionalExits`,
+        )
+      : Object.freeze([]);
+  return selectedExitContinuation(decision, additional);
+}
+
 function validateSelectedDecisionCycles(
   decisions: readonly NextRoomDecision[],
+  occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
   startOccurrenceId: OccurrenceId,
   path: string,
 ): void {
@@ -372,7 +368,7 @@ function validateSelectedDecisionCycles(
     visiting.add(occurrenceId);
     const decision = decisionsBySource.get(occurrenceId);
     if (decision !== undefined) {
-      const continuation = selectedExitContinuation(decision);
+      const continuation = selectedContinuationForDecision(decision, occurrences);
       const targetOccurrenceId =
         continuation?.kind === 'normal'
           ? continuation.target.occurrenceId
@@ -415,7 +411,7 @@ function validateStagedSelections(
     traversedSources.add(sourceOccurrenceId);
     const decision = decisionsBySource.get(sourceOccurrenceId);
     if (decision === undefined) return;
-    const continuation = selectedExitContinuation(decision);
+    const continuation = selectedContinuationForDecision(decision, occurrences);
     if (isTakeoverBatch(decision, occurrences, catalog)) return;
     // An empty decision is an authored envelope, not an ordinary stage. It
     // remains the active frontier until its first ordinary target exists (or a
@@ -460,6 +456,18 @@ function validateNormalDecisionProgressionBounds(
   const selectedSpine = Object.freeze({
     startOccurrenceId,
     decisions: Object.freeze([...decisions]),
+    occurrences: Object.freeze(
+      [...occurrences.values()].map((occurrence) =>
+        Object.freeze({
+          occurrenceId: occurrence.occurrenceId,
+          additionalExits: decodeAdditionalExits(
+            occurrence.additionalExits,
+            occurrences,
+            `${occurrence.path}.additionalExits`,
+          ),
+        }),
+      ),
+    ),
   });
   const ordinaryBatchLimit = ordinaryProgressionBatchLimit(layout);
   if (ordinaryBatchLimit === undefined) return;
@@ -589,7 +597,7 @@ function decodeExitDecision(
   startOccurrenceId: OccurrenceId,
 ): ExitDecision {
   const value = raw.value;
-  expectExactKeys(value, ['kind', 'source', 'normal', 'additional', 'selection'], raw.path);
+  expectExactKeys(value, ['kind', 'source', 'normal', 'selection'], raw.path);
   const source = decodeSource(value.source, `${raw.path}.source`);
   const progression = normalDecisionProgressionForLayout(layout);
   let sourceRoom: RoomDeclaration | undefined;
@@ -679,12 +687,14 @@ function decodeExitDecision(
       );
     }
   }
-  const additional = decodeAdditionalExits(
-    value.additional,
-    sourceRoom,
-    occurrences,
-    `${raw.path}.additional`,
-  );
+  const additional =
+    source.kind === 'occurrence'
+      ? decodeAdditionalExits(
+          occurrences.get(source.occurrenceId)?.additionalExits,
+          occurrences,
+          `${raw.path}.source.occurrenceId.additionalExits`,
+        )
+      : Object.freeze([]);
   const selection = decodeSelection(
     value.selection,
     targets.map((target) => target.exitKey),
@@ -737,7 +747,6 @@ function decodeExitDecision(
       batchState,
       targets,
     }),
-    additional,
     selection,
   });
 }
@@ -949,7 +958,8 @@ function validateDetourAutomaticContinuationDecision(
   }
   if (
     decision.normal.targets.length === 0 &&
-    decision.additional.length === 0 &&
+    decodeAdditionalExits(source.additionalExits, occurrences, `${source.path}.additionalExits`)
+      .length === 0 &&
     decision.selection.kind === 'unresolved'
   ) {
     // The automatic return uses the same intentionally incomplete envelope
@@ -961,7 +971,8 @@ function validateDetourAutomaticContinuationDecision(
   if (
     decision.normal.targets.length !== 1 ||
     target?.exitKey !== automatic.exitKey ||
-    decision.additional.length !== 0 ||
+    decodeAdditionalExits(source.additionalExits, occurrences, `${source.path}.additionalExits`)
+      .length !== 0 ||
     decision.selection.kind !== 'derived'
   ) {
     failProjectDocument(
@@ -998,8 +1009,15 @@ export function decodeBiomeTopology(
     expectExactKeys(
       occurrence,
       hasAnomalyReplacement
-        ? ['occurrenceId', 'gameName', 'anomalyReplacement', 'state', 'encounters']
-        : ['occurrenceId', 'gameName', 'state', 'encounters'],
+        ? [
+            'occurrenceId',
+            'gameName',
+            'anomalyReplacement',
+            'state',
+            'encounters',
+            'additionalExits',
+          ]
+        : ['occurrenceId', 'gameName', 'state', 'encounters', 'additionalExits'],
       occurrencePath,
     );
     const id = occurrenceId(occurrence.occurrenceId, `${occurrencePath}.occurrenceId`);
@@ -1014,6 +1032,7 @@ export function decodeBiomeTopology(
         hasAnomalyReplacement,
         state: occurrence.state,
         encounters: occurrence.encounters,
+        additionalExits: occurrence.additionalExits,
         path: occurrencePath,
       }),
     );
@@ -1068,7 +1087,7 @@ export function decodeBiomeTopology(
     path,
   );
   validateStagedSelections(decisions, occurrences, catalog, layout, startOccurrenceId, path);
-  validateSelectedDecisionCycles(decisions, startOccurrenceId, path);
+  validateSelectedDecisionCycles(decisions, occurrences, startOccurrenceId, path);
 
   const hubDecision = decisions.find(
     (decision): decision is HubDecision => decision.kind === 'hub',
@@ -1080,7 +1099,7 @@ export function decodeBiomeTopology(
     for (const decision of decisions) {
       if (decision.kind !== 'exit' || decision.source.kind !== 'occurrence') continue;
       if (!selectedSources.has(decision.source.occurrenceId)) continue;
-      const continuation = selectedExitContinuation(decision);
+      const continuation = selectedContinuationForDecision(decision, occurrences);
       const targetOccurrenceId =
         continuation?.kind === 'normal'
           ? continuation.target.occurrenceId
@@ -1179,6 +1198,33 @@ export function decodeBiomeTopology(
     entryActive: true,
     path: start.path,
   });
+  for (const rawOccurrence of occurrences.values()) {
+    const additional = decodeAdditionalExits(
+      rawOccurrence.additionalExits,
+      occurrences,
+      `${rawOccurrence.path}.additionalExits`,
+    );
+    for (const [additionalIndex, exit] of additional.entries()) {
+      const sourceDecision = decisions.find(
+        (decision): decision is ExitDecision =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === rawOccurrence.occurrenceId,
+      );
+      own(
+        exit.occurrenceId,
+        ownerForAdditionalExit(
+          exit,
+          occurrences,
+          catalog,
+          layout,
+          sourceDecision?.selection.kind === 'additional' &&
+            sourceDecision.selection.additionalExitKey === exit.key,
+          `${rawOccurrence.path}.additionalExits[${additionalIndex}].occurrenceId`,
+        ),
+      );
+    }
+  }
   for (const [index, decision] of decisions.entries()) {
     const decisionPath = rawDecisions[index]?.path ?? path;
     if (decision.kind === 'hub') {
@@ -1212,20 +1258,6 @@ export function decodeBiomeTopology(
           targetIndex,
           selected === target.exitKey,
           `${decisionPath}.normal.targets[${targetIndex}].occurrenceId`,
-        ),
-      );
-    }
-    for (const [additionalIndex, additional] of decision.additional.entries()) {
-      own(
-        additional.occurrenceId,
-        ownerForAdditionalExit(
-          additional,
-          occurrences,
-          catalog,
-          layout,
-          decision.selection.kind === 'additional' &&
-            decision.selection.additionalExitKey === additional.key,
-          `${decisionPath}.additional[${additionalIndex}].occurrenceId`,
         ),
       );
     }
@@ -1271,6 +1303,11 @@ export function decodeBiomeTopology(
         catalog,
         room,
         `${rawOccurrence.path}.encounters`,
+      ),
+      additionalExits: decodeAdditionalExits(
+        rawOccurrence.additionalExits,
+        occurrences,
+        `${rawOccurrence.path}.additionalExits`,
       ),
     });
   });

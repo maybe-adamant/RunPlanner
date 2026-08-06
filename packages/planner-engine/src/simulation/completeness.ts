@@ -23,6 +23,7 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import {
+  additionalExitsForDecision,
   declaredPhysicalExitsForSourceRoom,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
@@ -378,7 +379,10 @@ export function evaluateBiomeCompleteness(
     );
     if (batchFindings.length !== 0) return incomplete([...findings, ...batchFindings]);
 
-    const selected = selectedExitContinuation(decision);
+    const selected = selectedExitContinuation(
+      decision,
+      additionalExitsForDecision(topology, decision),
+    );
     if (selected === undefined) {
       const origin = createExitSelectionAddress(biome, sourceAddress(decision.source));
       return incomplete([

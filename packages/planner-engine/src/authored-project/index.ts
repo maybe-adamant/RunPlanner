@@ -84,6 +84,7 @@ export {
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   normalDecisionProgressionForLayout,
+  additionalExitsForDecision,
   ordinaryTargetAuthoringEligibility,
   selectedExitKey,
   selectedAdditionalExit,

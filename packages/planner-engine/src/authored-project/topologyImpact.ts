@@ -23,10 +23,24 @@ function sourceKey(source: ExitDecisionSource): string {
     : `hubDecision:${source.decisionKey}`;
 }
 
-function targetsForDecision(decision: ExitDecision): readonly OccurrenceId[] {
+function targetsForDecision(
+  topology: BiomeTopology,
+  decision: ExitDecision,
+): readonly OccurrenceId[] {
+  const additional =
+    decision.source.kind !== 'occurrence'
+      ? Object.freeze([])
+      : (() => {
+          const sourceOccurrenceId = decision.source.occurrenceId;
+          return (
+            topology.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === sourceOccurrenceId,
+            )?.additionalExits ?? Object.freeze([])
+          );
+        })();
   return Object.freeze([
     ...decision.normal.targets.map((target) => target.occurrenceId),
-    ...decision.additional.map((exit) => exit.occurrenceId),
+    ...additional.map((exit) => exit.occurrenceId),
   ]);
 }
 
@@ -99,7 +113,7 @@ function collectTopologyRemovalClosure(
         removedSourceKeys.add(sourceKey(decision.source));
         changed = true;
       }
-      for (const occurrenceId of targetsForDecision(decision)) {
+      for (const occurrenceId of targetsForDecision(topology, decision)) {
         if (!removedOccurrences.has(occurrenceId)) {
           removedOccurrences.add(occurrenceId);
           changed = true;

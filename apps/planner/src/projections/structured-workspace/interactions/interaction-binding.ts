@@ -474,7 +474,7 @@ function bindBatchInteractions(
                 kind: 'exitSelection' as const,
                 routeKey: owner.routeKey,
                 biomeKey: owner.biomeKey,
-                source: owner.source,
+                source: { kind: 'occurrence' as const, occurrenceId: owner.occurrenceId },
               }),
               value: Object.freeze({
                 kind: 'additional' as const,

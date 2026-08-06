@@ -53,7 +53,7 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
   { name: 'ordinary target', address: createTargetAddress(fBiome, fSource, 'exit2') },
   {
     name: 'additional exit',
-    address: createAdditionalExitAddress(fBiome, fSource, 'zagreusContract'),
+    address: createAdditionalExitAddress(fBiome, fSource.occurrenceId, 'zagreusContract'),
   },
   { name: 'Hub target', address: createTargetAddress(nBiome, nHubSource, 'preboss') },
   { name: 'Hub decision', address: createHubDecisionAddress(nBiome, 'hub') },
@@ -103,10 +103,10 @@ describe('semantic addresses', () => {
       '["target","Underworld","F",{"kind":"occurrence","occurrenceId":"address-f"},"exit2"]',
     );
     expect(
-      semanticAddressKey(createAdditionalExitAddress(fBiome, fSource, 'zagreusContract')),
-    ).toBe(
-      '["additionalExit","Underworld","F",{"kind":"occurrence","occurrenceId":"address-f"},"zagreusContract"]',
-    );
+      semanticAddressKey(
+        createAdditionalExitAddress(fBiome, fSource.occurrenceId, 'zagreusContract'),
+      ),
+    ).toBe('["additionalExit","Underworld","F","address-f","zagreusContract"]');
     expect(semanticAddressKey(createExitDecisionAddress(nBiome, nHubSource))).toBe(
       '["exitDecision","Surface","N",{"kind":"hubDecision","decisionKey":"hub"}]',
     );

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   createAdditionalExitAddress,
   createBiomeAddress,
-  createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
@@ -24,14 +23,7 @@ const origin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-c
 const secondOrigin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-second'));
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gOrigin = createOccurrenceAddress(gBiome, createOccurrenceId('history-fold-g-combat'));
-const additionalOrigin = createAdditionalExitAddress(
-  biome,
-  createExitDecisionAddress(biome, {
-    kind: 'occurrence',
-    occurrenceId: origin.occurrenceId,
-  }).source,
-  'zagreusContract',
-);
+const additionalOrigin = createAdditionalExitAddress(biome, origin.occurrenceId, 'zagreusContract');
 const contractOrigin = createOccurrenceAddress(biome, createOccurrenceId('history-fold-zagreus'));
 
 type UnsequencedHistoryEvent = HistoryEvent extends infer Event

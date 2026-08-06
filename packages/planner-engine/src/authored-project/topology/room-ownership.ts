@@ -51,23 +51,21 @@ function isContractAdditionalTarget(
   ) {
     return false;
   }
-  return topology.decisions.some((decision): boolean => {
-    if (decision.kind !== 'exit' || decision.source.kind !== 'occurrence') return false;
-    const source = occurrenceFor(topology, decision.source.occurrenceId);
+  return topology.occurrences.some((source): boolean => {
     const sourceRoom = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-    if (sourceRoom === undefined || sourceRoom.roomSetKey !== layout.biomeKey) return false;
-    return decision.additional.some((additional) => {
+    if (
+      source === undefined ||
+      sourceRoom === undefined ||
+      sourceRoom.roomSetKey !== layout.biomeKey
+    )
+      return false;
+    return (source.additionalExits ?? []).some((additional) => {
       if (
         additional.kind !== 'zagreusContract' ||
         additional.occurrenceId !== occurrence.occurrenceId
       )
         return false;
-      return sourceRoom.additionalExits.some(
-        (declaration) =>
-          declaration.kind === 'zagreusContract' &&
-          declaration.key === additional.key &&
-          declaration.targetRoomGameName === room.gameName,
-      );
+      return true;
     });
   });
 }

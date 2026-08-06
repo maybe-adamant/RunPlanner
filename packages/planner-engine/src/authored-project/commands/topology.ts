@@ -27,6 +27,7 @@ import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import {
   admitsTerminalTakeoverEnvelope,
   automaticHostContinuationExitForDetourRoom,
+  additionalExitsForDecision,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
@@ -197,6 +198,7 @@ function defaultOccurrence(
       room,
       `occurrences.${occurrenceId}.encounters`,
     ),
+    additionalExits: Object.freeze([]),
   });
 }
 
@@ -362,7 +364,6 @@ function createBatch(
       batchState,
       targets: Object.freeze([]),
     }),
-    additional: Object.freeze([]),
     selection: Object.freeze({ kind: 'unresolved' }),
   });
   return updateTopology(document, located, appendDecision(topology, decision));
@@ -466,7 +467,7 @@ function createTarget(
     allowed,
   );
   const selection: ExitSelection =
-    targets.length === 1 && decision.additional.length === 0
+    targets.length === 1 && additionalExitsForDecision(topology, decision).length === 0
       ? Object.freeze({ kind: 'derived' })
       : decision.selection.kind === 'normal' || decision.selection.kind === 'additional'
         ? decision.selection
@@ -626,7 +627,8 @@ function replaceTakeoverBatch(
     (occurrence) => !removed.has(occurrence.occurrenceId),
   );
   const selection: ExitSelection =
-    ids.length === 1 && (existing?.additional.length ?? 0) === 0
+    ids.length === 1 &&
+    (existing === undefined ? true : additionalExitsForDecision(topology, existing).length === 0)
       ? Object.freeze({ kind: 'derived' })
       : existing?.selection.kind === 'normal' && exitKeys.includes(existing.selection.exitKey)
         ? existing.selection
@@ -663,7 +665,6 @@ function replaceTakeoverBatch(
       batchState: null,
       targets,
     }),
-    additional: existing?.additional ?? Object.freeze([]),
     selection,
   });
   const selectedTakeoverExitKey = selectedExitKey(decision);
@@ -725,7 +726,8 @@ function setExitSelection(
     failCommand(command, 'normal-door batch does not exist');
   const batch = decision.normal;
   const keys = batch.targets.map((target) => target.exitKey);
-  const hasAdditional = decision.additional.length > 0;
+  const additionalExits = additionalExitsForDecision(topology, decision);
+  const hasAdditional = additionalExits.length > 0;
   if (command.value.kind === 'derived' && (keys.length !== 1 || hasAdditional))
     failCommand(command, 'derived selection requires one normal exit');
   if (command.value.kind === 'unresolved' && keys.length === 1 && !hasAdditional)
@@ -736,13 +738,19 @@ function setExitSelection(
     failCommand(command, `${command.value.exitKey} is not a target exit`);
   if (command.value.kind === 'additional') {
     const { additionalExitKey } = command.value;
-    if (!decision.additional.some((exit) => exit.key === additionalExitKey)) {
+    if (!additionalExits.some((exit) => exit.key === additionalExitKey)) {
       failCommand(command, `${additionalExitKey} is not an authored additional exit`);
     }
   }
   const nextDecision = Object.freeze({ ...decision, selection: command.value });
-  const previousContinuation = selectedExitContinuation(decision);
-  const nextContinuation = selectedExitContinuation(nextDecision);
+  const previousContinuation = selectedExitContinuation(
+    decision,
+    additionalExitsForDecision(topology, decision),
+  );
+  const nextContinuation = selectedExitContinuation(
+    nextDecision,
+    additionalExitsForDecision(topology, nextDecision),
+  );
   const selectedOccurrenceId = (continuation: ReturnType<typeof selectedExitContinuation>) =>
     continuation?.kind === 'normal'
       ? continuation.target.occurrenceId
@@ -792,17 +800,6 @@ function setExitSelection(
           candidate.source.kind === 'occurrence' &&
           candidate.source.occurrenceId === nextContinuation.target.occurrenceId,
       );
-      const retainsSupportedAdditionalExits =
-        outgoing.kind === 'exit' &&
-        outgoing.additional.every((additional) => {
-          const declaration = nextRoom.additionalExits.find(
-            (candidate) => candidate.key === additional.key && candidate.kind === additional.kind,
-          );
-          const target = topology.occurrences.find(
-            (occurrence) => occurrence.occurrenceId === additional.occurrenceId,
-          );
-          return declaration !== undefined && target?.gameName === declaration.targetRoomGameName;
-        });
       if (
         outgoing.kind !== 'exit' ||
         previousRoom.kind === 'Preboss' ||
@@ -810,12 +807,6 @@ function setExitSelection(
         targetAlreadyOwnsDecision
       ) {
         failCommand(command, 'remove the prior selected target’s downstream decision first');
-      }
-      if (!retainsSupportedAdditionalExits) {
-        failCommand(
-          command,
-          'the new selected target does not declare the retained downstream additional exits',
-        );
       }
       const reanchored = Object.freeze({
         ...outgoing,
@@ -1000,7 +991,7 @@ function reconcileBatchExitCapacity(
   const withoutDownstream = removeDownstreamDecisions(topology, removed);
   let selection: ExitSelection = Object.freeze({ kind: 'unresolved' });
   const existingSelection = decision.selection;
-  if (retained.length === 1 && decision.additional.length === 0) {
+  if (retained.length === 1 && additionalExitsForDecision(topology, decision).length === 0) {
     selection = Object.freeze({ kind: 'derived' });
   } else if (
     existingSelection.kind === 'normal' &&
@@ -1041,7 +1032,6 @@ function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
       batchState: null,
       targets: Object.freeze([]),
     }),
-    additional: Object.freeze([]),
     selection: Object.freeze({ kind: 'unresolved' }),
   });
 }

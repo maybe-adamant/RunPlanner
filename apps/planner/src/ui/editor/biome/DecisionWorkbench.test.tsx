@@ -241,7 +241,7 @@ describe('DecisionWorkbench', () => {
     if (located === undefined) throw new Error('Golden selected Midshop is missing');
     const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
     const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
-    const additional = createAdditionalExitAddress(biome, source, 'zagreusContract');
+    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'zagreusContract');
     const project = applyProjectCommand(base, catalog, {
       kind: 'AddZagreusContract',
       additional,

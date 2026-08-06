@@ -43,7 +43,15 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
       }
       continue;
     }
-    const continuation = selectedExitContinuation(decision);
+    const sourceOccurrenceId =
+      decision.source.kind === 'occurrence' ? decision.source.occurrenceId : undefined;
+    const continuation = selectedExitContinuation(
+      decision,
+      sourceOccurrenceId === undefined
+        ? undefined
+        : topology.occurrences.find((occurrence) => occurrence.occurrenceId === sourceOccurrenceId)
+            ?.additionalExits,
+    );
     if (continuation?.kind === 'normal') active.add(continuation.target.occurrenceId);
     if (continuation?.kind === 'additional') active.add(continuation.exit.occurrenceId);
   }
@@ -54,15 +62,6 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
   source: WorkspaceBiomeSource,
 ): WorkspaceBiomeOccurrenceAssemblyFacts {
   const active = authoredDetailsActiveOccurrenceIds(source.plan);
-  const additionalKeysBySource = new Map<OccurrenceId, readonly string[]>();
-  for (const decision of source.plan.topology?.decisions ?? []) {
-    if (decision.kind === 'exit' && decision.source.kind === 'occurrence') {
-      additionalKeysBySource.set(
-        decision.source.occurrenceId,
-        Object.freeze(decision.additional.map((additional) => additional.key)),
-      );
-    }
-  }
   const byOccurrence = new Map<OccurrenceId, WorkspaceOccurrenceAssemblyFact>();
   for (const occurrence of source.plan.topology?.occurrences ?? []) {
     if (byOccurrence.has(occurrence.occurrenceId)) {
@@ -73,8 +72,9 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
     byOccurrence.set(
       occurrence.occurrenceId,
       Object.freeze({
-        authoredAdditionalExitKeys:
-          additionalKeysBySource.get(occurrence.occurrenceId) ?? Object.freeze([]),
+        authoredAdditionalExitKeys: Object.freeze(
+          (occurrence.additionalExits ?? []).map((additional) => additional.key),
+        ),
         detailsActive: active.has(occurrence.occurrenceId),
         occurrenceId: occurrence.occurrenceId,
       }),

@@ -30,6 +30,7 @@ import type {
 } from '../../authored-project/model';
 import {
   declaredPhysicalExits,
+  additionalExitsForDecision,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
@@ -401,41 +402,30 @@ function materializeAdditionalContinuations(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
-  source: ExitDecisionSourceAddress,
 ): readonly CanonicalAdditionalContinuation[] {
-  if (decision.additional.length === 0) return Object.freeze([]);
+  const additionalExits = additionalExitsForDecision(topology, decision);
+  if (additionalExits.length === 0) return Object.freeze([]);
   if (decision.source.kind !== 'occurrence') {
     fail('only an authored occurrence may own an additional continuation');
   }
-  const sourceRoom = requireRoom(
-    catalog,
-    layout,
-    topology,
-    requireOccurrence(occurrences, decision.source.occurrenceId),
-  );
-  const selected = selectedAdditionalExit(decision)?.key;
+  const sourceOccurrenceId = decision.source.occurrenceId;
+  const selected = selectedAdditionalExit(decision, additionalExits)?.key;
   return Object.freeze(
-    decision.additional.map((additional) => {
+    additionalExits.map((additional) => {
       if (additional.kind !== 'zagreusContract') {
         fail(`unsupported additional continuation ${additional.kind}`);
-      }
-      const declaration = sourceRoom.additionalExits.find(
-        (candidate) => candidate.kind === 'zagreusContract' && candidate.key === additional.key,
-      );
-      if (declaration === undefined) {
-        fail(`${sourceRoom.gameName} did not declare ${additional.key}`);
       }
       const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
       const room = requireRoom(catalog, layout, topology, occurrence);
       if (
-        room.gameName !== declaration.targetRoomGameName ||
+        room.gameName !== 'C_Boss01' ||
         room.mode.kind !== 'authored' ||
         room.mode.templateKey !== 'ContractBoss'
       ) {
-        fail(`${additional.key} has the wrong declared contract room`);
+        fail(`${additional.key} has the wrong contract room`);
       }
       return Object.freeze({
-        origin: createAdditionalExitAddress(biome, source, additional.key),
+        origin: createAdditionalExitAddress(biome, sourceOccurrenceId, additional.key),
         key: additional.key,
         picked: selected === additional.key,
         room: materializeAuthoredRoom({
@@ -539,7 +529,6 @@ function materializeBatch(
     topology,
     occurrences,
     decision,
-    source,
   );
   const selectedTarget = targets.find((target) => target.picked);
   const selectedAdditional = additional.find((continuation) => continuation.picked);
@@ -739,7 +728,10 @@ function isCompleteBatch(
     takeover ||
     normal.rewardStore.kind !== 'authoredBaseStore' ||
     normal.rewardStore.baseRewardStoreKey !== null;
-  const selected = selectedExitContinuation(decision);
+  const selected = selectedExitContinuation(
+    decision,
+    additionalExitsForDecision(topology, decision),
+  );
   if (decision.selection.kind === 'derived' && selected?.kind !== 'normal') {
     fail('complete width-one batch has no target');
   }
@@ -952,15 +944,7 @@ export function materializeBiomePrefix(
       );
       const additional =
         partial?.additional ??
-        materializeAdditionalContinuations(
-          catalog,
-          biome,
-          layout,
-          topology,
-          occurrences,
-          decision,
-          sourceAddress(source),
-        );
+        materializeAdditionalContinuations(catalog, biome, layout, topology, occurrences, decision);
       return prefix(
         biome,
         biomeState,

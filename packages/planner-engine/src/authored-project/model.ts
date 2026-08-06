@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 13 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 14 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -112,6 +112,8 @@ export interface RoomOccurrence {
   readonly anomalyReplacement?: AnomalyReplacementProvenance;
   readonly state: AuthoredRoomState;
   readonly encounters: RoomEncounterState;
+  /** Source-owned closed sibling continuations emitted by this occurrence. */
+  readonly additionalExits: readonly AuthoredAdditionalExit[];
 }
 
 export interface AnomalyReplacementProvenance {
@@ -141,9 +143,8 @@ export interface NormalDoorBatch {
 }
 
 /**
- * Persisted additional exits are intentionally closed to the one currently
- * supported game feature. This is an authored sibling of `normal`, not a
- * normal target with a synthetic exit key.
+ * Persisted additional exits are source-occurrence owned. They are not normal
+ * targets and an exit decision never duplicates their ownership.
  */
 export interface ZagreusContractAdditionalExit {
   readonly kind: 'zagreusContract';
@@ -151,13 +152,14 @@ export interface ZagreusContractAdditionalExit {
   readonly occurrenceId: OccurrenceId;
 }
 
-export type AdditionalExit = ZagreusContractAdditionalExit;
+export type AuthoredAdditionalExit = ZagreusContractAdditionalExit;
+/** @deprecated Use AuthoredAdditionalExit at occurrence ownership boundaries. */
+export type AdditionalExit = AuthoredAdditionalExit;
 
 export interface ExitDecision {
   readonly kind: 'exit';
   readonly source: ExitDecisionSource;
   readonly normal: NormalDoorBatch;
-  readonly additional: readonly AdditionalExit[];
   readonly selection: ExitSelection;
 }
 

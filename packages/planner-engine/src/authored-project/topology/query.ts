@@ -15,10 +15,16 @@ import type {
   ExitTargetReference,
   HubDecision,
   OccurrenceId,
+  RoomOccurrence,
 } from '../model';
 
-/** The selected-spine queries need no room-local authored state. */
-export type SelectedSpineTopology = Pick<BiomeTopology, 'startOccurrenceId' | 'decisions'>;
+/** The selected spine resolves occurrence-owned additional continuations. */
+type AdditionalExitTopology = {
+  readonly occurrences: readonly Pick<RoomOccurrence, 'occurrenceId' | 'additionalExits'>[];
+};
+
+export type SelectedSpineTopology = Pick<BiomeTopology, 'startOccurrenceId' | 'decisions'> &
+  Partial<AdditionalExitTopology>;
 
 /**
  * Static command eligibility for one authored ordinary normal-door target.
@@ -397,10 +403,25 @@ export function selectedExitTarget(decision: ExitDecision): ExitTargetReference 
 }
 
 /** Resolves an explicitly selected sibling continuation without normalizing it. */
-export function selectedAdditionalExit(decision: ExitDecision): AdditionalExit | undefined {
+export function additionalExitsForDecision(
+  topology: AdditionalExitTopology,
+  decision: ExitDecision,
+): readonly AdditionalExit[] {
+  if (decision.source.kind !== 'occurrence') return Object.freeze([]);
+  const sourceOccurrenceId = decision.source.occurrenceId;
+  return (
+    topology.occurrences.find((occurrence) => occurrence.occurrenceId === sourceOccurrenceId)
+      ?.additionalExits ?? Object.freeze([])
+  );
+}
+
+export function selectedAdditionalExit(
+  decision: ExitDecision,
+  additionalExits: readonly AdditionalExit[] = Object.freeze([]),
+): AdditionalExit | undefined {
   const selection = decision.selection;
   if (selection.kind !== 'additional') return undefined;
-  return decision.additional.find((exit) => exit.key === selection.additionalExitKey);
+  return additionalExits.find((exit) => exit.key === selection.additionalExitKey);
 }
 
 export type SelectedExitContinuation =
@@ -414,10 +435,11 @@ export type SelectedExitContinuation =
  */
 export function selectedExitContinuation(
   decision: ExitDecision,
+  additionalExits: readonly AdditionalExit[] = Object.freeze([]),
 ): SelectedExitContinuation | undefined {
   const target = selectedExitTarget(decision);
   if (target !== undefined) return Object.freeze({ kind: 'normal', target });
-  const exit = selectedAdditionalExit(decision);
+  const exit = selectedAdditionalExit(decision, additionalExits);
   return exit === undefined ? undefined : Object.freeze({ kind: 'additional', exit });
 }
 
@@ -444,7 +466,11 @@ export function selectedOrdinaryBatchIndex(
       occurrenceId: currentOccurrenceId,
     });
     if (decision === undefined) return undefined;
-    const continuation = selectedExitContinuation(decision);
+    const additionalExits =
+      topology.occurrences === undefined
+        ? undefined
+        : additionalExitsForDecision({ occurrences: topology.occurrences }, decision);
+    const continuation = selectedExitContinuation(decision, additionalExits);
     if (continuation === undefined) return undefined;
     batchIndex += 1;
     currentOccurrenceId =
@@ -542,7 +568,6 @@ export function isExactTerminalTakeoverEnvelope(decision: ExitDecision): boolean
     decision.normal.rewardStore.kind === 'none' &&
     decision.normal.batchState === null &&
     decision.normal.targets.length === 0 &&
-    decision.additional.length === 0 &&
     decision.selection.kind === 'unresolved'
   );
 }
