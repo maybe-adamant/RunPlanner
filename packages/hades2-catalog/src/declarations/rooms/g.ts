@@ -1,5 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 
+const naturalChaosExit = {
+  kind: 'naturalChaos' as const,
+  key: 'naturalChaos' as const,
+  exitType: 'ChaosExitDoor',
+};
+
 export const gRooms = [
   {
     gameName: 'G_Intro',
@@ -7,6 +13,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'none' },
@@ -23,6 +30,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -54,6 +62,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -81,6 +90,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -113,6 +123,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -144,6 +155,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -176,6 +188,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -207,6 +220,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -238,6 +252,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -269,6 +284,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -301,6 +317,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -332,6 +349,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -363,6 +381,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -394,6 +413,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -425,6 +445,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -457,6 +478,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -489,6 +511,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -520,6 +543,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -552,6 +576,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -586,6 +611,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -617,6 +643,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -649,6 +676,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -689,6 +717,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: {
@@ -726,6 +755,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -766,6 +796,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
@@ -788,6 +819,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
+    additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -825,6 +857,7 @@ export const gRooms = [
       { index: 2, type: 'OceanusExitDoor' },
     ],
     additionalExits: [
+      naturalChaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',

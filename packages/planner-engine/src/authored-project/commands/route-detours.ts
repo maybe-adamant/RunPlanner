@@ -24,7 +24,6 @@ import {
 } from '../topology/query';
 import {
   applyTopologyRemovalImpact,
-  describeExitDecisionRemovalImpact,
   describeTopologyRemovalImpact,
 } from '../topologyImpact';
 import {
@@ -217,11 +216,28 @@ function removeOutgoingDecision(
   topology: BiomeTopology,
   occurrenceId: OccurrenceId,
 ): BiomeTopology {
-  const impact = describeExitDecisionRemovalImpact(topology, {
-    kind: 'occurrence',
-    occurrenceId,
+  const source = { kind: 'occurrence' as const, occurrenceId };
+  const decision = exitDecisionForSource(topology, source);
+  if (decision === undefined) return topology;
+  // Anomaly replaces the source room's normal continuation. Additional exits
+  // are source-owned and stay dormant with the occurrence, so only ordinary
+  // targets and their descendants participate in this removal closure.
+  const impact = describeTopologyRemovalImpact(
+    topology,
+    new Set(decision.normal.targets.map((target) => target.occurrenceId)),
+  );
+  const withoutNormalBranch = applyTopologyRemovalImpact(topology, impact);
+  return Object.freeze({
+    ...withoutNormalBranch,
+    decisions: Object.freeze(
+      withoutNormalBranch.decisions.filter(
+        (candidate) =>
+          candidate.kind !== 'exit' ||
+          candidate.source.kind !== 'occurrence' ||
+          candidate.source.occurrenceId !== occurrenceId,
+      ),
+    ),
   });
-  return impact === undefined ? topology : applyTopologyRemovalImpact(topology, impact);
 }
 
 function switchTargetToAnomaly(
@@ -418,6 +434,54 @@ function additionalDeclaration(
   return declaration;
 }
 
+function naturalChaosDeclaration(
+  room: RoomDeclaration,
+  additionalExitKey: string,
+  command: RouteDetourCommand,
+): Extract<RoomDeclaration['additionalExits'][number], { readonly kind: 'naturalChaos' }> {
+  const declaration = room.additionalExits.find(
+    (
+      candidate,
+    ): candidate is Extract<
+      RoomDeclaration['additionalExits'][number],
+      { readonly kind: 'naturalChaos' }
+    > => candidate.kind === 'naturalChaos' && candidate.key === additionalExitKey,
+  );
+  if (declaration === undefined) {
+    failCommand(command, `${additionalExitKey} is not declared by ${room.gameName}`);
+  }
+  return declaration;
+}
+
+function requireNaturalChaosSource(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  occurrenceId: OccurrenceId,
+  command: RouteDetourCommand,
+): { readonly occurrence: RoomOccurrence; readonly room: RoomDeclaration } {
+  if (selectedOrdinaryBatchIndex(topology, occurrenceId) === undefined) {
+    failCommand(command, 'a natural Chaos source must be on the selected spine');
+  }
+  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
+  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  if (room.mode.kind !== 'authored') {
+    failCommand(command, 'a natural Chaos source must be an authored host room');
+  }
+  return Object.freeze({ occurrence, room });
+}
+
+function naturalChaosHost(
+  located: LocatedBiome,
+  command: RouteDetourCommand,
+): NonNullable<typeof located.layout.naturalChaos> {
+  const host = located.layout.naturalChaos;
+  if (host === undefined) {
+    failCommand(command, `${located.layout.biomeKey} has no natural Chaos host policy`);
+  }
+  return host;
+}
+
 function normalSelectionWithAdditional(
   selection: ExitSelection,
   decision: ExitDecision,
@@ -582,6 +646,203 @@ function removeZagreusContract(
   );
 }
 
+function addNaturalChaos(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<RouteDetourCommand, { readonly kind: 'AddNaturalChaos' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const { occurrence, room: sourceRoom } = requireNaturalChaosSource(
+    catalog,
+    located,
+    topology,
+    command.additional.occurrenceId,
+    command,
+  );
+  const declaration = naturalChaosDeclaration(
+    sourceRoom,
+    command.additional.additionalExitKey,
+    command,
+  );
+  if (occurrence.additionalExits.some((additional) => additional.key === declaration.key)) {
+    failCommand(command, `${declaration.key} is already authored`);
+  }
+  const host = naturalChaosHost(located, command);
+  const chaosRoom = catalog.rooms.byKey[host.defaultRoomGameName];
+  if (chaosRoom === undefined) {
+    failCommand(command, `unknown Chaos map ${host.defaultRoomGameName}`);
+  }
+  if (
+    chaosRoom.roomSetKey !== 'Chaos' ||
+    chaosRoom.mode.kind !== 'authored' ||
+    chaosRoom.mode.templateKey !== 'Chaos'
+  ) {
+    failCommand(command, `${chaosRoom.gameName} is not a declared Chaos map`);
+  }
+  const source = Object.freeze({ kind: 'occurrence' as const, occurrenceId: occurrence.occurrenceId });
+  const existing = exitDecisionForSource(topology, source);
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression === undefined) {
+    failCommand(command, 'a natural Chaos source requires normal host progression');
+  }
+  const additional: AdditionalExit = Object.freeze({
+    kind: 'naturalChaos',
+    key: declaration.key,
+    occurrenceId: command.occurrenceId,
+  });
+  const nextDecision: ExitDecision = Object.freeze({
+    kind: 'exit',
+    source,
+    normal:
+      existing?.normal ??
+      Object.freeze({
+        kind: 'batch',
+        rewardStore: initialRewardStore(located, sourceRoom),
+        batchState: createInitialBatchState(progression.batchPolicy),
+        targets: Object.freeze([]),
+      }),
+    selection:
+      existing === undefined
+        ? Object.freeze({ kind: 'unresolved' })
+        : normalSelectionWithAdditional(existing.selection, existing),
+  });
+  const chaosOccurrence: RoomOccurrence = Object.freeze({
+    occurrenceId: command.occurrenceId,
+    gameName: chaosRoom.gameName,
+    state: createDefaultRoomState(catalog, chaosRoom, { role: 'ordinary', entryActive: false }),
+    encounters: createDefaultRoomEncounterState(
+      catalog,
+      chaosRoom,
+      `occurrences.${command.occurrenceId}.encounters`,
+    ),
+    additionalExits: Object.freeze([]),
+  });
+  const withChaos = appendOccurrence(topology, chaosOccurrence, command);
+  const withSource = replaceOccurrence(
+    withChaos,
+    Object.freeze({ ...occurrence, additionalExits: Object.freeze([...occurrence.additionalExits, additional]) }),
+  );
+  return updateTopology(
+    document,
+    located,
+    existing === undefined ? appendDecision(withSource, nextDecision) : replaceDecision(withSource, nextDecision),
+  );
+}
+
+function removeNaturalChaos(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<RouteDetourCommand, { readonly kind: 'RemoveNaturalChaos' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  if (selectedOrdinaryBatchIndex(topology, command.additional.occurrenceId) === undefined) {
+    failCommand(command, 'a natural Chaos source must be on the selected spine');
+  }
+  const occurrence = requireOccurrence(located.plan, command.additional.occurrenceId, command);
+  const source = Object.freeze({ kind: 'occurrence' as const, occurrenceId: occurrence.occurrenceId });
+  const decision = exitDecisionForSource(topology, source);
+  const additional = occurrence.additionalExits.find(
+    (candidate) =>
+      candidate.kind === 'naturalChaos' &&
+      candidate.key === command.additional.additionalExitKey,
+  );
+  if (additional === undefined) {
+    failCommand(command, `${command.additional.additionalExitKey} is not authored`);
+  }
+  const impact = describeTopologyRemovalImpact(topology, new Set([additional.occurrenceId]));
+  const withoutChaos = applyTopologyRemovalImpact(topology, impact);
+  const withoutFeature = replaceOccurrence(
+    withoutChaos,
+    Object.freeze({
+      ...occurrence,
+      additionalExits: Object.freeze(
+        occurrence.additionalExits.filter((candidate) => candidate.key !== additional.key),
+      ),
+    }),
+  );
+  if (decision === undefined) {
+    return updateTopology(document, located, withoutFeature);
+  }
+  const retainedDecision = exitDecisionForSource(withoutChaos, source);
+  if (retainedDecision === undefined) {
+    throw new Error('removing an additional target removed its source decision');
+  }
+  const remainingAdditional = occurrence.additionalExits.filter((candidate) => candidate.key !== additional.key);
+  const selection: ExitSelection =
+    remainingAdditional.length === 0 && retainedDecision.normal.targets.length === 1
+      ? Object.freeze({ kind: 'derived' })
+      : retainedDecision.selection.kind === 'additional' &&
+          retainedDecision.selection.additionalExitKey === additional.key
+        ? Object.freeze({ kind: 'unresolved' })
+        : retainedDecision.selection;
+  const nextDecision = Object.freeze({ ...retainedDecision, selection });
+  const withDecision = replaceDecision(
+    withoutFeature,
+    nextDecision,
+  );
+  return updateTopology(
+    document,
+    located,
+    reconcileNormalTargetEntryStates(
+      catalog,
+      located,
+      withDecision,
+      nextDecision,
+      selectedExitKey(nextDecision),
+      command,
+    ),
+  );
+}
+
+function replaceNaturalChaosMap(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<RouteDetourCommand, { readonly kind: 'ReplaceNaturalChaosMap' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+  const source = topology.occurrences.find((candidate) =>
+    candidate.additionalExits.some(
+      (additional) =>
+        additional.kind === 'naturalChaos' && additional.occurrenceId === occurrence.occurrenceId,
+    ),
+  );
+  if (source === undefined) {
+    failCommand(command, `${occurrence.occurrenceId} is not an authored natural Chaos map`);
+  }
+  const host = naturalChaosHost(located, command);
+  if (!host.roomGameNames.includes(command.gameName)) {
+    failCommand(command, `${command.gameName} is outside the ${located.layout.biomeKey} Chaos map domain`);
+  }
+  const room = catalog.rooms.byKey[command.gameName];
+  if (room === undefined) {
+    failCommand(command, `unknown Chaos map ${command.gameName}`);
+  }
+  if (room.roomSetKey !== 'Chaos' || room.mode.kind !== 'authored' || room.mode.templateKey !== 'Chaos') {
+    failCommand(command, `${command.gameName} is not a declared Chaos map`);
+  }
+  return updateTopology(
+    document,
+    located,
+    replaceOccurrence(
+      topology,
+      Object.freeze({
+        ...occurrence,
+        gameName: room.gameName,
+        state: createDefaultRoomState(catalog, room, { role: 'ordinary', entryActive: false }),
+        encounters: createDefaultRoomEncounterState(
+          catalog,
+          room,
+          `occurrences.${occurrence.occurrenceId}.encounters`,
+        ),
+      }),
+    ),
+  );
+}
+
 export function applyRouteDetourCommand(
   document: ProjectDocument,
   catalog: Catalog,
@@ -601,5 +862,11 @@ export function applyRouteDetourCommand(
       return addZagreusContract(document, catalog, located, command);
     case 'RemoveZagreusContract':
       return removeZagreusContract(document, catalog, located, command);
+    case 'AddNaturalChaos':
+      return addNaturalChaos(document, catalog, located, command);
+    case 'RemoveNaturalChaos':
+      return removeNaturalChaos(document, catalog, located, command);
+    case 'ReplaceNaturalChaosMap':
+      return replaceNaturalChaosMap(document, catalog, located, command);
   }
 }

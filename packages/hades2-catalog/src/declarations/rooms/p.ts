@@ -1,5 +1,16 @@
 import type { RawRoomDeclaration } from '../types';
 
+const naturalChaosExit = {
+  kind: 'naturalChaos' as const,
+  key: 'naturalChaos' as const,
+  exitType: 'ChaosExitDoor',
+  requirement: {
+    kind: 'counterRange' as const,
+    axis: 'biomeDepthCache' as const,
+    range: { max: 5 },
+  },
+};
+
 export const pRooms = [
   {
     gameName: 'P_Intro',
@@ -7,6 +18,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusOutdoorExitDoor' },
@@ -27,6 +39,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -63,6 +76,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -94,6 +108,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -130,6 +145,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -161,6 +177,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -192,6 +209,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -223,6 +241,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -254,6 +273,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -285,6 +305,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -316,6 +337,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -347,6 +369,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -378,6 +401,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -409,6 +433,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -440,6 +465,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -471,6 +497,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -502,6 +529,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -533,6 +561,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -569,6 +598,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -605,6 +635,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Outdoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -667,6 +698,7 @@ export const pRooms = [
     roomSetKey: 'P',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
+    additionalExits: [naturalChaosExit],
     structuralTags: ['Indoor'],
     exits: [
       { index: 1, type: 'OlympusIndoorExitDoor' },
@@ -704,6 +736,7 @@ export const pRooms = [
       { index: 2, type: 'OlympusOutdoorExitDoor' },
     ],
     additionalExits: [
+      naturalChaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',

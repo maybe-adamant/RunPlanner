@@ -5,6 +5,7 @@ import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
 import { anomalyRooms } from './rooms/anomaly';
 import { cRooms } from './rooms/c';
+import { chaosRooms } from './rooms/chaos';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
@@ -20,6 +21,7 @@ import type { RawCatalogInput, RawRoomDeclaration } from './types';
 const rooms: readonly RawRoomDeclaration[] = [
   ...anomalyRooms,
   ...cRooms,
+  ...chaosRooms,
   ...fRooms,
   ...gRooms,
   ...pRooms,
@@ -31,7 +33,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.16.0-route-detours',
+  version: '0.17.0-natural-chaos',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

@@ -64,6 +64,7 @@ export const rewardTypes = [
   directReward('LastStandDrop', 'Death Defiance', 'consumable'),
   directReward('ChaosWeaponUpgrade', 'Chaos Hammer', 'consumable'),
   directReward('InfernalContractBoon', 'Infernal Contract', 'loot'),
+  directReward('TrialUpgrade', 'Chaos Blessing', 'loot'),
   directReward('GiftDrop', 'Nectar', 'resource'),
   directReward('MetaCurrencyDrop', 'Bones', 'resource'),
   directReward('MetaCurrencyBigDrop', 'Big Bones', 'resource'),

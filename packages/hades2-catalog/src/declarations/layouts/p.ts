@@ -17,6 +17,11 @@ export const pBiomeLayout = {
     rewardStoreOverrides: [],
     bounds: { maxBatches: 8, maxTargets: 16 },
   },
+  naturalChaos: {
+    roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
+    defaultRoomGameName: 'Chaos_01',
+    offerSpacingWindow: 10,
+  },
   completion: {
     rooms: [
       { role: 'boss', roomGameName: 'P_Boss01' },

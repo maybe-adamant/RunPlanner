@@ -525,6 +525,7 @@ describe('reward-kernel declaration parity', () => {
       LastStandDrop: 'Death Defiance',
       ChaosWeaponUpgrade: 'Chaos Hammer',
       InfernalContractBoon: 'Infernal Contract',
+      TrialUpgrade: 'Chaos Blessing',
       GiftDrop: 'Nectar',
       MetaCurrencyDrop: 'Bones',
       MetaCurrencyBigDrop: 'Big Bones',
@@ -705,6 +706,7 @@ describe('reward-kernel declaration parity', () => {
       'StackUpgradeTriple',
       'WeaponUpgrade',
       'InfernalContractBoon',
+      'TrialUpgrade',
     ]);
     expect(
       rewardKernelCatalog.acquisitions.values
@@ -756,7 +758,7 @@ describe('reward-kernel declaration parity', () => {
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(49);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(50);
   });
 
   it('normalizes room-reward acquisition timing without reward-name dispatch', () => {

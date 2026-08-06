@@ -205,6 +205,7 @@ export function createDefaultRoomState(
       });
     case 'Devotion':
     case 'ContractBoss':
+    case 'Chaos':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       if (room.incomingReward.kind !== 'fixed') {

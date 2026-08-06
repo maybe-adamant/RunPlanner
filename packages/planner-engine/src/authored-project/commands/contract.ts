@@ -56,9 +56,12 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'ReplaceAnomalyMap':
     case 'ReplaceAnomalySuccess':
     case 'RevertAnomaly':
+    case 'ReplaceNaturalChaosMap':
       return command.occurrence;
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
+    case 'AddNaturalChaos':
+    case 'RemoveNaturalChaos':
       return command.additional;
     case 'RemoveHubDecision':
       return command.hub;

@@ -1100,6 +1100,45 @@ export function normalizeBiomeLayouts(
     if (progression.kind === 'hub') {
       validateHubEntryStart(start, progression, layout.biomeKey, rooms, path);
     }
+    const naturalChaos =
+      layout.naturalChaos === undefined
+        ? undefined
+        : (() => {
+            const roomGameNames = freezeUniqueStrings(
+              layout.naturalChaos.roomGameNames,
+              `${path}.naturalChaos.roomGameNames`,
+            );
+            if (roomGameNames.length === 0) {
+              fail(`${path}.naturalChaos.roomGameNames`, 'must not be empty');
+            }
+            for (const [index, roomGameName] of roomGameNames.entries()) {
+              const room = rooms.byKey[roomGameName];
+              if (
+                room === undefined ||
+                room.roomSetKey !== 'Chaos' ||
+                room.mode.kind !== 'authored' ||
+                room.mode.templateKey !== 'Chaos'
+              ) {
+                fail(`${path}.naturalChaos.roomGameNames[${index}]`, 'must name an authored Chaos room');
+              }
+            }
+            const defaultRoomGameName = requireNonEmpty(
+              layout.naturalChaos.defaultRoomGameName,
+              `${path}.naturalChaos.defaultRoomGameName`,
+            );
+            if (!roomGameNames.includes(defaultRoomGameName)) {
+              fail(`${path}.naturalChaos.defaultRoomGameName`, 'must belong to roomGameNames');
+            }
+            const offerSpacingWindow = requirePositiveInteger(
+              layout.naturalChaos.offerSpacingWindow,
+              `${path}.naturalChaos.offerSpacingWindow`,
+            );
+            return Object.freeze({
+              roomGameNames: roomGameNames as [string, ...string[]],
+              defaultRoomGameName,
+              offerSpacingWindow,
+            });
+          })();
     return Object.freeze({
       biomeKey: layout.biomeKey,
       initialCounters: Object.freeze({
@@ -1114,6 +1153,7 @@ export function normalizeBiomeLayouts(
       }),
       start,
       progression,
+      ...(naturalChaos === undefined ? {} : { naturalChaos }),
       completion: normalizeCompletion(
         layout.completion,
         layout.biomeKey,

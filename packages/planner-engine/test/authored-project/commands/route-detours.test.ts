@@ -281,6 +281,96 @@ describe('authored-project route detour commands', () => {
     );
   });
 
+  it('authors, replaces, removes, and codec-round-trips an occurrence-owned natural Chaos gate', () => {
+    const opening = createOccurrenceId('natural-chaos-opening');
+    const chaos = createOccurrenceId('natural-chaos-target');
+    const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
+      (occurrence) => occurrence.occurrenceId === opening,
+    )?.additionalExits).toEqual([
+      { kind: 'naturalChaos', key: 'naturalChaos', occurrenceId: chaos },
+    ]);
+    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
+      (occurrence) => occurrence.occurrenceId === chaos,
+    )).toMatchObject({ gameName: 'Chaos_01', state: { kind: 'fixed' } });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceNaturalChaosMap',
+      occurrence: createOccurrenceAddress(fBiome, chaos),
+      gameName: 'Chaos_06',
+    });
+    expect(biomeTopology(project, 'Underworld', 'F').occurrences.find(
+      (occurrence) => occurrence.occurrenceId === chaos,
+    )?.gameName).toBe('Chaos_06');
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(project);
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveNaturalChaos',
+      additional,
+    });
+    expect(biomeTopology(project, 'Underworld', 'F').occurrences.map(
+      (occurrence) => occurrence.occurrenceId,
+    )).not.toContain(chaos);
+  });
+
+  it('removes a retained natural Chaos gate after its selected G source becomes an Anomaly', () => {
+    const intro = createOccurrenceId('natural-chaos-anomaly-intro');
+    const target = createOccurrenceId('natural-chaos-anomaly-target');
+    const chaos = createOccurrenceId('natural-chaos-anomaly-target-room');
+    const source = { kind: 'occurrence' as const, occurrenceId: intro };
+    let project = applyProjectCommand(gProject(), catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: intro,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(gBiome, source),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+      occurrenceId: target,
+      gameName: 'G_Combat01',
+    });
+    const additional = createAdditionalExitAddress(gBiome, target, 'naturalChaos');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveNaturalChaos',
+      additional,
+    });
+    const topology = biomeTopology(project, 'Underworld', 'G');
+    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === target)).toMatchObject({
+      gameName: 'B_Combat01',
+      additionalExits: [],
+    });
+    expect(topology.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(chaos);
+  });
+
   it('rejects switching away from a selected Midshop contract with a downstream decision', () => {
     const { project: initial, shop } = fSelectedMidshop();
     const source = { kind: 'occurrence' as const, occurrenceId: shop };

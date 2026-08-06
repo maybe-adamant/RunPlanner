@@ -22,7 +22,7 @@ import { decodeRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
-  automaticHostContinuationExitForDetourRoom,
+  hostContinuationExitForDetourRoom,
   declaredPhysicalExitsForSourceRoom,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
@@ -187,12 +187,15 @@ function decodeAdditionalExits(
     const additionalPath = `${path}[${index}]`;
     const additional = expectRecord(rawValue, additionalPath);
     const kind = expectString(additional.kind, `${additionalPath}.kind`);
-    if (kind !== 'zagreusContract') {
+    if (kind !== 'zagreusContract' && kind !== 'naturalChaos') {
       failProjectDocument(`${additionalPath}.kind`, `unknown additional exit ${kind}`);
     }
     expectExactKeys(additional, ['kind', 'key', 'occurrenceId'], additionalPath);
     const key = expectNonBlankString(additional.key, `${additionalPath}.key`);
-    if (key !== 'zagreusContract') {
+    if (
+      (kind === 'zagreusContract' && key !== 'zagreusContract') ||
+      (kind === 'naturalChaos' && key !== 'naturalChaos')
+    ) {
       failProjectDocument(`${additionalPath}.key`, `unknown additional exit ${key}`);
     }
     if (seen.has(key)) {
@@ -204,10 +207,10 @@ function decodeAdditionalExits(
     if (target === undefined) {
       failProjectDocument(`${additionalPath}.occurrenceId`, `unknown occurrence ${id}`);
     }
-    if (target.gameName !== 'C_Boss01') {
+    if (kind === 'zagreusContract' && target.gameName !== 'C_Boss01') {
       failProjectDocument(`${additionalPath}.occurrenceId`, `${key} requires C_Boss01`);
     }
-    return Object.freeze({ kind, key: 'zagreusContract', occurrenceId: id });
+    return Object.freeze({ kind, key, occurrenceId: id }) as AdditionalExit;
   });
   return Object.freeze(additional);
 }
@@ -913,14 +916,27 @@ function ownerForAdditionalExit(
     failProjectDocument(path, `unknown additional target ${additional.occurrenceId}`);
   }
   const room = requireKnownRoom(rawOccurrence, catalog);
-  if (
-    room.roomSetKey === layout.biomeKey ||
+  if (additional.kind === 'zagreusContract') {
+    if (
+      room.roomSetKey === layout.biomeKey ||
+      room.mode.kind !== 'authored' ||
+      room.mode.templateKey !== 'ContractBoss'
+    ) {
+      failProjectDocument(
+        `${rawOccurrence.path}.gameName`,
+        `${additional.key} requires its declared Zagreus contract room`,
+      );
+    }
+  } else if (
+    layout.naturalChaos === undefined ||
+    !layout.naturalChaos.roomGameNames.includes(room.gameName) ||
+    room.roomSetKey !== 'Chaos' ||
     room.mode.kind !== 'authored' ||
-    room.mode.templateKey !== 'ContractBoss'
+    room.mode.templateKey !== 'Chaos'
   ) {
     failProjectDocument(
       `${rawOccurrence.path}.gameName`,
-      `${additional.key} requires its declared Zagreus contract room`,
+      `${additional.key} requires a declared ${layout.biomeKey} Chaos map`,
     );
   }
   if (rawOccurrence.hasAnomalyReplacement) {
@@ -949,11 +965,11 @@ function validateDetourAutomaticContinuationDecision(
   if (source === undefined) return;
   const sourceRoom = requireKnownRoom(source, catalog);
   if (sourceRoom.roomSetKey === layout.biomeKey) return;
-  const automatic = automaticHostContinuationExitForDetourRoom(sourceRoom);
-  if (automatic === undefined) {
+  const continuation = hostContinuationExitForDetourRoom(sourceRoom);
+  if (continuation === undefined) {
     failProjectDocument(
       `${decisionPath}.source.occurrenceId`,
-      `${sourceRoom.gameName} has no admitted detour automatic continuation`,
+      `${sourceRoom.gameName} has no admitted detour host continuation`,
     );
   }
   if (
@@ -970,14 +986,14 @@ function validateDetourAutomaticContinuationDecision(
   const [target] = decision.normal.targets;
   if (
     decision.normal.targets.length !== 1 ||
-    target?.exitKey !== automatic.exitKey ||
+    target?.exitKey !== continuation.exitKey ||
     decodeAdditionalExits(source.additionalExits, occurrences, `${source.path}.additionalExits`)
       .length !== 0 ||
     decision.selection.kind !== 'derived'
   ) {
     failProjectDocument(
       decisionPath,
-      'a detour automatic continuation requires one derived exit1 host target and no additional exits',
+      'a detour host continuation requires one derived exit1 host target and no additional exits',
     );
   }
   if (target === undefined) return;

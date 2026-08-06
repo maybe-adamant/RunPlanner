@@ -194,7 +194,7 @@ export interface CanonicalTarget {
  */
 export interface CanonicalAdditionalContinuation {
   readonly origin: AdditionalExitAddress;
-  readonly key: 'zagreusContract';
+  readonly key: 'zagreusContract' | 'naturalChaos';
   readonly picked: boolean;
   readonly room: CanonicalAuthoredRoom;
 }
