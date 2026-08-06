@@ -162,6 +162,15 @@ target is a real dead leaf but cannot own a downstream exit decision. Cycles,
 detached decisions, duplicate sources, multiply-owned occurrences, and orphan
 occurrences are contract errors.
 
+Changing the picked target between compatible ordinary normal continuations is
+one authored edit. If the previously picked target owns the next exit decision,
+that decision is re-anchored to the newly picked occurrence while its complete
+subtree remains intact. Occurrence identity and room-local authored state never
+move between the two targets. The old target becomes a dead leaf and the new
+target becomes the decision's sole semantic source. A continuation cannot be
+re-anchored onto an additional exit or a terminal source, and a retained
+additional exit must also be declared by the new decision source.
+
 ## Starts, Batches, Preboss, and Completion
 
 The catalog declares either an `authoredChoice` start or a declaration-fixed

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -11,9 +12,15 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectHistory,
   createTargetAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   ProjectCommandContractError,
+  redoProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
+import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import {
@@ -436,6 +443,11 @@ describe('authored-project commands and topology', () => {
       topology.occurrences.find((occurrence) => occurrence.occurrenceId === 'f-preboss-shop')
         ?.state,
     ).toEqual({ kind: 'shop' });
+    const prebossShopEncounters = topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
+    )?.encounters;
+    if (prebossShopEncounters === undefined)
+      throw new Error('F Preboss Shop encounters are missing');
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(fBiome, combatDecision.source),
@@ -446,6 +458,11 @@ describe('authored-project commands and topology', () => {
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
       )?.state,
     ).toMatchObject({ kind: 'shop', shop: expect.any(Object) });
+    expect(
+      fTopology(project).occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
+      )?.encounters,
+    ).toEqual(prebossShopEncounters);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopPurchaseOrder',
       shop: createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
@@ -466,6 +483,11 @@ describe('authored-project commands and topology', () => {
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
       )?.state,
     ).toEqual({ kind: 'shop' });
+    expect(
+      fTopology(project).occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
+      )?.encounters,
+    ).toEqual(prebossShopEncounters);
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'CreateTarget',
@@ -820,6 +842,202 @@ describe('authored-project commands and topology', () => {
     ).toThrow(ProjectCommandContractError);
   });
 
+  it('re-anchors one selected ordinary continuation without rewriting its subtree or target packages', () => {
+    const openingId = createOccurrenceId('reanchor-opening');
+    const sourceId = createOccurrenceId('reanchor-source');
+    const priorId = createOccurrenceId('reanchor-prior');
+    const nextId = createOccurrenceId('reanchor-next');
+    const descendantId = createOccurrenceId('reanchor-descendant');
+    const leafId = createOccurrenceId('reanchor-leaf');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: openingId,
+      gameName: 'F_Opening01',
+    });
+    const openingDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, openingDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, openingDecision.source, 'exit1'),
+      occurrenceId: sourceId,
+      gameName: 'F_Combat02',
+    });
+    const sourceDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: sourceDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, sourceDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit1'),
+      occurrenceId: priorId,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit2'),
+      occurrenceId: nextId,
+      gameName: 'F_Combat04',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const priorDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: priorId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: priorDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, priorDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, priorDecision.source, 'exit1'),
+      occurrenceId: descendantId,
+      gameName: 'F_Combat03',
+    });
+    const descendantDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: descendantId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: descendantDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, descendantDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, descendantDecision.source, 'exit1'),
+      occurrenceId: leafId,
+      gameName: 'F_Combat04',
+    });
+
+    const before = fTopology(project);
+    const beforeOutgoing = before.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === priorId,
+    );
+    const beforeDescendant = before.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === descendantId,
+    );
+    if (beforeOutgoing?.kind !== 'exit' || beforeDescendant?.kind !== 'exit') {
+      throw new Error('re-anchor fixture is missing its selected continuation');
+    }
+    const priorPackage = before.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === priorId,
+    );
+    const nextPackage = before.occurrences.find((occurrence) => occurrence.occurrenceId === nextId);
+    if (priorPackage === undefined || nextPackage === undefined) {
+      throw new Error('re-anchor fixture is missing its target packages');
+    }
+
+    const command = {
+      kind: 'SetExitSelection' as const,
+      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
+      value: { kind: 'normal' as const, exitKey: 'exit2' },
+    };
+    const reanchored = applyProjectCommand(project, catalog, command);
+    const history = createProjectHistory(project);
+    const reanchoredHistory = applyProjectHistoryCommand(history, catalog, command);
+    const topology = fTopology(reanchored);
+    const moved = topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === nextId,
+    );
+    const retainedDescendant = topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === descendantId,
+    );
+    if (moved?.kind !== 'exit' || retainedDescendant?.kind !== 'exit') {
+      throw new Error('re-anchor result is missing its retained continuation');
+    }
+
+    expect(
+      topology.decisions.some(
+        (decision) =>
+          decision.source.kind === 'occurrence' && decision.source.occurrenceId === priorId,
+      ),
+    ).toBe(false);
+    expect(moved.normal).toEqual(beforeOutgoing.normal);
+    expect(moved.additional).toEqual(beforeOutgoing.additional);
+    expect(retainedDescendant).toEqual(beforeDescendant);
+    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === priorId)).toEqual(
+      priorPackage,
+    );
+    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === nextId)).toEqual(
+      nextPackage,
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(reanchored)), catalog)).toEqual(
+      reanchored,
+    );
+    expect(undoProjectHistory(reanchoredHistory).present).toBe(project);
+    expect(redoProjectHistory(undoProjectHistory(reanchoredHistory)).present).toEqual(reanchored);
+
+    const plan = reanchored.routes[0]?.biomes[0];
+    if (plan === undefined) throw new Error('re-anchor F plan is missing');
+    const prefix = materializeBiomePrefix(catalog, fBiome, plan);
+    if (prefix?.entryRoom === undefined) throw new Error('re-anchor prefix did not materialize');
+    const historyPrefix = composeBiomeHistoryPrefix(catalog, prefix);
+    expect(prefix.decisions).toHaveLength(2);
+    expect(prefix.frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: createExitDecisionAddress(fBiome, {
+        kind: 'occurrence',
+        occurrenceId: nextId,
+      }),
+      parent: { occurrenceId: nextId },
+    });
+    expect(historyPrefix).not.toBeNull();
+    const enteredOccurrenceIds =
+      historyPrefix?.events.flatMap((event) =>
+        event.kind === 'roomEntered' && event.origin.kind === 'occurrence'
+          ? [event.origin.occurrenceId]
+          : [],
+      ) ?? [];
+    expect(enteredOccurrenceIds).toContain(nextId);
+    expect(enteredOccurrenceIds).not.toContain(priorId);
+  });
+
   it('retains overflow targets until explicit ordinary exit-capacity repair', () => {
     let project = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',
@@ -1029,5 +1247,25 @@ describe('authored-project commands and topology', () => {
     ).toContainEqual(
       expect.objectContaining({ occurrenceId: 'i-preboss', state: { kind: 'shop' } }),
     );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(iBiome, twoExitDecision.source),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const peerDecision = createExitDecisionAddress(iBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('i-peer'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: peerDecision,
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(iBiome, twoExitDecision.source),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      }),
+    ).toThrow(/remove the prior selected target’s downstream decision first/);
   });
 });

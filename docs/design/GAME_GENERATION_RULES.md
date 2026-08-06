@@ -67,6 +67,14 @@ silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
 repair: it removes unavailable targets and their downstream subtree, then
 normalizes selection from the retained keys.
 
+Selecting another compatible ordinary normal target does not discard an already
+authored next decision. `SetExitSelection` atomically re-anchors that outgoing
+decision to the new selected occurrence, retaining its structural exits,
+targets, and descendants. This is only valid between ordinary continuations:
+additional selections and terminal sources remain incompatible with a retained
+downstream decision, and any retained additional exit must be declared by the
+new source. The former selected target is again an unpicked dead leaf.
+
 The retained-key rule is intentionally narrow. The codec accepts only normal
 exit keys present in the biome's authored declarations (or the one fixed Hub
 exit key); it never accepts an arbitrary string as a repair placeholder. A
