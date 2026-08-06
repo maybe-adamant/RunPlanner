@@ -19,7 +19,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
-import { fBiome, fProject, gBiome, gProject } from '../support/configured-projects';
+import { fBiome, fProject, gBiome, gProject, nBiome, nProject } from '../support/configured-projects';
 
 function biomeTopology(
   project: ReturnType<typeof fProject>,
@@ -315,13 +315,41 @@ describe('authored-project route detour commands', () => {
     )?.gameName).toBe('Chaos_06');
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(project);
 
-    project = applyProjectCommand(project, catalog, {
+    const history = createProjectHistory(project);
+    const removed = applyProjectHistoryCommand(history, catalog, {
       kind: 'RemoveNaturalChaos',
       additional,
     });
-    expect(biomeTopology(project, 'Underworld', 'F').occurrences.map(
+    const restored = undoProjectHistory(removed);
+    const redone = redoProjectHistory(restored);
+    expect(restored.present).toEqual(project);
+    expect(redone.present).toEqual(removed.present);
+    expect(biomeTopology(removed.present, 'Underworld', 'F').occurrences.map(
       (occurrence) => occurrence.occurrenceId,
     )).not.toContain(chaos);
+  });
+
+  it('rejects a natural Chaos map outside N’s declared target domain', () => {
+    const opening = createOccurrenceId('natural-chaos-n-opening');
+    const chaos = createOccurrenceId('natural-chaos-n-target');
+    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    let project = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceNaturalChaosMap',
+        occurrence: createOccurrenceAddress(nBiome, chaos),
+        gameName: 'Chaos_01',
+      }),
+    ).toThrow(/outside the N Chaos map domain/);
   });
 
   it('removes a retained natural Chaos gate after its selected G source becomes an Anomaly', () => {
