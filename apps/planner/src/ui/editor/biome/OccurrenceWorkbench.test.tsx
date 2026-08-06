@@ -1125,6 +1125,7 @@ describe('OccurrenceWorkbench', () => {
     );
     expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
+    expect(screen.queryByLabelText('Customize')).toBeNull();
   });
 
   it('authors Shop membership and ordinal as one complete purchase order per row action', async () => {

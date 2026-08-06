@@ -878,7 +878,7 @@ function hasRoomLocalCustomization(
     case 'ship':
       return true;
     case 'shop':
-      return roomLocal.materialized && (roomLocal.offers.length > 0 || zagreusMaterialized);
+      return roomLocal.materialized && zagreusMaterialized;
     case 'none':
     case 'fixed':
     case 'incomingReward':
