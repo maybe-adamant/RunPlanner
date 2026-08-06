@@ -377,10 +377,14 @@ function projectAuthoredTargetWithOverlay(
     requireWorkspaceRoom(input.catalog, occurrence.gameName).kind,
   );
   const markerForTarget = input.markerDestinations.marker(address);
-  const anomalyReplacement =
-    input.source.layout.progression.kind === 'generated'
-      ? input.source.layout.progression.anomalyReplacement
-      : undefined;
+  const anomalyTakeoverAvailable =
+    input.source.evaluation !== undefined && 'roomGeneration' in input.source.evaluation
+      ? input.source.evaluation.roomGeneration.ordinary.anomalyTakeovers.some(
+          (support) =>
+            semanticAddressKey(support.origin) === semanticAddressKey(address) &&
+            support.selectedPossible,
+        )
+      : false;
   const occurrenceAssembly = input.assembleOccurrence(
     Object.freeze({
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
@@ -415,7 +419,7 @@ function projectAuthoredTargetWithOverlay(
       room: node.room,
       ...(occurrence.state.kind === 'counted' &&
       occurrence.anomalyReplacement === undefined &&
-      anomalyReplacement?.replaceableTargetRoomGameNames.includes(occurrence.gameName)
+      anomalyTakeoverAvailable
         ? { anomalyTakeover: Object.freeze({ label: 'Replace with Anomaly' }) }
         : {}),
     }),
@@ -753,22 +757,8 @@ function assembleBatchDecision(
               occurrence,
             }),
           );
-          const room = requireWorkspaceRoom(input.catalog, occurrence.gameName);
-          const fixed = room.encounterSlotBindings.find((binding) => binding.kind === 'fixed');
-          if (fixed?.kind !== 'fixed') {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${semanticAddressKey(owner)} Zagreus contract has no fixed encounter`,
-            );
-          }
-          const encounter = input.catalog.encounterDefinitions.byKey[fixed.encounterDefinitionKey];
-          if (encounter === undefined) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${semanticAddressKey(owner)} Zagreus contract fixed encounter is unknown`,
-            );
-          }
           return Object.freeze({
             contractRoom: contractAssembly.node.room,
-            encounterLabel: encounter.label,
             marker: input.markerDestinations.marker(
               createAdditionalExitAddress(source.biome, decision.source, zagreusAdditional.key),
             ),
@@ -793,7 +783,6 @@ function assembleBatchDecision(
       : {
           zagreusContract: Object.freeze({
             contractRoom: zagreusContract.contractRoom,
-            encounterLabel: zagreusContract.encounterLabel,
             marker: zagreusContract.marker,
             owner: zagreusContract.owner,
             selected: zagreusContract.selected,

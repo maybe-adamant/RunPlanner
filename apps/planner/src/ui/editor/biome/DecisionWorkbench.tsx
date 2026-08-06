@@ -209,22 +209,24 @@ function TargetRow({
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
-        {node.targetInteraction === 'readOnly' ? (
-          <p className="fixed-room-state">These Preboss doors are changed together.</p>
-        ) : !replaceable ? (
-          <p className="fixed-room-state">
-            {target.physicalState === 'unavailable'
-              ? 'This saved door is no longer available here. Fix the earlier route first.'
-              : 'This door cannot be changed.'}
-          </p>
-        ) : (
-          <TargetRoomSelector
-            idPrefix={`target-${target.room.occurrenceId}`}
-            interactionKey={target.marker.focusKey}
-            interactions={interactions}
-            label={`Door ${target.index} room`}
-          />
-        )}
+        {target.room.anomaly === undefined ? (
+          node.targetInteraction === 'readOnly' ? (
+            <p className="fixed-room-state">These Preboss doors are changed together.</p>
+          ) : !replaceable ? (
+            <p className="fixed-room-state">
+              {target.physicalState === 'unavailable'
+                ? 'This saved door is no longer available here. Fix the earlier route first.'
+                : 'This door cannot be changed.'}
+            </p>
+          ) : (
+            <TargetRoomSelector
+              idPrefix={`target-${target.room.occurrenceId}`}
+              interactionKey={target.marker.focusKey}
+              interactions={interactions}
+              label={`Door ${target.index} room`}
+            />
+          )
+        ) : null}
         {target.anomalyTakeover === undefined ? null : (
           <button
             className="quiet-action action-compact"
@@ -322,8 +324,14 @@ function ZagreusContractExit({
     workspaceInteractionKey(control.owner),
   );
   return (
-    <article aria-label="Zagreus contract exit" className="exit-row zagreus-contract-exit">
+    <article
+      aria-label="Zagreus contract exit"
+      className="exit-row zagreus-contract-exit"
+      data-available="true"
+      data-picked={control.selected}
+    >
       <label className="picked-control">
+        <span className="visually-hidden">Take Zagreus contract</span>
         <input
           aria-label="Take Zagreus contract"
           checked={control.selected}
@@ -331,22 +339,18 @@ function ZagreusContractExit({
           onChange={() => executeIntent(interaction.selectIntent)}
           type="radio"
         />
-        <span>Take the contract exit</span>
       </label>
       <div className="exit-content">
         <div className="exit-heading">
           <div>
             <p className="card-kicker">Additional exit</p>
-            <h4>{control.contractRoom.label}</h4>
+            <h4>Zagreus contract</h4>
           </div>
           <div className="owner-markers">
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <p className="fixed-room-state">Encounter: {control.encounterLabel}</p>
-        <p className="fixed-room-state">
-          Its following decision returns automatically to this biome.
-        </p>
+        <p className="fixed-room-state">Room: {control.contractRoom.label}</p>
         <RoomOfferEditor
           idPrefix={`zagreus-${control.contractRoom.occurrenceId}`}
           interactions={interactions}

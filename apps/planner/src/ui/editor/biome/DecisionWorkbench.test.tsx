@@ -254,7 +254,12 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(createExitDecisionAddress(biome, source)),
     );
 
-    expect(screen.getByRole('article', { name: 'Zagreus contract exit' })).toBeTruthy();
+    const contract = screen.getByRole('article', { name: 'Zagreus contract exit' });
+    expect(contract.dataset.picked).toBe('false');
+    expect(
+      within(contract).getByRole('heading', { level: 4, name: 'Zagreus contract' }),
+    ).toBeTruthy();
+    expect(within(contract).getByText(/^Room: /)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove contract' })).toBeTruthy();
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
   });
@@ -1019,7 +1024,15 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(node.owner),
       application,
     );
-    await view.user.click(screen.getByRole('button', { name: 'Replace with Anomaly' }));
+    const targetCard = screen
+      .getAllByLabelText(`${target.room.label} room offer`)
+      .find((card) =>
+        within(card).queryByLabelText(`Pick ${target.room.label} from Door ${target.index}`),
+      );
+    if (targetCard === undefined) throw new Error('Anomaly-capable target card is missing');
+    await view.user.click(within(targetCard).getByRole('button', { name: 'Replace with Anomaly' }));
+    expect(screen.queryByLabelText(`Door ${target.index} room`)).toBeNull();
+    expect(screen.getByLabelText('Map')).toBeTruthy();
     expect(
       dispatch.mock.calls
         .map(([action]) => action)
