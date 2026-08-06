@@ -324,6 +324,28 @@ must not become simulator room-name conditions.
 semantic choices or translation data; the label is presentation. UI must not
 derive labels from internal identifiers.
 
+### Closed route-detour declarations
+
+`roomSetKey` records a room's game room-set identity. It is declaration data,
+not a route placement, normal-door eligibility rule, or lifecycle classifier.
+The host authored biome supplies placement; legal conditional insertion is
+expressed by closed generation declarations.
+
+G owns the one `oceanusAnomaly` replacement declaration: its source checkpoint
+requirements, replaceable ordinary G target names, seven Anomaly map names,
+and default map. A normal target may enter that room set only through this
+replacement. The four supported Midshops (`F_Shop01`, `G_Shop01`, `O_Shop01`,
+and `P_Shop01`) each declare the one `zagreusContract` additional exit to
+`C_Boss01`. Neither Anomaly maps nor `C_Boss01` belongs to a normal-door
+candidate domain.
+
+Anomaly maps and `C_Boss01` declare the same closed automatic exit facts:
+automatic traversal, hidden reward preview, and fresh host-normal target
+generation. The catalog also retains the intentional encounter asymmetry:
+`GeneratedAnomalyB` advances encounter depth; `BossZagreus01` does not.
+`C_Boss01` has a fixed `InfernalContractBoon` acquisition and deliberately
+does not model `GemPointsBigDrop` or `PauseBiomeState`.
+
 ## Physical Exit Types
 
 Physical exit declarations retain the game exit type and reference a normalized

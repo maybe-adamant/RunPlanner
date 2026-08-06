@@ -40,9 +40,10 @@ Tauri 2 shell packages the same application as a no-install Windows preview;
 native desktop file integration and the app/game execution boundary remain
 deliberate later steps.
 
-Natural Chaos is explicit future special-exit work, and Anomaly detours remain
-deferred. Neither has production declaration, authored state, command,
-simulation, candidate, or UI behavior today; a future Chaos slice must extend
+Natural Chaos is explicit future special-exit work. Oceanus Anomaly replacement
+and the selected Midshop Zagreus contract are supported closed detours: they
+reuse ordinary occurrences and lifecycle processing, and return through one
+declaration-owned hidden host continuation. A future Chaos slice must extend
 the exit-decision envelope without changing normal-door takeover or completion
 ownership.
 

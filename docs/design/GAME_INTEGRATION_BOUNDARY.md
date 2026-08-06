@@ -63,8 +63,8 @@ which facts are actually necessary.
   field-NPC combat, through fixed runtime adapters;
 - suppress natural Chaos and unmodeled NPC random, Shop, Bridge, interaction,
   and wager systems while those systems are absent from the execution plan;
-- suppress Anomaly replacement while route-structural detours are absent from
-  the execution plan;
+- realize supported authored Anomaly replacement and Zagreus contract detours
+  only through later fixed runtime adapters;
 - compare expected and observed game state at known checkpoints;
 - report mismatches without inventing new planning logic.
 
@@ -121,7 +121,6 @@ The app's v1 canonical history excludes spontaneous systems whose presence
 would otherwise change modeled history:
 
 - natural Chaos generation;
-- Anomaly replacement;
 - NPC random events, Shop/Bridge appearances, interactions, and wager outcomes.
 
 The future game module must disable these systems unless a later schema
@@ -187,8 +186,9 @@ for execution.
 - clipboard wrapper or compression;
 - game hook selection;
 - exact runtime mechanism that realizes G's open-picked-exit baseline;
-- exact runtime adapters that realize selected combat definitions and suppress
-  natural Chaos, Anomaly replacement, and unmodeled NPC event systems;
+- exact runtime adapters that realize selected combat definitions, supported
+  Anomaly/Zagreus detours, and suppression of natural Chaos and unmodeled NPC
+  event systems;
 - runtime command handlers;
 - strict versus diagnostic mismatch policy;
 - automatic diagnostic import;

@@ -185,7 +185,7 @@ transient expansion state.
 
 The canonical product does not model weighted RNG replay, combat-wave
 composition, NPC event/interactions outside selected combat definitions,
-natural Chaos, anomaly detours, optional player interactions, or external
-profile gates. Each can enter only
+Natural Chaos and other unsupported detours, optional player interactions, or
+external profile gates. Each can enter only
 with an explicit catalog/input model, authored owner, lifecycle rule,
 validation behavior, and UI projection.

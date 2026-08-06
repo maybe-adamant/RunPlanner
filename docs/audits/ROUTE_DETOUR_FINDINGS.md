@@ -4,18 +4,14 @@
 
 This is a source-backed game-data audit. It records how Chaos, Oceanus
 Anomalies, and the Zagreus contract leave and resume a host route. It does not
-own planner schema, implementation sequencing, or UI contracts; the temporary
-implementation plans own those decisions. Where the discussion has settled a
-planner baseline against these facts, the disposition is recorded separately
-from the source behavior.
+own planner schema, implementation sequencing, or UI contracts; the owning
+design and biome authorities own those decisions. Where the
+discussion has settled a planner baseline against these facts, the disposition
+is recorded separately from the source behavior.
 
-The current product still suppresses all three systems. Delivery is now split
-between:
-
-- an implementation-ready plan for Oceanus Anomaly replacement and the
-  Zagreus contract from its declared Midshop sources;
-- a provisional natural-Chaos follow-up for `N`, `F`, `G`, and `P` that must
-  be revalidated after the first plan lands.
+The current product supports Oceanus Anomaly replacement and the Zagreus
+contract from their declared sources. Natural Chaos remains a provisional
+follow-up for `N`, `F`, `G`, and `P` and is still suppressed.
 
 Spark of Ixion forced Chaos is recorded because it uses the same game entry
 function and explains otherwise surprising Chaos gates. It is explicitly not
@@ -565,50 +561,27 @@ Without choosing a schema yet, the live evidence creates these constraints:
 - Concrete map capability matters. Neither a nonzero chance nor a forced trait
   can produce a Chaos gate without a `SecretPoint`.
 
-These are source constraints on the temporary implementation plans, not a
-commitment by this audit to one topology type or command surface.
+These are source constraints on the remaining Natural Chaos implementation
+plan, not a commitment by this audit to one topology type or command surface.
 
 ## Deliberate planner disposition
 
-| System                                     | Audit disposition                                                                                              |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Natural Chaos in `N`, `F`, `G`, and `P`    | preserve as a natural-only provisional follow-up after Anomaly/Zagreus; do not implement from the audit        |
-| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                                |
-| Oceanus Anomaly                            | selected for the first implementation plan as normal-target replacement with one automatic hidden continuation |
-| Zagreus contract                           | selected for the first implementation plan as a Midshop additional exit with one automatic hidden continuation |
+| System                                     | Audit disposition                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Natural Chaos in `N`, `F`, `G`, and `P`    | preserve as a natural-only provisional follow-up after Anomaly/Zagreus; do not implement from the audit |
+| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                         |
+| Oceanus Anomaly                            | implemented as normal-target replacement with one automatic hidden continuation                         |
+| Zagreus contract                           | implemented as Midshop additional exit with one automatic hidden continuation                           |
 
-### Settled Anomaly and Zagreus planner baseline
+### Implemented planner disposition
 
-The implementation plan may treat the following as closed scope decisions
-rather than reopen them as game-data questions:
-
-- assume the ordinary save/profile and narrative progression requirements for
-  both systems have been met;
-- preserve their run-level, room-history, depth, source-room,
-  source-encounter, and target-capability requirements;
-- author possible outcomes rather than replaying the game's chance rolls;
-- consume each feature's once-per-run limit on entry into its Anomaly or
-  `C_Boss01` occurrence, not when its door or replacement is prepared;
-- use the progressed complete seven-map Anomaly pool, defaulting a newly
-  authored takeover to the first declared map, `B_Combat01`;
-- force `GeneratedAnomalyB` as the Anomaly encounter and default its authored
-  challenge result to success;
-- use fixed `C_Boss01` and `BossZagreus01` for the Zagreus room;
-- model its relevant payout as `InfernalContractBoon` and omit the separate
-  meta-progression `GemPointsBigDrop` from the planner's supported reward
-  lifecycle;
-- preserve `GeneratedAnomalyB`'s encounter-depth increment and
-  `BossZagreus01`'s lack of one;
-- omit `C_Boss01.PauseBiomeState` from production modeling because the planner
-  has no biome-state trait lifecycle input or consumer.
-
-Those are deliberate product simplifications over the complete source facts
-recorded above. They do not change the game's actual progression predicates,
-chance rolls, or dual Zagreus-room outputs.
-
-The temporary Anomaly/Zagreus plan owns the selected schema, command, engine,
-and editor delivery gates. Those implementation choices are not game-data
-facts and therefore do not move into this audit.
+The app models possible Anomaly replacement and the declared Midshop Zagreus
+contract while assuming their ordinary progression predicates are met; it does
+not replay chance. The game-only `GemPointsBigDrop`, `PauseBiomeState`, and
+dual Zagreus output remain outside the modeled reward and trait lifecycle.
+Stable catalog, authored-project, lifecycle, simulation, editor, G-biome, and
+integration-boundary contracts own the implementation details; this audit
+retains only their source evidence and disposition.
 
 ### Settled natural Chaos planner baseline
 
@@ -631,10 +604,10 @@ that the game bypasses `Secrets`.
 
 ## Required fixture ownership
 
-The Anomaly/Zagreus implementation must add focused lifecycle fixtures for one
-Anomaly replacement and one Zagreus Midshop. The later natural-Chaos
-implementation must separately add one ordinary natural source and the
-`N_Opening01` route case. The source already establishes the expected
+Focused lifecycle fixtures cover Anomaly replacement and a Zagreus Midshop;
+representative browser workflows cover Anomaly failure and selected Zagreus
+return. The later natural-Chaos implementation must separately add one ordinary
+natural source and the `N_Opening01` route case. The source establishes the expected
 history/depth and return behavior; fixtures should protect each selected
 planner interpretation rather than stand in for missing production semantics.
 

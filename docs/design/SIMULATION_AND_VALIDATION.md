@@ -414,6 +414,26 @@ preserves schema-13's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
+### Closed inserted-detour simulation
+
+Anomaly evaluates its displaced G target as ordinary target eligibility, then
+evaluates the catalog-owned source and prior-entered-Anomaly gates. A legal
+takeover materializes only the retained Anomaly occurrence and offer: the
+remembered G room produces no creation, reward, or history event. Anomaly
+failure still consumes its offer; only acquisition is omitted. Invalid retained
+state remains materialized for exact findings.
+
+A declared Zagreus sibling is created at the selected Midshop's entry-time
+contract checkpoint, independently of ordinary normal-target generation. Its
+selection crosses the Midshop-to-`C_Boss01` and automatic-return decisions in
+the same selected-spine and normal-batch accounting. The normal Midshop lane
+and its offers remain present and consumed even when the contract is selected.
+In particular, O's depth-five Shop normal target remains an unpicked fifth
+target; `C_Boss01` then generates a distinct sixth O target, whose continuing
+host policy can resolve `O_PreBoss01`. Validation consumes both detour caps on
+entered-room history only, so skipped authored alternatives do not block a
+later offer.
+
 ### Prefix Snapshots
 
 An incomplete but materializable biome has a prefix product:
