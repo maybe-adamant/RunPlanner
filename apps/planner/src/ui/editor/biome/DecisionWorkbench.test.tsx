@@ -363,6 +363,66 @@ describe('DecisionWorkbench', () => {
     expect((screen.getByLabelText('Door 2 room') as HTMLSelectElement).disabled).toBe(true);
   });
 
+  it('reanchors an authored downstream decision when its normal selected room changes', async () => {
+    const project = createRepresentativeNOPQProject();
+    const owner = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: pOccurrenceIds.intro,
+    });
+    const view = renderDecisionWorkbench(project, 'Surface', 'P', subjectForOwner(owner));
+    const node = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
+      (candidate) =>
+        candidate.kind === 'ordinaryBatch' &&
+        semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
+    );
+    if (node?.kind !== 'ordinaryBatch') throw new Error('P Decision 1 is missing');
+    const selected = node.targets.find((target) => target.selected);
+    const replacement = node.targets.find((target) => !target.selected);
+    if (selected === undefined || replacement === undefined) {
+      throw new Error('P Decision 1 needs selected and unselected normal rooms');
+    }
+    const retainedOwner = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: replacement.room.occurrenceId,
+    });
+
+    await view.user.click(
+      screen.getByRole('radio', {
+        name: `Pick ${replacement.room.label} from Door ${replacement.index}`,
+      }),
+    );
+
+    await waitFor(() => {
+      const topology = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'P')?.topology;
+      expect(
+        topology?.decisions.some(
+          (decision) =>
+            decision.kind === 'exit' &&
+            decision.source.kind === 'occurrence' &&
+            decision.source.occurrenceId === replacement.room.occurrenceId,
+        ),
+      ).toBe(true);
+      expect(
+        topology?.decisions.some(
+          (decision) =>
+            decision.kind === 'exit' &&
+            decision.source.kind === 'occurrence' &&
+            decision.source.occurrenceId === selected.room.occurrenceId,
+        ),
+      ).toBe(false);
+    });
+    expect(
+      workspaceBiome(view.application, 'Surface', 'P').nodes.some(
+        (candidate) =>
+          candidate.kind === 'ordinaryBatch' &&
+          semanticAddressKey(candidate.owner) === semanticAddressKey(retainedOwner),
+      ),
+    ).toBe(true);
+  });
+
   it('publishes picked-room and reward edits as separate atomic decision commands', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',

@@ -741,31 +741,102 @@ function setExitSelection(
     }
   }
   const nextDecision = Object.freeze({ ...decision, selection: command.value });
+  const previousContinuation = selectedExitContinuation(decision);
+  const nextContinuation = selectedExitContinuation(nextDecision);
   const selectedOccurrenceId = (continuation: ReturnType<typeof selectedExitContinuation>) =>
     continuation?.kind === 'normal'
       ? continuation.target.occurrenceId
       : continuation?.kind === 'additional'
         ? continuation.exit.occurrenceId
         : undefined;
-  const nextSelectedOccurrenceId = selectedOccurrenceId(selectedExitContinuation(nextDecision));
-  const previousSelectedOccurrenceId = selectedOccurrenceId(selectedExitContinuation(decision));
+  const nextSelectedOccurrenceId = selectedOccurrenceId(nextContinuation);
+  const previousSelectedOccurrenceId = selectedOccurrenceId(previousContinuation);
+  let selectionTopology = topology;
   if (previousSelectedOccurrenceId !== nextSelectedOccurrenceId) {
-    if (
-      previousSelectedOccurrenceId !== undefined &&
-      topology.decisions.some(
+    const outgoing = topology.decisions.find(
+      (candidate) =>
+        candidate.source.kind === 'occurrence' &&
+        candidate.source.occurrenceId === previousSelectedOccurrenceId,
+    );
+    if (outgoing !== undefined) {
+      if (previousContinuation?.kind !== 'normal' || nextContinuation?.kind !== 'normal') {
+        failCommand(command, 'remove the prior selected target’s downstream decision first');
+      }
+      const previousOccurrence = requireOccurrence(
+        located.plan,
+        previousContinuation.target.occurrenceId,
+        command,
+      );
+      const nextOccurrence = requireOccurrence(
+        located.plan,
+        nextContinuation.target.occurrenceId,
+        command,
+      );
+      if (previousOccurrence.state.kind === 'anomaly' || nextOccurrence.state.kind === 'anomaly') {
+        failCommand(command, 'remove the prior selected target’s downstream decision first');
+      }
+      const previousRoom = requireRoom(
+        catalog,
+        previousOccurrence.gameName,
+        located.layout.biomeKey,
+        command,
+      );
+      const nextRoom = requireRoom(
+        catalog,
+        nextOccurrence.gameName,
+        located.layout.biomeKey,
+        command,
+      );
+      const targetAlreadyOwnsDecision = topology.decisions.some(
         (candidate) =>
           candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === previousSelectedOccurrenceId,
-      )
-    ) {
-      failCommand(command, 'remove the prior selected target’s downstream decision first');
+          candidate.source.occurrenceId === nextContinuation.target.occurrenceId,
+      );
+      const retainsSupportedAdditionalExits =
+        outgoing.kind === 'exit' &&
+        outgoing.additional.every((additional) => {
+          const declaration = nextRoom.additionalExits.find(
+            (candidate) => candidate.key === additional.key && candidate.kind === additional.kind,
+          );
+          const target = topology.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === additional.occurrenceId,
+          );
+          return declaration !== undefined && target?.gameName === declaration.targetRoomGameName;
+        });
+      if (
+        outgoing.kind !== 'exit' ||
+        previousRoom.kind === 'Preboss' ||
+        nextRoom.kind === 'Preboss' ||
+        targetAlreadyOwnsDecision
+      ) {
+        failCommand(command, 'remove the prior selected target’s downstream decision first');
+      }
+      if (!retainsSupportedAdditionalExits) {
+        failCommand(
+          command,
+          'the new selected target does not declare the retained downstream additional exits',
+        );
+      }
+      const reanchored = Object.freeze({
+        ...outgoing,
+        source: Object.freeze({
+          kind: 'occurrence' as const,
+          occurrenceId: nextContinuation.target.occurrenceId,
+        }),
+      });
+      selectionTopology = Object.freeze({
+        ...topology,
+        decisions: Object.freeze(
+          topology.decisions.map((candidate) => (candidate === outgoing ? reanchored : candidate)),
+        ),
+      });
     }
   }
   const nextSelectedExitKey = selectedExitKey(nextDecision);
   const withSelectionState = reconcileNormalTargetEntryStates(
     catalog,
     located,
-    topology,
+    selectionTopology,
     nextDecision,
     nextSelectedExitKey,
     command,

@@ -2,7 +2,6 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { BiomeTopology, ExitDecision } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
-import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import { failCommand, type LocatedBiome } from './contract';
 import type { ProjectCommand } from './types';
 
@@ -53,19 +52,11 @@ export function reconcileNormalTargetEntryStates(
     const entryActive = decision.normal.targets[targetIndex]?.exitKey === selectedNormalExitKey;
     const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
     if (hasInventory === entryActive) return occurrence;
-    return Object.freeze({
-      occurrenceId: occurrence.occurrenceId,
-      gameName: room.gameName,
-      ...(occurrence.anomalyReplacement === undefined
-        ? {}
-        : { anomalyReplacement: occurrence.anomalyReplacement }),
-      state: createDefaultRoomState(catalog, room, { role, entryActive }),
-      encounters: createDefaultRoomEncounterState(
-        catalog,
-        room,
-        `occurrences.${occurrence.occurrenceId}.encounters`,
-      ),
-    });
+    const defaultState = createDefaultRoomState(catalog, room, { role, entryActive });
+    if (defaultState.kind !== 'shop') {
+      failCommand(command, `${room.gameName} has no entry-activated Shop state`);
+    }
+    return Object.freeze({ ...occurrence, state: defaultState });
   });
   return Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });
 }

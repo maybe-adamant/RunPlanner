@@ -318,4 +318,78 @@ describe('authored-project route detour commands', () => {
       }),
     ).toThrow(/remove the prior selected target’s downstream decision first/);
   });
+
+  it('rejects re-anchoring a Midshop decision whose contract is not declared by the new source', () => {
+    const opening = createOccurrenceId('detour-reanchor-opening');
+    const fork = createOccurrenceId('detour-reanchor-fork');
+    const shop = createOccurrenceId('detour-reanchor-shop');
+    const peer = createOccurrenceId('detour-reanchor-peer');
+    const contract = createOccurrenceId('detour-reanchor-contract');
+    const openingSource = { kind: 'occurrence' as const, occurrenceId: opening };
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, openingSource),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, openingSource),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, openingSource, 'exit1'),
+      occurrenceId: fork,
+      gameName: 'F_Combat02',
+    });
+    const forkSource = { kind: 'occurrence' as const, occurrenceId: fork };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, forkSource),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, forkSource),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, forkSource, 'exit1'),
+      occurrenceId: shop,
+      gameName: 'F_Shop01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, forkSource, 'exit2'),
+      occurrenceId: peer,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, forkSource),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddZagreusContract',
+      additional: createAdditionalExitAddress(
+        fBiome,
+        { kind: 'occurrence', occurrenceId: shop },
+        'zagreusContract',
+      ),
+      occurrenceId: contract,
+    });
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, forkSource),
+        value: { kind: 'normal', exitKey: 'exit2' },
+      }),
+    ).toThrow(/does not declare the retained downstream additional exits/);
+  });
 });
