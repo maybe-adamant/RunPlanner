@@ -612,9 +612,10 @@ history/depth and return behavior; fixtures should protect each selected
 planner interpretation rather than stand in for missing production semantics.
 
 The automatic hidden continuation editor policy is also closed: its exact
-authored target and reward remain visible to the planner author while the UI
-labels their in-game preview and traversal as hidden/automatic. Simulation
-still selects and consumes the reward before automatic entry.
+authored target and reward remain visible through an ordinary width-one
+decision. The derived selection needs no special return control or explanatory
+label; the catalog retains the game's hidden-preview and automatic-traversal
+facts. Simulation still selects and consumes the reward before automatic entry.
 
 The Anomaly target inventory, forced encounter, source/target eligibility
 split, and Anomaly/Zagreus entry-consumed run caps are closed. They are not

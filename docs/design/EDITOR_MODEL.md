@@ -346,18 +346,20 @@ because those offers materialize on their doors.
 An Anomaly-capable G target exposes one bound `Replace with Anomaly` action on
 the target card, including unpicked and finding-backed targets. The resulting
 occurrence retains its reward editor and exposes its map, authored success,
-fixed encounter fact, and exact revert action. Its automatic continuation is
-shown only on the selected spine, with the concrete hidden host target and
-reward editable but no player branch selector.
+and exact revert action. Fixed `GeneratedAnomalyB` remains a catalog and
+lifecycle fact rather than a redundant editor control. On the selected spine,
+the outgoing host continuation is an ordinary width-one decision: its concrete
+target and reward remain editable while its selection is declaration-derived,
+so React adds neither a player branch selector nor a special return control.
 
 A selected, details-active declared Midshop with materialized Shop state
 exposes the bound Zagreus spawn action from its Shop workbench. The persisted
 contract remains a sibling continuation in the containing decision, where the
 normal lane and fixed `C_Boss01` card are independently inspectable and
 selectable. Findings never hide an already-active selected source control;
-unpicked Midshops have no contract surface. `C_Boss01` presents its automatic
-host continuation under the same hidden/automatic rule. React supplies no
-eligibility, topology, reward, or return policy.
+unpicked Midshops have no contract surface. `C_Boss01` uses the same ordinary
+width-one continuation presentation. React supplies no eligibility, topology,
+reward, or return policy.
 
 A materialized Shop preserves declaration order for inventory rows while
 deriving `Purchased` membership and a `Purchase order` ordinal from its one
