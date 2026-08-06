@@ -255,19 +255,17 @@ describe('route detour catalog declarations', () => {
       expect(source?.exits.map((exit) => exit.behavior)).toEqual(
         normalExitTypes.map(() => ({ kind: 'playerSelected', rewardPreview: 'visible' })),
       );
-      expect(source?.additionalExits.find((exit) => exit.kind === 'zagreusContract')).toEqual(
-        {
-          kind: 'zagreusContract',
-          key: 'zagreusContract',
-          physicalExit: {
-            type: 'ZagContract',
-            compatibilityPolicyKey: 'Unconstrained',
-            behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
-          },
-          targetRoomGameName: 'C_Boss01',
-          maxEnteredThisRoute: 0,
+      expect(source?.additionalExits.find((exit) => exit.kind === 'zagreusContract')).toEqual({
+        kind: 'zagreusContract',
+        key: 'zagreusContract',
+        physicalExit: {
+          type: 'ZagContract',
+          compatibilityPolicyKey: 'Unconstrained',
+          behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
         },
-      );
+        targetRoomGameName: 'C_Boss01',
+        maxEnteredThisRoute: 0,
+      });
     }
   });
 
@@ -341,9 +339,7 @@ describe('route detour catalog declarations', () => {
     expect(sources).toEqual([...naturalChaosSources].sort());
     for (const gameName of naturalChaosSources) {
       expect(
-        catalog.rooms.byKey[gameName]?.additionalExits.find(
-          (exit) => exit.kind === 'naturalChaos',
-        ),
+        catalog.rooms.byKey[gameName]?.additionalExits.find((exit) => exit.kind === 'naturalChaos'),
       ).toMatchObject({
         kind: 'naturalChaos',
         key: 'naturalChaos',
@@ -370,7 +366,14 @@ describe('route detour catalog declarations', () => {
     expect(catalog.biomeLayouts.byKey.P?.naturalChaos).toEqual(
       catalog.biomeLayouts.byKey.F?.naturalChaos,
     );
-    for (const gameName of ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06']) {
+    for (const gameName of [
+      'Chaos_01',
+      'Chaos_02',
+      'Chaos_03',
+      'Chaos_04',
+      'Chaos_05',
+      'Chaos_06',
+    ]) {
       expect(catalog.rooms.byKey[gameName]).toMatchObject({
         roomSetKey: 'Chaos',
         mode: { kind: 'authored', templateKey: 'Chaos' },

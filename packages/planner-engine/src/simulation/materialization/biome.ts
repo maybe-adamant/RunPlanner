@@ -218,11 +218,12 @@ function canonicalRewardStore(
   source: ExitDecisionSourceAddress,
   state: BatchRewardStoreState,
   takeover: boolean,
+  naturalChaosSelected: boolean,
 ): CanonicalBatchRewardStore {
   const origin = createBatchRewardStoreAddress(biome, source);
   if (state.kind === 'authoredBaseStore') {
     if (state.baseRewardStoreKey === null) {
-      if (takeover) return Object.freeze({ origin, kind: 'none' });
+      if (takeover || naturalChaosSelected) return Object.freeze({ origin, kind: 'none' });
       fail('complete batch has no authored reward store');
     }
     return Object.freeze({
@@ -412,7 +413,10 @@ function materializeAdditionalContinuations(
   return Object.freeze(
     additionalExits.map((additional) => {
       const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
-      const room = requireRoom(catalog, layout, topology, occurrence);
+      const room =
+        additional.kind === 'naturalChaos'
+          ? requireCatalogRoom(catalog, occurrence)
+          : requireRoom(catalog, layout, topology, occurrence);
       if (additional.kind === 'zagreusContract') {
         if (
           room.gameName !== 'C_Boss01' ||
@@ -421,12 +425,7 @@ function materializeAdditionalContinuations(
         ) {
           fail(`${additional.key} has the wrong contract room`);
         }
-      } else if (
-        layout.naturalChaos === undefined ||
-        !layout.naturalChaos.roomGameNames.includes(room.gameName) ||
-        room.mode.kind !== 'authored' ||
-        room.mode.templateKey !== 'Chaos'
-      ) {
+      } else if (room.mode.kind !== 'authored' || room.mode.templateKey !== 'Chaos') {
         fail(`${additional.key} has the wrong Chaos room`);
       }
       return Object.freeze({
@@ -554,7 +553,13 @@ function materializeBatch(
       origin: createExitDecisionAddress(biome, source),
       source,
       parent,
-      rewardStore: canonicalRewardStore(biome, source, normal.rewardStore, takeover),
+      rewardStore: canonicalRewardStore(
+        biome,
+        source,
+        normal.rewardStore,
+        takeover,
+        selectedAdditional?.key === 'naturalChaos',
+      ),
       ...(sharedBatchStoreKey === undefined
         ? {}
         : { resolvedSharedRewardStoreKey: sharedBatchStoreKey }),
@@ -746,9 +751,10 @@ function isCompleteBatch(
       : selected?.kind === 'additional'
         ? occurrences.get(selected.exit.occurrenceId)
         : undefined;
+  const selectedNaturalChaos =
+    selected?.kind === 'additional' && selected.exit.kind === 'naturalChaos';
   return (
-    allPhysicalTargets &&
-    hasStore &&
+    (selectedNaturalChaos || (allPhysicalTargets && hasStore)) &&
     selected !== undefined &&
     !(pickedOccurrence?.state.kind === 'shop' && pickedOccurrence.state.shop === undefined)
   );

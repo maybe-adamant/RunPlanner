@@ -9,9 +9,10 @@ design and biome authorities own those decisions. Where the
 discussion has settled a planner baseline against these facts, the disposition
 is recorded separately from the source behavior.
 
-The current product supports Oceanus Anomaly replacement and the Zagreus
-contract from their declared sources. Natural Chaos remains a provisional
-follow-up for `N`, `F`, `G`, and `P` and is still suppressed.
+The current product supports Oceanus Anomaly replacement, the Zagreus contract,
+and natural Chaos from their declared sources. Natural Chaos is implemented
+only for `N`, `F`, `G`, and `P`; Spark of Ixion and every forced path remain
+suppressed.
 
 Spark of Ixion forced Chaos is recorded because it uses the same game entry
 function and explains otherwise surprising Chaos gates. It is explicitly not
@@ -561,17 +562,18 @@ Without choosing a schema yet, the live evidence creates these constraints:
 - Concrete map capability matters. Neither a nonzero chance nor a forced trait
   can produce a Chaos gate without a `SecretPoint`.
 
-These are source constraints on the remaining Natural Chaos implementation
-plan, not a commitment by this audit to one topology type or command surface.
+These are source constraints consumed by the implemented natural-Chaos
+additional-exit contract, not a commitment to a generic topology type or
+command surface.
 
 ## Deliberate planner disposition
 
-| System                                     | Audit disposition                                                                                       |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Natural Chaos in `N`, `F`, `G`, and `P`    | preserve as a natural-only provisional follow-up after Anomaly/Zagreus; do not implement from the audit |
-| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                         |
-| Oceanus Anomaly                            | implemented as normal-target replacement with one automatic hidden continuation                         |
-| Zagreus contract                           | implemented as Midshop additional exit with one automatic hidden continuation                           |
+| System                                     | Audit disposition                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Natural Chaos in `N`, `F`, `G`, and `P`    | implemented as a natural-only declared additional exit with fixed Chaos room and fresh ordinary return |
+| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                        |
+| Oceanus Anomaly                            | implemented as normal-target replacement with one automatic hidden continuation                        |
+| Zagreus contract                           | implemented as Midshop additional exit with one automatic hidden continuation                          |
 
 ### Implemented planner disposition
 

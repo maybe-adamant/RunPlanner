@@ -22,10 +22,7 @@ import {
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
-import {
-  applyTopologyRemovalImpact,
-  describeTopologyRemovalImpact,
-} from '../topologyImpact';
+import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topologyImpact';
 import {
   failCommand,
   requireOccurrence,
@@ -680,7 +677,10 @@ function addNaturalChaos(
   ) {
     failCommand(command, `${chaosRoom.gameName} is not a declared Chaos map`);
   }
-  const source = Object.freeze({ kind: 'occurrence' as const, occurrenceId: occurrence.occurrenceId });
+  const source = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: occurrence.occurrenceId,
+  });
   const existing = exitDecisionForSource(topology, source);
   const progression = normalDecisionProgressionForLayout(located.layout);
   if (progression === undefined) {
@@ -721,12 +721,17 @@ function addNaturalChaos(
   const withChaos = appendOccurrence(topology, chaosOccurrence, command);
   const withSource = replaceOccurrence(
     withChaos,
-    Object.freeze({ ...occurrence, additionalExits: Object.freeze([...occurrence.additionalExits, additional]) }),
+    Object.freeze({
+      ...occurrence,
+      additionalExits: Object.freeze([...occurrence.additionalExits, additional]),
+    }),
   );
   return updateTopology(
     document,
     located,
-    existing === undefined ? appendDecision(withSource, nextDecision) : replaceDecision(withSource, nextDecision),
+    existing === undefined
+      ? appendDecision(withSource, nextDecision)
+      : replaceDecision(withSource, nextDecision),
   );
 }
 
@@ -741,12 +746,14 @@ function removeNaturalChaos(
     failCommand(command, 'a natural Chaos source must be on the selected spine');
   }
   const occurrence = requireOccurrence(located.plan, command.additional.occurrenceId, command);
-  const source = Object.freeze({ kind: 'occurrence' as const, occurrenceId: occurrence.occurrenceId });
+  const source = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: occurrence.occurrenceId,
+  });
   const decision = exitDecisionForSource(topology, source);
   const additional = occurrence.additionalExits.find(
     (candidate) =>
-      candidate.kind === 'naturalChaos' &&
-      candidate.key === command.additional.additionalExitKey,
+      candidate.kind === 'naturalChaos' && candidate.key === command.additional.additionalExitKey,
   );
   if (additional === undefined) {
     failCommand(command, `${command.additional.additionalExitKey} is not authored`);
@@ -769,7 +776,9 @@ function removeNaturalChaos(
   if (retainedDecision === undefined) {
     throw new Error('removing an additional target removed its source decision');
   }
-  const remainingAdditional = occurrence.additionalExits.filter((candidate) => candidate.key !== additional.key);
+  const remainingAdditional = occurrence.additionalExits.filter(
+    (candidate) => candidate.key !== additional.key,
+  );
   const selection: ExitSelection =
     remainingAdditional.length === 0 && retainedDecision.normal.targets.length === 1
       ? Object.freeze({ kind: 'derived' })
@@ -778,10 +787,7 @@ function removeNaturalChaos(
         ? Object.freeze({ kind: 'unresolved' })
         : retainedDecision.selection;
   const nextDecision = Object.freeze({ ...retainedDecision, selection });
-  const withDecision = replaceDecision(
-    withoutFeature,
-    nextDecision,
-  );
+  const withDecision = replaceDecision(withoutFeature, nextDecision);
   return updateTopology(
     document,
     located,
@@ -815,13 +821,20 @@ function replaceNaturalChaosMap(
   }
   const host = naturalChaosHost(located, command);
   if (!host.roomGameNames.includes(command.gameName)) {
-    failCommand(command, `${command.gameName} is outside the ${located.layout.biomeKey} Chaos map domain`);
+    failCommand(
+      command,
+      `${command.gameName} is outside the ${located.layout.biomeKey} Chaos map domain`,
+    );
   }
   const room = catalog.rooms.byKey[command.gameName];
   if (room === undefined) {
     failCommand(command, `unknown Chaos map ${command.gameName}`);
   }
-  if (room.roomSetKey !== 'Chaos' || room.mode.kind !== 'authored' || room.mode.templateKey !== 'Chaos') {
+  if (
+    room.roomSetKey !== 'Chaos' ||
+    room.mode.kind !== 'authored' ||
+    room.mode.templateKey !== 'Chaos'
+  ) {
     failCommand(command, `${command.gameName} is not a declared Chaos map`);
   }
   return updateTopology(

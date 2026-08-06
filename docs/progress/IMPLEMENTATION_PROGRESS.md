@@ -12,15 +12,16 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-Oceanus Anomaly replacement and the Zagreus Midshop contract are complete.
-Schema 13 gives them closed catalog insertion rules, persisted provenance and
-additional-exit ownership, shared occurrence lifecycle/history, simulation and
+Oceanus Anomaly replacement, the Zagreus Midshop contract, and natural Chaos
+are complete. Schema 14 gives closed catalog insertion rules, persisted
+occurrence-owned additional exits, shared lifecycle/history, simulation and
 validation, exact workspace/finding reachability, and representative browser
-workflows for Anomaly failure and a selected Zagreus host return. The stable
+workflows. Natural Chaos is limited to its declared N/F/G/P sources, concrete
+host map domains, P depth condition, and preceding-ten-room offer spacing;
+selected Chaos resumes through a fresh ordinary host continuation. The stable
 contracts live in the catalog, authored-project, lifecycle,
-simulation/validation, editor, G-biome, and integration-boundary authorities;
-the temporary delivery plan is retired. Natural Chaos remains unopened and
-suppressed.
+simulation/validation, editor, affected biome, and integration-boundary
+authorities; the temporary delivery plan is retired.
 
 Phase 7 is complete. Commits 1 through 12, the candidate-system refactor,
 Tartarus reconciliation, sequential blank-slot candidate evaluation, the

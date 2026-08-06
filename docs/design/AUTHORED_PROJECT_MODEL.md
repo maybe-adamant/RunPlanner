@@ -154,9 +154,10 @@ Selection belongs to the enclosing decision: a width-one normal-only batch uses
 `normal` selects one declared normal target; and `additional` selects one
 closed sibling continuation. Additional exits are authored by the source
 `RoomOccurrence`, while the active outgoing decision exposes that source's
-closed siblings. The only supported additional exit is a declared Zagreus
-contract beside a Midshop's normal lane. It is never a synthetic normal target
-or a generic cross-room-set escape hatch.
+closed siblings. Supported additional exits are a declared Zagreus contract
+beside a Midshop's normal lane and declared natural Chaos beside eligible
+N/F/G/P sources. Both remain source-occurrence-owned and are never synthetic
+normal targets or generic cross-room-set escapes.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -288,10 +289,11 @@ Route detours use narrower commands than general room replacement. An Anomaly
 retains one normal G target occurrence identity, remembers its displaced G
 declaration, and owns its retained incoming offer plus success state. A
 Zagreus contract owns one `C_Boss01` occurrence as a declared additional exit.
-Anomaly replacements and the Zagreus contract are the only declared detour
-ownership forms admitted by decoded topology; each has one declaration-owned
-automatic hidden host return that remains a normal host target and batch for
-accounting.
+Anomaly replacements, the Zagreus contract, and natural Chaos are the declared
+detour ownership forms admitted by decoded topology. Anomaly and Zagreus each
+have one declaration-owned automatic host return; selected natural Chaos
+instead exposes one fresh, ordinary player-selected host continuation after its
+Chaos room.
 
 An Anomaly takeover preserves the target occurrence ID, incoming reward, and
 remembered displaced G game name. It resets incompatible room-local leaves,
@@ -309,6 +311,15 @@ when the sibling makes selection ambiguous. Removing the sibling deletes only
 its occurrence and descendants and restores that derived selection when
 applicable. The additional exit is selected through the enclosing decision,
 not represented as a synthetic normal target.
+
+`AddNaturalChaos` attaches one declared `naturalChaos` sibling to an eligible
+source occurrence; `ReplaceNaturalChaosMap` changes only that sibling's
+concrete map within the host layout's declared domain, and `RemoveNaturalChaos`
+deletes only the sibling and its descendants. Contextual spacing and source
+requirements do not make the persisted gate undecodable: evaluation reports
+them at its additional-exit owner. A selected Chaos room owns its fixed
+`Empty_Chaos` encounter and direct `TrialUpgrade` reward, then its outgoing
+ordinary decision owns the fresh host continuation.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
@@ -416,8 +427,8 @@ history.
 
 ## Explicit Non-Goals
 
-The authored model contains no Chaos gate, special-exit placeholder,
-probability score, RNG seed, game-profile predicate, generic graph edge,
+The authored model contains no generic special-exit placeholder, probability
+score, RNG seed, game-profile predicate, generic graph edge,
 rendered coordinate, React state, ImGui storage, silent repair, or guessed
-fallback. Future Chaos support extends the exit-decision envelope; it does not
+fallback. Natural Chaos uses the closed additional-exit envelope; it does not
 create a separate completion or layout-specific biome-plan family.

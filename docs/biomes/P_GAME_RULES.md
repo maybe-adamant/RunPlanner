@@ -108,9 +108,15 @@ ledger.
 
 ## Product boundary
 
+Natural Chaos is supported from the declared P source maps as an optional
+additional exit beside normal doors. Its source-local biome-depth ceiling and
+the host-wide preceding-ten offer spacing remain engine-evaluated; selected
+Chaos returns through a fresh ordinary P continuation without changing
+normal-door force or Preboss takeover ownership.
+
 The supported product includes catalog normalization, authored topology,
 concrete encounter selection, semantic commands, validation, candidates,
 workspace projection, and React editing for this envelope. NPC events and
-interactions beyond selected combat, Natural Chaos and other unsupported
+interactions beyond selected combat and other unsupported
 detours, and optional player interactions remain outside the canonical P
 baseline until they acquire explicit modeled inputs and ownership.

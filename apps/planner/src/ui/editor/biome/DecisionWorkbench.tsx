@@ -156,7 +156,9 @@ function TargetRow({
   const replaceable =
     node.targetInteraction === 'replaceable' && target.physicalState === 'available';
   const selectionInteraction =
-    node.targets.length === 1 && node.zagreusContract === undefined
+    node.targets.length === 1 &&
+    node.zagreusContract === undefined &&
+    node.naturalChaos === undefined
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -364,6 +366,81 @@ function ZagreusContractExit({
           type="button"
         >
           Remove contract
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/** Natural Chaos is a sibling exit: its map, fixed room facts, and removal stay together. */
+function NaturalChaosExit({
+  control,
+  interactions,
+  selectionName,
+}: {
+  readonly control: NonNullable<BatchNode['naturalChaos']>;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly selectionName: string;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.naturalChaosExits,
+    workspaceInteractionKey(control.owner),
+  );
+  return (
+    <article
+      aria-label="Chaos gate exit"
+      className="exit-row zagreus-contract-exit"
+      data-available="true"
+      data-picked={control.selected}
+    >
+      <label className="picked-control">
+        <span className="visually-hidden">Take Chaos gate</span>
+        <input
+          aria-label="Take Chaos gate"
+          checked={control.selected}
+          name={selectionName}
+          onChange={() => executeIntent(interaction.selectIntent)}
+          type="radio"
+        />
+      </label>
+      <div className="exit-content">
+        <div className="exit-heading">
+          <div>
+            <p className="card-kicker">Additional exit</p>
+            <h4>Chaos gate</h4>
+          </div>
+          <div className="owner-markers">
+            <SemanticOwnerMarker address={control.owner} />
+          </div>
+        </div>
+        <label className="field-control" htmlFor={`chaos-map-${control.chaosRoom.occurrenceId}`}>
+          <span>Map</span>
+          <select
+            id={`chaos-map-${control.chaosRoom.occurrenceId}`}
+            onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
+            value={control.chaosRoom.gameName}
+          >
+            {control.mapChoices.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <RoomOfferEditor
+          idPrefix={`chaos-${control.chaosRoom.occurrenceId}`}
+          interactions={interactions}
+          presentation="full"
+          room={control.chaosRoom}
+        />
+        <button
+          className="danger-action action-compact"
+          data-command="RemoveNaturalChaos"
+          onClick={() => executeIntent(interaction.removeIntent)}
+          type="button"
+        >
+          Remove Chaos gate
         </button>
       </div>
     </article>
@@ -603,7 +680,9 @@ export function BatchWorkbench({
     workspaceInteractionKey(node.owner),
   );
   const exitSelection =
-    node.targets.length === 1 && node.zagreusContract === undefined
+    node.targets.length === 1 &&
+    node.zagreusContract === undefined &&
+    node.naturalChaos === undefined
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -666,6 +745,13 @@ export function BatchWorkbench({
             {node.zagreusContract === undefined ? null : (
               <ZagreusContractExit
                 control={node.zagreusContract}
+                interactions={interactions}
+                selectionName={`selection-${node.key}`}
+              />
+            )}
+            {node.naturalChaos === undefined ? null : (
+              <NaturalChaosExit
+                control={node.naturalChaos}
                 interactions={interactions}
                 selectionName={`selection-${node.key}`}
               />

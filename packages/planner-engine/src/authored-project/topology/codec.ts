@@ -928,15 +928,13 @@ function ownerForAdditionalExit(
       );
     }
   } else if (
-    layout.naturalChaos === undefined ||
-    !layout.naturalChaos.roomGameNames.includes(room.gameName) ||
     room.roomSetKey !== 'Chaos' ||
     room.mode.kind !== 'authored' ||
     room.mode.templateKey !== 'Chaos'
   ) {
     failProjectDocument(
       `${rawOccurrence.path}.gameName`,
-      `${additional.key} requires a declared ${layout.biomeKey} Chaos map`,
+      `${additional.key} requires a declared Chaos room`,
     );
   }
   if (rawOccurrence.hasAnomalyReplacement) {

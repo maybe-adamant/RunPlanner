@@ -429,7 +429,11 @@ function normalizeAdditionalExits(
             ? undefined
             : normalizeRequirement(raw.requirement, `${exitPath}.requirement`);
         if (requirement !== undefined) {
-          validateRequirementReferences(requirement, rewards.rewardTypes, `${exitPath}.requirement`);
+          validateRequirementReferences(
+            requirement,
+            rewards.rewardTypes,
+            `${exitPath}.requirement`,
+          );
           rejectEncounterHistoryRequirements(requirement, `${exitPath}.requirement`);
         }
         return Object.freeze({
@@ -582,7 +586,10 @@ export function normalizeRooms(
         exits[0].behavior.kind !== 'playerSelected' ||
         exits[0].behavior.rewardPreview !== 'visible'
       ) {
-        fail(`${path}.exits`, 'Chaos rooms require one visible player-selected ChaosReturnExitDoor');
+        fail(
+          `${path}.exits`,
+          'Chaos rooms require one visible player-selected ChaosReturnExitDoor',
+        );
       }
       const encounter = encounterSlotBindings[0];
       if (

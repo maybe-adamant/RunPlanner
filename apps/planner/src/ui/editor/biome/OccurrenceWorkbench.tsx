@@ -14,6 +14,7 @@ import {
   type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRoomSummary,
+  type WorkspaceNaturalChaosSpawnControl,
   type WorkspaceZagreusSpawnControl,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -584,6 +585,39 @@ function ZagreusSpawnWorkbench({
   );
 }
 
+/** A selected source exposes only the declared natural-Chaos creation command. */
+function NaturalChaosSpawnWorkbench({
+  control,
+  interactions,
+}: {
+  readonly control: WorkspaceNaturalChaosSpawnControl;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.naturalChaosSpawns,
+    workspaceInteractionKey(control.owner),
+  );
+  return (
+    <section aria-label="Natural Chaos availability" className="zagreus-contract-workbench">
+      <div className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>Chaos gate</h4>
+          <SemanticOwnerMarker address={control.owner} />
+        </div>
+      </div>
+      <button
+        className="quiet-action action-compact"
+        data-command="AddNaturalChaos"
+        onClick={() => executeIntent(interaction.spawnIntent())}
+        type="button"
+      >
+        Add Chaos gate
+      </button>
+    </section>
+  );
+}
+
 /**
  * The workspace has already established this is an authored Anomaly and has
  * supplied its closed declaration map domain. These controls intentionally do
@@ -813,6 +847,12 @@ export function RoomOfferEditor({
           {state.kind === 'shop' && room.zagreusSpawn?.materialized === true ? (
             <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
           ) : null}
+          {room.naturalChaosSpawn === undefined ? null : (
+            <NaturalChaosSpawnWorkbench
+              control={room.naturalChaosSpawn}
+              interactions={interactions}
+            />
+          )}
         </RoomCustomizationDisclosure>
       ) : null}
       <RevertAnomalyAction room={room} />

@@ -9,6 +9,8 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -42,6 +44,7 @@ const fBiome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');
 const oBiome = createBiomeAddress('Surface', 'O');
 const pBiome = createBiomeAddress('Surface', 'P');
+const nBiome = createBiomeAddress('Surface', 'N');
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
@@ -126,11 +129,12 @@ function setAdditionalSelection(
   project: ProjectDocument,
   biome: BiomeAddress,
   parent: OccurrenceId,
+  additionalExitKey = 'zagreusContract',
 ): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(biome, source(parent)),
-    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    value: { kind: 'additional', additionalExitKey },
   });
 }
 
@@ -334,6 +338,28 @@ function buildUnpickedGContractProject() {
     occurrenceId: contract,
   });
   return { project, shop, contract, additional };
+}
+
+function buildNaturalChaosProject() {
+  const opening = createOccurrenceId('natural-chaos-f-opening');
+  const chaos = createOccurrenceId('natural-chaos-f-room');
+  const returned = createOccurrenceId('natural-chaos-f-return');
+  let project = projectFor('Underworld', 1);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: opening,
+    gameName: 'F_Opening01',
+  });
+  const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddNaturalChaos',
+    additional,
+    occurrenceId: chaos,
+  });
+  project = setAdditionalSelection(project, fBiome, opening, 'naturalChaos');
+  project = appendSingleTargetBatch(project, fBiome, chaos, returned, 'F_Combat01', 'RunProgress');
+  return { project, opening, chaos, returned, additional };
 }
 
 function buildAnomalyCapProject(firstAnomalySelected: boolean) {
@@ -563,6 +589,164 @@ function buildDepthFiveOContractProject() {
 }
 
 describe('route-detour simulation', () => {
+  it('keeps an authored N Chaos map outside the host domain materialized and finding-backed', () => {
+    const opening = createOccurrenceId('natural-chaos-n-opening');
+    const chaos = createOccurrenceId('natural-chaos-n-room');
+    let project = projectFor('Surface', 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: opening,
+    });
+    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    const encoded = JSON.parse(encodeProjectDocument(project)) as {
+      routes: Array<{
+        biomes: Array<{
+          topology: { occurrences: Array<{ occurrenceId: string; gameName: string }> } | null;
+        }>;
+      }>;
+    };
+    const encodedChaos = encoded.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === chaos);
+    if (encodedChaos === undefined) throw new Error('encoded Chaos occurrence is missing');
+    encodedChaos.gameName = 'Chaos_01';
+    const retained = decodeProjectDocument(encoded, catalog);
+    const { snapshot, history } = prefix(retained, nBiome);
+    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
+
+    expect(
+      snapshot.frontier?.kind === 'exitDecision'
+        ? snapshot.frontier.additional[0]?.room.gameName
+        : undefined,
+    ).toBe('Chaos_01');
+    expect(generation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: additional,
+        evidence: expect.objectContaining({
+          kind: 'naturalChaos',
+          failedConditions: expect.arrayContaining(['targetDomain']),
+        }),
+      }),
+    );
+  });
+
+  it('takes selected N Chaos directly to the fresh depth-two Hub takeover without PreHub', () => {
+    const opening = createOccurrenceId('natural-chaos-n-selected-opening');
+    const chaos = createOccurrenceId('natural-chaos-n-selected-room');
+    let project = projectFor('Surface', 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: opening,
+    });
+    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    project = setAdditionalSelection(project, nBiome, opening, 'naturalChaos');
+    project = createBatch(project, nBiome, chaos);
+    const { snapshot, history } = prefix(project, nBiome);
+
+    expect(history.ledgers.roomAppearances.map((room) => room.gameName)).toEqual([
+      'N_Opening01',
+      'Chaos_03',
+    ]);
+    expect(history.ledgers.roomAppearances.some((room) => room.gameName === 'N_PreHub01')).toBe(
+      false,
+    );
+    expect(snapshot.frontier).toMatchObject({
+      kind: 'exitDecision',
+      hubContinuation: { kind: 'terminalTakeover' },
+    });
+  });
+
+  it('consumes a skipped Chaos offer for the preceding-ten-room spacing rule', () => {
+    const opening = createOccurrenceId('natural-chaos-spacing-opening');
+    const firstCombat = createOccurrenceId('natural-chaos-spacing-first-combat');
+    const secondCombat = createOccurrenceId('natural-chaos-spacing-second-combat');
+    const firstChaos = createOccurrenceId('natural-chaos-spacing-first-gate');
+    const secondChaos = createOccurrenceId('natural-chaos-spacing-second-gate');
+    let project = projectFor('Underworld', 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    const firstAdditional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional: firstAdditional,
+      occurrenceId: firstChaos,
+    });
+    project = replaceBatchStore(project, fBiome, opening, 'RunProgress');
+    project = addTarget(project, fBiome, opening, 'exit1', firstCombat, 'F_Combat01');
+    project = setNormalSelection(project, fBiome, opening, 'exit1');
+    const secondAdditional = createAdditionalExitAddress(fBiome, firstCombat, 'naturalChaos');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional: secondAdditional,
+      occurrenceId: secondChaos,
+    });
+    project = replaceBatchStore(project, fBiome, firstCombat, 'RunProgress');
+    project = addTarget(project, fBiome, firstCombat, 'exit1', secondCombat, 'F_Combat02');
+    const { snapshot, history } = prefix(project, fBiome);
+    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
+
+    expect(generation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: secondAdditional,
+        evidence: expect.objectContaining({
+          kind: 'naturalChaos',
+          failedConditions: expect.arrayContaining(['offerSpacing']),
+        }),
+      }),
+    );
+  });
+
+  it('records the Chaos offer at source entry, then enters Chaos and generates a fresh host target', () => {
+    const { project, opening, chaos, returned, additional } = buildNaturalChaosProject();
+    const { history } = prefix(project, fBiome);
+    expect(
+      history.events.find(
+        (event) =>
+          event.kind === 'roomCreated' &&
+          event.source === 'additionalExit' &&
+          semanticAddressKey(event.additionalOrigin) === semanticAddressKey(additional),
+      ),
+    ).toMatchObject({ gameName: 'Chaos_01', picked: true });
+    expect(history.rooms.map((room) => semanticAddressKey(room.origin))).toEqual(
+      expect.arrayContaining([
+        semanticAddressKey(createOccurrenceAddress(fBiome, opening)),
+        semanticAddressKey(createOccurrenceAddress(fBiome, chaos)),
+        semanticAddressKey(createOccurrenceAddress(fBiome, returned)),
+      ]),
+    );
+    expect(history.ledgers.roomAppearances.map((appearance) => appearance.gameName)).toEqual(
+      expect.arrayContaining(['Chaos_01']),
+    );
+    expect(
+      history.events.some(
+        (event) =>
+          event.kind === 'producerRoleAdvanced' &&
+          semanticAddressKey(event.origin) ===
+            semanticAddressKey(createOccurrenceAddress(fBiome, chaos)) &&
+          event.rewardType === 'TrialUpgrade',
+      ),
+    ).toBe(true);
+  });
+
   it.each([true, false])(
     'consumes the same Anomaly offer while acquisition follows success=%s and returns before commit',
     (success) => {
