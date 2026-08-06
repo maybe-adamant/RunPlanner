@@ -4,8 +4,8 @@
 
 **Provisional. Do not implement from this document yet.**
 
-Promote this plan to implementation-ready only after the Anomaly and Zagreus
-work is complete and Gate A has been rerun against the resulting live code.
+Promote this plan to implementation-ready only after re-running its Gate A
+against the completed Anomaly/Zagreus live code.
 The plan exists now to preserve the settled product and game-model decisions;
 it does not require the preceding work to build dormant Chaos types, commands,
 state, or UI.

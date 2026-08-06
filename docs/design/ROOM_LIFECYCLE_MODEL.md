@@ -704,6 +704,24 @@ Presentation-only callbacks remain excluded. Unknown or deferred behavior is
 documented in audits and suppressed according to the owning feature contract;
 it does not become a generic production `unsupported` operation.
 
+### Anomaly and Zagreus inserted-room ordering
+
+Anomaly and `C_Boss01` use the ordinary entered-occurrence lifecycle. Their
+automatic host target is generated at their outgoing-generation checkpoint:
+after entry-time and room-local effects (including reward acquisition), but
+before their own commit-time room history, route ordinal, `runDepthCache`, and
+host `biomeDepthCache` effects. The room then commits and the generated target
+enters automatically. The target is a distinct, normal host target with a
+normally selected and consumed reward; automatic and hidden are presentation
+and traversal facts, not an accounting-free callback.
+
+Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path;
+its retained incoming offer is acquired only when authored success is true.
+`C_Boss01` runs fixed `BossZagreus01`, acquires `InfernalContractBoon`, and
+does not advance encounter depth. Both once-per-route limits are consumed only
+when the inserted occurrence enters, not when an authored replacement or
+additional exit is created.
+
 ## Audit and Fixture Requirements
 
 Every lifecycle profile must record:

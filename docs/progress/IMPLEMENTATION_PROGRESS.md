@@ -12,6 +12,16 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
+Oceanus Anomaly replacement and the Zagreus Midshop contract are complete.
+Schema 13 gives them closed catalog insertion rules, persisted provenance and
+additional-exit ownership, shared occurrence lifecycle/history, simulation and
+validation, exact workspace/finding reachability, and representative browser
+workflows for Anomaly failure and a selected Zagreus host return. The stable
+contracts live in the catalog, authored-project, lifecycle,
+simulation/validation, editor, G-biome, and integration-boundary authorities;
+the temporary delivery plan is retired. Natural Chaos remains unopened and
+suppressed.
+
 Phase 7 is complete. Commits 1 through 12, the candidate-system refactor,
 Tartarus reconciliation, sequential blank-slot candidate evaluation, the
 schema-8 authored-prerequisite correction, and the final interaction and
@@ -1186,8 +1196,9 @@ ranks for all multi-side-door maps. Local rewards validate as one unordered
 sibling batch. Eventual hub execution order remains a targeted conformance
 probe rather than unresolved schema work.
 
-The completed G audit additionally locks Anomaly replacement beside natural
-Chaos as a suppressed route-structural detour, keeps Narcissus's internal
+The completed G audit records natural Chaos as a suppressed route-structural
+detour, while the later Anomaly delivery adds its closed replacement contract.
+It keeps Narcissus's internal
 benefit choice deferred to future concrete NPC/trait resolution, and names the
 progressed-save exclusions for `FishmanIntro`, early-run Eris, and prior-run
 Narcissus force. It also replaces a hidden simulator-appended biome tail with

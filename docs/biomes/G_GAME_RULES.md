@@ -42,7 +42,7 @@ coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 | Fixed intro                            | `G_Intro` is reward-free and has no planner-relevant encounter choice                                                     | **Exact:** empty fixed intro projection                                                                | implemented           | --                                                            |
 | Ordinary combat identity               | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | implemented           | Combat composition becomes an authored or validated output    |
 | Locked extra exits                     | After ordinary target creation, later exits may require a counting, reward-free unlock encounter before traversal         | **Deferred:** v1 requires the picked exit to realize open and takes it immediately                     | documented boundary   | v2 models optional per-exit actions and their counter effects |
-| Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the prior room set       | **Deferred:** omit and suppress Anomaly replacement in the v1 detour-free baseline                     | documented boundary   | Route-structural detours are implemented                      |
+| Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the host set             | **Exact:** closed replacement, retained offer, authored outcome, and hidden fresh host return          | implemented           | --                                                            |
 | Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                            |
 | Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced        |
 | Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | implemented           | --                                                            |
@@ -128,18 +128,22 @@ Occurrences.
 
 ## Anomaly Detour
 
-Every ordinary G combat declaration permits Anomaly replacement in the game.
-After the picker has selected an eligible G target, the game may replace that
-target with an Anomaly room. The replacement owns a different room identity,
-encounter, reward, and history contribution before returning to the prior room
-set. It is therefore a route-structural detour, not a room-local feature or a
-different enemy-wave composition for the selected G room.
+An eligible ordinary G target may be atomically replaced by one Anomaly map.
+The source must be at G depth three or later, have no earlier entered Anomaly,
+avoid `G_Shop01`, `G_Story01`, `G_PreBoss01`, and `C_Boss01`, and avoid the
+Artemis and Nemesis random-event encounters. The target remains one of the
+declared replaceable ordinary G combats; its occurrence ID and incoming reward
+are retained while its game name, encounter state, and downstream decision are
+replaced. `Devotion` and `SpellDrop` are invalid-but-editable retained offers.
 
-The v1 planner omits Anomaly rooms and conditions canonical history on no
-Anomaly replacement. Planned game execution must suppress the replacement,
-just as it suppresses natural Chaos routing. Observing an Anomaly during a v1
-execution is a conformance mismatch. Anomaly routing remains deferred until
-layouts can represent leaving and returning to a biome spine.
+The replacement uses one of the seven declared B maps (default `B_Combat01`),
+fixed `GeneratedAnomalyB`, and authored success. Its offer is consumed on
+creation; success acquires it and failure does not. On selected entry it
+consumes the once-per-route cap, generates one fresh hidden G continuation
+before its own commit, then commits as an ordinary room. The displaced G room
+never contributes phantom creation, reward, or history. Revert restores the
+remembered G declaration, retained reward, complete defaults, and no detour
+continuation.
 
 ## Room Families and Caps
 

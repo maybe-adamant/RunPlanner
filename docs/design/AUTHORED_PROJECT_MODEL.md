@@ -279,6 +279,22 @@ ownership forms admitted by decoded topology; each has one declaration-owned
 automatic hidden host return that remains a normal host target and batch for
 accounting.
 
+An Anomaly takeover preserves the target occurrence ID, incoming reward, and
+remembered displaced G game name. It resets incompatible room-local leaves,
+installs the declared Anomaly defaults, and never creates the remembered room.
+Map changes retain that offer, outcome, and provenance. Revert restores the
+remembered G identity, retains the offer, restores complete G defaults, and
+removes the Anomaly continuation. An incompatible retained reward remains
+authored and finding-backed rather than being silently rerolled or refunded.
+
+The Zagreus command creates or extends the selected Midshop's ordinary decision
+with a closed `zagreusContract` sibling. It preserves the normal lane and its
+selection; a width-one declaration-derived normal selection becomes explicit
+when the sibling makes selection ambiguous. Removing the sibling deletes only
+its occurrence and descendants and restores that derived selection when
+applicable. The additional exit is selected through the enclosing decision,
+not represented as a synthetic normal target.
+
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, and Shop offers/purchase order. Leaf

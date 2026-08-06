@@ -3,11 +3,19 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectDocument,
+  createTargetAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -21,6 +29,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
+  goldenGOccurrenceId,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
@@ -397,5 +406,227 @@ describe('underworld product loop', () => {
     expect(pStructure.querySelector('[data-kind="completion"]')).toBeNull();
     const completion = within(pStructure).getByRole('region', { name: 'Biome completion' });
     expect(within(completion).getByText('Prometheus')).toBeTruthy();
+  });
+
+  it('carries an Anomaly failure through the browser without acquiring its retained offer', async () => {
+    const application = createApplication();
+    const anomaly = goldenGOccurrenceId(3, 2);
+    const source = goldenGOccurrenceId(2, 1);
+    const returned = createOccurrenceId('product-anomaly-return');
+    let project = createGoldenFGHIProject();
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(
+        goldenGBiome,
+        { kind: 'occurrence', occurrenceId: source },
+        'exit2',
+      ),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenGOccurrenceId(3, 1),
+      }),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: source,
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: anomaly,
+      }),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: anomaly,
+      }),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(
+        goldenGBiome,
+        { kind: 'occurrence', occurrenceId: anomaly },
+        'exit1',
+      ),
+      occurrenceId: returned,
+      gameName: 'G_Combat04',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenGBiome, anomaly)),
+      ),
+    );
+
+    await view.user.click(screen.getByRole('checkbox', { name: 'Clear Anomaly' }));
+    const failed = application.store.getState().projectWorkspace.history.present;
+    expect(
+      failed.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === anomaly)?.state,
+    ).toMatchObject({ kind: 'anomaly', success: false });
+    expect(screen.getByText('The next host door is generated automatically.')).toBeTruthy();
+    const evaluation = simulateProject(application.catalog, failed);
+    const gEvaluation = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (gEvaluation === undefined || !('rewards' in gEvaluation)) {
+      throw new Error('Anomaly failure must retain an evaluated G reward prefix');
+    }
+    const anomalyReward = createIncomingRewardAddress(goldenGBiome, anomaly);
+    const hasRewardEvent = (kind: 'rewardOffered' | 'concreteAcquisition') =>
+      gEvaluation.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === kind &&
+            semanticAddressKey(event.origin) === semanticAddressKey(anomalyReward),
+        ),
+      );
+    expect(hasRewardEvent('rewardOffered')).toBe(true);
+    expect(hasRewardEvent('concreteAcquisition')).toBe(false);
+  });
+
+  it('takes a selected Zagreus contract through its automatic host return in the browser', async () => {
+    const application = createApplication();
+    const fBiome = createBiomeAddress('Underworld', 'F');
+    const opening = createOccurrenceId('product-zagreus-opening');
+    const shop = createOccurrenceId('product-zagreus-shop');
+    const contract = createOccurrenceId('product-zagreus-contract');
+    const returned = createOccurrenceId('product-zagreus-return');
+    const normalOne = createOccurrenceId('product-zagreus-normal-one');
+    const normalTwo = createOccurrenceId('product-zagreus-normal-two');
+    const source = { kind: 'occurrence' as const, occurrenceId: shop };
+    const additional = createAdditionalExitAddress(fBiome, source, 'zagreusContract');
+    let project = applyProjectCommand(
+      createProjectDocument(application.catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Zagreus product return',
+        projectId: 'product-zagreus-return',
+      }),
+      application.catalog,
+      {
+        biome: fBiome,
+        kind: 'CreateStart',
+        occurrenceId: opening,
+        gameName: 'F_Opening01',
+      },
+    );
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, { kind: 'occurrence', occurrenceId: opening }),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, {
+        kind: 'occurrence',
+        occurrenceId: opening,
+      }),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, { kind: 'occurrence', occurrenceId: opening }, 'exit1'),
+      occurrenceId: shop,
+      gameName: 'F_Shop01',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'AddZagreusContract',
+      additional,
+      occurrenceId: contract,
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit1'),
+      occurrenceId: normalOne,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit2'),
+      occurrenceId: normalTwo,
+      gameName: 'F_Combat02',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() =>
+      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(fBiome, source))),
+    );
+
+    expect((screen.getByLabelText('Take Zagreus contract') as HTMLInputElement).checked).toBe(
+      false,
+    );
+    await view.user.click(screen.getByLabelText('Take Zagreus contract'));
+    expect(
+      screen.getByRole('article', { name: 'Zagreus contract exit' }).getAttribute('data-picked'),
+    ).toBe('true');
+    let selected = application.store.getState().projectWorkspace.history.present;
+    selected = applyProjectCommand(selected, application.catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, { kind: 'occurrence', occurrenceId: contract }),
+    });
+    selected = applyProjectCommand(selected, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, {
+        kind: 'occurrence',
+        occurrenceId: contract,
+      }),
+      storeKey: 'RunProgress',
+    });
+    selected = applyProjectCommand(selected, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, { kind: 'occurrence', occurrenceId: contract }, 'exit1'),
+      occurrenceId: returned,
+      gameName: 'F_Combat03',
+    });
+    const selectedEvaluation = simulateProject(application.catalog, selected);
+    const fEvaluation = selectedEvaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (
+      fEvaluation === undefined ||
+      (!('snapshot' in fEvaluation) && !('materializedPrefix' in fEvaluation))
+    ) {
+      throw new Error('Selected Zagreus contract must materialize an F prefix');
+    }
+    const materialized =
+      'snapshot' in fEvaluation ? fEvaluation.snapshot : fEvaluation.materializedPrefix;
+    expect(
+      materialized.decisions
+        .filter((decision) => decision.kind === 'batch')
+        .flatMap((decision) => decision.additional)
+        .map((target) => target.room.gameName),
+    ).toContain('C_Boss01');
+    const returnDecision = materialized.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === contract,
+    );
+    expect(returnDecision).toMatchObject({
+      kind: 'batch',
+      targets: [{ room: { occurrenceId: returned } }],
+    });
   });
 });

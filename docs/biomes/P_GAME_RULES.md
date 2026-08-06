@@ -111,6 +111,6 @@ ledger.
 The supported product includes catalog normalization, authored topology,
 concrete encounter selection, semantic commands, validation, candidates,
 workspace projection, and React editing for this envelope. NPC events and
-interactions beyond selected combat, natural Chaos, anomaly detours, and
-optional player interactions remain outside the canonical P baseline until they
-acquire explicit modeled inputs and ownership.
+interactions beyond selected combat, Natural Chaos and other unsupported
+detours, and optional player interactions remain outside the canonical P
+baseline until they acquire explicit modeled inputs and ownership.

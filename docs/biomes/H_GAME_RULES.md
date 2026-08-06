@@ -123,6 +123,6 @@ planner's modeled surface.
 
 The canonical product owns H catalog facts, authored Fields state, concrete
 encounter selection, semantic commands, validation, candidates, and workspace
-projection. NPC events and interactions beyond selected Nemesis combat, natural
-Chaos, anomaly detours, and optional player systems remain outside the baseline
-until they are modeled explicitly.
+projection. NPC events and interactions beyond selected Nemesis combat, Natural
+Chaos and other unsupported detours, and optional player systems remain outside
+the baseline until they are modeled explicitly.
