@@ -152,9 +152,11 @@ Hub-sourced batches belong only to N's completed-Hub Preboss handoff.
 Selection belongs to the enclosing decision: a width-one normal-only batch uses
 `derived`; a multi-target or sibling-additional decision may be `unresolved`;
 `normal` selects one declared normal target; and `additional` selects one
-closed sibling continuation. The only supported additional exit is a declared
-Zagreus contract beside a Midshop's normal lane. It is never a synthetic normal
-target or a generic cross-room-set escape hatch.
+closed sibling continuation. Additional exits are authored by the source
+`RoomOccurrence`, while the active outgoing decision exposes that source's
+closed siblings. The only supported additional exit is a declared Zagreus
+contract beside a Midshop's normal lane. It is never a synthetic normal target
+or a generic cross-room-set escape hatch.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -168,8 +170,9 @@ that decision is re-anchored to the newly picked occurrence while its complete
 subtree remains intact. Occurrence identity and room-local authored state never
 move between the two targets. The old target becomes a dead leaf and the new
 target becomes the decision's sole semantic source. A continuation cannot be
-re-anchored onto an additional exit or a terminal source, and a retained
-additional exit must also be declared by the new decision source.
+re-anchored onto an additional exit or a terminal source. Additional exits and
+their target packages remain with their original source occurrence, becoming
+dormant when that source is unpicked and available again if it is reselected.
 
 ## Starts, Batches, Preboss, and Completion
 
@@ -205,9 +208,11 @@ its Preboss is an ordinary retained peer. These exceptions belong to
 declaration-derived topology rules rather than the empty shape itself.
 
 The supported Zagreus command may atomically create a selected Midshop's empty
-normal envelope with its closed additional contract sibling. That incomplete
-normal lane remains authored and finding-backed until ordinary targets are
-added; the additional exit neither consumes nor repairs normal progression.
+normal envelope and append its closed additional contract to that Midshop
+occurrence. The active envelope exposes the sibling beside its normal lane.
+That incomplete normal lane remains authored and finding-backed until ordinary
+targets are added; the additional exit neither consumes nor repairs normal
+progression.
 
 The first Door 1 choice resolves the envelope. An ordinary or
 `retainNormalPeers` choice realizes an ordinary batch and must satisfy the
@@ -297,7 +302,8 @@ removes the Anomaly continuation. An incompatible retained reward remains
 authored and finding-backed rather than being silently rerolled or refunded.
 
 The Zagreus command creates or extends the selected Midshop's ordinary decision
-with a closed `zagreusContract` sibling. It preserves the normal lane and its
+and appends a closed `zagreusContract` to that Midshop occurrence. Its active
+decision exposes the sibling while preserving the normal lane and its
 selection; a width-one declaration-derived normal selection becomes explicit
 when the sibling makes selection ambiguous. Removing the sibling deletes only
 its occurrence and descendants and restores that derived selection when
@@ -345,7 +351,7 @@ canonical projection for maps and markers, not another identity source.
 | room-sourced decision             | `ExitDecisionAddress` with occurrence source                                      |
 | N handoff decision                | `ExitDecisionAddress` with Hub source                                             |
 | normal target                     | `TargetAddress` with source and exit key                                          |
-| additional continuation           | `AdditionalExitAddress` with source and declared additional-exit key              |
+| additional continuation           | `AdditionalExitAddress` with occurrence ID and declared additional-exit key       |
 | decision selection                | `ExitSelectionAddress` with source                                                |
 | batch reward store                | `BatchRewardStoreAddress` with source                                             |
 | Hub board                         | `HubDecisionAddress`                                                              |
@@ -355,7 +361,7 @@ canonical projection for maps and markers, not another identity source.
 | derived completion                | `CompletionRoomAddress`                                                           |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-13 addresses.
+batch-store identity, and rendered target indexes are not schema-14 addresses.
 
 ## Commands
 

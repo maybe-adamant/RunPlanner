@@ -602,6 +602,7 @@ function prepareShipLifecycleCandidateContext(
           gameName: room.gameName,
           state,
           encounters: room.encounters,
+          additionalExits: Object.freeze([]),
         }),
       );
       const candidateRoom = Object.freeze({

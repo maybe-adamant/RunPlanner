@@ -527,7 +527,7 @@ describe('underworld product loop', () => {
     const normalOne = createOccurrenceId('product-zagreus-normal-one');
     const normalTwo = createOccurrenceId('product-zagreus-normal-two');
     const source = { kind: 'occurrence' as const, occurrenceId: shop };
-    const additional = createAdditionalExitAddress(fBiome, source, 'zagreusContract');
+    const additional = createAdditionalExitAddress(fBiome, source.occurrenceId, 'zagreusContract');
     let project = applyProjectCommand(
       createProjectDocument(application.catalog, {
         configuredBiomeCounts: { Underworld: 1 },

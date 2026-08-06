@@ -1053,7 +1053,7 @@ export function assembleWorkspaceOccurrence(
       : (() => {
           const owner = createAdditionalExitAddress(
             input.biome,
-            { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+            occurrence.occurrenceId,
             zagreusDeclaration.key,
           );
           return Object.freeze({

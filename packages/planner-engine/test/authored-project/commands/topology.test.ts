@@ -999,7 +999,6 @@ describe('authored-project commands and topology', () => {
       ),
     ).toBe(false);
     expect(moved.normal).toEqual(beforeOutgoing.normal);
-    expect(moved.additional).toEqual(beforeOutgoing.additional);
     expect(retainedDescendant).toEqual(beforeDescendant);
     expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === priorId)).toEqual(
       priorPackage,

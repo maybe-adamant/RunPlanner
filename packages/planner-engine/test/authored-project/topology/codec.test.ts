@@ -268,8 +268,13 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
     gameName: 'C_Boss01',
     state: { kind: 'fixed' },
     encounters: { encounterKeyByPhase: {} },
+    additionalExits: [],
   });
-  shopDecision.additional = [
+  const shopOccurrence = encoded.topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === 'zagreus-shop',
+  );
+  if (shopOccurrence === undefined) throw new Error('missing Zagreus Midshop occurrence');
+  shopOccurrence.additionalExits = [
     {
       kind: 'zagreusContract',
       key: 'zagreusContract',
@@ -534,11 +539,15 @@ describe('persisted authored topology codec', () => {
     );
     expect(envelope).toMatchObject({
       normal: { targets: [] },
-      additional: [
-        { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'zagreus-contract' },
-      ],
       selection: { kind: 'unresolved' },
     });
+    expect(
+      planFor(document, 'Underworld', 'F').topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === shopSource.occurrenceId,
+      )?.additionalExits,
+    ).toEqual([
+      { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'zagreus-contract' },
+    ]);
     expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
 
     document = applyProjectCommand(document, catalog, {
@@ -576,8 +585,24 @@ describe('persisted authored topology codec', () => {
     );
     expect(returnDecision).toMatchObject({
       normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'zagreus-host-return' }] },
-      additional: [],
       selection: { kind: 'derived' },
+    });
+  });
+
+  it('rejects the retired decision-owned additional-exit field', () => {
+    const encoded = encodedTopology(incompleteZagreusEnvelopeProject(), 'Underworld', 'F');
+    const shopDecisionIndex = encoded.topology.decisions.findIndex(
+      (decision) =>
+        decision.kind === 'exit' &&
+        (decision.source as { occurrenceId?: string }).occurrenceId === 'zagreus-shop',
+    );
+    const shopDecision = encoded.topology.decisions[shopDecisionIndex];
+    if (shopDecision === undefined) throw new Error('missing Zagreus Midshop decision');
+    shopDecision.additional = [];
+
+    expectDocumentError(encoded.document, {
+      path: `${encoded.path}.decisions[${shopDecisionIndex}].additional`,
+      detail: 'is not a project document field',
     });
   });
 
@@ -747,7 +772,6 @@ describe('persisted authored topology codec', () => {
         batchState: normal.batchState,
         targets: [],
       },
-      additional: [],
       selection: { kind: 'unresolved' },
     });
 
@@ -946,7 +970,6 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [],
       },
-      additional: [],
       selection: { kind: 'unresolved' },
     });
     expectDocumentError(competingHubOwner.document, {
@@ -992,6 +1015,8 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'f-width-one-target',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
+      encounters: { encounterKeyByPhase: {} },
+      additionalExits: [],
     });
     widthOne.topology.decisions.push({
       kind: 'exit',
@@ -1002,7 +1027,6 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [{ exitKey: 'exit1', occurrenceId: 'f-width-one-target' }],
       },
-      additional: [],
       selection: { kind: 'normal', exitKey: 'exit1' },
     });
     expectDocumentError(widthOne.document, {
@@ -1041,7 +1065,6 @@ describe('persisted authored topology codec', () => {
         batchState: null,
         targets: [],
       },
-      additional: [],
       selection: { kind: 'unresolved' },
     });
     expectDocumentError(deadLeaf.document, {
@@ -1054,6 +1077,8 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'orphan',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
+      encounters: { encounterKeyByPhase: {} },
+      additionalExits: [],
     });
     expectDocumentError(orphan.document, {
       path: `${orphan.path}.occurrences[4]`,

@@ -625,14 +625,20 @@ function assembleBatchDecision(
     evaluatedAdditional.set(additional.key, additional);
   }
   const canonicalAdditionalByKey = new Map<string, CanonicalAdditionalContinuation>();
-  for (const additional of decision.additional) {
+  const authoredAdditional =
+    decision.source.kind === 'occurrence'
+      ? (source.occurrence(decision.source.occurrenceId)?.additionalExits ?? Object.freeze([]))
+      : Object.freeze([]);
+  for (const additional of authoredAdditional) {
     const evaluatedAdditionalExit = evaluatedAdditional.get(additional.key);
     if (evaluatedAdditionalExit === undefined) continue;
     evaluatedAdditional.delete(additional.key);
     const occurrence = source.occurrence(additional.occurrenceId);
     const additionalOwner = createAdditionalExitAddress(
       source.biome,
-      decision.source,
+      decision.source.kind === 'occurrence'
+        ? decision.source.occurrenceId
+        : additional.occurrenceId,
       additional.key,
     );
     const occurrenceOwner = createOccurrenceAddress(source.biome, additional.occurrenceId);
@@ -737,7 +743,7 @@ function assembleBatchDecision(
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
   const effectiveRewardStore = effectiveRewardStoreForBatch(decision, evaluated);
-  const zagreusAdditional = decision.additional.find(
+  const zagreusAdditional = authoredAdditional.find(
     (additional) => additional.kind === 'zagreusContract',
   );
   const zagreusContract =
@@ -760,11 +766,19 @@ function assembleBatchDecision(
           return Object.freeze({
             contractRoom: contractAssembly.node.room,
             marker: input.markerDestinations.marker(
-              createAdditionalExitAddress(source.biome, decision.source, zagreusAdditional.key),
+              createAdditionalExitAddress(
+                source.biome,
+                decision.source.kind === 'occurrence'
+                  ? decision.source.occurrenceId
+                  : zagreusAdditional.occurrenceId,
+                zagreusAdditional.key,
+              ),
             ),
             owner: createAdditionalExitAddress(
               source.biome,
-              decision.source,
+              decision.source.kind === 'occurrence'
+                ? decision.source.occurrenceId
+                : zagreusAdditional.occurrenceId,
               zagreusAdditional.key,
             ),
             selected:

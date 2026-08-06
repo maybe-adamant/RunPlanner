@@ -206,12 +206,16 @@ export function expectedWorkspaceStructuralControls(
       );
       if (
         contract !== undefined &&
-        decision.additional.length === 0 &&
+        (sourceOccurrence?.additionalExits?.length ?? 0) === 0 &&
         activeOccurrenceIds.has(decision.source.occurrenceId) &&
         sourceOccurrence?.state.kind === 'shop' &&
         sourceOccurrence.state.shop !== undefined
       ) {
-        const additional = createAdditionalExitAddress(biome, decision.source, contract.key);
+        const additional = createAdditionalExitAddress(
+          biome,
+          decision.source.occurrenceId,
+          contract.key,
+        );
         add('zagreusSpawn', workspaceTestOwnerKey(additional), additional);
       }
     }

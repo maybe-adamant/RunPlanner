@@ -336,6 +336,7 @@ export function applyRoomReplacementCommand(
         `occurrences.${occurrence.occurrenceId}.encounters`,
       ),
     ),
+    additionalExits: occurrence.additionalExits ?? Object.freeze([]),
   });
   return updateOccurrenceTopology(
     document,

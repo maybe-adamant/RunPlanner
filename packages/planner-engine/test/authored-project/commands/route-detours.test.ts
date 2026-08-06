@@ -189,7 +189,7 @@ describe('authored-project route detour commands', () => {
   it('adds the contract beside an incomplete normal envelope, preserves the normal lane, and removes its descendant return', () => {
     const { project: initial, shop } = fSelectedMidshop();
     const source = { kind: 'occurrence' as const, occurrenceId: shop };
-    const additional = createAdditionalExitAddress(fBiome, source, 'zagreusContract');
+    const additional = createAdditionalExitAddress(fBiome, source.occurrenceId, 'zagreusContract');
     const contract = createOccurrenceId('detour-contract');
     const normalTarget = createOccurrenceId('detour-contract-normal');
     const returnTarget = createOccurrenceId('detour-contract-return');
@@ -206,9 +206,13 @@ describe('authored-project route detour commands', () => {
     );
     expect(decision).toMatchObject({
       normal: { targets: [] },
-      additional: [{ kind: 'zagreusContract', occurrenceId: contract }],
       selection: { kind: 'unresolved' },
     });
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === shop,
+      )?.additionalExits,
+    ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
@@ -264,9 +268,11 @@ describe('authored-project route detour commands', () => {
     );
     expect(decision).toMatchObject({
       normal: { targets: [{ occurrenceId: normalTarget }] },
-      additional: [],
       selection: { kind: 'derived' },
     });
+    expect(
+      topology.occurrences.find((occurrence) => occurrence.occurrenceId === shop)?.additionalExits,
+    ).toEqual([]);
     expect(topology.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(
       contract,
     );
@@ -278,7 +284,7 @@ describe('authored-project route detour commands', () => {
   it('rejects switching away from a selected Midshop contract with a downstream decision', () => {
     const { project: initial, shop } = fSelectedMidshop();
     const source = { kind: 'occurrence' as const, occurrenceId: shop };
-    const additional = createAdditionalExitAddress(fBiome, source, 'zagreusContract');
+    const additional = createAdditionalExitAddress(fBiome, source.occurrenceId, 'zagreusContract');
     const contract = createOccurrenceId('detour-switch-selected-contract');
     const normalTarget = createOccurrenceId('detour-switch-normal-target');
     let project = applyProjectCommand(initial, catalog, {
@@ -319,7 +325,7 @@ describe('authored-project route detour commands', () => {
     ).toThrow(/remove the prior selected target’s downstream decision first/);
   });
 
-  it('rejects re-anchoring a Midshop decision whose contract is not declared by the new source', () => {
+  it('retains a source-owned contract when its normal selection re-anchors to a peer', () => {
     const opening = createOccurrenceId('detour-reanchor-opening');
     const fork = createOccurrenceId('detour-reanchor-fork');
     const shop = createOccurrenceId('detour-reanchor-shop');
@@ -376,20 +382,37 @@ describe('authored-project route detour commands', () => {
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'AddZagreusContract',
-      additional: createAdditionalExitAddress(
-        fBiome,
-        { kind: 'occurrence', occurrenceId: shop },
-        'zagreusContract',
-      ),
+      additional: createAdditionalExitAddress(fBiome, shop, 'zagreusContract'),
       occurrenceId: contract,
     });
 
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetExitSelection',
-        selection: createExitSelectionAddress(fBiome, forkSource),
-        value: { kind: 'normal', exitKey: 'exit2' },
-      }),
-    ).toThrow(/does not declare the retained downstream additional exits/);
+    const reanchored = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, forkSource),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    expect(
+      biomeTopology(reanchored, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === shop,
+      )?.additionalExits,
+    ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
+    const restored = applyProjectCommand(reanchored, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, forkSource),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const restoredTopology = biomeTopology(restored, 'Underworld', 'F');
+    expect(
+      restoredTopology.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === shop,
+      ),
+    ).toBe(true);
+    expect(
+      restoredTopology.occurrences.find((occurrence) => occurrence.occurrenceId === shop)
+        ?.additionalExits,
+    ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
   });
 });

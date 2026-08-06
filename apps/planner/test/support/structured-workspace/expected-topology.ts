@@ -173,11 +173,21 @@ export function expectedWorkspaceTopologyManifest(
         }),
       );
     }
-    for (const additional of decision.additional) {
+    const sourceOccurrence =
+      decision.source.kind === 'occurrence'
+        ? occurrenceRecords.get(decision.source.occurrenceId)
+        : undefined;
+    for (const additional of sourceOccurrence?.additionalExits ?? []) {
       ownOccurrence(additional.occurrenceId, `${plan.biomeKey} additional ${additional.key}`);
       additionalExits.push(
         Object.freeze({
-          address: createAdditionalExitAddress(biome, decision.source, additional.key),
+          address: createAdditionalExitAddress(
+            biome,
+            decision.source.kind === 'occurrence'
+              ? decision.source.occurrenceId
+              : additional.occurrenceId,
+            additional.key,
+          ),
           decisionAddress: createExitDecisionAddress(biome, decision.source),
           occurrenceId: additional.occurrenceId,
         }),

@@ -50,12 +50,6 @@ function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSourceAddress
   );
 }
 
-function sourceFromAddress(source: ExitDecisionSourceAddress): ExitDecisionSource {
-  return source.kind === 'occurrence'
-    ? Object.freeze({ kind: 'occurrence', occurrenceId: source.occurrenceId })
-    : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
-}
-
 function replaceDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
   return Object.freeze({
     ...topology,
@@ -274,6 +268,7 @@ function switchTargetToAnomaly(
       replacementRoom,
       `occurrences.${occurrence.occurrenceId}.encounters`,
     ),
+    additionalExits: occurrence.additionalExits ?? Object.freeze([]),
   });
   return updateTopology(document, located, replaceOccurrence(withoutOutgoing, replacement));
 }
@@ -373,6 +368,7 @@ function revertAnomaly(
           rememberedRoom,
           `occurrences.${occurrence.occurrenceId}.encounters`,
         ),
+        additionalExits: occurrence.additionalExits ?? Object.freeze([]),
       }),
     ),
   );
@@ -382,16 +378,13 @@ function requireContractSource(
   catalog: Catalog,
   located: LocatedBiome,
   topology: BiomeTopology,
-  source: ExitDecisionSourceAddress,
+  occurrenceId: OccurrenceId,
   command: RouteDetourCommand,
 ): { readonly occurrence: RoomOccurrence; readonly room: RoomDeclaration } {
-  if (source.kind !== 'occurrence') {
-    failCommand(command, 'a Zagreus contract requires an occurrence source');
-  }
-  if (selectedOrdinaryBatchIndex(topology, source.occurrenceId) === undefined) {
+  if (selectedOrdinaryBatchIndex(topology, occurrenceId) === undefined) {
     failCommand(command, 'a Zagreus contract source must be on the selected spine');
   }
-  const occurrence = requireOccurrence(located.plan, source.occurrenceId, command);
+  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
   if (
     room.kind !== 'Shop' ||
@@ -444,11 +437,11 @@ function addZagreusContract(
   command: Extract<RouteDetourCommand, { readonly kind: 'AddZagreusContract' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const { room: sourceRoom } = requireContractSource(
+  const { occurrence, room: sourceRoom } = requireContractSource(
     catalog,
     located,
     topology,
-    command.additional.source,
+    command.additional.occurrenceId,
     command,
   );
   const declaration = additionalDeclaration(
@@ -456,8 +449,12 @@ function addZagreusContract(
     command.additional.additionalExitKey,
     command,
   );
-  const existing = exitDecisionForSource(topology, command.additional.source);
-  if (existing?.additional.some((additional) => additional.key === declaration.key)) {
+  const source = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: command.additional.occurrenceId,
+  });
+  const existing = exitDecisionForSource(topology, source);
+  if ((occurrence.additionalExits ?? []).some((additional) => additional.key === declaration.key)) {
     failCommand(command, `${declaration.key} is already authored`);
   }
   const contractRoom = requireContractBossRoom(catalog, declaration.targetRoomGameName, command);
@@ -472,7 +469,7 @@ function addZagreusContract(
   });
   const nextDecision: ExitDecision = Object.freeze({
     kind: 'exit',
-    source: sourceFromAddress(command.additional.source),
+    source,
     normal:
       existing?.normal ??
       Object.freeze({
@@ -481,7 +478,6 @@ function addZagreusContract(
         batchState: createInitialBatchState(progression.batchPolicy),
         targets: Object.freeze([]),
       }),
-    additional: Object.freeze([...(existing?.additional ?? []), contract]),
     selection:
       existing === undefined
         ? Object.freeze({ kind: 'unresolved' })
@@ -496,14 +492,22 @@ function addZagreusContract(
       contractRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
+    additionalExits: Object.freeze([]),
   });
   const withContract = appendOccurrence(topology, contractOccurrence, command);
+  const withSource = replaceOccurrence(
+    withContract,
+    Object.freeze({
+      ...occurrence,
+      additionalExits: Object.freeze([...(occurrence.additionalExits ?? []), contract]),
+    }),
+  );
   return updateTopology(
     document,
     located,
     existing === undefined
-      ? appendDecision(withContract, nextDecision)
-      : replaceDecision(withContract, nextDecision),
+      ? appendDecision(withSource, nextDecision)
+      : replaceDecision(withSource, nextDecision),
   );
 }
 
@@ -514,11 +518,11 @@ function removeZagreusContract(
   command: Extract<RouteDetourCommand, { readonly kind: 'RemoveZagreusContract' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const { room: sourceRoom } = requireContractSource(
+  const { occurrence, room: sourceRoom } = requireContractSource(
     catalog,
     located,
     topology,
-    command.additional.source,
+    command.additional.occurrenceId,
     command,
   );
   const declaration = additionalDeclaration(
@@ -526,18 +530,24 @@ function removeZagreusContract(
     command.additional.additionalExitKey,
     command,
   );
-  const decision = exitDecisionForSource(topology, command.additional.source);
-  const additional = decision?.additional.find((candidate) => candidate.key === declaration.key);
+  const source = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: command.additional.occurrenceId,
+  });
+  const decision = exitDecisionForSource(topology, source);
+  const additional = (occurrence.additionalExits ?? []).find(
+    (candidate) => candidate.key === declaration.key,
+  );
   if (decision === undefined || additional === undefined) {
     failCommand(command, `${declaration.key} is not authored`);
   }
   const impact = describeTopologyRemovalImpact(topology, new Set([additional.occurrenceId]));
   const withoutContract = applyTopologyRemovalImpact(topology, impact);
-  const retainedDecision = exitDecisionForSource(withoutContract, command.additional.source);
+  const retainedDecision = exitDecisionForSource(withoutContract, source);
   if (retainedDecision === undefined) {
     throw new Error('removing an additional target removed its source decision');
   }
-  const remainingAdditional = retainedDecision.additional.filter(
+  const remainingAdditional = (occurrence.additionalExits ?? []).filter(
     (candidate) => candidate.key !== declaration.key,
   );
   const selection: ExitSelection =
@@ -549,10 +559,15 @@ function removeZagreusContract(
         : retainedDecision.selection;
   const nextDecision = Object.freeze({
     ...retainedDecision,
-    additional: Object.freeze(remainingAdditional),
     selection,
   });
-  const withDecision = replaceDecision(withoutContract, nextDecision);
+  const withDecision = replaceDecision(
+    replaceOccurrence(
+      withoutContract,
+      Object.freeze({ ...occurrence, additionalExits: Object.freeze(remainingAdditional) }),
+    ),
+    nextDecision,
+  );
   return updateTopology(
     document,
     located,

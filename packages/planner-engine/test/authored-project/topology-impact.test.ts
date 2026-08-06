@@ -35,6 +35,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
@@ -44,14 +45,12 @@ describe('topology removal impact', () => {
             { exitKey: 'exit1', occurrenceId: retained },
             { exitKey: 'exit2', occurrenceId: child },
           ]),
-          additional: [],
           selection: { kind: 'normal' as const, exitKey: 'exit1' },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: child },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: grandchild }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -72,6 +71,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
@@ -81,14 +81,12 @@ describe('topology removal impact', () => {
             { exitKey: 'exit1', occurrenceId: retained },
             { exitKey: 'exit2', occurrenceId: child },
           ]),
-          additional: [],
           selection: { kind: 'normal' as const, exitKey: 'exit1' },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: child },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: grandchild }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -116,6 +114,7 @@ describe('topology removal impact', () => {
           gameName: 'TestRoom',
           state: { kind: 'none' },
           encounters: { encounterKeyByPhase: {} },
+          additionalExits: [],
         },
       ],
       decisions: [],
@@ -133,33 +132,34 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits:
+          occurrenceId === root
+            ? [
+                {
+                  kind: 'zagreusContract' as const,
+                  key: 'zagreusContract' as const,
+                  occurrenceId: contract,
+                },
+              ]
+            : [],
       })),
       decisions: [
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: root },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: retained }]),
-          additional: [
-            {
-              kind: 'zagreusContract' as const,
-              key: 'zagreusContract' as const,
-              occurrenceId: contract,
-            },
-          ],
           selection: { kind: 'additional' as const, additionalExitKey: 'zagreusContract' },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: contract },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: hostReturn }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: hostReturn },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: returnChild }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -199,13 +199,13 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: opening },
           normal: normalBatch([{ exitKey: 'prehub', occurrenceId: preHub }]),
-          additional: [],
           selection: { kind: 'normal' as const, exitKey: 'prehub' },
         },
         {
@@ -219,14 +219,12 @@ describe('topology removal impact', () => {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
           normal: normalBatch([{ exitKey: 'preboss', occurrenceId: preboss }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: preboss },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: postPreboss }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -263,6 +261,7 @@ describe('topology removal impact', () => {
           gameName: 'TestRoom',
           state: { kind: 'none' },
           encounters: { encounterKeyByPhase: {} },
+          additionalExits: [],
         },
       ],
       decisions: [],
@@ -304,6 +303,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [topology.decisions[0]],
     });
@@ -319,6 +319,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
@@ -332,7 +333,6 @@ describe('topology removal impact', () => {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: hubSlot },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: hubChild }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -358,6 +358,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
@@ -374,14 +375,12 @@ describe('topology removal impact', () => {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
           normal: normalBatch([{ exitKey: 'preboss', occurrenceId: preboss }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: preboss },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: completionChild }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
       ],
@@ -404,6 +403,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [topology.decisions[0]],
     });
@@ -422,13 +422,13 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {} },
+        additionalExits: [],
       })),
       decisions: [
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: root },
           normal: normalBatch([{ exitKey: 'exit1', occurrenceId: child }]),
-          additional: [],
           selection: { kind: 'derived' as const },
         },
         {
@@ -442,7 +442,6 @@ describe('topology removal impact', () => {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
           normal: normalBatch([]),
-          additional: [],
           selection: { kind: 'unresolved' as const },
         },
       ],

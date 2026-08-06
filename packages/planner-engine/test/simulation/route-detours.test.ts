@@ -285,7 +285,7 @@ function buildMidshopProject(options: {
     gameName: 'F_Opening01',
   });
   project = appendSingleTargetBatch(project, fBiome, opening, shop, 'F_Shop01', 'MetaProgress');
-  const additional = createAdditionalExitAddress(fBiome, source(shop), 'zagreusContract');
+  const additional = createAdditionalExitAddress(fBiome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddZagreusContract',
     additional,
@@ -327,7 +327,7 @@ function buildUnpickedGContractProject() {
     occurrenceId: intro,
   });
   project = appendSingleTargetBatch(project, gBiome, intro, shop, 'G_Shop01', 'RunProgress');
-  const additional = createAdditionalExitAddress(gBiome, source(shop), 'zagreusContract');
+  const additional = createAdditionalExitAddress(gBiome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddZagreusContract',
     additional,
@@ -495,7 +495,7 @@ function buildContractReturnProject(host: ContractReturnHost) {
     project = addTarget(project, host.biome, start, 'exit2', peer, host.startPeerGameName);
     project = setNormalSelection(project, host.biome, start, 'exit1');
   }
-  const additional = createAdditionalExitAddress(host.biome, source(shop), 'zagreusContract');
+  const additional = createAdditionalExitAddress(host.biome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddZagreusContract',
     additional,
@@ -536,7 +536,7 @@ function buildDepthFiveOContractProject() {
   project = appendSingleTargetBatch(project, oBiome, combat04, combat07, 'O_Combat07');
   project = appendSingleTargetBatch(project, oBiome, combat07, combat01, 'O_Combat01');
   project = appendSingleTargetBatch(project, oBiome, combat01, shop, 'O_Shop01');
-  const additional = createAdditionalExitAddress(oBiome, source(shop), 'zagreusContract');
+  const additional = createAdditionalExitAddress(oBiome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddZagreusContract',
     additional,
