@@ -58,7 +58,6 @@ export interface RawTraitGiverDeclaration {
   readonly traitKeys: readonly string[];
   readonly rarityPolicy:
     | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
-    | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
   readonly defaultOffer?: RawTraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, RawTraitOfferDefaults>>;
