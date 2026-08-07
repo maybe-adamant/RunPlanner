@@ -7,6 +7,7 @@ import type {
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import { encounterEnvelopeSlots } from './encounters';
 import { failProjectDocument } from '../validation';
+import type { TraitOfferDefaultsContext } from '../traits';
 
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
@@ -19,6 +20,7 @@ export interface RoomStateContext {
    * displaced. This is decode context, not persisted duplicate state.
    */
   readonly rememberedCountedBinding?: CountedRewardBinding;
+  readonly loadout?: TraitOfferDefaultsContext;
 }
 
 export function authoredTemplateKey(room: RoomDeclaration, path: string) {

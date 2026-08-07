@@ -71,6 +71,37 @@ export function applyProjectStateCommand(
       return command.name === document.name ? document : { ...document, name: command.name };
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
+    case 'ReplaceRouteLoadout': {
+      const routeIndex = document.routes.findIndex(
+        (route) => route.routeKey === command.route.routeKey,
+      );
+      if (routeIndex < 0)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      const weapon = catalog.weapons.byKey[command.weaponKey];
+      if (weapon === undefined) failCommand(command, `unknown weapon ${command.weaponKey}`);
+      if (!weapon.aspectKeys.includes(command.aspectKey)) {
+        failCommand(command, `${command.aspectKey} does not belong to ${command.weaponKey}`);
+      }
+      const route = document.routes[routeIndex];
+      if (route === undefined)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      if (
+        route.loadout.weaponKey === command.weaponKey &&
+        route.loadout.aspectKey === command.aspectKey
+      )
+        return document;
+      return {
+        ...document,
+        routes: document.routes.map((candidate, index) =>
+          index === routeIndex
+            ? {
+                ...candidate,
+                loadout: { weaponKey: command.weaponKey, aspectKey: command.aspectKey },
+              }
+            : candidate,
+        ),
+      };
+    }
     case 'ReplaceBiomeField': {
       const located = locateBiome(document, catalog, command);
       return withBiome(document, located, {

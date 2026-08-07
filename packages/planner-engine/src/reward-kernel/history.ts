@@ -8,7 +8,6 @@ import type {
   RewardKernelFacts,
   ProducerLifecyclePointKey,
 } from './model';
-import { ordinarySourceGameNames } from './support';
 
 const EMPTY_RECORD = Object.freeze({}) as Readonly<Record<string, number>>;
 
@@ -134,8 +133,9 @@ export function applyConcreteAcquisition(
     biomeUseRecord: increment(history.biomeUseRecord, acquisition.gameName),
     currentRoomUseRecord: increment(history.currentRoomUseRecord, acquisition.gameName),
   };
-  const ordinary = ordinarySourceGameNames(catalog).includes(acquisition.gameName);
-  const upgradableTraitCount = history.upgradableTraitCount + (ordinary ? 1 : 0);
+  // Trait upgradeability is derived solely from the equipped-trait ledger in
+  // the trait authority. Reward acquisition remains the exact loot/use ledger
+  // and must not manufacture a shadow trait counter.
   switch (declaration.historyProjection) {
     case 'lootAndUse':
       return Object.freeze({
@@ -143,14 +143,12 @@ export function applyConcreteAcquisition(
         ...common,
         lootTypeHistory: increment(history.lootTypeHistory, acquisition.gameName),
         lootBiomeRecord: increment(history.lootBiomeRecord, acquisition.gameName),
-        upgradableTraitCount,
       });
     case 'consumableAndUse':
       return Object.freeze({
         ...history,
         ...common,
         consumableRecord: increment(history.consumableRecord, acquisition.gameName),
-        upgradableTraitCount,
       });
     default:
       return assertNever(declaration.historyProjection);
@@ -167,7 +165,8 @@ export function factsWithHistory(
     ...base,
     counters: Object.freeze({
       ...base.counters,
-      upgradableTraitCount: history.upgradableTraitCount,
+      upgradableTraitCount:
+        history.traitFacts?.upgradableTraitCount ?? history.upgradableTraitCount,
     }),
     records: Object.freeze({
       ...base.records,

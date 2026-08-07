@@ -178,7 +178,7 @@ function controlsForOccurrence(
         input,
         { kind: 'incomingReward', address: incoming },
         incomingRewardBinding(room, state),
-        state.offer,
+        state.reward.offer,
       ),
     );
   };
@@ -223,7 +223,7 @@ function controlsForOccurrence(
             input,
             { kind: 'localReward', address },
             sideRoom.incomingReward,
-            side.offer,
+            side.reward.offer,
           ),
         );
       }
@@ -239,7 +239,9 @@ function controlsForOccurrence(
           group.key,
           slotKey,
         );
-        controls.push(rewardControl(input, { kind: 'localReward', address }, group.reward, offer));
+        controls.push(
+          rewardControl(input, { kind: 'localReward', address }, group.reward, offer.offer),
+        );
       }
       break;
     }
@@ -262,7 +264,12 @@ function controlsForOccurrence(
             offerKey,
           );
           controls.push(
-            rewardControl(input, { kind: 'rewardWheelOffer', address }, declaration.reward, offer),
+            rewardControl(
+              input,
+              { kind: 'rewardWheelOffer', address },
+              declaration.reward,
+              offer.offer,
+            ),
           );
         }
       }
@@ -293,7 +300,7 @@ function controlsForOccurrence(
             input,
             { kind: 'shopOffer', address },
             undefined,
-            shopOffer.offer,
+            shopOffer.reward.offer,
             group.rewardTypes,
           ),
         );

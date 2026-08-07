@@ -1,5 +1,10 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import {
+  createTraitOfferAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+  type TraitOfferOwnerAddress,
+} from '../../authored-project/addresses';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -28,8 +33,21 @@ import type {
   CanonicalLocalChildRoom,
   CanonicalResolvedIncomingReward,
 } from '../materialization';
-import type { FindingEvidence, RewardGenerationFindingCode, SemanticFinding } from '../model';
+import type {
+  FindingEvidence,
+  RewardGenerationFindingCode,
+  SemanticFinding,
+  TraitFindingCode,
+} from '../model';
 import type { RewardBranch, RewardEvent } from './model';
+import {
+  attachTraitHistory,
+  createTraitHistoryState,
+  evaluateReachedTraitOffer,
+  recordReachedTraitOffer,
+  type ReachedTraitOfferEvaluation,
+  type TraitHistoryState,
+} from '../traits';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -44,6 +62,8 @@ export interface RewardBranchState {
   readonly events: readonly RewardEvent[];
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;
   readonly processedThroughHistorySequence: number;
+  readonly traitHistory?: TraitHistoryState;
+  readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
 }
 
 export type RewardFactsFactory = (
@@ -80,9 +100,12 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       lootBiomeRecord: orderedRecord(history.lootBiomeRecord),
       consumableRecord: orderedRecord(history.consumableRecord),
       upgradableTraitCount: history.upgradableTraitCount,
+      traitFacts: history.traitFacts,
       lastDevotionDepth: history.lastDevotionDepth,
     },
     pendingShops: orderedRecord(branch.pendingShops),
+    traitHistory: branch.traitHistory,
+    traitEvaluations: branch.traitEvaluations,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
 }
@@ -115,6 +138,106 @@ export function appendRewardEvent(
     events: Object.freeze([...branch.events, next]),
     processedThroughHistorySequence: historySequence,
   });
+}
+
+function applyTraitOfferForAcquisition(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  reward: {
+    readonly origin: SemanticAddress;
+    readonly offer: CanonicalResolvedIncomingReward['offer'];
+    readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+  },
+  role: string,
+  lifecyclePoint: string,
+  sequence: number,
+  findings?: Map<string, SemanticFinding>,
+): RewardBranchState {
+  const authored = reward.traitOffersByAcquisitionRole?.[role];
+  if (authored === undefined) return branch;
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  const evaluation = evaluateReachedTraitOffer(
+    catalog,
+    reward.origin,
+    role,
+    authored,
+    before,
+    {
+      ...(reward.traitContext ?? {}),
+      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer.rewardType === 'Devotion',
+      resolvedProviderKey: authored.giverKey,
+    },
+    before.events.length,
+  );
+  const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
+  const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
+  if (findings !== undefined && evaluation.assessments.some((assessment) => !assessment.legal)) {
+    const owner = traitOwnerAddress(reward.origin);
+    if (owner !== undefined) {
+      evaluation.assessments.forEach((assessment) =>
+        assessment.findings.forEach((finding) => {
+          addTraitFinding(
+            findings,
+            owner,
+            role,
+            lifecyclePoint,
+            finding.code,
+            finding.traitKey,
+            finding.detail,
+          );
+        }),
+      );
+    }
+  }
+  // A reached offer remains in the evaluation trace even when one or more
+  // alternatives are context-invalid. Only a valid offer folds its selected
+  // trait into canonical equipped state; the reward/use ledger still records
+  // the concrete acquisition.
+  if (applied.event === undefined) return Object.freeze({ ...branch, traitEvaluations });
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, applied.history),
+    traitHistory: applied.history,
+    traitEvaluations,
+  });
+}
+
+function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
+  switch (origin.kind) {
+    case 'incomingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'shopOffer':
+      return origin;
+    default:
+      return undefined;
+  }
+}
+
+function addTraitFinding(
+  findings: Map<string, SemanticFinding>,
+  owner: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+  lifecyclePoint: string,
+  code: TraitFindingCode,
+  traitKey: string,
+  detail?: string,
+): void {
+  const origin = createTraitOfferAddress(owner, acquisitionRole);
+  const value: SemanticFinding = Object.freeze({
+    code,
+    severity: 'error',
+    phase: 'rewardGeneration',
+    origin,
+    evidence: Object.freeze({
+      acquisitionRole,
+      lifecyclePoint,
+      traitKey,
+      ...(detail === undefined ? {} : { detail }),
+    }),
+  });
+  addRewardFinding(findings, value);
 }
 
 export function advanceRewardBranch(
@@ -158,6 +281,8 @@ export function initializeRewardBranches(
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
         processedThroughHistorySequence: 0,
+        traitHistory: createTraitHistoryState(),
+        traitEvaluations: Object.freeze([]),
       }),
     ]);
   }
@@ -169,6 +294,8 @@ export function initializeRewardBranches(
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
         processedThroughHistorySequence: 0,
+        traitHistory: branch.traitHistory ?? createTraitHistoryState(),
+        traitEvaluations: branch.traitEvaluations ?? Object.freeze([]),
       }),
     ),
   );
@@ -692,6 +819,25 @@ export function processShopPurchases(
         if (offer === undefined) {
           return fail('shop acquisition has no semantic slot');
         }
+        candidate = applyTraitOfferForAcquisition(
+          catalog,
+          candidate,
+          Object.freeze({
+            origin: offer.offerOrigin,
+            kind: 'resolved',
+            producerKind: 'shop',
+            producerLifecycleKey: profile.key,
+            offer: offer.offer,
+            ...(offer.traitOffersByAcquisitionRole === undefined
+              ? {}
+              : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
+            ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+          }),
+          acquisition.event.role,
+          acquisition.event.lifecyclePoint,
+          historySequence,
+          findings,
+        );
         candidate = appendRewardEvent(candidate, historySequence, {
           kind: 'concreteAcquisition',
           origin: offer.purchaseOrigin,
@@ -775,8 +921,17 @@ export function processProducerRole(
       branch.history,
       acquisition.acquisition,
     );
+    const withTrait = applyTraitOfferForAcquisition(
+      catalog,
+      Object.freeze({ ...branch, history }),
+      incoming,
+      event.role,
+      event.lifecyclePoint,
+      event.sequence,
+      findings,
+    );
     next.push(
-      appendRewardEvent(Object.freeze({ ...branch, history }), event.sequence, {
+      appendRewardEvent(withTrait, event.sequence, {
         kind: 'concreteAcquisition',
         origin: incoming.origin,
         acquisition,
@@ -803,6 +958,8 @@ export function processOwnedRewardAcquisition(
     readonly offer: CanonicalResolvedIncomingReward['offer'];
     readonly origin: SemanticAddress;
     readonly producerLifecycleKey: string;
+    readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   historySequence: number,
   facts: RewardFactsFactory,
@@ -837,8 +994,17 @@ export function processOwnedRewardAcquisition(
         branch.history,
         acquisition.acquisition,
       );
+      const withTrait = applyTraitOfferForAcquisition(
+        catalog,
+        Object.freeze({ ...branch, history }),
+        reward as CanonicalResolvedIncomingReward,
+        binding.role,
+        binding.lifecyclePoint,
+        historySequence,
+        findings,
+      );
       next.push(
-        appendRewardEvent(Object.freeze({ ...branch, history }), historySequence, {
+        appendRewardEvent(withTrait, historySequence, {
           kind: 'concreteAcquisition',
           origin: reward.origin,
           acquisition,
@@ -867,5 +1033,7 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     history: branch.history,
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
+    ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
+    ...(branch.traitEvaluations === undefined ? {} : { traitEvaluations: branch.traitEvaluations }),
   });
 }

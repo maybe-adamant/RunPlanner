@@ -42,6 +42,14 @@ export function createProjectDocument(
 
     return {
       routeKey: route.key,
+      loadout: (() => {
+        const weapon = catalog.weapons.values.find((candidate) =>
+          candidate.aspectKeys.includes(candidate.defaultAspectKey),
+        );
+        if (weapon === undefined)
+          throw new ProjectDocumentContractError('routes', 'catalog has no weapons');
+        return { weaponKey: weapon.key, aspectKey: weapon.defaultAspectKey };
+      })(),
       biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => {
         const layout = catalog.biomeLayouts.byKey[biomeKey];
         if (layout === undefined) {

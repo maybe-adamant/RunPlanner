@@ -18,6 +18,48 @@ function mutable(value: unknown): Record<string, unknown> {
   return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
 }
 
+function findTraitOffer(value: unknown): Record<string, unknown> | undefined {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findTraitOffer(entry);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  const children = record.traitOffersByAcquisitionRole;
+  if (children !== null && typeof children === 'object') {
+    const first = Object.values(children as Record<string, unknown>)[0];
+    if (first !== undefined) return first as Record<string, unknown>;
+  }
+  for (const child of Object.values(record)) {
+    const found = findTraitOffer(child);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+function traitFixture(): {
+  readonly declaration: RoomDeclaration;
+  readonly state: Record<string, unknown>;
+} {
+  for (const declaration of catalog.rooms.values) {
+    try {
+      const state = mutable(
+        createDefaultRoomState(catalog, declaration, {
+          role: 'ordinary',
+          entryActive: true,
+        }),
+      );
+      if (findTraitOffer(state) !== undefined) return { declaration, state };
+    } catch {
+      // Some declaration-owned state kinds are not ordinary room fixtures.
+    }
+  }
+  throw new Error('catalog has no default trait-offer fixture');
+}
+
 describe('persisted authored room-state codec', () => {
   it.each(['H_Combat02', 'O_Combat01', 'N_Combat02'])(
     'decodes the complete %s declaration default',
@@ -112,10 +154,10 @@ describe('persisted authored room-state codec', () => {
 
     shop.purchaseOrder = [];
     const offers = shop.offers as Record<string, Record<string, unknown>>;
-    offers.Boon!.purchased = false;
+    (offers.Boon!.reward as Record<string, unknown>).purchased = false;
     expect(() =>
       decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
-    ).toThrow('$.room.state.shop.offers.Boon.purchased: is not a project document field');
+    ).toThrow('$.room.state.shop.offers.Boon.reward.purchased: is not a project document field');
   });
 
   it('preserves valid Ephyra side-room ownership and rejects an entered dormant side room', () => {
@@ -256,5 +298,38 @@ describe('persisted authored room-state codec', () => {
         path,
       ),
     ).toThrow('$.room.state.wheels.wheel1.pickedOfferIndex: must select an active offer');
+  });
+
+  it('rejects trait offers with a non-three option cardinality during schema decoding', () => {
+    const fixture = traitFixture();
+    const offer = findTraitOffer(fixture.state);
+    if (offer === undefined) throw new Error('trait fixture did not contain an offer');
+    offer.options = (offer.options as unknown[]).slice(0, 2);
+    expect(() =>
+      decodeRoomState(
+        fixture.state,
+        catalog,
+        fixture.declaration,
+        { role: 'ordinary', entryActive: true },
+        path,
+      ),
+    ).toThrow('must contain exactly 3 options');
+  });
+
+  it('rejects duplicate trait keys across the three persisted options', () => {
+    const fixture = traitFixture();
+    const offer = findTraitOffer(fixture.state);
+    if (offer === undefined) throw new Error('trait fixture did not contain an offer');
+    const options = offer.options as Record<string, unknown>[];
+    options[2]!.traitKey = options[0]!.traitKey;
+    expect(() =>
+      decodeRoomState(
+        fixture.state,
+        catalog,
+        fixture.declaration,
+        { role: 'ordinary', entryActive: true },
+        path,
+      ),
+    ).toThrow('is duplicated in the trait offer');
   });
 });

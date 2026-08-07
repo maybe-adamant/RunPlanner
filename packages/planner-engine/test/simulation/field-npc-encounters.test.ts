@@ -466,7 +466,7 @@ describe('field NPC encounter requirements', () => {
     ).toBe(2);
     expect(
       materializedRoom.localRewards?.find((reward) => reward.slotKey === 'cage1')?.offer,
-    ).toEqual(retainedCageRewards.cage1);
+    ).toEqual(retainedCageRewards.cage1?.offer);
   });
 
   it('applies exact predecessor-room spacing without treating an earlier current-room phase as a predecessor', () => {

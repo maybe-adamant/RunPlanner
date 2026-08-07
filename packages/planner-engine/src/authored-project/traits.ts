@@ -1,0 +1,106 @@
+import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
+import type { ResolvedRewardOffer } from '../reward-kernel/model';
+
+export interface AuthoredTraitOption {
+  readonly traitKey: string;
+  /** Hammers intentionally omit rarity. */
+  readonly rarity?: TraitRarity;
+}
+
+export interface AuthoredTraitOffer {
+  readonly giverKey: string;
+  readonly options: readonly [AuthoredTraitOption, AuthoredTraitOption, AuthoredTraitOption];
+  readonly selectedOptionKey: 'option1' | 'option2' | 'option3';
+}
+
+export type TraitOptionKey = AuthoredTraitOffer['selectedOptionKey'];
+
+export const TRAIT_OPTION_KEYS: readonly TraitOptionKey[] = Object.freeze([
+  'option1',
+  'option2',
+  'option3',
+]);
+
+export interface EquippedTrait {
+  readonly traitKey: string;
+  readonly giverKey: string;
+  readonly providerKind: TraitProviderKind;
+  readonly rarity?: TraitRarity;
+  readonly sourceRole: string;
+}
+
+export interface TraitOfferDefaultsContext {
+  readonly weaponKey: string;
+  readonly aspectKey: string;
+}
+
+export function optionIndex(key: TraitOptionKey): 0 | 1 | 2 {
+  return key === 'option1' ? 0 : key === 'option2' ? 1 : 2;
+}
+
+function giverForAcquisition(catalog: Catalog, gameName: string) {
+  const key = gameName === 'WeaponUpgrade' ? 'WeaponUpgrade' : gameName.replace(/Upgrade$/, '');
+  return catalog.traitGivers.byKey[key];
+}
+
+/** Resolves the catalog-owned provider for one reward acquisition role. */
+export function traitGiverForAcquisitionRole(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  acquisitionRole: string,
+): string | undefined {
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  const role = declaration?.acquisitionRoles.values.find(
+    (candidate) => candidate.key === acquisitionRole,
+  );
+  if (declaration === undefined || role === undefined) return undefined;
+  let source: string | undefined;
+  if (role.resolution.kind === 'self') source = declaration.gameName;
+  else if (role.resolution.kind === 'fixed') source = role.resolution.acquisition.gameName;
+  else {
+    const value = offer.payload?.[role.resolution.field as keyof NonNullable<typeof offer.payload>];
+    if (typeof value === 'string') source = value;
+  }
+  return source === undefined ? undefined : giverForAcquisition(catalog, source)?.key;
+}
+
+/** Returns one complete authored child for every in-scope acquisition role. */
+export function createDefaultTraitOffers(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  loadout: TraitOfferDefaultsContext,
+): Readonly<Record<string, AuthoredTraitOffer>> {
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
+  const result: Record<string, AuthoredTraitOffer> = {};
+  for (const role of declaration.acquisitionRoles.values) {
+    let gameName: string | undefined;
+    if (role.resolution.kind === 'self') gameName = declaration.gameName;
+    else if (role.resolution.kind === 'fixed') gameName = role.resolution.acquisition.gameName;
+    else {
+      const field = role.resolution.field;
+      const payload = offer.payload;
+      const value = payload?.[field as keyof typeof payload];
+      if (typeof value === 'string') gameName = value;
+    }
+    if (gameName === undefined) continue;
+    const giver = giverForAcquisition(catalog, gameName);
+    if (giver === undefined) continue;
+    const defaults =
+      giver.defaultsByLoadout?.[`${loadout.weaponKey}:${loadout.aspectKey}`] ?? giver.defaultOffer;
+    if (defaults === undefined) continue;
+    result[role.key] = Object.freeze({
+      giverKey: giver.key,
+      options: Object.freeze(
+        defaults.options.map((option) => Object.freeze({ ...option })),
+      ) as AuthoredTraitOffer['options'],
+      selectedOptionKey:
+        defaults.selectedOption === 0
+          ? 'option1'
+          : defaults.selectedOption === 1
+            ? 'option2'
+            : 'option3',
+    });
+  }
+  return Object.freeze(result);
+}

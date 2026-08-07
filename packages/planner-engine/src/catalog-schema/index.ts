@@ -356,6 +356,8 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
+  /** The normalized room declaration flag that suppresses Gift trait offers. */
+  readonly blockGiftBoons: boolean;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

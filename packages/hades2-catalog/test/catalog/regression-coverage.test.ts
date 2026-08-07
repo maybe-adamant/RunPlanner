@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '0bc5f1f10034ef6d'],
-  ['G', 'eea3269ee24134c9'],
-  ['H', 'ccc519094b1b7bc6'],
-  ['I', '48d819096ba71c31'],
-  ['N', 'c423f85bd62109a3'],
-  ['O', 'bd80beae02ea9802'],
-  ['P', '7930adbc2baa519b'],
-  ['Q', 'de69acde2e86359f'],
+  ['F', '9bebd9ef37c7b621'],
+  ['G', 'df55665a78375321'],
+  ['H', '88d4249b41a1d25c'],
+  ['I', '4bf4c4a16d7e3789'],
+  ['N', '54e882f5c6769f1a'],
+  ['O', '4ef1736f40a92421'],
+  ['P', 'c11a636b88c2fdc5'],
+  ['Q', 'b38143a2c27dac6e'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {

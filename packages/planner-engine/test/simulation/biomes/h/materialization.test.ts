@@ -261,7 +261,7 @@ describe('H Fields materialization', () => {
       {
         kind: 'localReward',
         reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
-        value: reward,
+        value: reward.offer,
       },
     ]);
 

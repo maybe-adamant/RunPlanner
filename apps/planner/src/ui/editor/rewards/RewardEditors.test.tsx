@@ -102,7 +102,7 @@ function projectRewardOffer(project: ProjectDocument): ResolvedRewardOffer {
   if (occurrence?.state.kind !== 'counted') {
     throw new Error('Reward lifecycle harness has no counted occurrence');
   }
-  return occurrence.state.offer;
+  return occurrence.state.reward.offer;
 }
 
 function StoreRewardHarness({

@@ -18,12 +18,20 @@ import type {
   RewardWheelOfferAddress,
   RouteAddress,
   ShopOfferAddress,
+  TraitOfferAddress,
   TargetAddress,
 } from '../addresses';
 import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
+import type { AuthoredTraitOffer, TraitOptionKey } from '../traits';
 
 export type ProjectStateCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
+  | {
+      readonly kind: 'ReplaceRouteLoadout';
+      readonly route: RouteAddress;
+      readonly weaponKey: string;
+      readonly aspectKey: string;
+    }
   | {
       readonly kind: 'ConfigureRoutePrefix';
       readonly route: RouteAddress;
@@ -231,6 +239,18 @@ export type EncounterOccurrenceCommand =
       readonly phase: EncounterPhaseAddress;
     };
 
+export type TraitOfferCommand =
+  | {
+      readonly kind: 'ReplaceTraitOffer';
+      readonly trait: TraitOfferAddress;
+      readonly value: AuthoredTraitOffer;
+    }
+  | {
+      readonly kind: 'ReplaceTraitSelection';
+      readonly trait: TraitOfferAddress;
+      readonly selectedOptionKey: TraitOptionKey;
+    };
+
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
@@ -244,7 +264,8 @@ export type ProjectCommand =
   | TopologyCommand
   | RoomReplacementCommand
   | RouteDetourCommand
-  | OccurrenceLeafCommand;
+  | OccurrenceLeafCommand
+  | TraitOfferCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

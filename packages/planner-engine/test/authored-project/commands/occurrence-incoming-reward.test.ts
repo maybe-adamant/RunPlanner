@@ -35,7 +35,7 @@ describe('authored-project incoming reward commands', () => {
         .find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === ephyraId)?.state,
-    ).toMatchObject({ kind: 'ephyraCombat', offer: { rewardType: 'MaxManaDropBig' } });
+    ).toMatchObject({ kind: 'ephyraCombat', reward: { offer: { rewardType: 'MaxManaDropBig' } } });
     expect(
       applyProjectCommand(changed, catalog, {
         kind: 'ReplaceIncomingReward',
@@ -54,7 +54,7 @@ describe('authored-project incoming reward commands', () => {
       counted.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === countedId,
       )?.state,
-    ).toMatchObject({ kind: 'counted', offer: { rewardType: 'MetaCurrencyDrop' } });
+    ).toMatchObject({ kind: 'counted', reward: { offer: { rewardType: 'MetaCurrencyDrop' } } });
 
     const freeId = createOccurrenceId('golden-h-preboss-free');
     const free = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -66,7 +66,7 @@ describe('authored-project incoming reward commands', () => {
       free.routes[0]?.biomes[2]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === freeId,
       )?.state,
-    ).toMatchObject({ kind: 'freeReward', offer: { rewardType: 'MaxHealthDrop' } });
+    ).toMatchObject({ kind: 'freeReward', reward: { offer: { rewardType: 'MaxHealthDrop' } } });
   });
 
   it('replaces only the payload of a declaration-fixed reward', () => {
@@ -92,12 +92,16 @@ describe('authored-project incoming reward commands', () => {
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
         )?.state,
-    ).toEqual({
+    ).toMatchObject({
       kind: 'fixed',
-      payload: {
-        kind: 'DevotionPair',
-        chosenSource: 'AphroditeUpgrade',
-        spurnedSource: 'ApolloUpgrade',
+      reward: {
+        offer: {
+          payload: {
+            kind: 'DevotionPair',
+            chosenSource: 'AphroditeUpgrade',
+            spurnedSource: 'ApolloUpgrade',
+          },
+        },
       },
     });
     expect(() =>

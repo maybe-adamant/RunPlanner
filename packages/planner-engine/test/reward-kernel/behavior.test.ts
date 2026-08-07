@@ -444,7 +444,7 @@ describe('offer and acquisition projections', () => {
     history = applyConcreteAcquisition(rewardKernelCatalog, history, chosen.acquisition);
     history = applyConcreteAcquisition(rewardKernelCatalog, history, spurned.acquisition);
     expect(history.lootTypeHistory).toEqual({ ApolloUpgrade: 1, ZeusUpgrade: 1 });
-    expect(history.upgradableTraitCount).toBe(2);
+    expect(history.upgradableTraitCount).toBe(0);
   });
 
   it('feeds Devotion offer spacing back into RunDepthCache requirements', () => {
@@ -505,7 +505,7 @@ describe('offer and acquisition projections', () => {
     expect(nextBiome.lootBiomeRecord).toEqual({});
     expect(nextBiome.useRecord).toEqual({ ApolloUpgrade: 1 });
     expect(nextBiome.lootTypeHistory).toEqual({ ApolloUpgrade: 1 });
-    expect(nextBiome.upgradableTraitCount).toBe(1);
+    expect(nextBiome.upgradableTraitCount).toBe(0);
   });
 
   it('makes the trait-free reward baseline explicit', () => {

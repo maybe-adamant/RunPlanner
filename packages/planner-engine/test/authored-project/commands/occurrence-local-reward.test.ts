@@ -26,7 +26,10 @@ describe('authored-project local reward commands', () => {
       changed.routes[0]?.biomes[2]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === combatId,
       )?.state,
-    ).toMatchObject({ kind: 'fieldsCombat', cages: { cage1: { rewardType: 'MaxManaDrop' } } });
+    ).toMatchObject({
+      kind: 'fieldsCombat',
+      cages: { cage1: { offer: { rewardType: 'MaxManaDrop' } } },
+    });
     expect(
       applyProjectCommand(changed, catalog, {
         kind: 'ReplaceLocalReward',
@@ -56,7 +59,7 @@ describe('authored-project local reward commands', () => {
         sideDoor1: {
           generation: 'notGenerated',
           enteredOrdinal: null,
-          offer: { rewardType: 'RoomMoneyTinyDrop' },
+          reward: { offer: { rewardType: 'RoomMoneyTinyDrop' } },
         },
       },
     });

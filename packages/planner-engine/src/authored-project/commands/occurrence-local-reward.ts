@@ -12,6 +12,7 @@ import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { LocalRewardCommand } from './types';
+import { createDefaultTraitOffers } from '../traits';
 
 export function applyLocalRewardCommand(
   document: ProjectDocument,
@@ -34,9 +35,10 @@ export function applyLocalRewardCommand(
         `unknown local reward ${command.reward.groupKey}.${command.reward.slotKey}`,
       );
     }
-    const offer = occurrence.state.cages[command.reward.slotKey];
-    if (offer === undefined) failCommand(command, `missing local reward ${command.reward.slotKey}`);
-    if (sameOccurrenceValue(offer, command.value)) return document;
+    const reward = occurrence.state.cages[command.reward.slotKey];
+    if (reward === undefined)
+      failCommand(command, `missing local reward ${command.reward.slotKey}`);
+    if (sameOccurrenceValue(reward.offer, command.value)) return document;
     return updateOccurrenceTopology(
       document,
       located,
@@ -48,7 +50,14 @@ export function applyLocalRewardCommand(
             ...occurrence.state,
             cages: Object.freeze({
               ...occurrence.state.cages,
-              [command.reward.slotKey]: command.value,
+              [command.reward.slotKey]: Object.freeze({
+                offer: command.value,
+                traitOffersByAcquisitionRole: createDefaultTraitOffers(
+                  catalog,
+                  command.value,
+                  located.loadout,
+                ),
+              }),
             }),
           }),
         }),
@@ -68,7 +77,7 @@ export function applyLocalRewardCommand(
   const sideRoom = state.sideRooms[command.reward.slotKey];
   if (sideRoom === undefined)
     failCommand(command, `missing side-room state ${command.reward.slotKey}`);
-  if (sameOccurrenceValue(sideRoom.offer, command.value)) return document;
+  if (sameOccurrenceValue(sideRoom.reward.offer, command.value)) return document;
   return updateOccurrenceTopology(
     document,
     located,
@@ -80,7 +89,17 @@ export function applyLocalRewardCommand(
           ...state,
           sideRooms: Object.freeze({
             ...state.sideRooms,
-            [command.reward.slotKey]: Object.freeze({ ...sideRoom, offer: command.value }),
+            [command.reward.slotKey]: Object.freeze({
+              ...sideRoom,
+              reward: Object.freeze({
+                offer: command.value,
+                traitOffersByAcquisitionRole: createDefaultTraitOffers(
+                  catalog,
+                  command.value,
+                  located.loadout,
+                ),
+              }),
+            }),
           }),
         }),
       }),

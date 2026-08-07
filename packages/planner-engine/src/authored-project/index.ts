@@ -34,6 +34,7 @@ export {
   createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
+  createTraitOfferAddress,
   createTargetAddress,
   createHubDecisionAddress,
   SemanticAddressContractError,
@@ -64,9 +65,19 @@ export {
   type SemanticAddress,
   type ShopOfferAddress,
   type ShopPurchaseAddress,
+  type TraitOfferAddress,
+  type TraitOfferOwnerAddress,
   type TargetAddress,
   type HubDecisionAddress,
 } from './addresses';
+export {
+  TRAIT_OPTION_KEYS,
+  optionIndex,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOption,
+  type EquippedTrait,
+  type TraitOptionKey,
+} from './traits';
 export {
   applyProjectCommand,
   projectCommandAddress,
@@ -120,7 +131,10 @@ export {
   type AuthoredBiomeState,
   type AuthoredFieldValue,
   type AuthoredRoomState,
+  type AuthoredRewardState,
+  type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,
+  type RouteLoadout,
   type AuthoredBatchState,
   type AuthoredAdditionalExit,
   type AnomalyReplacementProvenance,

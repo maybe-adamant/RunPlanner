@@ -1,12 +1,15 @@
+import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
 
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
+import { createDefaultTraitOffers } from '../traits';
 
 export function applyShopOccurrenceCommand(
   document: ProjectDocument,
+  catalog: Catalog,
   located: LocatedBiome,
   command: ShopOccurrenceCommand,
 ): ProjectDocument {
@@ -56,7 +59,16 @@ export function applyShopOccurrenceCommand(
   }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
-  const replacement = Object.freeze({ ...offer, offer: command.value });
+  const replacement = Object.freeze({
+    reward: Object.freeze({
+      offer: command.value,
+      traitOffersByAcquisitionRole: createDefaultTraitOffers(
+        catalog,
+        command.value,
+        located.loadout,
+      ),
+    }),
+  });
   if (sameOccurrenceValue(replacement, offer)) return document;
   return updateOccurrenceTopology(
     document,

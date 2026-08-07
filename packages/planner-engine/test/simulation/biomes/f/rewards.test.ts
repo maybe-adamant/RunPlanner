@@ -27,6 +27,7 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -142,6 +143,7 @@ function addTakeover(
 }
 
 function evaluate(project: ProjectDocument) {
+  project = authorLegalTraitOffers(project);
   const snapshot = materializeBiome(catalog, biome, complete(project));
   const history = composeBiomeHistory(catalog, snapshot);
   return { snapshot, history, rewards: evaluateBiomeRewards(catalog, snapshot, history, 1) };
@@ -817,7 +819,7 @@ describe('F reward-history simulation', () => {
       ),
     ).toMatchObject({
       gameName: 'F_Combat06',
-      state: { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
+      state: { kind: 'counted', reward: { offer: { rewardType: 'GiftDrop' } } },
     });
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({

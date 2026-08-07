@@ -661,6 +661,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       return evaluation.result.support !== 'impossible';
     case 'hubTerminalTakeover':
       return evaluation.result.support !== 'impossible';
+    case 'traitOffer':
+      return evaluation.result.supported;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -711,6 +713,8 @@ function candidateForced(
       return evaluation.result.support === 'required';
     case 'hubTerminalTakeover':
       return evaluation.result.support === 'required';
+    case 'traitOffer':
+      return false;
   }
 }
 

@@ -38,6 +38,7 @@ import type {
   CanonicalRoomReference,
 } from './model';
 import { materializeAuthoredRoom } from './rooms';
+import type { TraitOfferContext } from '../traits';
 
 type FixedRoomSlotDescriptor = Extract<
   LocalChildDescriptor,
@@ -170,6 +171,7 @@ function localIncomingReward(
   slot: FixedRoomSlotDescriptor,
   room: RoomDeclaration,
   state: EphyraSideRoomState,
+  traitContext?: TraitOfferContext,
 ): CanonicalResolvedIncomingReward {
   const binding = requireCountedBinding(room);
   const resolvedStoreKey = room.forcedRewardStoreKey ?? room.individualRewardStoreKey;
@@ -179,7 +181,13 @@ function localIncomingReward(
     kind: 'resolved',
     producerKind: 'countedChoice',
     producerLifecycleKey: binding.producerLifecycleKey,
-    offer: state.offer,
+    offer: state.reward.offer,
+    traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
+    traitContext: Object.freeze({
+      ...(traitContext ?? {}),
+      blockGiftBoons: room.blockGiftBoons,
+      devotionNoDuo: state.reward.offer.rewardType === 'Devotion',
+    }),
     resolvedStoreKey,
   });
 }
@@ -189,6 +197,7 @@ function materializeLocalSlots(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
+  traitContext?: TraitOfferContext,
 ): readonly CanonicalLocalChildRoom[] {
   const descriptor = room.localChildren[0];
   if (descriptor === undefined) return Object.freeze([]);
@@ -217,6 +226,7 @@ function materializeLocalSlots(
               slot,
               sideRoom,
               authored,
+              traitContext,
             )
           : undefined;
       if (incomingReward !== undefined) {
@@ -262,6 +272,7 @@ function materializeBoard(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   room: CanonicalHubRoom,
+  traitContext?: TraitOfferContext,
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(decision.visitOrder);
@@ -287,6 +298,7 @@ function materializeBoard(
               role: 'ordinary',
               entered: visited.has(slot.slotKey),
               lifecycleProfileKey: 'EphyraMainRoom',
+              ...(traitContext === undefined ? {} : { traitContext }),
             }),
           }),
         ];
@@ -302,6 +314,7 @@ function materializeVisits(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   board: CanonicalHubBoard,
+  traitContext?: TraitOfferContext,
 ): readonly CanonicalHubVisit[] {
   const targets = new Map(board.targets.map((target) => [target.hubSlotKey, target]));
   return Object.freeze(
@@ -310,7 +323,13 @@ function materializeVisits(
       if (target === undefined) fail(`Hub visit ${index + 1} lost open slot ${slotKey}`);
       const occurrence = requireOccurrence(occurrences, target.room.occurrenceId);
       const declaration = requireRoom(catalog, occurrence.gameName);
-      const localSlots = materializeLocalSlots(catalog, biome, occurrence, declaration);
+      const localSlots = materializeLocalSlots(
+        catalog,
+        biome,
+        occurrence,
+        declaration,
+        traitContext,
+      );
       const enteredLocalRooms = Object.freeze(
         localSlots
           .filter((local) => local.enteredOrdinal !== null)
@@ -347,18 +366,35 @@ export function materializeHubDecision(
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  traitContext?: TraitOfferContext,
 ): CanonicalHubDecision {
   if (decision.hubKey !== descriptor.hubKey) {
     fail(`Hub decision ${decision.hubKey} does not match ${descriptor.hubKey}`);
   }
   const room = materializeHubRoom(catalog, biome, descriptor);
-  const board = materializeBoard(catalog, biome, descriptor, decision, occurrences, room);
+  const board = materializeBoard(
+    catalog,
+    biome,
+    descriptor,
+    decision,
+    occurrences,
+    room,
+    traitContext,
+  );
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
     source: hubSourceReference(biome, decision, occurrences),
     room,
     board,
-    visits: materializeVisits(catalog, biome, descriptor, decision, occurrences, board),
+    visits: materializeVisits(
+      catalog,
+      biome,
+      descriptor,
+      decision,
+      occurrences,
+      board,
+      traitContext,
+    ),
   });
 }

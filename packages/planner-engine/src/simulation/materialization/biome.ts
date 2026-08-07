@@ -46,6 +46,7 @@ import { materializeCompletionRooms } from './completion';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
+import type { TraitOfferContext } from '../traits';
 import type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,
@@ -368,6 +369,7 @@ function materializeTarget(
   batchState: CanonicalBatchState,
   clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
   physicalExit: CanonicalPhysicalExit,
+  traitContext?: TraitOfferContext,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, layout, topology, occurrence);
@@ -387,6 +389,7 @@ function materializeTarget(
       ...(batchStore === undefined ? {} : { batchStoreKey: batchStore }),
       ...(batchState.kind === 'fields' ? { activeCageCount: batchState.doorCageRewardCount } : {}),
       ...(clockworkRewardValue === undefined ? {} : { clockworkReward: clockworkRewardValue }),
+      ...(traitContext === undefined ? {} : { traitContext }),
     }),
   });
 }
@@ -402,6 +405,7 @@ function materializeAdditionalContinuations(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
+  traitContext?: TraitOfferContext,
 ): readonly CanonicalAdditionalContinuation[] {
   const additionalExits = additionalExitsForDecision(topology, decision);
   if (additionalExits.length === 0) return Object.freeze([]);
@@ -439,6 +443,7 @@ function materializeAdditionalContinuations(
           occurrence,
           role: 'ordinary',
           entered: selected === additional.key,
+          ...(traitContext === undefined ? {} : { traitContext }),
         }),
       });
     }),
@@ -459,6 +464,7 @@ function materializeBatch(
     readonly allowUnselected?: boolean;
     readonly physicalExits: ReadonlyMap<string, CanonicalPhysicalExit>;
   },
+  traitContext?: TraitOfferContext,
 ): { readonly batch: CanonicalBatch; readonly nextClockwork: ClockworkState | undefined } {
   const normal = decision.normal;
   const source = sourceAddress(decision.source);
@@ -523,6 +529,7 @@ function materializeBatch(
         batchState,
         rewards.get(target.exitKey),
         physicalExit,
+        traitContext,
       );
     }),
   );
@@ -533,6 +540,7 @@ function materializeBatch(
     topology,
     occurrences,
     decision,
+    traitContext,
   );
   const selectedTarget = targets.find((target) => target.picked);
   const selectedAdditional = additional.find((continuation) => continuation.picked);
@@ -623,6 +631,7 @@ function materializeStart(
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
+  traitContext?: TraitOfferContext,
 ): CanonicalAuthoredRoom {
   const room = requireRoom(catalog, layout, topology, occurrence);
   return materializeAuthoredRoom({
@@ -637,6 +646,7 @@ function materializeStart(
     room.gameName === layout.start.roomGameName
       ? { lifecycleProfileKey: 'EphyraOpeningRoom' }
       : {}),
+    ...(traitContext === undefined ? {} : { traitContext }),
   });
 }
 
@@ -771,6 +781,7 @@ function materializeContiguousBatchPrefix(
   sourceRoom: RoomDeclaration | undefined,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
   clockwork: ClockworkState | undefined,
+  traitContext?: TraitOfferContext,
 ): CanonicalBatch | undefined {
   if (decision === undefined || sourceRoom === undefined) return undefined;
   const takeover = batchTakesOverNormalDoors(
@@ -811,6 +822,7 @@ function materializeContiguousBatchPrefix(
     sourceAuthoredRoom,
     clockwork,
     { allowUnselected: true, physicalExits },
+    traitContext,
   ).batch;
 }
 
@@ -823,6 +835,7 @@ export function materializeBiomePrefix(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
+  traitContext?: TraitOfferContext,
 ): MaterializedBiomePrefix | null {
   const layout = requireLayout(catalog, biome);
   if (Object.values(plan.state).some((value) => value === null)) return null;
@@ -831,7 +844,14 @@ export function materializeBiomePrefix(
   if (topology === null) return prefix(biome, biomeState, undefined, []);
   const occurrences = occurrenceMap(topology);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence);
+  const entryRoom = materializeStart(
+    catalog,
+    biome,
+    layout,
+    topology,
+    startOccurrence,
+    traitContext,
+  );
   const decisions: CanonicalDecision[] = [];
   let current = entryRoom;
   let clockwork =
@@ -864,6 +884,7 @@ export function materializeBiomePrefix(
           layout.progression,
           authoredHub,
           occurrences,
+          traitContext,
         );
         decisions.push(hub);
         const hubReadiness = hubDecisionHandoffReadiness(layout.progression, authoredHub);
@@ -927,6 +948,7 @@ export function materializeBiomePrefix(
           undefined,
           undefined,
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
+          traitContext,
         );
         decisions.push(materialized.batch);
         return prefix(biome, biomeState, entryRoom, decisions);
@@ -952,10 +974,19 @@ export function materializeBiomePrefix(
         sourceRoom,
         current,
         clockwork,
+        traitContext,
       );
       const additional =
         partial?.additional ??
-        materializeAdditionalContinuations(catalog, biome, layout, topology, occurrences, decision);
+        materializeAdditionalContinuations(
+          catalog,
+          biome,
+          layout,
+          topology,
+          occurrences,
+          decision,
+          traitContext,
+        );
       return prefix(
         biome,
         biomeState,
@@ -983,6 +1014,7 @@ export function materializeBiomePrefix(
       current,
       clockwork,
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
+      traitContext,
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
@@ -1002,6 +1034,7 @@ export function materializeBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
+  traitContext?: TraitOfferContext,
 ): CanonicalBiome {
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
   const layout = requireLayout(catalog, biome);
@@ -1009,7 +1042,14 @@ export function materializeBiome(
   const occurrences = occurrenceMap(topology);
   const biomeState = canonicalBiomeState(layout.biomeKey, completeness.biomeState);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence);
+  const entryRoom = materializeStart(
+    catalog,
+    biome,
+    layout,
+    topology,
+    startOccurrence,
+    traitContext,
+  );
   const decisions: CanonicalDecision[] = [];
   let currentRoom = entryRoom;
   let clockwork =
@@ -1038,6 +1078,7 @@ export function materializeBiome(
           layout.progression,
           authoredHub,
           occurrences,
+          traitContext,
         );
         decisions.push(hub);
         const handoff = handoffDecision(topology, layout.progression);
@@ -1052,6 +1093,7 @@ export function materializeBiome(
           undefined,
           undefined,
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
+          traitContext,
         );
         decisions.push(materialized.batch);
         enteredPreboss = materialized.batch.targets.find((target) => target.picked)?.room;
@@ -1070,6 +1112,7 @@ export function materializeBiome(
       currentRoom,
       clockwork,
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
+      traitContext,
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;

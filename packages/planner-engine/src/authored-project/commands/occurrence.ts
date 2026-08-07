@@ -32,7 +32,7 @@ export function applyOccurrenceCommand(
       return applyEphyraOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
     case 'ReplaceShopPurchaseOrder':
-      return applyShopOccurrenceCommand(document, located, command);
+      return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);

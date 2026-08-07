@@ -197,6 +197,8 @@ export interface RawRoomDeclaration {
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
+  /** The game room flag that suppresses Gift trait offers in this room. */
+  readonly blockGiftBoons?: boolean;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

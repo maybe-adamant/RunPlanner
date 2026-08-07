@@ -16,6 +16,7 @@ import type {
 } from '../model';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
+import { createDefaultTraitOffers } from '../traits';
 import {
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
@@ -275,7 +276,18 @@ function switchTargetToAnomaly(
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
     anomalyReplacement: Object.freeze({ replacedRoomGameName: rememberedRoom.gameName }),
-    state: Object.freeze({ kind: 'anomaly', offer: occurrence.state.offer, success: true }),
+    state: Object.freeze({
+      kind: 'anomaly',
+      reward: Object.freeze({
+        offer: occurrence.state.reward.offer,
+        traitOffersByAcquisitionRole: createDefaultTraitOffers(
+          catalog,
+          occurrence.state.reward.offer,
+          located.loadout,
+        ),
+      }),
+      success: true,
+    }),
     encounters: createDefaultRoomEncounterState(
       catalog,
       replacementRoom,
@@ -375,7 +387,17 @@ function revertAnomaly(
       Object.freeze({
         occurrenceId: occurrence.occurrenceId,
         gameName: rememberedRoom.gameName,
-        state: Object.freeze({ kind: 'counted', offer: occurrence.state.offer }),
+        state: Object.freeze({
+          kind: 'counted',
+          reward: Object.freeze({
+            offer: occurrence.state.reward.offer,
+            traitOffersByAcquisitionRole: createDefaultTraitOffers(
+              catalog,
+              occurrence.state.reward.offer,
+              located.loadout,
+            ),
+          }),
+        }),
         encounters: createDefaultRoomEncounterState(
           catalog,
           rememberedRoom,
@@ -547,7 +569,11 @@ function addZagreusContract(
   const contractOccurrence: RoomOccurrence = Object.freeze({
     occurrenceId: command.occurrenceId,
     gameName: contractRoom.gameName,
-    state: createDefaultRoomState(catalog, contractRoom, { role: 'ordinary', entryActive: false }),
+    state: createDefaultRoomState(catalog, contractRoom, {
+      role: 'ordinary',
+      entryActive: false,
+      loadout: located.loadout,
+    }),
     encounters: createDefaultRoomEncounterState(
       catalog,
       contractRoom,
@@ -710,7 +736,11 @@ function addNaturalChaos(
   const chaosOccurrence: RoomOccurrence = Object.freeze({
     occurrenceId: command.occurrenceId,
     gameName: chaosRoom.gameName,
-    state: createDefaultRoomState(catalog, chaosRoom, { role: 'ordinary', entryActive: false }),
+    state: createDefaultRoomState(catalog, chaosRoom, {
+      role: 'ordinary',
+      entryActive: false,
+      loadout: located.loadout,
+    }),
     encounters: createDefaultRoomEncounterState(
       catalog,
       chaosRoom,
@@ -845,7 +875,11 @@ function replaceNaturalChaosMap(
       Object.freeze({
         ...occurrence,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, { role: 'ordinary', entryActive: false }),
+        state: createDefaultRoomState(catalog, room, {
+          role: 'ordinary',
+          entryActive: false,
+          loadout: located.loadout,
+        }),
         encounters: createDefaultRoomEncounterState(
           catalog,
           room,

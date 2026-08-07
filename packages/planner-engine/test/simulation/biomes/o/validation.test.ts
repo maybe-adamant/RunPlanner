@@ -449,7 +449,7 @@ describe('selected O validation', () => {
       {
         kind: 'rewardWheelOffer',
         offer: createRewardWheelOfferAddress(oBiome, occurrence.occurrenceId, 'wheel1', 'offer1'),
-        value: offer,
+        value: offer.offer,
       },
       {
         kind: 'rewardWheelPicked',

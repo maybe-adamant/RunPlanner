@@ -6,6 +6,7 @@ import type {
 } from '../../authored-project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SemanticFinding } from '../model';
+import type { ReachedTraitOfferEvaluation, TraitHistoryState } from '../traits';
 
 interface RewardEventBase {
   readonly rewardSequence: number;
@@ -54,6 +55,8 @@ export interface RewardBranch {
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly processedThroughHistorySequence: number;
+  readonly traitHistory?: TraitHistoryState;
+  readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
 }
 
 export interface TargetRewardHistoryCheckpoint {

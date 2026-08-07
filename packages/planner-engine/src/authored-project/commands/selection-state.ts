@@ -52,7 +52,11 @@ export function reconcileNormalTargetEntryStates(
     const entryActive = decision.normal.targets[targetIndex]?.exitKey === selectedNormalExitKey;
     const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
     if (hasInventory === entryActive) return occurrence;
-    const defaultState = createDefaultRoomState(catalog, room, { role, entryActive });
+    const defaultState = createDefaultRoomState(catalog, room, {
+      role,
+      entryActive,
+      loadout: located.loadout,
+    });
     if (defaultState.kind !== 'shop') {
       failCommand(command, `${room.gameName} has no entry-activated Shop state`);
     }

@@ -12,6 +12,7 @@ import {
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShipOccurrenceCommand } from './types';
+import { createDefaultTraitOffers } from '../traits';
 
 function requireWheel(
   catalog: Catalog,
@@ -125,7 +126,14 @@ export function applyShipOccurrenceCommand(
           ...wheel,
           offers: Object.freeze({
             ...wheel.offers,
-            [command.offer.offerKey]: command.value,
+            [command.offer.offerKey]: Object.freeze({
+              offer: command.value,
+              traitOffersByAcquisitionRole: createDefaultTraitOffers(
+                catalog,
+                command.value,
+                located.loadout,
+              ),
+            }),
           }),
         });
       }

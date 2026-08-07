@@ -29,7 +29,7 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
-import { createCompleteFGProject } from '@run-planner/test-fixtures';
+import { authorLegalTraitOffers, createCompleteFGProject } from '@run-planner/test-fixtures';
 import {
   createFGenerationProject,
   fGenerationBaselineBatches,
@@ -65,7 +65,9 @@ const validPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
 ]);
 
 function validPrefixProject(): ProjectDocument {
-  return createFGenerationProject(validPrefixBatches, { includeTakeover: false });
+  return authorLegalTraitOffers(
+    createFGenerationProject(validPrefixBatches, { includeTakeover: false }),
+  );
 }
 
 const shopPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
@@ -87,7 +89,9 @@ const shopPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
 ]);
 
 function shopPrefixProject(): ProjectDocument {
-  return createFGenerationProject(shopPrefixBatches, { includeTakeover: false });
+  return authorLegalTraitOffers(
+    createFGenerationProject(shopPrefixBatches, { includeTakeover: false }),
+  );
 }
 
 const boonPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
@@ -119,7 +123,9 @@ const boonPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
 ]);
 
 function boonPrefixProject(): ProjectDocument {
-  return createFGenerationProject(boonPrefixBatches, { includeTakeover: false });
+  return authorLegalTraitOffers(
+    createFGenerationProject(boonPrefixBatches, { includeTakeover: false }),
+  );
 }
 
 function candidateSession(project: ProjectDocument) {
@@ -326,7 +332,7 @@ describe('F candidate support', () => {
       {
         kind: 'shopOffer',
         offer: createShopOfferAddress(fBiome, shopId, offerKey),
-        value: offer.offer,
+        value: offer.reward.offer,
       },
       {
         kind: 'shopPurchaseOrder',
@@ -575,12 +581,12 @@ describe('F candidate support', () => {
       {
         kind: 'incomingReward',
         reward: createIncomingRewardAddress(fBiome, combat.occurrenceId),
-        value: combat.state.offer,
+        value: combat.state.reward.offer,
       },
       {
         kind: 'shopOffer',
         offer: createShopOfferAddress(fBiome, shop.occurrenceId, offerKey),
-        value: offer.offer,
+        value: offer.reward.offer,
       },
       {
         kind: 'shopPurchaseOrder',

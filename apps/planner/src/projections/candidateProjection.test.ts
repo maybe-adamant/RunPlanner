@@ -143,10 +143,10 @@ describe('candidate projection', () => {
         ),
       },
       room.incomingReward,
-      occurrence.state.offer.rewardType,
+      occurrence.state.reward.offer.rewardType,
     );
 
-    expect(domain).toContain(occurrence.state.offer.rewardType);
+    expect(domain).toContain(occurrence.state.reward.offer.rewardType);
     expect(domain).not.toContain('MetaCurrencyDrop');
     expect(observeCandidateEvaluation).not.toHaveBeenCalled();
   });

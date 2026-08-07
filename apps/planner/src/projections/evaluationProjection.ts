@@ -148,6 +148,50 @@ const findingCopy = {
     title: 'Shop purchase is unavailable',
     description: 'The selected purchase order cannot be completed.',
   },
+  alreadyEquipped: {
+    title: 'Trait is already equipped',
+    description: 'This trait cannot be offered again while it is equipped.',
+  },
+  missingPrerequisite: {
+    title: 'Trait prerequisite is missing',
+    description: 'The current equipped-trait history does not satisfy this prerequisite.',
+  },
+  negativePrerequisite: {
+    title: 'Trait prerequisite is blocked',
+    description: 'A trait that must be absent is currently equipped.',
+  },
+  offerContext: {
+    title: 'Trait offer context is blocked',
+    description: 'This trait is not legal in the current reward or room context.',
+  },
+  elementThreshold: {
+    title: 'Element threshold is unmet',
+    description: 'The equipped element totals are below this trait offer requirement.',
+  },
+  rarityCount: {
+    title: 'Rarity threshold is unmet',
+    description: 'The equipped god-boon rarity totals are outside this trait offer requirement.',
+  },
+  rarifiableTarget: {
+    title: 'No rarifiable trait is equipped',
+    description: 'This offer requires an equipped trait that can be rarified.',
+  },
+  superchargeableTarget: {
+    title: 'No superchargeable trait is equipped',
+    description: 'This offer requires an equipped trait that can be supercharged.',
+  },
+  occupiedBoonSlot: {
+    title: 'Ordinary boon slot is occupied',
+    description: 'The ordinary boon slot for this trait already has an equipped trait.',
+  },
+  wrongHammerLoadout: {
+    title: 'Hammer is incompatible with this loadout',
+    description: 'This Hammer trait does not support the selected weapon and aspect.',
+  },
+  hammerExclusion: {
+    title: 'Hammer trait is excluded',
+    description: 'This Hammer trait is excluded by the current offer context.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -397,6 +441,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Shop offer`;
     case 'shopPurchase':
       return `${biomeLabel} · Shop purchase`;
+    case 'traitOffer':
+      return `${biomeLabel} · Trait offer`;
     case 'completionRoom':
       return `${biomeLabel} · ${origin.role === 'boss' ? 'Boss' : 'Postboss'}`;
   }

@@ -4,6 +4,24 @@ import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { AuthoredRoomState } from '../model';
 import { requireEphyraSideRooms, requireFieldsCages, requireShipCombatWheels } from './declaration';
 import { reconcileRoomEncounterState } from './encounters';
+import { createDefaultTraitOffers, type TraitOfferDefaultsContext } from '../traits';
+
+function defaultTraitOffers(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  loadout: TraitOfferDefaultsContext = { weaponKey: '', aspectKey: '' },
+) {
+  return createDefaultTraitOffers(catalog, offer, loadout);
+}
+
+function fallbackLoadout(catalog: Catalog): TraitOfferDefaultsContext {
+  const weapon = catalog.weapons.values.find((candidate) =>
+    candidate.aspectKeys.includes(candidate.defaultAspectKey),
+  );
+  return weapon === undefined
+    ? { weaponKey: '', aspectKey: '' }
+    : { weaponKey: weapon.key, aspectKey: weapon.defaultAspectKey };
+}
 
 function countedOfferIsAdmitted(
   binding: CountedRewardBinding,
@@ -31,10 +49,12 @@ function shipEncounterCountIsAdmitted(
 }
 
 function reconcileFieldsCombatState(
+  catalog: Catalog,
   previousRoom: RoomDeclaration,
   previousState: Extract<AuthoredRoomState, { readonly kind: 'fieldsCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'fieldsCombat' }>,
+  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'FieldsCombat')) {
     return replacementState;
@@ -46,22 +66,32 @@ function reconcileFieldsCombatState(
   }
   const cages = Object.fromEntries(
     replacementDescriptor.slotKeys.map((slotKey) => {
-      const previousOffer = previousState.cages[slotKey];
-      const replacementOffer = replacementState.cages[slotKey];
-      if (replacementOffer === undefined) {
+      const previousReward = previousState.cages[slotKey];
+      const replacementReward = replacementState.cages[slotKey];
+      if (replacementReward === undefined) {
         throw new Error(`${replacementRoom.gameName} default omitted cage ${slotKey}`);
       }
       return [
         slotKey,
-        previousOffer !== undefined &&
+        previousReward !== undefined &&
         previousDescriptor.slotKeys.includes(slotKey) &&
-        countedOfferIsAdmitted(replacementDescriptor.reward, previousOffer)
-          ? previousOffer
-          : replacementOffer,
+        countedOfferIsAdmitted(replacementDescriptor.reward, previousReward.offer)
+          ? Object.freeze({
+              offer: previousReward.offer,
+              traitOffersByAcquisitionRole: defaultTraitOffers(
+                catalog,
+                previousReward.offer,
+                loadout,
+              ),
+            })
+          : replacementReward,
       ];
     }),
   );
-  return Object.freeze({ kind: 'fieldsCombat', cages: Object.freeze(cages) });
+  return Object.freeze({
+    kind: 'fieldsCombat',
+    cages: Object.freeze(cages),
+  });
 }
 
 function reconcileShipCombatState(
@@ -70,6 +100,7 @@ function reconcileShipCombatState(
   previousState: Extract<AuthoredRoomState, { readonly kind: 'shipCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'shipCombat' }>,
+  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'ShipCombat')) {
     return replacementState;
@@ -101,9 +132,9 @@ function reconcileShipCombatState(
           : replacementWheel.offerCount;
       const offers = Object.fromEntries(
         descriptor.offerKeys.map((offerKey) => {
-          const previousOffer = previousWheel.offers[offerKey];
-          const replacementOffer = replacementWheel.offers[offerKey];
-          if (replacementOffer === undefined) {
+          const previousReward = previousWheel.offers[offerKey];
+          const replacementReward = replacementWheel.offers[offerKey];
+          if (replacementReward === undefined) {
             throw new Error(
               `${replacementRoom.gameName} default omitted ${descriptor.key}.${offerKey}`,
             );
@@ -111,10 +142,17 @@ function reconcileShipCombatState(
           return [
             offerKey,
             previousDescriptor.offerKeys.includes(offerKey) &&
-            previousOffer !== undefined &&
-            countedOfferIsAdmitted(descriptor.reward, previousOffer)
-              ? previousOffer
-              : replacementOffer,
+            previousReward !== undefined &&
+            countedOfferIsAdmitted(descriptor.reward, previousReward.offer)
+              ? Object.freeze({
+                  offer: previousReward.offer,
+                  traitOffersByAcquisitionRole: defaultTraitOffers(
+                    catalog,
+                    previousReward.offer,
+                    loadout,
+                  ),
+                })
+              : replacementReward,
           ];
         }),
       );
@@ -153,6 +191,7 @@ function reconcileEphyraCombatState(
   previousState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
+  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'EphyraCombat')) {
     return replacementState;
@@ -193,15 +232,18 @@ function reconcileEphyraCombatState(
     const childBinding = replacementChild.incomingReward;
     const offer =
       childBinding.kind === 'countedChoice' &&
-      countedOfferIsAdmitted(childBinding, previousSide.offer)
-        ? previousSide.offer
-        : fallback.offer;
+      countedOfferIsAdmitted(childBinding, previousSide.reward.offer)
+        ? previousSide.reward.offer
+        : fallback.reward.offer;
     return {
       slotKey: slot.slotKey,
       state: Object.freeze({
         generation: previousSide.generation,
         enteredOrdinal: null,
-        offer,
+        reward: Object.freeze({
+          offer,
+          traitOffersByAcquisitionRole: defaultTraitOffers(catalog, offer, loadout),
+        }),
         encounters: reconcileRoomEncounterState(
           catalog,
           previousChild,
@@ -225,13 +267,17 @@ function reconcileEphyraCombatState(
     ]),
   );
   const parentBinding = replacementRoom.incomingReward;
+  const parentOffer =
+    parentBinding.kind === 'countedChoice' &&
+    countedOfferIsAdmitted(parentBinding, previousState.reward.offer)
+      ? previousState.reward.offer
+      : replacementState.reward.offer;
   return Object.freeze({
     kind: 'ephyraCombat',
-    offer:
-      parentBinding.kind === 'countedChoice' &&
-      countedOfferIsAdmitted(parentBinding, previousState.offer)
-        ? previousState.offer
-        : replacementState.offer,
+    reward: Object.freeze({
+      offer: parentOffer,
+      traitOffersByAcquisitionRole: defaultTraitOffers(catalog, parentOffer, loadout),
+    }),
     sideRooms: Object.freeze(sideRooms),
   });
 }
@@ -249,15 +295,27 @@ export function reconcileReplacementRoomState(
   previousState: AuthoredRoomState,
   replacementRoom: RoomDeclaration,
   replacementState: AuthoredRoomState,
+  loadout?: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
+  const resolvedLoadout = loadout ?? fallbackLoadout(catalog);
   switch (replacementState.kind) {
     case 'none':
       return replacementState;
     case 'counted':
       return previousState.kind === 'counted' &&
         replacementRoom.incomingReward.kind === 'countedChoice' &&
-        countedOfferIsAdmitted(replacementRoom.incomingReward, previousState.offer)
-        ? Object.freeze({ kind: 'counted', offer: previousState.offer })
+        countedOfferIsAdmitted(replacementRoom.incomingReward, previousState.reward.offer)
+        ? Object.freeze({
+            kind: 'counted',
+            reward: Object.freeze({
+              offer: previousState.reward.offer,
+              traitOffersByAcquisitionRole: defaultTraitOffers(
+                catalog,
+                previousState.reward.offer,
+                resolvedLoadout,
+              ),
+            }),
+          })
         : replacementState;
     case 'anomaly':
     case 'fixed':
@@ -267,7 +325,14 @@ export function reconcileReplacementRoomState(
     case 'fieldsCombat':
       return previousState.kind === 'fieldsCombat' &&
         roomUsesTemplate(replacementRoom, 'FieldsCombat')
-        ? reconcileFieldsCombatState(previousRoom, previousState, replacementRoom, replacementState)
+        ? reconcileFieldsCombatState(
+            catalog,
+            previousRoom,
+            previousState,
+            replacementRoom,
+            replacementState,
+            resolvedLoadout,
+          )
         : replacementState;
     case 'shipCombat':
       return previousState.kind === 'shipCombat' && roomUsesTemplate(replacementRoom, 'ShipCombat')
@@ -277,6 +342,7 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
+            resolvedLoadout,
           )
         : replacementState;
     case 'ephyraCombat':
@@ -288,6 +354,7 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
+            resolvedLoadout,
           )
         : replacementState;
   }

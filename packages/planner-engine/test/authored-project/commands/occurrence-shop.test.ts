@@ -39,7 +39,7 @@ describe('authored-project Shop occurrence commands', () => {
       shop: {
         purchaseOrder: ['MajorNonBoon'],
         offers: {
-          MajorNonBoon: { offer: { rewardType: 'MaxHealthDrop' } },
+          MajorNonBoon: { reward: { offer: { rewardType: 'MaxHealthDrop' } } },
         },
       },
     });

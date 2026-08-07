@@ -7,6 +7,7 @@ import type {
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
+  AuthoredRoutePlan,
 } from '../model';
 import type { BiomeOwnedProjectCommand, ProjectCommand } from './types';
 
@@ -35,6 +36,7 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'RenameProject':
       return createProjectAddress();
     case 'ConfigureRoutePrefix':
+    case 'ReplaceRouteLoadout':
       return command.route;
     case 'ReplaceBiomeField':
       return command.field;
@@ -100,6 +102,9 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'SelectEncounter':
     case 'ResetEncounter':
       return command.phase;
+    case 'ReplaceTraitOffer':
+    case 'ReplaceTraitSelection':
+      return command.trait;
   }
 }
 
@@ -110,6 +115,7 @@ export function failCommand(command: ProjectCommand, detail: string): never {
 export interface LocatedBiome {
   readonly routeIndex: number;
   readonly biomeIndex: number;
+  readonly loadout: AuthoredRoutePlan['loadout'];
   readonly plan: AuthoredBiomePlan;
   readonly layout: BiomeLayout;
 }
@@ -132,7 +138,7 @@ export function locateBiome(
   if (plan === undefined) failCommand(command, `missing biome ${address.biomeKey}`);
   const layout = catalog.biomeLayouts.byKey[address.biomeKey];
   if (layout === undefined) failCommand(command, `catalog has no layout for ${address.biomeKey}`);
-  return { routeIndex, biomeIndex, plan, layout };
+  return { routeIndex, biomeIndex, loadout: route.loadout, plan, layout };
 }
 
 export function requireTopology(plan: AuthoredBiomePlan, command: ProjectCommand): BiomeTopology {

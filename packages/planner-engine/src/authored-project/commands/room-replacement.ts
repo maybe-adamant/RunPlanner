@@ -324,6 +324,7 @@ export function applyRoomReplacementCommand(
       occurrence.state,
       replacementRoom,
       replacementDefault,
+      located.loadout,
     ),
     encounters: reconcileRoomEncounterState(
       catalog,
