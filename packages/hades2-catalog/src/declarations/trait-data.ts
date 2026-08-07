@@ -113,6 +113,7 @@ const traits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    ordinaryBoonSlot: 'Secondary',
   },
   {
     key: 'AphroditeCastBoon',
@@ -284,9 +285,7 @@ const traits = [
         minimum: 2,
       },
     ],
-    elementContributions: {
-      Water: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -617,12 +616,13 @@ const traits = [
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     offerRequirements: [],
     elementContributions: {
-      Fire: 1,
+      Air: 1,
     },
     isPersistentGodTrait: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    ordinaryBoonSlot: 'Secondary',
   },
   {
     key: 'ApolloCastBoon',
@@ -819,9 +819,7 @@ const traits = [
         minimum: 2,
       },
     ],
-    elementContributions: {
-      Fire: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -1137,6 +1135,7 @@ const traits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    ordinaryBoonSlot: 'Secondary',
   },
   {
     key: 'AresCastBoon',
@@ -1310,7 +1309,7 @@ const traits = [
     key: 'ElementalOlympianDamageBoon',
     label: 'Rallying Cry',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
-    equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
+    equippedRarities: ['Common', 'Rare', 'Epic'],
     offerRequirements: [
       {
         kind: 'elementCount',
@@ -1318,13 +1317,11 @@ const traits = [
         minimum: 4,
       },
     ],
-    elementContributions: {
-      Earth: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
-    blockStacking: false,
-    blockInRunRarify: false,
-    excludeFromRarityCount: false,
+    blockStacking: true,
+    blockInRunRarify: true,
+    excludeFromRarityCount: true,
   },
   {
     key: 'DoubleBloodDropBoon',
@@ -1387,6 +1384,15 @@ const traits = [
               'DemeterManaBoon',
             ],
           },
+        ],
+      },
+      {
+        kind: 'notEquippedTrait',
+        traitKeys: [
+          'CastProjectileBoon',
+          'CastAnywhereBoon',
+          'HadesCastProjectileBoon',
+          'CastLobBoon',
         ],
       },
     ],
@@ -1807,9 +1813,7 @@ const traits = [
         minimum: 4,
       },
     ],
-    elementContributions: {
-      Earth: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -2221,9 +2225,7 @@ const traits = [
         minimum: 2,
       },
     ],
-    elementContributions: {
-      Earth: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -2646,9 +2648,7 @@ const traits = [
         ],
       },
     ],
-    elementContributions: {
-      Water: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -2899,7 +2899,12 @@ const traits = [
     label: 'Glowing Coal',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    offerRequirements: [
+      {
+        kind: 'notEquippedTrait',
+        traitKeys: ['HadesCastProjectileBoon', 'CastAnywhereBoon', 'CastLobBoon', 'SelfCastBoon'],
+      },
+    ],
     elementContributions: {
       Fire: 1,
     },
@@ -3000,9 +3005,7 @@ const traits = [
         minimum: 2,
       },
     ],
-    elementContributions: {
-      Fire: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -3314,9 +3317,7 @@ const traits = [
         minimum: 2,
       },
     ],
-    elementContributions: {
-      Water: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -3517,6 +3518,10 @@ const traits = [
           'AresCastBoon',
         ],
       },
+      {
+        kind: 'notEquippedTrait',
+        traitKeys: ['CastProjectileBoon', 'HadesCastProjectileBoon', 'CastLobBoon', 'SelfCastBoon'],
+      },
     ],
     elementContributions: {
       Air: 1,
@@ -3617,9 +3622,7 @@ const traits = [
         minimum: 3,
       },
     ],
-    elementContributions: {
-      Air: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -3901,9 +3904,7 @@ const traits = [
         minimum: 4,
       },
     ],
-    elementContributions: {
-      Earth: 1,
-    },
+    elementContributions: {},
     isPersistentGodTrait: true,
     blockStacking: true,
     blockInRunRarify: true,
@@ -3943,8 +3944,6 @@ const traits = [
   {
     key: 'StaffDoubleAttackTrait',
     label: 'Wicked Thrasher',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -3959,8 +3958,6 @@ const traits = [
   {
     key: 'StaffLongAttackTrait',
     label: 'Extending Wallop',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -3975,8 +3972,6 @@ const traits = [
   {
     key: 'StaffDashAttackTrait',
     label: 'Melting Swipe',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -3991,8 +3986,6 @@ const traits = [
   {
     key: 'StaffTripleShotTrait',
     label: 'Dual Moonshot',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4012,8 +4005,6 @@ const traits = [
   {
     key: 'StaffJumpSpecialTrait',
     label: 'Shimmering Moonshot',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4033,8 +4024,6 @@ const traits = [
   {
     key: 'StaffExAoETrait',
     label: 'Cross Cataclysm',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4049,8 +4038,6 @@ const traits = [
   {
     key: 'StaffAttackRecoveryTrait',
     label: 'Rapid Thrasher',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4070,8 +4057,6 @@ const traits = [
   {
     key: 'StaffFastSpecialTrait',
     label: 'Rapid Moonshot',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4091,8 +4076,6 @@ const traits = [
   {
     key: 'StaffExHealTrait',
     label: 'Vampiric Cataclysm',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4112,8 +4095,6 @@ const traits = [
   {
     key: 'StaffSecondStageTrait',
     label: 'Giga Moonburst',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4133,8 +4114,6 @@ const traits = [
   {
     key: 'StaffPowershotTrait',
     label: 'Aetheric Moonburst',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4154,8 +4133,6 @@ const traits = [
   {
     key: 'StaffOneWayAttackTrait',
     label: 'Mirrored Thrasher',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4170,8 +4147,6 @@ const traits = [
   {
     key: 'StaffRaiseDeadBigTrait',
     label: 'Soulfilled Ankh',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4186,8 +4161,6 @@ const traits = [
   {
     key: 'StaffRaiseDeadDoubleTrait',
     label: 'Mirrored Ankh',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4202,8 +4175,6 @@ const traits = [
   {
     key: 'StaffLoneShadeRespawnTrait',
     label: 'Scarab Etchings',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4218,8 +4189,6 @@ const traits = [
   {
     key: 'StaffLoneShadeRallyTrait',
     label: 'Pharaoh Etchings',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4234,8 +4203,6 @@ const traits = [
   {
     key: 'DaggerBlinkAoETrait',
     label: 'Sweeping Ambush',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4255,8 +4222,6 @@ const traits = [
   {
     key: 'DaggerSpecialJumpTrait',
     label: 'Dancing Knives',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4276,8 +4241,6 @@ const traits = [
   {
     key: 'DaggerSpecialLineTrait',
     label: 'Sureshot Flurry',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4297,8 +4260,6 @@ const traits = [
   {
     key: 'DaggerRapidAttackTrait',
     label: 'Rapid Onslaught',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4318,8 +4279,6 @@ const traits = [
   {
     key: 'DaggerSpecialConsecutiveTrait',
     label: 'Melting Sickle',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4339,8 +4298,6 @@ const traits = [
   {
     key: 'DaggerBackstabTrait',
     label: 'Skulking Onslaught',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4360,8 +4317,6 @@ const traits = [
   {
     key: 'DaggerSpecialReturnTrait',
     label: 'Reaper Knives',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4381,8 +4336,6 @@ const traits = [
   {
     key: 'DaggerSpecialFanTrait',
     label: 'Hidden Knives',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4402,8 +4355,6 @@ const traits = [
   {
     key: 'DaggerAttackFinisherTrait',
     label: 'Final Slice',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4423,8 +4374,6 @@ const traits = [
   {
     key: 'DaggerFinalHitTrait',
     label: 'Wicked Onslaught',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4444,8 +4393,6 @@ const traits = [
   {
     key: 'DaggerChargeStageSkipTrait',
     label: 'Sudden Flurry',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4465,8 +4412,6 @@ const traits = [
   {
     key: 'DaggerDashAttackTripleTrait',
     label: 'Trick Knives',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4481,8 +4426,6 @@ const traits = [
   {
     key: 'DaggerTripleBuffTrait',
     label: 'Phantom Brand',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4497,8 +4440,6 @@ const traits = [
   {
     key: 'DaggerTripleRepeatWomboTrait',
     label: 'Banshee Brand',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4513,8 +4454,6 @@ const traits = [
   {
     key: 'DaggerTripleHomingSpecialTrait',
     label: 'Sinister Pinion',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4529,8 +4468,6 @@ const traits = [
   {
     key: 'AxeSpinSpeedTrait',
     label: 'Furious Whirlwind',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4550,8 +4487,6 @@ const traits = [
   {
     key: 'AxeChargedSpecialTrait',
     label: 'Sudden Cleaver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4571,8 +4506,6 @@ const traits = [
   {
     key: 'AxeAttackRecoveryTrait',
     label: 'Rapid Hack',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4592,8 +4525,6 @@ const traits = [
   {
     key: 'AxeMassiveThirdStrikeTrait',
     label: "Executioner's Chop",
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4608,8 +4539,6 @@ const traits = [
   {
     key: 'AxeThirdStrikeTrait',
     label: 'Hell Splitter',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4624,8 +4553,6 @@ const traits = [
   {
     key: 'AxeRangedWhirlwindTrait',
     label: 'Seething Marauder',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4645,8 +4572,6 @@ const traits = [
   {
     key: 'AxeFreeSpinTrait',
     label: 'Psychic Whirlwind',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4666,8 +4591,6 @@ const traits = [
   {
     key: 'AxeArmorTrait',
     label: 'Melting Shredder',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4687,8 +4610,6 @@ const traits = [
   {
     key: 'AxeBlockEmpowerTrait',
     label: 'Siege Shredder',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4708,8 +4629,6 @@ const traits = [
   {
     key: 'AxeSecondStageTrait',
     label: 'Giga Cleaver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4729,8 +4648,6 @@ const traits = [
   {
     key: 'AxeDashAttackTrait',
     label: 'Dashing Heave',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4750,8 +4667,6 @@ const traits = [
   {
     key: 'AxeSturdyTrait',
     label: 'Colossus Slash',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4771,8 +4686,6 @@ const traits = [
   {
     key: 'AxeRallyFrenzyTrait',
     label: 'Iron Core',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4787,8 +4700,6 @@ const traits = [
   {
     key: 'AxeRallyFirstStrikeTrait',
     label: 'Heaven Splitter',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4803,8 +4714,6 @@ const traits = [
   {
     key: 'TorchExSpecialCountTrait',
     label: 'Hidden Helix',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4819,8 +4728,6 @@ const traits = [
   {
     key: 'TorchSpecialSpeedTrait',
     label: 'Clean Coil',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4840,8 +4747,6 @@ const traits = [
   {
     key: 'TorchAttackSpeedTrait',
     label: 'Furious Blaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4856,8 +4761,6 @@ const traits = [
   {
     key: 'TorchSpecialLineTrait',
     label: 'Melting Helix',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4877,8 +4780,6 @@ const traits = [
   {
     key: 'TorchSpecialImpactTrait',
     label: 'Enduring Coil',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4898,8 +4799,6 @@ const traits = [
   {
     key: 'TorchMoveSpeedTrait',
     label: 'Mega Blaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4919,8 +4818,6 @@ const traits = [
   {
     key: 'TorchSplitAttackTrait',
     label: 'Dividing Blaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4935,8 +4832,6 @@ const traits = [
   {
     key: 'TorchEnhancedAttackTrait',
     label: 'Inverted Blaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4956,8 +4851,6 @@ const traits = [
   {
     key: 'TorchDiscountExAttackTrait',
     label: 'Sudden Burst',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4972,8 +4865,6 @@ const traits = [
   {
     key: 'TorchLongevityTrait',
     label: 'Rising Helix',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -4988,8 +4879,6 @@ const traits = [
   {
     key: 'TorchOrbitPointTrait',
     label: 'Whirling Helix',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5009,8 +4898,6 @@ const traits = [
   {
     key: 'TorchSpinAttackTrait',
     label: 'Leaden Blaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5030,8 +4917,6 @@ const traits = [
   {
     key: 'TorchAutofireSprintTrait',
     label: 'Demonic Cell',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5046,8 +4931,6 @@ const traits = [
   {
     key: 'LobAmmoTrait',
     label: 'Bolstered Array',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5062,8 +4945,6 @@ const traits = [
   {
     key: 'LobAmmoMagnetismTrait',
     label: 'Fetching Array',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [
       {
         kind: 'notEquippedTrait',
@@ -5083,8 +4964,6 @@ const traits = [
   {
     key: 'LobRushArmorTrait',
     label: 'Melting Break',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5104,8 +4983,6 @@ const traits = [
   {
     key: 'LobSpreadShotTrait',
     label: 'Wide Grin',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5120,8 +4997,6 @@ const traits = [
   {
     key: 'LobSpecialSpeedTrait',
     label: 'Rapid Driver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5141,8 +5016,6 @@ const traits = [
   {
     key: 'LobSturdySpecialTrait',
     label: 'Colossus Driver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5162,8 +5035,6 @@ const traits = [
   {
     key: 'LobOneSideTrait',
     label: 'Mega Driver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5178,8 +5049,6 @@ const traits = [
   {
     key: 'LobInOutSpecialExTrait',
     label: 'Twisting Crash',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5199,8 +5068,6 @@ const traits = [
   {
     key: 'LobStraightShotTrait',
     label: 'Boosted Ignition',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5215,8 +5082,6 @@ const traits = [
   {
     key: 'LobPulseAmmoTrait',
     label: 'Volatile Array',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [
       {
         kind: 'notEquippedTrait',
@@ -5236,8 +5101,6 @@ const traits = [
   {
     key: 'LobPulseAmmoCollectTrait',
     label: 'Possessed Array',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5252,8 +5115,6 @@ const traits = [
   {
     key: 'LobGrowthTrait',
     label: 'Looming Ignition',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5268,8 +5129,6 @@ const traits = [
   {
     key: 'LobGunOverheatTrait',
     label: 'Venerated Relic',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5284,8 +5143,6 @@ const traits = [
   {
     key: 'LobGunBounceTrait',
     label: 'Leering Glance',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5300,8 +5157,6 @@ const traits = [
   {
     key: 'LobGunSpecialBounceTrait',
     label: 'Runic Driver',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5316,8 +5171,6 @@ const traits = [
   {
     key: 'LobGunAttackRangeTrait',
     label: 'Garmr Gaze',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5332,8 +5185,6 @@ const traits = [
   {
     key: 'LobGunAttackDoublerTrait',
     label: 'Helheim Charge',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5348,8 +5199,6 @@ const traits = [
   {
     key: 'SuitArmorTrait',
     label: 'Melting Cross',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5364,8 +5213,6 @@ const traits = [
   {
     key: 'SuitAttackSpeedTrait',
     label: 'Rapid Frame',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5380,8 +5227,6 @@ const traits = [
   {
     key: 'SuitAttackSizeTrait',
     label: 'Reaper Frame',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5396,8 +5241,6 @@ const traits = [
   {
     key: 'SuitAttackRangeTrait',
     label: 'Siege Frame',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5412,8 +5255,6 @@ const traits = [
   {
     key: 'SuitFullChargeTrait',
     label: 'World Collider',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5428,8 +5269,6 @@ const traits = [
   {
     key: 'SuitDashAttackTrait',
     label: 'Exhaust Riser',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5444,8 +5283,6 @@ const traits = [
   {
     key: 'SuitSpecialJumpTrait',
     label: 'Shimmering Rockets',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5460,8 +5297,6 @@ const traits = [
   {
     key: 'SuitSpecialStartUpTrait',
     label: 'Furious Rockets',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5476,8 +5311,6 @@ const traits = [
   {
     key: 'SuitSpecialAutoTrait',
     label: 'Launcher Frame',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5492,8 +5325,6 @@ const traits = [
   {
     key: 'SuitSpecialBlockTrait',
     label: 'Counter Barrage',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5508,8 +5339,6 @@ const traits = [
   {
     key: 'SuitSpecialDiscountTrait',
     label: 'Sudden Salvo',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5524,8 +5353,6 @@ const traits = [
   {
     key: 'SuitSpecialConsecutiveHitTrait',
     label: 'Ripper Rockets',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5540,8 +5367,6 @@ const traits = [
   {
     key: 'SuitComboForwardRocketTrait',
     label: 'Elephant Rockets',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5556,8 +5381,6 @@ const traits = [
   {
     key: 'SuitComboBlockBuffTrait',
     label: 'Counter Supreme',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5572,8 +5395,6 @@ const traits = [
   {
     key: 'SuitComboDoubleSpecialTrait',
     label: 'Awakened Rockets',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5588,8 +5409,6 @@ const traits = [
   {
     key: 'SuitComboDashAttackTrait',
     label: 'Mooncrest Riser',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -5604,8 +5423,6 @@ const traits = [
   {
     key: 'SuitPowershotTrait',
     label: 'Chakra Collider',
-    freshOfferRarities: ['Common'],
-    equippedRarities: ['Common'],
     offerRequirements: [],
     elementContributions: {},
     isPersistentGodTrait: false,
@@ -6209,23 +6026,19 @@ const givers = [
       'SuitPowershotTrait',
     ],
     rarityPolicy: {
-      kind: 'fixed',
-      rarity: 'Common',
+      kind: 'none',
     },
     defaultsByLoadout: {
       'WeaponStaffSwing:BaseStaffAspect': {
         options: [
           {
             traitKey: 'StaffDoubleAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffLongAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffDashAttackTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6234,15 +6047,12 @@ const givers = [
         options: [
           {
             traitKey: 'StaffDoubleAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffLongAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffDashAttackTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6251,15 +6061,12 @@ const givers = [
         options: [
           {
             traitKey: 'StaffDoubleAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffLongAttackTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffDashAttackTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6268,15 +6075,12 @@ const givers = [
         options: [
           {
             traitKey: 'StaffTripleShotTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffJumpSpecialTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'StaffAttackRecoveryTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6285,15 +6089,12 @@ const givers = [
         options: [
           {
             traitKey: 'DaggerBlinkAoETrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialJumpTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6302,15 +6103,12 @@ const givers = [
         options: [
           {
             traitKey: 'DaggerBlinkAoETrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialJumpTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6319,15 +6117,12 @@ const givers = [
         options: [
           {
             traitKey: 'DaggerBlinkAoETrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialJumpTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6336,15 +6131,12 @@ const givers = [
         options: [
           {
             traitKey: 'DaggerBlinkAoETrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialJumpTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'DaggerSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6353,15 +6145,12 @@ const givers = [
         options: [
           {
             traitKey: 'AxeSpinSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeChargedSpecialTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeAttackRecoveryTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6370,15 +6159,12 @@ const givers = [
         options: [
           {
             traitKey: 'AxeSpinSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeChargedSpecialTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeAttackRecoveryTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6387,15 +6173,12 @@ const givers = [
         options: [
           {
             traitKey: 'AxeSpinSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeChargedSpecialTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeAttackRecoveryTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6404,15 +6187,12 @@ const givers = [
         options: [
           {
             traitKey: 'AxeSpinSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeChargedSpecialTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'AxeAttackRecoveryTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6421,15 +6201,12 @@ const givers = [
         options: [
           {
             traitKey: 'TorchExSpecialCountTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchSpecialSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchAttackSpeedTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6438,15 +6215,12 @@ const givers = [
         options: [
           {
             traitKey: 'TorchSpecialSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchAttackSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6455,15 +6229,12 @@ const givers = [
         options: [
           {
             traitKey: 'TorchExSpecialCountTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchSpecialSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchAttackSpeedTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6472,15 +6243,12 @@ const givers = [
         options: [
           {
             traitKey: 'TorchExSpecialCountTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchSpecialSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'TorchSpecialLineTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6489,15 +6257,12 @@ const givers = [
         options: [
           {
             traitKey: 'LobAmmoTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobAmmoMagnetismTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobRushArmorTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6506,15 +6271,12 @@ const givers = [
         options: [
           {
             traitKey: 'LobAmmoTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobAmmoMagnetismTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobRushArmorTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6523,15 +6285,12 @@ const givers = [
         options: [
           {
             traitKey: 'LobAmmoTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobAmmoMagnetismTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobRushArmorTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6540,15 +6299,12 @@ const givers = [
         options: [
           {
             traitKey: 'LobRushArmorTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobSpecialSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'LobSturdySpecialTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6557,15 +6313,12 @@ const givers = [
         options: [
           {
             traitKey: 'SuitArmorTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSizeTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6574,15 +6327,12 @@ const givers = [
         options: [
           {
             traitKey: 'SuitArmorTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSizeTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6591,15 +6341,12 @@ const givers = [
         options: [
           {
             traitKey: 'SuitArmorTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSizeTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,
@@ -6608,15 +6355,12 @@ const givers = [
         options: [
           {
             traitKey: 'SuitArmorTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSpeedTrait',
-            rarity: 'Common',
           },
           {
             traitKey: 'SuitAttackSizeTrait',
-            rarity: 'Common',
           },
         ],
         selectedOption: 0,

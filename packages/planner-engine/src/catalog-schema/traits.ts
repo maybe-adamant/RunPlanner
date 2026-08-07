@@ -5,6 +5,20 @@ export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer';
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
 
+/** The rarity vocabulary a declaration participates in.
+ *
+ * Hammers are deliberately un-rarified in the planner.  Keeping that as an
+ * explicit domain (rather than encoding it as a fixed Common rarity) prevents
+ * rarity-bearing Hammer state from leaking into authored or derived products.
+ */
+export type TraitRarityDomain =
+  | { readonly kind: 'none' }
+  | {
+      readonly kind: 'ranked';
+      readonly freshOfferRarities: readonly TraitRarity[];
+      readonly equippedRarities: readonly TraitRarity[];
+    };
+
 export type TraitElement = 'Aether' | 'Earth' | 'Air' | 'Fire' | 'Water';
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
@@ -72,8 +86,7 @@ export interface HammerCompatibility {
 export interface TraitDeclaration {
   readonly key: string;
   readonly label: string;
-  readonly freshOfferRarities: readonly TraitRarity[];
-  readonly equippedRarities: readonly TraitRarity[];
+  readonly rarityDomain: TraitRarityDomain;
   readonly offerRequirements: readonly TraitRequirementExpression[];
   readonly ordinaryBoonSlot?: TraitOrdinaryBoonSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
@@ -87,7 +100,7 @@ export interface TraitDeclaration {
 
 export interface TraitOfferOptionDefault {
   readonly traitKey: string;
-  readonly rarity: TraitRarity;
+  readonly rarity?: TraitRarity;
 }
 
 export interface TraitOfferDefaults {
@@ -99,9 +112,7 @@ export interface TraitOfferDefaults {
   readonly selectedOption: 0 | 1 | 2;
 }
 
-export type TraitGiverRarityPolicy =
-  | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
-  | { readonly kind: 'fixed'; readonly rarity: TraitRarity };
+export type TraitGiverRarityPolicy = TraitRarityDomain;
 
 export interface TraitGiverDeclaration {
   readonly key: string;
@@ -129,5 +140,4 @@ export interface TraitCatalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
-  readonly deferredTraitKeys: readonly string[];
 }

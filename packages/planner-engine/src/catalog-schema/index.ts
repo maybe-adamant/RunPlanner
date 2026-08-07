@@ -646,7 +646,6 @@ export interface Catalog {
   readonly traitRarityOrder: readonly ['Common', 'Rare', 'Epic', 'Heroic'];
   readonly traitElements: readonly TraitElement[];
   readonly traitBaseElements: readonly ['Earth', 'Air', 'Fire', 'Water'];
-  readonly deferredTraitKeys: readonly string[];
 }
 
 export interface CatalogSummary {
