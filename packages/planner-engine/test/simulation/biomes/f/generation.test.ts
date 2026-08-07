@@ -57,7 +57,7 @@ function evaluate(project = createFGenerationProject()) {
     traitContext(project),
   );
   const history = composeBiomeHistory(catalog, snapshot);
-  const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+  const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1, traitContext(project));
   return {
     snapshot,
     history,

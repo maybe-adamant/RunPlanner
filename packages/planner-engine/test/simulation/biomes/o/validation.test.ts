@@ -6,6 +6,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createRouteAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createTargetAddress,
@@ -18,7 +19,13 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createRepresentativeNOProject,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures';
+import { evaluateBiomeRewardsAssembly } from '../../../../src/simulation/rewards/biome';
 
 function evaluateO(project = createRepresentativeNOProject()) {
   const evaluation = simulateProject(catalog, project);
@@ -465,6 +472,124 @@ describe('selected O validation', () => {
       { kind: 'rewardWheelOffer', result: { supported: true, findings: [] } },
       { kind: 'rewardWheelPicked', result: { selectedPossible: true, findings: [] } },
     ]);
+  });
+
+  it('uses the route loadout for a wheel2 Hammer check when the first wheel offer has no context', () => {
+    let project = createRepresentativeNOProject();
+    const shipOwner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelPicked',
+      wheel,
+      pickedOfferIndex: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: shipOwner,
+      encounterCount: 3,
+    });
+    project = authorLegalTraitOffers(project);
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    if (route === undefined) throw new Error('O fixture has no Surface route');
+    const replacementWeapon = catalog.weapons.values.find(
+      (weapon) => weapon.key !== route.loadout.weaponKey,
+    );
+    if (replacementWeapon === undefined) throw new Error('missing replacement weapon');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Surface'),
+      weaponKey: replacementWeapon.key,
+      aspectKey: replacementWeapon.defaultAspectKey,
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const currentRoute = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    if (currentRoute === undefined) throw new Error('O fixture lost Surface route');
+    const evaluatedRoute = assembly.evaluation.routes.find(
+      (candidate) => candidate.routeKey === 'Surface',
+    );
+    const n = evaluatedRoute?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const o = evaluatedRoute?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (
+      n?.authoring !== 'complete' ||
+      n.validity !== 'valid' ||
+      o?.authoring !== 'complete' ||
+      o.snapshot === undefined
+    ) {
+      throw new Error('O fixture did not complete after the stale Hammer edit');
+    }
+    const snapshot = o.snapshot;
+    const withoutFirstWheelContext = {
+      ...snapshot,
+      decisions: Object.freeze(
+        snapshot.decisions.map((decision) =>
+          decision.kind !== 'batch'
+            ? decision
+            : Object.freeze({
+                ...decision,
+                targets: Object.freeze(
+                  decision.targets.map((target) =>
+                    target.room.occurrenceId !== oOccurrenceIds.combat07
+                      ? target
+                      : Object.freeze({
+                          ...target,
+                          room: Object.freeze({
+                            ...target.room,
+                            rewardWheels: Object.freeze(
+                              target.room.rewardWheels!.map((candidateWheel) =>
+                                candidateWheel.wheelKey !== 'wheel1'
+                                  ? candidateWheel
+                                  : Object.freeze({
+                                      ...candidateWheel,
+                                      offers: Object.freeze(
+                                        candidateWheel.offers.map((offer, index) => {
+                                          if (index !== 0) return offer;
+                                          const { traitContext, ...withoutContext } = offer;
+                                          void traitContext;
+                                          return Object.freeze(withoutContext);
+                                        }),
+                                      ),
+                                    }),
+                              ),
+                            ),
+                          }),
+                        }),
+                  ),
+                ),
+              }),
+        ),
+      ),
+    };
+    const rewardAssembly = evaluateBiomeRewardsAssembly(
+      catalog,
+      withoutFirstWheelContext,
+      o.history,
+      2,
+      currentRoute.loadout,
+      n.rewards.branches,
+    );
+    const lifecycle = rewardAssembly.lifecycleArtifacts.shipAt(shipOwner);
+    if (lifecycle === undefined) throw new Error('missing Ship lifecycle candidate');
+    const occurrence = project.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+      );
+    if (occurrence?.state.kind !== 'shipCombat') throw new Error('missing Ship state');
+
+    const result = lifecycle.evaluateState(occurrence.state);
+    expect(result.findings).toContainEqual(expect.objectContaining({ code: 'wrongHammerLoadout' }));
   });
 
   it('evaluates dormant wheel2 when a supported encounter-count candidate activates it', () => {

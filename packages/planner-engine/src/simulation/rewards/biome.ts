@@ -589,15 +589,9 @@ function prepareShipLifecycleCandidateContext(
   history: BiomeRewardHistory,
   branchesBeforeFirstWheel: readonly RewardBranchState[],
   enteredBiomeCount: number,
+  routeLoadout: RouteLoadout,
 ): ShipLifecycleCandidateContext {
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
-  const loadout = room.rewardWheels?.[0]?.offers[0]?.traitContext;
-  if (loadout === undefined || loadout.weaponKey === undefined || loadout.aspectKey === undefined) {
-    throw new BiomeRewardSimulationContractError(
-      `${room.gameName} ShipCombat candidate requires a route loadout`,
-    );
-  }
-  const routeLoadout = loadout as RouteLoadout;
   return Object.freeze({
     origin: room.origin,
     activeWheelKeys,
@@ -689,6 +683,7 @@ export function evaluateBiomeRewardsAssembly(
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
   enteredBiomeCount: number,
+  routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
@@ -1422,6 +1417,7 @@ export function evaluateBiomeRewardsAssembly(
               history,
               branches,
               enteredBiomeCount,
+              routeLoadout,
             ),
           );
         }
@@ -1719,6 +1715,7 @@ export function evaluateBiomeRewards(
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
   enteredBiomeCount: number,
+  routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
 ): BiomeRewardSimulation {
   return evaluateBiomeRewardsAssembly(
@@ -1726,6 +1723,7 @@ export function evaluateBiomeRewards(
     snapshot,
     history,
     enteredBiomeCount,
+    routeLoadout,
     initialBranches,
   ).simulation;
 }

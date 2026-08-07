@@ -156,13 +156,12 @@ function products(
   prefix: MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   },
-  enteredBiomeCount: number,
-  seed?: ProgressiveSeed,
+  context: ProgressiveBiomeContext,
 ): ProgressiveProducts {
   const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
-    seed?.history.afterTransition,
+    context.seed?.history.afterTransition,
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
@@ -184,8 +183,9 @@ function products(
     catalog,
     prefix,
     history,
-    enteredBiomeCount,
-    seed?.rewardBranches,
+    context.enteredBiomeCount,
+    context.loadout,
+    context.seed?.rewardBranches,
   );
   const roomGeneration = generation(
     catalog,
@@ -194,7 +194,7 @@ function products(
     },
     prefix,
     history,
-    enteredBiomeCount,
+    context.enteredBiomeCount,
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
@@ -712,7 +712,7 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   const materializedPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
-  const evaluated = products(catalog, materializedPrefix, context.enteredBiomeCount, context.seed);
+  const evaluated = products(catalog, materializedPrefix, context);
   const unsupported = firstUnsupportedFinding(
     materializedPrefix,
     evaluated.evaluation,
@@ -759,7 +759,7 @@ export function evaluateProgressiveBiomeAssembly(
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   let executionPrefix = authoredPrefix;
-  let evaluated = products(catalog, executionPrefix, context.enteredBiomeCount, context.seed);
+  let evaluated = products(catalog, executionPrefix, context);
   let retainedInteractions = evaluated.candidateArtifacts;
   let encounterArtifacts = evaluated.candidateArtifacts.encounters;
   let encounterFindings: readonly SemanticFinding[] =
@@ -784,19 +784,14 @@ export function evaluateProgressiveBiomeAssembly(
     executionPrefix = clamped as MaterializedBiomePrefix & {
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     };
-    evaluated = products(catalog, executionPrefix, context.enteredBiomeCount, context.seed);
+    evaluated = products(catalog, executionPrefix, context);
     const interactionPrefix = retainedInteractionPrefix(
       authoredPrefix,
       unsupported,
     ) as MaterializedBiomePrefix & {
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     };
-    retainedInteractions = products(
-      catalog,
-      interactionPrefix,
-      context.enteredBiomeCount,
-      context.seed,
-    ).candidateArtifacts;
+    retainedInteractions = products(catalog, interactionPrefix, context).candidateArtifacts;
     const retainedEncounterCandidates = evaluateEncounterCandidates(
       catalog,
       structurallyActiveEncounterRooms(authoredPrefix),

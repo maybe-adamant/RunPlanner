@@ -811,7 +811,13 @@ describe('route-detour simulation', () => {
     (success) => {
       const { project, anomaly, returned } = buildAnomalyProject(success);
       const { snapshot, history } = prefix(project, gBiome);
-      const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+      const rewards = evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        1,
+        traitContext(project, gBiome),
+      );
       const incoming = createIncomingRewardAddress(gBiome, anomaly);
       const anomalyRoom = snapshot.decisions
         .filter((decision) => decision.kind === 'batch')
@@ -885,7 +891,13 @@ describe('route-detour simulation', () => {
       },
     });
     const { snapshot, history } = prefix(project, gBiome);
-    const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+    const rewards = evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project, gBiome),
+    );
 
     const anomalyRoom = snapshot.decisions
       .filter((decision) => decision.kind === 'batch')
@@ -951,7 +963,13 @@ describe('route-detour simulation', () => {
         },
       });
       const { snapshot, history } = prefix(project, gBiome);
-      const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+      const rewards = evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        1,
+        traitContext(project, gBiome),
+      );
       const traces = rewards.branches
         .flatMap((branch) => branch.traitEvaluations ?? [])
         .filter((trace) => semanticAddressKey(trace.address) === semanticAddressKey(incoming));
@@ -1204,7 +1222,13 @@ describe('route-detour simulation', () => {
       { normalTargets: true },
     );
     const { snapshot, history } = prefix(project, fBiome);
-    const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+    const rewards = evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project, fBiome),
+    );
     const shopBatch = snapshot.decisions.find(
       (decision) =>
         decision.kind === 'batch' &&

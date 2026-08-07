@@ -152,7 +152,11 @@ function evaluate(project: ProjectDocument) {
   project = authorLegalTraitOffers(project);
   const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
   const history = composeBiomeHistory(catalog, snapshot);
-  return { snapshot, history, rewards: evaluateBiomeRewards(catalog, snapshot, history, 1) };
+  return {
+    snapshot,
+    history,
+    rewards: evaluateBiomeRewards(catalog, snapshot, history, 1, traitContext(project)),
+  };
 }
 
 function firstBranch(result: ReturnType<typeof evaluate>['rewards']) {
@@ -781,9 +785,9 @@ describe('F reward-history simulation', () => {
     });
     const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
 
-    expect(() => evaluateBiomeRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
-      /in the snapshot but .* in history/,
-    );
+    expect(() =>
+      evaluateBiomeRewards(catalog, snapshot, baseline.history, 1, traitContext(project)),
+    ).toThrowError(/in the snapshot but .* in history/);
   });
 
   it('keeps an already context-invalid downstream offer authored after room replacement', () => {
