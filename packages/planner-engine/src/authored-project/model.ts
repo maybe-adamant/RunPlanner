@@ -159,8 +159,6 @@ export interface NaturalChaosAdditionalExit {
 }
 
 export type AuthoredAdditionalExit = ZagreusContractAdditionalExit | NaturalChaosAdditionalExit;
-/** @deprecated Use AuthoredAdditionalExit at occurrence ownership boundaries. */
-export type AdditionalExit = AuthoredAdditionalExit;
 
 export interface ExitDecision {
   readonly kind: 'exit';

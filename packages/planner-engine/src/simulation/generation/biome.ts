@@ -847,6 +847,7 @@ function evaluateAdditionalContinuationEntries(
       if (window !== undefined) {
         const recentOrigins = new Set(
           parentHistory.entry.ledgers.roomAppearances
+            .slice(0, -1)
             .slice(-window)
             .map((appearance) => semanticAddressKey(appearance.origin)),
         );

@@ -67,6 +67,98 @@ describe('underworld product loop', () => {
     expect(document.body.textContent).not.toContain('Linear topology');
   });
 
+  it('authors, configures, selects, and continues through a natural Chaos gate', async () => {
+    const application = createApplication();
+    const opening = createOccurrenceId('product-natural-chaos-opening');
+    let project = createProjectDocument(application.catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Natural Chaos product loop',
+      projectId: 'natural-chaos-product-loop',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, opening)),
+      ),
+    );
+    await view.user.click(screen.getByText('Customize'));
+    await view.user.click(screen.getByRole('button', { name: 'Add Chaos gate' }));
+
+    const topology = () =>
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
+    const authoredGate = topology()
+      ?.occurrences.find((occurrence) => occurrence.occurrenceId === opening)
+      ?.additionalExits.find((additional) => additional.kind === 'naturalChaos');
+    if (authoredGate === undefined) throw new Error('natural Chaos gate was not authored');
+    const chaosOccurrenceId = authoredGate.occurrenceId;
+    const source = { kind: 'occurrence' as const, occurrenceId: opening };
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createExitDecisionAddress(goldenFBiome, source)),
+      ),
+    );
+
+    await view.user.selectOptions(screen.getByLabelText(/Base reward pool/), 'MetaProgress');
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const normalRoom = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) => option.getAttribute('aria-disabled') !== 'true');
+    if (normalRoom === undefined) throw new Error('natural Chaos normal lane has no room choice');
+    await view.user.click(normalRoom);
+
+    const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
+    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
+    await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
+    expect(
+      topology()?.occurrences.find((occurrence) => occurrence.occurrenceId === chaosOccurrenceId)
+        ?.gameName,
+    ).toBe('Chaos_06');
+    expect(
+      topology()?.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === opening,
+      ),
+    ).toMatchObject({
+      selection: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    });
+
+    await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
+    await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
+    expect(
+      topology()?.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === chaosOccurrenceId,
+      ),
+    ).toBe(true);
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      topology()?.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === chaosOccurrenceId,
+      ),
+    ).toBe(false);
+  });
+
   it('keeps a blocked downstream biome structurally authorable through the workspace', async () => {
     const application = createApplication();
     const view = renderPlannerForInteraction({ application });

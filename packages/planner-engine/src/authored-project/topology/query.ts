@@ -8,7 +8,7 @@ import type {
 } from '../../catalog-schema';
 import type { TargetAddress } from '../addresses';
 import type {
-  AdditionalExit,
+  AuthoredAdditionalExit,
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
@@ -410,7 +410,7 @@ export function selectedExitTarget(decision: ExitDecision): ExitTargetReference 
 export function additionalExitsForDecision(
   topology: AdditionalExitTopology,
   decision: ExitDecision,
-): readonly AdditionalExit[] {
+): readonly AuthoredAdditionalExit[] {
   if (decision.source.kind !== 'occurrence') return Object.freeze([]);
   const sourceOccurrenceId = decision.source.occurrenceId;
   return (
@@ -421,8 +421,8 @@ export function additionalExitsForDecision(
 
 export function selectedAdditionalExit(
   decision: ExitDecision,
-  additionalExits: readonly AdditionalExit[] = Object.freeze([]),
-): AdditionalExit | undefined {
+  additionalExits: readonly AuthoredAdditionalExit[] = Object.freeze([]),
+): AuthoredAdditionalExit | undefined {
   const selection = decision.selection;
   if (selection.kind !== 'additional') return undefined;
   return additionalExits.find((exit) => exit.key === selection.additionalExitKey);
@@ -430,7 +430,7 @@ export function selectedAdditionalExit(
 
 export type SelectedExitContinuation =
   | { readonly kind: 'normal'; readonly target: ExitTargetReference }
-  | { readonly kind: 'additional'; readonly exit: AdditionalExit };
+  | { readonly kind: 'additional'; readonly exit: AuthoredAdditionalExit };
 
 /**
  * Resolves the selected topology edge across both normal and closed
@@ -439,7 +439,7 @@ export type SelectedExitContinuation =
  */
 export function selectedExitContinuation(
   decision: ExitDecision,
-  additionalExits: readonly AdditionalExit[] = Object.freeze([]),
+  additionalExits: readonly AuthoredAdditionalExit[] = Object.freeze([]),
 ): SelectedExitContinuation | undefined {
   const target = selectedExitTarget(decision);
   if (target !== undefined) return Object.freeze({ kind: 'normal', target });

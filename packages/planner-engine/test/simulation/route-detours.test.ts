@@ -27,6 +27,7 @@ import {
   evaluateBiomeRewards,
   evaluateBiomeRoomGeneration,
   materializeBiomePrefix,
+  simulateProject,
   simulateProjectAssembly,
   type BiomeHistoryPrefix,
   type CanonicalAuthoredRoom,
@@ -36,8 +37,11 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
+  goldenGStartId,
 } from '@run-planner/test-fixtures';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -714,6 +718,49 @@ describe('route-detour simulation', () => {
       }),
     );
   });
+
+  it.each([
+    { blocked: true, fBatchIndex: 4, position: 'tenth' },
+    { blocked: false, fBatchIndex: 3, position: 'eleventh' },
+  ] as const)(
+    'treats a skipped cross-biome Chaos offer at the $position predecessor as blocked=$blocked',
+    ({ blocked, fBatchIndex }) => {
+      const firstSource = goldenFOccurrenceId(fBatchIndex, 1);
+      const firstAdditional = createAdditionalExitAddress(
+        goldenFBiome,
+        firstSource,
+        'naturalChaos',
+      );
+      const secondAdditional = createAdditionalExitAddress(
+        goldenGBiome,
+        goldenGStartId,
+        'naturalChaos',
+      );
+      let project = createCompleteFGProject();
+      project = applyProjectCommand(project, catalog, {
+        kind: 'AddNaturalChaos',
+        additional: firstAdditional,
+        occurrenceId: createOccurrenceId(`cross-biome-chaos-f-${fBatchIndex}`),
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'AddNaturalChaos',
+        additional: secondAdditional,
+        occurrenceId: createOccurrenceId(`cross-biome-chaos-g-${fBatchIndex}`),
+      });
+
+      const g = simulateProject(catalog, project)
+        .routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G');
+      const spacingFinding = g?.findings.find(
+        (finding) =>
+          semanticAddressKey(finding.origin) === semanticAddressKey(secondAdditional) &&
+          finding.evidence.kind === 'naturalChaos' &&
+          Array.isArray(finding.evidence.failedConditions) &&
+          finding.evidence.failedConditions.includes('offerSpacing'),
+      );
+      expect(spacingFinding !== undefined).toBe(blocked);
+    },
+  );
 
   it('records the Chaos offer at source entry, then enters Chaos and generates a fresh host target', () => {
     const { project, opening, chaos, returned, additional } = buildNaturalChaosProject();

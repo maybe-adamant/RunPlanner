@@ -2,9 +2,9 @@ import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { decodeBatchState } from '../batchState';
 import type {
-  AdditionalExit,
   AnomalyReplacementProvenance,
   AuthoredBatchState,
+  AuthoredAdditionalExit,
   BatchRewardStoreState,
   BiomeTopology,
   ExitDecision,
@@ -180,10 +180,10 @@ function decodeAdditionalExits(
   value: unknown,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
   path: string,
-): readonly AdditionalExit[] {
+): readonly AuthoredAdditionalExit[] {
   const rawAdditional = expectArray(value, path);
   const seen = new Set<string>();
-  const additional = rawAdditional.map((rawValue, index): AdditionalExit => {
+  const additional = rawAdditional.map((rawValue, index): AuthoredAdditionalExit => {
     const additionalPath = `${path}[${index}]`;
     const additional = expectRecord(rawValue, additionalPath);
     const kind = expectString(additional.kind, `${additionalPath}.kind`);
@@ -210,7 +210,7 @@ function decodeAdditionalExits(
     if (kind === 'zagreusContract' && target.gameName !== 'C_Boss01') {
       failProjectDocument(`${additionalPath}.occurrenceId`, `${key} requires C_Boss01`);
     }
-    return Object.freeze({ kind, key, occurrenceId: id }) as AdditionalExit;
+    return Object.freeze({ kind, key, occurrenceId: id }) as AuthoredAdditionalExit;
   });
   return Object.freeze(additional);
 }
@@ -904,7 +904,7 @@ function ownerForNormalTarget(
 }
 
 function ownerForAdditionalExit(
-  additional: AdditionalExit,
+  additional: AuthoredAdditionalExit,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
   catalog: Catalog,
   layout: BiomeLayout,

@@ -122,7 +122,7 @@ export {
   type AuthoredRoomState,
   type AuthoredRoutePlan,
   type AuthoredBatchState,
-  type AdditionalExit,
+  type AuthoredAdditionalExit,
   type AnomalyReplacementProvenance,
   type AnomalyRoomState,
   type BatchRewardStoreState,
