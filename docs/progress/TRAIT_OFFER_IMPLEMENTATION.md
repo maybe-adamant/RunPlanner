@@ -16,10 +16,11 @@ Add concrete three-choice trait offers for the first complete provider slice:
 - Hermes; and
 - Daedalus Hammers for all six weapons and four aspects per weapon.
 
-The feature records the three alternatives, the rarity carried by each
-alternative, and the one selected trait. It folds only the selected trait into
-chronological equipped-trait state, derives the offer facts that depend on that
-state, and preserves the existing exact loot and use ledgers.
+The feature records the three alternatives, the rarity carried by each ranked
+alternative, and the one selected trait. Hammer alternatives carry no rarity.
+It folds only the selected trait into chronological equipped-trait state,
+derives the offer facts that depend on that state, and preserves the existing
+exact loot and use ledgers.
 
 This is not a generic item-effect system. The slice exists to establish one
 truthful trait-offer contract and prove it through dependency-driven boons,
@@ -79,9 +80,10 @@ The first slice models:
 - exact giver-pool membership;
 - exactly three distinct offered trait keys;
 - one selected option;
-- supported fresh-offer rarity for each trait;
-- concrete equipped rarity, including `Heroic` as a representable in-run state
-  but never a fresh ordinary choice;
+- supported fresh-offer rarity for each ranked trait;
+- concrete equipped rarity for ranked traits, including `Heroic` as a
+  representable in-run state but never a fresh ordinary choice;
+- explicit absence of rarity for Hammer traits;
 - exclusion of an already equipped copy;
 - positive equipped-trait prerequisites;
 - in-scope negative equipped-trait predicates found during Gate A closure;
@@ -144,7 +146,8 @@ owns its key and label and belongs to exactly one weapon.
 A trait declaration owns only facts consumed by this slice:
 
 - exact game key and label;
-- supported fresh-offer rarity domain and supported equipped rarity levels;
+- a supported fresh/equipped rarity domain, or an explicit no-rarity domain for
+  Hammers;
 - typed offer requirements: positive and negative equipped keys, element
   thresholds, rarity-count thresholds, upgradeability predicates, and
   offer-context facts;
@@ -183,8 +186,9 @@ A giver declaration owns:
 - unique ordered trait pool;
 - exact three-trait authored defaults: one provider default for
   Olympian/Hermes givers and loadout-keyed defaults for Hammers; and
-- rarity authorship: selectable for Olympian/Hermes scalable traits and fixed
-  for sole-rarity traits and Hammers.
+- rarity authorship: selectable for Olympian/Hermes scalable traits, with
+  trait-local sole-rarity domains for Legendary and Duo traits, and absent for
+  Hammers.
 
 Reward types continue to own acquisition-role resolution. Room declarations
 own room facts such as `BlockGiftBoons`; reward context owns facts such as
@@ -237,16 +241,15 @@ role.
 An authored trait offer contains three stable slots and one selected slot:
 
 ```text
-option1 -> trait key + rarity
-option2 -> trait key + rarity
-option3 -> trait key + rarity
+option1 -> trait key + rarity when ranked
+option2 -> trait key + rarity when ranked
+option3 -> trait key + rarity when ranked
 selectedOptionKey -> option1 | option2 | option3
 ```
 
-Rarity is a concrete game fact on every option. Hammers use the giver's fixed
-fresh-offer rarity, so React does not present a Hammer rarity control.
-Legendary and Duo traits likewise expose their sole legal rarity rather than a
-meaningless picker.
+Rarity is a concrete game fact on every ranked option. Hammer options have no
+rarity field and React presents no Hammer rarity control. Legendary and Duo
+traits expose their sole legal rarity rather than a meaningless picker.
 
 Replacing a parent reward or source atomically installs the new role-complete
 trait defaults and discards incompatible descendants. Hammer default
@@ -288,8 +291,8 @@ Add an explicit trait history product beside existing reward history:
 
 - chronological trait-offer events with exact semantic owner, giver, three
   options, selected option, and acquisition point;
-- folded equipped traits keyed by exact trait key and retaining concrete
-  rarity;
+- folded equipped traits keyed by exact trait key, retaining concrete rarity
+  for ranked traits and no rarity for Hammers;
 - ordinary boon-slot occupancy;
 - element counts and `highestBaseElementCount`;
 - god-boon rarity counts; and
@@ -337,7 +340,7 @@ catalog
 + route loadout
 + resolved offer context: acquisition role, reward type, and declaration-owned
   room facts
--> trait and rarity candidate assessments
+-> trait and applicable-rarity candidate assessments
 ```
 
 Presentation and interaction binding consume this product as sibling
@@ -418,9 +421,9 @@ requires its own UX decision and regression scope.
 Each route gains a `Traits` panel beside Route and NPCs. It projects reached
 trait-offer evaluations in lifecycle order, including the currently invalid
 reached offers that were omitted from canonical equipped state. Each compact
-row shows biome/room, giver, selected trait, and rarity, then opens the same
-`TraitOfferDialog` used by the room launcher. The full three-option form is not
-duplicated inline in the route panel.
+row shows biome/room, giver, selected trait, and rarity where applicable, then
+opens the same `TraitOfferDialog` used by the room launcher. The full
+three-option form is not duplicated inline in the route panel.
 
 The route panel and room inspector reference the same `TraitOfferAddress`,
 workspace control package, candidate query, and bound commands. They are two
@@ -520,7 +523,8 @@ Deliver:
   god-boon rarity counts, slots, and exact `upgradableTraitCount`;
 - the explicit reached-offer evaluation trace and context-unavailable
   boundary;
-- pure trait/rarity candidate assessment for every included provider;
+- pure trait and applicable-rarity candidate assessment for every included
+  provider;
 - three-alternative validation against one pre-selection history snapshot;
 - already-equipped, prerequisite, supported negative predicate, ordinary
   slot, offer-context, element, rarity-count, rarifiable target,
@@ -577,7 +581,7 @@ Deliver:
 - the chronological route Traits panel with exact navigation;
 - Route overview loadout controls;
 - rarity-aware Olympian/Hermes editing; and
-- fixed-rarity Hammer editing with no fake rarity selector.
+- no-rarity Hammer editing with no fake rarity field or selector.
 
 Audit against:
 
@@ -608,8 +612,9 @@ Deliver:
 
 - exhaustive source-to-catalog closure checks for every included giver,
   prerequisite, offer-context rule, element contribution, derived-fact
-  predicate, rarity level, stacking/in-run-rarify flag, aspect restriction,
-  and equipped-trait exclusion;
+  predicate, ranked rarity level or no-rarity classification,
+  stacking/in-run-rarify flag, aspect restriction, and equipped-trait
+  exclusion;
 - representative full-route chronology through ordinary, Hermes, Devotion,
   Shop, and Hammer acquisitions;
 - cross-layer product-loop closure; and
@@ -664,8 +669,8 @@ The slice is complete when:
    offer;
 2. only its selected option changes equipped state at the correct lifecycle
    point;
-3. loot/use history remains intact and element, rarity, slot, and upgradeability
-   facts derive only from concrete equipped traits;
+3. loot/use history remains intact and element, applicable rarity, slot, and
+   upgradeability facts derive only from concrete equipped traits;
 4. Olympian/Hermes prerequisites, Devotion/room context, infusion and
    rarity-derived requirements, and Hammer loadout/exclusion rules drive engine
    candidates and findings;

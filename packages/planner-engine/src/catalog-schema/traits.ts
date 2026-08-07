@@ -112,7 +112,10 @@ export interface TraitOfferDefaults {
   readonly selectedOption: 0 | 1 | 2;
 }
 
-export type TraitGiverRarityPolicy = TraitRarityDomain;
+/** The rarity controls a giver exposes while authoring a fresh offer. */
+export type TraitGiverRarityPolicy =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] };
 
 export interface TraitGiverDeclaration {
   readonly key: string;

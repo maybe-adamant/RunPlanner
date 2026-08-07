@@ -81,6 +81,84 @@ const expectedPositiveRequirementOwners = [
   'BloodManaBurstBoon',
 ] as const;
 
+const expectedOrdinarySlots = Object.fromEntries(
+  [
+    'Aphrodite',
+    'Apollo',
+    'Ares',
+    'Demeter',
+    'Hephaestus',
+    'Hera',
+    'Hestia',
+    'Poseidon',
+    'Zeus',
+  ].flatMap((giver) => [
+    [`${giver}WeaponBoon`, 'Melee'],
+    [`${giver}SpecialBoon`, 'Secondary'],
+    [`${giver}CastBoon`, 'Ranged'],
+    [`${giver}SprintBoon`, 'Rush'],
+    [`${giver}ManaBoon`, 'Mana'],
+  ]),
+);
+
+const sourceKeys = (keys: string): readonly string[] => keys.trim().split(/\s+/).sort();
+
+const expectedElementTraitKeys = {
+  Aether: sourceKeys(`
+    SprintEchoBoon CharmCrowdBoon AllCloseBoon MaxHealthDamageBoon ManaBurstCountBoon
+    BurnRefreshBoon SlamManaBurstBoon BloodManaBurstBoon ApolloSecondStageCastBoon
+    RaiseDeadBoon PoseidonSplashSprintBoon StormSpawnBoon CoverRegenerationBoon
+    BlindClearBoon DoubleSwordBoon SelfCastBoon AutoRevengeBoon BloodRetentionBoon
+    RapidSwordBoon DoubleSplashBoon FireballRendBoon RootStrikeBoon KeepsakeLevelBoon
+    GoodStuffBoon BurnConsumeBoon ClearRootBoon ManaShieldBoon ReboundingSparkBoon
+    MassiveCastBoon DoubleMassiveAttackBoon AllElementalBoon SuperSacrificeBoonHera
+    MoneyDamageBoon ManaRestoreDamageBoon EchoBurnBoon SteamBoon
+    LightningVulnerabilityBoon SuperSacrificeBoonZeus
+  `),
+  Earth: sourceKeys(`
+    AresWeaponBoon AresSpecialBoon AresCastBoon AresSprintBoon AresManaBoon
+    AresExCastBoon RendBloodDropBoon AresStatusDoubleDamageBoon BloodDropRevengeBoon
+    MissingHealthCritBoon LowHealthLifestealBoon OmegaDelayedDamageBoon
+    DoubleBloodDropBoon DemeterManaBoon PlantHealthBoon BoonGrowthBoon
+    ReserveManaHitShieldBoon SlowExAttackBoon CastAttachBoon InstantRootKill
+    HephaestusCastBoon HephaestusManaBoon HeavyArmorBoon ArmorBoon
+    EncounterStartDefenseBuffBoon ManaToHealthBoon WeaponUpgradeBoon HeraWeaponBoon
+    HeraSpecialBoon OmegaHeraProjectileBoon AllElementalBoon HermesWeaponBoon
+    HermesSpecialBoon HermesCastDiscountBoon SorcerySpeedBoon
+  `),
+  Air: sourceKeys(`
+    AphroditeCastBoon AphroditeSprintBoon AphroditeManaBoon HighHealthOffenseBoon
+    HealthRewardBonusBoon FocusRawDamageBoon RandomStatusBoon ApolloWeaponBoon
+    ApolloSpecialBoon ApolloManaBoon PerfectDamageBonusBoon ApolloCastAreaBoon
+    DoubleStrikeChanceBoon HeraCastBoon LinkedDeathDamageBoon SpawnCastDamageBoon
+    AllElementalBoon ZeusWeaponBoon ZeusSpecialBoon ZeusCastBoon ZeusSprintBoon
+    ZeusManaBoon ZeusManaBoltBoon BoltRetaliateBoon CastAnywhereBoon FocusLightningBoon
+    DoubleBoltBoon EchoExpirationBoon LightningDebuffGeneratorBoon SpawnKillBoon
+    DodgeChanceBoon SlowProjectileBoon MoneyMultiplierBoon TimedKillBuffBoon
+    TimeStopLastStandBoon
+  `),
+  Fire: sourceKeys(`
+    ApolloCastBoon ApolloSprintBoon ApolloRetaliateBoon BlindChanceBoon
+    ApolloBlindBoon ApolloExCastBoon DoubleExManaBoon HephaestusWeaponBoon
+    HephaestusSpecialBoon HephaestusSprintBoon MassiveDamageBoon AntiArmorBoon
+    MassiveKnockupBoon HeraSprintBoon DamageShareRetaliateBoon CommonGlobalDamageBoon
+    AllElementalBoon HestiaWeaponBoon HestiaSpecialBoon HestiaCastBoon HestiaSprintBoon
+    HestiaManaBoon OmegaZeroBurnBoon CastProjectileBoon FireballManaSpecialBoon
+    BurnExplodeBoon BurnArmorBoon BurnStackBoon AloneDamageBoon BurnSprintBoon
+    SprintShieldBoon RestockBoon
+  `),
+  Water: sourceKeys(`
+    AphroditeWeaponBoon AphroditeSpecialBoon DoorHealToFullBoon WeakPotencyBoon
+    WeakVulnerabilityBoon ManaBurstBoon DemeterWeaponBoon DemeterSpecialBoon
+    DemeterCastBoon DemeterSprintBoon CastNovaBoon RootDurationBoon HeraManaBoon
+    BoonDecayBoon DamageSharePotencyBoon AllElementalBoon PoseidonWeaponBoon
+    PoseidonSpecialBoon PoseidonCastBoon PoseidonSprintBoon PoseidonManaBoon
+    EncounterStartOffenseBuffBoon RoomRewardBonusBoon FocusDamageShaveBoon
+    DoubleRewardBoon PoseidonStatusBoon PoseidonExCastBoon OmegaPoseidonProjectileBoon
+    AmplifyConeBoon LuckyBoon
+  `),
+} as const;
+
 const expectedHammerRestrictions: Readonly<Record<string, readonly string[]>> = {
   StaffDoubleAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
   StaffLongAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
@@ -727,6 +805,10 @@ describe('trait offer catalog closure', () => {
     expect(traits?.baseElements).toEqual(['Earth', 'Air', 'Fire', 'Water']);
     expect(traits?.offerContexts.byKey.devotionNoDuo?.blockedRarity).toBe('Duo');
     expect(traits?.offerContexts.byKey.blockGiftBoons?.roomFlag).toBe('BlockGiftBoons');
+    expect(traits?.givers.byKey.Aphrodite?.rarityPolicy).toEqual({
+      kind: 'selectable',
+      rarities: ['Common', 'Rare', 'Epic'],
+    });
 
     const allElemental = traits?.traits.byKey.AllElementalBoon;
     expect(allElemental?.elementContributions).toEqual({
@@ -763,9 +845,28 @@ describe('trait offer catalog closure', () => {
       required: false,
     });
 
-    expect(traits?.traits.byKey.AphroditeSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
-    expect(traits?.traits.byKey.ApolloSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
-    expect(traits?.traits.byKey.AresSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
+    expect(
+      Object.fromEntries(
+        traits.traits.values
+          .filter((trait) => trait.ordinaryBoonSlot !== undefined)
+          .map((trait) => [trait.key, trait.ordinaryBoonSlot]),
+      ),
+    ).toEqual(expectedOrdinarySlots);
+
+    expect(
+      Object.fromEntries(
+        catalog.traitElements.map((element) => [
+          element,
+          traits.traits.values
+            .filter((trait) => trait.elementContributions[element] !== undefined)
+            .map((trait) => trait.key)
+            .sort(),
+        ]),
+      ),
+    ).toEqual(expectedElementTraitKeys);
+    expect(
+      new Set(traits.traits.values.flatMap((trait) => Object.values(trait.elementContributions))),
+    ).toEqual(new Set([1]));
 
     const infusionTraits = [
       'ElementalUnifiedBoon',
@@ -791,6 +892,8 @@ describe('trait offer catalog closure', () => {
       freshOfferRarities: ['Common', 'Rare', 'Epic'],
       equippedRarities: ['Common', 'Rare', 'Epic'],
     });
+    expect(Object.isFrozen(traits.traits.byKey.AphroditeWeaponBoon?.rarityDomain)).toBe(true);
+    expect(Object.isFrozen(traits.traits.byKey.StaffDoubleAttackTrait?.rarityDomain)).toBe(true);
   });
 
   it('closes the complete audited dependency, negative, threshold, and aspect matrices', () => {
@@ -1022,6 +1125,21 @@ describe('trait offer catalog closure', () => {
     };
     expect(() => createCatalog(unknownRarity)).toThrow(/must be one of Common/);
 
+    const emptyGiverRarities = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite'
+            ? { ...giver, rarityPolicy: { kind: 'selectable' as const, rarities: [] } }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(emptyGiverRarities)).toThrow(
+      /rarityPolicy\.rarities: must not be empty/,
+    );
+
     const hammerRarity = {
       ...declarations,
       traitCatalog: {
@@ -1127,6 +1245,22 @@ describe('trait offer catalog closure', () => {
     expect(() => createCatalog(malformedPolicy)).toThrow(
       /givers\[.*\]\.rarityPolicy: must be an object/,
     );
+
+    const unsupportedFixedPolicy = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'WeaponUpgrade'
+            ? {
+                ...giver,
+                rarityPolicy: { kind: 'fixed', rarity: 'Common' } as never,
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(unsupportedFixedPolicy)).toThrow(/unknown rarity policy kind fixed/);
   });
 
   it('keeps compiler-local deferred operands out of the normalized catalog', () => {

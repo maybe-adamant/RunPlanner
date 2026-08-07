@@ -355,13 +355,15 @@ function normalizeTraits(
       ),
     );
     // Requirement operands are checked against the complete trait collection after it exists.
-    const rarityDomain = isHammer
-      ? ({ kind: 'none' } as const)
-      : ({
-          kind: 'ranked' as const,
-          freshOfferRarities: Object.freeze(freshOfferRarities),
-          equippedRarities: Object.freeze(equippedRarities),
-        } as const);
+    const rarityDomain = Object.freeze(
+      isHammer
+        ? ({ kind: 'none' } as const)
+        : ({
+            kind: 'ranked' as const,
+            freshOfferRarities: Object.freeze(freshOfferRarities),
+            equippedRarities: Object.freeze(equippedRarities),
+          } as const),
+    );
     if (isHammer && (freshOfferRarities.length !== 0 || equippedRarities.length !== 0)) {
       fail(`${path}.freshOfferRarities`, 'Hammer traits have no rarity domain');
     }
@@ -451,35 +453,44 @@ function normalizeGivers(
       giver.rarityPolicy,
       `${path}.rarityPolicy`,
     ) as unknown as RawTraitGiverDeclaration['rarityPolicy'];
-    const rarityDomain =
+    const rarityPolicyDeclaration = rarityPolicy as unknown as {
+      readonly kind?: unknown;
+    };
+    const normalizedRarityPolicy =
       rarityPolicy.kind === 'none'
         ? ({ kind: 'none' } as const)
         : rarityPolicy.kind === 'selectable'
-          ? {
-              kind: 'ranked' as const,
-              freshOfferRarities: Object.freeze(
-                freezeUniqueStrings(
-                  requireArray(
-                    rarityPolicy.rarities,
-                    `${path}.rarityPolicy.rarities`,
-                  ) as readonly string[],
+          ? (() => {
+              const rarities = freezeUniqueStrings(
+                requireArray(
+                  rarityPolicy.rarities,
                   `${path}.rarityPolicy.rarities`,
-                ).map((rarity, rarityIndex) =>
-                  closedValue(
-                    rarity,
-                    ['Common', 'Rare', 'Epic'] as const,
-                    `${path}.rarityPolicy.rarities[${rarityIndex}]`,
-                  ),
+                ) as readonly string[],
+                `${path}.rarityPolicy.rarities`,
+              ).map((rarity, rarityIndex) =>
+                closedValue(
+                  rarity,
+                  ['Common', 'Rare', 'Epic'] as const,
+                  `${path}.rarityPolicy.rarities[${rarityIndex}]`,
                 ),
-              ),
-              equippedRarities: Object.freeze(['Common', 'Rare', 'Epic', 'Heroic'] as const),
-            }
-          : fail(`${path}.rarityPolicy`, 'fixed rarity authorship is not supported');
-    const normalizedRarityDomain = Object.freeze(rarityDomain);
-    if (providerKind === 'hammer' && normalizedRarityDomain.kind !== 'none')
+              );
+              if (rarities.length === 0) {
+                fail(`${path}.rarityPolicy.rarities`, 'must not be empty');
+              }
+              return { kind: 'selectable' as const, rarities: Object.freeze(rarities) };
+            })()
+          : fail(
+              `${path}.rarityPolicy.kind`,
+              `unknown rarity policy kind ${String(rarityPolicyDeclaration.kind)}`,
+            );
+    const frozenRarityPolicy = Object.freeze(normalizedRarityPolicy);
+    if (providerKind === 'hammer' && frozenRarityPolicy.kind !== 'none')
       fail(`${path}.rarityPolicy`, 'Hammer givers require no rarity authorship');
-    if (providerKind !== 'hammer' && normalizedRarityDomain.kind !== 'ranked')
-      fail(`${path}.rarityPolicy`, 'Olympian and Hermes givers require ranked rarity authorship');
+    if (providerKind !== 'hammer' && frozenRarityPolicy.kind !== 'selectable')
+      fail(
+        `${path}.rarityPolicy`,
+        'Olympian and Hermes givers require selectable rarity authorship',
+      );
     if (providerKind === 'hammer' && giver.defaultsByLoadout === undefined)
       fail(`${path}.defaultsByLoadout`, 'must cover every loadout');
     if (providerKind !== 'hammer' && giver.defaultOffer === undefined)
@@ -492,11 +503,9 @@ function normalizeGivers(
       defaults.options.forEach((option, optionIndex) => {
         const trait = traits.byKey[option.traitKey];
         if (
-          normalizedRarityDomain.kind === 'ranked' &&
+          frozenRarityPolicy.kind === 'selectable' &&
           option.rarity !== undefined &&
-          !(normalizedRarityDomain.freshOfferRarities as readonly TraitRarity[]).includes(
-            option.rarity,
-          ) &&
+          !(frozenRarityPolicy.rarities as readonly TraitRarity[]).includes(option.rarity) &&
           !(
             trait?.rarityDomain.kind === 'ranked' &&
             trait.rarityDomain.freshOfferRarities.length === 1 &&
@@ -561,7 +570,7 @@ function normalizeGivers(
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
       traitKeys,
-      rarityPolicy: normalizedRarityDomain,
+      rarityPolicy: frozenRarityPolicy,
       ...(defaultOffer === undefined ? {} : { defaultOffer }),
       ...(Object.keys(defaultsByLoadout).length === 0
         ? {}
