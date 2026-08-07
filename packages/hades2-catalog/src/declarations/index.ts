@@ -16,6 +16,7 @@ import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
 import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
+import { traitCatalogInput } from './trait-data';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 
 const rooms: readonly RawRoomDeclaration[] = [
@@ -45,6 +46,7 @@ export const declarations = {
   exitTypes,
   rooms,
   biomeLayouts,
+  traitCatalog: traitCatalogInput,
 } as const satisfies RawCatalogInput;
 
 export type {
@@ -68,4 +70,5 @@ export type {
   RawRoomLifecycleProfileDeclaration,
   RawShopRewardBinding,
   RawZagreusContractAdditionalExitDeclaration,
+  RawTraitCatalogInput,
 } from './types';
