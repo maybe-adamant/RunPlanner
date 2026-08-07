@@ -8,7 +8,12 @@ import {
   createShopPurchaseAddress,
   type BiomeAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredRoomState, RoomOccurrence, ShopState } from '../../authored-project/model';
+import type {
+  AuthoredRoomState,
+  RoomOccurrence,
+  RouteLoadout,
+  ShopState,
+} from '../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
 import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
 import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
@@ -20,7 +25,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitMaterializationContext, TraitOfferContext } from '../traits';
+import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 
 function fail(detail: string): never {
@@ -60,7 +65,7 @@ export interface AuthoredRoomMaterializationContext {
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
-  readonly traitContext?: TraitMaterializationContext;
+  readonly loadout?: RouteLoadout;
 }
 
 interface MaterializedRoomLeaf {
@@ -94,8 +99,15 @@ function traitContextForOffer(
   context: AuthoredRoomMaterializationContext,
   offer: ResolvedRewardOffer,
 ): TraitOfferContext {
+  if (
+    context.loadout === undefined ||
+    context.loadout.weaponKey.length === 0 ||
+    context.loadout.aspectKey.length === 0
+  ) {
+    fail(`${context.room.gameName} reward materialization requires a route loadout`);
+  }
   return Object.freeze({
-    ...(context.traitContext ?? {}),
+    ...context.loadout,
     blockGiftBoons: context.room.blockGiftBoons,
     devotionNoDuo: offer.rewardType === 'Devotion',
   });
@@ -339,8 +351,11 @@ export function materializeShipCombatState(
   biome: BiomeAddress,
   room: RoomDeclaration,
   occurrence: RoomOccurrence,
-  traitContext?: TraitMaterializationContext,
+  loadout: RouteLoadout,
 ): MaterializedShipCombatState {
+  if (loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
+    fail(`${room.gameName} ShipCombat materialization requires a route loadout`);
+  }
   if (occurrence.state.kind !== 'shipCombat') {
     fail(`${occurrence.gameName} expected shipCombat state, received ${occurrence.state.kind}`);
   }
@@ -404,7 +419,7 @@ export function materializeShipCombatState(
         offer: reward.offer,
         traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
         traitContext: Object.freeze({
-          ...(traitContext ?? {}),
+          ...loadout,
           blockGiftBoons: room.blockGiftBoons,
           devotionNoDuo: reward.offer.rewardType === 'Devotion',
         }),
@@ -433,12 +448,16 @@ export function materializeShipCombatState(
 }
 
 function materializeShipCombat(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  if (context.loadout === undefined) {
+    fail(`${context.room.gameName} ShipCombat materialization requires a route loadout`);
+  }
+  const loadout = context.loadout;
   const ship = materializeShipCombatState(
     context.catalog,
     context.biome,
     context.room,
     context.occurrence,
-    context.traitContext,
+    loadout,
   );
   return Object.freeze({
     lifecycleProfileKey: 'ShipCombatRoom',

@@ -98,7 +98,7 @@ describe('Shop trait acquisition processing', () => {
       role: 'ordinary',
       entered: true,
       lifecycleProfileKey: 'WorldShopRoom',
-      traitContext: newLoadout,
+      loadout: newLoadout,
     });
     const major = canonical.entryState?.offers.find((offer) => offer.offerKey === 'MajorNonBoon');
     if (major === undefined) throw new Error('missing materialized Hammer offer');

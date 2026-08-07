@@ -124,9 +124,9 @@ function progressiveN(project: ReturnType<typeof openHub>) {
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((biome) => biome.biomeKey === 'N');
   if (plan === undefined) throw new Error('project lost authored N');
-  const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, 1, {
-    weaponKey: 'Staff',
-    aspectKey: 'BaseStaffAspect',
+  const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
+    enteredBiomeCount: 1,
+    loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
   });
   if (progressive === null) throw new Error('N did not produce a progressive prefix');
   return progressive;

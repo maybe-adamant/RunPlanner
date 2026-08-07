@@ -384,22 +384,16 @@ describe('progressive biome evaluation', () => {
       throw new Error('progressive artifact fixture has no valid F seed or G plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
-    const clamped = evaluateProgressiveBiomeAssembly(
-      catalog,
-      goldenGBiome,
-      plan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+    const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
+      enteredBiomeCount: 2,
+      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       seed,
-    );
-    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
-      catalog,
-      goldenGBiome,
-      plan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+    });
+    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, goldenGBiome, plan, {
+      enteredBiomeCount: 2,
+      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       seed,
-    );
+    });
     const firstGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit1');
     const invalidSecondGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit2');
     const clampedContext = clamped?.candidateArtifacts.roomTargets.at(firstGTarget);
@@ -451,21 +445,20 @@ describe('progressive biome evaluation', () => {
       history: blockedPrevious.history,
       rewardBranches: blockedPrevious.rewards.branches,
     };
-    const blockedClamped = evaluateProgressiveBiomeAssembly(
-      catalog,
-      goldenGBiome,
-      blockedPlan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
-      blockedSeed,
-    );
+    const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
+      enteredBiomeCount: 2,
+      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      seed: blockedSeed,
+    });
     const blockedBeforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
       catalog,
       goldenGBiome,
       blockedPlan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
-      blockedSeed,
+      {
+        enteredBiomeCount: 2,
+        loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+        seed: blockedSeed,
+      },
     );
     const blockedOwner = createIncomingRewardAddress(goldenGBiome, blocked.firstTarget);
     const foreignOwner = createIncomingRewardAddress(
@@ -524,22 +517,16 @@ describe('progressive biome evaluation', () => {
       throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
-    const clamped = evaluateProgressiveBiomeAssembly(
-      catalog,
-      oBiome,
-      plan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+    const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
+      enteredBiomeCount: 2,
+      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       seed,
-    );
-    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
-      catalog,
-      oBiome,
-      plan,
-      2,
-      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+    });
+    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, {
+      enteredBiomeCount: 2,
+      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       seed,
-    );
+    });
     const clampedLifecycle = clamped?.candidateArtifacts.roomLifecycles.shipAt(owner);
     const beforeClampLifecycle = beforeClamp?.candidateArtifacts.roomLifecycles.shipAt(owner);
 

@@ -10,6 +10,7 @@ import type {
   ExitDecision,
   ProjectDocument,
   RoomOccurrence,
+  RouteLoadout,
 } from '../../authored-project/model';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
@@ -75,6 +76,7 @@ function sourceOfferPointStoreKey(
   plan: AuthoredBiomePlan,
   decision: ExitDecision,
   owner: IncomingRewardAddress,
+  loadout: RouteLoadout,
 ): string | undefined {
   if (decision.normal.kind !== 'batch') return undefined;
   switch (decision.normal.rewardStore.kind) {
@@ -99,6 +101,7 @@ function sourceOfferPointStoreKey(
         createBiomeAddress(owner.routeKey, owner.biomeKey),
         declaration,
         source,
+        loadout,
       ).rewardWheels.at(-1);
       if (wheel === undefined) {
         fail(`reward producer ${semanticAddressKey(owner)} has no active source offer point`);
@@ -114,6 +117,7 @@ function incomingStoreKey(
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   owner: IncomingRewardAddress,
+  loadout: RouteLoadout,
 ): string | undefined {
   const topology = plan.topology;
   const creatingDecision = topology?.decisions.find(
@@ -132,7 +136,7 @@ function incomingStoreKey(
     catalog,
     occurrences,
     orderedTargets(creatingDecision.normal.targets),
-    sourceOfferPointStoreKey(catalog, plan, creatingDecision, owner),
+    sourceOfferPointStoreKey(catalog, plan, creatingDecision, owner, loadout),
   );
   return declaration.forcedRewardStoreKey ?? declaration.individualRewardStoreKey ?? sharedStore;
 }
@@ -173,11 +177,14 @@ function authoredStoreKey(
   owner: CountedRewardOwnerAddress,
 ): string | undefined {
   const plan = planFor(project, owner);
+  const route = project.routes.find((candidate) => candidate.routeKey === owner.routeKey);
+  if (route === undefined)
+    fail(`reward producer ${semanticAddressKey(owner)} has no authored route`);
   const occurrence = occurrenceFor(plan, owner);
   const declaration = declarationFor(catalog, plan, occurrence, owner);
   switch (owner.kind) {
     case 'incomingReward':
-      return incomingStoreKey(catalog, plan, occurrence, declaration, owner);
+      return incomingStoreKey(catalog, plan, occurrence, declaration, owner, route.loadout);
     case 'localReward':
       return localStoreKey(catalog, occurrence, declaration, owner);
     case 'rewardWheelOffer': {

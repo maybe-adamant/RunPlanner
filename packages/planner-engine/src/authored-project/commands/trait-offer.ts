@@ -67,27 +67,80 @@ function locateReward(
   command: TraitOfferCommand,
 ): AuthoredRewardState | undefined {
   const owner = command.trait.owner;
-  if (owner.kind === 'shopOffer' && state.kind === 'shop')
-    return state.shop?.offers[owner.offerKey]?.reward;
-  if (owner.kind === 'rewardWheelOffer' && state.kind === 'shipCombat')
-    return state.wheels[owner.wheelKey]?.offers[owner.offerKey];
-  if (owner.kind === 'localReward' && state.kind === 'fieldsCombat')
-    return state.cages[owner.slotKey];
-  if (owner.kind === 'localReward' && state.kind === 'ephyraCombat') {
-    const { state: ephyraState, group } = requireEphyraSideGroup(
-      occurrence,
-      catalog,
-      located,
-      owner.groupKey,
-      command,
-    );
-    if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
-      failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-    }
-    return ephyraState.sideRooms[owner.slotKey]?.reward;
+  switch (owner.kind) {
+    case 'incomingReward':
+      switch (state.kind) {
+        case 'counted':
+        case 'fixed':
+        case 'anomaly':
+        case 'ephyraCombat':
+        case 'freeReward':
+          return state.reward;
+        case 'none':
+        case 'fieldsCombat':
+        case 'shipCombat':
+        case 'shop':
+          failCommand(command, `incoming reward is not owned by ${occurrence.gameName}`);
+      }
+      break;
+    case 'localReward':
+      if (state.kind === 'fieldsCombat') {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        const group = room?.localChildren.find((child) => child.key === owner.groupKey);
+        if (group?.kind !== 'boundedRewardSlots') {
+          failCommand(
+            command,
+            `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
+          );
+        }
+        if (!group.slotKeys.includes(owner.slotKey)) {
+          failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
+        }
+        const reward = state.cages[owner.slotKey];
+        if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
+        return reward;
+      }
+      if (state.kind === 'ephyraCombat') {
+        const { state: ephyraState, group } = requireEphyraSideGroup(
+          occurrence,
+          catalog,
+          located,
+          owner.groupKey,
+          command,
+        );
+        if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
+          failCommand(command, `unknown side-room slot ${owner.slotKey}`);
+        }
+        const sideRoom = ephyraState.sideRooms[owner.slotKey];
+        if (sideRoom === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
+        return sideRoom.reward;
+      }
+      return failCommand(
+        command,
+        `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
+      );
+    case 'rewardWheelOffer':
+      if (state.kind !== 'shipCombat') {
+        failCommand(command, `${occurrence.gameName} has no reward wheel ${owner.wheelKey}`);
+      }
+      {
+        const wheel = state.wheels[owner.wheelKey];
+        const reward = wheel?.offers[owner.offerKey];
+        if (wheel === undefined || reward === undefined) {
+          failCommand(command, `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`);
+        }
+        return reward;
+      }
+    case 'shopOffer':
+      if (state.kind !== 'shop' || state.shop === undefined) {
+        failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
+      }
+      {
+        const reward = state.shop.offers[owner.offerKey]?.reward;
+        if (reward === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
+        return reward;
+      }
   }
-  if ('reward' in state) return state.reward;
-  return undefined;
 }
 
 function updateState(
@@ -99,82 +152,122 @@ function updateState(
   value: AuthoredTraitOffer,
 ): RoomOccurrence['state'] {
   const owner = command.trait.owner;
-  if (owner.kind === 'shopOffer' && state.kind === 'shop' && state.shop !== undefined) {
-    const entry = state.shop.offers[owner.offerKey];
-    if (entry === undefined) return state;
-    return Object.freeze({
-      ...state,
-      shop: Object.freeze({
-        ...state.shop,
-        offers: Object.freeze({
-          ...state.shop.offers,
-          [owner.offerKey]: Object.freeze({
-            ...entry,
-            reward: updateReward(entry.reward, command.trait.acquisitionRole, value),
+  switch (owner.kind) {
+    case 'incomingReward':
+      switch (state.kind) {
+        case 'counted':
+        case 'fixed':
+        case 'anomaly':
+        case 'ephyraCombat':
+        case 'freeReward':
+          return Object.freeze({
+            ...state,
+            reward: updateReward(state.reward, command.trait.acquisitionRole, value),
+          });
+        case 'none':
+        case 'fieldsCombat':
+        case 'shipCombat':
+        case 'shop':
+          failCommand(command, `incoming reward is not owned by ${occurrence.gameName}`);
+      }
+      break;
+    case 'localReward':
+      if (state.kind === 'fieldsCombat') {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        const group = room?.localChildren.find((child) => child.key === owner.groupKey);
+        if (group?.kind !== 'boundedRewardSlots') {
+          failCommand(
+            command,
+            `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
+          );
+        }
+        if (!group.slotKeys.includes(owner.slotKey)) {
+          failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
+        }
+        const reward = state.cages[owner.slotKey];
+        if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
+        return Object.freeze({
+          ...state,
+          cages: Object.freeze({
+            ...state.cages,
+            [owner.slotKey]: updateReward(reward, command.trait.acquisitionRole, value),
           }),
-        }),
-      }),
-    });
-  }
-  if (owner.kind === 'rewardWheelOffer' && state.kind === 'shipCombat') {
-    const wheel = state.wheels[owner.wheelKey];
-    const reward = wheel?.offers[owner.offerKey];
-    if (wheel === undefined || reward === undefined) return state;
-    return Object.freeze({
-      ...state,
-      wheels: Object.freeze({
-        ...state.wheels,
-        [owner.wheelKey]: Object.freeze({
-          ...wheel,
-          offers: Object.freeze({
-            ...wheel.offers,
-            [owner.offerKey]: updateReward(reward, command.trait.acquisitionRole, value),
+        });
+      }
+      if (state.kind === 'ephyraCombat') {
+        const { state: ephyraState, group } = requireEphyraSideGroup(
+          occurrence,
+          catalog,
+          located,
+          owner.groupKey,
+          command,
+        );
+        if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
+          failCommand(command, `unknown side-room slot ${owner.slotKey}`);
+        }
+        const sideRoom = ephyraState.sideRooms[owner.slotKey];
+        if (sideRoom === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
+        return Object.freeze({
+          ...state,
+          sideRooms: Object.freeze({
+            ...state.sideRooms,
+            [owner.slotKey]: Object.freeze({
+              ...sideRoom,
+              reward: updateReward(sideRoom.reward, command.trait.acquisitionRole, value),
+            }),
           }),
-        }),
-      }),
-    });
+        });
+      }
+      return failCommand(
+        command,
+        `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
+      );
+    case 'rewardWheelOffer':
+      if (state.kind !== 'shipCombat') {
+        failCommand(command, `${occurrence.gameName} has no reward wheel ${owner.wheelKey}`);
+      }
+      {
+        const wheel = state.wheels[owner.wheelKey];
+        const reward = wheel?.offers[owner.offerKey];
+        if (wheel === undefined || reward === undefined) {
+          failCommand(command, `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`);
+        }
+        return Object.freeze({
+          ...state,
+          wheels: Object.freeze({
+            ...state.wheels,
+            [owner.wheelKey]: Object.freeze({
+              ...wheel,
+              offers: Object.freeze({
+                ...wheel.offers,
+                [owner.offerKey]: updateReward(reward, command.trait.acquisitionRole, value),
+              }),
+            }),
+          }),
+        });
+      }
+    case 'shopOffer':
+      if (state.kind !== 'shop' || state.shop === undefined) {
+        failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
+      }
+      {
+        const entry = state.shop.offers[owner.offerKey];
+        if (entry === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
+        return Object.freeze({
+          ...state,
+          shop: Object.freeze({
+            ...state.shop,
+            offers: Object.freeze({
+              ...state.shop.offers,
+              [owner.offerKey]: Object.freeze({
+                ...entry,
+                reward: updateReward(entry.reward, command.trait.acquisitionRole, value),
+              }),
+            }),
+          }),
+        });
+      }
   }
-  if (owner.kind === 'localReward' && state.kind === 'fieldsCombat') {
-    const reward = state.cages[owner.slotKey];
-    if (reward === undefined) return state;
-    return Object.freeze({
-      ...state,
-      cages: Object.freeze({
-        ...state.cages,
-        [owner.slotKey]: updateReward(reward, command.trait.acquisitionRole, value),
-      }),
-    });
-  }
-  if (owner.kind === 'localReward' && state.kind === 'ephyraCombat') {
-    const { state: ephyraState, group } = requireEphyraSideGroup(
-      occurrence,
-      catalog,
-      located,
-      owner.groupKey,
-      command,
-    );
-    if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
-      failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-    }
-    const sideRoom = ephyraState.sideRooms[owner.slotKey];
-    if (sideRoom === undefined) return state;
-    return Object.freeze({
-      ...state,
-      sideRooms: Object.freeze({
-        ...state.sideRooms,
-        [owner.slotKey]: Object.freeze({
-          ...sideRoom,
-          reward: updateReward(sideRoom.reward, command.trait.acquisitionRole, value),
-        }),
-      }),
-    });
-  }
-  if ('reward' in state)
-    return Object.freeze({
-      ...state,
-      reward: updateReward(state.reward, command.trait.acquisitionRole, value),
-    });
-  return state;
 }
 
 export function applyTraitOfferCommand(

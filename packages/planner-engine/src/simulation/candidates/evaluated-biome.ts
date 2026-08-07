@@ -8,7 +8,12 @@ import type {
   ProjectEvaluation,
 } from '../project';
 import type { CanonicalAuthoredRoom, MaterializedBiomePrefix } from '../materialization';
-import { evaluateProgressiveBiome, type ProgressiveBiomeEvaluation } from '../progressive/biome';
+import {
+  evaluateProgressiveBiome,
+  type ProgressiveBiomeContext,
+  type ProgressiveBiomeEvaluation,
+  type ProgressiveSeed,
+} from '../progressive/biome';
 import { CandidateEvaluationContractError } from './contract';
 
 export function completeBiome(
@@ -78,9 +83,12 @@ export function candidateBiome(
       catalog,
       createBiomeAddress(routeKey, biomeKey),
       planFor(project, routeKey, biomeKey),
-      completeBiomeCount(evaluation, routeKey, biomeKey),
-      traitContextFor(project, routeKey),
-      progressiveSeed(evaluation, routeKey, biomeKey),
+      progressiveContextFor(
+        project,
+        routeKey,
+        completeBiomeCount(evaluation, routeKey, biomeKey),
+        progressiveSeed(evaluation, routeKey, biomeKey),
+      ),
     ) ?? undefined
   );
 }
@@ -129,17 +137,20 @@ export function planFor(
   return plan;
 }
 
-export function traitContextFor(
+export function progressiveContextFor(
   project: ProjectDocument,
   routeKey: string,
-): { readonly weaponKey: string; readonly aspectKey: string } {
+  enteredBiomeCount: number,
+  seed?: ProgressiveSeed,
+): ProgressiveBiomeContext {
   const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
   if (route === undefined) {
     throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
   }
   return Object.freeze({
-    weaponKey: route.loadout.weaponKey,
-    aspectKey: route.loadout.aspectKey,
+    enteredBiomeCount,
+    loadout: route.loadout,
+    ...(seed === undefined ? {} : { seed }),
   });
 }
 

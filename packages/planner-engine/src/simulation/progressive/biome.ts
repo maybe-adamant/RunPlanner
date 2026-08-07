@@ -5,7 +5,7 @@ import {
   type BiomeAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredBiomePlan } from '../../authored-project/model';
+import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import {
   evaluateBiomeRoomGenerationAssembly,
   evaluateHubDecisionGeneration,
@@ -37,7 +37,6 @@ import {
 } from '../encounters';
 import { materializeBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
-import type { TraitMaterializationContext } from '../traits';
 import {
   evaluateBiomeRewardsAssembly,
   type BiomeRewardSimulation,
@@ -74,9 +73,15 @@ export interface ProgressiveBiomeEvaluationAssembly {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
 }
 
-interface ProgressiveSeed {
+export interface ProgressiveSeed {
   readonly history: CanonicalBiomeHistory;
   readonly rewardBranches: readonly RewardBranch[];
+}
+
+export interface ProgressiveBiomeContext {
+  readonly enteredBiomeCount: number;
+  readonly loadout: RouteLoadout;
+  readonly seed?: ProgressiveSeed;
 }
 
 interface ProgressiveGenerationAssembly {
@@ -689,19 +694,10 @@ export function evaluateProgressiveBiomeBeforeClamp(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  seed?: ProgressiveSeed,
+  context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluation | null {
   return (
-    evaluateProgressiveBiomeAssemblyBeforeClamp(
-      catalog,
-      biome,
-      plan,
-      enteredBiomeCount,
-      traitContext,
-      seed,
-    )?.evaluation ?? null
+    evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, biome, plan, context)?.evaluation ?? null
   );
 }
 
@@ -709,16 +705,14 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  seed?: ProgressiveSeed,
+  context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, traitContext);
+  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
-  const evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
+  const evaluated = products(catalog, materializedPrefix, context.enteredBiomeCount, context.seed);
   const unsupported = firstUnsupportedFinding(
     materializedPrefix,
     evaluated.evaluation,
@@ -748,31 +742,24 @@ export function evaluateProgressiveBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  seed?: ProgressiveSeed,
+  context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluation | null {
-  return (
-    evaluateProgressiveBiomeAssembly(catalog, biome, plan, enteredBiomeCount, traitContext, seed)
-      ?.evaluation ?? null
-  );
+  return evaluateProgressiveBiomeAssembly(catalog, biome, plan, context)?.evaluation ?? null;
 }
 
 export function evaluateProgressiveBiomeAssembly(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  seed?: ProgressiveSeed,
+  context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, traitContext);
+  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   let executionPrefix = authoredPrefix;
-  let evaluated = products(catalog, executionPrefix, enteredBiomeCount, seed);
+  let evaluated = products(catalog, executionPrefix, context.enteredBiomeCount, context.seed);
   let retainedInteractions = evaluated.candidateArtifacts;
   let encounterArtifacts = evaluated.candidateArtifacts.encounters;
   let encounterFindings: readonly SemanticFinding[] =
@@ -797,7 +784,7 @@ export function evaluateProgressiveBiomeAssembly(
     executionPrefix = clamped as MaterializedBiomePrefix & {
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     };
-    evaluated = products(catalog, executionPrefix, enteredBiomeCount, seed);
+    evaluated = products(catalog, executionPrefix, context.enteredBiomeCount, context.seed);
     const interactionPrefix = retainedInteractionPrefix(
       authoredPrefix,
       unsupported,
@@ -807,8 +794,8 @@ export function evaluateProgressiveBiomeAssembly(
     retainedInteractions = products(
       catalog,
       interactionPrefix,
-      enteredBiomeCount,
-      seed,
+      context.enteredBiomeCount,
+      context.seed,
     ).candidateArtifacts;
     const retainedEncounterCandidates = evaluateEncounterCandidates(
       catalog,
