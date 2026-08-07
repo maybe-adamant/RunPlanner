@@ -130,6 +130,12 @@ ineligible in this slice; they do not synthesize a replacement offer. Every
 source predicate discovered in Gate A must receive an explicit modeled or
 deferred disposition. Nothing may disappear behind a permissive fallback.
 
+That no-swap result remains localized to trait candidate policy and carries the
+exact occupying trait key and rarity. It is not encoded as a catalog fact,
+authored-schema field, or scattered validation rule. A later focused exchange
+slice may derive its replacement target from the same pre-offer occupancy map;
+authored options do not persist a speculative replacement link.
+
 ## Core Model
 
 ### Catalog authority
@@ -293,7 +299,8 @@ Add an explicit trait history product beside existing reward history:
   options, selected option, and acquisition point;
 - folded equipped traits keyed by exact trait key, retaining concrete rarity
   for ranked traits and no rarity for Hammers;
-- ordinary boon-slot occupancy;
+- ordinary boon-slot occupancy as an exact map from slot to equipped trait key
+  and rarity;
 - element counts and `highestBaseElementCount`;
 - god-boon rarity counts; and
 - the exact derived `upgradableTraitCount`.
