@@ -330,7 +330,13 @@ describe('progressive biome evaluation', () => {
     const directSnapshotWithEntry = { ...directSnapshot, entryRoom: directSnapshot.entryRoom };
     const directHistory = composeBiomeHistoryPrefix(catalog, directSnapshot);
     if (directHistory === null) throw new Error('stale Hammer direct history did not compose');
-    const directRewards = evaluateBiomeRewards(catalog, directSnapshotWithEntry, directHistory, 1);
+    const directRewards = evaluateBiomeRewards(
+      catalog,
+      directSnapshotWithEntry,
+      directHistory,
+      1,
+      currentRoute.loadout,
+    );
     expect(directRewards.findings).toContainEqual(
       expect.objectContaining({
         code: 'wrongHammerLoadout',

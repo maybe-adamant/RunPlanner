@@ -578,6 +578,7 @@ function evaluateBiomeAssembly(
     snapshot,
     history,
     context.enteredBiomeCount,
+    context.loadout,
     context.seed?.rewardBranches,
   );
   const roomGeneration = generation(
