@@ -361,6 +361,20 @@ unpicked Midshops have no contract surface. `C_Boss01` uses the same ordinary
 width-one continuation presentation. React supplies no eligibility, topology,
 reward, or return policy.
 
+A selected, details-active N/F/G/P room with declared natural-Chaos capability
+exposes one bound spawn action from its room-customization surface. The authored
+spawn action intentionally remains inside `Customize`: adding an optional
+room-local gate configures the current room and is not itself a peer of the
+primary route-navigation choice. Once authored, however, the gate is a genuine
+sibling continuation in the containing decision, where the normal lane and
+concrete Chaos room are independently inspectable and use the same single-choice
+interaction. The Chaos card exposes its declaration-owned map domain, fixed
+encounter and reward facts, and removal action without inventing editable fixed
+leaves. Invalid active gates retain those controls; unpicked source rooms retain
+authored state without exposing active room-local customization. Selecting
+Chaos publishes its downstream continuation as the ordinary next-step frontier.
+React supplies no source, spacing, depth, map, reward, or return policy.
+
 A materialized Shop preserves declaration order for inventory rows while
 deriving `Purchased` membership and a `Purchase order` ordinal from its one
 occurrence-owned `purchaseOrder` list. Each row exposes a membership toggle and

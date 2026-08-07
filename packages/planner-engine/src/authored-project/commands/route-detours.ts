@@ -2,9 +2,9 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createInitialBatchState } from '../batchState';
 import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
-  AdditionalExit,
   AnomalyReplacementProvenance,
   AnomalyRoomState,
+  AuthoredAdditionalExit,
   BatchRewardStoreState,
   BiomeTopology,
   ExitDecision,
@@ -523,7 +523,7 @@ function addZagreusContract(
   if (progression === undefined) {
     failCommand(command, 'a Zagreus contract source requires normal host progression');
   }
-  const contract: AdditionalExit = Object.freeze({
+  const contract: AuthoredAdditionalExit = Object.freeze({
     kind: 'zagreusContract',
     key: declaration.key,
     occurrenceId: command.occurrenceId,
@@ -686,7 +686,7 @@ function addNaturalChaos(
   if (progression === undefined) {
     failCommand(command, 'a natural Chaos source requires normal host progression');
   }
-  const additional: AdditionalExit = Object.freeze({
+  const additional: AuthoredAdditionalExit = Object.freeze({
     kind: 'naturalChaos',
     key: declaration.key,
     occurrenceId: command.occurrenceId,
