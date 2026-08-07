@@ -16,7 +16,7 @@ import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
 import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
-import { traitCatalogInput } from './trait-data';
+import { traitCatalogInput } from './traits/index';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 
 const rooms: readonly RawRoomDeclaration[] = [
