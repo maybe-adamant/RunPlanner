@@ -12,6 +12,7 @@ export const cRooms = [
     roomSetKey: 'C',
     kind: 'Boss',
     mode: { kind: 'authored', templateKey: 'ContractBoss' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {

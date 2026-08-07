@@ -33,6 +33,7 @@ import {
   planFor,
   prefixBiome,
   progressiveSeed,
+  traitContextFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 import { wheelState } from './ship-owner';
@@ -113,6 +114,7 @@ function selectedRewardProducerSource(
       createBiomeAddress(owner.routeKey, owner.biomeKey),
       planFor(project, owner.routeKey, owner.biomeKey),
       completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+      traitContextFor(project, owner.routeKey),
       progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
     );
     return progressive === null
@@ -149,6 +151,7 @@ function repairAssemblyForOwner(
     createBiomeAddress(owner.routeKey, owner.biomeKey),
     planFor(project, owner.routeKey, owner.biomeKey),
     completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+    traitContextFor(project, owner.routeKey),
     progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
   );
   return raw !== null &&

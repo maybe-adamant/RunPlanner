@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type OccurrenceId,
@@ -61,6 +62,12 @@ function plan(project: ProjectDocument, biome: BiomeAddress) {
   return result;
 }
 
+function traitContext(project: ProjectDocument, biome: BiomeAddress) {
+  const route = project.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  if (route === undefined) throw new Error(`missing ${biome.routeKey} route`);
+  return route.loadout;
+}
+
 function prefix(
   project: ProjectDocument,
   biome: BiomeAddress,
@@ -69,7 +76,12 @@ function prefix(
   readonly snapshot: MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom };
   readonly history: BiomeHistoryPrefix;
 } {
-  const snapshot = materializeBiomePrefix(catalog, biome, plan(project, biome));
+  const snapshot = materializeBiomePrefix(
+    catalog,
+    biome,
+    plan(project, biome),
+    traitContext(project, biome),
+  );
   if (snapshot === null || snapshot.entryRoom === undefined) {
     throw new Error(`${biome.biomeKey} did not materialize an entry prefix`);
   }
@@ -886,6 +898,75 @@ describe('route-detour simulation', () => {
       }),
     );
   });
+
+  it.each([
+    [
+      'PlantHealthBoon',
+      'DemeterUpgrade',
+      'Demeter',
+      'DemeterWeaponBoon',
+      'DemeterSpecialBoon',
+      'source',
+    ],
+    [
+      'RoomRewardBonusBoon',
+      'PoseidonUpgrade',
+      'Poseidon',
+      'PoseidonWeaponBoon',
+      'PoseidonSpecialBoon',
+      'source',
+    ],
+    [
+      'MoneyMultiplierBoon',
+      'HermesUpgrade',
+      'Hermes',
+      'HermesWeaponBoon',
+      'HermesSpecialBoon',
+      'self',
+    ],
+  ] as const)(
+    'blocks and does not equip %s on an Anomaly offer',
+    (traitKey, source, giverKey, companion1, companion2, acquisitionRole) => {
+      const { anomaly, project: initial } = buildAnomalyProject(true);
+      const incoming = createIncomingRewardAddress(gBiome, anomaly);
+      let project = applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: incoming,
+        value:
+          source === 'HermesUpgrade'
+            ? { rewardType: 'HermesUpgrade' }
+            : { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(incoming, acquisitionRole),
+        value: {
+          giverKey,
+          options: [
+            { traitKey, rarity: 'Common' },
+            { traitKey: companion1, rarity: 'Common' },
+            { traitKey: companion2, rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        },
+      });
+      const { snapshot, history } = prefix(project, gBiome);
+      const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
+      const traces = rewards.branches
+        .flatMap((branch) => branch.traitEvaluations ?? [])
+        .filter((trace) => semanticAddressKey(trace.address) === semanticAddressKey(incoming));
+      const trace = traces?.[0];
+      expect(trace?.assessments[0]).toMatchObject({
+        legal: false,
+        findings: [{ code: 'offerContext', detail: 'blockGiftBoons', traitKey }],
+      });
+      expect(
+        rewards.branches.every(
+          (branch) => branch.traitHistory?.equippedTraits[traitKey] === undefined,
+        ),
+      ).toBe(true);
+    },
+  );
 
   it.each([false, true])(
     'treats an earlier Anomaly as cap-consuming only when it has entered (entered=%s)',

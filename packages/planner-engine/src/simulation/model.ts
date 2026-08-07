@@ -47,8 +47,7 @@ export type TraitFindingCode =
   | 'rarifiableTarget'
   | 'superchargeableTarget'
   | 'occupiedBoonSlot'
-  | 'wrongHammerLoadout'
-  | 'hammerExclusion';
+  | 'wrongHammerLoadout';
 
 export type FindingCode =
   | CompletenessFindingCode

@@ -289,8 +289,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'trait',
         message: 'This Hammer trait is incompatible with the selected loadout.',
       };
-    case 'hammerExclusion':
-      return { kind: 'trait', message: 'This Hammer trait is excluded from the offer.' };
     case 'batchRewardStoreMissing':
     case 'batchStateMissing':
     case 'biomeFieldMissing':

@@ -37,6 +37,7 @@ import {
   completeBiomeCount,
   planFor,
   progressiveSeed,
+  traitContextFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 
@@ -287,6 +288,7 @@ function hubRegionEvaluation(
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
     completeBiomeCount(evaluation, routeKey, biomeKey),
+    traitContextFor(project, routeKey),
     progressiveSeed(evaluation, routeKey, biomeKey),
   );
 }
@@ -312,6 +314,7 @@ function hubVisitOrderEvaluation(
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
     completeBiomeCount(evaluation, routeKey, biomeKey),
+    traitContextFor(project, routeKey),
     progressiveSeed(evaluation, routeKey, biomeKey),
   );
 }
@@ -358,6 +361,7 @@ function hubRegionRepairForSideRoom(
     createBiomeAddress(sideRoom.routeKey, sideRoom.biomeKey),
     regionalPlan,
     completeBiomeCount(evaluation, sideRoom.routeKey, sideRoom.biomeKey),
+    traitContextFor(project, sideRoom.routeKey),
     progressiveSeed(evaluation, sideRoom.routeKey, sideRoom.biomeKey),
   );
   return raw !== null &&

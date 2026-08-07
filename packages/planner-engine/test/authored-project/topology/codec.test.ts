@@ -702,7 +702,9 @@ describe('persisted authored topology codec', () => {
           semanticAddressKey(createExitDecisionAddress(biome, candidate.source)) ===
             semanticAddressKey(decision),
       );
-      const prefix = materializeBiomePrefix(catalog, biome, plan);
+      const route = document.routes.find((candidate) => candidate.routeKey === routeKey);
+      if (route === undefined) throw new Error(`missing ${routeKey} route`);
+      const prefix = materializeBiomePrefix(catalog, biome, plan, route.loadout);
       if (prefix === null) throw new Error(`missing ${biomeKey} terminal prefix`);
       const history = composeBiomeHistoryPrefix(catalog, prefix);
 

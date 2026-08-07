@@ -1014,7 +1014,9 @@ describe('authored-project commands and topology', () => {
 
     const plan = reanchored.routes[0]?.biomes[0];
     if (plan === undefined) throw new Error('re-anchor F plan is missing');
-    const prefix = materializeBiomePrefix(catalog, fBiome, plan);
+    const route = reanchored.routes.find((candidate) => candidate.routeKey === fBiome.routeKey);
+    if (route === undefined) throw new Error('re-anchor F route is missing');
+    const prefix = materializeBiomePrefix(catalog, fBiome, plan, route.loadout);
     if (prefix?.entryRoom === undefined) throw new Error('re-anchor prefix did not materialize');
     const historyPrefix = composeBiomeHistoryPrefix(catalog, prefix);
     expect(prefix.decisions).toHaveLength(2);

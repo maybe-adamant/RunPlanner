@@ -20,7 +20,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitOfferContext } from '../traits';
+import type { TraitMaterializationContext, TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 
 function fail(detail: string): never {
@@ -60,7 +60,7 @@ export interface AuthoredRoomMaterializationContext {
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitMaterializationContext;
 }
 
 interface MaterializedRoomLeaf {
@@ -339,7 +339,7 @@ export function materializeShipCombatState(
   biome: BiomeAddress,
   room: RoomDeclaration,
   occurrence: RoomOccurrence,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): MaterializedShipCombatState {
   if (occurrence.state.kind !== 'shipCombat') {
     fail(`${occurrence.gameName} expected shipCombat state, received ${occurrence.state.kind}`);

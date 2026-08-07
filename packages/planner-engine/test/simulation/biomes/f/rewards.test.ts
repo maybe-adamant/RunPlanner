@@ -45,6 +45,12 @@ function fPlan(project: ProjectDocument) {
   return plan;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture has no Underworld route');
+  return route.loadout;
+}
+
 function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
   const result = evaluateBiomeCompleteness(catalog, biome, fPlan(project));
   if (result.completion !== 'complete') {
@@ -144,7 +150,7 @@ function addTakeover(
 
 function evaluate(project: ProjectDocument) {
   project = authorLegalTraitOffers(project);
-  const snapshot = materializeBiome(catalog, biome, complete(project));
+  const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
   const history = composeBiomeHistory(catalog, snapshot);
   return { snapshot, history, rewards: evaluateBiomeRewards(catalog, snapshot, history, 1) };
 }
@@ -773,7 +779,7 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-run-peer')),
       gameName: 'F_Combat06',
     });
-    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
 
     expect(() => evaluateBiomeRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
       /in the snapshot but .* in history/,

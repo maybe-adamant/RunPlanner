@@ -10,14 +10,14 @@ import {
 } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
-import type { EphyraOccurrenceCommand, LocalRewardCommand } from './types';
+import type { EphyraOccurrenceCommand, LocalRewardCommand, TraitOfferCommand } from './types';
 
 export function requireEphyraSideGroup(
   occurrence: RoomOccurrence,
   catalog: Catalog,
   located: LocatedBiome,
   groupKey: string,
-  command: EphyraOccurrenceCommand | LocalRewardCommand,
+  command: EphyraOccurrenceCommand | LocalRewardCommand | TraitOfferCommand,
 ) {
   if (occurrence.state.kind !== 'ephyraCombat') {
     failCommand(command, `${occurrence.gameName} has no Ephyra side-room state`);

@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { traitGiverForAcquisitionRole, type AuthoredTraitOffer } from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
+import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
 
@@ -59,6 +60,9 @@ function updateReward(
 }
 
 function locateReward(
+  catalog: Catalog,
+  located: LocatedBiome,
+  occurrence: RoomOccurrence,
   state: RoomOccurrence['state'],
   command: TraitOfferCommand,
 ): AuthoredRewardState | undefined {
@@ -69,11 +73,27 @@ function locateReward(
     return state.wheels[owner.wheelKey]?.offers[owner.offerKey];
   if (owner.kind === 'localReward' && state.kind === 'fieldsCombat')
     return state.cages[owner.slotKey];
+  if (owner.kind === 'localReward' && state.kind === 'ephyraCombat') {
+    const { state: ephyraState, group } = requireEphyraSideGroup(
+      occurrence,
+      catalog,
+      located,
+      owner.groupKey,
+      command,
+    );
+    if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
+      failCommand(command, `unknown side-room slot ${owner.slotKey}`);
+    }
+    return ephyraState.sideRooms[owner.slotKey]?.reward;
+  }
   if ('reward' in state) return state.reward;
   return undefined;
 }
 
 function updateState(
+  catalog: Catalog,
+  located: LocatedBiome,
+  occurrence: RoomOccurrence,
   state: RoomOccurrence['state'],
   command: TraitOfferCommand,
   value: AuthoredTraitOffer,
@@ -125,6 +145,30 @@ function updateState(
       }),
     });
   }
+  if (owner.kind === 'localReward' && state.kind === 'ephyraCombat') {
+    const { state: ephyraState, group } = requireEphyraSideGroup(
+      occurrence,
+      catalog,
+      located,
+      owner.groupKey,
+      command,
+    );
+    if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
+      failCommand(command, `unknown side-room slot ${owner.slotKey}`);
+    }
+    const sideRoom = ephyraState.sideRooms[owner.slotKey];
+    if (sideRoom === undefined) return state;
+    return Object.freeze({
+      ...state,
+      sideRooms: Object.freeze({
+        ...state.sideRooms,
+        [owner.slotKey]: Object.freeze({
+          ...sideRoom,
+          reward: updateReward(sideRoom.reward, command.trait.acquisitionRole, value),
+        }),
+      }),
+    });
+  }
   if ('reward' in state)
     return Object.freeze({
       ...state,
@@ -144,7 +188,7 @@ export function applyTraitOfferCommand(
   const occurrence = requireOccurrence(located.plan, owner.occurrenceId, command);
   if (owner.routeKey !== command.trait.routeKey || owner.biomeKey !== command.trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
-  const reward = locateReward(occurrence.state, command);
+  const reward = locateReward(catalog, located, occurrence, occurrence.state, command);
   if (reward === undefined)
     failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
   const existing = reward.traitOffersByAcquisitionRole[command.trait.acquisitionRole];
@@ -168,7 +212,7 @@ export function applyTraitOfferCommand(
   if (value.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
-  const state = updateState(occurrence.state, command, value);
+  const state = updateState(catalog, located, occurrence, occurrence.state, command, value);
   return updateOccurrenceTopology(
     document,
     located,

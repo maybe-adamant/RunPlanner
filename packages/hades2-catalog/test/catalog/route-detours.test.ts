@@ -153,6 +153,7 @@ describe('route detour catalog declarations', () => {
         roomSetKey: 'Anomaly',
         kind: 'Combat',
         mode: { kind: 'authored', templateKey: 'Anomaly' },
+        blockGiftBoons: true,
         incomingReward: {
           kind: 'countedChoice',
           ineligibleRewardTypes: ['Devotion', 'SpellDrop'],
@@ -179,6 +180,7 @@ describe('route detour catalog declarations', () => {
       roomSetKey: 'C',
       kind: 'Boss',
       mode: { kind: 'authored', templateKey: 'ContractBoss' },
+      blockGiftBoons: true,
       incomingReward: {
         kind: 'fixed',
         offer: { rewardType: 'InfernalContractBoon' },

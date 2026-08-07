@@ -46,7 +46,7 @@ import { materializeCompletionRooms } from './completion';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
-import type { TraitOfferContext } from '../traits';
+import type { TraitMaterializationContext } from '../traits';
 import type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,
@@ -76,6 +76,22 @@ export class BiomeMaterializationContractError extends Error {
 
 function fail(detail: string): never {
   throw new BiomeMaterializationContractError(detail);
+}
+
+function requireTraitMaterializationContext(
+  context: TraitMaterializationContext,
+): TraitMaterializationContext {
+  if (
+    context === null ||
+    typeof context !== 'object' ||
+    typeof context.weaponKey !== 'string' ||
+    context.weaponKey.length === 0 ||
+    typeof context.aspectKey !== 'string' ||
+    context.aspectKey.length === 0
+  ) {
+    fail('public biome materialization requires a route weapon and aspect loadout');
+  }
+  return Object.freeze({ weaponKey: context.weaponKey, aspectKey: context.aspectKey });
 }
 
 function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
@@ -369,7 +385,7 @@ function materializeTarget(
   batchState: CanonicalBatchState,
   clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
   physicalExit: CanonicalPhysicalExit,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, layout, topology, occurrence);
@@ -405,7 +421,7 @@ function materializeAdditionalContinuations(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): readonly CanonicalAdditionalContinuation[] {
   const additionalExits = additionalExitsForDecision(topology, decision);
   if (additionalExits.length === 0) return Object.freeze([]);
@@ -464,7 +480,7 @@ function materializeBatch(
     readonly allowUnselected?: boolean;
     readonly physicalExits: ReadonlyMap<string, CanonicalPhysicalExit>;
   },
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): { readonly batch: CanonicalBatch; readonly nextClockwork: ClockworkState | undefined } {
   const normal = decision.normal;
   const source = sourceAddress(decision.source);
@@ -631,7 +647,7 @@ function materializeStart(
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalAuthoredRoom {
   const room = requireRoom(catalog, layout, topology, occurrence);
   return materializeAuthoredRoom({
@@ -781,7 +797,7 @@ function materializeContiguousBatchPrefix(
   sourceRoom: RoomDeclaration | undefined,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
   clockwork: ClockworkState | undefined,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalBatch | undefined {
   if (decision === undefined || sourceRoom === undefined) return undefined;
   const takeover = batchTakesOverNormalDoors(
@@ -835,8 +851,9 @@ export function materializeBiomePrefix(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  traitContext?: TraitOfferContext,
+  traitContext: TraitMaterializationContext,
 ): MaterializedBiomePrefix | null {
+  traitContext = requireTraitMaterializationContext(traitContext);
   const layout = requireLayout(catalog, biome);
   if (Object.values(plan.state).some((value) => value === null)) return null;
   const biomeState = canonicalBiomeState(layout.biomeKey, plan.state);
@@ -1034,8 +1051,9 @@ export function materializeBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
-  traitContext?: TraitOfferContext,
+  traitContext: TraitMaterializationContext,
 ): CanonicalBiome {
+  traitContext = requireTraitMaterializationContext(traitContext);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
   const layout = requireLayout(catalog, biome);
   const topology = completeness.topology;

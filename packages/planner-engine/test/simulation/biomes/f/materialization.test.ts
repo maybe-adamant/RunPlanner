@@ -29,6 +29,12 @@ function fPlan(project: ProjectDocument) {
   return plan;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture has no Underworld route');
+  return route.loadout;
+}
+
 function materialize(project: ProjectDocument) {
   const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
   if (completeness.completion !== 'complete') {
@@ -36,7 +42,7 @@ function materialize(project: ProjectDocument) {
       `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
     );
   }
-  return materializeBiome(catalog, fBiome, completeness);
+  return materializeBiome(catalog, fBiome, completeness, traitContext(project));
 }
 
 describe('F takeover materialization', () => {
@@ -51,8 +57,26 @@ describe('F takeover materialization', () => {
   it('requires complete authored topology at the public materialization boundary', () => {
     const incomplete = evaluateBiomeCompleteness(catalog, fBiome, fPlan(createFProject()));
 
-    expect(() => materializeBiome(catalog, fBiome, incomplete as never)).toThrowError(
+    expect(() =>
+      materializeBiome(catalog, fBiome, incomplete as never, {
+        weaponKey: 'Staff',
+        aspectKey: 'BaseStaffAspect',
+      }),
+    ).toThrowError(
       new BiomeMaterializationContractError('biome materialization requires completeness'),
+    );
+  });
+
+  it('requires a route-owned loadout at the public materialization boundary', () => {
+    const completeness = evaluateBiomeCompleteness(
+      catalog,
+      fBiome,
+      fPlan(createCompleteFTakeoverProject()),
+    );
+    if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
+    // @ts-expect-error public materialization requires a route-owned loadout
+    expect(() => materializeBiome(catalog, fBiome, completeness, {})).toThrowError(
+      'public biome materialization requires a route weapon and aspect loadout',
     );
   });
 

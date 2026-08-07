@@ -18,10 +18,19 @@ function fPlan(project: ProjectDocument) {
   return plan;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture has no Underworld route');
+  return route.loadout;
+}
+
 function history(project = createCompleteFTakeoverProject()) {
   const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
   if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
-  return composeBiomeHistory(catalog, materializeBiome(catalog, fBiome, completeness));
+  return composeBiomeHistory(
+    catalog,
+    materializeBiome(catalog, fBiome, completeness, traitContext(project)),
+  );
 }
 
 describe('F takeover history', () => {
@@ -89,7 +98,7 @@ describe('F takeover history', () => {
     const project = createCompleteFTakeoverProject();
     const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
     if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
-    const snapshot = materializeBiome(catalog, fBiome, completeness);
+    const snapshot = materializeBiome(catalog, fBiome, completeness, traitContext(project));
     const before = JSON.parse(JSON.stringify(snapshot));
     const first = composeBiomeHistory(catalog, snapshot);
     const second = composeBiomeHistory(catalog, snapshot);

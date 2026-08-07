@@ -23,6 +23,12 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 
+function traitContext(project: ReturnType<typeof createProjectDocument>, routeKey: string) {
+  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+  if (route === undefined) throw new Error(`missing ${routeKey} route`);
+  return route.loadout;
+}
+
 function selectedFTakeoverProject() {
   const biome = createBiomeAddress('Underworld', 'F');
   let project = createProjectDocument(catalog, {
@@ -708,7 +714,13 @@ describe('unified biome simulation', () => {
     const project = completeHProject();
     const plan = project.routes[0]?.biomes.find((candidate) => candidate.biomeKey === 'H');
     if (plan === undefined) throw new Error('missing H plan');
-    const biome = evaluateBiome(catalog, 'Underworld', plan, 3);
+    const biome = evaluateBiome(
+      catalog,
+      'Underworld',
+      plan,
+      3,
+      traitContext(project, 'Underworld'),
+    );
     expect(biome.authoring).toBe('complete');
     if (biome.authoring !== 'complete') throw new Error('H should be complete');
     expect(biome.snapshot.decisions.filter((decision) => decision.kind === 'batch')).toHaveLength(
@@ -730,7 +742,7 @@ describe('unified biome simulation', () => {
     const oProject = completeOProject();
     const oPlan = oProject.routes[1]?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (oPlan === undefined) throw new Error('missing O plan');
-    const o = evaluateBiome(catalog, 'Surface', oPlan, 2);
+    const o = evaluateBiome(catalog, 'Surface', oPlan, 2, traitContext(oProject, 'Surface'));
     expect(o.authoring).toBe('complete');
     if (o.authoring !== 'complete') throw new Error('O should be complete');
     expect(o.snapshot.decisions.at(-1)).toMatchObject({
@@ -742,7 +754,7 @@ describe('unified biome simulation', () => {
     const qProject = completeQProject();
     const qPlan = qProject.routes[1]?.biomes.find((candidate) => candidate.biomeKey === 'Q');
     if (qPlan === undefined) throw new Error('missing Q plan');
-    const q = evaluateBiome(catalog, 'Surface', qPlan, 4);
+    const q = evaluateBiome(catalog, 'Surface', qPlan, 4, traitContext(qProject, 'Surface'));
     expect(q.authoring).toBe('complete');
     if (q.authoring !== 'complete') throw new Error('Q should be complete');
     expect(q.snapshot.decisions.filter((decision) => decision.kind === 'batch')).toHaveLength(7);
@@ -759,14 +771,22 @@ describe('unified biome simulation', () => {
         decisions: Object.freeze([...qPlan.topology.decisions].reverse()),
       }),
     });
-    expect(evaluateBiome(catalog, 'Surface', reversed, 4).authoring).toBe('complete');
+    expect(
+      evaluateBiome(catalog, 'Surface', reversed, 4, traitContext(qProject, 'Surface')).authoring,
+    ).toBe('complete');
   });
 
   it('derives Clockwork batch state and reward timing from the selected I spine', () => {
     const project = completeIProject();
     const plan = project.routes[0]?.biomes.find((candidate) => candidate.biomeKey === 'I');
     if (plan === undefined) throw new Error('missing I plan');
-    const biome = evaluateBiome(catalog, 'Underworld', plan, 4);
+    const biome = evaluateBiome(
+      catalog,
+      'Underworld',
+      plan,
+      4,
+      traitContext(project, 'Underworld'),
+    );
     expect(biome.authoring).toBe('complete');
     if (biome.authoring !== 'complete') throw new Error('I should be complete');
     expect(
@@ -797,7 +817,13 @@ describe('unified biome simulation', () => {
       const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
       const plan = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
       if (plan === undefined) throw new Error(`missing ${biomeKey} plan`);
-      const biome = evaluateBiome(catalog, routeKey, plan, enteredBiomeCount);
+      const biome = evaluateBiome(
+        catalog,
+        routeKey,
+        plan,
+        enteredBiomeCount,
+        traitContext(project, routeKey),
+      );
       expect(biome.authoring).toBe('complete');
       if (biome.authoring !== 'complete') throw new Error(`${biomeKey} should be complete`);
       const takeover = biome.snapshot.decisions.find(

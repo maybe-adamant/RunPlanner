@@ -79,6 +79,7 @@ export function candidateBiome(
       createBiomeAddress(routeKey, biomeKey),
       planFor(project, routeKey, biomeKey),
       completeBiomeCount(evaluation, routeKey, biomeKey),
+      traitContextFor(project, routeKey),
       progressiveSeed(evaluation, routeKey, biomeKey),
     ) ?? undefined
   );
@@ -126,6 +127,20 @@ export function planFor(
     );
   }
   return plan;
+}
+
+export function traitContextFor(
+  project: ProjectDocument,
+  routeKey: string,
+): { readonly weaponKey: string; readonly aspectKey: string } {
+  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+  if (route === undefined) {
+    throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
+  }
+  return Object.freeze({
+    weaponKey: route.loadout.weaponKey,
+    aspectKey: route.loadout.aspectKey,
+  });
 }
 
 export function completeBiomeCount(
