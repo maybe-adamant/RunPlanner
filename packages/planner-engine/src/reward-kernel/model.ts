@@ -176,7 +176,18 @@ export interface RewardHistoryState {
   readonly lootBiomeRecord: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
   readonly upgradableTraitCount: number;
+  /** Canonical equipped trait keys used to derive upgradeability. */
+  readonly equippedTraitKeys?: Readonly<Record<string, number>>;
+  /** Derived by the planner-engine trait ledger; never incremented by loot projection. */
+  readonly traitFacts?: TraitDerivedFacts;
   readonly lastDevotionDepth?: number;
+}
+
+export interface TraitDerivedFacts {
+  readonly upgradableTraitCount: number;
+  readonly elementCounts: Readonly<Record<string, number>>;
+  readonly highestBaseElementCount: number;
+  readonly godBoonRarityCounts: Readonly<Record<string, number>>;
 }
 
 export interface ConcreteAcquisitionEvent {

@@ -9,6 +9,7 @@ import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
 import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
+import { applyTraitOfferCommand } from './trait-offer';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -19,6 +20,7 @@ function applyUnchecked(
 ): ProjectDocument {
   switch (command.kind) {
     case 'RenameProject':
+    case 'ReplaceRouteLoadout':
     case 'ConfigureRoutePrefix':
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
@@ -79,6 +81,14 @@ function applyUnchecked(
     case 'ReplaceShopOffer':
     case 'ReplaceShopPurchaseOrder':
       return applyOccurrenceCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceTraitOffer':
+    case 'ReplaceTraitSelection':
+      return applyTraitOfferCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

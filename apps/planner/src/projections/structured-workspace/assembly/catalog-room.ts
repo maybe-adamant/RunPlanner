@@ -25,10 +25,10 @@ export function resolveWorkspaceFixedRewardOffer(
   }
   return Object.freeze({
     rewardType: room.incomingReward.offer.rewardType,
-    ...(state.payload === undefined
+    ...(state.reward.offer.payload === undefined
       ? room.incomingReward.offer.payload === undefined
         ? {}
         : { payload: room.incomingReward.offer.payload }
-      : { payload: state.payload }),
+      : { payload: state.reward.offer.payload }),
   });
 }

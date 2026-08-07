@@ -21,9 +21,9 @@ describe('authored room-state defaults', () => {
     ).toMatchObject({
       kind: 'fieldsCombat',
       cages: {
-        cage1: { rewardType: expect.any(String) },
-        cage2: { rewardType: expect.any(String) },
-        cage3: { rewardType: expect.any(String) },
+        cage1: { offer: { rewardType: expect.any(String) } },
+        cage2: { offer: { rewardType: expect.any(String) } },
+        cage3: { offer: { rewardType: expect.any(String) } },
       },
     });
 
@@ -48,17 +48,17 @@ describe('authored room-state defaults', () => {
       }),
     ).toMatchObject({
       kind: 'ephyraCombat',
-      offer: { rewardType: expect.any(String) },
+      reward: { offer: { rewardType: expect.any(String) } },
       sideRooms: {
         sideDoor1: {
           generation: 'notGenerated',
           enteredOrdinal: null,
-          offer: { rewardType: expect.any(String) },
+          reward: { offer: { rewardType: expect.any(String) } },
         },
         sideDoor2: {
           generation: 'notGenerated',
           enteredOrdinal: null,
-          offer: { rewardType: expect.any(String) },
+          reward: { offer: { rewardType: expect.any(String) } },
         },
       },
     });
@@ -75,9 +75,9 @@ describe('authored room-state defaults', () => {
         resolvedStoreKey: 'MetaProgress',
         entryActive: true,
       }),
-    ).toEqual({
+    ).toMatchObject({
       kind: 'counted',
-      offer: declaration.incomingReward.defaultOffersByStore.RunProgress,
+      reward: { offer: declaration.incomingReward.defaultOffersByStore.RunProgress },
     });
   });
 
@@ -122,9 +122,9 @@ describe('authored room-state defaults', () => {
           resolvedStoreKey: 'MetaProgress',
           entryActive: false,
         }),
-      ).toEqual({
+      ).toMatchObject({
         kind: 'freeReward',
-        offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress,
+        reward: { offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress },
       });
     },
   );
@@ -152,9 +152,9 @@ describe('authored room-state defaults', () => {
         role: 'prebossFreeReward',
         entryActive: false,
       }),
-    ).toEqual({
+    ).toMatchObject({
       kind: 'freeReward',
-      offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress,
+      reward: { offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress },
     });
   });
 

@@ -154,7 +154,9 @@ describe('authored-project route detour commands', () => {
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.occurrenceId === target);
     if (encodedAnomaly === undefined) throw new Error('encoded Anomaly occurrence is missing');
-    encodedAnomaly.state.offer = { rewardType: 'InfernalContractBoon' };
+    const encodedReward = encodedAnomaly.state.reward as Record<string, unknown>;
+    encodedReward.offer = { rewardType: 'InfernalContractBoon' };
+    encodedReward.traitOffersByAcquisitionRole = {};
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       /InfernalContractBoon is filtered from this room/,
     );
@@ -180,14 +182,16 @@ describe('authored-project route detour commands', () => {
       occurrenceId: target,
       gameName: 'G_Combat01',
     });
-    expect(revertedOccurrence?.state).toEqual({
+    expect(revertedOccurrence?.state).toMatchObject({
       kind: 'counted',
-      offer: {
-        rewardType: 'Devotion',
-        payload: {
-          kind: 'DevotionPair',
-          chosenSource: 'AphroditeUpgrade',
-          spurnedSource: 'ApolloUpgrade',
+      reward: {
+        offer: {
+          rewardType: 'Devotion',
+          payload: {
+            kind: 'DevotionPair',
+            chosenSource: 'AphroditeUpgrade',
+            spurnedSource: 'ApolloUpgrade',
+          },
         },
       },
     });

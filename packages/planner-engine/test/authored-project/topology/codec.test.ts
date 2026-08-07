@@ -266,7 +266,14 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
   encoded.topology.occurrences.push({
     occurrenceId: 'zagreus-contract',
     gameName: 'C_Boss01',
-    state: { kind: 'fixed' },
+    state: {
+      kind: 'fixed',
+      reward: {
+        offer: (catalog.rooms.byKey.C_Boss01?.incomingReward as { kind: 'fixed'; offer: unknown })
+          .offer,
+        traitOffersByAcquisitionRole: {},
+      },
+    },
     encounters: { encounterKeyByPhase: {} },
     additionalExits: [],
   });
@@ -468,7 +475,7 @@ function rewardWheelProject(): ProjectDocument {
       'wheel1',
       offerKey,
     ),
-    value: offer,
+    value: offer.offer,
   });
 }
 

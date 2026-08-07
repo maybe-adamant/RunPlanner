@@ -184,6 +184,7 @@ function defaultOccurrence(
   role: RoomOccurrenceRole,
   entryActive: boolean,
   resolvedStoreKey?: string,
+  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
 ): RoomOccurrence {
   return Object.freeze({
     occurrenceId,
@@ -192,6 +193,7 @@ function defaultOccurrence(
       role,
       entryActive,
       ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
+      ...(loadout === undefined ? {} : { loadout }),
     }),
     encounters: createDefaultRoomEncounterState(
       catalog,
@@ -311,7 +313,15 @@ function createStart(
   }
   if (gameName === undefined) failCommand(command, 'missing declared authored start');
   const room = requireRoom(catalog, gameName, located.layout.biomeKey, command);
-  const occurrence = defaultOccurrence(catalog, room, command.occurrenceId, 'ordinary', true);
+  const occurrence = defaultOccurrence(
+    catalog,
+    room,
+    command.occurrenceId,
+    'ordinary',
+    true,
+    undefined,
+    located.loadout,
+  );
   return withBiome(document, located, {
     ...located.plan,
     topology: Object.freeze({
@@ -506,6 +516,7 @@ function createTarget(
       role,
       nextSelectedExitKey === command.target.exitKey,
       batchRewardStoreKey,
+      located.loadout,
     ),
     command,
   );
@@ -534,6 +545,7 @@ function createTarget(
           targetRole,
           entryActive,
           batchRewardStoreKey,
+          located.loadout,
         );
   });
   const next = replaceDecision(
@@ -684,6 +696,7 @@ function replaceTakeoverBatch(
           role === 'prebossFreeReward'
             ? prebossFreeRewardStore(room, sourceIncomingStore(topology, command.decision.source))
             : undefined,
+          located.loadout,
         );
   });
   const withoutOld =
@@ -1174,7 +1187,15 @@ function updateHub(
       replaceDecision(
         appendOccurrence(
           topology,
-          defaultOccurrence(catalog, room, command.occurrenceId, 'ordinary', false),
+          defaultOccurrence(
+            catalog,
+            room,
+            command.occurrenceId,
+            'ordinary',
+            false,
+            undefined,
+            located.loadout,
+          ),
           command,
         ),
         replacement,

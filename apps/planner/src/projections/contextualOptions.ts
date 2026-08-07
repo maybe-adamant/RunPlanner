@@ -263,6 +263,34 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'shop',
         message: 'This purchase order cannot be completed with the current shop configuration.',
       };
+    case 'alreadyEquipped':
+      return { kind: 'trait', message: 'This trait is already equipped.' };
+    case 'missingPrerequisite':
+      return {
+        kind: 'trait',
+        message: 'The equipped-trait history does not satisfy this prerequisite.',
+      };
+    case 'negativePrerequisite':
+      return { kind: 'trait', message: 'A trait that must be absent is currently equipped.' };
+    case 'offerContext':
+      return { kind: 'trait', message: 'This trait is blocked by the current offer context.' };
+    case 'elementThreshold':
+      return { kind: 'trait', message: 'The equipped element totals are too low for this trait.' };
+    case 'rarityCount':
+      return { kind: 'trait', message: 'The equipped rarity totals do not satisfy this trait.' };
+    case 'rarifiableTarget':
+      return { kind: 'trait', message: 'No equipped trait can be rarified for this offer.' };
+    case 'superchargeableTarget':
+      return { kind: 'trait', message: 'No equipped trait can be supercharged for this offer.' };
+    case 'occupiedBoonSlot':
+      return { kind: 'trait', message: 'This ordinary boon slot is already occupied.' };
+    case 'wrongHammerLoadout':
+      return {
+        kind: 'trait',
+        message: 'This Hammer trait is incompatible with the selected loadout.',
+      };
+    case 'hammerExclusion':
+      return { kind: 'trait', message: 'This Hammer trait is excluded from the offer.' };
     case 'batchRewardStoreMissing':
     case 'batchStateMissing':
     case 'biomeFieldMissing':
@@ -283,6 +311,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
 function activeFinding(
   evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
 ): SemanticFinding | undefined {
+  if (evaluation.kind === 'traitOffer') return undefined;
   return 'findings' in evaluation.result ? evaluation.result.findings[0] : undefined;
 }
 

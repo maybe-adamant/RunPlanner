@@ -15,11 +15,18 @@ import {
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
+import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
+import { materializeHubDecision } from '../../../../src/simulation/materialization';
+import {
+  initializeRewardBranches,
+  processOwnedRewardAcquisition,
+} from '../../../../src/simulation/rewards/processing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -28,9 +35,11 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  authorLegalTraitOffers,
 } from '@run-planner/test-fixtures';
 
 function completeN(project = createRepresentativeNProject()) {
+  project = authorLegalTraitOffers(project);
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
@@ -439,6 +448,118 @@ describe('N Hub rewards, validation, and candidates', () => {
         )
         .map((event) => semanticAddressKey(event.origin)),
     ).toEqual(enteredOrigins);
+  });
+
+  it('propagates and acquires a trait-bearing active Ephyra local reward', () => {
+    const project = createRepresentativeNProject();
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const topology = plan?.topology;
+    const decision = topology?.decisions.find((candidate) => candidate.kind === 'hub');
+    const descriptor = catalog.biomeLayouts.byKey.N?.progression;
+    if (
+      route === undefined ||
+      plan === undefined ||
+      topology === null ||
+      topology === undefined ||
+      decision?.kind !== 'hub' ||
+      descriptor?.kind !== 'hub'
+    ) {
+      throw new Error('fixture lost complete Hub topology');
+    }
+    const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === 'combat05');
+    const parent = topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === target?.occurrenceId,
+    );
+    if (target === undefined || parent?.state.kind !== 'ephyraCombat') {
+      throw new Error('fixture lost Ephyra combat target');
+    }
+    const side = parent.state.sideRooms.sideDoor1;
+    if (side === undefined) throw new Error('fixture lost Ephyra local slot');
+    const offer = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'DemeterUpgrade' },
+    };
+    const traitOffersByAcquisitionRole = createDefaultTraitOffers(catalog, offer, route.loadout);
+    const replacedParent = Object.freeze({
+      ...parent,
+      state: Object.freeze({
+        ...parent.state,
+        sideRooms: Object.freeze({
+          ...parent.state.sideRooms,
+          sideDoor1: Object.freeze({
+            ...side,
+            reward: Object.freeze({ offer, traitOffersByAcquisitionRole }),
+          }),
+        }),
+      }),
+    });
+    const occurrences = new Map(
+      topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
+    );
+    occurrences.set(replacedParent.occurrenceId, replacedParent);
+    const canonical = materializeHubDecision(catalog, nBiome, descriptor, decision, occurrences, {
+      weaponKey: route.loadout.weaponKey,
+      aspectKey: route.loadout.aspectKey,
+    });
+    const visit = canonical.visits.find(
+      (candidate) => candidate.target.room.occurrenceId === parent.occurrenceId,
+    );
+    const local = visit?.localSlots.find((candidate) => candidate.slotKey === 'sideDoor1');
+    const incoming = local?.incomingReward;
+    if (incoming === undefined) throw new Error('fixture lost materialized local reward');
+    expect(incoming.traitOffersByAcquisitionRole).toEqual(traitOffersByAcquisitionRole);
+
+    const findings = new Map();
+    const baseFacts: RewardKernelFacts = {
+      requirements: {
+        counters: {
+          biomeDepthCache: 4,
+          biomeEncounterDepth: 2,
+          encounterDepth: 7,
+          enteredBiomes: 1,
+          upgradableTraitCount: 0,
+        },
+        records: {
+          biomeUseRecord: {},
+          lootTypeHistory: {},
+          roomsEntered: {},
+          useRecord: {},
+        },
+        currentRoomShopOptionNames: new Set(),
+        currentRoomRewardType: undefined,
+        currentRoomStructuralTags: [],
+        rewardLookups: {},
+        runDepthCache: 8,
+        lastEventRunDepthCaches: {},
+        recentEncounterEnvelopeSlots: [],
+        offeredExitCount: 3,
+        currentBatchRoomGameNames: [],
+        clockwork: undefined,
+        flags: { allSpellInvested: false, pendingSpellDrop: false },
+      },
+    };
+    const branches = processOwnedRewardAcquisition(
+      catalog,
+      initializeRewardBranches(),
+      incoming,
+      1,
+      (history) => factsWithHistory(baseFacts, history, new Set()),
+      findings,
+      (detail) => {
+        throw new Error(detail);
+      },
+    );
+    const branch = branches[0];
+    const trace = branch?.traitEvaluations?.[0];
+    if (branch === undefined || trace === undefined) throw new Error('trait event was not reached');
+    expect(trace.address).toEqual(incoming.origin);
+    expect(trace.assessments.every((assessment) => assessment.legal)).toBe(true);
+    expect(branch.events).toContainEqual(
+      expect.objectContaining({ kind: 'concreteAcquisition', origin: incoming.origin }),
+    );
+    expect(branch.traitHistory?.equippedTraits[trace.offer.options[0]!.traitKey]).toBeDefined();
+    expect(findings).toHaveLength(0);
   });
 
   it('keeps the peer-exclusion finding at the second conflicting local reward owner', () => {

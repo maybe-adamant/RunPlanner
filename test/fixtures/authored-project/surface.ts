@@ -21,6 +21,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { authorLegalTraitOffers } from './trait-offers';
 
 /**
  * The canonical Surface regression fixture is intentionally translated from
@@ -70,6 +71,11 @@ export const qOccurrenceIds = Object.freeze({
   secondMiniboss2: createOccurrenceId('surface-q-second-miniboss-2'),
   preboss: createOccurrenceId('surface-q-preboss'),
 });
+
+const representativeNCache = new Map<string, ProjectDocument>();
+let representativeNOCache: ProjectDocument | undefined;
+let representativeNOPCache: ProjectDocument | undefined;
+let representativeNOPQCache: ProjectDocument | undefined;
 
 export const nOpenSlotKeys = [
   'combat11',
@@ -297,18 +303,20 @@ export function appendCompleteN(
     next = replaceIncoming(next, nBiome, nOccurrenceId(slotKey), value);
   }
   next = configureNSideRooms(next);
-  if (options.includePreboss === false) return next;
+  if (options.includePreboss === false) return authorLegalTraitOffers(next);
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
     gameName: 'N_PreBoss01',
     targetOccurrenceIds: { preboss: nOccurrenceIds.preboss },
   });
-  return applyProjectCommand(next, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 export function appendCompleteO(project: ProjectDocument): ProjectDocument {
@@ -353,11 +361,13 @@ export function appendCompleteO(project: ProjectDocument): ProjectDocument {
     gameName: 'O_PreBoss01',
     targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
   });
-  return applyProjectCommand(next, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'MajorNonBoon'),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'MajorNonBoon'),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 export function appendCompleteP(project: ProjectDocument): ProjectDocument {
@@ -429,11 +439,13 @@ export function appendCompleteP(project: ProjectDocument): ProjectDocument {
     selection: createExitSelectionAddress(pBiome, occurrenceSource(parent)),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
-  return applyProjectCommand(next, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 export function appendCompleteQ(project: ProjectDocument): ProjectDocument {
@@ -490,11 +502,13 @@ export function appendCompleteQ(project: ProjectDocument): ProjectDocument {
     gameName: 'Q_PreBoss01',
     targetOccurrenceIds: { exit1: qOccurrenceIds.preboss },
   });
-  return applyProjectCommand(next, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
-    value: { rewardType: 'MaxHealthDropBig' },
-  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
+      value: { rewardType: 'MaxHealthDropBig' },
+    }),
+  );
 }
 
 function emptySurfaceProject(configuredBiomeCount: 1 | 2 | 3 | 4): ProjectDocument {
@@ -508,17 +522,32 @@ function emptySurfaceProject(configuredBiomeCount: 1 | 2 | 3 | 4): ProjectDocume
 export function createRepresentativeNProject(
   options: CompleteNFixtureOptions = {},
 ): ProjectDocument {
-  return appendCompleteN(emptySurfaceProject(1), options);
+  const key = JSON.stringify(options);
+  const cached = representativeNCache.get(key);
+  if (cached !== undefined) return cached;
+  const normalized = appendCompleteN(emptySurfaceProject(1), options);
+  representativeNCache.set(key, normalized);
+  return normalized;
 }
 
 export function createRepresentativeNOProject(): ProjectDocument {
-  return appendCompleteO(appendCompleteN(emptySurfaceProject(2)));
+  if (representativeNOCache !== undefined) return representativeNOCache;
+  representativeNOCache = appendCompleteO(appendCompleteN(emptySurfaceProject(2)));
+  return representativeNOCache;
 }
 
 export function createRepresentativeNOPProject(): ProjectDocument {
-  return appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(3))));
+  if (representativeNOPCache !== undefined) return representativeNOPCache;
+  representativeNOPCache = appendCompleteP(
+    appendCompleteO(appendCompleteN(emptySurfaceProject(3))),
+  );
+  return representativeNOPCache;
 }
 
 export function createRepresentativeNOPQProject(): ProjectDocument {
-  return appendCompleteQ(appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(4)))));
+  if (representativeNOPQCache !== undefined) return representativeNOPQCache;
+  representativeNOPQCache = appendCompleteQ(
+    appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(4)))),
+  );
+  return representativeNOPQCache;
 }

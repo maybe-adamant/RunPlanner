@@ -55,11 +55,21 @@ function decodeRoutePlan(
   catalog: Catalog,
 ): AuthoredRoutePlan {
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['routeKey', 'biomes'], path);
+  expectExactKeys(plan, ['routeKey', 'loadout', 'biomes'], path);
 
   const routeKey = expectString(plan.routeKey, `${path}.routeKey`);
   if (routeKey !== route.key) {
     fail(`${path}.routeKey`, `expected ${route.key}, received ${routeKey}`);
+  }
+
+  const loadout = expectRecord(plan.loadout, `${path}.loadout`);
+  expectExactKeys(loadout, ['weaponKey', 'aspectKey'], `${path}.loadout`);
+  const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
+  const aspectKey = expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
+  const weapon = catalog.weapons.byKey[weaponKey];
+  if (weapon === undefined) fail(`${path}.loadout.weaponKey`, `unknown weapon ${weaponKey}`);
+  if (!weapon.aspectKeys.includes(aspectKey)) {
+    fail(`${path}.loadout.aspectKey`, `${aspectKey} does not belong to ${weaponKey}`);
   }
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);
@@ -77,6 +87,7 @@ function decodeRoutePlan(
 
   return Object.freeze({
     routeKey,
+    loadout: Object.freeze({ weaponKey, aspectKey }),
     biomes: Object.freeze(biomes),
   });
 }

@@ -78,6 +78,11 @@ import {
   type HubTerminalTakeoverCandidateQuery,
 } from './takeover-hub';
 import type { CandidateContextUnavailable } from './availability';
+import {
+  evaluateTraitOfferCandidate,
+  type EvaluatedTraitOfferCandidate,
+  type TraitOfferCandidateQuery,
+} from './trait-offer';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -98,7 +103,8 @@ export type ProjectCandidateQuery =
   | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery
   | TakeoverPrebossBatchCandidateQuery
-  | HubTerminalTakeoverCandidateQuery;
+  | HubTerminalTakeoverCandidateQuery
+  | TraitOfferCandidateQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -120,7 +126,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
   | EvaluatedTakeoverPrebossBatchCandidate
-  | EvaluatedHubTerminalTakeoverCandidate;
+  | EvaluatedHubTerminalTakeoverCandidate
+  | EvaluatedTraitOfferCandidate;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -264,6 +271,8 @@ function evaluateCandidateQuery(
           ?.roomLifecycles,
         query,
       );
+    case 'traitOffer':
+      return evaluateTraitOfferCandidate(catalog, project, evaluation, query);
   }
   return assertNever(query);
 }

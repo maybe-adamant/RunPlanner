@@ -26,6 +26,7 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { createDefaultRoomEncounterState } from './encounters';
+import { createDefaultTraitOffers, type TraitOfferDefaultsContext } from '../traits';
 
 function defaultCountedOffer(
   binding: CountedRewardBinding,
@@ -42,6 +43,15 @@ function defaultCountedOffer(
   return offer;
 }
 
+function fallbackLoadout(catalog: Catalog): TraitOfferDefaultsContext {
+  const weapon = catalog.weapons.values.find((candidate) =>
+    candidate.aspectKeys.includes(candidate.defaultAspectKey),
+  );
+  return weapon === undefined
+    ? { weaponKey: '', aspectKey: '' }
+    : { weaponKey: weapon.key, aspectKey: weapon.defaultAspectKey };
+}
+
 /**
  * A declaration-owned store narrows the set of defaults an occurrence may
  * use. A normal batch store is only the fallback for declarations that do
@@ -54,14 +64,24 @@ function defaultCountedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
-function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
+function defaultShopState(
+  catalog: Catalog,
+  binding: ShopRewardBinding,
+  path: string,
+  loadout: TraitOfferDefaultsContext,
+): ShopState {
   const profile = catalog.rewards.shops.byKey[binding.shopProfileKey];
   if (profile === undefined) {
     failProjectDocument(path, `unknown shop profile ${binding.shopProfileKey}`);
   }
   const offers: Record<string, ShopOfferState> = {};
   for (const slot of profile.slots.values) {
-    offers[slot.key] = Object.freeze({ offer: slot.defaultOffer });
+    offers[slot.key] = Object.freeze({
+      reward: Object.freeze({
+        offer: slot.defaultOffer,
+        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, slot.defaultOffer, loadout),
+      }),
+    });
   }
   return Object.freeze({
     profileKey: profile.key,
@@ -87,15 +107,25 @@ function defaultFieldsCages(
 }
 
 function defaultRewardWheel(
+  catalog: Catalog,
   descriptor: EncounterRewardWheelAttachment,
   path: string,
+  loadout: TraitOfferDefaultsContext,
 ): RewardWheelState {
   const offer = defaultCountedOffer(descriptor.reward, descriptor.defaultStoreKey, path);
   return Object.freeze({
     storeKey: descriptor.defaultStoreKey,
     offerCount: descriptor.offerCount.defaultValue,
     offers: Object.freeze(
-      Object.fromEntries(descriptor.offerKeys.map((offerKey) => [offerKey, offer])),
+      Object.fromEntries(
+        descriptor.offerKeys.map((offerKey) => [
+          offerKey,
+          Object.freeze({
+            offer,
+            traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+          }),
+        ]),
+      ),
     ),
     pickedOfferIndex: 1,
   });
@@ -105,13 +135,16 @@ function defaultShipCombatState(
   catalog: Catalog,
   room: RoomDeclaration,
   path: string,
+  loadout: TraitOfferDefaultsContext,
 ): ShipCombatState {
   const wheels = requireShipCombatWheels(catalog, room, path);
   return Object.freeze({
     kind: 'shipCombat',
     encounterCount: 2,
     wheels: Object.freeze(
-      Object.fromEntries(wheels.map((wheel) => [wheel.key, defaultRewardWheel(wheel, path)])),
+      Object.fromEntries(
+        wheels.map((wheel) => [wheel.key, defaultRewardWheel(catalog, wheel, path, loadout)]),
+      ),
     ),
   });
 }
@@ -121,6 +154,7 @@ function defaultEphyraCombatState(
   room: RoomDeclaration,
   resolvedStoreKey: string | undefined,
   path: string,
+  loadout: TraitOfferDefaultsContext,
 ): EphyraCombatState {
   const sideRooms: Record<string, EphyraSideRoomState> = {};
   for (const slot of requireEphyraSideRooms(room, path)?.slots ?? []) {
@@ -131,11 +165,22 @@ function defaultEphyraCombatState(
     sideRooms[slot.slotKey] = Object.freeze({
       generation: 'notGenerated',
       enteredOrdinal: null,
-      offer: defaultCountedOffer(
-        requireCountedBinding(sideRoom, path),
-        sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-        `${path}.sideRooms.${slot.slotKey}.offer`,
-      ),
+      reward: Object.freeze({
+        offer: defaultCountedOffer(
+          requireCountedBinding(sideRoom, path),
+          sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
+          `${path}.sideRooms.${slot.slotKey}.offer`,
+        ),
+        traitOffersByAcquisitionRole: createDefaultTraitOffers(
+          catalog,
+          defaultCountedOffer(
+            requireCountedBinding(sideRoom, path),
+            sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
+            `${path}.sideRooms.${slot.slotKey}.offer`,
+          ),
+          loadout,
+        ),
+      }),
       encounters: createDefaultRoomEncounterState(
         catalog,
         sideRoom,
@@ -143,13 +188,17 @@ function defaultEphyraCombatState(
       ),
     });
   }
+  const offer = defaultCountedOffer(
+    requireCountedBinding(room, path),
+    defaultCountedStoreKey(room, resolvedStoreKey),
+    `${path}.offer`,
+  );
   return Object.freeze({
     kind: 'ephyraCombat',
-    offer: defaultCountedOffer(
-      requireCountedBinding(room, path),
-      defaultCountedStoreKey(room, resolvedStoreKey),
-      `${path}.offer`,
-    ),
+    reward: Object.freeze({
+      offer,
+      traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+    }),
     sideRooms: Object.freeze(sideRooms),
   });
 }
@@ -161,6 +210,13 @@ export function createDefaultRoomState(
 ): AuthoredRoomState {
   const path = `rooms.${room.gameName}.state`;
   const { role, entryActive } = context;
+  const defaultLoadout = context.loadout ?? fallbackLoadout(catalog);
+  const traitOffers = (offer: ResolvedRewardOffer) => ({
+    reward: Object.freeze({
+      offer,
+      traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
+    }),
+  });
 
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
@@ -169,40 +225,70 @@ export function createDefaultRoomState(
       return Object.freeze({ kind: 'none' });
     case 'FieldsCombat':
       requireOrdinaryRole(role, room, path);
-      return Object.freeze({ kind: 'fieldsCombat', cages: defaultFieldsCages(room, path) });
+      {
+        const cages = defaultFieldsCages(room, path);
+        return Object.freeze({
+          kind: 'fieldsCombat',
+          cages: Object.freeze(
+            Object.fromEntries(
+              Object.entries(cages).map(([slotKey, offer]) => [
+                slotKey,
+                Object.freeze({
+                  offer,
+                  traitOffersByAcquisitionRole: createDefaultTraitOffers(
+                    catalog,
+                    offer,
+                    defaultLoadout,
+                  ),
+                }),
+              ]),
+            ),
+          ),
+        });
+      }
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
-      return defaultShipCombatState(catalog, room, path);
+      return defaultShipCombatState(catalog, room, path, defaultLoadout);
     case 'EphyraCombat':
       requireOrdinaryRole(role, room, path);
-      return defaultEphyraCombatState(catalog, room, context.resolvedStoreKey, path);
+      return defaultEphyraCombatState(
+        catalog,
+        room,
+        context.resolvedStoreKey,
+        path,
+        defaultLoadout,
+      );
     case 'FixedOpening':
     case 'FixedPreHub':
     case 'ClockworkCombat':
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
-    case 'StandardCombat':
+    case 'StandardCombat': {
       requireOrdinaryRole(role, room, path);
+      const offer = defaultCountedOffer(
+        requireCountedBinding(room, path),
+        defaultCountedStoreKey(room, context.resolvedStoreKey),
+        path,
+      );
       return Object.freeze({
         kind: 'counted',
-        offer: defaultCountedOffer(
-          requireCountedBinding(room, path),
-          defaultCountedStoreKey(room, context.resolvedStoreKey),
-          path,
-        ),
+        ...traitOffers(offer),
       });
-    case 'Anomaly':
+    }
+    case 'Anomaly': {
       requireOrdinaryRole(role, room, path);
+      const offer = defaultCountedOffer(
+        requireCountedBinding(room, path),
+        defaultCountedStoreKey(room, context.resolvedStoreKey),
+        path,
+      );
       return Object.freeze({
         kind: 'anomaly',
-        offer: defaultCountedOffer(
-          requireCountedBinding(room, path),
-          defaultCountedStoreKey(room, context.resolvedStoreKey),
-          path,
-        ),
+        ...traitOffers(offer),
         success: true,
       });
+    }
     case 'Devotion':
     case 'ContractBoss':
     case 'Chaos':
@@ -214,11 +300,13 @@ export function createDefaultRoomState(
           `${authoredTemplateKey(room, path)} requires a fixed reward binding`,
         );
       }
+      const offer = room.incomingReward.offer;
       return Object.freeze({
         kind: 'fixed',
-        ...(room.incomingReward.offer.payload === undefined
-          ? {}
-          : { payload: room.incomingReward.offer.payload }),
+        reward: Object.freeze({
+          offer,
+          traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
+        }),
       });
     }
     case 'Shop':
@@ -226,10 +314,12 @@ export function createDefaultRoomState(
       return Object.freeze({
         kind: 'shop',
         ...(entryActive
-          ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
+          ? {
+              shop: defaultShopState(catalog, requireShopBinding(room, path), path, defaultLoadout),
+            }
           : {}),
       });
-    case 'Preboss':
+    case 'Preboss': {
       if (role === 'ordinary') {
         failProjectDocument(path, 'Preboss requires a declaration-derived offer role');
       }
@@ -237,7 +327,14 @@ export function createDefaultRoomState(
         return Object.freeze({
           kind: 'shop',
           ...(entryActive
-            ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
+            ? {
+                shop: defaultShopState(
+                  catalog,
+                  requireShopBinding(room, path),
+                  path,
+                  defaultLoadout,
+                ),
+              }
             : {}),
         });
       }
@@ -247,13 +344,15 @@ export function createDefaultRoomState(
       ) {
         failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
+      const offer = defaultCountedOffer(
+        room.prebossBatchPolicy.remainingOffers.reward,
+        defaultCountedStoreKey(room, context.resolvedStoreKey),
+        path,
+      );
       return Object.freeze({
         kind: 'freeReward',
-        offer: defaultCountedOffer(
-          room.prebossBatchPolicy.remainingOffers.reward,
-          defaultCountedStoreKey(room, context.resolvedStoreKey),
-          path,
-        ),
+        ...traitOffers(offer),
       });
+    }
   }
 }

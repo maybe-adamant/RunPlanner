@@ -460,6 +460,8 @@ function processOwnedRewardAcquisition(
     readonly offer: CanonicalResolvedIncomingReward['offer'];
     readonly origin: SemanticAddress;
     readonly producerLifecycleKey: string;
+    readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   view: HistoryStateView,
   historySequence: number,

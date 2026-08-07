@@ -1,6 +1,7 @@
-import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
+import type { ResolvedRewardOffer } from '../reward-kernel/model';
+import type { AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 14 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 15 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -9,7 +10,19 @@ export type OccurrenceId = string & {
 };
 
 export interface ShopOfferState {
+  readonly reward: AuthoredRewardState;
+}
+
+export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer>>;
+
+export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
+}
+
+export interface RouteLoadout {
+  readonly weaponKey: string;
+  readonly aspectKey: string;
 }
 
 export interface ShopState {
@@ -25,13 +38,13 @@ export interface ShopState {
 
 export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
-  readonly cages: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly cages: Readonly<Record<string, AuthoredRewardState>>;
 }
 
 export interface RewardWheelState {
   readonly storeKey: string;
   readonly offerCount: number;
-  readonly offers: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly offers: Readonly<Record<string, AuthoredRewardState>>;
   readonly pickedOfferIndex: number;
 }
 
@@ -54,13 +67,13 @@ export interface RoomEncounterState {
 export interface EphyraSideRoomState {
   readonly generation: SideRoomGeneration;
   readonly enteredOrdinal: number | null;
-  readonly offer: ResolvedRewardOffer;
+  readonly reward: AuthoredRewardState;
   readonly encounters: RoomEncounterState;
 }
 
 export interface EphyraCombatState {
   readonly kind: 'ephyraCombat';
-  readonly offer: ResolvedRewardOffer;
+  readonly reward: AuthoredRewardState;
   readonly sideRooms: Readonly<Record<string, EphyraSideRoomState>>;
 }
 
@@ -71,20 +84,20 @@ export interface EphyraCombatState {
  */
 export interface AnomalyRoomState {
   readonly kind: 'anomaly';
-  readonly offer: ResolvedRewardOffer;
+  readonly reward: AuthoredRewardState;
   readonly success: boolean;
 }
 
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
-  | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
-  | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
+  | { readonly kind: 'fixed'; readonly reward: AuthoredRewardState }
+  | { readonly kind: 'counted'; readonly reward: AuthoredRewardState }
   | AnomalyRoomState
   | EphyraCombatState
   | FieldsCombatState
   | ShipCombatState
   | { readonly kind: 'shop'; readonly shop?: ShopState }
-  | { readonly kind: 'freeReward'; readonly offer: ResolvedRewardOffer };
+  | { readonly kind: 'freeReward'; readonly reward: AuthoredRewardState };
 
 export type BatchRewardStoreState =
   | { readonly kind: 'authoredBaseStore'; readonly baseRewardStoreKey: string | null }
@@ -196,6 +209,7 @@ export interface AuthoredBiomePlan {
 
 export interface AuthoredRoutePlan {
   readonly routeKey: string;
+  readonly loadout: RouteLoadout;
   readonly biomes: readonly AuthoredBiomePlan[];
 }
 

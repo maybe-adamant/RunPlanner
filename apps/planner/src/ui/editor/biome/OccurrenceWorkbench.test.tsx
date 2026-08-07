@@ -1094,7 +1094,7 @@ describe('OccurrenceWorkbench', () => {
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1').offers
         .offer2,
-    ).toEqual({ rewardType: 'MetaCurrencyDrop' });
+    ).toEqual({ offer: { rewardType: 'MetaCurrencyDrop' }, traitOffersByAcquisitionRole: {} });
 
     act(() =>
       view.application.store.dispatch(

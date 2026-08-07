@@ -37,10 +37,24 @@ export type RewardGenerationFindingCode =
   | 'shopOfferUnavailable'
   | 'shopPurchaseUnavailable';
 
+export type TraitFindingCode =
+  | 'alreadyEquipped'
+  | 'missingPrerequisite'
+  | 'negativePrerequisite'
+  | 'offerContext'
+  | 'elementThreshold'
+  | 'rarityCount'
+  | 'rarifiableTarget'
+  | 'superchargeableTarget'
+  | 'occupiedBoonSlot'
+  | 'wrongHammerLoadout'
+  | 'hammerExclusion';
+
 export type FindingCode =
   | CompletenessFindingCode
   | EncounterResolutionFindingCode
   | RewardGenerationFindingCode
+  | TraitFindingCode
   | RoomGenerationFindingCode;
 
 export type FindingEvidenceValue =

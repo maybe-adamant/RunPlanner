@@ -11,6 +11,7 @@ import type {
   ShopProfileDeclaration,
 } from '../../reward-kernel/model';
 import type {
+  AuthoredRewardState,
   AuthoredRoomState,
   EphyraCombatState,
   EphyraSideRoomState,
@@ -21,6 +22,7 @@ import type {
 } from '../model';
 import {
   expectExactKeys,
+  expectArray,
   expectBoolean,
   expectPositiveInteger,
   expectRecord,
@@ -38,6 +40,8 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { decodeRoomEncounterState } from './encounters';
+import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
+import { TRAIT_OPTION_KEYS } from '../traits';
 
 function decodePayload(
   value: unknown,
@@ -109,6 +113,116 @@ function decodeOffer(value: unknown, catalog: Catalog, path: string): ResolvedRe
   });
 }
 
+function traitGiverForSource(catalog: Catalog, source: string) {
+  return catalog.traitGivers.byKey[
+    source === 'WeaponUpgrade' ? source : source.replace(/Upgrade$/, '')
+  ];
+}
+
+function expectedTraitRoles(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): Readonly<Record<string, string>> {
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) return {};
+  const result: Record<string, string> = {};
+  for (const role of declaration.acquisitionRoles.values) {
+    let source: string | undefined;
+    if (role.resolution.kind === 'self') source = declaration.gameName;
+    else if (role.resolution.kind === 'fixed') source = role.resolution.acquisition.gameName;
+    else {
+      const value =
+        offer.payload?.[role.resolution.field as keyof NonNullable<typeof offer.payload>];
+      if (typeof value === 'string') source = value;
+    }
+    if (source !== undefined && traitGiverForSource(catalog, source) !== undefined)
+      result[role.key] = traitGiverForSource(catalog, source)!.key;
+  }
+  return result;
+}
+
+function decodeTraitOffers(
+  value: unknown,
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  path: string,
+): Readonly<Record<string, AuthoredTraitOffer>> {
+  const expected = expectedTraitRoles(catalog, offer);
+  if (value === undefined && Object.keys(expected).length === 0) return Object.freeze({});
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, Object.keys(expected), path);
+  const result: Record<string, AuthoredTraitOffer> = {};
+  for (const [roleKey, giverKey] of Object.entries(expected)) {
+    const rolePath = `${path}.${roleKey}`;
+    const record = expectRecord(raw[roleKey], rolePath);
+    expectExactKeys(record, ['giverKey', 'options', 'selectedOptionKey'], rolePath);
+    if (expectString(record.giverKey, `${rolePath}.giverKey`) !== giverKey)
+      failProjectDocument(`${rolePath}.giverKey`, `expected ${giverKey}`);
+    const giver = catalog.traitGivers.byKey[giverKey];
+    if (giver === undefined) failProjectDocument(rolePath, `unknown giver ${giverKey}`);
+    const optionsRaw = expectArray(record.options, `${rolePath}.options`);
+    if (optionsRaw.length !== TRAIT_OPTION_KEYS.length)
+      failProjectDocument(
+        `${rolePath}.options`,
+        `must contain exactly ${TRAIT_OPTION_KEYS.length} options`,
+      );
+    const options: AuthoredTraitOption[] = [];
+    const traitKeys = new Set<string>();
+    for (const key of TRAIT_OPTION_KEYS) {
+      const index = TRAIT_OPTION_KEYS.indexOf(key);
+      const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
+      expectExactKeys(
+        option,
+        option.rarity === undefined ? ['traitKey'] : ['traitKey', 'rarity'],
+        `${rolePath}.options.${key}`,
+      );
+      const traitKey = expectString(option.traitKey, `${rolePath}.options.${key}.traitKey`);
+      if (traitKeys.has(traitKey))
+        failProjectDocument(
+          `${rolePath}.options.${key}.traitKey`,
+          `${traitKey} is duplicated in the trait offer`,
+        );
+      traitKeys.add(traitKey);
+      const trait = catalog.traits.byKey[traitKey];
+      if (trait === undefined || !giver.traitKeys.includes(traitKey))
+        failProjectDocument(
+          `${rolePath}.options.${key}.traitKey`,
+          `${traitKey} is not in giver ${giverKey}`,
+        );
+      const rarity =
+        option.rarity === undefined
+          ? undefined
+          : (expectString(
+              option.rarity,
+              `${rolePath}.options.${key}.rarity`,
+            ) as AuthoredTraitOption['rarity']);
+      if (trait.rarityDomain.kind === 'none' && rarity !== undefined)
+        failProjectDocument(`${rolePath}.options.${key}.rarity`, 'Hammer options have no rarity');
+      if (
+        trait.rarityDomain.kind === 'ranked' &&
+        (rarity === undefined || !trait.rarityDomain.freshOfferRarities.includes(rarity))
+      )
+        failProjectDocument(
+          `${rolePath}.options.${key}.rarity`,
+          `unsupported fresh rarity for ${traitKey}`,
+        );
+      options.push(Object.freeze({ traitKey, ...(rarity === undefined ? {} : { rarity }) }));
+    }
+    const selected = expectString(record.selectedOptionKey, `${rolePath}.selectedOptionKey`);
+    if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selected))
+      failProjectDocument(
+        `${rolePath}.selectedOptionKey`,
+        'must select option1, option2, or option3',
+      );
+    result[roleKey] = Object.freeze({
+      giverKey,
+      options: Object.freeze(options) as AuthoredTraitOffer['options'],
+      selectedOptionKey: selected as AuthoredTraitOffer['selectedOptionKey'],
+    });
+  }
+  return Object.freeze(result);
+}
+
 function decodeCountedOffer(
   value: unknown,
   catalog: Catalog,
@@ -120,6 +234,21 @@ function decodeCountedOffer(
     failProjectDocument(`${path}.rewardType`, `${offer.rewardType} is filtered from this room`);
   }
   return offer;
+}
+
+function decodeRewardState(value: unknown, catalog: Catalog, path: string): AuthoredRewardState {
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, ['offer', 'traitOffersByAcquisitionRole'], path);
+  const offer = decodeOffer(raw.offer, catalog, `${path}.offer`);
+  return Object.freeze({
+    offer,
+    traitOffersByAcquisitionRole: decodeTraitOffers(
+      raw.traitOffersByAcquisitionRole,
+      catalog,
+      offer,
+      `${path}.traitOffersByAcquisitionRole`,
+    ),
+  });
 }
 
 function decodeRewardWheel(
@@ -143,14 +272,15 @@ function decodeRewardWheel(
   }
   const rawOffers = expectRecord(wheel.offers, `${path}.offers`);
   expectExactKeys(rawOffers, descriptor.offerKeys, `${path}.offers`);
-  const offers: Record<string, ResolvedRewardOffer> = {};
+  const offers: Record<string, AuthoredRewardState> = {};
   for (const offerKey of descriptor.offerKeys) {
-    offers[offerKey] = decodeCountedOffer(
-      rawOffers[offerKey],
-      catalog,
-      descriptor.reward,
-      `${path}.offers.${offerKey}`,
-    );
+    const reward = decodeRewardState(rawOffers[offerKey], catalog, `${path}.offers.${offerKey}`);
+    if (!descriptor.reward.allowedRewardTypes.includes(reward.offer.rewardType))
+      failProjectDocument(
+        `${path}.offers.${offerKey}.offer.rewardType`,
+        `${reward.offer.rewardType} is filtered from this wheel`,
+      );
+    offers[offerKey] = reward;
   }
   const pickedOfferIndex = expectPositiveInteger(
     wheel.pickedOfferIndex,
@@ -209,7 +339,7 @@ function decodeEphyraCombatState(
   path: string,
 ): EphyraCombatState {
   expectedKind(value.kind, 'ephyraCombat', path);
-  expectExactKeys(value, ['kind', 'offer', 'sideRooms'], path);
+  expectExactKeys(value, ['kind', 'reward', 'sideRooms'], path);
   const descriptor = requireEphyraSideRooms(room, path);
   const slots = descriptor?.slots ?? [];
   const rawSideRooms = expectRecord(value.sideRooms, `${path}.sideRooms`);
@@ -223,7 +353,7 @@ function decodeEphyraCombatState(
   for (const slot of slots) {
     const slotPath = `${path}.sideRooms.${slot.slotKey}`;
     const rawState = expectRecord(rawSideRooms[slot.slotKey], slotPath);
-    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'offer', 'encounters'], slotPath);
+    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'reward', 'encounters'], slotPath);
     const generation = expectString(rawState.generation, `${slotPath}.generation`);
     if (generation !== 'generated' && generation !== 'notGenerated') {
       failProjectDocument(`${slotPath}.generation`, 'must be generated or notGenerated');
@@ -246,15 +376,17 @@ function decodeEphyraCombatState(
     if (sideRoom === undefined) {
       failProjectDocument(slotPath, `unknown room ${slot.roomGameName}`);
     }
+    const sideReward = decodeRewardState(rawState.reward, catalog, `${slotPath}.reward`);
+    const sideOffer = decodeCountedOffer(
+      sideReward.offer,
+      catalog,
+      requireCountedBinding(sideRoom, slotPath),
+      `${slotPath}.reward.offer`,
+    );
     sideRooms[slot.slotKey] = Object.freeze({
       generation,
       enteredOrdinal,
-      offer: decodeCountedOffer(
-        rawState.offer,
-        catalog,
-        requireCountedBinding(sideRoom, slotPath),
-        `${slotPath}.offer`,
-      ),
+      reward: Object.freeze({ ...sideReward, offer: sideOffer }),
       encounters: decodeRoomEncounterState(
         rawState.encounters,
         catalog,
@@ -271,14 +403,16 @@ function decodeEphyraCombatState(
       );
     }
   }
+  const parentReward = decodeRewardState(value.reward, catalog, `${path}.reward`);
+  const offer = decodeCountedOffer(
+    parentReward.offer,
+    catalog,
+    requireCountedBinding(room, path),
+    `${path}.reward.offer`,
+  );
   return Object.freeze({
     kind: 'ephyraCombat',
-    offer: decodeCountedOffer(
-      value.offer,
-      catalog,
-      requireCountedBinding(room, path),
-      `${path}.offer`,
-    ),
+    reward: Object.freeze({ ...parentReward, offer }),
     sideRooms: Object.freeze(sideRooms),
   });
 }
@@ -319,8 +453,9 @@ function decodeShopOffers(
   for (const slot of profile.slots.values) {
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
-    expectExactKeys(rawOffer, ['offer'], offerPath);
-    const offer = decodeOffer(rawOffer.offer, catalog, `${offerPath}.offer`);
+    expectExactKeys(rawOffer, ['reward'], offerPath);
+    const reward = decodeRewardState(rawOffer.reward, catalog, `${offerPath}.reward`);
+    const offer = reward.offer;
     const group = profile.groups.byKey[slot.groupKey];
     if (group === undefined) {
       failProjectDocument(offerPath, `unknown shop group ${slot.groupKey}`);
@@ -329,11 +464,11 @@ function decodeShopOffers(
       !group.options.values.some((option) => option.defaultOffer.rewardType === offer.rewardType)
     ) {
       failProjectDocument(
-        `${offerPath}.offer.rewardType`,
+        `${offerPath}.reward.offer.rewardType`,
         `${offer.rewardType} is not available from ${slot.groupKey}`,
       );
     }
-    offers[slot.key] = Object.freeze({ offer });
+    offers[slot.key] = Object.freeze({ reward });
   }
   if (!Array.isArray(rawPurchaseOrder)) {
     failProjectDocument(`${path}.purchaseOrder`, 'must be an array');
@@ -388,16 +523,21 @@ export function decodeRoomState(
       const descriptor = requireFieldsCages(room, path);
       const rawCages = expectRecord(state.cages, `${path}.cages`);
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
-      const cages: Record<string, ResolvedRewardOffer> = {};
+      const cages: Record<string, AuthoredRewardState> = {};
       for (const slotKey of descriptor.slotKeys) {
-        cages[slotKey] = decodeCountedOffer(
-          rawCages[slotKey],
+        const reward = decodeRewardState(rawCages[slotKey], catalog, `${path}.cages.${slotKey}`);
+        const offer = decodeCountedOffer(
+          reward.offer,
           catalog,
           descriptor.reward,
-          `${path}.cages.${slotKey}`,
+          `${path}.cages.${slotKey}.offer`,
         );
+        cages[slotKey] = Object.freeze({ ...reward, offer });
       }
-      return Object.freeze({ kind: 'fieldsCombat', cages: Object.freeze(cages) });
+      return Object.freeze({
+        kind: 'fieldsCombat',
+        cages: Object.freeze(cages),
+      });
     }
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
@@ -411,34 +551,45 @@ export function decodeRoomState(
     case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
-    case 'StandardCombat':
+    case 'StandardCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'counted', path);
-      expectExactKeys(state, ['kind', 'offer'], path);
+      expectExactKeys(state, ['kind', 'reward'], path);
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const offer = decodeCountedOffer(
+        reward.offer,
+        catalog,
+        requireCountedBinding(room, path),
+        `${path}.reward.offer`,
+      );
       return Object.freeze({
         kind: 'counted',
-        offer: decodeCountedOffer(
-          state.offer,
-          catalog,
-          requireCountedBinding(room, path),
-          `${path}.offer`,
-        ),
+        reward: Object.freeze({ ...reward, offer }),
       });
-    case 'Anomaly':
+    }
+    case 'Anomaly': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'anomaly', path);
-      expectExactKeys(state, ['kind', 'offer', 'success'], path);
+      expectExactKeys(state, ['kind', 'reward', 'success'], path);
       if (rememberedCountedBinding === undefined) {
         failProjectDocument(path, 'Anomaly requires its remembered counted reward binding');
       }
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const offer = decodeCountedOffer(
+        reward.offer,
+        catalog,
+        rememberedCountedBinding,
+        `${path}.reward.offer`,
+      );
       return Object.freeze({
         kind: 'anomaly',
         // The takeover can retain a normal G reward that this Anomaly map
         // would not normally offer. The remembered G declaration remains the
         // persisted offer domain; evaluation reports the Anomaly mismatch.
-        offer: decodeCountedOffer(state.offer, catalog, rememberedCountedBinding, `${path}.offer`),
+        reward: Object.freeze({ ...reward, offer }),
         success: expectBoolean(state.success, `${path}.success`),
       });
+    }
     case 'Devotion':
     case 'ContractBoss':
     case 'Chaos':
@@ -455,18 +606,31 @@ export function decodeRoomState(
       if (rewardType === undefined) {
         failProjectDocument(path, `unknown fixed reward ${room.incomingReward.offer.rewardType}`);
       }
-      expectExactKeys(
-        state,
-        rewardType.payloadDomain === undefined ? ['kind'] : ['kind', 'payload'],
-        path,
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const payload = decodePayload(
+        reward.offer.payload,
+        rewardType,
+        catalog,
+        `${path}.reward.offer.payload`,
       );
-      const payload = decodePayload(state.payload, rewardType, catalog, `${path}.payload`);
-      return Object.freeze({ kind: 'fixed', ...(payload === undefined ? {} : { payload }) });
+      const offer = Object.freeze({
+        rewardType: room.incomingReward.offer.rewardType,
+        ...(payload === undefined ? {} : { payload }),
+      });
+      if (offer.rewardType !== reward.offer.rewardType)
+        failProjectDocument(
+          `${path}.reward.offer.rewardType`,
+          'fixed reward type is declaration-owned',
+        );
+      return Object.freeze({
+        kind: 'fixed',
+        reward: Object.freeze({ ...reward, offer }),
+      });
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
       return decodeShopRoomState(state, catalog, room, entryActive, path);
-    case 'Preboss':
+    case 'Preboss': {
       if (role === 'ordinary') {
         failProjectDocument(path, 'Preboss requires a declaration-derived offer role');
       }
@@ -474,22 +638,25 @@ export function decodeRoomState(
         return decodeShopRoomState(state, catalog, room, entryActive, path);
       }
       expectedKind(state.kind, 'freeReward', path);
-      expectExactKeys(state, ['kind', 'offer'], path);
+      expectExactKeys(state, ['kind', 'reward'], path);
       if (
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' ||
         room.prebossBatchPolicy.remainingOffers.kind !== 'counted'
       ) {
         failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const offer = decodeCountedOffer(
+        reward.offer,
+        catalog,
+        room.prebossBatchPolicy.remainingOffers.reward,
+        `${path}.reward.offer`,
+      );
       return Object.freeze({
         kind: 'freeReward',
-        offer: decodeCountedOffer(
-          state.offer,
-          catalog,
-          room.prebossBatchPolicy.remainingOffers.reward,
-          `${path}.offer`,
-        ),
+        reward: Object.freeze({ ...reward, offer }),
       });
+    }
   }
 }
 

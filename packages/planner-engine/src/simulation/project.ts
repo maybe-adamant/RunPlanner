@@ -491,6 +491,7 @@ function evaluateBiomeAssembly(
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
   previous?: CompleteValidBiomeProjectEvaluation,
+  traitContext?: import('./traits').TraitOfferContext,
 ): BiomeProjectEvaluationAssembly {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateBiomeCompleteness(catalog, origin, plan);
@@ -544,7 +545,7 @@ function evaluateBiomeAssembly(
       candidateArtifacts: progressive.candidateArtifacts,
     });
   }
-  const snapshot = materializeBiome(catalog, origin, completeness);
+  const snapshot = materializeBiome(catalog, origin, completeness, traitContext);
   const seed: HistoryStateView | undefined = previous?.history.afterTransition;
   const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
   if (composed.kind === 'blocked') {
@@ -735,6 +736,7 @@ function evaluateRouteAssembly(
       plan,
       index + 1,
       previous?.authoring === 'complete' && previous.validity === 'valid' ? previous : undefined,
+      { weaponKey: route.loadout.weaponKey, aspectKey: route.loadout.aspectKey },
     );
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);

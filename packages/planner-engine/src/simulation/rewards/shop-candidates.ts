@@ -50,7 +50,8 @@ export function prepareShopPurchaseCandidateContext({
               }
               return Object.freeze({
                 ...offer,
-                offer: candidate.offer,
+                offer: candidate.reward.offer,
+                traitOffersByAcquisitionRole: candidate.reward.traitOffersByAcquisitionRole,
               });
             }),
           ),

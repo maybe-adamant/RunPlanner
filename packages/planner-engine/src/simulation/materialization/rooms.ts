@@ -20,6 +20,8 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
+import type { TraitOfferContext } from '../traits';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -58,6 +60,7 @@ export interface AuthoredRoomMaterializationContext {
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
+  readonly traitContext?: TraitOfferContext;
 }
 
 interface MaterializedRoomLeaf {
@@ -87,6 +90,17 @@ function resolvedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
+function traitContextForOffer(
+  context: AuthoredRoomMaterializationContext,
+  offer: ResolvedRewardOffer,
+): TraitOfferContext {
+  return Object.freeze({
+    ...(context.traitContext ?? {}),
+    blockGiftBoons: context.room.blockGiftBoons,
+    devotionNoDuo: offer.rewardType === 'Devotion',
+  });
+}
+
 function resolvedIncomingReward(
   context: AuthoredRoomMaterializationContext,
   producerKind: CanonicalResolvedIncomingReward['producerKind'],
@@ -100,6 +114,13 @@ function resolvedIncomingReward(
     producerKind,
     producerLifecycleKey,
     offer,
+    ...('reward' in context.occurrence.state
+      ? {
+          traitOffersByAcquisitionRole:
+            context.occurrence.state.reward.traitOffersByAcquisitionRole,
+        }
+      : {}),
+    traitContext: traitContextForOffer(context, offer),
     ...(storeKey === undefined ? {} : { resolvedStoreKey: storeKey }),
   });
 }
@@ -130,7 +151,7 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
       context,
       'countedChoice',
       binding.producerLifecycleKey,
-      state.offer,
+      state.reward.offer,
     ),
   });
 }
@@ -151,7 +172,7 @@ function materializeAnomaly(context: AuthoredRoomMaterializationContext): Materi
     context,
     'countedChoice',
     binding.producerLifecycleKey,
-    state.offer,
+    state.reward.offer,
   );
   return Object.freeze({
     lifecycleProfileKey: 'StandardRewardRoom',
@@ -192,7 +213,7 @@ function materializeEphyraCombat(
       context,
       'countedChoice',
       binding.producerLifecycleKey,
-      state.offer,
+      state.reward.offer,
     ),
   });
 }
@@ -203,7 +224,7 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   if (binding.kind !== 'fixed') {
     fail(`${context.room.gameName} fixed template has ${binding.kind} producer`);
   }
-  const payload = state.payload ?? binding.offer.payload;
+  const payload = state.reward.offer.payload ?? binding.offer.payload;
   return Object.freeze({
     lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
     incomingReward: resolvedIncomingReward(
@@ -282,8 +303,8 @@ function materializeFieldsCombat(
     if (attachment?.kind !== 'localReward') {
       return fail(`${context.room.gameName}.${encounterSlot.key} lacks a cage reward attachment`);
     }
-    const offer = state.cages[attachment.slotKey];
-    if (offer === undefined) {
+    const reward = state.cages[attachment.slotKey];
+    if (reward === undefined) {
       fail(`${context.room.gameName} is missing authored cage ${attachment.slotKey}`);
     }
     return Object.freeze({
@@ -297,7 +318,9 @@ function materializeFieldsCombat(
       slotKey: attachment.slotKey,
       encounterPhaseKey: encounterSlot.key,
       producerLifecycleKey: descriptor.reward.producerLifecycleKey,
-      offer,
+      offer: reward.offer,
+      traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+      traitContext: traitContextForOffer(context, reward.offer),
       resolvedStoreKey: storeKey,
     });
   });
@@ -316,6 +339,7 @@ export function materializeShipCombatState(
   biome: BiomeAddress,
   room: RoomDeclaration,
   occurrence: RoomOccurrence,
+  traitContext?: TraitOfferContext,
 ): MaterializedShipCombatState {
   if (occurrence.state.kind !== 'shipCombat') {
     fail(`${occurrence.gameName} expected shipCombat state, received ${occurrence.state.kind}`);
@@ -365,8 +389,8 @@ export function materializeShipCombatState(
       fail(`${room.gameName} is missing ${descriptor.key}`);
     }
     const offers = descriptor.offerKeys.slice(0, wheel.offerCount).map((offerKey, index) => {
-      const offer = wheel.offers[offerKey];
-      if (offer === undefined) {
+      const reward = wheel.offers[offerKey];
+      if (reward === undefined) {
         fail(`${room.gameName}.${descriptor.key} is missing ${offerKey}`);
       }
       return Object.freeze({
@@ -377,7 +401,13 @@ export function materializeShipCombatState(
           offerKey,
         ),
         offerKey,
-        offer,
+        offer: reward.offer,
+        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+        traitContext: Object.freeze({
+          ...(traitContext ?? {}),
+          blockGiftBoons: room.blockGiftBoons,
+          devotionNoDuo: reward.offer.rewardType === 'Devotion',
+        }),
         picked: wheel.pickedOfferIndex === index + 1,
       });
     });
@@ -408,6 +438,7 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
     context.biome,
     context.room,
     context.occurrence,
+    context.traitContext,
   );
   return Object.freeze({
     lifecycleProfileKey: 'ShipCombatRoom',
@@ -445,7 +476,9 @@ function materializeShopEntry(
             context.occurrence.occurrenceId,
             slot.key,
           ),
-          offer: authored.offer,
+          offer: authored.reward.offer,
+          traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
+          traitContext: traitContextForOffer(context, authored.reward.offer),
         });
       }),
     ),
@@ -497,7 +530,7 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
       context,
       'freeReward',
       policy.remainingOffers.reward.producerLifecycleKey,
-      state.offer,
+      state.reward.offer,
     ),
   });
 }

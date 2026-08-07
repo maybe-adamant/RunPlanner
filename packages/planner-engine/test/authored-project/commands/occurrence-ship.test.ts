@@ -107,7 +107,7 @@ describe('authored-project Ship occurrence commands', () => {
 
     expect(shipState(project).wheels.wheel1).toMatchObject({
       storeKey: 'MetaProgress',
-      offers: { offer1: { rewardType: 'RoomMoneyDrop' } },
+      offers: { offer1: { offer: { rewardType: 'RoomMoneyDrop' } } },
     });
     expect(
       applyProjectCommand(project, catalog, {

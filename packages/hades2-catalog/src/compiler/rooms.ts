@@ -503,6 +503,9 @@ export function normalizeRooms(
     if (room.structuralTags === undefined) {
       fail(`${path}.structuralTags`, 'is required');
     }
+    if (room.blockGiftBoons !== undefined && typeof room.blockGiftBoons !== 'boolean') {
+      fail(`${path}.blockGiftBoons`, 'must be a boolean when declared');
+    }
     const mode = validateMode(room, path);
     const encounterEnvelopeKey = requireNonEmpty(
       room.encounterEnvelopeKey,
@@ -720,6 +723,7 @@ export function normalizeRooms(
       exits: Object.freeze(exits),
       additionalExits,
       incomingReward,
+      blockGiftBoons: room.blockGiftBoons ?? false,
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
       encounterSlotBindings,

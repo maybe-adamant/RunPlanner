@@ -6,6 +6,7 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
+import { createDefaultTraitOffers } from '../traits';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -25,6 +26,7 @@ export function applyIncomingRewardCommand(
     failCommand(command, `${occurrence.gameName} is not a legal topology room occurrence`);
   }
   let state: RoomOccurrence['state'];
+  const loadout = located.loadout;
   if (occurrence.state.kind === 'fixed') {
     if (
       room.incomingReward.kind !== 'fixed' ||
@@ -34,7 +36,10 @@ export function applyIncomingRewardCommand(
     }
     state = Object.freeze({
       kind: 'fixed',
-      ...(command.value.payload === undefined ? {} : { payload: command.value.payload }),
+      reward: Object.freeze({
+        offer: command.value,
+        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
+      }),
     });
   } else if (
     occurrence.state.kind === 'counted' ||
@@ -42,7 +47,13 @@ export function applyIncomingRewardCommand(
     occurrence.state.kind === 'freeReward' ||
     occurrence.state.kind === 'ephyraCombat'
   ) {
-    state = Object.freeze({ ...occurrence.state, offer: command.value });
+    state = Object.freeze({
+      ...occurrence.state,
+      reward: Object.freeze({
+        offer: command.value,
+        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
+      }),
+    });
   } else {
     failCommand(command, `${occurrence.gameName} has no replaceable incoming reward`);
   }

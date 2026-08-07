@@ -139,6 +139,15 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly offerKey: string;
 }
 
+export type TraitOfferOwnerAddress =
+  IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress | ShopOfferAddress;
+
+export interface TraitOfferAddress extends BiomeOwnedAddress {
+  readonly kind: 'traitOffer';
+  readonly owner: TraitOfferOwnerAddress;
+  readonly acquisitionRole: string;
+}
+
 export type SemanticAddress =
   | ProjectAddress
   | RouteAddress
@@ -164,7 +173,8 @@ export type SemanticAddress =
   | HubRoomAddress
   | HubVisitAddress
   | ShopPurchaseAddress
-  | ShopOfferAddress;
+  | ShopOfferAddress
+  | TraitOfferAddress;
 
 export class SemanticAddressContractError extends Error {
   constructor(
@@ -438,6 +448,19 @@ export function createShopOfferAddress(
   });
 }
 
+export function createTraitOfferAddress(
+  ownerAddress: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+): TraitOfferAddress {
+  return Object.freeze({
+    kind: 'traitOffer',
+    routeKey: ownerAddress.routeKey,
+    biomeKey: ownerAddress.biomeKey,
+    owner: ownerAddress,
+    acquisitionRole: nonBlank(acquisitionRole, 'acquisitionRole'),
+  });
+}
+
 export function semanticAddressKey(address: SemanticAddress): string {
   const base = [
     address.kind,
@@ -489,5 +512,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'shopOffer':
     case 'shopPurchase':
       return JSON.stringify([...base, address.occurrenceId, address.offerKey]);
+    case 'traitOffer':
+      return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
   }
 }

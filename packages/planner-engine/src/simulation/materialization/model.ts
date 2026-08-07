@@ -22,6 +22,8 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
+import type { AuthoredTraitOffer } from '../../authored-project/traits';
+import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 
@@ -31,6 +33,8 @@ export interface CanonicalResolvedIncomingReward {
   readonly producerKind: 'countedChoice' | 'fixed' | 'freeReward' | 'shop';
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey?: string;
   /**
    * An Anomaly always creates and consumes its retained offer. Its authored
@@ -45,6 +49,8 @@ export interface CanonicalShopOffer {
   readonly offerOrigin: ShopOfferAddress;
   readonly purchaseOrigin: ShopPurchaseAddress;
   readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitContext?: TraitOfferContext;
 }
 
 export interface CanonicalShopEntryState {
@@ -61,6 +67,8 @@ export interface CanonicalLocalReward {
   readonly encounterPhaseKey: string;
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey: string;
 }
 
@@ -68,6 +76,8 @@ export interface CanonicalRewardWheelOffer {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
   readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitContext?: TraitOfferContext;
   readonly picked: boolean;
 }
 

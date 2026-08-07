@@ -61,6 +61,8 @@ export {
   type StartRoomCandidateSupport,
   type HubTerminalTakeoverCandidateQuery,
   type TakeoverPrebossBatchCandidateQuery,
+  type EvaluatedTraitOfferCandidate,
+  type TraitOfferCandidateQuery,
 } from './candidates';
 export {
   executeRoomLifecycle,
@@ -232,3 +234,22 @@ export {
   type RouteEvaluationSummary,
   type RouteProcessingRegions,
 } from './project';
+export {
+  assessTraitOffer,
+  attachTraitHistory,
+  assessTraitOption,
+  traitCandidates,
+  createTraitHistoryState,
+  foldTraitOfferEvents,
+  evaluateReachedTraitOffer,
+  recordReachedTraitOffer,
+  nextRarity,
+  traitDerivedFacts,
+  type TraitAssessment,
+  type TraitFindingCode,
+  type TraitHistoryState,
+  type ReachedTraitOfferEvaluation,
+  type TraitOfferContext,
+  type TraitOfferEvent,
+  type TraitCandidateAssessment,
+} from './traits';

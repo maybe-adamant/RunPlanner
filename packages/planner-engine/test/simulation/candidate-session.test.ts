@@ -180,7 +180,7 @@ describe('candidate session', () => {
     ).evaluate({
       kind: 'incomingReward',
       reward: createIncomingRewardAddress(fBiome, occurrence.occurrenceId),
-      value: occurrence.state.offer,
+      value: occurrence.state.reward.offer,
     });
 
     expect(result).toMatchObject({
@@ -207,7 +207,7 @@ describe('candidate session', () => {
       {
         kind: 'shopOffer',
         offer: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
-        value: offer.offer,
+        value: offer.reward.offer,
       },
       {
         kind: 'shopPurchaseOrder',

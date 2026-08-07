@@ -23,6 +23,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { authorLegalTraitOffers } from './trait-offers';
 
 export const goldenFBiome = createBiomeAddress('Underworld', 'F');
 export const goldenGBiome = createBiomeAddress('Underworld', 'G');
@@ -47,6 +48,10 @@ export interface GoldenGProjectOptions {
   readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
   readonly prebossSource?: 'G_Combat12' | 'G_Combat14';
 }
+
+const completeFGCache = new Map<string, ProjectDocument>();
+let goldenFGHCache: ProjectDocument | undefined;
+let goldenFGHICache: ProjectDocument | undefined;
 
 const fBatches: readonly BatchSpec[] = [
   { storeKey: 'MetaProgress', targets: [{ gameName: 'F_Combat02' }] },
@@ -335,7 +340,7 @@ function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
   ];
 }
 
-export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
+function createCompleteFGProjectRaw(options: GoldenGProjectOptions = {}): ProjectDocument {
   let project = createCompleteFProject();
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
@@ -409,6 +414,15 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     ),
     value: { rewardType: 'RoomRewardHealDrop' },
   });
+}
+
+export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
+  const key = JSON.stringify(options);
+  const cached = completeFGCache.get(key);
+  if (cached !== undefined) return cached;
+  const normalized = authorLegalTraitOffers(createCompleteFGProjectRaw(options));
+  completeFGCache.set(key, normalized);
+  return normalized;
 }
 
 interface UnstoredTargetSpec {
@@ -654,10 +668,14 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
 
 /** Complete F-through-H authored-project fixture. */
 export function createGoldenFGHProject(): ProjectDocument {
-  return appendCompleteH(createCompleteFGProject());
+  if (goldenFGHCache !== undefined) return goldenFGHCache;
+  goldenFGHCache = authorLegalTraitOffers(appendCompleteH(createCompleteFGProjectRaw()));
+  return goldenFGHCache;
 }
 
 /** Complete Underworld authored-project fixture. */
 export function createGoldenFGHIProject(): ProjectDocument {
-  return appendCompleteI(createGoldenFGHProject());
+  if (goldenFGHICache !== undefined) return goldenFGHICache;
+  goldenFGHICache = authorLegalTraitOffers(appendCompleteI(createGoldenFGHProject()));
+  return goldenFGHICache;
 }
