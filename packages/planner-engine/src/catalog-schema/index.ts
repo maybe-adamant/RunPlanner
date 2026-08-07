@@ -8,6 +8,32 @@ import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../r
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
 
+export type {
+  AspectDeclaration,
+  HammerCompatibility,
+  TraitCatalog,
+  TraitDeclaration,
+  TraitElement,
+  TraitGiverDeclaration,
+  TraitOfferContextDeclaration,
+  TraitOfferContextKey,
+  TraitOfferDefaults,
+  TraitOfferOptionDefault,
+  TraitOrdinaryBoonSlot,
+  TraitProviderKind,
+  TraitRarity,
+  TraitRequirementExpression,
+  WeaponDeclaration,
+} from './traits';
+import type {
+  AspectDeclaration,
+  TraitDeclaration,
+  TraitElement,
+  TraitGiverDeclaration,
+  TraitOfferContextDeclaration,
+  WeaponDeclaration,
+} from './traits';
+
 export type { CatalogCollection } from '../normalized/collection';
 export type { RoomStructuralTag } from '../requirements/model';
 
@@ -612,6 +638,15 @@ export interface Catalog {
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
   readonly biomeLayouts: CatalogCollection<BiomeLayout>;
+  readonly weapons: CatalogCollection<WeaponDeclaration>;
+  readonly aspects: CatalogCollection<AspectDeclaration>;
+  readonly traits: CatalogCollection<TraitDeclaration>;
+  readonly traitGivers: CatalogCollection<TraitGiverDeclaration>;
+  readonly traitOfferContexts: CatalogCollection<TraitOfferContextDeclaration>;
+  readonly traitRarityOrder: readonly ['Common', 'Rare', 'Epic', 'Heroic'];
+  readonly traitElements: readonly TraitElement[];
+  readonly traitBaseElements: readonly ['Earth', 'Air', 'Fire', 'Water'];
+  readonly deferredTraitKeys: readonly string[];
 }
 
 export interface CatalogSummary {

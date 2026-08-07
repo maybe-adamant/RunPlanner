@@ -46,6 +46,15 @@ describe('summarizeCatalog', () => {
       exitTypes: emptyCollection(),
       rooms: emptyCollection(),
       biomeLayouts: emptyCollection(),
+      weapons: emptyCollection(),
+      aspects: emptyCollection(),
+      traits: emptyCollection(),
+      traitGivers: emptyCollection(),
+      traitOfferContexts: emptyCollection(),
+      traitRarityOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
+      traitElements: [],
+      traitBaseElements: ['Earth', 'Air', 'Fire', 'Water'],
+      deferredTraitKeys: [],
     };
 
     expect(summarizeCatalog(catalog)).toEqual({

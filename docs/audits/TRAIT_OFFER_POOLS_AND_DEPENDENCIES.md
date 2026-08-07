@@ -682,3 +682,32 @@ the preceding rows come from `TraitRequirements`.
     351 unique trait keys, and 77 traits with positive equipped-trait
     prerequisites. Source-to-document comparison found no missing or extra
     dependency rows.
+
+## Gate A Source-Closure Fields
+
+The first trait-offer slice consumes the following additional declaration
+facts from the installed scripts. These are normalized in the catalog without
+moving any lifecycle, authored-state, or simulation policy into declarations:
+
+| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, and Hammer key                                                                                                                                                                                                                          |
+| fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer fresh offers are fixed `Common` under `ForceCommon`                                                                                        |
+| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                               |
+| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                         |
+| god-trait/rareness flags      | inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits are not persistent god traits                                                                                                                            |
+| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                |
+| offer requirements            | all 77 positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the two Hammer `HasNone` rows are explicit negative requirements                                                                                                                                 |
+| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon` |
+| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                    |
+| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                      |
+
+The Gate-A normalized inventory has six weapons, 24 weapon/aspect pairs, 268
+unique included trait declarations, 211 Olympian/Hermes memberships, 92 Hammer
+memberships, and one loadout-keyed Hammer default triple for each of the 24
+pairs. The 23 exact deferred-provider operands discovered in the included
+dependency graph remain keys only; no NPC, Story, Spell, or Talent wrapper is
+introduced into the persistent trait catalog. Other source predicates retain
+the dispositions above or the previously recorded progressed-baseline,
+mechanical-effect, and Hephaestus level/cooldown deferrals; no unlisted
+offer-affecting predicate was discovered during this closure.

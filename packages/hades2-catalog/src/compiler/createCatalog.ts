@@ -19,6 +19,7 @@ import { normalizeRooms } from './rooms';
 import { normalizeRoomLifecycleProfiles } from './lifecycles';
 import { normalizeRoutes } from './routes';
 import { createRewardKernelCatalog } from './rewards/normalize';
+import { createTraitCatalog } from './traits';
 
 export { CatalogContractError } from './errors';
 
@@ -28,6 +29,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const biomes = normalizeBiomes(input.biomes);
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
+  const traitCatalog = createTraitCatalog(input.traitCatalog);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
   const encounterDefinitions = normalizeEncounterDefinitions(input.encounterDefinitions, rewards);
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
@@ -72,5 +74,14 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
     rooms,
     biomeLayouts,
+    weapons: traitCatalog.weapons,
+    aspects: traitCatalog.aspects,
+    traits: traitCatalog.traits,
+    traitGivers: traitCatalog.givers,
+    traitOfferContexts: traitCatalog.offerContexts,
+    traitRarityOrder: traitCatalog.rarityOrder,
+    traitElements: traitCatalog.elements,
+    traitBaseElements: traitCatalog.baseElements,
+    deferredTraitKeys: traitCatalog.deferredTraitKeys,
   });
 }

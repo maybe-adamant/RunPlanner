@@ -27,6 +27,7 @@ import type {
 import type { EnteredRewardStoreHistoryPolicy } from '@run-planner/engine/reward-kernel';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawRewardKernelInput } from './rewards/types';
+import type { RawTraitCatalogInput } from './traits';
 
 export interface RawEncounterRewardWheelAttachment {
   readonly kind: 'rewardWheel';
@@ -279,4 +280,7 @@ export interface RawCatalogInput {
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
+  readonly traitCatalog: RawTraitCatalogInput;
 }
+
+export type { RawTraitCatalogInput } from './traits';
