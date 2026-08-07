@@ -40,6 +40,12 @@ function plan(project: ProjectDocument) {
   return result;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture has no Underworld route');
+  return route.loadout;
+}
+
 function hLayout() {
   const layout = catalog.biomeLayouts.byKey.H;
   if (layout === undefined) throw new Error('catalog has no H layout');
@@ -218,7 +224,7 @@ function materialize(project: ProjectDocument) {
       `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
     );
   }
-  return materializeBiome(catalog, biome, completeness);
+  return materializeBiome(catalog, biome, completeness, traitContext(project));
 }
 
 function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {

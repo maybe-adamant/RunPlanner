@@ -252,4 +252,5 @@ export {
   type TraitOfferContext,
   type TraitOfferEvent,
   type TraitCandidateAssessment,
+  type TraitMaterializationContext,
 } from './traits';

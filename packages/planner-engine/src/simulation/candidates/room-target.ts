@@ -44,6 +44,7 @@ import {
   prefixAuthoredRooms,
   prefixBiome,
   progressiveSeed,
+  traitContextFor,
 } from './evaluated-biome';
 
 export interface RoomTargetCandidateQuery {
@@ -280,6 +281,7 @@ function evaluateInvalidCompleteRoomTarget(
     createBiomeAddress(query.target.routeKey, query.target.biomeKey),
     planFor(project, query.target.routeKey, query.target.biomeKey),
     completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
+    traitContextFor(project, query.target.routeKey),
     progressiveSeed(evaluation, query.target.routeKey, query.target.biomeKey),
   );
   if (progressive === null) return undefined;

@@ -12,6 +12,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -35,6 +36,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -58,6 +60,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -81,6 +84,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -104,6 +108,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -127,6 +132,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {
@@ -150,6 +156,7 @@ export const anomalyRooms = [
     roomSetKey: 'Anomaly',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'Anomaly' },
+    blockGiftBoons: true,
     structuralTags: [],
     exits: [{ index: 1, type: 'AnomalyAutoExitDoor' }],
     incomingReward: {

@@ -35,6 +35,12 @@ function fPlan(project: ProjectDocument) {
   return plan;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture has no Underworld route');
+  return route.loadout;
+}
+
 function complete(project: ProjectDocument) {
   const result = evaluateBiomeCompleteness(catalog, fGenerationBiome, fPlan(project));
   if (result.completion !== 'complete') {
@@ -44,7 +50,12 @@ function complete(project: ProjectDocument) {
 }
 
 function evaluate(project = createFGenerationProject()) {
-  const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
+  const snapshot = materializeBiome(
+    catalog,
+    fGenerationBiome,
+    complete(project),
+    traitContext(project),
+  );
   const history = composeBiomeHistory(catalog, snapshot);
   const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
   return {
@@ -238,7 +249,12 @@ describe('F room possibility and generation validation', () => {
       occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationStartId),
       gameName: 'F_Opening02',
     });
-    const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
+    const snapshot = materializeBiome(
+      catalog,
+      fGenerationBiome,
+      complete(project),
+      traitContext(project),
+    );
 
     expect(() =>
       evaluateBiomeRoomGeneration(
@@ -258,7 +274,12 @@ describe('F room possibility and generation validation', () => {
       occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(2, 2)),
       gameName: 'F_Combat04',
     });
-    const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
+    const snapshot = materializeBiome(
+      catalog,
+      fGenerationBiome,
+      complete(project),
+      traitContext(project),
+    );
 
     expect(() =>
       evaluateBiomeRoomGeneration(

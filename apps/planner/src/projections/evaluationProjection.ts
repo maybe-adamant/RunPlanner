@@ -188,10 +188,6 @@ const findingCopy = {
     title: 'Hammer is incompatible with this loadout',
     description: 'This Hammer trait does not support the selected weapon and aspect.',
   },
-  hammerExclusion: {
-    title: 'Hammer trait is excluded',
-    description: 'This Hammer trait is excluded by the current offer context.',
-  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

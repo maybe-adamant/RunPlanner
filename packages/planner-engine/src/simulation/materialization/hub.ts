@@ -38,7 +38,7 @@ import type {
   CanonicalRoomReference,
 } from './model';
 import { materializeAuthoredRoom } from './rooms';
-import type { TraitOfferContext } from '../traits';
+import type { TraitMaterializationContext } from '../traits';
 
 type FixedRoomSlotDescriptor = Extract<
   LocalChildDescriptor,
@@ -171,7 +171,7 @@ function localIncomingReward(
   slot: FixedRoomSlotDescriptor,
   room: RoomDeclaration,
   state: EphyraSideRoomState,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalResolvedIncomingReward {
   const binding = requireCountedBinding(room);
   const resolvedStoreKey = room.forcedRewardStoreKey ?? room.individualRewardStoreKey;
@@ -197,7 +197,7 @@ function materializeLocalSlots(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): readonly CanonicalLocalChildRoom[] {
   const descriptor = room.localChildren[0];
   if (descriptor === undefined) return Object.freeze([]);
@@ -272,7 +272,7 @@ function materializeBoard(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   room: CanonicalHubRoom,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(decision.visitOrder);
@@ -314,7 +314,7 @@ function materializeVisits(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   board: CanonicalHubBoard,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): readonly CanonicalHubVisit[] {
   const targets = new Map(board.targets.map((target) => [target.hubSlotKey, target]));
   return Object.freeze(
@@ -366,7 +366,7 @@ export function materializeHubDecision(
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  traitContext?: TraitOfferContext,
+  traitContext?: TraitMaterializationContext,
 ): CanonicalHubDecision {
   if (decision.hubKey !== descriptor.hubKey) {
     fail(`Hub decision ${decision.hubKey} does not match ${descriptor.hubKey}`);

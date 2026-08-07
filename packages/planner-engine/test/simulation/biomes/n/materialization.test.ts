@@ -29,6 +29,12 @@ function completeN() {
   return { project, evaluation, biome };
 }
 
+function traitContext(project: ReturnType<typeof createRepresentativeNProject>) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  if (route === undefined) throw new Error('N fixture has no Surface route');
+  return route.loadout;
+}
+
 describe('canonical N Hub materialization', () => {
   it('keeps an unopened Hub structurally incomplete without inventing a board', () => {
     const project = createProjectDocument(catalog, {
@@ -173,7 +179,7 @@ describe('canonical N Hub materialization', () => {
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N terminal-envelope fixture lost its biome plan');
-    const prefix = materializeBiomePrefix(catalog, nBiome, plan);
+    const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
     if (prefix === null) {
       throw new Error('N terminal envelope did not materialize its selected prefix');
     }
@@ -241,7 +247,7 @@ describe('canonical N Hub materialization', () => {
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N Hub-source fixture lost its biome plan');
-    const prefix = materializeBiomePrefix(catalog, nBiome, plan);
+    const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
     if (prefix === null) throw new Error('N Hub-source fixture did not materialize');
     const hub = prefix.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('N Hub-source fixture lost its Hub decision');

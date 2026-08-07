@@ -37,6 +37,7 @@ import {
 } from '../encounters';
 import { materializeBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
+import type { TraitMaterializationContext } from '../traits';
 import {
   evaluateBiomeRewardsAssembly,
   type BiomeRewardSimulation,
@@ -689,11 +690,18 @@ export function evaluateProgressiveBiomeBeforeClamp(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluation | null {
   return (
-    evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, biome, plan, enteredBiomeCount, seed)
-      ?.evaluation ?? null
+    evaluateProgressiveBiomeAssemblyBeforeClamp(
+      catalog,
+      biome,
+      plan,
+      enteredBiomeCount,
+      traitContext,
+      seed,
+    )?.evaluation ?? null
   );
 }
 
@@ -702,9 +710,10 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan);
+  const initial = materializeBiomePrefix(catalog, biome, plan, traitContext);
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
@@ -740,11 +749,12 @@ export function evaluateProgressiveBiome(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluation | null {
   return (
-    evaluateProgressiveBiomeAssembly(catalog, biome, plan, enteredBiomeCount, seed)?.evaluation ??
-    null
+    evaluateProgressiveBiomeAssembly(catalog, biome, plan, enteredBiomeCount, traitContext, seed)
+      ?.evaluation ?? null
   );
 }
 
@@ -753,9 +763,10 @@ export function evaluateProgressiveBiomeAssembly(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan);
+  const initial = materializeBiomePrefix(catalog, biome, plan, traitContext);
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;

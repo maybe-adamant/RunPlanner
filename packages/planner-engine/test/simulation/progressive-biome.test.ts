@@ -18,7 +18,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  composeBiomeHistoryPrefix,
   createPreparedProjectCandidateSession,
+  evaluateBiomeRewards,
+  materializeBiomePrefix,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -47,6 +50,8 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
   goldenHBiome,
@@ -265,6 +270,81 @@ function partialGWithEarlierInvalidReward() {
 }
 
 describe('progressive biome evaluation', () => {
+  it('assesses a stale Hammer loadout in an incomplete prefix with the route context', () => {
+    const initial = createGoldenFGHProject();
+    const route = initial.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    if (route === undefined) throw new Error('missing Underworld route');
+    const replacementWeapon = catalog.weapons.values.find(
+      (weapon) => weapon.key !== route.loadout.weaponKey,
+    );
+    if (replacementWeapon === undefined) throw new Error('missing replacement weapon');
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Underworld'),
+      weaponKey: replacementWeapon.key,
+      aspectKey: replacementWeapon.defaultAspectKey,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(8, 1),
+      }),
+    });
+    const evaluation = simulateProject(catalog, project)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    expect(evaluation?.authoring).toBe('incomplete');
+    expect(evaluation?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'wrongHammerLoadout',
+        origin: expect.objectContaining({
+          kind: 'traitOffer',
+          owner: expect.objectContaining({
+            kind: 'incomingReward',
+            occurrenceId: goldenFOccurrenceId(8, 1),
+          }),
+        }),
+      }),
+    );
+
+    const plan = project.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (plan === undefined) throw new Error('stale Hammer plan is missing');
+    const currentRoute = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    if (currentRoute === undefined) throw new Error('stale Hammer route is missing');
+    // @ts-expect-error public materialization requires a route-owned loadout
+    expect(() => materializeBiomePrefix(catalog, goldenFBiome, plan, {})).toThrowError(
+      'public biome materialization requires a route weapon and aspect loadout',
+    );
+    const directSnapshot = materializeBiomePrefix(
+      catalog,
+      goldenFBiome,
+      plan,
+      currentRoute.loadout,
+    );
+    if (directSnapshot?.entryRoom === undefined) {
+      throw new Error('stale Hammer direct prefix did not materialize');
+    }
+    const directSnapshotWithEntry = { ...directSnapshot, entryRoom: directSnapshot.entryRoom };
+    const directHistory = composeBiomeHistoryPrefix(catalog, directSnapshot);
+    if (directHistory === null) throw new Error('stale Hammer direct history did not compose');
+    const directRewards = evaluateBiomeRewards(catalog, directSnapshotWithEntry, directHistory, 1);
+    expect(directRewards.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'wrongHammerLoadout',
+        origin: expect.objectContaining({
+          kind: 'traitOffer',
+          owner: expect.objectContaining({
+            kind: 'incomingReward',
+            occurrenceId: goldenFOccurrenceId(8, 1),
+          }),
+        }),
+      }),
+    );
+  });
+
   it('carries exact room-target and reward-producer artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
     const complete = createFGenerationProject();
     const incomplete = createFGenerationProject(undefined, { includeTakeover: false });
@@ -304,12 +384,20 @@ describe('progressive biome evaluation', () => {
       throw new Error('progressive artifact fixture has no valid F seed or G plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
-    const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, 2, seed);
+    const clamped = evaluateProgressiveBiomeAssembly(
+      catalog,
+      goldenGBiome,
+      plan,
+      2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      seed,
+    );
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
       catalog,
       goldenGBiome,
       plan,
       2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       seed,
     );
     const firstGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit1');
@@ -368,6 +456,7 @@ describe('progressive biome evaluation', () => {
       goldenGBiome,
       blockedPlan,
       2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       blockedSeed,
     );
     const blockedBeforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
@@ -375,6 +464,7 @@ describe('progressive biome evaluation', () => {
       goldenGBiome,
       blockedPlan,
       2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
       blockedSeed,
     );
     const blockedOwner = createIncomingRewardAddress(goldenGBiome, blocked.firstTarget);
@@ -434,8 +524,22 @@ describe('progressive biome evaluation', () => {
       throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
-    const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, 2, seed);
-    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, 2, seed);
+    const clamped = evaluateProgressiveBiomeAssembly(
+      catalog,
+      oBiome,
+      plan,
+      2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      seed,
+    );
+    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
+      catalog,
+      oBiome,
+      plan,
+      2,
+      { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      seed,
+    );
     const clampedLifecycle = clamped?.candidateArtifacts.roomLifecycles.shipAt(owner);
     const beforeClampLifecycle = beforeClamp?.candidateArtifacts.roomLifecycles.shipAt(owner);
 

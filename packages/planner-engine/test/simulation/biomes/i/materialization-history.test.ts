@@ -54,6 +54,12 @@ function plan(project: ProjectDocument): AuthoredBiomePlan {
   return result;
 }
 
+function traitContext(project: ProjectDocument) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  if (route === undefined) throw new Error('fixture lost Underworld route');
+  return route.loadout;
+}
+
 function appendBatch(
   project: ProjectDocument,
   parentOccurrenceId: OccurrenceId | null,
@@ -315,7 +321,7 @@ describe('canonical I Clockwork materialization and history', () => {
       kind: 'RemoveExitDecision',
     });
     project = applyProjectCommand(project, catalog, { decision, kind: 'CreateBatch' });
-    const snapshot = materializeBiomePrefix(catalog, biome, plan(project));
+    const snapshot = materializeBiomePrefix(catalog, biome, plan(project), traitContext(project));
     if (snapshot?.entryRoom === undefined) {
       throw new Error('empty I decision fixture did not materialize a prefix');
     }
@@ -345,7 +351,7 @@ describe('canonical I Clockwork materialization and history', () => {
   it('derives physical Goal and NonGoal offers before each generated batch', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
-    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
     const snapshotBatches = batches(snapshot);
 
     expect(snapshot.entryRoom).toMatchObject({
@@ -375,7 +381,9 @@ describe('canonical I Clockwork materialization and history', () => {
       [1, 3, 5],
       [0, 3, 5],
     ]);
-    expect(materializeBiome(catalog, biome, complete(project))).toEqual(snapshot);
+    expect(materializeBiome(catalog, biome, complete(project), traitContext(project))).toEqual(
+      snapshot,
+    );
     expect(
       snapshotBatches.slice(0, -1).map((batch) =>
         batch.targets.map((target) => ({
@@ -448,7 +456,13 @@ describe('canonical I Clockwork materialization and history', () => {
   });
 
   it('carries H route state and advances Clockwork counters only at picked producer points', () => {
-    const snapshot = materializeBiome(catalog, biome, complete(completeProject()));
+    const completeFixture = completeProject();
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      complete(completeFixture),
+      traitContext(completeFixture),
+    );
     const snapshotBatches = batches(snapshot);
     const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
     const events = history.events;
@@ -550,7 +564,7 @@ describe('canonical I Clockwork materialization and history', () => {
 
   it('enters an authored Story without changing either Clockwork counter', () => {
     const project = projectWithPickedStory();
-    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
     const snapshotBatches = batches(snapshot);
     const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
     const storyTarget = snapshotBatches[1]?.targets[1];
@@ -598,7 +612,7 @@ describe('canonical I Clockwork materialization and history', () => {
 
   it('rejects a two-exit room after the authored non-goal limit is exhausted', () => {
     const project = projectWithExhaustedLimitDomain();
-    const snapshot = materializeBiomePrefix(catalog, biome, plan(project));
+    const snapshot = materializeBiomePrefix(catalog, biome, plan(project), traitContext(project));
     if (snapshot === null || snapshot.entryRoom === undefined) {
       throw new Error('exhausted Clockwork fixture did not materialize a prefix');
     }
@@ -648,7 +662,7 @@ describe('canonical I Clockwork materialization and history', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     });
-    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
     const snapshotBatches = batches(snapshot);
     const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
     const devotionOrigin = snapshotBatches[2]?.targets[1]?.room.origin;

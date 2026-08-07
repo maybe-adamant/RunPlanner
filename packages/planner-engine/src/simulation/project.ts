@@ -52,6 +52,7 @@ import {
 } from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
+import type { TraitMaterializationContext } from './traits';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -480,9 +481,11 @@ export function evaluateBiome(
   routeKey: string,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   previous?: CompleteValidBiomeProjectEvaluation,
 ): ProjectBiomeEvaluation {
-  return evaluateBiomeAssembly(catalog, routeKey, plan, enteredBiomeCount, previous).evaluation;
+  return evaluateBiomeAssembly(catalog, routeKey, plan, enteredBiomeCount, traitContext, previous)
+    .evaluation;
 }
 
 function evaluateBiomeAssembly(
@@ -490,8 +493,8 @@ function evaluateBiomeAssembly(
   routeKey: string,
   plan: AuthoredBiomePlan,
   enteredBiomeCount: number,
+  traitContext: TraitMaterializationContext,
   previous?: CompleteValidBiomeProjectEvaluation,
-  traitContext?: import('./traits').TraitOfferContext,
 ): BiomeProjectEvaluationAssembly {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateBiomeCompleteness(catalog, origin, plan);
@@ -501,6 +504,7 @@ function evaluateBiomeAssembly(
       origin,
       plan,
       enteredBiomeCount,
+      traitContext,
       previous === undefined
         ? undefined
         : { history: previous.history, rewardBranches: previous.rewards.branches },
@@ -554,6 +558,7 @@ function evaluateBiomeAssembly(
       origin,
       plan,
       enteredBiomeCount,
+      traitContext,
       previous === undefined
         ? undefined
         : { history: previous.history, rewardBranches: previous.rewards.branches },
@@ -735,8 +740,8 @@ function evaluateRouteAssembly(
       route.routeKey,
       plan,
       index + 1,
-      previous?.authoring === 'complete' && previous.validity === 'valid' ? previous : undefined,
       { weaponKey: route.loadout.weaponKey, aspectKey: route.loadout.aspectKey },
+      previous?.authoring === 'complete' && previous.validity === 'valid' ? previous : undefined,
     );
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
