@@ -3,6 +3,9 @@ import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
 import { fail } from './errors';
 
 export function requireNonEmpty(value: string, path: string): string {
+  if (typeof value !== 'string') {
+    fail(path, 'must be a string');
+  }
   if (value.trim().length === 0) {
     fail(path, 'must not be empty');
   }
@@ -24,6 +27,30 @@ export function requirePositiveInteger(value: number, path: string): number {
   }
 
   return value;
+}
+
+export function requireBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') {
+    fail(path, 'must be boolean');
+  }
+
+  return value;
+}
+
+export function requireArray(value: unknown, path: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    fail(path, 'must be an array');
+  }
+
+  return value;
+}
+
+export function requireObject(value: unknown, path: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    fail(path, 'must be an object');
+  }
+
+  return value as Record<string, unknown>;
 }
 
 export function freezeUniqueStrings(values: readonly string[], path: string): readonly string[] {

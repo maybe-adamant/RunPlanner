@@ -1,20 +1,75 @@
 import type {
-  AspectDeclaration,
   TraitCatalog,
   TraitDeclaration,
-  TraitGiverDeclaration,
-  TraitOfferContextDeclaration,
   TraitOfferDefaults,
   TraitRequirementExpression,
   TraitRarity,
-  WeaponDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
-export type RawTraitDeclaration = TraitDeclaration;
-export type RawWeaponDeclaration = WeaponDeclaration;
-export type RawAspectDeclaration = AspectDeclaration;
-export type RawTraitGiverDeclaration = TraitGiverDeclaration;
-export type RawTraitOfferContextDeclaration = TraitOfferContextDeclaration;
+/** Raw catalog declarations intentionally remain separate from normalized
+ * engine products.  They are runtime-validated at the catalog boundary. */
+export interface RawTraitDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly freshOfferRarities?: readonly TraitRarity[];
+  readonly equippedRarities?: readonly TraitRarity[];
+  readonly offerRequirements: readonly TraitRequirementExpression[];
+  readonly ordinaryBoonSlot?: TraitDeclaration['ordinaryBoonSlot'];
+  readonly elementContributions: TraitDeclaration['elementContributions'];
+  readonly isPersistentGodTrait: boolean;
+  readonly blockStacking: boolean;
+  readonly blockInRunRarify: boolean;
+  readonly excludeFromRarityCount: boolean;
+  readonly selfExclusion?: string;
+  readonly hammerCompatibility?: TraitDeclaration['hammerCompatibility'];
+}
+
+export interface RawWeaponDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly aspectKeys: readonly string[];
+  readonly defaultAspectKey: string;
+}
+
+export interface RawAspectDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly weaponKey: string;
+}
+
+export interface RawTraitOfferOptionDefault {
+  readonly traitKey: string;
+  readonly rarity?: TraitRarity;
+}
+
+export interface RawTraitOfferDefaults {
+  readonly options: readonly [
+    RawTraitOfferOptionDefault,
+    RawTraitOfferOptionDefault,
+    RawTraitOfferOptionDefault,
+  ];
+  readonly selectedOption: 0 | 1 | 2;
+}
+
+export interface RawTraitGiverDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly providerKind: 'olympian' | 'hermes' | 'hammer';
+  readonly traitKeys: readonly string[];
+  readonly rarityPolicy:
+    | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
+    | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
+    | { readonly kind: 'none' };
+  readonly defaultOffer?: RawTraitOfferDefaults;
+  readonly defaultsByLoadout?: Readonly<Record<string, RawTraitOfferDefaults>>;
+}
+
+export interface RawTraitOfferContextDeclaration {
+  readonly key: string;
+  readonly kind: 'rewardRarityBlock' | 'roomFlag';
+  readonly blockedRarity?: TraitRarity;
+  readonly roomFlag?: 'BlockGiftBoons';
+}
 
 export interface RawTraitCatalogInput {
   readonly weapons: readonly RawWeaponDeclaration[];

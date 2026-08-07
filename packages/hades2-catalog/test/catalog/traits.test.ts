@@ -565,7 +565,9 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
   DoubleBloodDropBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresWeaponBoon","AresSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["AresManaBoon","BloodDropRevengeBoon"]},{"kind":"anyEquippedTrait","traitKeys":["AresExCastBoon","AresStatusDoubleDamageBoon","MissingHealthCritBoon","LowHealthLifestealBoon","OmegaDelayedDamageBoon"]}]}]',
   SelfCastBoon:
-    '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresCastBoon","AresExCastBoon","OmegaDelayedDamageBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DemeterWeaponBoon","DemeterSpecialBoon","DemeterCastBoon","DemeterSprintBoon","DemeterManaBoon"]}]}]',
+    '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresCastBoon","AresExCastBoon","OmegaDelayedDamageBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DemeterWeaponBoon","DemeterSpecialBoon","DemeterCastBoon","DemeterSprintBoon","DemeterManaBoon"]}]},{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","HadesCastProjectileBoon","CastLobBoon"]}]',
+  CastProjectileBoon:
+    '[{"kind":"notEquippedTrait","traitKeys":["HadesCastProjectileBoon","CastAnywhereBoon","CastLobBoon","SelfCastBoon"]}]',
   AutoRevengeBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresWeaponBoon","AresSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ZeusWeaponBoon","ZeusSpecialBoon","ZeusCastBoon","ZeusSprintBoon","ZeusManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["BloodDropRevengeBoon","ApolloRetaliateBoon","BoltRetaliateBoon"]}]}]',
   BloodRetentionBoon:
@@ -655,7 +657,7 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
   LightningVulnerabilityBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["PoseidonCastBoon","PoseidonStatusBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ZeusWeaponBoon","ZeusSpecialBoon","ZeusCastBoon","ZeusSprintBoon","BoltRetaliateBoon","CastAnywhereBoon"]}]}]',
   CastAnywhereBoon:
-    '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","ApolloCastBoon","DemeterCastBoon","HephaestusCastBoon","HeraCastBoon","HestiaCastBoon","PoseidonCastBoon","ZeusCastBoon","AresCastBoon"]}]',
+    '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","ApolloCastBoon","DemeterCastBoon","HephaestusCastBoon","HeraCastBoon","HestiaCastBoon","PoseidonCastBoon","ZeusCastBoon","AresCastBoon"]},{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","HadesCastProjectileBoon","CastLobBoon","SelfCastBoon"]}]',
   DoubleBoltBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["ZeusWeaponBoon","ZeusSpecialBoon","ZeusCastBoon","ZeusSprintBoon","ZeusManaBoltBoon","BoltRetaliateBoon","CastAnywhereBoon"]}]',
   EchoExpirationBoon:
@@ -685,7 +687,6 @@ describe('trait offer catalog closure', () => {
     offerContexts: catalog.traitOfferContexts,
     rarityOrder: catalog.traitRarityOrder,
     baseElements: catalog.traitBaseElements,
-    deferredTraitKeys: catalog.deferredTraitKeys,
   };
 
   it('declares the complete Gate-A provider surfaces', () => {
@@ -709,7 +710,7 @@ describe('trait offer catalog closure', () => {
     expect(
       Object.fromEntries(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys])),
     ).toEqual(expectedGiverPools);
-    expect(traits?.deferredTraitKeys).toEqual(expectedDeferredTraitKeys);
+    expect(declarations.traitCatalog.deferredTraitKeys).toEqual(expectedDeferredTraitKeys);
   });
 
   it('keeps shared traits giver-neutral and closes deferred operands without placeholders', () => {
@@ -717,7 +718,7 @@ describe('trait offer catalog closure', () => {
     expect(traits?.givers.byKey.Zeus?.traitKeys).toContain('SprintEchoBoon');
     expect(traits?.traits.byKey.SprintEchoBoon).toBeDefined();
     expect(traits?.traits.byKey.SorceryCritBoon).toBeUndefined();
-    expect(traits?.deferredTraitKeys).toContain('SpellLaserTrait');
+    expect(declarations.traitCatalog.deferredTraitKeys).toContain('SpellLaserTrait');
     expect(traits?.traits.byKey.SorceryCritBoon).toBeUndefined();
   });
 
@@ -761,6 +762,35 @@ describe('trait offer catalog closure', () => {
       context: 'blockGiftBoons',
       required: false,
     });
+
+    expect(traits?.traits.byKey.AphroditeSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
+    expect(traits?.traits.byKey.ApolloSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
+    expect(traits?.traits.byKey.AresSpecialBoon?.ordinaryBoonSlot).toBe('Secondary');
+
+    const infusionTraits = [
+      'ElementalUnifiedBoon',
+      'ElementalRarityUpgradeBoon',
+      'ElementalDamageBoon',
+      'ElementalOlympianDamageBoon',
+      'ElementalBaseDamageBoon',
+      'ElementalRallyBoon',
+      'ElementalDamageFloorBoon',
+      'ElementalDodgeBoon',
+      'ElementalDamageCapBoon',
+      'ElementalHealthBoon',
+    ];
+    for (const key of infusionTraits) {
+      const trait = traits?.traits.byKey[key];
+      expect(trait?.elementContributions).toEqual({});
+      expect(trait?.blockStacking).toBe(true);
+      expect(trait?.blockInRunRarify).toBe(true);
+      expect(trait?.excludeFromRarityCount).toBe(true);
+    }
+    expect(traits?.traits.byKey.ElementalOlympianDamageBoon?.rarityDomain).toEqual({
+      kind: 'ranked',
+      freshOfferRarities: ['Common', 'Rare', 'Epic'],
+      equippedRarities: ['Common', 'Rare', 'Epic'],
+    });
   });
 
   it('closes the complete audited dependency, negative, threshold, and aspect matrices', () => {
@@ -784,7 +814,11 @@ describe('trait offer catalog closure', () => {
     );
     expect(actualOfferRequirements).toEqual(expectedOfferRequirements);
 
-    const deferred = new Set(traits.deferredTraitKeys);
+    const deferred = new Set([
+      ...declarations.traitCatalog.deferredTraitKeys,
+      'HadesCastProjectileBoon',
+      'CastLobBoon',
+    ]);
     const walk = (
       requirement: (typeof traits.traits.values)[number]['offerRequirements'][number],
     ): readonly string[] => {
@@ -857,7 +891,7 @@ describe('trait offer catalog closure', () => {
           const declaration = traits?.traits.byKey[option.traitKey];
           expect(declaration?.hammerCompatibility?.weaponKey).toBe(weapon.key);
           expect(declaration?.hammerCompatibility?.aspectKeys).toContain(aspectKey);
-          expect(option.rarity).toBe('Common');
+          expect(option.rarity).toBeUndefined();
         }
       }
     }
@@ -898,7 +932,7 @@ describe('trait offer catalog closure', () => {
     );
   });
 
-  it('allows sole Legendary defaults while keeping every Hammer member fixed Common', () => {
+  it('preserves Legendary rarity while keeping Hammer declarations un-rarified', () => {
     const aphrodite = declarations.traitCatalog.givers.find((giver) => giver.key === 'Aphrodite');
     if (aphrodite === undefined || aphrodite.defaultOffer === undefined) throw new Error('fixture');
     const legendaryDefault = {
@@ -942,7 +976,171 @@ describe('trait offer catalog closure', () => {
         ),
       },
     };
-    expect(() => createCatalog(invalidHammer)).toThrow(/fixed Common rarity/);
+    expect(() => createCatalog(invalidHammer)).toThrow(/no rarity domain/);
+    expect(catalog.traitGivers.byKey.WeaponUpgrade?.rarityPolicy).toEqual({ kind: 'none' });
+    expect(catalog.traits.byKey.StaffTripleShotTrait?.rarityDomain).toEqual({ kind: 'none' });
     expect(Object.isFrozen(catalog.traitGivers.byKey.WeaponUpgrade?.rarityPolicy)).toBe(true);
+  });
+
+  it('rejects malformed raw booleans, rarity domains, and requirement discriminators', () => {
+    const invalidBoolean = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, blockStacking: 'false' as unknown as boolean }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(invalidBoolean)).toThrow(/blockStacking: must be boolean/);
+
+    const emptyRanked = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, freshOfferRarities: [] as const }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(emptyRanked)).toThrow(/ranked rarity domains must not be empty/);
+
+    const unknownRarity = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, freshOfferRarities: ['Mythic' as unknown as 'Common'] }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(unknownRarity)).toThrow(/must be one of Common/);
+
+    const hammerRarity = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'WeaponUpgrade'
+            ? {
+                ...giver,
+                defaultsByLoadout: {
+                  ...giver.defaultsByLoadout,
+                  'WeaponStaffSwing:BaseStaffAspect': {
+                    ...giver.defaultsByLoadout?.['WeaponStaffSwing:BaseStaffAspect'],
+                    options: [
+                      {
+                        traitKey: 'StaffDoubleAttackTrait',
+                        rarity: 'Common' as const,
+                      },
+                      ...(giver.defaultsByLoadout?.[
+                        'WeaponStaffSwing:BaseStaffAspect'
+                      ]?.options.slice(1) ?? []),
+                    ] as const,
+                  },
+                },
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(hammerRarity as never)).toThrow(/has no rarity/);
+
+    const unknownRequirement = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? {
+                ...trait,
+                offerRequirements: [{ kind: 'futurePredicate' } as never],
+              }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(unknownRequirement)).toThrow(/unknown requirement kind/);
+  });
+
+  it('rejects malformed raw array and object contacts with declaration paths', () => {
+    const malformedRequirements = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, offerRequirements: null as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformedRequirements)).toThrow(
+      /traits\[.*\]\.offerRequirements: must be an array/,
+    );
+
+    const malformedElements = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, elementContributions: null as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformedElements)).toThrow(
+      /traits\[.*\]\.elementContributions: must be an object/,
+    );
+
+    const malformedRarities = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AphroditeWeaponBoon'
+            ? { ...trait, freshOfferRarities: null as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformedRarities)).toThrow(
+      /traits\[.*\]\.freshOfferRarities: must be an array/,
+    );
+
+    const malformedPolicy = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'WeaponUpgrade' ? { ...giver, rarityPolicy: null as never } : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformedPolicy)).toThrow(
+      /givers\[.*\]\.rarityPolicy: must be an object/,
+    );
+  });
+
+  it('keeps compiler-local deferred operands out of the normalized catalog', () => {
+    const withoutCompilerKeys = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        deferredTraitKeys: declarations.traitCatalog.deferredTraitKeys,
+      },
+    };
+    const normalized = createCatalog(withoutCompilerKeys);
+    expect(normalized.traits.byKey.CastProjectileBoon).toBeDefined();
+    expect(normalized.traits.byKey.CastAnywhereBoon).toBeDefined();
+    expect(normalized.traits.byKey.SelfCastBoon).toBeDefined();
+    expect('deferredTraitKeys' in normalized).toBe(false);
   });
 });

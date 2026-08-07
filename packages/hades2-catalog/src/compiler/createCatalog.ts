@@ -82,6 +82,5 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     traitRarityOrder: traitCatalog.rarityOrder,
     traitElements: traitCatalog.elements,
     traitBaseElements: traitCatalog.baseElements,
-    deferredTraitKeys: traitCatalog.deferredTraitKeys,
   });
 }

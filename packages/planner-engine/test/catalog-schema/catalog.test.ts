@@ -54,7 +54,6 @@ describe('summarizeCatalog', () => {
       traitRarityOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
       traitElements: [],
       traitBaseElements: ['Earth', 'Air', 'Fire', 'Water'],
-      deferredTraitKeys: [],
     };
 
     expect(summarizeCatalog(catalog)).toEqual({
