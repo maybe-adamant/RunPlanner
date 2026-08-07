@@ -44,7 +44,7 @@ import {
   prefixAuthoredRooms,
   prefixBiome,
   progressiveSeed,
-  traitContextFor,
+  progressiveContextFor,
 } from './evaluated-biome';
 
 export interface RoomTargetCandidateQuery {
@@ -280,9 +280,12 @@ function evaluateInvalidCompleteRoomTarget(
     catalog,
     createBiomeAddress(query.target.routeKey, query.target.biomeKey),
     planFor(project, query.target.routeKey, query.target.biomeKey),
-    completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
-    traitContextFor(project, query.target.routeKey),
-    progressiveSeed(evaluation, query.target.routeKey, query.target.biomeKey),
+    progressiveContextFor(
+      project,
+      query.target.routeKey,
+      completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
+      progressiveSeed(evaluation, query.target.routeKey, query.target.biomeKey),
+    ),
   );
   if (progressive === null) return undefined;
   const covered = progressive.candidateArtifacts.roomTargets.at(query.target);

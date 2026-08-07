@@ -37,7 +37,7 @@ import {
   planFor,
   prefixBiome,
   progressiveSeed,
-  traitContextFor,
+  progressiveContextFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 import { shipState, wheelState } from './ship-owner';
@@ -190,9 +190,12 @@ function selectedLifecycleSource(
       catalog,
       createBiomeAddress(owner.routeKey, owner.biomeKey),
       planFor(project, owner.routeKey, owner.biomeKey),
-      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-      traitContextFor(project, owner.routeKey),
-      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+      progressiveContextFor(
+        project,
+        owner.routeKey,
+        completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+        progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+      ),
     );
     return progressive === null
       ? undefined
@@ -228,9 +231,12 @@ function preClampLifecycleRepairSource(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
     planFor(project, owner.routeKey, owner.biomeKey),
-    completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-    traitContextFor(project, owner.routeKey),
-    progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+    progressiveContextFor(
+      project,
+      owner.routeKey,
+      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+    ),
   );
   return raw !== null &&
     raw.evaluation.blockedAt !== undefined &&
@@ -363,6 +369,15 @@ export function evaluateShipEncounterCountCandidate(
     );
   }
   const ship = shipState(catalog, project, query.occurrence);
+  const route = project.routes.find(
+    (candidate) => candidate.routeKey === query.occurrence.routeKey,
+  );
+  if (route === undefined) {
+    throw new CandidateEvaluationContractError(
+      `candidate owner has no ${query.occurrence.routeKey} route`,
+    );
+  }
+  const loadout = route.loadout;
   const stateForCount = (encounterCount: 2 | 3): ShipCombatState =>
     Object.freeze({ ...ship.state, encounterCount });
   const encounterForCount = (encounterCount: 2 | 3) => {
@@ -371,6 +386,7 @@ export function evaluateShipEncounterCountCandidate(
       createBiomeAddress(query.occurrence.routeKey, query.occurrence.biomeKey),
       ship.room,
       Object.freeze({ ...ship.authored, state: stateForCount(encounterCount) }),
+      loadout,
     );
     return Object.freeze({
       finalPhaseKey: materialized.encounterPhases.at(-1)?.slotKey,

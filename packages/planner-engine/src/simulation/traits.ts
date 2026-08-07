@@ -144,16 +144,6 @@ export interface TraitOfferContext {
   readonly resolvedProviderKey?: string;
 }
 
-/**
- * The loadout facts required when a public materialization walks authored
- * rewards. Room- and reward-owned offer facts are derived by materialization;
- * callers provide only the route-owned loadout.
- */
-export interface TraitMaterializationContext {
-  readonly weaponKey: string;
-  readonly aspectKey: string;
-}
-
 export interface TraitAssessment {
   readonly legal: boolean;
   readonly findings: readonly {

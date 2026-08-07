@@ -43,6 +43,7 @@ import type { SemanticFinding } from './model';
 import {
   evaluateProgressiveBiomeAssembly,
   type BiomeGenerationValidation,
+  type ProgressiveBiomeContext,
 } from './progressive/biome';
 import { evaluateBiomeRewardsAssembly } from './rewards/biome';
 import type { BiomeRewardSimulation } from './rewards/model';
@@ -52,7 +53,6 @@ import {
 } from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
-import type { TraitMaterializationContext } from './traits';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -480,35 +480,21 @@ export function evaluateBiome(
   catalog: Catalog,
   routeKey: string,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  previous?: CompleteValidBiomeProjectEvaluation,
+  context: ProgressiveBiomeContext,
 ): ProjectBiomeEvaluation {
-  return evaluateBiomeAssembly(catalog, routeKey, plan, enteredBiomeCount, traitContext, previous)
-    .evaluation;
+  return evaluateBiomeAssembly(catalog, routeKey, plan, context).evaluation;
 }
 
 function evaluateBiomeAssembly(
   catalog: Catalog,
   routeKey: string,
   plan: AuthoredBiomePlan,
-  enteredBiomeCount: number,
-  traitContext: TraitMaterializationContext,
-  previous?: CompleteValidBiomeProjectEvaluation,
+  context: ProgressiveBiomeContext,
 ): BiomeProjectEvaluationAssembly {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateBiomeCompleteness(catalog, origin, plan);
   if (completeness.completion === 'incomplete') {
-    const progressive = evaluateProgressiveBiomeAssembly(
-      catalog,
-      origin,
-      plan,
-      enteredBiomeCount,
-      traitContext,
-      previous === undefined
-        ? undefined
-        : { history: previous.history, rewardBranches: previous.rewards.branches },
-    );
+    const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
     if (progressive === null) {
       return Object.freeze({
         evaluation: Object.freeze({
@@ -549,20 +535,11 @@ function evaluateBiomeAssembly(
       candidateArtifacts: progressive.candidateArtifacts,
     });
   }
-  const snapshot = materializeBiome(catalog, origin, completeness, traitContext);
-  const seed: HistoryStateView | undefined = previous?.history.afterTransition;
+  const snapshot = materializeBiome(catalog, origin, completeness, context.loadout);
+  const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
   const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
   if (composed.kind === 'blocked') {
-    const progressive = evaluateProgressiveBiomeAssembly(
-      catalog,
-      origin,
-      plan,
-      enteredBiomeCount,
-      traitContext,
-      previous === undefined
-        ? undefined
-        : { history: previous.history, rewardBranches: previous.rewards.branches },
-    );
+    const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
     if (progressive === null) {
       throw new ProjectSimulationContractError(
         `${plan.biomeKey} encounter block has no materialized progressive prefix`,
@@ -600,14 +577,14 @@ function evaluateBiomeAssembly(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
-    previous?.rewards.branches,
+    context.enteredBiomeCount,
+    context.seed?.rewardBranches,
   );
   const roomGeneration = generation(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
+    context.enteredBiomeCount,
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
@@ -735,14 +712,16 @@ function evaluateRouteAssembly(
     if (previous?.authoring === 'complete' && previous.validity === 'invalid') {
       throw new ProjectSimulationContractError('invalid biome cannot seed route continuation');
     }
-    const assembled = evaluateBiomeAssembly(
-      catalog,
-      route.routeKey,
-      plan,
-      index + 1,
-      { weaponKey: route.loadout.weaponKey, aspectKey: route.loadout.aspectKey },
-      previous?.authoring === 'complete' && previous.validity === 'valid' ? previous : undefined,
-    );
+    const seed =
+      previous?.authoring === 'complete' && previous.validity === 'valid'
+        ? Object.freeze({ history: previous.history, rewardBranches: previous.rewards.branches })
+        : undefined;
+    const context = Object.freeze({
+      enteredBiomeCount: index + 1,
+      loadout: route.loadout,
+      ...(seed === undefined ? {} : { seed }),
+    });
+    const assembled = evaluateBiomeAssembly(catalog, route.routeKey, plan, context);
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);

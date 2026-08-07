@@ -33,7 +33,7 @@ import {
   planFor,
   prefixBiome,
   progressiveSeed,
-  traitContextFor,
+  progressiveContextFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 import { wheelState } from './ship-owner';
@@ -113,9 +113,12 @@ function selectedRewardProducerSource(
       catalog,
       createBiomeAddress(owner.routeKey, owner.biomeKey),
       planFor(project, owner.routeKey, owner.biomeKey),
-      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-      traitContextFor(project, owner.routeKey),
-      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+      progressiveContextFor(
+        project,
+        owner.routeKey,
+        completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+        progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+      ),
     );
     return progressive === null
       ? undefined
@@ -150,9 +153,12 @@ function repairAssemblyForOwner(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
     planFor(project, owner.routeKey, owner.biomeKey),
-    completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-    traitContextFor(project, owner.routeKey),
-    progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+    progressiveContextFor(
+      project,
+      owner.routeKey,
+      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
+      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
+    ),
   );
   return raw !== null &&
     raw.evaluation.blockedAt !== undefined &&

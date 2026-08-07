@@ -27,6 +27,7 @@ import type {
   HubDecision,
   OccurrenceId,
   RoomOccurrence,
+  RouteLoadout,
 } from '../../authored-project/model';
 import {
   declaredPhysicalExits,
@@ -46,7 +47,6 @@ import { materializeCompletionRooms } from './completion';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
-import type { TraitMaterializationContext } from '../traits';
 import type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,
@@ -78,9 +78,7 @@ function fail(detail: string): never {
   throw new BiomeMaterializationContractError(detail);
 }
 
-function requireTraitMaterializationContext(
-  context: TraitMaterializationContext,
-): TraitMaterializationContext {
+function requireLoadout(context: RouteLoadout): RouteLoadout {
   if (
     context === null ||
     typeof context !== 'object' ||
@@ -385,7 +383,7 @@ function materializeTarget(
   batchState: CanonicalBatchState,
   clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
   physicalExit: CanonicalPhysicalExit,
-  traitContext?: TraitMaterializationContext,
+  loadout?: RouteLoadout,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, layout, topology, occurrence);
@@ -405,7 +403,7 @@ function materializeTarget(
       ...(batchStore === undefined ? {} : { batchStoreKey: batchStore }),
       ...(batchState.kind === 'fields' ? { activeCageCount: batchState.doorCageRewardCount } : {}),
       ...(clockworkRewardValue === undefined ? {} : { clockworkReward: clockworkRewardValue }),
-      ...(traitContext === undefined ? {} : { traitContext }),
+      ...(loadout === undefined ? {} : { loadout }),
     }),
   });
 }
@@ -421,7 +419,7 @@ function materializeAdditionalContinuations(
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
-  traitContext?: TraitMaterializationContext,
+  loadout?: RouteLoadout,
 ): readonly CanonicalAdditionalContinuation[] {
   const additionalExits = additionalExitsForDecision(topology, decision);
   if (additionalExits.length === 0) return Object.freeze([]);
@@ -459,7 +457,7 @@ function materializeAdditionalContinuations(
           occurrence,
           role: 'ordinary',
           entered: selected === additional.key,
-          ...(traitContext === undefined ? {} : { traitContext }),
+          ...(loadout === undefined ? {} : { loadout }),
         }),
       });
     }),
@@ -480,7 +478,7 @@ function materializeBatch(
     readonly allowUnselected?: boolean;
     readonly physicalExits: ReadonlyMap<string, CanonicalPhysicalExit>;
   },
-  traitContext?: TraitMaterializationContext,
+  loadout?: RouteLoadout,
 ): { readonly batch: CanonicalBatch; readonly nextClockwork: ClockworkState | undefined } {
   const normal = decision.normal;
   const source = sourceAddress(decision.source);
@@ -545,7 +543,7 @@ function materializeBatch(
         batchState,
         rewards.get(target.exitKey),
         physicalExit,
-        traitContext,
+        loadout,
       );
     }),
   );
@@ -556,7 +554,7 @@ function materializeBatch(
     topology,
     occurrences,
     decision,
-    traitContext,
+    loadout,
   );
   const selectedTarget = targets.find((target) => target.picked);
   const selectedAdditional = additional.find((continuation) => continuation.picked);
@@ -647,7 +645,7 @@ function materializeStart(
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
-  traitContext?: TraitMaterializationContext,
+  loadout?: RouteLoadout,
 ): CanonicalAuthoredRoom {
   const room = requireRoom(catalog, layout, topology, occurrence);
   return materializeAuthoredRoom({
@@ -662,7 +660,7 @@ function materializeStart(
     room.gameName === layout.start.roomGameName
       ? { lifecycleProfileKey: 'EphyraOpeningRoom' }
       : {}),
-    ...(traitContext === undefined ? {} : { traitContext }),
+    ...(loadout === undefined ? {} : { loadout }),
   });
 }
 
@@ -797,7 +795,7 @@ function materializeContiguousBatchPrefix(
   sourceRoom: RoomDeclaration | undefined,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
   clockwork: ClockworkState | undefined,
-  traitContext?: TraitMaterializationContext,
+  loadout?: RouteLoadout,
 ): CanonicalBatch | undefined {
   if (decision === undefined || sourceRoom === undefined) return undefined;
   const takeover = batchTakesOverNormalDoors(
@@ -838,7 +836,7 @@ function materializeContiguousBatchPrefix(
     sourceAuthoredRoom,
     clockwork,
     { allowUnselected: true, physicalExits },
-    traitContext,
+    loadout,
   ).batch;
 }
 
@@ -851,9 +849,9 @@ export function materializeBiomePrefix(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-  traitContext: TraitMaterializationContext,
+  loadout: RouteLoadout,
 ): MaterializedBiomePrefix | null {
-  traitContext = requireTraitMaterializationContext(traitContext);
+  loadout = requireLoadout(loadout);
   const layout = requireLayout(catalog, biome);
   if (Object.values(plan.state).some((value) => value === null)) return null;
   const biomeState = canonicalBiomeState(layout.biomeKey, plan.state);
@@ -861,14 +859,7 @@ export function materializeBiomePrefix(
   if (topology === null) return prefix(biome, biomeState, undefined, []);
   const occurrences = occurrenceMap(topology);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(
-    catalog,
-    biome,
-    layout,
-    topology,
-    startOccurrence,
-    traitContext,
-  );
+  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
   const decisions: CanonicalDecision[] = [];
   let current = entryRoom;
   let clockwork =
@@ -901,7 +892,7 @@ export function materializeBiomePrefix(
           layout.progression,
           authoredHub,
           occurrences,
-          traitContext,
+          loadout,
         );
         decisions.push(hub);
         const hubReadiness = hubDecisionHandoffReadiness(layout.progression, authoredHub);
@@ -965,7 +956,7 @@ export function materializeBiomePrefix(
           undefined,
           undefined,
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
-          traitContext,
+          loadout,
         );
         decisions.push(materialized.batch);
         return prefix(biome, biomeState, entryRoom, decisions);
@@ -991,7 +982,7 @@ export function materializeBiomePrefix(
         sourceRoom,
         current,
         clockwork,
-        traitContext,
+        loadout,
       );
       const additional =
         partial?.additional ??
@@ -1002,7 +993,7 @@ export function materializeBiomePrefix(
           topology,
           occurrences,
           decision,
-          traitContext,
+          loadout,
         );
       return prefix(
         biome,
@@ -1031,7 +1022,7 @@ export function materializeBiomePrefix(
       current,
       clockwork,
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
-      traitContext,
+      loadout,
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
@@ -1051,23 +1042,16 @@ export function materializeBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
-  traitContext: TraitMaterializationContext,
+  loadout: RouteLoadout,
 ): CanonicalBiome {
-  traitContext = requireTraitMaterializationContext(traitContext);
+  loadout = requireLoadout(loadout);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
   const layout = requireLayout(catalog, biome);
   const topology = completeness.topology;
   const occurrences = occurrenceMap(topology);
   const biomeState = canonicalBiomeState(layout.biomeKey, completeness.biomeState);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(
-    catalog,
-    biome,
-    layout,
-    topology,
-    startOccurrence,
-    traitContext,
-  );
+  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
   const decisions: CanonicalDecision[] = [];
   let currentRoom = entryRoom;
   let clockwork =
@@ -1096,7 +1080,7 @@ export function materializeBiome(
           layout.progression,
           authoredHub,
           occurrences,
-          traitContext,
+          loadout,
         );
         decisions.push(hub);
         const handoff = handoffDecision(topology, layout.progression);
@@ -1111,7 +1095,7 @@ export function materializeBiome(
           undefined,
           undefined,
           { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
-          traitContext,
+          loadout,
         );
         decisions.push(materialized.batch);
         enteredPreboss = materialized.batch.targets.find((target) => target.picked)?.room;
@@ -1130,7 +1114,7 @@ export function materializeBiome(
       currentRoom,
       clockwork,
       { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
-      traitContext,
+      loadout,
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;

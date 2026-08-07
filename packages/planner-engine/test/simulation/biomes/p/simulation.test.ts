@@ -229,17 +229,14 @@ describe('P core loop', () => {
       ?.biomes.find((biome) => biome.biomeKey === 'P');
     const progressive =
       previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
-        ? evaluateProgressiveBiomeAssembly(
-            catalog,
-            pBiome,
-            plan,
-            3,
-            { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
-            {
+        ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
+            enteredBiomeCount: 3,
+            loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+            seed: {
               history: previous.history,
               rewardBranches: previous.rewards.branches,
             },
-          )
+          })
         : null;
     const shopOwner = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
     expect(progressive).not.toBeNull();

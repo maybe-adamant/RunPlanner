@@ -8,7 +8,7 @@ import {
   type SemanticAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
-import type { ShipCombatState } from '../../authored-project/model';
+import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
 import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
@@ -591,6 +591,13 @@ function prepareShipLifecycleCandidateContext(
   enteredBiomeCount: number,
 ): ShipLifecycleCandidateContext {
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
+  const loadout = room.rewardWheels?.[0]?.offers[0]?.traitContext;
+  if (loadout === undefined || loadout.weaponKey === undefined || loadout.aspectKey === undefined) {
+    throw new BiomeRewardSimulationContractError(
+      `${room.gameName} ShipCombat candidate requires a route loadout`,
+    );
+  }
+  const routeLoadout = loadout as RouteLoadout;
   return Object.freeze({
     origin: room.origin,
     activeWheelKeys,
@@ -606,6 +613,7 @@ function prepareShipLifecycleCandidateContext(
           encounters: room.encounters,
           additionalExits: Object.freeze([]),
         }),
+        routeLoadout,
       );
       const candidateRoom = Object.freeze({
         ...room,
