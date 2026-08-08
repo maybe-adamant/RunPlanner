@@ -508,9 +508,13 @@ The ten included infusion/Unity traits use these offer thresholds:
 | `ElementalHealthBoon`         | `Water >= 2`                                                 |
 
 Their higher `ActivationRequirements` affect the strength or activation of an
-already equipped trait; they do not raise the offer threshold and remain
-outside offer simulation. The external progression/narrative gate inherited
-by `UnityTrait` is collapsed by the progressed baseline.
+already equipped trait; they do not raise the offer threshold. Most remain
+outside the current simulation because their activated effects do not yet
+change a modeled history fact. `ElementalRarityUpgradeBoon` is the exception:
+its activation changes equipped rarities and the legal rarity domain of later
+offers, so that lifecycle is retained below. The external
+progression/narrative gate inherited by `UnityTrait` is collapsed by the
+progressed baseline.
 
 ### Rarity-derived facts
 
@@ -532,6 +536,53 @@ Common -> Rare -> Epic -> Heroic
 
 `Heroic` is consequently a valid equipped rarity even though it is not a
 fresh authored choice.
+
+### Proper Upbringing lifecycle
+
+`ElementalRarityUpgradeBoon` (Proper Upbringing) has two distinct element
+thresholds:
+
+- it may be offered at `Fire >= 1`, `Earth >= 1`, `Air >= 1`, and
+  `Water >= 1`; and
+- its equipped effect is active only at `Fire >= 2`, `Earth >= 2`,
+  `Air >= 2`, and `Water >= 2`.
+
+Crossing the activation threshold from inactive to active calls
+`UpgradeAllCommon`. That operation visits the equipped collection once per
+unique trait key and upgrades a trait from Common to Rare only when it:
+
+- satisfies the game's god-trait classification with `ForShop = true`;
+- does not declare `BlockInRunRarify`; and
+- is currently Common.
+
+The same activation installs a `GodLootOnly` rarity bonus with `Rare = 1`.
+Because rarity rolls continue through higher valid rarities, this is a Rare
+floor for later scalable god-loot choices rather than a command to make every
+choice exactly Rare. It applies to ordinary Olympian and Hermes loot in the
+currently modeled provider set when the proposed trait actually supports Rare.
+It does not turn fixed-Common infusion traits, Hammer traits, fixed Legendary
+traits, or fixed Duo traits into Rare choices.
+
+Falling below the activation threshold removes the future-offer rarity bonus.
+It does not downgrade traits already promoted to Rare. If the effect later
+reactivates, `UpgradeAllCommon` runs again and promotes newly present eligible
+Common traits. A trait acquisition or replacement that supplies the final
+required element participates in the activation check after it enters equipped
+state, so that newly selected trait is included when eligible.
+
+The source function also assigns Proper Upbringing's own displayed rarity to
+Rare on activation, independently of its rolled rarity. Its infusion rarity
+participates in the game's offer-generation tabulation, but the planner models
+possible authored offers rather than their rarity probabilities. The
+self-assignment changes neither the effect's activation/strength nor a modeled
+eligibility fact: the declaration is `BlockInRunRarify`, `BlockStacking`, and
+`ExcludeFromRarityCount`. The planner therefore retains its authored rarity as
+offer evidence and does not mutate its effective rarity on activation. This is
+a deliberate probability/presentation collapse, not a general rule for
+infusion traits. The observable promotions of other equipped traits and the
+future-offer floor remain semantic. Selling, level/stack preservation,
+presentation delays, double-boon handling, and sources that explicitly ignore
+temporary or all rarity bonuses remain outside the slice.
 
 ### Three related upgradeability contracts
 
