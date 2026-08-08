@@ -9,6 +9,7 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRouteAddress,
   createTargetAddress,
   ProjectCommandContractError,
 } from '@run-planner/engine/authored-project';
@@ -39,6 +40,69 @@ function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBio
 }
 
 describe('authored-project room replacement commands', () => {
+  it('installs replacement Shop Hammer defaults for the exact route loadout', () => {
+    const initial = fProject();
+    const initialLoadout = initial.routes.find((route) => route.routeKey === 'Underworld')?.loadout;
+    const replacementWeapon = catalog.weapons.values.find(
+      (weapon) => weapon.key !== initialLoadout?.weaponKey,
+    );
+    if (replacementWeapon === undefined) throw new Error('missing alternate test weapon');
+    const loadout = Object.freeze({
+      weaponKey: replacementWeapon.key,
+      aspectKey: replacementWeapon.defaultAspectKey,
+    });
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Underworld'),
+      ...loadout,
+    });
+    const openingId = createOccurrenceId('replacement-loadout-opening');
+    const targetId = createOccurrenceId('replacement-loadout-target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: openingId,
+      gameName: 'F_Opening01',
+    });
+    const decision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, decision.source, 'exit1'),
+      occurrenceId: targetId,
+      gameName: 'F_Combat02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, targetId),
+      gameName: 'F_Shop01',
+    });
+
+    const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === targetId,
+    );
+    if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
+      throw new Error('replacement did not create an active Shop');
+    }
+    const hammer = occurrence.state.shop.offers.MajorNonBoon?.reward;
+    const expected =
+      catalog.traitGivers.byKey.WeaponUpgrade?.defaultsByLoadout?.[
+        `${loadout.weaponKey}:${loadout.aspectKey}`
+      ];
+    const authoredHammer = Object.values(hammer?.traitOffersByAcquisitionRole ?? {})[0];
+    expect(hammer?.offer.rewardType).toBe('WeaponUpgradeDrop');
+    expect(authoredHammer?.giverKey).toBe('WeaponUpgrade');
+    expect(authoredHammer?.options).toEqual(expected?.options);
+  });
+
   it('changes only declared start choices, retains the occurrence identity, and noops unchanged input', () => {
     const startId = createOccurrenceId('replacement-start');
     const initial = applyProjectCommand(fProject(), catalog, {

@@ -25,6 +25,11 @@ export function applyIncomingRewardCommand(
   if (room === undefined) {
     failCommand(command, `${occurrence.gameName} is not a legal topology room occurrence`);
   }
+  if (
+    'reward' in occurrence.state &&
+    sameOccurrenceValue(occurrence.state.reward.offer, command.value)
+  )
+    return document;
   let state: RoomOccurrence['state'];
   const loadout = located.loadout;
   if (occurrence.state.kind === 'fixed') {
@@ -57,7 +62,6 @@ export function applyIncomingRewardCommand(
   } else {
     failCommand(command, `${occurrence.gameName} has no replaceable incoming reward`);
   }
-  if (sameOccurrenceValue(state, occurrence.state)) return document;
   return updateOccurrenceTopology(
     document,
     located,

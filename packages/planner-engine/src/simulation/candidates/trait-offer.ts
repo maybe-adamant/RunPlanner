@@ -7,6 +7,8 @@ import { assessTraitOffer, type TraitAssessment, type TraitFindingCode } from '.
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { candidateBiome } from './evaluated-biome';
 
+export type TraitOfferCandidateFindingCode = TraitFindingCode | 'duplicateOfferedTrait';
+
 export interface TraitOfferCandidateQuery {
   readonly kind: 'traitOffer';
   readonly trait: TraitOfferAddress;
@@ -19,7 +21,7 @@ export interface EvaluatedTraitOfferCandidate {
     readonly supported: boolean;
     readonly assessments: readonly TraitAssessment[];
     readonly findings: readonly {
-      readonly code: TraitFindingCode;
+      readonly code: TraitOfferCandidateFindingCode;
       readonly traitKey: string;
       readonly detail?: string;
     }[];
@@ -74,13 +76,33 @@ export function evaluateTraitOfferCandidate(
   const assessments = reached.map((trace) =>
     assessTraitOffer(catalog, query.value, trace.before, trace.context),
   );
-  const findings = Object.freeze(
-    assessments.flatMap((assessment) => assessment.flatMap((entry) => entry.findings)),
+  const optionCounts = new Map<string, number>();
+  for (const option of query.value.options) {
+    optionCounts.set(option.traitKey, (optionCounts.get(option.traitKey) ?? 0) + 1);
+  }
+  const duplicateFindings = Object.freeze(
+    [...optionCounts.entries()].flatMap(([traitKey, count]) =>
+      count > 1
+        ? [
+            Object.freeze({
+              code: 'duplicateOfferedTrait' as const,
+              traitKey,
+              detail: 'trait appears in more than one offered option',
+            }),
+          ]
+        : [],
+    ),
   );
+  const findings = Object.freeze([
+    ...assessments.flatMap((assessment) => assessment.flatMap((entry) => entry.findings)),
+    ...duplicateFindings,
+  ]);
   return Object.freeze({
     kind: 'traitOffer',
     result: Object.freeze({
-      supported: assessments.some((assessment) => assessment.every((entry) => entry.legal)),
+      supported:
+        duplicateFindings.length === 0 &&
+        assessments.some((assessment) => assessment.every((entry) => entry.legal)),
       assessments: Object.freeze(assessments.flat()),
       findings,
     }),

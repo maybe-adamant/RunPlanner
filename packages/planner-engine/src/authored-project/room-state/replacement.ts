@@ -9,18 +9,9 @@ import { createDefaultTraitOffers, type TraitOfferDefaultsContext } from '../tra
 function defaultTraitOffers(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
-  loadout: TraitOfferDefaultsContext = { weaponKey: '', aspectKey: '' },
+  loadout: TraitOfferDefaultsContext,
 ) {
   return createDefaultTraitOffers(catalog, offer, loadout);
-}
-
-function fallbackLoadout(catalog: Catalog): TraitOfferDefaultsContext {
-  const weapon = catalog.weapons.values.find((candidate) =>
-    candidate.aspectKeys.includes(candidate.defaultAspectKey),
-  );
-  return weapon === undefined
-    ? { weaponKey: '', aspectKey: '' }
-    : { weaponKey: weapon.key, aspectKey: weapon.defaultAspectKey };
 }
 
 function countedOfferIsAdmitted(
@@ -295,9 +286,8 @@ export function reconcileReplacementRoomState(
   previousState: AuthoredRoomState,
   replacementRoom: RoomDeclaration,
   replacementState: AuthoredRoomState,
-  loadout?: TraitOfferDefaultsContext,
+  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
-  const resolvedLoadout = loadout ?? fallbackLoadout(catalog);
   switch (replacementState.kind) {
     case 'none':
       return replacementState;
@@ -312,7 +302,7 @@ export function reconcileReplacementRoomState(
               traitOffersByAcquisitionRole: defaultTraitOffers(
                 catalog,
                 previousState.reward.offer,
-                resolvedLoadout,
+                loadout,
               ),
             }),
           })
@@ -331,7 +321,7 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            resolvedLoadout,
+            loadout,
           )
         : replacementState;
     case 'shipCombat':
@@ -342,7 +332,7 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            resolvedLoadout,
+            loadout,
           )
         : replacementState;
     case 'ephyraCombat':
@@ -354,7 +344,7 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            resolvedLoadout,
+            loadout,
           )
         : replacementState;
   }

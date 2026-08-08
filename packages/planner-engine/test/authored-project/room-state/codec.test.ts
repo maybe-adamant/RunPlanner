@@ -4,7 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import { decodeRoomState } from '../../../src/authored-project/room-state/codec';
-import { createDefaultRoomState } from '../../../src/authored-project/room-state/defaults';
+import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 
 const path = '$.room.state';
 

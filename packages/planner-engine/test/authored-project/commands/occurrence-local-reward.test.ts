@@ -206,6 +206,25 @@ describe('authored-project local reward commands', () => {
       },
     });
     expect(state?.kind === 'ephyraCombat' ? state.reward : undefined).toEqual(parentRewardBefore);
+    expect(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitSelection',
+        trait,
+        selectedOptionKey: 'option2',
+      }),
+    ).toBe(project);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitSelection',
+        trait,
+        selectedOptionKey: 'option4' as never,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        commandKind: 'ReplaceTraitSelection',
+        detail: 'selected option must be option1, option2, or option3',
+      }),
+    );
     expect(() =>
       applyTraitOfferCommand(
         project,

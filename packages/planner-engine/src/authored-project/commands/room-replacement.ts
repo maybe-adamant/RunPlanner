@@ -148,10 +148,14 @@ function occurrenceContext(
   failCommand(command, `occurrence ${occurrenceId} has no structural owner`);
 }
 
-function asRoomStateContext(context: OccurrenceContext): RoomStateContext {
+function asRoomStateContext(
+  context: OccurrenceContext,
+  loadout: LocatedBiome['loadout'],
+): RoomStateContext {
   return Object.freeze({
     role: context.role,
     entryActive: context.entryActive,
+    loadout,
     ...(context.resolvedStoreKey === undefined
       ? {}
       : { resolvedStoreKey: context.resolvedStoreKey }),
@@ -313,7 +317,7 @@ export function applyRoomReplacementCommand(
   const replacementDefault = createDefaultRoomState(
     catalog,
     replacementRoom,
-    asRoomStateContext(context),
+    asRoomStateContext(context, located.loadout),
   );
   const replacement: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,

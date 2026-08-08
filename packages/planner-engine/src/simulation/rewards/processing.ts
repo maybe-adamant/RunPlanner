@@ -168,7 +168,7 @@ function applyTraitOfferForAcquisition(
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer.rewardType === 'Devotion',
       resolvedProviderKey: authored.giverKey,
     },
-    before.events.length,
+    branch.traitEvaluations?.length ?? 0,
   );
   const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);

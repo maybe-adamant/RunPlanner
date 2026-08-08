@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
@@ -20,6 +21,33 @@ function shipState(project: ProjectDocument, occurrenceId = oOccurrenceIds.comba
 }
 
 describe('authored-project Ship occurrence commands', () => {
+  it('preserves customized wheel trait children when the parent offer is unchanged', () => {
+    const offer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer1',
+    );
+    const value = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    };
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer,
+      value,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(offer, 'source'),
+      selectedOptionKey: 'option2',
+    });
+
+    expect(
+      applyProjectCommand(project, catalog, { kind: 'ReplaceRewardWheelOffer', offer, value }),
+    ).toBe(project);
+  });
+
   it('replaces the encounter count and preserves identity for an unchanged count', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const initial = createRepresentativeNOProject();

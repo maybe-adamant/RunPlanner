@@ -9,12 +9,36 @@ import {
   createOccurrenceId,
   createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { gBiome, gProject, nBiome } from '../support/configured-projects';
 
 describe('authored-project Shop occurrence commands', () => {
+  it('preserves customized Shop trait children when the parent offer is unchanged', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const offer = createShopOfferAddress(nBiome, shopId, 'Boon');
+    const value = {
+      rewardType: 'RandomLoot' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    };
+    let project = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(offer, 'source'),
+      selectedOptionKey: 'option2',
+    });
+
+    expect(applyProjectCommand(project, catalog, { kind: 'ReplaceShopOffer', offer, value })).toBe(
+      project,
+    );
+  });
+
   it('replaces an offer and complete purchase order independently and preserves unchanged identity', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const offer = createShopOfferAddress(nBiome, shopId, 'MajorNonBoon');

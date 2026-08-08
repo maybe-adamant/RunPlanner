@@ -15,12 +15,12 @@ export interface RoomStateContext {
   readonly role: RoomOccurrenceRole;
   readonly resolvedStoreKey?: string;
   readonly entryActive: boolean;
+  readonly loadout: TraitOfferDefaultsContext;
   /**
    * An Anomaly replacement retains the offer domain of the normal G target it
    * displaced. This is decode context, not persisted duplicate state.
    */
   readonly rememberedCountedBinding?: CountedRewardBinding;
-  readonly loadout?: TraitOfferDefaultsContext;
 }
 
 export function authoredTemplateKey(room: RoomDeclaration, path: string) {

@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -20,6 +21,28 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  it('preserves customized trait children when the parent offer is unchanged', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const value = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    };
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(reward, 'source'),
+      selectedOptionKey: 'option2',
+    });
+
+    expect(
+      applyProjectCommand(project, catalog, { kind: 'ReplaceIncomingReward', reward, value }),
+    ).toBe(project);
+  });
+
   it('replaces counted and free-reward offers and preserves unchanged document identity', () => {
     const ephyraId = createOccurrenceId('round-trip-n-combat02');
     const reward = createIncomingRewardAddress(nBiome, ephyraId);

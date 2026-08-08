@@ -122,6 +122,7 @@ export function applyShipOccurrenceCommand(
         if (offer === undefined || !descriptor.offerKeys.includes(command.offer.offerKey)) {
           failCommand(command, `unknown wheel offer ${command.offer.offerKey}`);
         }
+        if (sameOccurrenceValue(offer.offer, command.value)) return document;
         replacement = Object.freeze({
           ...wheel,
           offers: Object.freeze({
