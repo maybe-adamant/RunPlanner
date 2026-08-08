@@ -425,6 +425,10 @@ function normalizeGivers(
   );
   const values = declarations.map((giver, index) => {
     const path = `givers[${index}]`;
+    const priorityTraitKeys = freezeUniqueStrings(
+      requireArray(giver.priorityTraitKeys, `${path}.priorityTraitKeys`) as readonly string[],
+      `${path}.priorityTraitKeys`,
+    );
     const traitKeys = freezeUniqueStrings(
       requireArray(giver.traitKeys, `${path}.traitKeys`) as readonly string[],
       `${path}.traitKeys`,
@@ -443,6 +447,12 @@ function normalizeGivers(
         fail(`${path}.traitKeys[${memberIndex}]`, 'Hammer members must have no rarity domain');
       if (giver.providerKind !== 'hammer' && trait.hammerCompatibility !== undefined)
         fail(`${path}.traitKeys[${memberIndex}]`, 'non-Hammer giver cannot contain a Hammer trait');
+    }
+    for (const [priorityIndex, traitKey] of priorityTraitKeys.entries()) {
+      if (!traitKeys.includes(traitKey))
+        fail(`${path}.priorityTraitKeys[${priorityIndex}]`, 'must belong to giver pool');
+      if (traits.byKey[traitKey] === undefined)
+        fail(`${path}.priorityTraitKeys[${priorityIndex}]`, `unknown trait ${traitKey}`);
     }
     const providerKind = closedValue(
       giver.providerKind,
@@ -491,6 +501,27 @@ function normalizeGivers(
         `${path}.rarityPolicy`,
         'Olympian and Hermes givers require selectable rarity authorship',
       );
+    if (providerKind === 'olympian') {
+      if (priorityTraitKeys.length !== 5)
+        fail(`${path}.priorityTraitKeys`, 'Olympian givers require exactly five priority traits');
+      const prioritySlots = priorityTraitKeys.map(
+        (traitKey) => traits.byKey[traitKey]?.ordinaryBoonSlot,
+      );
+      if (
+        prioritySlots.some((slot) => slot === undefined) ||
+        new Set(prioritySlots).size !== 5 ||
+        !(['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const).every((slot) =>
+          prioritySlots.includes(slot),
+        )
+      ) {
+        fail(
+          `${path}.priorityTraitKeys`,
+          'Olympian priority traits must cover Melee, Secondary, Ranged, Rush, and Mana',
+        );
+      }
+    } else if (priorityTraitKeys.length !== 0) {
+      fail(`${path}.priorityTraitKeys`, 'non-Olympian givers must not declare priority traits');
+    }
     if (providerKind === 'hammer' && giver.defaultsByLoadout === undefined)
       fail(`${path}.defaultsByLoadout`, 'must cover every loadout');
     if (providerKind !== 'hammer' && giver.defaultOffer === undefined)
@@ -520,6 +551,18 @@ function normalizeGivers(
       });
     };
     if (defaultOffer !== undefined) validateDefaultPolicy(defaultOffer, `${path}.defaultOffer`);
+    if (providerKind === 'olympian' && defaultOffer !== undefined) {
+      const prioritySet = new Set(priorityTraitKeys);
+      if (defaultOffer.options.some((option) => !prioritySet.has(option.traitKey))) {
+        fail(`${path}.defaultOffer`, 'Olympian defaults must use priority traits only');
+      }
+      const defaultSlots = defaultOffer.options.map(
+        (option) => traits.byKey[option.traitKey]?.ordinaryBoonSlot,
+      );
+      if (!defaultSlots.includes('Melee') || !defaultSlots.includes('Secondary')) {
+        fail(`${path}.defaultOffer`, 'Olympian defaults must include Melee and Secondary traits');
+      }
+    }
     const defaultsByLoadout: Record<string, TraitOfferDefaults> = {};
     if (giver.defaultsByLoadout !== undefined) {
       const rawDefaultsByLoadout = requireObject(
@@ -570,6 +613,7 @@ function normalizeGivers(
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
       traitKeys,
+      priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
       ...(defaultOffer === undefined ? {} : { defaultOffer }),
       ...(Object.keys(defaultsByLoadout).length === 0

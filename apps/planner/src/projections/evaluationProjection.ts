@@ -191,6 +191,14 @@ const findingCopy = {
     title: 'Hammer is incompatible with this loadout',
     description: 'This Hammer trait does not support the selected weapon and aspect.',
   },
+  nonPriorityTrait: {
+    title: 'First Olympian offer needs a priority trait',
+    description: 'Every option in the first Olympian offer must be a priority trait.',
+  },
+  missingAttackOrSpecial: {
+    title: 'First Olympian offer needs Attack or Special',
+    description: 'The first Olympian offer must include an Attack or Special trait.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

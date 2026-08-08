@@ -56,6 +56,7 @@ export interface RawTraitGiverDeclaration {
   readonly label: string;
   readonly providerKind: 'olympian' | 'hermes' | 'hammer';
   readonly traitKeys: readonly string[];
+  readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:
     | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
     | { readonly kind: 'none' };

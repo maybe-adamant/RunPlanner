@@ -237,6 +237,7 @@ export {
 } from './project';
 export {
   assessTraitOffer,
+  assessTraitOfferComposition,
   attachTraitHistory,
   assessTraitOption,
   traitCandidates,
@@ -247,6 +248,8 @@ export {
   nextRarity,
   traitDerivedFacts,
   type TraitAssessment,
+  type TraitOfferCompositionAssessment,
+  type TraitOfferCompositionFinding,
   type TraitFindingCode,
   type TraitHistoryState,
   type ReachedTraitOfferEvaluation,

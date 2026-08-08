@@ -455,6 +455,13 @@ export const demeterGiver = {
   key: 'Demeter',
   label: 'Demeter',
   providerKind: 'olympian',
+  priorityTraitKeys: [
+    'DemeterWeaponBoon',
+    'DemeterSpecialBoon',
+    'DemeterCastBoon',
+    'DemeterSprintBoon',
+    'DemeterManaBoon',
+  ],
   traitKeys: [
     'DemeterWeaponBoon',
     'DemeterSpecialBoon',

@@ -8,8 +8,11 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   assessTraitOption,
+  assessTraitOfferComposition,
   createTraitHistoryState,
+  evaluateReachedTraitOffer,
   foldTraitOfferEvents,
+  recordReachedTraitOffer,
   traitCandidates,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
@@ -536,6 +539,131 @@ describe('trait legality and derived facts', () => {
 });
 
 describe('reached trait offer chronology', () => {
+  const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
+    Object.freeze({
+      giverKey,
+      options: Object.freeze(traitKeys.map((traitKey) => Object.freeze({ traitKey }))) as [
+        { readonly traitKey: string },
+        { readonly traitKey: string },
+        { readonly traitKey: string },
+      ],
+      selectedOptionKey: 'option1' as const,
+    });
+
+  it('assesses the first Olympian offer as one complete priority composition', () => {
+    const valid = offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']);
+    expect(assessTraitOfferComposition(catalog, valid, createTraitHistoryState())).toEqual({
+      applies: true,
+      legal: true,
+      findings: [],
+    });
+
+    const nonPriority = offer('Apollo', [
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloRetaliateBoon',
+    ]);
+    expect(assessTraitOfferComposition(catalog, nonPriority, createTraitHistoryState())).toEqual({
+      applies: true,
+      legal: false,
+      findings: [
+        {
+          code: 'nonPriorityTrait',
+          traitKey: 'ApolloRetaliateBoon',
+          optionKey: 'option3',
+        },
+      ],
+    });
+
+    const missingAttackOrSpecial = offer('Apollo', [
+      'ApolloCastBoon',
+      'ApolloSprintBoon',
+      'ApolloManaBoon',
+    ]);
+    expect(
+      assessTraitOfferComposition(catalog, missingAttackOrSpecial, createTraitHistoryState()),
+    ).toEqual({ applies: true, legal: false, findings: [{ code: 'missingAttackOrSpecial' }] });
+  });
+
+  it('does not apply first-offer composition after a slot is occupied or to Hermes/Hammer', () => {
+    const occupied = foldTraitOfferEvents(catalog, [
+      {
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 1,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'seed',
+      },
+    ]);
+    const invalid = offer('Apollo', ['ApolloCastBoon', 'ApolloSprintBoon', 'ApolloManaBoon']);
+    expect(assessTraitOfferComposition(catalog, invalid, occupied)).toEqual({
+      applies: false,
+      legal: true,
+      findings: [],
+    });
+    expect(
+      assessTraitOfferComposition(
+        catalog,
+        offer('Hermes', ['HermesWeaponBoon', 'HermesSpecialBoon', 'HermesCastDiscountBoon']),
+        createTraitHistoryState(),
+      ),
+    ).toEqual({ applies: false, legal: true, findings: [] });
+    expect(
+      assessTraitOfferComposition(
+        catalog,
+        offer('WeaponUpgrade', [
+          'StaffDoubleAttackTrait',
+          'StaffLongAttackTrait',
+          'StaffDashAttackTrait',
+        ]),
+        createTraitHistoryState(),
+      ),
+    ).toEqual({ applies: false, legal: true, findings: [] });
+  });
+
+  it('keeps an invalid first offer out of history so a later Olympian can satisfy the rule', () => {
+    const first = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'chosenSource',
+      offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloRetaliateBoon']),
+      createTraitHistoryState(),
+      {},
+      0,
+    );
+    expect(first.composition.legal).toBe(false);
+    expect(recordReachedTraitOffer(catalog, first, 1, 'test').history.events).toHaveLength(0);
+
+    const second = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'chosenSource',
+      offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']),
+      first.before,
+      {},
+      1,
+    );
+    expect(second.composition.legal).toBe(true);
+    expect(recordReachedTraitOffer(catalog, second, 2, 'test').history.events).toHaveLength(1);
+  });
+
+  it('marks non-priority first-offer candidates unavailable with a composition reason', () => {
+    const candidate = traitCandidates(catalog, 'Apollo', createTraitHistoryState()).find(
+      (entry) => entry.traitKey === 'ApolloRetaliateBoon' && entry.rarity === 'Common',
+    );
+    expect(candidate?.available).toBe(false);
+    expect(candidate?.assessment.findings).toContainEqual({
+      code: 'nonPriorityTrait',
+      traitKey: 'ApolloRetaliateBoon',
+    });
+  });
+
   it('advances trace position when an invalid offer emits no equipped event', () => {
     const authoredWeapon = catalog.weapons.values[0];
     const activeWeapon = catalog.weapons.values.find(

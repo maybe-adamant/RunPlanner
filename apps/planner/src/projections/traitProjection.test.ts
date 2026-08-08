@@ -53,6 +53,13 @@ describe('route trait projection', () => {
     const invalidTrace = Object.freeze({
       ...firstTrace,
       assessments: Object.freeze([invalidAssessment, ...firstTrace.assessments.slice(1)]),
+      composition: Object.freeze({
+        ...firstTrace.composition,
+        legal: false,
+        findings: Object.freeze([
+          { code: 'nonPriorityTrait' as const, traitKey: selectedTraitKey },
+        ]),
+      }),
       chronologicalIndex: 5,
     });
     const validTrace = Object.freeze({ ...firstTrace, chronologicalIndex: 10 });
@@ -115,7 +122,7 @@ describe('route trait projection', () => {
       throw new Error('aggregated trait rows are missing');
     }
     expect(firstRow.invalid).toBe(true);
-    expect(firstRow.findingCount).toBe(2);
+    expect(firstRow.findingCount).toBe(3);
     expect(rows.indexOf(firstRow)).toBeLessThan(rows.indexOf(secondRow));
     const feedback = projectTraitOfferFeedback(firstTrace.offer, {
       value: firstTrace.offer,
@@ -123,6 +130,7 @@ describe('route trait projection', () => {
         kind: 'traitOffer',
         result: {
           supported: false,
+          branches: [],
           assessments: invalidTrace.assessments,
           findings: [duplicateFinding, duplicateFinding, secondFinding],
         },
@@ -224,5 +232,40 @@ describe('route trait projection', () => {
           (occurrence) => occurrence.occurrenceId === traceAddress.occurrenceId,
         )?.gameName,
     );
+  });
+
+  it('presents first-Olympian composition findings without inventing option prerequisites', () => {
+    const offer = {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+        { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const feedback = projectTraitOfferFeedback(offer, {
+      value: offer,
+      evaluation: {
+        kind: 'traitOffer',
+        result: {
+          supported: false,
+          branches: [],
+          assessments: [],
+          findings: [
+            {
+              code: 'nonPriorityTrait' as const,
+              traitKey: 'ApolloRetaliateBoon',
+            },
+            { code: 'missingAttackOrSpecial' as const },
+          ],
+        },
+      },
+    });
+    expect(feedback.options[2]?.reasons).toEqual([
+      expect.stringContaining('First Olympian offer needs a priority trait'),
+    ]);
+    expect(feedback.options[0]?.reasons).toEqual([]);
+    expect(feedback.contextMessage).toContain('First Olympian offer needs Attack or Special');
   });
 });

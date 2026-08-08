@@ -171,7 +171,11 @@ function applyTraitOfferForAcquisition(
   );
   const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
-  if (findings !== undefined && evaluation.assessments.some((assessment) => !assessment.legal)) {
+  if (
+    findings !== undefined &&
+    (evaluation.composition.findings.length > 0 ||
+      evaluation.assessments.some((assessment) => !assessment.legal))
+  ) {
     const owner = traitOwnerAddress(reward.origin);
     if (owner !== undefined) {
       evaluation.assessments.forEach((assessment) =>
@@ -187,6 +191,9 @@ function applyTraitOfferForAcquisition(
           );
         }),
       );
+      evaluation.composition.findings.forEach((finding) => {
+        addTraitFinding(findings, owner, role, lifecyclePoint, finding.code, finding.traitKey);
+      });
     }
   }
   // A reached offer remains in the evaluation trace even when one or more
@@ -220,7 +227,7 @@ function addTraitFinding(
   acquisitionRole: string,
   lifecyclePoint: string,
   code: TraitFindingCode,
-  traitKey: string,
+  traitKey: string | undefined,
   detail?: string,
 ): void {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
@@ -232,7 +239,7 @@ function addTraitFinding(
     evidence: Object.freeze({
       acquisitionRole,
       lifecyclePoint,
-      traitKey,
+      ...(traitKey === undefined ? {} : { traitKey }),
       ...(detail === undefined ? {} : { detail }),
     }),
   });

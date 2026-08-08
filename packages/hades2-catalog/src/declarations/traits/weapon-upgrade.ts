@@ -1501,6 +1501,7 @@ export const weaponUpgradeGiver = {
   key: 'WeaponUpgrade',
   label: 'Daedalus Hammer',
   providerKind: 'hammer',
+  priorityTraitKeys: [],
   traitKeys: [
     'StaffDoubleAttackTrait',
     'StaffLongAttackTrait',

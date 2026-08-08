@@ -485,6 +485,13 @@ not equip a sibling option, rewrite trait history, or persist counters. React
 receives only the bound interaction projection and cannot recreate this
 policy.
 
+For a first Olympian contact, the candidate product also carries
+branch-grouped complete-offer composition assessments. Non-priority options are
+unavailable with a composition-context finding; missing Attack/Special is one
+offer-level finding rather than a fabricated prerequisite. Branch evidence is
+not flattened before support is decided, so one branch's valid first offer
+cannot hide another branch's invalid composition.
+
 The candidate refactor is complete. `../progress/IMPLEMENTATION_PLAN.md`
 preserves its numbered delivery slices and acceptance gates;
 `../progress/IMPLEMENTATION_PROGRESS.md` records their completion evidence.

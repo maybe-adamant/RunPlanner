@@ -78,6 +78,33 @@ key as a persistent equipped trait. `UpgradeHammerBoon`, `NarcissusA..I`,
 here; later lifecycle work must classify their selected effects before treating
 every pool entry as persistent inventory.
 
+### Priority-upgrade closure
+
+The source `GetPriorityTraits`/`PriorityUpgrades` surface is closed for the
+first Olympian offer rule. Each ordinary Olympian declares exactly five core
+keys, in Weapon/Attack, Special, Cast, Sprint, and Mana order:
+
+| Giver      | Priority keys                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| Aphrodite  | `AphroditeWeaponBoon`, `AphroditeSpecialBoon`, `AphroditeCastBoon`, `AphroditeSprintBoon`, `AphroditeManaBoon`      |
+| Apollo     | `ApolloWeaponBoon`, `ApolloSpecialBoon`, `ApolloCastBoon`, `ApolloSprintBoon`, `ApolloManaBoon`                     |
+| Ares       | `AresWeaponBoon`, `AresSpecialBoon`, `AresCastBoon`, `AresSprintBoon`, `AresManaBoon`                               |
+| Demeter    | `DemeterWeaponBoon`, `DemeterSpecialBoon`, `DemeterCastBoon`, `DemeterSprintBoon`, `DemeterManaBoon`                |
+| Hephaestus | `HephaestusWeaponBoon`, `HephaestusSpecialBoon`, `HephaestusCastBoon`, `HephaestusSprintBoon`, `HephaestusManaBoon` |
+| Hera       | `HeraWeaponBoon`, `HeraSpecialBoon`, `HeraCastBoon`, `HeraSprintBoon`, `HeraManaBoon`                               |
+| Hestia     | `HestiaWeaponBoon`, `HestiaSpecialBoon`, `HestiaCastBoon`, `HestiaSprintBoon`, `HestiaManaBoon`                     |
+| Poseidon   | `PoseidonWeaponBoon`, `PoseidonSpecialBoon`, `PoseidonCastBoon`, `PoseidonSprintBoon`, `PoseidonManaBoon`           |
+| Zeus       | `ZeusWeaponBoon`, `ZeusSpecialBoon`, `ZeusCastBoon`, `ZeusSprintBoon`, `ZeusManaBoon`                               |
+
+Hermes and `WeaponUpgrade` (Hammer) declare an explicitly empty priority set.
+Normalization verifies membership, uniqueness, and coverage of the five
+ordinary slots. Olympian defaults use priority keys only and include Melee and
+Secondary. The first-offer guarantee is a support simplification: a first
+reached Olympian offer while all ordinary slots are empty needs three distinct
+priority traits and Attack (`Melee`) or Special (`Secondary`). Replacement,
+weighted probability, and `PriorityChance` remain deferred rather than being
+inferred from this guarantee.
+
 ## In-Scope Offer Shape
 
 `ScreenData.UpgradeChoice.MaxChoices` is three. `CalcNumLootChoices` can reduce

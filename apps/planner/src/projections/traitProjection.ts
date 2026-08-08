@@ -73,17 +73,23 @@ export function projectTraitOfferFeedback(
     return Object.freeze({ options: Object.freeze([]), support });
   }
   const findingsByTrait = new Map<string, string[]>();
+  let contextMessage: string | undefined;
   for (const finding of evaluation.result.findings) {
     const copy = presentTraitCandidateFinding(finding.code);
     const reason =
       finding.detail === undefined
         ? `${copy.title}: ${copy.description}`
         : `${copy.title}: ${copy.description} (${finding.detail})`;
+    if (finding.traitKey === undefined) {
+      contextMessage = contextMessage === undefined ? reason : `${contextMessage} ${reason}`;
+      continue;
+    }
     const reasons = findingsByTrait.get(finding.traitKey);
     if (reasons === undefined) findingsByTrait.set(finding.traitKey, [reason]);
     else if (!reasons.includes(reason)) reasons.push(reason);
   }
   return Object.freeze({
+    ...(contextMessage === undefined ? {} : { contextMessage }),
     options: Object.freeze(
       offer.options.map((option) => {
         const reasons = findingsByTrait.get(option.traitKey) ?? [];
@@ -133,12 +139,13 @@ function ownerLocationForAddress(
 interface AggregatedTraitTrace {
   readonly trace: ReachedTraitOfferEvaluation;
   readonly assessments: ReachedTraitOfferEvaluation['assessments'][number][];
+  readonly compositions: ReachedTraitOfferEvaluation['composition'][];
   chronologicalIndex: number;
 }
 
 function findingKey(finding: {
   readonly code: string;
-  readonly traitKey: string;
+  readonly traitKey?: string;
   readonly detail?: string;
 }): string {
   return `${finding.code}|${finding.traitKey}|${finding.detail ?? ''}`;
@@ -154,6 +161,10 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
     for (const assessment of trace.assessments) {
       if (!assessment.legal) invalid = true;
       for (const finding of assessment.findings) findingKeys.add(findingKey(finding));
+    }
+    for (const composition of trace.compositions) {
+      if (!composition.legal) invalid = true;
+      for (const finding of composition.findings) findingKeys.add(findingKey(finding));
     }
   }
   return Object.freeze({ invalid, findingCount: findingKeys.size });
@@ -185,11 +196,13 @@ function groupedTraitTraces(
         if (existing === undefined) {
           grouped.set(key, {
             assessments: [...trace.assessments],
+            compositions: [trace.composition],
             chronologicalIndex: trace.chronologicalIndex,
             trace,
           });
         } else {
           existing.assessments.push(...trace.assessments);
+          existing.compositions.push(trace.composition);
           existing.chronologicalIndex = Math.min(
             existing.chronologicalIndex,
             trace.chronologicalIndex,

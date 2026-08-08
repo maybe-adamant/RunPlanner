@@ -766,6 +766,11 @@ Hammer rows intentionally expose no rarity field. Giver labels, selected
 trait labels, and contextual findings are presentation products derived from
 catalog and engine outputs.
 
+First-Olympian composition findings use the same `TraitOfferAddress` and
+existing finding presentation path. The editor adds no mode or persisted state:
+whether the rule applies comes from the engine's reached pre-offer ledger and
+its derived empty ordinary-boon slots.
+
 Trait dialog visibility and focus handoff are UI-session state. Opening from a
 room, Shop, route Traits row, or semantic finding does not enter authored
 history or undo/redo. The route projection groups branch evidence by semantic

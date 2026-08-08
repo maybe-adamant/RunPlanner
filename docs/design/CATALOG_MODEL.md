@@ -705,11 +705,17 @@ trait declarations, and 11 giver declarations (the nine Olympians, Hermes, and
 equipped rarity domains, exact offer requirements, ordinary boon slot,
 element contributions, persistent-god classification, stacking and in-run
 rarify flags, rarity-count exclusion, and Hammer weapon/aspect compatibility.
-Giver declarations own ordered pool membership, rarity authorship, and the
-complete default triple (one provider default for Olympian/Hermes and one per
+Giver declarations own ordered pool membership, normalized `priorityTraitKeys`,
+rarity authorship, and the complete default triple (one provider default for Olympian/Hermes and one per
 weapon/aspect loadout for Hammers). Hammer traits deliberately use a `none`
 rarity domain; `Heroic` remains in the normalized equipped rarity order but is
 never a fresh authored choice.
+
+The nine Olympian priority sets each cover the five ordinary slots; Hermes and
+Hammer normalize an explicitly empty set. Catalog construction rejects unknown,
+duplicate, out-of-pool, cross-slot, or malformed priority sets and rejects
+Olympian defaults that leave the set or omit Melee and Secondary. The empty-slot
+predicate and first-offer timing remain simulation-owned, not catalog state.
 
 Catalog construction is the source-to-catalog closure boundary. It rejects
 unknown requirement operands, duplicate or cross-provider pool members,

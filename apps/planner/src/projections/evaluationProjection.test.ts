@@ -58,6 +58,8 @@ const allFindingCodes = [
   'rewardSourceUnavailable',
   'shopOfferUnavailable',
   'shopPurchaseUnavailable',
+  'nonPriorityTrait',
+  'missingAttackOrSpecial',
 ] as const satisfies readonly FindingCode[];
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -74,7 +76,7 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 
 describe('evaluation presentation', () => {
   it('provides explicit player copy for every Phase 3 finding code', () => {
-    expect(allFindingCodes).toHaveLength(20);
+    expect(allFindingCodes).toHaveLength(22);
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);
