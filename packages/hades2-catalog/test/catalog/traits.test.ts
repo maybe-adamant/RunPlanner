@@ -101,6 +101,29 @@ const expectedOrdinarySlots = Object.fromEntries(
   ]),
 );
 
+const expectedPriorityTraitKeys: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
+  [
+    'Aphrodite',
+    'Apollo',
+    'Ares',
+    'Demeter',
+    'Hephaestus',
+    'Hera',
+    'Hestia',
+    'Poseidon',
+    'Zeus',
+  ].map((giver) => [
+    giver,
+    [
+      `${giver}WeaponBoon`,
+      `${giver}SpecialBoon`,
+      `${giver}CastBoon`,
+      `${giver}SprintBoon`,
+      `${giver}ManaBoon`,
+    ],
+  ]),
+);
+
 const sourceKeys = (keys: string): readonly string[] => keys.trim().split(/\s+/).sort();
 
 const expectedElementTraitKeys = {
@@ -789,6 +812,11 @@ describe('trait offer catalog closure', () => {
       Object.fromEntries(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys])),
     ).toEqual(expectedGiverPools);
     expect(declarations.traitCatalog.deferredTraitKeys).toEqual(expectedDeferredTraitKeys);
+    for (const [giverKey, priorityTraitKeys] of Object.entries(expectedPriorityTraitKeys)) {
+      expect(traits.givers.byKey[giverKey]?.priorityTraitKeys).toEqual(priorityTraitKeys);
+    }
+    expect(traits.givers.byKey.Hermes?.priorityTraitKeys).toEqual([]);
+    expect(traits.givers.byKey.WeaponUpgrade?.priorityTraitKeys).toEqual([]);
   });
 
   it('keeps shared traits giver-neutral and closes deferred operands without placeholders', () => {
@@ -1059,6 +1087,47 @@ describe('trait offer catalog closure', () => {
     );
   });
 
+  it('rejects malformed priority declarations and non-priority Olympian defaults', () => {
+    const duplicatePriority = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite'
+            ? {
+                ...giver,
+                priorityTraitKeys: [giver.priorityTraitKeys[0]!, ...giver.priorityTraitKeys],
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(duplicatePriority)).toThrow(/priorityTraitKeys/);
+
+    const nonPriorityDefault = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
+            ? {
+                ...giver,
+                defaultOffer: {
+                  ...giver.defaultOffer,
+                  options: [
+                    giver.defaultOffer.options[0]!,
+                    giver.defaultOffer.options[1]!,
+                    { traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
+                  ] as const,
+                },
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(nonPriorityDefault)).toThrow(/priority traits only/);
+  });
+
   it('preserves Legendary rarity while keeping Hammer declarations un-rarified', () => {
     const aphrodite = declarations.traitCatalog.givers.find((giver) => giver.key === 'Aphrodite');
     if (aphrodite === undefined || aphrodite.defaultOffer === undefined) throw new Error('fixture');
@@ -1082,7 +1151,7 @@ describe('trait offer catalog closure', () => {
         ),
       },
     };
-    expect(() => createCatalog(valid)).not.toThrow();
+    expect(() => createCatalog(valid)).toThrow(/priority traits only/);
 
     const hammerTrait = declarations.traitCatalog.traits.find(
       (trait) => trait.key === 'StaffTripleShotTrait',

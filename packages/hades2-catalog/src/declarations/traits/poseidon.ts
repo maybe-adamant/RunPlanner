@@ -297,6 +297,13 @@ export const poseidonGiver = {
   key: 'Poseidon',
   label: 'Poseidon',
   providerKind: 'olympian',
+  priorityTraitKeys: [
+    'PoseidonWeaponBoon',
+    'PoseidonSpecialBoon',
+    'PoseidonCastBoon',
+    'PoseidonSprintBoon',
+    'PoseidonManaBoon',
+  ],
   traitKeys: [
     'PoseidonWeaponBoon',
     'PoseidonSpecialBoon',

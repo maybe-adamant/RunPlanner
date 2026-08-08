@@ -385,6 +385,13 @@ export const hephaestusGiver = {
   key: 'Hephaestus',
   label: 'Hephaestus',
   providerKind: 'olympian',
+  priorityTraitKeys: [
+    'HephaestusWeaponBoon',
+    'HephaestusSpecialBoon',
+    'HephaestusCastBoon',
+    'HephaestusSprintBoon',
+    'HephaestusManaBoon',
+  ],
   traitKeys: [
     'HephaestusWeaponBoon',
     'HephaestusSpecialBoon',

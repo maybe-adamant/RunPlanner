@@ -620,6 +620,11 @@ thresholds, loadout compatibility, or chronology. The route Traits panel is a
 second reference to those controls, not a persisted route-wide model. Dialog
 target and focus restoration remain transient editor-session state.
 
+Complete-offer first-Olympian composition findings are projected through the
+same leaf and destination. They do not add a workspace mode or marker; the
+engine derives empty ordinary-boon slots from equipped state, and dormant,
+unpicked, or unpurchased leaves remain non-consuming authoring surfaces.
+
 The structured workspace is complete when:
 
 - ordinary-decision biomes show one labeled rail stop per decision, active

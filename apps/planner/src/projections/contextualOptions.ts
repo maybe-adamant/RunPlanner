@@ -289,6 +289,16 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'trait',
         message: 'This Hammer trait is incompatible with the selected loadout.',
       };
+    case 'nonPriorityTrait':
+      return {
+        kind: 'trait',
+        message: 'Every option in the first Olympian offer must be a priority trait.',
+      };
+    case 'missingAttackOrSpecial':
+      return {
+        kind: 'trait',
+        message: 'The first Olympian offer must include an Attack or Special trait.',
+      };
     case 'batchRewardStoreMissing':
     case 'batchStateMissing':
     case 'biomeFieldMissing':

@@ -3,7 +3,13 @@ import { semanticAddressKey, type TraitOfferAddress } from '../../authored-proje
 import type { AuthoredTraitOffer } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectEvaluation } from '../project';
-import { assessTraitOffer, type TraitAssessment, type TraitFindingCode } from '../traits';
+import {
+  assessTraitOffer,
+  assessTraitOfferComposition,
+  type TraitAssessment,
+  type TraitFindingCode,
+  type TraitOfferCompositionAssessment,
+} from '../traits';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { candidateBiome } from './evaluated-biome';
 
@@ -20,9 +26,13 @@ export interface EvaluatedTraitOfferCandidate {
   readonly result: {
     readonly supported: boolean;
     readonly assessments: readonly TraitAssessment[];
+    readonly branches: readonly {
+      readonly assessments: readonly TraitAssessment[];
+      readonly composition: TraitOfferCompositionAssessment;
+    }[];
     readonly findings: readonly {
       readonly code: TraitOfferCandidateFindingCode;
-      readonly traitKey: string;
+      readonly traitKey?: string;
       readonly detail?: string;
     }[];
   };
@@ -73,9 +83,13 @@ export function evaluateTraitOfferCandidate(
       'afterRoomLifecycle',
     );
   }
-  const assessments = reached.map((trace) =>
-    assessTraitOffer(catalog, query.value, trace.before, trace.context),
+  const branches = reached.map((trace) =>
+    Object.freeze({
+      assessments: assessTraitOffer(catalog, query.value, trace.before, trace.context),
+      composition: assessTraitOfferComposition(catalog, query.value, trace.before),
+    }),
   );
+  const assessments = branches.map((branch) => branch.assessments);
   const optionCounts = new Map<string, number>();
   for (const option of query.value.options) {
     optionCounts.set(option.traitKey, (optionCounts.get(option.traitKey) ?? 0) + 1);
@@ -94,7 +108,10 @@ export function evaluateTraitOfferCandidate(
     ),
   );
   const findings = Object.freeze([
-    ...assessments.flatMap((assessment) => assessment.flatMap((entry) => entry.findings)),
+    ...branches.flatMap((branch) => [
+      ...branch.assessments.flatMap((entry) => entry.findings),
+      ...branch.composition.findings,
+    ]),
     ...duplicateFindings,
   ]);
   return Object.freeze({
@@ -102,7 +119,10 @@ export function evaluateTraitOfferCandidate(
     result: Object.freeze({
       supported:
         duplicateFindings.length === 0 &&
-        assessments.some((assessment) => assessment.every((entry) => entry.legal)),
+        branches.some(
+          (branch) => branch.composition.legal && branch.assessments.every((entry) => entry.legal),
+        ),
+      branches: Object.freeze(branches),
       assessments: Object.freeze(assessments.flat()),
       findings,
     }),

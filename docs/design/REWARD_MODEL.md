@@ -964,6 +964,16 @@ enter equipped state. A valid offer folds only its selected trait. Devotion's
 chosen role therefore equips before combat and its spurned role observes that
 state after combat; Shop purchases fold in authored purchase order.
 
+The first reached Olympian offer is a complete-offer composition point when
+the pre-offer `ordinaryBoonSlots` projection is empty. Its three alternatives
+must be distinct priority/core traits and include Attack (`Melee`) or Special
+(`Secondary`). Composition findings are owned by the offer address, with one
+finding for each non-priority option and one aggregate missing-Attack/Special
+finding. Hermes, Hammer, dormant, unpicked, and unpurchased roles do not
+consume this first-offer rule. An invalid first offer does not fold its
+selection, so a later reached Olympian can still satisfy the rule. No
+replacement or probability policy is inferred here.
+
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,
 god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
@@ -972,6 +982,9 @@ that ledger and are not aliases or persisted shadow counters. The old
 ordinary-source increment approximation is retired. NPC/Story effect-backed
 choices, rarity mutation, stacks, and other deferred providers remain outside
 this persistent trait lifecycle.
+
+The empty-slot test is always derived from this ledger at the reached offer
+boundary; no persisted first-offer marker or replacement counter exists.
 
 Spell/Talent and Surface Shop delivery flags remain on their existing explicit
 deferred boundary; they are not inferred from trait state.

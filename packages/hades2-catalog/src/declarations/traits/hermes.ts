@@ -244,6 +244,7 @@ export const hermesGiver = {
   key: 'Hermes',
   label: 'Hermes',
   providerKind: 'hermes',
+  priorityTraitKeys: [],
   traitKeys: [
     'HermesWeaponBoon',
     'HermesSpecialBoon',

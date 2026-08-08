@@ -122,6 +122,8 @@ export interface TraitGiverDeclaration {
   readonly label: string;
   readonly providerKind: TraitProviderKind;
   readonly traitKeys: readonly string[];
+  /** Source-declared priority/core traits used by first Olympian offers. */
+  readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy: TraitGiverRarityPolicy;
   readonly defaultOffer?: TraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, TraitOfferDefaults>>;

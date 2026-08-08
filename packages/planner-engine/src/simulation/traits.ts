@@ -152,6 +152,20 @@ export interface TraitAssessment {
   }[];
 }
 
+/** Findings that belong to the complete first-Olympian offer, not one option's
+ * ordinary trait legality.  A missing Attack/Special has no option owner. */
+export interface TraitOfferCompositionFinding {
+  readonly code: 'nonPriorityTrait' | 'missingAttackOrSpecial';
+  readonly traitKey?: string;
+  readonly optionKey?: TraitOptionKey;
+}
+
+export interface TraitOfferCompositionAssessment {
+  readonly applies: boolean;
+  readonly legal: boolean;
+  readonly findings: readonly TraitOfferCompositionFinding[];
+}
+
 export interface ReachedTraitOfferEvaluation {
   readonly address: SemanticAddress;
   readonly acquisitionRole: string;
@@ -159,6 +173,7 @@ export interface ReachedTraitOfferEvaluation {
   readonly offer: AuthoredTraitOffer;
   readonly context: TraitOfferContext;
   readonly assessments: readonly TraitAssessment[];
+  readonly composition: TraitOfferCompositionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -179,6 +194,7 @@ export function evaluateReachedTraitOffer(
   context: TraitOfferContext,
   chronologicalIndex: number,
 ): ReachedTraitOfferEvaluation {
+  const composition = assessTraitOfferComposition(catalog, offer, before);
   return Object.freeze({
     address,
     acquisitionRole,
@@ -186,8 +202,50 @@ export function evaluateReachedTraitOffer(
     offer,
     context,
     assessments: assessTraitOffer(catalog, offer, before, context),
+    composition,
     reached: true,
     chronologicalIndex,
+  });
+}
+
+/**
+ * Assess the source-owned guarantee attached to the first reached Olympian
+ * offer.  The offer is evaluated as one complete three-option surface: no
+ * option is treated as an equipped prerequisite for another option.
+ */
+export function assessTraitOfferComposition(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  before: TraitHistoryState,
+): TraitOfferCompositionAssessment {
+  const giver = catalog.traitGivers.byKey[offer.giverKey];
+  const applies =
+    giver?.providerKind === 'olympian' && Object.keys(before.ordinaryBoonSlots).length === 0;
+  if (!applies || giver === undefined) {
+    return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
+  }
+  const priority = new Set(giver.priorityTraitKeys);
+  const findings: TraitOfferCompositionFinding[] = [];
+  offer.options.forEach((option, index) => {
+    if (!priority.has(option.traitKey)) {
+      findings.push(
+        Object.freeze({
+          code: 'nonPriorityTrait',
+          traitKey: option.traitKey,
+          optionKey: index === 0 ? 'option1' : index === 1 ? 'option2' : 'option3',
+        }),
+      );
+    }
+  });
+  const hasAttackOrSpecial = offer.options.some((option) => {
+    const slot = catalog.traits.byKey[option.traitKey]?.ordinaryBoonSlot;
+    return slot === 'Melee' || slot === 'Secondary';
+  });
+  if (!hasAttackOrSpecial) findings.push(Object.freeze({ code: 'missingAttackOrSpecial' }));
+  return Object.freeze({
+    applies: true,
+    legal: findings.length === 0,
+    findings: Object.freeze(findings),
   });
 }
 
@@ -197,7 +255,8 @@ export function recordReachedTraitOffer(
   sequence: number,
   acquisitionPoint: string,
 ): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
-  const valid = evaluation.assessments.every((assessment) => assessment.legal);
+  const valid =
+    evaluation.composition.legal && evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
   const event: TraitOfferEvent = Object.freeze({
     owner: evaluation.address,
@@ -363,11 +422,30 @@ export function traitCandidates(
 ): readonly TraitCandidateAssessment[] {
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver === undefined) return Object.freeze([]);
+  const firstOlympian =
+    giver.providerKind === 'olympian' && Object.keys(history.ordinaryBoonSlots).length === 0;
+  const priority = new Set(giver.priorityTraitKeys);
+  const addCompositionContext = (
+    traitKey: string,
+    assessment: TraitAssessment,
+  ): TraitAssessment => {
+    if (!firstOlympian || priority.has(traitKey)) return assessment;
+    return Object.freeze({
+      legal: false,
+      findings: Object.freeze([
+        ...assessment.findings,
+        Object.freeze({ code: 'nonPriorityTrait' as const, traitKey }),
+      ]),
+    });
+  };
   const candidates: TraitCandidateAssessment[] = [];
   for (const traitKey of giver.traitKeys) {
     const trait = catalog.traits.byKey[traitKey];
     if (trait === undefined) continue;
-    const assessment = assessTraitOption(catalog, traitKey, history, context);
+    const assessment = addCompositionContext(
+      traitKey,
+      assessTraitOption(catalog, traitKey, history, context),
+    );
     if (trait.rarityDomain.kind === 'none') {
       candidates.push(Object.freeze({ traitKey, available: assessment.legal, assessment }));
       continue;
@@ -376,7 +454,10 @@ export function traitCandidates(
       // Heroic is intentionally never in a fresh domain, even when a source
       // declaration accidentally exposes it through a broader giver policy.
       if (rarity === 'Heroic') continue;
-      const rarityAssessment = assessTraitOption(catalog, traitKey, history, context, rarity);
+      const rarityAssessment = addCompositionContext(
+        traitKey,
+        assessTraitOption(catalog, traitKey, history, context, rarity),
+      );
       candidates.push(
         Object.freeze({
           traitKey,

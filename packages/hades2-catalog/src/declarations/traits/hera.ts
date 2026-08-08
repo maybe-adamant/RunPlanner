@@ -401,6 +401,13 @@ export const heraGiver = {
   key: 'Hera',
   label: 'Hera',
   providerKind: 'olympian',
+  priorityTraitKeys: [
+    'HeraWeaponBoon',
+    'HeraSpecialBoon',
+    'HeraCastBoon',
+    'HeraSprintBoon',
+    'HeraManaBoon',
+  ],
   traitKeys: [
     'HeraWeaponBoon',
     'HeraSpecialBoon',

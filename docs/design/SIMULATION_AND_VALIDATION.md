@@ -1237,6 +1237,15 @@ the reward records declared as biome-local; dormant/unpicked/unpurchased
 offers do not enter it. NPC/Story effect-backed choices, stacks, rarity
 mutation, and other deferred providers remain outside this persistent slice.
 
+Before folding a reached Olympian role, simulation derives whether the
+pre-offer ledger has empty ordinary boon slots. If so, it evaluates the whole
+three-option surface against the giver's normalized priority set and requires
+three distinct priority traits plus Melee or Secondary. This is a first-class
+composition product, separate from option-local prerequisites and addressed by
+the same `TraitOfferAddress`; one invalid alternative prevents the selected
+option from folding. No history marker is persisted. Hermes, Hammer, and roles
+that never reach acquisition are outside this transition.
+
 The current canonical trace still keeps `allSpellInvested = false` and
 `pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop
 delivery boundaries. Trait state does not infer either flag; concrete Hex,
