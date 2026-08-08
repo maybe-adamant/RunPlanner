@@ -737,6 +737,28 @@ the preceding rows come from `TraitRequirements`.
     equipped-trait prerequisites. The broader source graph contains 77 such
     owners after retaining the deferred Artemis/Athena spell-state rows.
 
+## Olympian Replacement Source Closure
+
+The installed `UpgradeChoiceLogic.lua` and `TraitLogic.lua` replacement paths
+retain the following possibility semantics. A normal replacement is drawn only
+from an Olympian giver's normalized `PriorityUpgrades` (`priorityTraitKeys`),
+must be a new trait whose ordinary slot is occupied by a different equipped
+trait, and keeps every ordinary requirement and offer-context predicate. The
+occupant may belong to another god. Its supported rarity advances exactly
+`Common -> Rare -> Epic -> Heroic`; a Heroic occupant has no replacement.
+Replacement identity is therefore a derived transition from the pre-offer
+equipped ledger and authored option rarity, not a persisted offer field.
+
+The game seeds at most one normal replacement and fills additional positions
+with replacements only after the ordinary pool is exhausted. The planner
+retains the possibility boundary without the source's 10 percent roll,
+progression gates, force flags, counters, level/stack transfer, or
+`ExchangeLevelBonus`. For an exact pre-offer branch, ordinary availability is
+the count of distinct legal trait keys with at least one legal fresh rarity;
+the maximum replacement count is `ordinaryCandidateCount >= 2 ? 1 : 3 -
+ordinaryCandidateCount`. Replacement alternatives remain independent against
+the same pre-offer state.
+
 ## Gate A Source-Closure Fields
 
 The first trait-offer slice consumes the following additional declaration

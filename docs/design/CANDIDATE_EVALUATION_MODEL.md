@@ -480,9 +480,13 @@ trait-local rarity shape remain structural command/codec checks.
 
 The returned findings cover prerequisite, negative predicate, context,
 element, rarity-count, rarifiable/superchargeable target, occupied-slot,
-wrong-loadout, and acquired-Hammer exclusion rules. Candidate evaluation does
-not equip a sibling option, rewrite trait history, or persist counters. React
-receives only the bound interaction projection and cannot recreate this
+wrong-loadout, and acquired-Hammer exclusion rules. For an occupied Olympian
+slot, the same product may carry one exact derived replacement transition and
+its promoted rarity; Heroic is emitted only for Epic-to-Heroic replacement and
+never as a fresh candidate. Replacement candidates remain limited to
+`priorityTraitKeys`, and waive only occupied-slot failure. Candidate evaluation
+does not equip a sibling option, rewrite trait history, or persist counters.
+React receives only the bound interaction projection and cannot recreate this
 policy.
 
 For a first Olympian contact, the candidate product also carries
@@ -491,6 +495,11 @@ unavailable with a composition-context finding; missing Attack/Special is one
 offer-level finding rather than a fabricated prerequisite. Branch evidence is
 not flattened before support is decided, so one branch's valid first offer
 cannot hide another branch's invalid composition.
+
+Replacement composition is a sibling branch-local product. It reports the
+distinct legal ordinary-key count, the maximum replacement count, and an
+offer-level excess finding. Option assessments and composition must succeed in
+one branch; evidence from separate branch histories is never combined.
 
 The candidate refactor is complete. `../progress/IMPLEMENTATION_PLAN.md`
 preserves its numbered delivery slices and acceptance gates;

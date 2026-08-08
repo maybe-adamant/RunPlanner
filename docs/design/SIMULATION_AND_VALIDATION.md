@@ -1246,6 +1246,24 @@ the same `TraitOfferAddress`; one invalid alternative prevents the selected
 option from folding. No history marker is persisted. Hermes, Hammer, and roles
 that never reach acquisition are outside this transition.
 
+When ordinary slots are already occupied, the same pre-offer branch also
+derives Olympian replacement transitions. A transition is legal only for a
+giver priority trait that is not equipped, whose slot occupant is a different
+trait, and whose authored rarity is the exact next supported rank. Cross-god
+occupants are valid; Heroic occupants are not. Replacement waives only the
+occupied-slot finding. The offer-level sibling composition counts distinct
+legal ordinary keys (never Heroic) and permits at most
+`ordinaryCandidateCount >= 2 ? 1 : 3 - ordinaryCandidateCount` replacements.
+All alternatives remain against one immutable pre-offer state, and branch
+support never combines evidence from different histories.
+
+The selected replacement event removes the exact prior occupant, equips the
+new trait at its promoted rarity, retains earlier acquisition events, and
+recomputes every ledger-derived fact. Unselected alternatives do not mutate
+state. Replacement identity is derived and absent from authored JSON; source
+probability, force/progression gates, counters, and level/stack transfer stay
+deferred.
+
 The current canonical trace still keeps `allSpellInvested = false` and
 `pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop
 delivery boundaries. Trait state does not infer either flag; concrete Hex,

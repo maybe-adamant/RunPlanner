@@ -10,6 +10,7 @@ import type {
   CandidateContextUnavailable,
   ProjectEvaluation,
   ReachedTraitOfferEvaluation,
+  TraitReplacementTransition,
 } from '@run-planner/engine/simulation';
 
 import type {
@@ -24,6 +25,7 @@ export interface TraitOfferOptionFeedback {
   readonly legal: boolean;
   readonly reasons: readonly string[];
   readonly traitKey: string;
+  readonly replacement?: TraitReplacementTransition;
 }
 
 export interface TraitOfferFeedback {
@@ -93,10 +95,16 @@ export function projectTraitOfferFeedback(
     options: Object.freeze(
       offer.options.map((option) => {
         const reasons = findingsByTrait.get(option.traitKey) ?? [];
+        const replacement = uniformReplacement(
+          evaluation.result.assessments,
+          evaluation.result.branches.length,
+          option.traitKey,
+        );
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
+          ...(replacement === undefined ? {} : { replacement }),
         });
       }),
     ),
@@ -111,6 +119,7 @@ export interface RouteTraitOfferProjection {
   readonly locationLabel: string;
   readonly selectedTraitLabel: string;
   readonly rarity?: string;
+  readonly selectedReplacement?: TraitReplacementTransition;
   readonly invalid: boolean;
   readonly findingCount: number;
   readonly interactionKey: string;
@@ -140,6 +149,7 @@ interface AggregatedTraitTrace {
   readonly trace: ReachedTraitOfferEvaluation;
   readonly assessments: ReachedTraitOfferEvaluation['assessments'][number][];
   readonly compositions: ReachedTraitOfferEvaluation['composition'][];
+  readonly replacementCompositions: ReachedTraitOfferEvaluation['replacementComposition'][];
   chronologicalIndex: number;
 }
 
@@ -166,8 +176,37 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
       if (!composition.legal) invalid = true;
       for (const finding of composition.findings) findingKeys.add(findingKey(finding));
     }
+    for (const composition of trace.replacementCompositions) {
+      if (!composition.legal) invalid = true;
+      for (const finding of composition.findings) findingKeys.add(findingKey(finding));
+    }
   }
   return Object.freeze({ invalid, findingCount: findingKeys.size });
+}
+
+function uniformReplacement(
+  assessments: readonly ReachedTraitOfferEvaluation['assessments'][number][],
+  branchCount: number,
+  traitKey: string,
+): TraitReplacementTransition | undefined {
+  const replacements = assessments
+    .map((assessment) => assessment.replacementTransition)
+    .filter(
+      (replacement): replacement is TraitReplacementTransition =>
+        replacement?.newTraitKey === traitKey,
+    );
+  if (replacements.length !== branchCount) return undefined;
+  const first = replacements[0];
+  if (first === undefined) return undefined;
+  return replacements.every(
+    (replacement) =>
+      replacement.slot === first.slot &&
+      replacement.replacedTraitKey === first.replacedTraitKey &&
+      replacement.oldRarity === first.oldRarity &&
+      replacement.requiredRarity === first.requiredRarity,
+  )
+    ? first
+    : undefined;
 }
 
 /*
@@ -197,12 +236,14 @@ function groupedTraitTraces(
           grouped.set(key, {
             assessments: [...trace.assessments],
             compositions: [trace.composition],
+            replacementCompositions: [trace.replacementComposition],
             chronologicalIndex: trace.chronologicalIndex,
             trace,
           });
         } else {
           existing.assessments.push(...trace.assessments);
           existing.compositions.push(trace.composition);
+          existing.replacementCompositions.push(trace.replacementComposition);
           existing.chronologicalIndex = Math.min(
             existing.chronologicalIndex,
             trace.chronologicalIndex,
@@ -256,6 +297,11 @@ export function projectRouteTraitOffers(
     const giver = catalog.traitGivers.byKey[trace.offer.giverKey];
     if (trait === undefined || giver === undefined || control === undefined) continue;
     const evidence = aggregateTraceEvidence([grouped]);
+    const selectedReplacement = uniformReplacement(
+      grouped.assessments,
+      grouped.compositions.length,
+      option.traitKey,
+    );
     rows.push(
       Object.freeze({
         address,
@@ -264,6 +310,7 @@ export function projectRouteTraitOffers(
         locationLabel: ownerLocationForAddress(project, trace.address),
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+        ...(selectedReplacement === undefined ? {} : { selectedReplacement }),
         invalid: evidence.invalid,
         findingCount: evidence.findingCount,
         interactionKey: key,

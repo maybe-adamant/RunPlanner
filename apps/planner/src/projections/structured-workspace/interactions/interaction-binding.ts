@@ -10,7 +10,10 @@ import {
 import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import type {
+  ProjectEvaluationAssembly,
+  TraitReplacementTransition,
+} from '@run-planner/engine/simulation';
 
 import {
   candidateSupport,
@@ -1057,6 +1060,32 @@ function candidateHasExecutableSupport(candidate: CandidateOptionProjection<unkn
   return support === 'forced' || support === 'possible';
 }
 
+function uniformTraitReplacementForOption(
+  evaluation: Extract<CandidateProjectionEvaluation, { readonly kind: 'traitOffer' }>,
+  optionIndex: number,
+  traitKey: string,
+): TraitReplacementTransition | undefined {
+  const replacements = evaluation.result.branches.map(
+    (branch) => branch.assessments[optionIndex]?.replacementTransition,
+  );
+  if (replacements.length === 0 || replacements.some((replacement) => replacement === undefined)) {
+    return undefined;
+  }
+  const first = replacements[0];
+  if (first === undefined || first.newTraitKey !== traitKey) return undefined;
+  return replacements.every(
+    (replacement) =>
+      replacement !== undefined &&
+      replacement.slot === first.slot &&
+      replacement.replacedTraitKey === first.replacedTraitKey &&
+      replacement.oldRarity === first.oldRarity &&
+      replacement.newTraitKey === first.newTraitKey &&
+      replacement.requiredRarity === first.requiredRarity,
+  )
+    ? first
+    : undefined;
+}
+
 function distinctRooms(rooms: readonly RoomDeclaration[]): readonly RoomDeclaration[] {
   return Object.freeze([...new Map(rooms.map((room) => [room.gameName, room])).values()]);
 }
@@ -1510,21 +1539,54 @@ export function bindWorkspaceInteractions(
         key,
         load,
         owner: control.address,
-        rarityChoicesFor: (traitKey: string) => {
+        rarityChoicesFor: (traitKey: string, optionIndex?: number) => {
           const trait = catalog.traits.byKey[traitKey];
           if (trait?.rarityDomain.kind !== 'ranked') return Object.freeze([]);
-          if (trait.rarityDomain.freshOfferRarities.length === 1) {
-            return trait.rarityDomain.freshOfferRarities;
-          }
           const rarityPolicy = control.giver.rarityPolicy;
-          if (rarityPolicy.kind !== 'selectable') {
-            return Object.freeze([]);
+          const fresh =
+            rarityPolicy.kind !== 'selectable'
+              ? Object.freeze([])
+              : Object.freeze(
+                  trait.rarityDomain.freshOfferRarities.filter((rarity) =>
+                    rarityPolicy.rarities.includes(rarity),
+                  ),
+                );
+          if (optionIndex !== undefined) {
+            for (const rarity of trait.rarityDomain.equippedRarities) {
+              const options = [...control.offer.options] as Array<
+                AuthoredTraitOffer['options'][number]
+              >;
+              options[optionIndex] = Object.freeze({ traitKey, rarity });
+              const probe = load(
+                Object.freeze({
+                  ...control.offer,
+                  options: Object.freeze(options) as AuthoredTraitOffer['options'],
+                }),
+              )[0];
+              const evaluation = probe?.evaluation;
+              if (evaluation?.kind !== 'traitOffer') continue;
+              const replacement = uniformTraitReplacementForOption(
+                evaluation,
+                optionIndex,
+                traitKey,
+              );
+              if (replacement?.requiredRarity === rarity) {
+                return Object.freeze([replacement.requiredRarity]);
+              }
+            }
           }
-          return Object.freeze(
-            trait.rarityDomain.freshOfferRarities.filter((rarity) =>
-              rarityPolicy.rarities.includes(rarity),
-            ),
-          );
+          const replacementRarity =
+            optionIndex === undefined ? control.replacementRarities?.[traitKey] : undefined;
+          if (replacementRarity !== undefined) return Object.freeze([replacementRarity]);
+          // Keep a structurally valid but context-invalid persisted value
+          // visible long enough for the user to repair it.
+          const persisted = control.offer.options.find(
+            (option) => option.traitKey === traitKey,
+          )?.rarity;
+          if (persisted !== undefined && !fresh.includes(persisted)) {
+            return Object.freeze([persisted, ...fresh]);
+          }
+          return fresh;
         },
         selectedIntent: (selectedOptionKey: AuthoredTraitOffer['selectedOptionKey']) =>
           Object.freeze({

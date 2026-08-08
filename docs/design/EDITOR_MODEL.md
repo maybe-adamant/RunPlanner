@@ -771,6 +771,14 @@ existing finding presentation path. The editor adds no mode or persisted state:
 whether the rule applies comes from the engine's reached pre-offer ledger and
 its derived empty ordinary-boon slots.
 
+The same modal presents an engine-derived Olympian replacement as an option
+annotation with its exact old trait, slot transition, and promoted rarity. The
+application binds address-scoped candidate evidence and React renders it; the
+editor does not infer occupied slots, rarity promotion, replacement limits, or
+eligibility. Structurally supported but context-invalid rarities remain visible
+for repair, while Heroic is offered only when the engine exposes an
+Epic-to-Heroic replacement.
+
 Trait dialog visibility and focus handoff are UI-session state. Opening from a
 room, Shop, route Traits row, or semantic finding does not enter authored
 history or undo/redo. The route projection groups branch evidence by semantic

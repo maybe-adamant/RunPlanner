@@ -1,8 +1,9 @@
 import {
+  createTraitOfferAddress,
   semanticAddressKey,
   type EncounterPhaseAddress,
 } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
@@ -109,6 +110,85 @@ function routeStatus(route: { readonly status: ProjectEvaluation['status'] }): W
   return route.status;
 }
 
+function enrichTraitReplacementRarities(
+  source: WorkspaceBiomeSource,
+  controls: ReadonlyMap<string, WorkspaceRewardControl>,
+): ReadonlyMap<string, WorkspaceRewardControl> {
+  const replacementByOwner = new Map<
+    string,
+    {
+      branchCount: number;
+      replacements: Map<string, Set<TraitRarity>>;
+      replacementSeen: Map<string, number>;
+    }
+  >();
+  for (const evaluated of source.evaluation === undefined ? [] : [source.evaluation]) {
+    if (!('rewards' in evaluated)) continue;
+    for (const branch of evaluated.rewards.branches) {
+      for (const trace of branch.traitEvaluations ?? []) {
+        const owner = createTraitOfferAddress(
+          trace.address as Extract<
+            typeof trace.address,
+            { kind: 'incomingReward' | 'localReward' | 'rewardWheelOffer' | 'shopOffer' }
+          >,
+          trace.acquisitionRole,
+        );
+        const key = semanticAddressKey(owner);
+        const ownerEvidence = replacementByOwner.get(key) ?? {
+          branchCount: 0,
+          replacements: new Map(),
+          replacementSeen: new Map(),
+        };
+        ownerEvidence.branchCount += 1;
+        for (const assessment of trace.assessments) {
+          const replacement = assessment.replacementTransition;
+          if (replacement === undefined) continue;
+          const rarities = ownerEvidence.replacements.get(replacement.newTraitKey) ?? new Set();
+          rarities.add(replacement.requiredRarity);
+          ownerEvidence.replacements.set(replacement.newTraitKey, rarities);
+          ownerEvidence.replacementSeen.set(
+            replacement.newTraitKey,
+            (ownerEvidence.replacementSeen.get(replacement.newTraitKey) ?? 0) + 1,
+          );
+        }
+        replacementByOwner.set(key, ownerEvidence);
+      }
+    }
+  }
+  if (replacementByOwner.size === 0) return controls;
+  const enriched = new Map<string, WorkspaceRewardControl>();
+  for (const [key, control] of controls) {
+    if (control.traitOffers === undefined) {
+      enriched.set(key, control);
+      continue;
+    }
+    const traitOffers = control.traitOffers.map((trait) => {
+      const ownerEvidence = replacementByOwner.get(semanticAddressKey(trait.address));
+      const replacementRarities: Record<string, TraitRarity> = {};
+      if (ownerEvidence !== undefined) {
+        for (const [traitKey, rarities] of ownerEvidence.replacements) {
+          const rank = [...rarities][0];
+          if (
+            rarities.size === 1 &&
+            rank !== undefined &&
+            ownerEvidence.replacementSeen.get(traitKey) === ownerEvidence.branchCount
+          ) {
+            replacementRarities[traitKey] = rank;
+          }
+        }
+      }
+      return Object.keys(replacementRarities).length === 0
+        ? trait
+        : Object.freeze({
+            ...trait,
+            replacementRarities: Object.freeze(replacementRarities),
+          });
+    });
+    enriched.set(key, Object.freeze({ ...control, traitOffers: Object.freeze(traitOffers) }));
+  }
+  return enriched;
+}
+
 export function createStructuredWorkspaceProjection(
   catalog: Catalog,
   services: StructuredWorkspaceContextualServices,
@@ -188,8 +268,12 @@ export function createStructuredWorkspaceProjection(
             projected.frontierInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
-          appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
-          for (const rewardControl of projected.rewardControls.values()) {
+          const enrichedRewardControls = enrichTraitReplacementRarities(
+            biomeSource,
+            projected.rewardControls,
+          );
+          appendUniqueRewardControls(rewardControls, enrichedRewardControls.values());
+          for (const rewardControl of enrichedRewardControls.values()) {
             for (const traitControl of rewardControl.traitOffers ?? []) {
               const key = semanticAddressKey(traitControl.address);
               if (traitControls.has(key)) {

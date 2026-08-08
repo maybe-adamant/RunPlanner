@@ -6,6 +6,7 @@ import type { ProjectEvaluation } from '../project';
 import {
   assessTraitOffer,
   assessTraitOfferComposition,
+  assessTraitReplacementComposition,
   type TraitAssessment,
   type TraitFindingCode,
   type TraitOfferCompositionAssessment,
@@ -29,6 +30,7 @@ export interface EvaluatedTraitOfferCandidate {
     readonly branches: readonly {
       readonly assessments: readonly TraitAssessment[];
       readonly composition: TraitOfferCompositionAssessment;
+      readonly replacementComposition?: ReturnType<typeof assessTraitReplacementComposition>;
     }[];
     readonly findings: readonly {
       readonly code: TraitOfferCandidateFindingCode;
@@ -87,6 +89,18 @@ export function evaluateTraitOfferCandidate(
     Object.freeze({
       assessments: assessTraitOffer(catalog, query.value, trace.before, trace.context),
       composition: assessTraitOfferComposition(catalog, query.value, trace.before),
+      ...(() => {
+        const replacementComposition = assessTraitReplacementComposition(
+          catalog,
+          query.value,
+          trace.before,
+          trace.context,
+        );
+        return replacementComposition.applies &&
+          (replacementComposition.replacementCount > 0 || !replacementComposition.legal)
+          ? { replacementComposition }
+          : {};
+      })(),
     }),
   );
   const assessments = branches.map((branch) => branch.assessments);
@@ -111,6 +125,7 @@ export function evaluateTraitOfferCandidate(
     ...branches.flatMap((branch) => [
       ...branch.assessments.flatMap((entry) => entry.findings),
       ...branch.composition.findings,
+      ...(branch.replacementComposition?.findings ?? []),
     ]),
     ...duplicateFindings,
   ]);
@@ -120,7 +135,10 @@ export function evaluateTraitOfferCandidate(
       supported:
         duplicateFindings.length === 0 &&
         branches.some(
-          (branch) => branch.composition.legal && branch.assessments.every((entry) => entry.legal),
+          (branch) =>
+            branch.composition.legal &&
+            (branch.replacementComposition?.legal ?? true) &&
+            branch.assessments.every((entry) => entry.legal),
         ),
       branches: Object.freeze(branches),
       assessments: Object.freeze(assessments.flat()),

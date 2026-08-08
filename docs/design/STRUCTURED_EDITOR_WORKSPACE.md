@@ -625,6 +625,14 @@ same leaf and destination. They do not add a workspace mode or marker; the
 engine derives empty ordinary-boon slots from equipped state, and dormant,
 unpicked, or unpurchased leaves remain non-consuming authoring surfaces.
 
+Replacement evidence uses that same leaf and interaction. A reached
+Olympian replacement carries its exact engine transition and promoted rarity
+into the option annotation and selected chronological summary. The workspace
+does not add a replacement editor or checkbox, and React never reconstructs
+slot occupancy, promotion, shortage limits, or branch legality. Heroic appears
+only when the bound engine candidate is an Epic-to-Heroic replacement; findings
+leave all trait and rarity controls available for repair.
+
 The structured workspace is complete when:
 
 - ordinary-decision biomes show one labeled rail stop per decision, active
