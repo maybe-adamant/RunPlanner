@@ -1033,6 +1033,93 @@ describe('trait offer catalog closure', () => {
         { kind: 'elementCount', element: 'Water', minimum: 1 },
       ],
     });
+    expect(traits.traits.byKey.ElementalRarityUpgradeBoon?.rarityFloorEffect).toEqual({
+      activationElementMinimums: { Fire: 2, Earth: 2, Air: 2, Water: 2 },
+      fromRarity: 'Common',
+      minimumRarity: 'Rare',
+    });
+    expect(Object.isFrozen(traits.traits.byKey.ElementalRarityUpgradeBoon?.rarityFloorEffect)).toBe(
+      true,
+    );
+    expect(
+      Object.isFrozen(
+        traits.traits.byKey.ElementalRarityUpgradeBoon?.rarityFloorEffect
+          ?.activationElementMinimums,
+      ),
+    ).toBe(true);
+    expect(traits.traits.byKey.HeraWeaponBoon?.rarityFloorEffect).toBeUndefined();
+  });
+
+  it('rejects malformed declaration-owned rarity floors at catalog construction', () => {
+    const proper = declarations.traitCatalog.traits.find(
+      (trait) => trait.key === 'ElementalRarityUpgradeBoon',
+    );
+    if (proper === undefined) throw new Error('missing Proper Upbringing declaration');
+    const malformed = (effect: object) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === proper.key ? { ...trait, rarityFloorEffect: effect } : trait,
+          ),
+        },
+      });
+    expect(() =>
+      malformed({ fromRarity: 'Common', minimumRarity: 'Rare', activationElementMinimums: {} }),
+    ).toThrow(/must not be empty/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Lightning: 2 },
+      }),
+    ).toThrow(/unknown|must be one of/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Fire: 0 },
+      }),
+    ).toThrow(/positive integer/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Epic',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Fire: 2 },
+      }),
+    ).toThrow(/must be Common/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Common',
+        activationElementMinimums: { Fire: 2 },
+      }),
+    ).toThrow(/must be Rare|must follow/);
+    const hammer = declarations.traitCatalog.traits.find(
+      (trait) => trait.hammerCompatibility !== undefined,
+    );
+    if (hammer === undefined) throw new Error('missing Hammer declaration');
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === hammer.key
+              ? {
+                  ...trait,
+                  rarityFloorEffect: {
+                    fromRarity: 'Common',
+                    minimumRarity: 'Rare',
+                    activationElementMinimums: { Fire: 2 },
+                  },
+                }
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/Hammer traits cannot declare/);
   });
 
   it('provides a compatible complete Hammer default for every weapon/aspect pair', () => {

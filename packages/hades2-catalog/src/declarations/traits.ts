@@ -20,6 +20,7 @@ export interface RawTraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
+  readonly rarityFloorEffect?: unknown;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: TraitDeclaration['hammerCompatibility'];
 }

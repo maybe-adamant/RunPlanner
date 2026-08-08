@@ -9,6 +9,7 @@ import type {
   TraitOfferDefaults,
   TraitOfferOptionDefault,
   TraitRequirementExpression,
+  ScalableGodTraitRarityFloorEffect,
   TraitElement,
   TraitRarity,
   WeaponDeclaration,
@@ -35,6 +36,7 @@ import type {
 } from '../declarations/traits';
 
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as const;
+const IN_RUN_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
@@ -354,6 +356,55 @@ function normalizeTraits(
         ),
       ),
     );
+    let rarityFloorEffect: ScalableGodTraitRarityFloorEffect | undefined;
+    if (trait.rarityFloorEffect !== undefined) {
+      const effectPath = `${path}.rarityFloorEffect`;
+      if (isHammer) fail(effectPath, 'Hammer traits cannot declare a rarity floor effect');
+      const effect = requireObject(trait.rarityFloorEffect, effectPath) as unknown as {
+        readonly activationElementMinimums?: unknown;
+        readonly fromRarity?: unknown;
+        readonly minimumRarity?: unknown;
+      };
+      const rawMinimums = requireObject(
+        effect.activationElementMinimums,
+        `${effectPath}.activationElementMinimums`,
+      );
+      const minimums: Partial<Record<TraitElement, number>> = {};
+      for (const [element, minimum] of Object.entries(rawMinimums)) {
+        const normalizedElement = closedValue(
+          element,
+          ELEMENTS,
+          `${effectPath}.activationElementMinimums.${element}`,
+        );
+        minimums[normalizedElement] = requirePositiveInteger(
+          minimum as number,
+          `${effectPath}.activationElementMinimums.${element}`,
+        );
+      }
+      if (Object.keys(minimums).length === 0)
+        fail(`${effectPath}.activationElementMinimums`, 'must not be empty');
+      const fromRarity = closedValue(
+        effect.fromRarity,
+        IN_RUN_RARITIES,
+        `${effectPath}.fromRarity`,
+      );
+      const minimumRarity = closedValue(
+        effect.minimumRarity,
+        IN_RUN_RARITIES,
+        `${effectPath}.minimumRarity`,
+      );
+      if (fromRarity !== 'Common')
+        fail(`${effectPath}.fromRarity`, 'must be Common for a scalable god-trait floor');
+      if (minimumRarity !== 'Rare')
+        fail(`${effectPath}.minimumRarity`, 'must be Rare for a scalable god-trait floor');
+      if (IN_RUN_RARITIES.indexOf(minimumRarity) <= IN_RUN_RARITIES.indexOf(fromRarity))
+        fail(`${effectPath}.minimumRarity`, 'must follow fromRarity in the in-run rarity order');
+      rarityFloorEffect = Object.freeze({
+        activationElementMinimums: Object.freeze(minimums),
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+      });
+    }
     // Requirement operands are checked against the complete trait collection after it exists.
     const rarityDomain = Object.freeze(
       isHammer
@@ -392,6 +443,7 @@ function normalizeTraits(
         trait.excludeFromRarityCount,
         `${path}.excludeFromRarityCount`,
       ),
+      ...(rarityFloorEffect === undefined ? {} : { rarityFloorEffect }),
       ...(trait.selfExclusion === undefined
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
