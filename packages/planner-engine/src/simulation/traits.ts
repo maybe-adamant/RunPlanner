@@ -40,6 +40,8 @@ export interface TraitHistoryState {
   readonly highestBaseElementCount: number;
   readonly godBoonRarityCounts: Readonly<Record<string, number>>;
   readonly upgradableTraitCount: number;
+  /** Derived floor for fresh scalable god-trait offers. */
+  readonly minimumScalableGodTraitRarity?: 'Rare';
 }
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
@@ -97,11 +99,62 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
   });
 }
 
+function activeRarityFloorSources(
+  catalog: Catalog,
+  equippedTraits: Readonly<Record<string, EquippedTrait>>,
+  elementCounts: Readonly<Record<TraitElement, number>>,
+): ReadonlySet<string> {
+  const active = new Set<string>();
+  for (const equipped of Object.values(equippedTraits)) {
+    const declaration = catalog.traits.byKey[equipped.traitKey];
+    const effect = declaration?.rarityFloorEffect;
+    if (effect === undefined) continue;
+    const activeForLedger = Object.entries(effect.activationElementMinimums).every(
+      ([element, minimum]) => (elementCounts[element as TraitElement] ?? 0) >= minimum,
+    );
+    if (activeForLedger) active.add(equipped.traitKey);
+  }
+  return active;
+}
+
+function promoteActiveFloorTargets(
+  catalog: Catalog,
+  equippedTraits: Record<string, EquippedTrait>,
+  activeSources: ReadonlySet<string>,
+): void {
+  if (activeSources.size === 0) return;
+  const effects = [...activeSources].flatMap((sourceKey) => {
+    const declaration = catalog.traits.byKey[sourceKey];
+    return declaration?.rarityFloorEffect === undefined
+      ? []
+      : [{ sourceKey, effect: declaration.rarityFloorEffect }];
+  });
+  if (effects.length === 0) return;
+  for (const [traitKey, equipped] of Object.entries(equippedTraits)) {
+    const declaration = catalog.traits.byKey[traitKey];
+    if (
+      declaration === undefined ||
+      !declaration.isPersistentGodTrait ||
+      declaration.blockInRunRarify ||
+      activeSources.has(traitKey) ||
+      declaration.rarityDomain.kind !== 'ranked' ||
+      !declaration.rarityDomain.equippedRarities.includes('Rare') ||
+      equipped.rarity !== 'Common' ||
+      effects.every(
+        ({ effect }) => effect.fromRarity !== 'Common' || effect.minimumRarity !== 'Rare',
+      )
+    )
+      continue;
+    equippedTraits[traitKey] = Object.freeze({ ...equipped, rarity: 'Rare' });
+  }
+}
+
 export function foldTraitOfferEvents(
   catalog: Catalog,
   events: readonly TraitOfferEvent[],
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
+  let activeSources: ReadonlySet<string> = new Set();
   const ordered = [...events].sort((left, right) => left.sequence - right.sequence);
   for (const event of ordered) {
     const option = event.options[optionIndex(event.selectedOptionKey)];
@@ -119,12 +172,24 @@ export function foldTraitOfferEvents(
       ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
       sourceRole: event.acquisitionRole,
     });
+    const afterAcquisition = deriveFacts(catalog, equipped);
+    const nextActiveSources = activeRarityFloorSources(
+      catalog,
+      equipped,
+      afterAcquisition.elementCounts,
+    );
+    const newlyActive = new Set(
+      [...nextActiveSources].filter((sourceKey) => !activeSources.has(sourceKey)),
+    );
+    promoteActiveFloorTargets(catalog, equipped, newlyActive);
+    activeSources = nextActiveSources;
   }
   const derived = deriveFacts(catalog, equipped);
   return Object.freeze({
     events: Object.freeze(ordered),
     equippedTraits: Object.freeze(equipped),
     ...derived,
+    ...(activeSources.size === 0 ? {} : { minimumScalableGodTraitRarity: 'Rare' as const }),
   });
 }
 
@@ -496,6 +561,15 @@ export function assessTraitOption(
   )
     findings.push({ code: 'wrongHammerLoadout', traitKey });
   let replacementTransition: TraitReplacementTransition | undefined;
+  if (
+    history.minimumScalableGodTraitRarity !== undefined &&
+    rarity === 'Common' &&
+    trait.isPersistentGodTrait &&
+    trait.rarityDomain.kind === 'ranked' &&
+    trait.rarityDomain.freshOfferRarities.includes('Rare')
+  ) {
+    findings.push({ code: 'rarityBelowActiveFloor', traitKey, detail: 'Rare' });
+  }
   const occupied =
     trait.ordinaryBoonSlot === undefined
       ? undefined

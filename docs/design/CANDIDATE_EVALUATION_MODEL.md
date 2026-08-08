@@ -489,6 +489,15 @@ does not equip a sibling option, rewrite trait history, or persist counters.
 React receives only the bound interaction projection and cannot recreate this
 policy.
 
+When the reached pre-acquisition history carries
+`minimumScalableGodTraitRarity`, a fresh Common candidate is additionally
+assessed against that derived floor only when its declaration supports Rare as
+a fresh rarity. The engine reports `rarityBelowActiveFloor` separately from
+`freshRarityUnavailable`; replacement candidates continue to use their exact
+next rarity and the existing shortage composition. The application consumes
+this finding through the ordinary trait-offer interaction and does not inspect
+Proper Upbringing or recount elements.
+
 For a first Olympian contact, the candidate product also carries
 branch-grouped complete-offer composition assessments. Non-priority options are
 unavailable with a composition-context finding; missing Attack/Special is one

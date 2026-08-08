@@ -390,6 +390,269 @@ describe('Boon Growth and Boon Decay target predicates', () => {
   });
 });
 
+describe('Proper Upbringing rarity lifecycle', () => {
+  const elementPairs = [
+    ['HeraWeaponBoon', 'Hera'],
+    ['PoseidonWeaponBoon', 'Poseidon'],
+    ['HeraCastBoon', 'Hera'],
+    ['ZeusWeaponBoon', 'Zeus'],
+    ['HeraSprintBoon', 'Hera'],
+    ['HestiaWeaponBoon', 'Hestia'],
+    ['HeraManaBoon', 'Hera'],
+    ['DemeterManaBoon', 'Demeter'],
+  ] as const;
+
+  function twoEachHistory() {
+    return historyFrom(
+      elementPairs.map(([traitKey, giverKey]) => ({
+        giverKey,
+        traitKey,
+        rarity: 'Common' as const,
+      })),
+    );
+  }
+
+  function activeHistory() {
+    const source = historyFrom([
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+    ]).events[0];
+    if (source === undefined) throw new Error('missing Proper Upbringing event');
+    const result = historyFrom([
+      ...twoEachHistory().events.map((event) => ({
+        giverKey: event.giverKey,
+        traitKey: event.options[0]!.traitKey,
+        rarity: event.options[0]!.rarity,
+      })),
+      {
+        giverKey: source.giverKey,
+        traitKey: source.options[0]!.traitKey,
+        rarity: source.options[0]!.rarity,
+      },
+    ]);
+    return result;
+  }
+
+  function eventFor(
+    sequence: number,
+    giverKey: string,
+    traitKey: string,
+    rarity: TraitOfferEvent['options'][number]['rarity'],
+    replacementTransition?: TraitOfferEvent['replacementTransition'],
+  ): TraitOfferEvent {
+    return {
+      owner,
+      acquisitionRole: `proper-${sequence}`,
+      sequence,
+      giverKey,
+      options: [
+        { traitKey, ...(rarity === undefined ? {} : { rarity }) },
+        { traitKey: catalog.traitGivers.byKey[giverKey]!.traitKeys[1]! },
+        { traitKey: catalog.traitGivers.byKey[giverKey]!.traitKeys[2]! },
+      ],
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'test',
+      ...(replacementTransition === undefined ? {} : { replacementTransition }),
+    };
+  }
+
+  it('offers at one of each base element while inactive and activates at two of each', () => {
+    const oneEach = historyFrom([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraCastBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraSprintBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraManaBoon', rarity: 'Common' as const },
+    ]);
+    expect(
+      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', oneEach, {}, 'Common').legal,
+    ).toBe(true);
+    expect(oneEach.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(activeHistory().minimumScalableGodTraitRarity).toBe('Rare');
+  });
+
+  it('activates when a later acquisition supplies the final base element', () => {
+    const history = historyFrom([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraCastBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraSprintBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'HeraManaBoon', rarity: 'Common' as const },
+      { giverKey: 'Demeter', traitKey: 'DemeterManaBoon', rarity: 'Common' as const },
+      { giverKey: 'Hestia', traitKey: 'HestiaWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+      { giverKey: 'Poseidon', traitKey: 'PoseidonWeaponBoon', rarity: 'Common' as const },
+    ]);
+    expect(history.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(history.equippedTraits.PoseidonWeaponBoon?.rarity).toBe('Rare');
+  });
+
+  it('promotes eligible Olympian and Hermes Commons once, preserving all declaration identity', () => {
+    const history = historyFrom([
+      ...elementPairs.map(([traitKey, giverKey]) => ({
+        giverKey,
+        traitKey,
+        rarity: 'Common' as const,
+      })),
+      { giverKey: 'Hermes', traitKey: 'HermesWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+    ]);
+    expect(history.equippedTraits.HeraWeaponBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Common');
+    expect(history.godBoonRarityCounts.Common ?? 0).toBe(0);
+    expect(history.godBoonRarityCounts.Rare).toBe(9);
+    expect(history.equippedTraits.HeraWeaponBoon).not.toBe(
+      historyFrom([{ giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const }])
+        .equippedTraits.HeraWeaponBoon,
+    );
+    expect(foldTraitOfferEvents(catalog, history.events)).toEqual(history);
+  });
+
+  it('does not promote fixed or excluded domains and deactivation keeps promotions', () => {
+    const history = activeHistory();
+    const withFixed = historyFrom([
+      ...elementPairs.map(([traitKey, giverKey]) => ({
+        giverKey,
+        traitKey,
+        rarity: 'Common' as const,
+      })),
+      { giverKey: 'Demeter', traitKey: 'ElementalDamageBoon', rarity: 'Common' as const },
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+    ]);
+    expect(withFixed.equippedTraits.ElementalDamageBoon?.rarity).toBe('Common');
+    expect(history.equippedTraits.HeraWeaponBoon?.rarity).toBe('Rare');
+    expect(history.minimumScalableGodTraitRarity).toBe('Rare');
+  });
+
+  it('rejects fresh Common below the floor but keeps Rare/Epic and fixed domains', () => {
+    const history = activeHistory();
+    expect(
+      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Common').findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    expect(
+      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Rare').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    expect(
+      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Epic').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    expect(
+      assessTraitOption(catalog, 'ElementalDamageBoon', history, {}, 'Common').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    expect(
+      assessTraitOption(catalog, 'AllElementalBoon', history, {}, 'Legendary').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+  });
+
+  it('reactivates for a Common acquired while inactive and replays independently', () => {
+    const inactive = twoEachHistory();
+    const events = [...inactive.events];
+    const withoutSource = foldTraitOfferEvents(catalog, [
+      ...events,
+      ...historyFrom([
+        { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+      ]).events,
+    ]);
+    expect(withoutSource.minimumScalableGodTraitRarity).toBe('Rare');
+    const replay = foldTraitOfferEvents(catalog, events);
+    expect(replay.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(replay.equippedTraits.HeraWeaponBoon?.rarity).toBe('Common');
+    expect(foldTraitOfferEvents(catalog, withoutSource.events)).toEqual(withoutSource);
+  });
+
+  it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
+    const initial = twoEachHistory();
+    const source = historyFrom([
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+    ]).events[0]!;
+    const activated = foldTraitOfferEvents(catalog, [
+      ...initial.events,
+      { ...source, sequence: 9 },
+    ]);
+    const deactivated = foldTraitOfferEvents(catalog, [
+      ...activated.events,
+      eventFor(10, 'Apollo', 'ApolloWeaponBoon', 'Rare', {
+        slot: 'Melee',
+        replacedTraitKey: 'HeraWeaponBoon',
+        oldRarity: 'Rare',
+        newTraitKey: 'ApolloWeaponBoon',
+        requiredRarity: 'Rare',
+      }),
+    ]);
+    expect(deactivated.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(deactivated.equippedTraits.HeraCastBoon?.rarity).toBe('Rare');
+    const reactivated = foldTraitOfferEvents(catalog, [
+      ...deactivated.events,
+      eventFor(11, 'Zeus', 'ZeusSpecialBoon', 'Common'),
+      eventFor(12, 'Hera', 'HeraWeaponBoon', 'Epic', {
+        slot: 'Melee',
+        replacedTraitKey: 'ApolloWeaponBoon',
+        oldRarity: 'Rare',
+        newTraitKey: 'HeraWeaponBoon',
+        requiredRarity: 'Epic',
+      }),
+    ]);
+    expect(reactivated.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(reactivated.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Rare');
+    expect(reactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
+  });
+
+  it('keeps replacement rarity and replacement shortage floor-aware', () => {
+    const history = activeHistory();
+    const replacement = assessTraitOption(
+      catalog,
+      'ApolloWeaponBoon',
+      history,
+      { resolvedProviderKey: 'Apollo' },
+      'Epic',
+    );
+    expect(replacement.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'rarityBelowActiveFloor' }),
+    );
+    expect(replacement.replacementTransition?.requiredRarity).toBe('Epic');
+    const common = assessTraitOption(
+      catalog,
+      'ApolloManaBoon',
+      history,
+      { resolvedProviderKey: 'Apollo' },
+      'Common',
+    );
+    expect(common.findings).toContainEqual(
+      expect.objectContaining({ code: 'rarityBelowActiveFloor' }),
+    );
+  });
+
+  it('does not activate or promote from an invalid/unselected offer and keeps replay branch-local', () => {
+    const initial = twoEachHistory();
+    const source = historyFrom([
+      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
+    ]).events[0]!;
+    const dormant = foldTraitOfferEvents(catalog, initial.events);
+    expect(dormant.minimumScalableGodTraitRarity).toBeUndefined();
+    const invalidOffer = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'proper-invalid',
+      {
+        giverKey: 'Hera',
+        options: [
+          { traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' },
+          { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+      initial,
+      {},
+      9,
+    );
+    expect(recordReachedTraitOffer(catalog, invalidOffer, 9, 'test').event).toBeUndefined();
+    const branchA = foldTraitOfferEvents(catalog, [...initial.events, { ...source, sequence: 9 }]);
+    const branchB = foldTraitOfferEvents(catalog, initial.events);
+    expect(branchA.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(branchB.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(foldTraitOfferEvents(catalog, [...branchA.events])).toEqual(branchA);
+  });
+});
+
 describe('trait legality and derived facts', () => {
   const derivedHistory = historyFrom([
     { giverKey: 'Demeter', traitKey: 'DemeterManaBoon', rarity: 'Common' },

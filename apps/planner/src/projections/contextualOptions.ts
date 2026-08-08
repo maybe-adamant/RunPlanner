@@ -286,6 +286,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'This ordinary boon slot is already occupied.' };
     case 'freshRarityUnavailable':
       return { kind: 'trait', message: 'This rarity is unavailable for a fresh trait offer.' };
+    case 'rarityBelowActiveFloor':
+      return {
+        kind: 'trait',
+        message: 'This fresh Common offer is below the active Rare floor.',
+      };
     case 'replacementUnavailable':
       return { kind: 'trait', message: 'This occupied boon slot cannot be replaced here.' };
     case 'replacementMaximumRarity':
