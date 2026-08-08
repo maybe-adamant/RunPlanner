@@ -868,25 +868,49 @@ describe('trait offer catalog closure', () => {
       new Set(traits.traits.values.flatMap((trait) => Object.values(trait.elementContributions))),
     ).toEqual(new Set([1]));
 
-    const infusionTraits = [
-      'ElementalUnifiedBoon',
-      'ElementalRarityUpgradeBoon',
-      'ElementalDamageBoon',
-      'ElementalOlympianDamageBoon',
-      'ElementalBaseDamageBoon',
-      'ElementalRallyBoon',
-      'ElementalDamageFloorBoon',
-      'ElementalDodgeBoon',
-      'ElementalDamageCapBoon',
-      'ElementalHealthBoon',
-    ];
-    for (const key of infusionTraits) {
-      const trait = traits?.traits.byKey[key];
-      expect(trait?.elementContributions).toEqual({});
-      expect(trait?.blockStacking).toBe(true);
-      expect(trait?.blockInRunRarify).toBe(true);
-      expect(trait?.excludeFromRarityCount).toBe(true);
+    // The declaration set is the source expected map for the normalized
+    // classification. Compare every included trait, including the 92
+    // no-rarity Hammers, rather than sampling only the ten infusion traits.
+    for (const expected of declarations.traitCatalog.traits) {
+      const actual = traits.traits.byKey[expected.key];
+      expect(actual).toBeDefined();
+      if (actual === undefined) continue;
+      expect({
+        key: actual.key,
+        label: actual.label,
+        rarityDomain: actual.rarityDomain,
+        offerRequirements: actual.offerRequirements,
+        ordinaryBoonSlot: actual.ordinaryBoonSlot,
+        elementContributions: actual.elementContributions,
+        isPersistentGodTrait: actual.isPersistentGodTrait,
+        blockStacking: actual.blockStacking,
+        blockInRunRarify: actual.blockInRunRarify,
+        excludeFromRarityCount: actual.excludeFromRarityCount,
+        selfExclusion: actual.selfExclusion,
+        hammerCompatibility: actual.hammerCompatibility,
+      }).toEqual({
+        key: expected.key,
+        label: expected.label,
+        rarityDomain:
+          expected.hammerCompatibility === undefined
+            ? {
+                kind: 'ranked',
+                freshOfferRarities: expected.freshOfferRarities,
+                equippedRarities: expected.equippedRarities,
+              }
+            : { kind: 'none' },
+        offerRequirements: expected.offerRequirements,
+        ordinaryBoonSlot: expected.ordinaryBoonSlot,
+        elementContributions: expected.elementContributions,
+        isPersistentGodTrait: expected.isPersistentGodTrait,
+        blockStacking: expected.blockStacking,
+        blockInRunRarify: expected.blockInRunRarify,
+        excludeFromRarityCount: expected.excludeFromRarityCount,
+        selfExclusion: expected.selfExclusion,
+        hammerCompatibility: expected.hammerCompatibility,
+      });
     }
+    expect(traits.traits.values).toHaveLength(declarations.traitCatalog.traits.length);
     expect(traits?.traits.byKey.ElementalOlympianDamageBoon?.rarityDomain).toEqual({
       kind: 'ranked',
       freshOfferRarities: ['Common', 'Rare', 'Epic'],

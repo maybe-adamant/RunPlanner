@@ -99,7 +99,6 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       lootTypeHistory: orderedRecord(history.lootTypeHistory),
       lootBiomeRecord: orderedRecord(history.lootBiomeRecord),
       consumableRecord: orderedRecord(history.consumableRecord),
-      upgradableTraitCount: history.upgradableTraitCount,
       traitFacts: history.traitFacts,
       lastDevotionDepth: history.lastDevotionDepth,
     },

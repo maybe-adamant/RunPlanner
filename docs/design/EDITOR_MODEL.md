@@ -755,6 +755,25 @@ groups, menus, and tooltips. The editor should support:
 - navigation from a finding to its semantic owner;
 - predictable undo/redo shortcuts.
 
+## Trait Offer Presentation
+
+Trait offers are projected from reached engine evaluations, never recomputed
+in React. A room/reward summary, the chronological route Traits panel, and a
+finding destination all reference the same `TraitOfferAddress` and bound
+interaction. The shared modal renders three stable option rows, the selected
+option, and a rarity control only for ranked Olympian/Hermes options;
+Hammer rows intentionally expose no rarity field. Giver labels, selected
+trait labels, and contextual findings are presentation products derived from
+catalog and engine outputs.
+
+Trait dialog visibility and focus handoff are UI-session state. Opening from a
+room, Shop, route Traits row, or semantic finding does not enter authored
+history or undo/redo. The route projection groups branch evidence by semantic
+owner while preserving engine chronology; it does not create a route-wide
+trait model. Dormant descendants remain withheld until their parent lifecycle
+reaches the role, and invalid reached offers stay editable with their exact
+finding.
+
 ## Initial F Editor Acceptance
 
 The first usable editor slice is complete when a user can:

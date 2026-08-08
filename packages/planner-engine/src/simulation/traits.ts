@@ -130,7 +130,6 @@ export function attachTraitHistory(
 ): RewardHistoryState {
   return Object.freeze({
     ...rewardHistory,
-    upgradableTraitCount: traitHistory.upgradableTraitCount,
     traitFacts: traitDerivedFacts(traitHistory),
   });
 }

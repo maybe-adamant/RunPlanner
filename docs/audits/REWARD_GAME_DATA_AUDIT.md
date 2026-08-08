@@ -140,20 +140,19 @@ The target declaration preserves all 18 entries in game order:
 - one Hermes, Devotion, Spell, and Talent;
 - four Boons with `allowDuplicates: true`.
 
-Current-run requirements remain exact: acquired ordinary gods, upgradeable
-trait count, Hammer history, current active shop options at the evaluation point, entered biome
-count, Hermes history, Devotion depth/spacing/exits, Spell state, and Talent
-state. External introduction and unlock gates are excluded.
-
-The existing one-trait-per-acquired-ordinary-Boon rule is a documented
-`Simplified` approximation for `upgradableTraitCount`. Exact trait selection and
-replacement are deferred.
+Current-run requirements remain exact: acquired ordinary gods, the
+equipped-trait-derived upgradeable count, Hammer history, current active shop
+options at the evaluation point, entered biome count, Hermes history, Devotion
+depth/spacing/exits, Spell state, and Talent state. External introduction and
+unlock gates are excluded. The equipped-trait ledger and its canonical fold are
+owned by the trait-offer authority; loot acquisition never increments a shadow
+trait counter.
 
 `SpellDropRequirements` also reads `PendingSpellDrop`, but the canonical route
 never uses the separately deferred Surface Shop delivery system that sets it.
 The value is therefore exactly false in the supported trace. `TalentLegal`
 reads `AllSpellInvestedCache`, which cannot be derived without the deferred Hex
-and Talent tree. V1 uses the explicit trait-free witness
+and Talent tree. V1 uses the explicit baseline witness
 `allSpellInvested = false`: after acquiring Spell, Talent remains supported
 subject to its other exact store, room, and biome-use requirements. This is a
 named `Simplified` support expansion and must be replaced when concrete Hex
@@ -351,11 +350,12 @@ support, while the authored payload uses `chosenSource` and `spurnedSource` to
 record the player's ordered execution intent. Both orderings of every supported
 pair are valid.
 
-Both acquisitions occur before the next room is generated. Under the current
-trait-free history model their final downstream record effect is equivalent to
-acquiring both sources, but the ordered roles remain authored because the game
-observes them during the room and execution must reproduce the choice. Exact
-trait exchange effects remain deferred with concrete trait state.
+Both acquisitions occur before the next room is generated. The ordered roles
+remain authored because the game observes them during the room and execution
+must reproduce the choice: the selected chosen-source trait folds before
+combat, and the spurned-source trait folds after combat. Their exact loot/use
+records and equipped-trait state therefore remain distinct even when both
+sources are acquired in one room.
 
 ## Offer Resolution and Concrete Acquisition
 
@@ -389,7 +389,7 @@ The complete role-resolution families are:
 | Producer                       | Store/option identity | Resolved offer                                  | Concrete acquisition timing and identity                                             | Disposition                                                                 |
 | ------------------------------ | --------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | Ordinary `Boon`                | `Boon`                | `Boon` plus visible source                      | acquire the concrete source, such as `ApolloUpgrade`, on room-reward pickup          | Exact                                                                       |
-| `Devotion`                     | `Devotion`            | chosen and spurned source roles                 | acquire chosen source before combat, then spurned source after combat                | Exact roles; trait exchange deferred                                        |
+| `Devotion`                     | `Devotion`            | chosen and spurned source roles                 | acquire chosen source before combat, then spurned source after combat                | Exact roles and concrete trait lifecycle                                    |
 | `Story`                        | fixed `Story`         | structural Story offer                          | no concrete acquisition                                                              | Exact                                                                       |
 | Structural `Shop`              | fixed `Shop`          | structural Shop offer                           | no incoming acquisition; entered shop creates option offers                          | Exact                                                                       |
 | `ClockworkGoal`                | fixed goal marker     | structural Clockwork Goal                       | decrement goal counter on entered spawn; no ordinary concrete acquisition            | Exact                                                                       |
@@ -449,10 +449,10 @@ The role registry composes those concrete identities as follows:
 - `StoreRewardRandomStack`, Big/Triple drops, and every resource variant remain
   exact self identities. They never project a related base name.
 
-Ordinary god-source loot additionally updates the acquired-source set and, under
-the declared trait-free approximation, adds one upgradeable trait per source.
-Hermes is excluded from both rules. Other trait, resource, health, mana, armor,
-Last Stand, and weapon mutation effects retain their documented simplified or
+Ordinary god-source loot updates the acquired-source set and reaches its
+authored concrete trait offer at the declared acquisition role. Hermes remains
+outside the ordinary-god source set. Other resource, health, mana, armor, Last
+Stand, and weapon mutation effects retain their documented simplified or
 deferred dispositions rather than entering an untyped semantic-effect bag.
 
 The registry intentionally omits `TrialUpgrade` with the excluded `Secrets`

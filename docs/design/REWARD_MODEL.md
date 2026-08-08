@@ -353,13 +353,13 @@ Triple, self-consumed wrapper, or random-Stack identities to a semantic base
 name. Future trait/resource simulation may add typed semantic effects beside these
 profiles without changing their exact ledger writes.
 
-Ordinary god loot also folds into the acquired ordinary-source set. Under the
-locked trait-free approximation, every acquired ordinary god source adds one to
-`upgradableTraitCount`; Devotion's two acquired sources apply that rule
-independently. Hermes is not an ordinary source. Other health, mana, armor,
-resource, Stack, Talent, weapon-trait, and Last Stand effects remain governed by
-their documented simplifications or deferrals rather than hidden projection
-aliases.
+Ordinary god loot resolves its trait-bearing role through the equipped-trait
+ledger described below; the concrete selected trait, rather than the loot
+source name, determines slot, element, rarity, and upgradeability facts.
+Devotion's chosen and spurned roles retain their distinct lifecycle points, and
+Hermes remains a separate provider. Other health, mana, armor, resource, Stack,
+Talent, weapon-trait, and Last Stand effects remain governed by their documented
+simplifications or deferrals rather than hidden projection aliases.
 
 ## Counted Stores and Bags
 
@@ -946,20 +946,35 @@ complete replacement values. Simulation validates:
   history projections selected independently from loot/consumable/resource
   acquisition kind.
 
-The current canonical reward model uses one global bounded approximation for
-the game's `UpgradableTraitCount`: every acquired ordinary Boon contributes one
-upgradeable trait. Concrete boon selection, replacement, and trait inventory
-are unavailable until the project models trait state explicitly. NPC benefit
-choices such as Narcissus do not contribute while their internal gift surface
-is deferred. This approximation must be replaced by resolved trait state when
-that future surface is introduced; it is not a generic unsupported state or
-permissive fallback.
+### Trait-bearing reward leaves
 
-The same trait-free boundary fixes `allSpellInvested` to false after Spell is
-acquired, allowing later Talent offers whenever their other exact requirements
-hold. `pendingSpellDrop` remains false because the separate Surface Shop
-delivery system is not part of the canonical trace. Both facts must move to
-concrete Hex/Talent and delivery state if those deferred features are added.
+Trait authoring is additive to reward identity. Every in-scope acquisition role
+may own one `AuthoredTraitOffer` child with three distinct options and one
+selected option. The reward kernel resolves the provider from the concrete
+acquisition role (including payload-source, fixed, Devotion chosen/spurned,
+and purchased Shop roles); it never switches on a room, Shop, or rendered
+trait name. An unpicked room, dormant local child, unselected wheel result, or
+unpurchased Shop option owns no reached trait event.
+
+At the role's declared lifecycle point, the kernel first applies the existing
+exact loot/use projection and then evaluates all three alternatives against
+one pre-selection equipped-trait snapshot. A reached invalid offer remains in
+the trace and receives semantic findings, but its selected option does not
+enter equipped state. A valid offer folds only its selected trait. Devotion's
+chosen role therefore equips before combat and its spurned role observes that
+state after combat; Shop purchases fold in authored purchase order.
+
+The equipped-trait ledger is the sole authority for trait-derived facts:
+ordinary boon-slot occupancy, element totals and highest base-element count,
+god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
+target and Boon Decay's superchargeable target are distinct predicates over
+that ledger and are not aliases or persisted shadow counters. The old
+ordinary-source increment approximation is retired. NPC/Story effect-backed
+choices, rarity mutation, stacks, and other deferred providers remain outside
+this persistent trait lifecycle.
+
+Spell/Talent and Surface Shop delivery flags remain on their existing explicit
+deferred boundary; they are not inferred from trait state.
 
 The editor only renders normalized domains and simulation results. It does not
 recompute reward legality.

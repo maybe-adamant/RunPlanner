@@ -696,6 +696,36 @@ occurrence into one composable history fragment.
 biome facts. `../progress/MIGRATION_PROVENANCE.md` records evidence disposition
 and port-verification history.
 
+## Trait Offer Catalog
+
+The normalized catalog owns the first concrete trait-offer provider slice. It
+contains six weapon declarations, their 24 aspect declarations, 268 included
+trait declarations, and 11 giver declarations (the nine Olympians, Hermes, and
+`WeaponUpgrade`). Trait declarations are giver-neutral facts: fresh and
+equipped rarity domains, exact offer requirements, ordinary boon slot,
+element contributions, persistent-god classification, stacking and in-run
+rarify flags, rarity-count exclusion, and Hammer weapon/aspect compatibility.
+Giver declarations own ordered pool membership, rarity authorship, and the
+complete default triple (one provider default for Olympian/Hermes and one per
+weapon/aspect loadout for Hammers). Hammer traits deliberately use a `none`
+rarity domain; `Heroic` remains in the normalized equipped rarity order but is
+never a fresh authored choice.
+
+Catalog construction is the source-to-catalog closure boundary. It rejects
+unknown requirement operands, duplicate or cross-provider pool members,
+invalid rarity domains, incompatible defaults, unknown contexts, missing
+loadout defaults, and malformed Hammer compatibility. Requirement operands
+that name deferred NPC, Story, Spell, or Talent providers remain exact keys in
+the declaration but do not create placeholder offerable traits. The closed
+context vocabulary is `devotionNoDuo` and the room-owned `BlockGiftBoons`
+flag; room names and acquisition timing never enter trait declarations.
+
+The complete membership, prerequisite, element, rarity, stacking, rarify,
+aspect, and exclusion matrices are tested at the catalog boundary against
+[`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](../audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
+The catalog is immutable after normalization and owns no authored choices,
+simulation counters, candidate policy, or React presentation.
+
 ## Audit Workflow
 
 For each declaration family:

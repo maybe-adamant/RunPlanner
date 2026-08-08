@@ -8,7 +8,9 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
+  createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -33,6 +35,7 @@ import { selectProfileStatus } from '@planner/state/store';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
+  createRepresentativeNOPQShopTraitProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -40,6 +43,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
+  pOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
@@ -186,6 +190,68 @@ describe('surface product loop', () => {
     renderPlannerForInteraction({ application: recovered });
     expect(selectProfileStatus(recovered.store.getState())).toBe('Recovered');
     expect(currentProject(recovered)).toEqual(authored);
+  });
+
+  it('carries a purchased P Shop Hammer through route history and the application projection', async () => {
+    const application = createApplication();
+    const authored = createRepresentativeNOPQShopTraitProject();
+    application.store.dispatch(authoredProjectReplaced(authored));
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toMatchObject({
+      status: 'valid',
+      summary: { configuredBiomeCount: 4, eligibleForExecutionPlan: true },
+    });
+
+    const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
+    const traitOwner = createTraitOfferAddress(shopOffer, 'weaponUpgrade');
+    const surface = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const pEvaluation = surface?.biomes.find((biome) => biome.biomeKey === 'P');
+    if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
+      throw new Error('complete Surface Shop fixture did not evaluate P rewards');
+    }
+    const branch = pEvaluation.rewards.branches[0];
+    if (branch === undefined) throw new Error('complete Surface Shop fixture has no P branch');
+    const event = branch.traitHistory?.events.find(
+      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
+    );
+    expect(event).toMatchObject({ owner: shopOffer, acquisitionPoint: 'purchase' });
+    const selected =
+      event === undefined
+        ? undefined
+        : event.options[
+            event.selectedOptionKey === 'option1'
+              ? 0
+              : event.selectedOptionKey === 'option2'
+                ? 1
+                : 2
+          ];
+    expect(
+      selected === undefined ? undefined : branch.traitHistory?.equippedTraits[selected.traitKey],
+    ).toBeDefined();
+
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(traitOwner));
+    expect(interaction).toMatchObject({
+      owner: traitOwner,
+      acquisitionRoleLabel: 'Weapon Upgrade',
+    });
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    await waitFor(() =>
+      expect(
+        document.getElementById(`trait-launcher-${semanticAddressKey(traitOwner)}`),
+      ).not.toBeNull(),
+    );
+    await view.user.click(
+      document.getElementById(`trait-launcher-${semanticAddressKey(traitOwner)}`)!,
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByLabelText('option1 rarity')).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Close trait offer' })).toBeTruthy();
+    application.dispose();
   });
 
   it('records an N Hub order move as one undoable semantic command and autosaves both states', async () => {

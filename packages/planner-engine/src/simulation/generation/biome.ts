@@ -254,7 +254,12 @@ function projectRoomGenerationRequirementContext(
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: enteredBiomeCount,
-      upgradableTraitCount: 0,
+      // Generation requirements consume the same derived trait facts as the
+      // reward kernel when a reward-history checkpoint is available. A
+      // missing checkpoint means the empty equipped ledger, never a loot
+      // source approximation.
+      upgradableTraitCount:
+        rewardHistory === undefined ? 0 : rewardHistory.traitFacts.upgradableTraitCount,
     }),
     records: Object.freeze({
       biomeUseRecord: rewardHistory?.biomeUseRecord ?? Object.freeze({}),
@@ -724,7 +729,8 @@ function targetRewardHistories(
         (history) =>
           !sameRecord(history.useRecord, first.useRecord) ||
           !sameRecord(history.biomeUseRecord, first.biomeUseRecord) ||
-          !sameRecord(history.lootTypeHistory, first.lootTypeHistory),
+          !sameRecord(history.lootTypeHistory, first.lootTypeHistory) ||
+          history.traitFacts.upgradableTraitCount !== first.traitFacts.upgradableTraitCount,
       )
     ) {
       throw new BiomeRoomGenerationContractError(

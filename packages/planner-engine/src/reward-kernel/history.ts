@@ -24,7 +24,12 @@ export function createRewardHistoryState(): RewardHistoryState {
     lootTypeHistory: EMPTY_RECORD,
     lootBiomeRecord: EMPTY_RECORD,
     consumableRecord: EMPTY_RECORD,
-    upgradableTraitCount: 0,
+    traitFacts: Object.freeze({
+      upgradableTraitCount: 0,
+      elementCounts: EMPTY_RECORD,
+      highestBaseElementCount: 0,
+      godBoonRarityCounts: EMPTY_RECORD,
+    }),
   });
 }
 
@@ -165,8 +170,9 @@ export function factsWithHistory(
     ...base,
     counters: Object.freeze({
       ...base.counters,
-      upgradableTraitCount:
-        history.traitFacts?.upgradableTraitCount ?? history.upgradableTraitCount,
+      // Trait eligibility is derived from the equipped-trait ledger.  The
+      // required history fold is the sole source of this fact.
+      upgradableTraitCount: history.traitFacts.upgradableTraitCount,
     }),
     records: Object.freeze({
       ...base.records,

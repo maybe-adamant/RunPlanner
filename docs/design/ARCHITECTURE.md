@@ -567,6 +567,24 @@ Unlike the ImGui implementation, ordinary React render allocation is not a
 domain constraint. Performance work should target observed latency rather than
 recreating draw-path restrictions from the game module.
 
+## Trait Offer Ownership
+
+Trait declarations and giver pools belong to `hades2-catalog`; normalized
+requirements, route loadout, authored reward children, semantic commands,
+trait history, lifecycle folding, candidates, and findings belong to
+`planner-engine`. The planner application owns only composition, persistence,
+workspace closure, interaction binding, route projections, and React
+presentation. The engine consumes the catalog contract without importing the
+catalog implementation, and the UI never evaluates trait legality or
+reconstructs lifecycle chronology.
+
+The equipped-trait ledger is replaceable simulation output beside exact loot
+and use ledgers. It is carried through validated route branches, not persisted
+as a second authored model. Stable trait offer owners are reward-owner plus
+acquisition-role addresses; option keys are evidence within that offer's
+assessment and never semantic owners or finding addresses.
+No room, Shop, or component may switch on Hammer trait names.
+
 ## Rejected Shapes
 
 Do not introduce:
