@@ -559,8 +559,8 @@ function normalizeGivers(
       const defaultSlots = defaultOffer.options.map(
         (option) => traits.byKey[option.traitKey]?.ordinaryBoonSlot,
       );
-      if (!defaultSlots.includes('Melee') || !defaultSlots.includes('Secondary')) {
-        fail(`${path}.defaultOffer`, 'Olympian defaults must include Melee and Secondary traits');
+      if (!defaultSlots.includes('Melee') && !defaultSlots.includes('Secondary')) {
+        fail(`${path}.defaultOffer`, 'Olympian defaults must include Melee or Secondary traits');
       }
     }
     const defaultsByLoadout: Record<string, TraitOfferDefaults> = {};

@@ -98,10 +98,10 @@ keys, in Weapon/Attack, Special, Cast, Sprint, and Mana order:
 
 Hermes and `WeaponUpgrade` (Hammer) declare an explicitly empty priority set.
 Normalization verifies membership, uniqueness, and coverage of the five
-ordinary slots. Olympian defaults use priority keys only and include Melee and
-Secondary. The first-offer guarantee is a support simplification: a first
-reached Olympian offer while all ordinary slots are empty needs three distinct
-priority traits and Attack (`Melee`) or Special (`Secondary`). Replacement,
+ordinary slots. Olympian defaults use priority keys only and include Melee or
+Secondary. The first-offer guarantee is a support simplification: a first reached
+Olympian offer while all ordinary slots are empty needs three distinct priority traits
+and Attack (`Melee`) or Special (`Secondary`). Replacement,
 weighted probability, and `PriorityChance` remain deferred rather than being
 inferred from this guarantee.
 

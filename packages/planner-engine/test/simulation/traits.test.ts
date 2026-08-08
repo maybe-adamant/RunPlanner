@@ -1,19 +1,31 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
+  semanticAddressKey,
+  type AuthoredTraitOffer,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
+import {
+  createRewardHistoryState,
+  factsWithHistory,
+  type RewardKernelFacts,
+} from '@run-planner/engine/reward-kernel';
 import {
   assessTraitOption,
   assessTraitOfferComposition,
+  attachTraitHistory,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitOfferEvents,
   recordReachedTraitOffer,
   traitCandidates,
+  type ProjectEvaluation,
+  type ReachedTraitOfferEvaluation,
+  type RewardBranch,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -21,6 +33,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   createRepresentativeNOPQProject,
+  goldenFBiome,
+  goldenFStartId,
+  goldenFOccurrenceId,
 } from '@run-planner/test-fixtures';
 
 import { createDefaultTraitOffers } from '../../src/authored-project/traits';
@@ -28,9 +43,65 @@ import {
   initializeRewardBranches,
   processOwnedRewardAcquisition,
 } from '../../src/simulation/rewards/processing';
+import {
+  evaluateTraitOfferCandidate,
+  type TraitOfferCandidateQuery,
+} from '../../src/simulation/candidates/trait-offer';
 import { simulateProject } from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
+
+function replaceBiomeRewardBranches(
+  evaluation: ProjectEvaluation,
+  routeKey: string,
+  biomeKey: string,
+  branches: readonly RewardBranch[],
+): ProjectEvaluation {
+  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const biome = route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (route === undefined || biome === undefined || !('rewards' in biome)) {
+    throw new Error(`missing ${routeKey}/${biomeKey} reward evaluation`);
+  }
+  const replacedBiome = Object.freeze({
+    ...biome,
+    rewards: Object.freeze({ ...biome.rewards, branches: Object.freeze([...branches]) }),
+  });
+  const replacedRoute = Object.freeze({
+    ...route,
+    biomes: Object.freeze(
+      route.biomes.map((candidate) => (candidate === biome ? replacedBiome : candidate)),
+    ),
+  });
+  return Object.freeze({
+    ...evaluation,
+    routes: Object.freeze(
+      evaluation.routes.map((candidate) => (candidate === route ? replacedRoute : candidate)),
+    ),
+  });
+}
+
+function branchWithTraitTrace(trace: ReachedTraitOfferEvaluation): RewardBranch {
+  return Object.freeze({
+    bags: Object.freeze({}),
+    history: attachTraitHistory(createRewardHistoryState(), trace.before),
+    events: Object.freeze([]),
+    processedThroughHistorySequence: 0,
+    traitHistory: trace.before,
+    traitEvaluations: Object.freeze([trace]),
+  });
+}
+
+function reachedTraitTraces(evaluation: ProjectEvaluation): readonly ReachedTraitOfferEvaluation[] {
+  return Object.freeze(
+    evaluation.routes.flatMap((route) =>
+      route.biomes.flatMap((biome) =>
+        'rewards' in biome
+          ? biome.rewards.branches.flatMap((branch) => branch.traitEvaluations ?? [])
+          : [],
+      ),
+    ),
+  );
+}
 
 // Source-expected Hammer memberships and aspect restrictions from
 // docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md.  This is intentionally
@@ -651,6 +722,189 @@ describe('reached trait offer chronology', () => {
     );
     expect(second.composition.legal).toBe(true);
     expect(recordReachedTraitOffer(catalog, second, 2, 'test').history.events).toHaveLength(1);
+  });
+
+  it('publishes and repairs a real invalid first offer through project simulation', () => {
+    const owner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const traitAddress = createTraitOfferAddress(owner, 'source');
+    const invalidFirstOffer = Object.freeze({
+      giverKey: 'Apollo',
+      options: Object.freeze([
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' as const },
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' as const },
+      ]) as TraitOfferEvent['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: traitAddress,
+      value: invalidFirstOffer,
+    });
+    const evaluation = simulateProject(catalog, project);
+    const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const f = route?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (f === undefined || !('rewards' in f)) throw new Error('F reward evaluation is missing');
+
+    expect(f.findings).toContainEqual({
+      code: 'missingAttackOrSpecial',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: traitAddress,
+      evidence: { acquisitionRole: 'source', lifecyclePoint: 'roomRewardPickup' },
+    });
+    const branch = f.rewards.branches[0];
+    if (branch === undefined) throw new Error('F reward branch is missing');
+    const firstTrace = branch.traitEvaluations?.find(
+      (trace) =>
+        semanticAddressKey(trace.address) === semanticAddressKey(owner) &&
+        trace.acquisitionRole === 'source',
+    );
+    const laterTrace = branch.traitEvaluations?.find(
+      (trace) =>
+        'occurrenceId' in trace.address &&
+        trace.address.occurrenceId === goldenFOccurrenceId(2, 1) &&
+        trace.acquisitionRole === 'source',
+    );
+    if (firstTrace === undefined || laterTrace === undefined) {
+      throw new Error('first-offer repair traces are missing');
+    }
+    expect(firstTrace.composition).toMatchObject({ applies: true, legal: false });
+    expect(laterTrace.before.ordinaryBoonSlots).toEqual({});
+    expect(laterTrace.composition).toEqual({ applies: true, legal: true, findings: [] });
+    expect(branch.traitHistory?.events).not.toContainEqual(
+      expect.objectContaining({ owner, acquisitionRole: 'source' }),
+    );
+    expect(branch.traitHistory?.events).toContainEqual(
+      expect.objectContaining({
+        owner: laterTrace.address,
+        acquisitionRole: 'source',
+        selectedOptionKey: laterTrace.offer.selectedOptionKey,
+      }),
+    );
+    const selectedIndex =
+      laterTrace.offer.selectedOptionKey === 'option1'
+        ? 0
+        : laterTrace.offer.selectedOptionKey === 'option2'
+          ? 1
+          : 2;
+    const selectedTraitKey = laterTrace.offer.options[selectedIndex]?.traitKey;
+    expect(selectedTraitKey).toBeDefined();
+    expect(branch.traitHistory?.equippedTraits[selectedTraitKey!]).toBeDefined();
+  });
+
+  it('keeps first-offer candidate support and evidence grouped by reached branch', () => {
+    const project = createGoldenFGHIProject();
+    const baseline = simulateProject(catalog, project);
+    const owner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const trait = createTraitOfferAddress(owner, 'source');
+    const value: AuthoredTraitOffer = Object.freeze({
+      giverKey: 'Apollo',
+      options: Object.freeze([
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1',
+    });
+    const occupiedBefore = foldTraitOfferEvents(catalog, [
+      {
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 0,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+    ]);
+    const legalBranchTrace = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      value,
+      occupiedBefore,
+      {},
+      0,
+    );
+    const invalidBranchTrace = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      value,
+      createTraitHistoryState(),
+      {},
+      0,
+    );
+    const candidateEvaluation = replaceBiomeRewardBranches(baseline, 'Underworld', 'F', [
+      branchWithTraitTrace(legalBranchTrace),
+      branchWithTraitTrace(invalidBranchTrace),
+    ]);
+    const query: TraitOfferCandidateQuery = { kind: 'traitOffer', trait, value };
+    const result = evaluateTraitOfferCandidate(catalog, project, candidateEvaluation, query);
+    if (result.kind !== 'traitOffer') throw new Error('trait offer candidate was unavailable');
+
+    expect(result.result.supported).toBe(true);
+    expect(result.result.branches).toHaveLength(2);
+    expect(result.result.branches[0]).toEqual({
+      assessments: [
+        { legal: true, findings: [] },
+        { legal: true, findings: [] },
+        { legal: true, findings: [] },
+      ],
+      composition: { applies: false, legal: true, findings: [] },
+    });
+    expect(result.result.branches[1]).toEqual({
+      assessments: [
+        { legal: true, findings: [] },
+        { legal: true, findings: [] },
+        { legal: true, findings: [] },
+      ],
+      composition: {
+        applies: true,
+        legal: false,
+        findings: [{ code: 'missingAttackOrSpecial' }],
+      },
+    });
+    expect(result.result.findings).toContainEqual({ code: 'missingAttackOrSpecial' });
+  });
+
+  it('keeps naturally surviving same-owner traces on one pre-offer state and context', () => {
+    // The current Golden and representative routes naturally collapse repeated
+    // owners onto one pre-offer context. The constructed boundary witness above
+    // protects the typed candidate product if a future branch producer diverges.
+    const routes = [
+      ['Underworld', createGoldenFGHIProject],
+      ['Surface', createRepresentativeNOPQProject],
+    ] as const;
+    let duplicateGroupCount = 0;
+    for (const [routeKey, createProject] of routes) {
+      const traces = reachedTraitTraces(simulateProject(catalog, createProject())).filter(
+        (trace) => 'routeKey' in trace.address && trace.address.routeKey === routeKey,
+      );
+      const byOwner = new Map<string, ReachedTraitOfferEvaluation[]>();
+      for (const trace of traces) {
+        const key = `${semanticAddressKey(trace.address)}:${trace.acquisitionRole}`;
+        const group = byOwner.get(key) ?? [];
+        group.push(trace);
+        byOwner.set(key, group);
+      }
+      for (const group of byOwner.values()) {
+        if (group.length < 2) continue;
+        duplicateGroupCount += 1;
+        const first = group[0];
+        if (first === undefined) throw new Error('same-owner trace group is empty');
+        for (const trace of group.slice(1)) {
+          expect(trace.before).toEqual(first.before);
+          expect(trace.context).toEqual(first.context);
+        }
+      }
+    }
+    expect(duplicateGroupCount).toBeGreaterThan(0);
   });
 
   it('marks non-priority first-offer candidates unavailable with a composition reason', () => {

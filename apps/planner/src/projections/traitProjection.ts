@@ -73,7 +73,7 @@ export function projectTraitOfferFeedback(
     return Object.freeze({ options: Object.freeze([]), support });
   }
   const findingsByTrait = new Map<string, string[]>();
-  let contextMessage: string | undefined;
+  const contextMessages = new Set<string>();
   for (const finding of evaluation.result.findings) {
     const copy = presentTraitCandidateFinding(finding.code);
     const reason =
@@ -81,7 +81,7 @@ export function projectTraitOfferFeedback(
         ? `${copy.title}: ${copy.description}`
         : `${copy.title}: ${copy.description} (${finding.detail})`;
     if (finding.traitKey === undefined) {
-      contextMessage = contextMessage === undefined ? reason : `${contextMessage} ${reason}`;
+      contextMessages.add(reason);
       continue;
     }
     const reasons = findingsByTrait.get(finding.traitKey);
@@ -89,7 +89,7 @@ export function projectTraitOfferFeedback(
     else if (!reasons.includes(reason)) reasons.push(reason);
   }
   return Object.freeze({
-    ...(contextMessage === undefined ? {} : { contextMessage }),
+    ...(contextMessages.size === 0 ? {} : { contextMessage: [...contextMessages].join(' ') }),
     options: Object.freeze(
       offer.options.map((option) => {
         const reasons = findingsByTrait.get(option.traitKey) ?? [];
