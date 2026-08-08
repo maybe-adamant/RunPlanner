@@ -59,6 +59,7 @@ const allFindingCodes = [
   'shopOfferUnavailable',
   'shopPurchaseUnavailable',
   'freshRarityUnavailable',
+  'rarityBelowActiveFloor',
   'nonPriorityTrait',
   'missingAttackOrSpecial',
 ] as const satisfies readonly FindingCode[];
@@ -77,7 +78,7 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 
 describe('evaluation presentation', () => {
   it('provides explicit player copy for every Phase 3 finding code', () => {
-    expect(allFindingCodes).toHaveLength(23);
+    expect(allFindingCodes).toHaveLength(24);
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);
@@ -195,6 +196,11 @@ describe('evaluation presentation', () => {
         'freshRarityUnavailable',
         'Fresh rarity is unavailable',
         'This rarity is not offered when the trait is acquired fresh.',
+      ],
+      [
+        'rarityBelowActiveFloor',
+        'Rarity is below the active floor',
+        'Proper Upbringing keeps fresh scalable god-trait offers at Rare or higher.',
       ],
     ] as const satisfies readonly (readonly [FindingCode, string, string])[];
 

@@ -990,6 +990,18 @@ ordinary-source increment approximation is retired. NPC/Story effect-backed
 choices, rarity mutation, stacks, and other deferred providers remain outside
 this persistent trait lifecycle.
 
+Proper Upbringing is the one modeled rarity lifecycle in this slice. Its
+normalized declaration supplies a `Common`-to-`Rare` floor that activates when
+the equipped ledger reaches its declaration-owned base-element minimums.
+Chronological replay promotes eligible equipped Common persistent god traits on
+the inactive-to-active transition, leaves the effect source and
+`BlockInRunRarify`/fixed-rarity traits unchanged, and exposes the active floor
+as a derived history fact. Deactivation removes only the future-offer floor;
+promotions remain, and a later reactivation performs a new pass. The effect
+source's own authored rarity remains offer evidence. This is an explicit
+declaration product, not a generic effect interpreter or persisted mutation
+state.
+
 The empty-slot test is always derived from this ledger at the reached offer
 boundary; no persisted first-offer marker or replacement counter exists.
 

@@ -272,4 +272,40 @@ describe('route trait projection', () => {
       feedback.contextMessage?.match(/First Olympian offer needs Attack or Special/g),
     ).toHaveLength(1);
   });
+
+  it('projects an active rarity-floor finding as repairable option copy', () => {
+    const offer = {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' as const },
+        { traitKey: 'ApolloCastBoon', rarity: 'Epic' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const feedback = projectTraitOfferFeedback(offer, {
+      value: offer,
+      evaluation: {
+        kind: 'traitOffer',
+        result: {
+          supported: false,
+          branches: [],
+          assessments: [],
+          findings: [
+            {
+              code: 'rarityBelowActiveFloor' as const,
+              traitKey: 'ApolloWeaponBoon',
+              detail: 'Rare',
+            },
+          ],
+        },
+      },
+    });
+    expect(feedback.options[0]?.legal).toBe(false);
+    expect(feedback.options[0]?.reasons).toEqual([
+      expect.stringContaining('Rarity is below the active floor'),
+    ]);
+    expect(feedback.options[1]?.reasons).toEqual([]);
+    expect(feedback.options[2]?.reasons).toEqual([]);
+  });
 });

@@ -2370,3 +2370,14 @@ remain on the frontier, with no terminal-navigation variant. Focused workspace
 and product-loop coverage exercise the nearby action and direct frontier path.
 The complete repository gate passes with 73 files and 588 tests, followed by
 typecheck, lint, formatting, production build, and diff checks.
+
+Proper Upbringing's rarity lifecycle is complete. Gate A adds the normalized,
+compiler-validated `Common`-to-`Rare` declaration-owned floor for
+`ElementalRarityUpgradeBoon`. Gate B folds chronological activation,
+deactivation, reactivation, immutable Common-to-Rare promotion, floor-aware
+fresh-offer assessment, replacement composition, and the existing trait-offer
+application projection. The engine keeps the floor derived on
+`TraitHistoryState`; no authored schema, persisted activation flag, generic
+effect framework, or Proper Upbringing-specific React path was added. The
+temporary implementation tracker is retired after this durable model and
+editor contract absorption.

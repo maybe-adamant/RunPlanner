@@ -1264,6 +1264,18 @@ state. Replacement identity is derived and absent from authored JSON; source
 probability, force/progression gates, counters, and level/stack transfer stay
 deferred.
 
+The same replay folds the normalized Proper Upbringing rarity floor. After
+each reached acquisition or replacement it derives the post-selection element
+ledger, detects each modeled effect's transition against the immediately prior
+replay state, promotes eligible Common persistent god traits once on
+activation, and publishes `minimumScalableGodTraitRarity` only while the
+effect remains active. Promotions are immutable replacement values and are
+recomputed into slots, elements, rarity counts, upgradeability, and all later
+trait predicates. A floor-aware fresh Common assessment reports
+`rarityBelowActiveFloor` when the declaration also supports Rare; Rare/Epic,
+fixed Common/Legendary/Duo, and Hammer domains retain their existing rules.
+Invalid, unselected, dormant, and unreached offers do not enter this replay.
+
 The current canonical trace still keeps `allSpellInvested = false` and
 `pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop
 delivery boundaries. Trait state does not infer either flag; concrete Hex,

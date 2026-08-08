@@ -191,6 +191,10 @@ const findingCopy = {
     title: 'Fresh rarity is unavailable',
     description: 'This rarity is not offered when the trait is acquired fresh.',
   },
+  rarityBelowActiveFloor: {
+    title: 'Rarity is below the active floor',
+    description: 'Proper Upbringing keeps fresh scalable god-trait offers at Rare or higher.',
+  },
   replacementUnavailable: {
     title: 'Trait replacement is unavailable',
     description: 'This occupied boon slot cannot be replaced by the selected giver.',

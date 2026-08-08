@@ -787,6 +787,12 @@ trait model. Dormant descendants remain withheld until their parent lifecycle
 reaches the role, and invalid reached offers stay editable with their exact
 finding.
 
+The existing trait-offer surface also presents the engine's
+`rarityBelowActiveFloor` finding as ordinary option feedback. A retained
+authored Common option remains visible and repairable after an upstream
+acquisition activates Proper Upbringing; no activation control, special panel,
+or React-side rarity filtering is introduced.
+
 ## Initial F Editor Acceptance
 
 The first usable editor slice is complete when a user can:

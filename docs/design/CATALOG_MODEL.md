@@ -711,6 +711,13 @@ weapon/aspect loadout for Hammers). Hammer traits deliberately use a `none`
 rarity domain; `Heroic` remains in the normalized equipped rarity order but is
 never a fresh authored choice.
 
+`ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
+product. Its activation minimums are the four base elements at `2`, and its
+closed `Common`-to-`Rare` transition is validated and deep-frozen by the
+compiler. This declaration is the catalog fact consumed by the engine's
+chronological rarity lifecycle; it is not a generic trait-effect registry or
+an authored-state field.
+
 The nine Olympian priority sets each cover the five ordinary slots; Hermes and
 Hammer normalize an explicitly empty set. Catalog construction rejects unknown,
 duplicate, out-of-pool, cross-slot, or malformed priority sets and rejects
