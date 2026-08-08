@@ -284,6 +284,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'No equipped trait can be supercharged for this offer.' };
     case 'occupiedBoonSlot':
       return { kind: 'trait', message: 'This ordinary boon slot is already occupied.' };
+    case 'freshRarityUnavailable':
+      return { kind: 'trait', message: 'This rarity is unavailable for a fresh trait offer.' };
     case 'replacementUnavailable':
       return { kind: 'trait', message: 'This occupied boon slot cannot be replaced here.' };
     case 'replacementMaximumRarity':

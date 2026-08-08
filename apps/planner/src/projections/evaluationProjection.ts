@@ -187,6 +187,10 @@ const findingCopy = {
     title: 'Ordinary boon slot is occupied',
     description: 'The ordinary boon slot for this trait already has an equipped trait.',
   },
+  freshRarityUnavailable: {
+    title: 'Fresh rarity is unavailable',
+    description: 'This rarity is not offered when the trait is acquired fresh.',
+  },
   replacementUnavailable: {
     title: 'Trait replacement is unavailable',
     description: 'This occupied boon slot cannot be replaced by the selected giver.',

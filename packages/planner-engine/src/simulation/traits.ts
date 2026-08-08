@@ -549,6 +549,22 @@ export function assessTraitOption(
       detail: trait.ordinaryBoonSlot,
     });
   }
+  // Ranked authored rarities are structurally allowed to retain an equipped
+  // rarity while the contextual offer decides whether it is a fresh option.
+  // A legal replacement is the one exception: its exact promoted rarity may
+  // be Heroic even though Heroic is never a fresh offer rarity.
+  if (
+    trait.rarityDomain.kind === 'ranked' &&
+    rarity !== undefined &&
+    !trait.rarityDomain.freshOfferRarities.includes(rarity) &&
+    replacementTransition === undefined
+  ) {
+    findings.push({
+      code: 'freshRarityUnavailable',
+      traitKey,
+      detail: rarity,
+    });
+  }
   return Object.freeze({
     legal: findings.length === 0,
     findings: Object.freeze(findings),
