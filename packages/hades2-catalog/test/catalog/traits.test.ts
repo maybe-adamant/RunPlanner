@@ -1126,6 +1126,52 @@ describe('trait offer catalog closure', () => {
       },
     };
     expect(() => createCatalog(nonPriorityDefault)).toThrow(/priority traits only/);
+
+    const meleeOnlyDefault = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
+            ? {
+                ...giver,
+                defaultOffer: {
+                  ...giver.defaultOffer,
+                  options: [
+                    giver.defaultOffer.options[0]!,
+                    giver.defaultOffer.options[2]!,
+                    { traitKey: 'AphroditeSprintBoon', rarity: 'Common' as const },
+                  ] as const,
+                },
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(meleeOnlyDefault)).not.toThrow();
+
+    const noMeleeOrSecondaryDefault = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
+            ? {
+                ...giver,
+                defaultOffer: {
+                  ...giver.defaultOffer,
+                  options: [
+                    giver.defaultOffer.options[2]!,
+                    { traitKey: 'AphroditeSprintBoon', rarity: 'Common' as const },
+                    { traitKey: 'AphroditeManaBoon', rarity: 'Common' as const },
+                  ] as const,
+                },
+              }
+            : giver,
+        ),
+      },
+    };
+    expect(() => createCatalog(noMeleeOrSecondaryDefault)).toThrow(/Melee or Secondary traits/);
   });
 
   it('preserves Legendary rarity while keeping Hammer declarations un-rarified', () => {

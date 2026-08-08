@@ -714,7 +714,8 @@ never a fresh authored choice.
 The nine Olympian priority sets each cover the five ordinary slots; Hermes and
 Hammer normalize an explicitly empty set. Catalog construction rejects unknown,
 duplicate, out-of-pool, cross-slot, or malformed priority sets and rejects
-Olympian defaults that leave the set or omit Melee and Secondary. The empty-slot
+Olympian defaults that leave the set or lack both Melee and Secondary; at least one of
+Melee or Secondary is required. The empty-slot
 predicate and first-offer timing remain simulation-owned, not catalog state.
 
 Catalog construction is the source-to-catalog closure boundary. It rejects

@@ -258,6 +258,7 @@ describe('route trait projection', () => {
               traitKey: 'ApolloRetaliateBoon',
             },
             { code: 'missingAttackOrSpecial' as const },
+            { code: 'missingAttackOrSpecial' as const },
           ],
         },
       },
@@ -267,5 +268,8 @@ describe('route trait projection', () => {
     ]);
     expect(feedback.options[0]?.reasons).toEqual([]);
     expect(feedback.contextMessage).toContain('First Olympian offer needs Attack or Special');
+    expect(
+      feedback.contextMessage?.match(/First Olympian offer needs Attack or Special/g),
+    ).toHaveLength(1);
   });
 });
