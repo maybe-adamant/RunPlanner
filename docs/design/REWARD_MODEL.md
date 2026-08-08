@@ -971,8 +971,15 @@ must be distinct priority/core traits and include Attack (`Melee`) or Special
 finding for each non-priority option and one aggregate missing-Attack/Special
 finding. Hermes, Hammer, dormant, unpicked, and unpurchased roles do not
 consume this first-offer rule. An invalid first offer does not fold its
-selection, so a later reached Olympian can still satisfy the rule. No
-replacement or probability policy is inferred here.
+selection, so a later reached Olympian can still satisfy the rule. Replacement
+is a sibling composition product: each legal replacement carries its exact
+slot, prior trait, old rarity, new trait, and promoted rarity, while ordinary
+availability counts distinct legal fresh trait keys from the same pre-offer
+branch. The maximum replacement count is one when at least two ordinary keys
+remain, otherwise `3 - ordinaryCandidateCount`. Replacement waives only
+occupied-slot failure; all other requirements remain authoritative. The 10
+percent roll, force flags, progression gates, counters, level/stack transfer,
+and `ExchangeLevelBonus` remain deferred.
 
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,

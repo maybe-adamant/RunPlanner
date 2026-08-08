@@ -35,6 +35,13 @@ export function RouteTraitsPanel({
                     {row.biomeKey} · {row.locationLabel} · {row.giverLabel}
                     {row.rarity === undefined ? '' : ` · ${row.rarity}`}
                   </span>
+                  {row.selectedReplacement === undefined ? null : (
+                    <span className="route-trait-replacement">
+                      Replaces {row.selectedReplacement.replacedTraitKey} ·{' '}
+                      {row.selectedReplacement.oldRarity} to{' '}
+                      {row.selectedReplacement.requiredRarity}
+                    </span>
+                  )}
                 </div>
                 <button
                   aria-label={`Edit ${interaction.acquisitionRoleLabel} offer`}

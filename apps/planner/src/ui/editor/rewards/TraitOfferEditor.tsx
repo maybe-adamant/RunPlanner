@@ -99,6 +99,9 @@ export function TraitOfferEditor({
     workspaceInteractionKey(address),
   );
   const [value, setValue] = useState<AuthoredTraitOffer>(interaction.value);
+  const [draftRarityChoices, setDraftRarityChoices] = useState<
+    Readonly<Record<string, readonly TraitRarity[]>>
+  >({});
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
   const [loadable, setLoadable] = useState(() =>
@@ -114,6 +117,7 @@ export function TraitOfferEditor({
     authoritativeInteractionRef.current = interaction;
     const nextLoadable = traitOfferLoadable(interaction, interaction.value);
     setValue(interaction.value);
+    setDraftRarityChoices({});
     setLoadable(nextLoadable);
     controller.activate(nextLoadable);
   }, [controller, interaction]);
@@ -132,7 +136,10 @@ export function TraitOfferEditor({
     const options = [...value.options] as Array<AuthoredTraitOffer['options'][number]>;
     const current = options[index]!;
     const nextTraitKey = patch.traitKey ?? current.traitKey;
-    const nextRarities = interaction.rarityChoicesFor(nextTraitKey);
+    const nextRarities = interaction.rarityChoicesFor(nextTraitKey, index);
+    setDraftRarityChoices((previous) =>
+      Object.freeze({ ...previous, [nextTraitKey]: nextRarities }),
+    );
     const nextRarity =
       patch.rarity ??
       (nextRarities.length === 0
@@ -156,7 +163,8 @@ export function TraitOfferEditor({
       <div className="trait-offer-options">
         {OPTION_KEYS.map((optionKey, index) => {
           const option = value.options[index]!;
-          const rarityChoices = interaction.rarityChoicesFor(option.traitKey);
+          const rarityChoices =
+            draftRarityChoices[option.traitKey] ?? interaction.rarityChoicesFor(option.traitKey);
           return (
             <fieldset className="trait-offer-option" key={optionKey}>
               <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -214,6 +222,13 @@ export function TraitOfferEditor({
                     <li key={reason}>{reason}</li>
                   ))}
                 </ul>
+              )}
+              {feedback.options[index]?.replacement === undefined ? null : (
+                <p className="trait-option-replacement" role="status">
+                  Replaces {feedback.options[index]!.replacement!.replacedTraitKey} ·{' '}
+                  {feedback.options[index]!.replacement!.oldRarity} to{' '}
+                  {feedback.options[index]!.replacement!.requiredRarity}
+                </p>
               )}
             </fieldset>
           );

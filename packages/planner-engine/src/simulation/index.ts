@@ -238,6 +238,7 @@ export {
 export {
   assessTraitOffer,
   assessTraitOfferComposition,
+  assessTraitReplacementComposition,
   attachTraitHistory,
   assessTraitOption,
   traitCandidates,
@@ -250,6 +251,8 @@ export {
   type TraitAssessment,
   type TraitOfferCompositionAssessment,
   type TraitOfferCompositionFinding,
+  type TraitReplacementCompositionAssessment,
+  type TraitReplacementTransition,
   type TraitFindingCode,
   type TraitHistoryState,
   type ReachedTraitOfferEvaluation,

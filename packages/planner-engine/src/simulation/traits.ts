@@ -20,6 +20,16 @@ export interface TraitOfferEvent {
   readonly options: AuthoredTraitOffer['options'];
   readonly selectedOptionKey: TraitOptionKey;
   readonly acquisitionPoint: string;
+  /** Derived from the pre-offer state; never persisted in authored state. */
+  readonly replacementTransition?: TraitReplacementTransition;
+}
+
+export interface TraitReplacementTransition {
+  readonly slot: string;
+  readonly replacedTraitKey: string;
+  readonly oldRarity: TraitRarity;
+  readonly newTraitKey: string;
+  readonly requiredRarity: TraitRarity;
 }
 
 export interface TraitHistoryState {
@@ -99,6 +109,9 @@ export function foldTraitOfferEvents(
     const giver = catalog.traitGivers.byKey[event.giverKey];
     const declaration = catalog.traits.byKey[option.traitKey];
     if (giver === undefined || declaration === undefined) continue;
+    if (event.replacementTransition !== undefined) {
+      delete equipped[event.replacementTransition.replacedTraitKey];
+    }
     equipped[option.traitKey] = Object.freeze({
       traitKey: option.traitKey,
       giverKey: giver.key,
@@ -150,6 +163,7 @@ export interface TraitAssessment {
     readonly traitKey: string;
     readonly detail?: string;
   }[];
+  readonly replacementTransition?: TraitReplacementTransition;
 }
 
 /** Findings that belong to the complete first-Olympian offer, not one option's
@@ -166,6 +180,18 @@ export interface TraitOfferCompositionAssessment {
   readonly findings: readonly TraitOfferCompositionFinding[];
 }
 
+export interface TraitReplacementCompositionAssessment {
+  readonly applies: boolean;
+  readonly legal: boolean;
+  readonly ordinaryCandidateCount: number;
+  readonly maximumReplacementCount: number;
+  readonly replacementCount: number;
+  readonly findings: readonly {
+    readonly code: 'replacementCompositionExceeded';
+    readonly detail?: string;
+  }[];
+}
+
 export interface ReachedTraitOfferEvaluation {
   readonly address: SemanticAddress;
   readonly acquisitionRole: string;
@@ -174,6 +200,7 @@ export interface ReachedTraitOfferEvaluation {
   readonly context: TraitOfferContext;
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
+  readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -195,6 +222,7 @@ export function evaluateReachedTraitOffer(
   chronologicalIndex: number,
 ): ReachedTraitOfferEvaluation {
   const composition = assessTraitOfferComposition(catalog, offer, before);
+  const replacementComposition = assessTraitReplacementComposition(catalog, offer, before, context);
   return Object.freeze({
     address,
     acquisitionRole,
@@ -203,6 +231,7 @@ export function evaluateReachedTraitOffer(
     context,
     assessments: assessTraitOffer(catalog, offer, before, context),
     composition,
+    replacementComposition,
     reached: true,
     chronologicalIndex,
   });
@@ -249,6 +278,74 @@ export function assessTraitOfferComposition(
   });
 }
 
+/**
+ * Replacement is an offer-level shortage rule. It is evaluated from the
+ * exact pre-offer ledger and never from an option selected earlier in the
+ * same offer.
+ */
+export function assessTraitReplacementComposition(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  before: TraitHistoryState,
+  context: TraitOfferContext = {},
+): TraitReplacementCompositionAssessment {
+  const giver = catalog.traitGivers.byKey[offer.giverKey];
+  const applies =
+    giver?.providerKind === 'olympian' && Object.keys(before.ordinaryBoonSlots).length > 0;
+  if (!applies || giver === undefined) {
+    return Object.freeze({
+      applies: false,
+      legal: true,
+      ordinaryCandidateCount: 0,
+      maximumReplacementCount: 0,
+      replacementCount: 0,
+      findings: Object.freeze([]),
+    });
+  }
+
+  const ordinaryKeys = new Set<string>();
+  const offerContext = { ...context, resolvedProviderKey: offer.giverKey };
+  for (const traitKey of giver.traitKeys) {
+    const trait = catalog.traits.byKey[traitKey];
+    if (trait === undefined || trait.rarityDomain.kind !== 'ranked') continue;
+    if (before.equippedTraits[traitKey] !== undefined) continue;
+    const canBeFresh = trait.rarityDomain.freshOfferRarities.some((rarity) => {
+      const assessment = assessTraitOption(catalog, traitKey, before, offerContext, rarity);
+      return assessment.legal && assessment.replacementTransition === undefined;
+    });
+    if (canBeFresh) ordinaryKeys.add(traitKey);
+  }
+  const ordinaryCandidateCount = ordinaryKeys.size;
+  const maximumReplacementCount = ordinaryCandidateCount >= 2 ? 1 : 3 - ordinaryCandidateCount;
+  const replacementCount = offer.options.reduce((count, option) => {
+    const assessment = assessTraitOption(
+      catalog,
+      option.traitKey,
+      before,
+      offerContext,
+      option.rarity,
+    );
+    return assessment.replacementTransition === undefined ? count : count + 1;
+  }, 0);
+  const findings =
+    replacementCount > maximumReplacementCount
+      ? Object.freeze([
+          Object.freeze({
+            code: 'replacementCompositionExceeded' as const,
+            detail: `${replacementCount}:${maximumReplacementCount}`,
+          }),
+        ])
+      : Object.freeze([]);
+  return Object.freeze({
+    applies: true,
+    legal: findings.length === 0,
+    ordinaryCandidateCount,
+    maximumReplacementCount,
+    replacementCount,
+    findings,
+  });
+}
+
 export function recordReachedTraitOffer(
   catalog: Catalog,
   evaluation: ReachedTraitOfferEvaluation,
@@ -256,8 +353,12 @@ export function recordReachedTraitOffer(
   acquisitionPoint: string,
 ): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
   const valid =
-    evaluation.composition.legal && evaluation.assessments.every((assessment) => assessment.legal);
+    evaluation.composition.legal &&
+    evaluation.replacementComposition.legal &&
+    evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
+  const selectedAssessment =
+    evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
   const event: TraitOfferEvent = Object.freeze({
     owner: evaluation.address,
     acquisitionRole: evaluation.acquisitionRole,
@@ -266,6 +367,9 @@ export function recordReachedTraitOffer(
     options: evaluation.offer.options,
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
+    ...(selectedAssessment?.replacementTransition === undefined
+      ? {}
+      : { replacementTransition: selectedAssessment.replacementTransition }),
   });
   const history = foldTraitOfferEvents(catalog, [...evaluation.before.events, event]);
   return Object.freeze({ history, event });
@@ -391,7 +495,65 @@ export function assessTraitOption(
         !trait.hammerCompatibility.aspectKeys.includes(context.aspectKey)))
   )
     findings.push({ code: 'wrongHammerLoadout', traitKey });
-  return Object.freeze({ legal: findings.length === 0, findings: Object.freeze(findings) });
+  let replacementTransition: TraitReplacementTransition | undefined;
+  const occupied =
+    trait.ordinaryBoonSlot === undefined
+      ? undefined
+      : history.ordinaryBoonSlots[trait.ordinaryBoonSlot];
+  const giver = context.resolvedProviderKey
+    ? catalog.traitGivers.byKey[context.resolvedProviderKey]
+    : undefined;
+  const priority = giver === undefined ? false : giver.priorityTraitKeys.includes(traitKey);
+  const replacementEligible =
+    occupied !== undefined &&
+    occupied.traitKey !== traitKey &&
+    giver?.providerKind === 'olympian' &&
+    priority &&
+    history.equippedTraits[traitKey] === undefined;
+  if (replacementEligible && occupied !== undefined && trait.ordinaryBoonSlot !== undefined) {
+    const requiredRarity =
+      occupied.rarity === undefined
+        ? undefined
+        : nextRarity(catalog, occupied.traitKey, occupied.rarity);
+    const occupiedIndex = findings.findIndex((finding) => finding.code === 'occupiedBoonSlot');
+    const nonSlotFindings = findings.filter((finding) => finding.code !== 'occupiedBoonSlot');
+    if (requiredRarity === undefined) {
+      findings.push({
+        code: 'replacementMaximumRarity',
+        traitKey,
+        detail: occupied.traitKey,
+      });
+    } else if (rarity !== requiredRarity) {
+      // Retain a precise replacement-shaped diagnostic rather than exposing
+      // arbitrary rarity variants for an occupied slot.
+      if (occupiedIndex >= 0 && nonSlotFindings.length === 0) findings.splice(occupiedIndex, 1);
+      findings.push({
+        code: 'replacementRarityMismatch',
+        traitKey,
+        detail: `${requiredRarity}:${rarity ?? 'missing'}`,
+      });
+    } else if (nonSlotFindings.length === 0) {
+      if (occupiedIndex >= 0) findings.splice(occupiedIndex, 1);
+      replacementTransition = Object.freeze({
+        slot: trait.ordinaryBoonSlot,
+        replacedTraitKey: occupied.traitKey,
+        oldRarity: occupied.rarity as TraitRarity,
+        newTraitKey: traitKey,
+        requiredRarity,
+      });
+    }
+  } else if (occupied !== undefined && trait.ordinaryBoonSlot !== undefined) {
+    findings.push({
+      code: 'replacementUnavailable',
+      traitKey,
+      detail: trait.ordinaryBoonSlot,
+    });
+  }
+  return Object.freeze({
+    legal: findings.length === 0,
+    findings: Object.freeze(findings),
+    ...(replacementTransition === undefined ? {} : { replacementTransition }),
+  });
 }
 
 export function assessTraitOffer(
@@ -400,9 +562,10 @@ export function assessTraitOffer(
   history: TraitHistoryState,
   context: TraitOfferContext = {},
 ): readonly TraitAssessment[] {
+  const offerContext = { ...context, resolvedProviderKey: offer.giverKey };
   return Object.freeze(
     offer.options.map((option) =>
-      assessTraitOption(catalog, option.traitKey, history, context, option.rarity),
+      assessTraitOption(catalog, option.traitKey, history, offerContext, option.rarity),
     ),
   );
 }
@@ -444,7 +607,7 @@ export function traitCandidates(
     if (trait === undefined) continue;
     const assessment = addCompositionContext(
       traitKey,
-      assessTraitOption(catalog, traitKey, history, context),
+      assessTraitOption(catalog, traitKey, history, { ...context, resolvedProviderKey: giverKey }),
     );
     if (trait.rarityDomain.kind === 'none') {
       candidates.push(Object.freeze({ traitKey, available: assessment.legal, assessment }));
@@ -456,14 +619,58 @@ export function traitCandidates(
       if (rarity === 'Heroic') continue;
       const rarityAssessment = addCompositionContext(
         traitKey,
-        assessTraitOption(catalog, traitKey, history, context, rarity),
+        assessTraitOption(
+          catalog,
+          traitKey,
+          history,
+          { ...context, resolvedProviderKey: giverKey },
+          rarity,
+        ),
       );
+      // A fresh rarity that is also the exact promoted replacement rarity is
+      // represented by the replacement candidate below, never as an ordinary
+      // arbitrary variant for an occupied slot.
+      if (rarityAssessment.replacementTransition !== undefined) continue;
       candidates.push(
         Object.freeze({
           traitKey,
           rarity,
           available: rarityAssessment.legal,
           assessment: rarityAssessment,
+        }),
+      );
+    }
+  }
+  // Replacement candidates are exact promoted-rarity variants. They are
+  // intentionally emitted in addition to fresh variants only for the giver's
+  // priority set; Heroic can therefore appear only as Epic-to-Heroic evidence.
+  if (giver.providerKind === 'olympian') {
+    for (const traitKey of giver.priorityTraitKeys) {
+      const trait = catalog.traits.byKey[traitKey];
+      if (trait?.rarityDomain.kind !== 'ranked') continue;
+      const occupied =
+        trait.ordinaryBoonSlot === undefined
+          ? undefined
+          : history.ordinaryBoonSlots[trait.ordinaryBoonSlot];
+      if (occupied === undefined) continue;
+      const required =
+        occupied.rarity === undefined
+          ? undefined
+          : nextRarity(catalog, occupied.traitKey, occupied.rarity);
+      if (required === undefined) continue;
+      const assessment = assessTraitOption(
+        catalog,
+        traitKey,
+        history,
+        { ...context, resolvedProviderKey: giverKey },
+        required,
+      );
+      candidates.push(
+        Object.freeze({
+          traitKey,
+          rarity: required,
+          available: assessment.legal && assessment.replacementTransition !== undefined,
+          assessment,
         }),
       );
     }

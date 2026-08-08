@@ -32,9 +32,9 @@ function validateOffer(
         failCommand(command, `Hammer option ${option.traitKey} has no rarity`);
     } else if (
       option.rarity === undefined ||
-      !trait.rarityDomain.freshOfferRarities.includes(option.rarity)
+      !trait.rarityDomain.equippedRarities.includes(option.rarity)
     ) {
-      failCommand(command, `unsupported fresh rarity for ${option.traitKey}`);
+      failCommand(command, `unsupported authored rarity for ${option.traitKey}`);
     }
   }
   return Object.freeze({

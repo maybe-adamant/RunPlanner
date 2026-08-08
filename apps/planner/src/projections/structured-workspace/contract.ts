@@ -165,6 +165,8 @@ export interface WorkspaceTraitOfferControl {
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
   readonly rewardOwner: RewardCandidateOwner['address'];
+  /** Engine-derived exact replacement rarity by proposed trait key. */
+  readonly replacementRarities?: Readonly<Record<string, TraitRarity>>;
 }
 
 export interface WorkspaceTraitOfferInteraction {
@@ -179,7 +181,7 @@ export interface WorkspaceTraitOfferInteraction {
     value?: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
-  readonly rarityChoicesFor: (traitKey: string) => readonly TraitRarity[];
+  readonly rarityChoicesFor: (traitKey: string, optionIndex?: number) => readonly TraitRarity[];
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;

@@ -13,8 +13,13 @@ import {
   createTraitOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
+  type TraitOfferOwnerAddress,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  simulateProject,
+  traitCandidates,
+  type ReachedTraitOfferEvaluation,
+} from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -574,6 +579,102 @@ describe('surface product loop', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+
+  it('completes an Olympian replacement through the shared trait editor', async () => {
+    const application = createApplication();
+    let authored = createRepresentativeNOPQProject();
+    const beforeEvaluation = simulateProject(application.catalog, authored);
+    let target:
+      | {
+          readonly address: TraitOfferOwnerAddress;
+          readonly trace: ReachedTraitOfferEvaluation;
+          readonly candidate: ReturnType<typeof traitCandidates>[number];
+        }
+      | undefined;
+    for (const route of beforeEvaluation.routes) {
+      for (const biome of route.biomes) {
+        if (!('rewards' in biome)) continue;
+        for (const branch of biome.rewards.branches) {
+          for (const trace of branch.traitEvaluations ?? []) {
+            const replacement = traitCandidates(
+              application.catalog,
+              trace.offer.giverKey,
+              trace.before,
+              trace.context,
+            ).find(
+              (candidate) =>
+                candidate.available && candidate.assessment.replacementTransition !== undefined,
+            );
+            if (replacement === undefined) continue;
+            target = {
+              address: trace.address as TraitOfferOwnerAddress,
+              trace,
+              candidate: replacement,
+            };
+            break;
+          }
+          if (target !== undefined) break;
+        }
+        if (target !== undefined) break;
+      }
+      if (target !== undefined) break;
+    }
+    if (target === undefined) throw new Error('No reached Olympian replacement candidate found');
+    const replacement = target.candidate;
+    const transition = replacement.assessment.replacementTransition;
+    if (transition === undefined || replacement.rarity === undefined) {
+      throw new Error('Replacement candidate is missing its derived transition');
+    }
+    const options = [...target.trace.offer.options] as Array<
+      (typeof target.trace.offer.options)[number]
+    >;
+    options[0] = Object.freeze({ traitKey: replacement.traitKey, rarity: replacement.rarity });
+    authored = applyProjectCommand(authored, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(target.address, target.trace.acquisitionRole),
+      value: Object.freeze({
+        giverKey: target.trace.offer.giverKey,
+        options: Object.freeze(options) as typeof target.trace.offer.options,
+        selectedOptionKey: 'option1',
+      }),
+    });
+    application.store.dispatch(authoredProjectReplaced(authored));
+
+    const evaluation = application.store.getState().projectWorkspace.assembly.evaluation;
+    const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const branches =
+      route?.biomes.flatMap((biome) => ('rewards' in biome ? biome.rewards.branches : [])) ?? [];
+    const event = branches
+      .flatMap((branch) => branch.traitHistory?.events ?? [])
+      .find(
+        (candidate) =>
+          semanticAddressKey(candidate.owner) === semanticAddressKey(target.address) &&
+          candidate.acquisitionRole === target.trace.acquisitionRole,
+      );
+    expect(event?.replacementTransition).toEqual(transition);
+    const history = branches[0]?.traitHistory;
+    expect(history?.equippedTraits[transition.replacedTraitKey]).toBeUndefined();
+    expect(history?.equippedTraits[transition.newTraitKey]).toMatchObject({
+      rarity: transition.requiredRarity,
+    });
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    expect(screen.getByText(new RegExp(`Replaces ${transition.replacedTraitKey}`))).toBeTruthy();
+    const launcher = document.getElementById(
+      `trait-launcher-${semanticAddressKey(createTraitOfferAddress(target.address, target.trace.acquisitionRole))}`,
+    );
+    if (launcher === null) {
+      throw new Error('replacement trait launcher is missing');
+    }
+    await view.user.click(launcher);
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText(new RegExp(`Replaces ${transition.replacedTraitKey}`)),
+    ).toBeTruthy();
+    application.dispose();
   });
 
   it('retains and repairs a reached Hammer after a route loadout change', async () => {

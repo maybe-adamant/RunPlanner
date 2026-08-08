@@ -20,11 +20,14 @@ import {
   createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
+  type AuthoredTraitOffer,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
+  type TraitAssessment,
+  type TraitReplacementTransition,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -52,9 +55,14 @@ import {
   qOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
+import type {
+  CandidateProjectionEvaluation,
+  CandidateProjectionSession,
+} from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
+import type { WorkspaceTraitOfferInteraction } from '../contract';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 import { bindWorkspaceInteractions } from './interaction-binding';
@@ -71,6 +79,7 @@ function bind(
   routeKey: string,
   biomeKey: string,
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
+  candidateSession?: CandidateProjectionSession,
 ) {
   const projectAssembly = simulateProjectAssembly(catalog, project);
   const evaluation = projectAssembly.evaluation;
@@ -81,6 +90,18 @@ function bind(
   const assembly = assembleWorkspaceBiomeSemantics(catalog, source, (phase) =>
     encounterPhaseCandidateSupportForProjectEvaluationAssembly(projectAssembly, phase),
   );
+  const traitControls = new Map(
+    [...assembly.rewardControls.values()]
+      .flatMap((control) => control.traitOffers ?? [])
+      .map((control) => [semanticAddressKey(control.address), control] as const),
+  );
+  const interactionServices =
+    candidateSession === undefined
+      ? services
+      : Object.freeze({
+          ...services,
+          candidateSessions: Object.freeze({ bind: () => candidateSession }),
+        });
   return {
     assembly,
     interactions: bindWorkspaceInteractions({
@@ -93,8 +114,9 @@ function bind(
       hubTakeoverInteractionRequirements: assembly.hubTakeoverInteractionRequirements,
       occurrenceInteractionRequirements: assembly.occurrenceInteractionRequirements,
       rewardControls: assembly.rewardControls,
+      traitControls,
       roomControls: assembly.roomControls,
-      services,
+      services: interactionServices,
       startInteractionRequirements: assembly.startInteractionRequirements,
       takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
@@ -102,7 +124,126 @@ function bind(
   };
 }
 
+type TraitCandidateEvaluation = Extract<
+  CandidateProjectionEvaluation,
+  { readonly kind: 'traitOffer' }
+>;
+type TraitCandidateBranch = TraitCandidateEvaluation['result']['branches'][number];
+
+function traitAssessment(replacementTransition?: TraitReplacementTransition): TraitAssessment {
+  return Object.freeze({
+    legal: true,
+    findings: Object.freeze([]),
+    ...(replacementTransition === undefined ? {} : { replacementTransition }),
+  });
+}
+
+function traitCandidateEvaluation(
+  branches: readonly TraitCandidateBranch[],
+): TraitCandidateEvaluation {
+  return Object.freeze({
+    kind: 'traitOffer' as const,
+    result: Object.freeze({
+      supported: true,
+      branches: Object.freeze(branches),
+      assessments: Object.freeze(branches.flatMap((branch) => branch.assessments)),
+      findings: Object.freeze([]),
+    }),
+  });
+}
+
+function traitBranch(replacementTransition?: TraitReplacementTransition): TraitCandidateBranch {
+  return Object.freeze({
+    assessments: Object.freeze([
+      traitAssessment(replacementTransition),
+      traitAssessment(),
+      traitAssessment(),
+    ]),
+    composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
+  });
+}
+
+function bindTraitWithCandidate(
+  evaluate: (value: AuthoredTraitOffer) => TraitCandidateEvaluation,
+): {
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly traitKey: string;
+} {
+  const project = createRepresentativeNOPQProject();
+  const projectAssembly = simulateProjectAssembly(catalog, project);
+  const baseSession = services.candidateSessions.bind(projectAssembly);
+  const candidateSession: CandidateProjectionSession = Object.freeze({
+    ...baseSession,
+    traitOffer: (
+      _owner: Parameters<CandidateProjectionSession['traitOffer']>[0],
+      value: Parameters<CandidateProjectionSession['traitOffer']>[1],
+    ): ReturnType<CandidateProjectionSession['traitOffer']> =>
+      Object.freeze([Object.freeze({ value, evaluation: evaluate(value) })]),
+  });
+  const { interactions } = bind(project, 'Surface', 'N', undefined, candidateSession);
+  const interaction = [...interactions.traitOffers.values()].find(
+    (candidate) => candidate.giver.providerKind === 'olympian',
+  );
+  if (interaction === undefined) throw new Error('an Olympian trait interaction is missing');
+  const traitKey = interaction.giver.priorityTraitKeys[0];
+  if (traitKey === undefined) throw new Error('the Olympian priority trait is missing');
+  return { interaction, traitKey };
+}
+
 describe('structured workspace interaction binding', () => {
+  it('keeps the normal repair rarity domain when replacement branches disagree', () => {
+    const { interaction, traitKey } = bindTraitWithCandidate((value) => {
+      const rarity = value.options[0]?.rarity;
+      const newTraitKey = value.options[0]?.traitKey;
+      if (newTraitKey === undefined) throw new Error('the candidate option is missing a trait key');
+      if (rarity !== 'Rare') return traitCandidateEvaluation([traitBranch(), traitBranch()]);
+      return traitCandidateEvaluation([
+        traitBranch({
+          slot: 'Melee',
+          replacedTraitKey: 'AphroditeSpecialBoon',
+          oldRarity: 'Common',
+          newTraitKey,
+          requiredRarity: 'Rare',
+        }),
+        traitBranch({
+          slot: 'Melee',
+          replacedTraitKey: 'AphroditeCastBoon',
+          oldRarity: 'Common',
+          newTraitKey,
+          requiredRarity: 'Rare',
+        }),
+      ]);
+    });
+
+    expect(interaction.rarityChoicesFor(traitKey, 0)).toEqual(['Common', 'Rare', 'Epic']);
+  });
+
+  it('promotes an option to the exact rarity only when every branch agrees', () => {
+    const transition: TraitReplacementTransition = {
+      slot: 'Melee',
+      replacedTraitKey: 'AphroditeSpecialBoon',
+      oldRarity: 'Common',
+      newTraitKey: 'AphroditeWeaponBoon',
+      requiredRarity: 'Rare',
+    };
+    const { interaction, traitKey } = bindTraitWithCandidate((value) => {
+      const rarity = value.options[0]?.rarity;
+      const newTraitKey = value.options[0]?.traitKey;
+      if (newTraitKey === undefined) throw new Error('the candidate option is missing a trait key');
+      return traitCandidateEvaluation(
+        rarity === 'Rare'
+          ? [
+              traitBranch({ ...transition, newTraitKey }),
+              traitBranch({ ...transition, newTraitKey }),
+            ]
+          : [traitBranch(), traitBranch()],
+      );
+    });
+    const expectedTransition = { ...transition, newTraitKey: traitKey };
+
+    expect(interaction.rarityChoicesFor(traitKey, 0)).toEqual([expectedTransition.requiredRarity]);
+  });
+
   it('binds one provisional Hub-slot identity per explicit opening attempt', () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),

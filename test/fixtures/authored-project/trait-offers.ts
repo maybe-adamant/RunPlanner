@@ -70,12 +70,25 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
           readonly rarity?: TraitRarity;
         }
       >();
-      for (const candidate of traitCandidates(
+      const candidates = traitCandidates(
         catalog,
         invalid.offer.giverKey,
         invalid.before,
         invalid.context,
-      )) {
+      );
+      // Keep fixture repair on ordinary variants whenever the engine reports
+      // a rich ordinary pool. Replacement alternatives are still exercised
+      // by focused replacement fixtures and are chosen only when ordinary
+      // candidates cannot complete the three-option surface.
+      const orderedCandidates = [
+        ...candidates.filter(
+          (candidate) => candidate.assessment.replacementTransition === undefined,
+        ),
+        ...candidates.filter(
+          (candidate) => candidate.assessment.replacementTransition !== undefined,
+        ),
+      ];
+      for (const candidate of orderedCandidates) {
         if (!candidate.available || optionsByTrait.has(candidate.traitKey)) continue;
         optionsByTrait.set(candidate.traitKey, {
           traitKey: candidate.traitKey,

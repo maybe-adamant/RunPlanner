@@ -187,6 +187,22 @@ const findingCopy = {
     title: 'Ordinary boon slot is occupied',
     description: 'The ordinary boon slot for this trait already has an equipped trait.',
   },
+  replacementUnavailable: {
+    title: 'Trait replacement is unavailable',
+    description: 'This occupied boon slot cannot be replaced by the selected giver.',
+  },
+  replacementMaximumRarity: {
+    title: 'Trait is already Heroic',
+    description: 'A Heroic occupant has no supported replacement rarity.',
+  },
+  replacementRarityMismatch: {
+    title: 'Replacement rarity is incorrect',
+    description: 'Use the exact next rarity required by the occupied trait.',
+  },
+  replacementCompositionExceeded: {
+    title: 'Too many replacements',
+    description: 'This offer contains more replacements than its ordinary pool allows.',
+  },
   wrongHammerLoadout: {
     title: 'Hammer is incompatible with this loadout',
     description: 'This Hammer trait does not support the selected weapon and aspect.',

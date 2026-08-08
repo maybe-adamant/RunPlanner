@@ -47,6 +47,10 @@ export type TraitFindingCode =
   | 'rarifiableTarget'
   | 'superchargeableTarget'
   | 'occupiedBoonSlot'
+  | 'replacementUnavailable'
+  | 'replacementMaximumRarity'
+  | 'replacementRarityMismatch'
+  | 'replacementCompositionExceeded'
   | 'wrongHammerLoadout'
   | 'nonPriorityTrait'
   | 'missingAttackOrSpecial';

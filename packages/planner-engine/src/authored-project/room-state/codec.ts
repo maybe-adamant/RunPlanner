@@ -200,11 +200,11 @@ function decodeTraitOffers(
         failProjectDocument(`${rolePath}.options.${key}.rarity`, 'Hammer options have no rarity');
       if (
         trait.rarityDomain.kind === 'ranked' &&
-        (rarity === undefined || !trait.rarityDomain.freshOfferRarities.includes(rarity))
+        (rarity === undefined || !trait.rarityDomain.equippedRarities.includes(rarity))
       )
         failProjectDocument(
           `${rolePath}.options.${key}.rarity`,
-          `unsupported fresh rarity for ${traitKey}`,
+          `unsupported authored rarity for ${traitKey}`,
         );
       options.push(Object.freeze({ traitKey, ...(rarity === undefined ? {} : { rarity }) }));
     }
