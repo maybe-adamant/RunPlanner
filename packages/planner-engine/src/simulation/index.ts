@@ -62,6 +62,7 @@ export {
   type HubTerminalTakeoverCandidateQuery,
   type TakeoverPrebossBatchCandidateQuery,
   type EvaluatedTraitOfferCandidate,
+  type TraitOfferCandidateFindingCode,
   type TraitOfferCandidateQuery,
 } from './candidates';
 export {

@@ -3,6 +3,7 @@ import { traitGiverForAcquisitionRole, type AuthoredTraitOffer } from '../traits
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
+import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
 
@@ -298,6 +299,12 @@ export function applyTraitOfferCommand(
   if (existing.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
+  if (
+    command.kind === 'ReplaceTraitSelection' &&
+    !['option1', 'option2', 'option3'].includes(command.selectedOptionKey)
+  ) {
+    failCommand(command, 'selected option must be option1, option2, or option3');
+  }
   const value =
     command.kind === 'ReplaceTraitSelection'
       ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
@@ -305,6 +312,7 @@ export function applyTraitOfferCommand(
   if (value.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
+  if (sameOccurrenceValue(value, existing)) return document;
   const state = updateState(catalog, located, occurrence, occurrence.state, command, value);
   return updateOccurrenceTopology(
     document,

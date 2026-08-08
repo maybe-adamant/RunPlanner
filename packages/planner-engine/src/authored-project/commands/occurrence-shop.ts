@@ -59,6 +59,7 @@ export function applyShopOccurrenceCommand(
   }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+  if (sameOccurrenceValue(offer.reward.offer, command.value)) return document;
   const replacement = Object.freeze({
     reward: Object.freeze({
       offer: command.value,
@@ -69,7 +70,6 @@ export function applyShopOccurrenceCommand(
       ),
     }),
   });
-  if (sameOccurrenceValue(replacement, offer)) return document;
   return updateOccurrenceTopology(
     document,
     located,

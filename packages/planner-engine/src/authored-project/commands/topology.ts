@@ -183,8 +183,8 @@ function defaultOccurrence(
   occurrenceId: OccurrenceId,
   role: RoomOccurrenceRole,
   entryActive: boolean,
-  resolvedStoreKey?: string,
-  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
+  resolvedStoreKey: string | undefined,
+  loadout: { readonly weaponKey: string; readonly aspectKey: string },
 ): RoomOccurrence {
   return Object.freeze({
     occurrenceId,
@@ -193,7 +193,7 @@ function defaultOccurrence(
       role,
       entryActive,
       ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
-      ...(loadout === undefined ? {} : { loadout }),
+      loadout,
     }),
     encounters: createDefaultRoomEncounterState(
       catalog,

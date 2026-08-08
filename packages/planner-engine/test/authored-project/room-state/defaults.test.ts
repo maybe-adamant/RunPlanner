@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
-import { createDefaultRoomState } from '../../../src/authored-project/room-state/defaults';
+import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 
 function room(gameName: string): RoomDeclaration {
   const declaration = catalog.rooms.byKey[gameName];

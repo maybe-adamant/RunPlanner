@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
-import { createDefaultRoomState } from '../../../src/authored-project/room-state/defaults';
+import {
+  createTestDefaultRoomState as createDefaultRoomState,
+  testRouteLoadout,
+} from '../support/default-room-state';
 import {
   createDefaultRoomEncounterState,
   reconcileRoomEncounterState,
@@ -15,6 +18,8 @@ function room(gameName: string): RoomDeclaration {
   if (declaration === undefined) throw new Error(`missing ${gameName}`);
   return declaration;
 }
+
+const testLoadout = testRouteLoadout(catalog);
 
 describe('authored room-state replacement', () => {
   it('retains exact compatible encounter leaves and resets only an incompatible stable slot', () => {
@@ -71,6 +76,7 @@ describe('authored room-state replacement', () => {
         previousState,
         compatibleRoom,
         compatibleDefault,
+        testLoadout,
       ),
     ).toEqual(previousState);
 
@@ -87,6 +93,7 @@ describe('authored room-state replacement', () => {
         previousState,
         forcedRoom,
         forcedDefault,
+        testLoadout,
       ),
     ).toEqual(forcedDefault);
   });
@@ -108,6 +115,7 @@ describe('authored room-state replacement', () => {
       previousState,
       replacementRoom,
       replacementDefault,
+      testLoadout,
     );
     expect(reconciled).toEqual(previousState);
     expect(reconciled).not.toBe(previousState);
@@ -142,6 +150,7 @@ describe('authored room-state replacement', () => {
         previousState,
         replacementRoom,
         replacementDefault,
+        testLoadout,
       ),
     ).toEqual(previousState);
   });
@@ -163,7 +172,14 @@ describe('authored room-state replacement', () => {
       }),
     });
     expect(
-      reconcileReplacementRoomState(catalog, shopRoom, orderedShop, shopRoom, shopDefault),
+      reconcileReplacementRoomState(
+        catalog,
+        shopRoom,
+        orderedShop,
+        shopRoom,
+        shopDefault,
+        testLoadout,
+      ),
     ).toBe(shopDefault);
 
     const ephyraRoom = room('N_Combat02');
@@ -189,7 +205,14 @@ describe('authored room-state replacement', () => {
       }),
     });
     expect(
-      reconcileReplacementRoomState(catalog, ephyraRoom, enteredEphyra, ephyraRoom, ephyraDefault),
+      reconcileReplacementRoomState(
+        catalog,
+        ephyraRoom,
+        enteredEphyra,
+        ephyraRoom,
+        ephyraDefault,
+        testLoadout,
+      ),
     ).toMatchObject({
       kind: 'ephyraCombat',
       sideRooms: {

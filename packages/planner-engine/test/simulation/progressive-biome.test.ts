@@ -12,6 +12,7 @@ import {
   createRewardWheelAddress,
   createRouteAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type OccurrenceId,
@@ -50,6 +51,7 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
+  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -270,6 +272,53 @@ function partialGWithEarlierInvalidReward() {
 }
 
 describe('progressive biome evaluation', () => {
+  it('rejects a duplicate sibling trait through the candidate authority', () => {
+    const project = authorLegalTraitOffers(createGoldenFGHProject());
+    const assembly = simulateProjectAssembly(catalog, project);
+    const trace = assembly.evaluation.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) =>
+        'rewards' in biome
+          ? biome.rewards.branches.flatMap((branch) => branch.traitEvaluations ?? [])
+          : [],
+      )
+      .find((candidate) => candidate.assessments.every((assessment) => assessment.legal));
+    if (trace === undefined) throw new Error('fixture has no reached legal trait offer');
+    const owner = trace.address;
+    if (
+      owner.kind !== 'incomingReward' &&
+      owner.kind !== 'localReward' &&
+      owner.kind !== 'rewardWheelOffer' &&
+      owner.kind !== 'shopOffer'
+    ) {
+      throw new Error('reached trait offer has no authored reward owner');
+    }
+    const first = trace.offer.options[0];
+    const third = trace.offer.options[2];
+    const result = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+      kind: 'traitOffer',
+      trait: createTraitOfferAddress(owner, trace.acquisitionRole),
+      value: Object.freeze({
+        giverKey: trace.offer.giverKey,
+        options: Object.freeze([first, first, third] as const),
+        selectedOptionKey: 'option1',
+      }),
+    });
+
+    expect(result).toMatchObject({
+      kind: 'traitOffer',
+      result: {
+        supported: false,
+        findings: [
+          expect.objectContaining({
+            code: 'duplicateOfferedTrait',
+            traitKey: first.traitKey,
+          }),
+        ],
+      },
+    });
+  });
+
   it('assesses a stale Hammer loadout in an incomplete prefix with the route context', () => {
     const initial = createGoldenFGHProject();
     const route = initial.routes.find((candidate) => candidate.routeKey === 'Underworld');

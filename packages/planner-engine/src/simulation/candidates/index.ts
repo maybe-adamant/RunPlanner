@@ -75,4 +75,8 @@ export type {
   EvaluatedHubTerminalTakeoverCandidate,
   HubTerminalTakeoverCandidateQuery,
 } from './takeover-hub';
-export type { EvaluatedTraitOfferCandidate, TraitOfferCandidateQuery } from './trait-offer';
+export type {
+  EvaluatedTraitOfferCandidate,
+  TraitOfferCandidateFindingCode,
+  TraitOfferCandidateQuery,
+} from './trait-offer';

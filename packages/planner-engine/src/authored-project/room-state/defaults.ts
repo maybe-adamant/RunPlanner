@@ -43,15 +43,6 @@ function defaultCountedOffer(
   return offer;
 }
 
-function fallbackLoadout(catalog: Catalog): TraitOfferDefaultsContext {
-  const weapon = catalog.weapons.values.find((candidate) =>
-    candidate.aspectKeys.includes(candidate.defaultAspectKey),
-  );
-  return weapon === undefined
-    ? { weaponKey: '', aspectKey: '' }
-    : { weaponKey: weapon.key, aspectKey: weapon.defaultAspectKey };
-}
-
 /**
  * A declaration-owned store narrows the set of defaults an occurrence may
  * use. A normal batch store is only the fallback for declarations that do
@@ -210,7 +201,7 @@ export function createDefaultRoomState(
 ): AuthoredRoomState {
   const path = `rooms.${room.gameName}.state`;
   const { role, entryActive } = context;
-  const defaultLoadout = context.loadout ?? fallbackLoadout(catalog);
+  const defaultLoadout = context.loadout;
   const traitOffers = (offer: ResolvedRewardOffer) => ({
     reward: Object.freeze({
       offer,
