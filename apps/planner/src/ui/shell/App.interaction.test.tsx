@@ -4,6 +4,9 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createExitSelectionAddress,
+  createShopOfferAddress,
+  semanticAddressKey,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -19,12 +22,24 @@ import type {
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
 import type { ProfileFileAdapter } from '@planner/persistence/profileFile';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
+import { routePanelSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { semanticOwnerElementId } from '../feedback/semanticOwner';
 import {
   createCompleteFGProject,
+  createGoldenFGHIProject,
+  createRepresentativeNOPQProject,
+  pBiome,
+  pOccurrenceId,
+  pOccurrenceIds,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
 } from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
@@ -219,6 +234,313 @@ describe('planner history interaction', () => {
     const encounter = screen.getByLabelText('Encounter') as HTMLSelectElement;
     expect(encounter.value).toBe('ArtemisCombatF');
     await waitFor(() => expect(document.activeElement).toBe(encounter));
+  });
+
+  it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    const launcher = screen.getAllByRole('button', { name: /Edit .* offer/ })[0];
+    if (launcher === undefined) throw new Error('route trait launcher is missing');
+    launcher.focus();
+    await view.user.keyboard('{Enter}');
+
+    const session = application.store.getState().editorSession;
+    if (session.focusedSemanticOwner?.kind !== 'traitOffer') {
+      throw new Error('route trait navigation did not retain the exact trait owner');
+    }
+    expect(session.traitDialogTarget).toEqual(session.focusedSemanticOwner);
+    expect(session.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: session.focusedSemanticOwner.biomeKey,
+    });
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeTruthy();
+    expect(dialog.tagName).toBe('DIALOG');
+    const appHeader = document.querySelector('.app-header');
+    expect(appHeader).not.toBeNull();
+    expect((appHeader as HTMLElement & { inert: boolean }).inert).toBe(true);
+
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement?.id).toBe(launcher.id);
+  });
+
+  it('resets an open trait editor across parent replacement and undo', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const traitInteraction = [...initialWorkspace.interactions.traitOffers.values()].find(
+      (candidate) => {
+        if (
+          candidate.owner.owner.kind !== 'incomingReward' ||
+          candidate.owner.owner.occurrenceId.includes('start')
+        )
+          return false;
+        const reward = initialWorkspace.interactions.rewards.get(
+          semanticAddressKey(candidate.owner.owner),
+        );
+        return reward?.authoredRewardTypes.includes('Boon') ?? false;
+      },
+    );
+    if (traitInteraction === undefined) throw new Error('incoming trait editor fixture is missing');
+    const target = traitInteraction.owner;
+    if (target.owner.kind !== 'incomingReward') throw new Error('incoming trait owner is missing');
+    const initialValue = traitInteraction.value;
+    const replacementSource = traitInteraction.giver.key === 'Ares' ? 'ZeusUpgrade' : 'AresUpgrade';
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: target.routeKey }));
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    const launcher = document.getElementById(`trait-launcher-${semanticAddressKey(target)}`);
+    if (launcher === null) throw new Error('trait editor launcher is missing');
+    await view.user.click(launcher);
+    const dialog = await screen.findByRole('dialog');
+    expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
+      initialValue.options[0]?.traitKey,
+    );
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceIncomingReward',
+        reward: target.owner,
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: replacementSource },
+        },
+      }),
+    );
+    const replacement = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(target));
+    if (replacement === undefined) throw new Error('replacement trait interaction is missing');
+    await waitFor(() =>
+      expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
+        replacement.value.options[0]?.traitKey,
+      ),
+    );
+    expect(replacement.value).not.toEqual(initialValue);
+    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
+      replacement.giver.label,
+    );
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    const restored = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(target));
+    if (restored === undefined) throw new Error('restored trait interaction is missing');
+    await waitFor(() =>
+      expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
+        restored.value.options[0]?.traitKey,
+      ),
+    );
+    expect(restored.value).toEqual(initialValue);
+    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
+      restored.giver.label,
+    );
+  });
+
+  it('opens a reached-invalid trait finding with its exact marker and engine reason', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRouteLoadout',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        weaponKey: 'WeaponDagger',
+        aspectKey: 'DaggerBackstabAspect',
+      }),
+    );
+    const invalid = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (finding) => finding.origin.kind === 'traitOffer',
+      );
+    if (invalid === undefined) throw new Error('invalid reached Hammer finding is missing');
+    const view = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings)
+      .getAllByRole('button')
+      .find((button) => button.textContent?.includes('Hammer is incompatible'));
+    if (findingButton === undefined) throw new Error('Hammer finding is not presented');
+    await view.user.click(findingButton);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.tagName).toBe('DIALOG');
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .focusByOwner.get(semanticAddressKey(invalid.origin)),
+    ).toMatchObject({
+      ownerAddress: invalid.origin,
+      traitDialogTarget: invalid.origin,
+    });
+    expect(document.getElementById(semanticOwnerElementId(invalid.origin))).toBeTruthy();
+    expect(
+      within(dialog).getAllByText(/Hammer is incompatible with this loadout/).length,
+    ).toBeGreaterThan(0);
+    expect(within(dialog).getByRole('status')).toBeTruthy();
+
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
+    if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
+    const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
+    if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
+    for (const [index, option] of corrected.options.entries()) {
+      await view.user.selectOptions(
+        within(dialog).getByLabelText(`option${index + 1} trait`),
+        option.traitKey,
+      );
+    }
+    const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
+    await waitFor(() => expect(save).toHaveProperty('disabled', false));
+    await view.user.click(save);
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
+        ),
+    ).toBe(false);
+  });
+
+  it('edits ordinary, Hermes, room Hammer, and Shop Hammer offers through shared controls', async () => {
+    const application = createApplication();
+    let project = createRepresentativeNOPQProject();
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(pBiome, {
+        kind: 'occurrence',
+        occurrenceId: pOccurrenceId('P_Combat07', 4, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
+      value: { rewardType: 'WeaponUpgradeDrop' },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+
+    const interactions = application.selectStructuredWorkspace(
+      application.store.getState(),
+    ).interactions;
+    const visibleLauncher = (
+      kind: 'olympian' | 'hermes' | 'hammer',
+      ownerKind?: string,
+      requireVisible = true,
+    ) => {
+      const interaction = [...interactions.traitOffers.values()].find(
+        (candidate) =>
+          candidate.giver.providerKind === kind &&
+          (ownerKind === undefined || candidate.owner.owner.kind === ownerKind) &&
+          (!requireVisible ||
+            document.getElementById(`trait-launcher-${semanticAddressKey(candidate.owner)}`) !==
+              null),
+      );
+      if (interaction === undefined) throw new Error(`visible ${kind} trait launcher is missing`);
+      return interaction;
+    };
+
+    const ordinary = visibleLauncher('olympian');
+    await view.user.click(
+      document.getElementById(`trait-launcher-${semanticAddressKey(ordinary.owner)}`)!,
+    );
+    const ordinaryDialog = await screen.findByRole('dialog');
+    expect(within(ordinaryDialog).getByLabelText('option1 rarity')).toBeTruthy();
+    await view.user.click(
+      within(ordinaryDialog).getByRole('button', { name: 'Close trait offer' }),
+    );
+
+    const roomHammer = visibleLauncher('hammer', 'incomingReward', false);
+    application.store.dispatch(
+      routePanelSelected({
+        routeKey: roomHammer.owner.routeKey,
+        panel: { kind: 'biome', biomeKey: roomHammer.owner.biomeKey },
+      }),
+    );
+    application.store.dispatch(semanticOwnerFocused(roomHammer.owner));
+    await waitFor(() =>
+      expect(
+        document.getElementById(`trait-launcher-${semanticAddressKey(roomHammer.owner)}`),
+      ).not.toBeNull(),
+    );
+    await view.user.click(
+      document.getElementById(`trait-launcher-${semanticAddressKey(roomHammer.owner)}`)!,
+    );
+    const roomHammerDialog = await screen.findByRole('dialog');
+    expect(within(roomHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
+    expect(within(roomHammerDialog).queryByText('Rarity', { selector: 'span' })).toBeNull();
+    await view.user.click(
+      within(roomHammerDialog).getByRole('button', { name: 'Close trait offer' }),
+    );
+
+    const shopHammer = visibleLauncher('hammer', 'shopOffer', false);
+    application.store.dispatch(
+      routePanelSelected({
+        routeKey: shopHammer.owner.routeKey,
+        panel: { kind: 'biome', biomeKey: shopHammer.owner.biomeKey },
+      }),
+    );
+    application.store.dispatch(semanticOwnerFocused(shopHammer.owner));
+    await waitFor(() =>
+      expect(
+        document.getElementById(`trait-launcher-${semanticAddressKey(shopHammer.owner)}`),
+      ).not.toBeNull(),
+    );
+    await view.user.click(
+      document.getElementById(`trait-launcher-${semanticAddressKey(shopHammer.owner)}`)!,
+    );
+    const shopHammerDialog = await screen.findByRole('dialog');
+    expect(within(shopHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
+  });
+
+  it('edits a reached Hermes offer with the shared rarity-aware editor', async () => {
+    const application = createApplication();
+    let project = createCompleteFGProject({ prebossSource: 'G_Combat14' });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenGOccurrenceId(7, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit3' },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    const interactions = application.selectStructuredWorkspace(
+      application.store.getState(),
+    ).interactions;
+    const hermes = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'hermes',
+    );
+    if (hermes === undefined) throw new Error('reached Hermes trait launcher is missing');
+    application.store.dispatch(
+      routePanelSelected({
+        routeKey: hermes.owner.routeKey,
+        panel: { kind: 'biome', biomeKey: hermes.owner.biomeKey },
+      }),
+    );
+    application.store.dispatch(semanticOwnerFocused(hermes.owner));
+    await waitFor(() =>
+      expect(
+        document.getElementById(`trait-launcher-${semanticAddressKey(hermes.owner)}`),
+      ).not.toBeNull(),
+    );
+    await view.user.click(
+      document.getElementById(`trait-launcher-${semanticAddressKey(hermes.owner)}`)!,
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('option1 rarity')).toBeTruthy();
   });
 
   it('keeps blocked and cross-route biome pages visible and editable', async () => {

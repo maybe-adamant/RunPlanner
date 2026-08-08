@@ -19,6 +19,7 @@ import {
   semanticAddressKey,
   type AuthoredBiomePlan,
   type ProjectDocument,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
@@ -280,6 +281,8 @@ function withoutLeafInteraction(
       return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
     case 'sideRoomGeneration':
       return { ...interactions, sideRoomGenerations: without(interactions.sideRoomGenerations) };
+    case 'traitOffer':
+      return { ...interactions, traitOffers: without(interactions.traitOffers) };
   }
 }
 
@@ -704,6 +707,7 @@ describe('structured workspace overlay contract', () => {
         'shopPurchase',
         'sideRoomEntryOrder',
         'sideRoomGeneration',
+        'traitOffer',
       ].sort(),
     );
 
@@ -719,6 +723,75 @@ describe('structured workspace overlay contract', () => {
         }),
       ).toThrow(/has no exact workspace interaction/);
     }
+  });
+
+  it('closes persisted trait children for every representative reward owner', () => {
+    const ownerKinds = new Set<string>();
+    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+      const projected = projection().project(simulateProjectAssembly(catalog, project));
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+          const workspaceBiome = projected.routes
+            .find((candidate) => candidate.routeKey === route.routeKey)
+            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
+          if (workspaceBiome === undefined)
+            throw new Error(`${plan.biomeKey} workspace is missing`);
+          const observed = observeWorkspaceProducts({
+            focusByOwner: projected.focusByOwner,
+            interactions: projected.interactions,
+            nodes: workspaceBiome.nodes,
+          });
+          for (const requirement of expectedWorkspaceLeafRequirements(catalog, biome, plan).filter(
+            (candidate) => candidate.address.kind === 'traitOffer',
+          )) {
+            const traitAddress = requirement.address as TraitOfferAddress;
+            ownerKinds.add(traitAddress.owner.kind);
+            assertExpectedWorkspaceLeafClosure({ expected: [requirement], observed });
+
+            const missingMarker = new Map(observed.markersByOwner);
+            missingMarker.delete(semanticAddressKey(traitAddress));
+            expect(() =>
+              assertExpectedWorkspaceLeafClosure({
+                expected: [requirement],
+                observed: { ...observed, markersByOwner: missingMarker },
+              }),
+            ).toThrow(/required authored leaf has no workspace marker/);
+
+            const missingDestination = new Map(observed.focusByOwner);
+            missingDestination.delete(semanticAddressKey(traitAddress));
+            expect(() =>
+              assertExpectedWorkspaceLeafClosure({
+                expected: [requirement],
+                observed: { ...observed, focusByOwner: missingDestination },
+              }),
+            ).toThrow(/destination is missing|has no workspace destination/);
+
+            const missingTraitInteraction = new Map(observed.interactions.traitOffers);
+            const traitInteraction = missingTraitInteraction.get(semanticAddressKey(traitAddress));
+            if (traitInteraction === undefined) {
+              throw new Error('expected trait interaction is missing from the observed workspace');
+            }
+            missingTraitInteraction.delete(traitInteraction.key);
+            expect(() =>
+              assertExpectedWorkspaceLeafClosure({
+                expected: [requirement],
+                observed: {
+                  ...observed,
+                  interactions: {
+                    ...observed.interactions,
+                    traitOffers: missingTraitInteraction,
+                  },
+                },
+              }),
+            ).toThrow(/authored trait offer leaf .* has no exact workspace interaction/);
+          }
+        }
+      }
+    }
+    expect([...ownerKinds].sort()).toEqual(
+      ['incomingReward', 'localReward', 'rewardWheelOffer', 'shopOffer'].sort(),
+    );
   });
 
   it('closes exact top-level, local-child, and invalid active multi-choice Ship encounter phase leaves', () => {

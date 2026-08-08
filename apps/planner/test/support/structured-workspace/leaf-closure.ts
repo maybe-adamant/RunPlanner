@@ -40,6 +40,8 @@ function leafInteraction(
       return observed.interactions.sideRoomEntryOrders.get(key);
     case 'sideRoomGeneration':
       return observed.interactions.sideRoomGenerations.get(key);
+    case 'traitOffer':
+      return observed.interactions.traitOffers.get(key);
   }
 }
 
@@ -51,6 +53,8 @@ function leafInteractionLabel(kind: ExpectedWorkspaceLeafInteractionKind): strin
       return 'Shop purchase';
     case 'shipCombatPhaseCount':
       return 'Ship combat-phase count';
+    case 'traitOffer':
+      return 'trait offer';
     default:
       return kind;
   }

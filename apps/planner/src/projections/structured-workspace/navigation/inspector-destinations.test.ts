@@ -95,6 +95,56 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
 }
 
 describe('workspace inspector destinations', () => {
+  it('routes nested trait owners to their containing Fields, Ephyra, Ship, and Shop workbenches', () => {
+    for (const document of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+      const workspace = project(document);
+      for (const route of workspace.routes) {
+        for (const projectedBiome of route.biomes) {
+          for (const node of projectedBiome.nodes) {
+            if (node.kind === 'occurrenceWorkbench') {
+              for (const marker of node.room.localDetailMarkers) {
+                if (marker.address.kind !== 'traitOffer') continue;
+                expect(destination(workspace, marker.address)).toMatchObject({
+                  ownerAddress: marker.address,
+                  inspectorSubject: { kind: 'node' },
+                });
+                expect(destination(workspace, marker.address).selectedRailKey).toBeDefined();
+              }
+              continue;
+            }
+            if (
+              node.kind !== 'ordinaryBatch' &&
+              node.kind !== 'mixedBatch' &&
+              node.kind !== 'takeoverBatch'
+            ) {
+              continue;
+            }
+            for (const target of node.targets) {
+              for (const marker of target.room.localDetailMarkers) {
+                if (marker.address.kind !== 'traitOffer') continue;
+                expect(destination(workspace, marker.address)).toMatchObject({
+                  ownerAddress: marker.address,
+                  inspectorSubject: { kind: 'node' },
+                });
+                expect(destination(workspace, marker.address).selectedRailKey).toBeDefined();
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('publishes distinct Chosen God and Spurned God role labels for Devotion traits', () => {
+    const workspace = project(createRepresentativeNOPQProject());
+    const labels = new Set(
+      [...workspace.interactions.traitOffers.values()].map(
+        (interaction) => interaction.acquisitionRoleLabel,
+      ),
+    );
+    expect([...labels]).toEqual(expect.arrayContaining(['Chosen God', 'Spurned God']));
+  });
+
   it('binds exact frontier and ordinary nested focus while leaving coarse fallback unselected', () => {
     const empty = project(emptyProject('Underworld', 1));
     const emptyF = biome(empty, 'F');
@@ -253,6 +303,17 @@ describe('workspace inspector destinations', () => {
     ).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
       selectedRailKey: hubRail.marker.focusKey,
+    });
+    const hubTrait = hub.slots
+      .flatMap((slot) => slot.room?.rewardControls ?? [])
+      .flatMap((control) => control.traitOffers ?? [])
+      .find((trait) => trait.address.owner.kind === 'incomingReward');
+    if (hubTrait === undefined) throw new Error('Hub main-reward trait marker is missing');
+    expect(destination(complete, hubTrait.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      ownerAddress: hubTrait.address,
+      selectedRailKey: hubRail.marker.focusKey,
+      traitDialogTarget: hubTrait.address,
     });
 
     const sideRoom = createLocalChildAddress(

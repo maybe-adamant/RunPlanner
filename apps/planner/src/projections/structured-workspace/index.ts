@@ -53,6 +53,8 @@ export type {
   WorkspaceRailEntry,
   WorkspaceRailSelectedTarget,
   WorkspaceRewardControl,
+  WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
   WorkspaceRoomSummary,

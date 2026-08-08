@@ -35,46 +35,58 @@ function appendMarker(markers: WorkspaceMarker[], marker: WorkspaceMarker | unde
   if (marker !== undefined) markers.push(marker);
 }
 
+function appendRewardControlMarkers(
+  markers: WorkspaceMarker[],
+  control: WorkspaceRoomSummary['rewardControls'][number],
+): void {
+  appendMarker(markers, control.marker);
+  for (const trait of control.traitOffers ?? []) appendMarker(markers, trait.marker);
+}
+
 function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   const markers: WorkspaceMarker[] = [];
   appendMarker(markers, room.marker);
   for (const phase of room.encounterPhases) appendMarker(markers, phase.marker);
-  for (const control of room.rewardControls) appendMarker(markers, control.marker);
+  for (const control of room.rewardControls) appendRewardControlMarkers(markers, control);
   appendMarker(markers, room.zagreusSpawn?.marker);
   appendMarker(markers, room.naturalChaosSpawn?.marker);
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':
       appendMarker(markers, local.marker);
-      if (local.control !== undefined) appendMarker(markers, local.control.marker);
+      if (local.control !== undefined) appendRewardControlMarkers(markers, local.control);
       break;
     case 'incomingReward':
-      appendMarker(markers, local.control.marker);
+      appendRewardControlMarkers(markers, local.control);
       break;
     case 'ephyra':
-      appendMarker(markers, local.incomingReward.marker);
+      appendRewardControlMarkers(markers, local.incomingReward);
       if (local.sideRooms.kind === 'published') {
         appendMarker(markers, local.sideRooms.group.marker);
         for (const slot of local.sideRooms.group.slots) {
           appendMarker(markers, slot.marker);
           for (const phase of slot.encounterPhases) appendMarker(markers, phase.marker);
-          if (slot.generation === 'generated') appendMarker(markers, slot.rewardControl.marker);
+          if (slot.generation === 'generated') {
+            appendRewardControlMarkers(markers, slot.rewardControl);
+          }
         }
       }
       break;
     case 'fields':
-      for (const cage of local.cages) appendMarker(markers, cage.control.marker);
+      for (const cage of local.cages) appendRewardControlMarkers(markers, cage.control);
       break;
     case 'ship':
       for (const wheel of local.wheels) {
         appendMarker(markers, wheel.marker);
-        for (const offer of wheel.offers) appendMarker(markers, offer.control.marker);
+        for (const offer of wheel.offers) {
+          appendRewardControlMarkers(markers, offer.control);
+        }
       }
       break;
     case 'shop':
       for (const offer of local.offers) {
         appendMarker(markers, offer.purchase.marker);
-        appendMarker(markers, offer.rewardControl.marker);
+        appendRewardControlMarkers(markers, offer.rewardControl);
       }
       break;
     case 'none':
@@ -85,21 +97,30 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   return markers;
 }
 
-/** Hub nodes publish only the declaration-defined main reward for a room. */
-function hubMainRewardMarker(room: WorkspaceRoomSummary): WorkspaceMarker | undefined {
+/** Hub nodes publish only the declaration-defined main reward package for a room. */
+function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':
-      return local.marker;
+      return Object.freeze([
+        local.marker,
+        ...(local.control?.traitOffers ?? []).map((trait) => trait.marker),
+      ]);
     case 'incomingReward':
-      return local.control.marker;
+      return Object.freeze([
+        local.control.marker,
+        ...(local.control.traitOffers ?? []).map((trait) => trait.marker),
+      ]);
     case 'ephyra':
-      return local.incomingReward.marker;
+      return Object.freeze([
+        local.incomingReward.marker,
+        ...(local.incomingReward.traitOffers ?? []).map((trait) => trait.marker),
+      ]);
     case 'none':
     case 'fields':
     case 'ship':
     case 'shop':
-      return undefined;
+      return Object.freeze([]);
     default:
       return unreachable(local);
   }
@@ -135,8 +156,7 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
       for (const slot of node.slots) {
         appendMarker(markers, slot.marker);
         if (slot.room !== undefined) {
-          const rewardMarker = hubMainRewardMarker(slot.room);
-          if (rewardMarker !== undefined) markers.push(rewardMarker);
+          markers.push(...hubMainRewardMarkers(slot.room));
         }
       }
       for (const visit of node.visits) appendMarker(markers, visit.marker);

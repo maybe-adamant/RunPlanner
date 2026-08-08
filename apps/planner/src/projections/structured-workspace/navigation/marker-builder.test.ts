@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createIncomingRewardAddress,
+  createTraitOfferAddress,
   createOccurrenceId,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -47,6 +48,26 @@ describe('structured workspace marker destination builder', () => {
       focusKey: hub.focusKey,
       nodeKey: 'hub-node',
       ownerAddress: reward.address,
+    });
+  });
+
+  it('preserves the transient trait-dialog target when a nested owner redirects to the Hub board', () => {
+    const value = builder();
+    const reward = createIncomingRewardAddress(
+      biome,
+      createOccurrenceId('redirected-trait-reward'),
+    );
+    const trait = value.emitter.marker(createTraitOfferAddress(reward, 'chosenSource'));
+    const hub = value.emitter.marker(biome, 'hub-node');
+
+    value.emitter.redirectTo(trait, hub, 'hub-node');
+
+    expect(value.destinations().get(trait.focusKey)).toMatchObject({
+      focusAddress: hub.address,
+      focusKey: hub.focusKey,
+      nodeKey: 'hub-node',
+      ownerAddress: trait.address,
+      traitDialogTarget: trait.address,
     });
   });
 

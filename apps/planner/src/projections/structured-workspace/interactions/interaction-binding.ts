@@ -5,7 +5,9 @@ import {
   type SemanticAddress,
   type SideRoomGeneration,
   type TargetAddress,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
+import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
@@ -41,6 +43,8 @@ import type {
   WorkspaceInteractionChoice,
   WorkspaceRewardControl,
   WorkspaceRewardInteraction,
+  WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferInteraction,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
@@ -87,6 +91,15 @@ function rewardIntentFor(
   }
 }
 
+function traitOfferIntentFor(
+  owner: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+): ReturnType<WorkspaceTraitOfferInteraction['intentFor']> {
+  return Object.freeze({
+    command: Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value }),
+  });
+}
+
 export interface WorkspaceInteractionBindingInput {
   readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly assembly: ProjectEvaluationAssembly;
@@ -106,6 +119,7 @@ export interface WorkspaceInteractionBindingInput {
     WorkspaceOccurrenceInteractionRequirement
   >;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
@@ -1147,6 +1161,7 @@ export function bindWorkspaceInteractions(
     hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements,
     rewardControls,
+    traitControls,
     roomControls,
     services,
     startInteractionRequirements,
@@ -1471,6 +1486,59 @@ export function bindWorkspaceInteractions(
     );
   }
 
+  const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
+  for (const [key, control] of traitControls ?? []) {
+    const traitChoices = Object.freeze(
+      control.giver.traitKeys.map((traitKey) => {
+        const trait = catalog.traits.byKey[traitKey];
+        if (trait === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} references unknown trait ${traitKey}`,
+          );
+        }
+        return Object.freeze({ label: trait.label, value: trait.key });
+      }),
+    );
+    const load = (value = control.offer) => candidates.traitOffer(control.address, value);
+    traitOffers.set(
+      key,
+      Object.freeze({
+        acquisitionRoleLabel: control.acquisitionRoleLabel,
+        choices: traitChoices,
+        giver: control.giver,
+        intentFor: (value: AuthoredTraitOffer) => traitOfferIntentFor(control.address, value),
+        key,
+        load,
+        owner: control.address,
+        rarityChoicesFor: (traitKey: string) => {
+          const trait = catalog.traits.byKey[traitKey];
+          if (trait?.rarityDomain.kind !== 'ranked') return Object.freeze([]);
+          if (trait.rarityDomain.freshOfferRarities.length === 1) {
+            return trait.rarityDomain.freshOfferRarities;
+          }
+          const rarityPolicy = control.giver.rarityPolicy;
+          if (rarityPolicy.kind !== 'selectable') {
+            return Object.freeze([]);
+          }
+          return Object.freeze(
+            trait.rarityDomain.freshOfferRarities.filter((rarity) =>
+              rarityPolicy.rarities.includes(rarity),
+            ),
+          );
+        },
+        selectedIntent: (selectedOptionKey: AuthoredTraitOffer['selectedOptionKey']) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceTraitSelection' as const,
+              selectedOptionKey,
+              trait: control.address,
+            }),
+          }),
+        value: control.offer,
+      }),
+    );
+  }
+
   return Object.freeze({
     batchRewardStores,
     encounterPhases,
@@ -1483,6 +1551,7 @@ export function bindWorkspaceInteractions(
     hubSlots,
     hubVisitOrders,
     rewards,
+    traitOffers,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,

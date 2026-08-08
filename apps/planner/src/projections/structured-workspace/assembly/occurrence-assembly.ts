@@ -10,13 +10,16 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type EncounterPhaseAddress,
   type LocalChildAddress,
   type RoomOccurrence,
   type SemanticAddress,
+  type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
+import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
 import type {
   Catalog,
   EncounterRewardWheelAttachment,
@@ -47,6 +50,7 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
+  type WorkspaceTraitOfferControl,
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
@@ -112,11 +116,56 @@ export type WorkspaceOccurrenceAssembler = (
   input: WorkspaceOccurrenceAssemblyRequest,
 ) => WorkspaceOccurrenceAssembly;
 
+function traitOfferControls(
+  input: WorkspaceOccurrenceAssemblyInput,
+  owner: RewardCandidateOwner,
+  reward: AuthoredRewardState,
+): readonly WorkspaceTraitOfferControl[] {
+  if (!input.facts.detailsActive) return Object.freeze([]);
+  const controls: WorkspaceTraitOfferControl[] = [];
+  for (const [acquisitionRole, offer] of Object.entries(reward.traitOffersByAcquisitionRole)) {
+    const giverKey = traitGiverForAcquisitionRole(input.catalog, reward.offer, acquisitionRole);
+    if (giverKey === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner.address)} has trait role ${acquisitionRole} without an in-scope giver`,
+      );
+    }
+    if (giverKey !== offer.giverKey) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner.address)} trait role ${acquisitionRole} has giver ${offer.giverKey}, expected ${giverKey}`,
+      );
+    }
+    const giver = input.catalog.traitGivers.byKey[giverKey];
+    if (giver === undefined) continue;
+    const address = createTraitOfferAddress(owner.address, acquisitionRole);
+    const acquisitionRoleLabel =
+      acquisitionRole === 'chosenSource'
+        ? 'Chosen God'
+        : acquisitionRole === 'spurnedSource'
+          ? 'Spurned God'
+          : acquisitionRole
+              .replace(/([a-z])([A-Z])/g, '$1 $2')
+              .replace(/^./, (character) => character.toUpperCase());
+    controls.push(
+      Object.freeze({
+        acquisitionRoleLabel,
+        address,
+        giver,
+        marker: input.markerDestinations.marker(address),
+        offer,
+        rewardOwner: owner.address,
+      }),
+    );
+  }
+  return Object.freeze(controls);
+}
+
 function rewardControl(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
   binding: CountedRewardBinding | undefined,
   offer: ResolvedRewardOffer,
+  authoredReward: AuthoredRewardState,
   explicitRewardTypes: readonly string[] = Object.freeze([offer.rewardType]),
 ): WorkspaceRewardControl {
   return binding === undefined
@@ -125,6 +174,7 @@ function rewardControl(
         marker: input.markerDestinations.marker(owner.address),
         offer,
         owner,
+        traitOffers: traitOfferControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
       })
     : Object.freeze({
@@ -133,6 +183,7 @@ function rewardControl(
         marker: input.markerDestinations.marker(owner.address),
         offer,
         owner: owner as CountedRewardCandidateOwner,
+        traitOffers: traitOfferControls(input, owner, authoredReward),
       });
 }
 
@@ -179,6 +230,7 @@ function controlsForOccurrence(
         { kind: 'incomingReward', address: incoming },
         incomingRewardBinding(room, state),
         state.reward.offer,
+        state.reward,
       ),
     );
   };
@@ -224,6 +276,7 @@ function controlsForOccurrence(
             { kind: 'localReward', address },
             sideRoom.incomingReward,
             side.reward.offer,
+            side.reward,
           ),
         );
       }
@@ -240,7 +293,7 @@ function controlsForOccurrence(
           slotKey,
         );
         controls.push(
-          rewardControl(input, { kind: 'localReward', address }, group.reward, offer.offer),
+          rewardControl(input, { kind: 'localReward', address }, group.reward, offer.offer, offer),
         );
       }
       break;
@@ -269,6 +322,7 @@ function controlsForOccurrence(
               { kind: 'rewardWheelOffer', address },
               declaration.reward,
               offer.offer,
+              offer,
             ),
           );
         }
@@ -301,6 +355,7 @@ function controlsForOccurrence(
             { kind: 'shopOffer', address },
             undefined,
             shopOffer.reward.offer,
+            shopOffer.reward,
             group.rewardTypes,
           ),
         );
@@ -317,6 +372,7 @@ function controlsForOccurrence(
             { kind: 'incomingReward', address: incoming },
             undefined,
             offer,
+            occurrence.state.reward,
             Object.freeze([offer.rewardType]),
           ),
         );

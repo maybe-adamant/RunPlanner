@@ -1,5 +1,6 @@
 import {
   createRouteAddress,
+  semanticAddressKey,
   type EncounterPhaseAddress,
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
@@ -48,6 +49,9 @@ import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { RouteNpcIndex } from './RouteNpcIndex';
+import { RouteTraitsPanel } from './RouteTraitsPanel';
+import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
+import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
 
 interface AppProps {
   readonly catalog: Catalog;
@@ -66,14 +70,18 @@ function presentBiomeList(labels: readonly string[]): string {
 }
 
 function RouteOverview({
+  catalog,
   label,
   navigation,
   feedback,
+  project,
   workspaceRoute,
 }: {
+  readonly catalog: Catalog;
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
+  readonly project: RootState['projectWorkspace']['history']['present'];
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
@@ -88,6 +96,11 @@ function RouteOverview({
     configuredBiomeLabels.length === 0
       ? 'No biomes configured.'
       : `Configuring ${presentBiomeList(configuredBiomeLabels)}.`;
+  const authoredRoute = project.routes.find((route) => route.routeKey === workspaceRoute.routeKey);
+  if (authoredRoute === undefined)
+    throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
+  const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];
+  if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -128,6 +141,60 @@ function RouteOverview({
         </select>
       </label>
       <p className="panel-description">{routeDescription}</p>
+      <div className="route-loadout-controls">
+        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
+          <span>Weapon</span>
+          <select
+            id={`${workspaceRoute.routeKey}-weapon`}
+            onChange={(event) => {
+              const next = catalog.weapons.byKey[event.target.value];
+              if (next === undefined) return;
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceRouteLoadout',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  weaponKey: next.key,
+                  aspectKey: next.defaultAspectKey,
+                }),
+              );
+            }}
+            value={weapon.key}
+          >
+            {catalog.weapons.values.map((candidate) => (
+              <option key={candidate.key} value={candidate.key}>
+                {candidate.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-aspect`}>
+          <span>Aspect</span>
+          <select
+            id={`${workspaceRoute.routeKey}-aspect`}
+            onChange={(event) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceRouteLoadout',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  weaponKey: weapon.key,
+                  aspectKey: event.target.value,
+                }),
+              )
+            }
+            value={authoredRoute.loadout.aspectKey}
+          >
+            {weapon.aspectKeys.map((aspectKey) => {
+              const aspect = catalog.aspects.byKey[aspectKey];
+              if (aspect === undefined) return null;
+              return (
+                <option key={aspect.key} value={aspect.key}>
+                  {aspect.label}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      </div>
     </section>
   );
 }
@@ -137,6 +204,7 @@ function RouteWorkspace({
   navigation,
   feedback,
   interactions,
+  project,
   projectEvaluation,
   workspace,
   workspaceRoute,
@@ -145,6 +213,7 @@ function RouteWorkspace({
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly project: RootState['projectWorkspace']['history']['present'];
   readonly projectEvaluation: ProjectEvaluation;
   readonly workspace: StructuredWorkspaceProjection;
   readonly workspaceRoute: WorkspaceRoute;
@@ -180,6 +249,13 @@ function RouteWorkspace({
       ? undefined
       : presentBiomeFeedbackContext(catalog, activeBiomeFeedback);
   const npcIndex = projectRouteNpcIndex(catalog, routeEvaluation, workspace.focusByOwner);
+  const traitRows = projectRouteTraitOffers(
+    catalog,
+    project,
+    projectEvaluation,
+    workspaceRoute.routeKey,
+    interactions,
+  );
   const contentLayout =
     activePanel.kind === 'biome' && activeBiomeProjection === undefined
       ? 'overview'
@@ -248,6 +324,22 @@ function RouteWorkspace({
             type="button"
           >
             NPCs
+          </button>
+          <button
+            aria-current={activePanel.kind === 'traits' ? 'page' : undefined}
+            className="panel-navigation-item"
+            data-active={activePanel.kind === 'traits'}
+            onClick={() =>
+              dispatch(
+                routePanelSelected({
+                  routeKey: workspaceRoute.routeKey,
+                  panel: { kind: 'traits' },
+                }),
+              )
+            }
+            type="button"
+          >
+            Traits
           </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
@@ -321,18 +413,24 @@ function RouteWorkspace({
           )}
           {activePanel.kind === 'overview' ? (
             <RouteOverview
+              catalog={catalog}
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
+              project={project}
               workspaceRoute={workspaceRoute}
             />
           ) : activePanel.kind === 'npcIndex' ? (
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
+          ) : activePanel.kind === 'traits' ? (
+            <RouteTraitsPanel interactions={interactions} rows={traitRows} />
           ) : activeBiomeProjection === undefined ? (
             <RouteOverview
+              catalog={catalog}
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
+              project={project}
               workspaceRoute={workspaceRoute}
             />
           ) : (
@@ -359,6 +457,9 @@ export function App({
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
+  const traitDialogTarget = useAppSelector(
+    (state) => state.editorSession.traitDialogTarget ?? null,
+  );
   const dispatch = useAppDispatch();
   const feedback = projectFeedbackHierarchy(evaluation);
   const activeRouteNavigation =
@@ -445,6 +546,7 @@ export function App({
             feedback={activeRouteFeedback}
             interactions={workspace.interactions}
             navigation={activeRouteNavigation}
+            project={project}
             projectEvaluation={evaluation}
             workspace={workspace}
             workspaceRoute={activeWorkspaceRoute}
@@ -474,6 +576,14 @@ export function App({
             </div>
           </dl>
         </section>
+      )}
+
+      {traitDialogTarget === null ? null : (
+        <TraitOfferDialog
+          interactions={workspace.interactions}
+          key={semanticAddressKey(traitDialogTarget)}
+          target={traitDialogTarget}
+        />
       )}
     </main>
   );

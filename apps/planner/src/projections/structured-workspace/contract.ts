@@ -1,5 +1,6 @@
 import {
   semanticAddressKey,
+  type AuthoredTraitOffer,
   type AuthoredBatchState,
   type AdditionalExitAddress,
   type BiomeAddress,
@@ -21,8 +22,14 @@ import {
   type SideRoomGeneration,
   type ShopPurchaseAddress,
   type TargetAddress,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
-import type { CompletionRoomDescriptor, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  CompletionRoomDescriptor,
+  RoomDeclaration,
+  TraitGiverDeclaration,
+  TraitRarity,
+} from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
@@ -69,6 +76,8 @@ export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;
   readonly focusAddress: SemanticAddress;
   readonly focusKey: string;
+  /** Present for trait owners that must open the transient shared dialog. */
+  readonly traitDialogTarget?: TraitOfferAddress;
   /**
    * Final presentation binding for an exact semantic owner. Omitted only when
    * the owning workspace has no renderable inspector subject.
@@ -145,6 +154,36 @@ export interface WorkspaceRewardInteraction {
   ) => ContextualPickerModel<ResolvedRewardOffer>;
   readonly selected: ResolvedRewardOffer;
   readonly summary: (offer: ResolvedRewardOffer) => string;
+}
+
+/** One exact authored trait child beneath a reward owner. */
+export interface WorkspaceTraitOfferControl {
+  /** Player-facing acquisition role (for example, Chosen God or Spurned God). */
+  readonly acquisitionRoleLabel: string;
+  readonly address: TraitOfferAddress;
+  readonly giver: TraitGiverDeclaration;
+  readonly marker: WorkspaceMarker;
+  readonly offer: AuthoredTraitOffer;
+  readonly rewardOwner: RewardCandidateOwner['address'];
+}
+
+export interface WorkspaceTraitOfferInteraction {
+  readonly acquisitionRoleLabel: string;
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly giver: TraitGiverDeclaration;
+  readonly intentFor: (
+    value: AuthoredTraitOffer,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  readonly key: string;
+  readonly load: (
+    value?: AuthoredTraitOffer,
+  ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
+  readonly owner: TraitOfferAddress;
+  readonly rarityChoicesFor: (traitKey: string) => readonly TraitRarity[];
+  readonly selectedIntent: (
+    selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;
+  readonly value: AuthoredTraitOffer;
 }
 
 interface WorkspaceRoomInteractionBase {
@@ -379,6 +418,7 @@ export interface WorkspaceInteractionCatalog {
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
+  readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -524,6 +564,7 @@ interface WorkspaceRewardControlBase {
   readonly marker: WorkspaceMarker;
   readonly offer: ResolvedRewardOffer;
   readonly owner: RewardCandidateOwner;
+  readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
