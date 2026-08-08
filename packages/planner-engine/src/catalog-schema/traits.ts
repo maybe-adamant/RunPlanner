@@ -21,6 +21,16 @@ export type TraitRarityDomain =
 
 export type TraitElement = 'Aether' | 'Earth' | 'Air' | 'Fire' | 'Water';
 
+/**
+ * One declaration-owned, scalable god-trait rarity floor.  This intentionally
+ * remains a closed product rather than a general trait-effect language.
+ */
+export interface ScalableGodTraitRarityFloorEffect {
+  readonly activationElementMinimums: Readonly<Partial<Record<TraitElement, number>>>;
+  readonly fromRarity: 'Common';
+  readonly minimumRarity: 'Rare';
+}
+
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
 export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons';
@@ -94,6 +104,7 @@ export interface TraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
+  readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: HammerCompatibility;
 }

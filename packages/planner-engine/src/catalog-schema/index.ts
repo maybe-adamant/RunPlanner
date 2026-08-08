@@ -23,6 +23,7 @@ export type {
   TraitProviderKind,
   TraitRarity,
   TraitRequirementExpression,
+  ScalableGodTraitRarityFloorEffect,
   WeaponDeclaration,
 } from './traits';
 import type {

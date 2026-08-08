@@ -248,6 +248,16 @@ export const heraTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    rarityFloorEffect: {
+      activationElementMinimums: {
+        Fire: 2,
+        Earth: 2,
+        Air: 2,
+        Water: 2,
+      },
+      fromRarity: 'Common',
+      minimumRarity: 'Rare',
+    },
   },
   {
     key: 'AllElementalBoon',
