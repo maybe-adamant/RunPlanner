@@ -1,5 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createShopOfferAddress,
+  createShopPurchaseAddress,
   createBiomeAddress,
   createOccurrenceId,
   semanticAddressKey,
@@ -18,6 +20,12 @@ import {
   processShopInventory,
   processShopPurchases,
 } from '../../src/simulation/rewards/processing';
+import { simulateProject } from '../../src/simulation';
+import {
+  createRepresentativeNOPQShopTraitProject,
+  pBiome,
+  pOccurrenceIds,
+} from '@run-planner/test-fixtures';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const shopId = createOccurrenceId('stale-purchased-hammer-shop');
@@ -54,6 +62,61 @@ function baseFacts(): RewardKernelFacts {
 }
 
 describe('Shop trait acquisition processing', () => {
+  it('folds a purchased P Shop Hammer at its exact shop owner and purchase lifecycle', () => {
+    const project = createRepresentativeNOPQShopTraitProject();
+    const evaluation = simulateProject(catalog, project);
+    expect(evaluation.status).toBe('valid');
+    const surface = evaluation.routes.find((route) => route.routeKey === 'Surface');
+    const pEvaluation = surface?.biomes.find((biome) => biome.biomeKey === 'P');
+    if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
+      throw new Error('complete Surface fixture did not evaluate P rewards');
+    }
+    const branch = pEvaluation.rewards.branches[0];
+    if (branch === undefined) throw new Error('complete Surface fixture has no P reward branch');
+
+    const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
+    const trace = branch.traitEvaluations?.find(
+      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(shopOffer),
+    );
+    if (trace === undefined) throw new Error('purchased Shop Hammer trace is missing');
+    expect(trace.address).toEqual(shopOffer);
+    expect(trace.acquisitionRole).toBe('weaponUpgrade');
+
+    const event = branch.traitHistory?.events.find(
+      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
+    );
+    if (event === undefined) throw new Error('purchased Shop Hammer fold event is missing');
+    expect(event).toMatchObject({
+      owner: shopOffer,
+      acquisitionRole: 'weaponUpgrade',
+      acquisitionPoint: 'purchase',
+    });
+    const selected =
+      event.options[
+        event.selectedOptionKey === 'option1' ? 0 : event.selectedOptionKey === 'option2' ? 1 : 2
+      ];
+    if (selected === undefined) throw new Error('purchased Shop Hammer selection is missing');
+    expect(branch.traitHistory?.equippedTraits[selected.traitKey]).toMatchObject({
+      traitKey: selected.traitKey,
+      sourceRole: 'weaponUpgrade',
+    });
+
+    const shopPurchase = createShopPurchaseAddress(
+      pBiome,
+      pOccurrenceIds.prebossShop,
+      'MajorNonBoon',
+    );
+    const purchase = branch.events.find(
+      (candidate) =>
+        candidate.kind === 'concreteAcquisition' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(shopPurchase),
+    );
+    expect(purchase).toBeDefined();
+    if (purchase?.kind === 'concreteAcquisition') {
+      expect(purchase.acquisition.lifecyclePoint).toBe('purchase');
+    }
+  });
+
   it('reports and withholds a persisted Hammer choice made stale by a loadout change', () => {
     const room = catalog.rooms.byKey.F_Shop01;
     if (room === undefined) throw new Error('missing F Shop declaration');

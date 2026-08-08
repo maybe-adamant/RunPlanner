@@ -600,6 +600,26 @@ or move presentation policy into generic wrappers.
 
 ## Acceptance
 
+### Trait Offer Closure
+
+Each active trait-bearing acquisition role is an expected workspace leaf with
+one `TraitOfferAddress`, one containing inspector, one bound interaction, and
+one exact finding destination. The occurrence assembler derives these leaves
+from normalized acquisition roles; it does not switch on Hammer names or
+reconstruct lifecycle order. Room, local, wheel, Devotion, and Shop
+projections all reuse the same interaction package. A materialized Shop
+publishes the same authored trait controls for purchased and unpurchased
+offers; an unpurchased control is authoring surface only and has no reached
+acquisition, trait event, or equipped-state fold until its purchase role is
+selected.
+
+The shared trait editor is a projection over the engine's three-option
+assessment. It dispatches complete semantic replacements and selected-option
+commands; it never evaluates prerequisites, slots, rarity counts, element
+thresholds, loadout compatibility, or chronology. The route Traits panel is a
+second reference to those controls, not a persisted route-wide model. Dialog
+target and focus restoration remain transient editor-session state.
+
 The structured workspace is complete when:
 
 - ordinary-decision biomes show one labeled rail stop per decision, active

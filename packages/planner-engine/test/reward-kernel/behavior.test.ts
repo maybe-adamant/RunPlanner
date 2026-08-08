@@ -78,7 +78,9 @@ function facts(
 
 function historyFromSources(sources: readonly string[]): RewardHistoryState {
   const counts = Object.freeze(Object.fromEntries(sources.map((source) => [source, 1])));
+  const baseline = createRewardHistoryState();
   return Object.freeze({
+    ...baseline,
     offerHistory: [],
     useRecord: counts,
     biomeUseRecord: counts,
@@ -86,7 +88,6 @@ function historyFromSources(sources: readonly string[]): RewardHistoryState {
     lootTypeHistory: counts,
     lootBiomeRecord: counts,
     consumableRecord: {},
-    upgradableTraitCount: sources.length,
   });
 }
 
@@ -444,7 +445,7 @@ describe('offer and acquisition projections', () => {
     history = applyConcreteAcquisition(rewardKernelCatalog, history, chosen.acquisition);
     history = applyConcreteAcquisition(rewardKernelCatalog, history, spurned.acquisition);
     expect(history.lootTypeHistory).toEqual({ ApolloUpgrade: 1, ZeusUpgrade: 1 });
-    expect(history.upgradableTraitCount).toBe(0);
+    expect(history.traitFacts.upgradableTraitCount).toBe(0);
   });
 
   it('feeds Devotion offer spacing back into RunDepthCache requirements', () => {
@@ -505,10 +506,10 @@ describe('offer and acquisition projections', () => {
     expect(nextBiome.lootBiomeRecord).toEqual({});
     expect(nextBiome.useRecord).toEqual({ ApolloUpgrade: 1 });
     expect(nextBiome.lootTypeHistory).toEqual({ ApolloUpgrade: 1 });
-    expect(nextBiome.upgradableTraitCount).toBe(0);
+    expect(nextBiome.traitFacts.upgradableTraitCount).toBe(0);
   });
 
-  it('makes the trait-free reward baseline explicit', () => {
+  it('keeps the reward-history trait fold neutral without trait acquisitions', () => {
     const baseline = facts();
     expect(baseline.requirements.counters.upgradableTraitCount).toBe(0);
     expect(baseline.requirements.flags).toEqual({

@@ -153,6 +153,17 @@ inventing an extra encounter that the app did not simulate.
 
 ## Readiness Gate for Protocol Work
 
+### Trait-state boundary
+
+The app's canonical execution facts include concrete selected trait events
+only after the trait-offer slice is validated. An eventual execution plan may
+carry stable reward-owner/acquisition-role addresses, selected trait keys,
+ranked rarity, and no-rarity Hammer selections as data. It must not export
+trait predicates, callbacks, UI labels, or a second equipped-state simulator.
+The game adapter may compare observed acquisitions against those selected
+facts and report semantic mismatches; it does not derive giver pools,
+prerequisites, loadout compatibility, or trait chronology.
+
 Do not design the concrete execution schema until:
 
 - F and G authored projects round-trip through project persistence;

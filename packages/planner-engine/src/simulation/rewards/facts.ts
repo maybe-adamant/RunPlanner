@@ -121,7 +121,9 @@ export function createRewardFacts({
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: enteredBiomeCount,
-      upgradableTraitCount: history.upgradableTraitCount,
+      // The trait ledger owns this derived count.  Reward history remains the
+      // consumer of that immutable fold and never re-counts loot sources.
+      upgradableTraitCount: history.traitFacts.upgradableTraitCount,
     }),
     records: Object.freeze({
       biomeUseRecord: history.biomeUseRecord,

@@ -468,6 +468,23 @@ horizons, and cache behavior without changing evaluation semantics.
 
 ## Delivery Boundary
 
+### Trait offer candidate boundary
+
+Trait-offer candidates use the same project-bound session as reward and Shop
+interactions. A query names one exact `TraitOfferAddress` and receives the
+matching reached pre-acquisition trait state, route loadout, resolved giver
+context, and complete authored offer. The engine assesses all three options
+against that one snapshot and returns applicable fresh rarities for ranked
+providers; Hammer options have no rarity domain. Provider membership and
+trait-local rarity shape remain structural command/codec checks.
+
+The returned findings cover prerequisite, negative predicate, context,
+element, rarity-count, rarifiable/superchargeable target, occupied-slot,
+wrong-loadout, and acquired-Hammer exclusion rules. Candidate evaluation does
+not equip a sibling option, rewrite trait history, or persist counters. React
+receives only the bound interaction projection and cannot recreate this
+policy.
+
 The candidate refactor is complete. `../progress/IMPLEMENTATION_PLAN.md`
 preserves its numbered delivery slices and acceptance gates;
 `../progress/IMPLEMENTATION_PROGRESS.md` records their completion evidence.

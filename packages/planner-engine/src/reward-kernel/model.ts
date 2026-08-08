@@ -175,11 +175,8 @@ export interface RewardHistoryState {
   readonly lootTypeHistory: Readonly<Record<string, number>>;
   readonly lootBiomeRecord: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
-  readonly upgradableTraitCount: number;
-  /** Canonical equipped trait keys used to derive upgradeability. */
-  readonly equippedTraitKeys?: Readonly<Record<string, number>>;
-  /** Derived by the planner-engine trait ledger; never incremented by loot projection. */
-  readonly traitFacts?: TraitDerivedFacts;
+  /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */
+  readonly traitFacts: TraitDerivedFacts;
   readonly lastDevotionDepth?: number;
 }
 

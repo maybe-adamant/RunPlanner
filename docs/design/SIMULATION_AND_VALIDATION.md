@@ -1218,17 +1218,29 @@ reward records that the game resets per biome (`BiomeUseRecord`,
 only G-local entered-store history even though the canonical history retains
 the validated F prefix.
 
-The canonical model increments `upgradableTraitCount` once for every acquired
-ordinary Boon. Exact boon selection, replacement, and upgradeable trait
-inventory are not yet project inputs, and deferred NPC gifts do not modify the
-counter. This approximation is fixture-backed and must be replaced rather than
-layered over when concrete trait state becomes modeled.
+Trait-bearing acquisition roles now fold an explicit equipped-trait ledger
+beside the existing loot/use history. Each reached offer records its semantic
+owner, provider, options, selected option, acquisition point, and pre-offer
+state. All three alternatives must be legal against the same state; an invalid
+reached offer remains repairable in the trace but emits no equipped event.
+Only the selected option of a valid role folds, immediately after that role's
+exact loot/use projection. The ledger carries concrete ranked rarity (including
+equipped `Heroic`) and no rarity for Hammers, then derives ordinary slot
+occupancy, element totals, highest base-element count, god-boon rarity counts,
+and `upgradableTraitCount`.
 
-The trait-free witness also holds `allSpellInvested = false`; Talent remains
-possible after Spell subject to its other exact requirements. The canonical
-trace never uses Surface Shop delivery, so `pendingSpellDrop = false` is exact
-for the current scope. Concrete Hex investment and delivery features must
-replace those facts if activated.
+`upgradableTraitCount` is no longer an ordinary-source increment and is never
+used as a shadow eligibility model. Boon Growth and Boon Decay evaluate their
+distinct next-rarity predicates from the same equipped ledger. Route evaluation
+seeds the branch's trait ledger across every validated biome and resets only
+the reward records declared as biome-local; dormant/unpicked/unpurchased
+offers do not enter it. NPC/Story effect-backed choices, stacks, rarity
+mutation, and other deferred providers remain outside this persistent slice.
+
+The current canonical trace still keeps `allSpellInvested = false` and
+`pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop
+delivery boundaries. Trait state does not infer either flag; concrete Hex,
+Talent, and delivery features must replace those facts if activated.
 
 N's local conformance probe captured the availability rank for every
 multi-side-door map, so forced-prefix validation can consume exact declaration

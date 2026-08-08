@@ -12,6 +12,7 @@ import {
   createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createProjectDocument,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
@@ -76,6 +77,7 @@ const representativeNCache = new Map<string, ProjectDocument>();
 let representativeNOCache: ProjectDocument | undefined;
 let representativeNOPCache: ProjectDocument | undefined;
 let representativeNOPQCache: ProjectDocument | undefined;
+let representativeNOPQShopTraitCache: ProjectDocument | undefined;
 
 export const nOpenSlotKeys = [
   'combat11',
@@ -550,4 +552,22 @@ export function createRepresentativeNOPQProject(): ProjectDocument {
     appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(4)))),
   );
   return representativeNOPQCache;
+}
+
+/** Complete Surface route with a purchased, in-scope P Shop Hammer. */
+export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
+  if (representativeNOPQShopTraitCache !== undefined) return representativeNOPQShopTraitCache;
+  let project = createRepresentativeNOPQProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
+    value: { rewardType: 'WeaponUpgradeDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopPurchaseOrder',
+    shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+    offerKeys: ['MajorNonBoon'],
+  });
+  representativeNOPQShopTraitCache = authorLegalTraitOffers(project);
+  return representativeNOPQShopTraitCache;
 }

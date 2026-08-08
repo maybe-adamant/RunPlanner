@@ -94,6 +94,8 @@ function requirementContext(
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: enteredBiomeCount(catalog, room),
+      // Encounter declarations do not consume reward-owned trait facts; keep
+      // this required context axis neutral rather than inventing a ledger.
       upgradableTraitCount: 0,
     }),
     records: Object.freeze({
