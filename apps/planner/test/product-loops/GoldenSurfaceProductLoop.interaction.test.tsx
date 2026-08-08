@@ -662,7 +662,9 @@ describe('surface product loop', () => {
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
-    expect(screen.getByText(new RegExp(`Replaces ${transition.replacedTraitKey}`))).toBeTruthy();
+    const replacedTraitLabel = application.catalog.traits.byKey[transition.replacedTraitKey]?.label;
+    if (replacedTraitLabel === undefined) throw new Error('replacement trait label is missing');
+    expect(screen.getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
     const launcher = document.getElementById(
       `trait-launcher-${semanticAddressKey(createTraitOfferAddress(target.address, target.trace.acquisitionRole))}`,
     );
@@ -671,9 +673,7 @@ describe('surface product loop', () => {
     }
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
-    expect(
-      within(dialog).getByText(new RegExp(`Replaces ${transition.replacedTraitKey}`)),
-    ).toBeTruthy();
+    expect(within(dialog).getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
     application.dispose();
   });
 

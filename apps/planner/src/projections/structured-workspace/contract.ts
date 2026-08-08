@@ -181,6 +181,8 @@ export interface WorkspaceTraitOfferInteraction {
     value?: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
+  /** Application-owned labels for trait keys carried by engine evidence. */
+  readonly traitLabel: (traitKey: string) => string;
   readonly rarityChoicesFor: (traitKey: string, optionIndex?: number) => readonly TraitRarity[];
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],

@@ -110,7 +110,7 @@ export function TraitOfferEditor({
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
-  const feedback = projectTraitOfferFeedback(value, candidate);
+  const feedback = projectTraitOfferFeedback(value, candidate, interaction.traitLabel);
   const authoritativeInteractionRef = useRef(interaction);
   useEffect(() => {
     if (authoritativeInteractionRef.current === interaction) return;
@@ -225,7 +225,7 @@ export function TraitOfferEditor({
               )}
               {feedback.options[index]?.replacement === undefined ? null : (
                 <p className="trait-option-replacement" role="status">
-                  Replaces {feedback.options[index]!.replacement!.replacedTraitKey} ·{' '}
+                  Replaces {feedback.options[index]!.replacement!.replacedTraitLabel} ·{' '}
                   {feedback.options[index]!.replacement!.oldRarity} to{' '}
                   {feedback.options[index]!.replacement!.requiredRarity}
                 </p>

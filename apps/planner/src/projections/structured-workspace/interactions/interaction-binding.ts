@@ -1539,6 +1539,7 @@ export function bindWorkspaceInteractions(
         key,
         load,
         owner: control.address,
+        traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         rarityChoicesFor: (traitKey: string, optionIndex?: number) => {
           const trait = catalog.traits.byKey[traitKey];
           if (trait?.rarityDomain.kind !== 'ranked') return Object.freeze([]);

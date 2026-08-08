@@ -47,6 +47,7 @@ export type TraitFindingCode =
   | 'rarifiableTarget'
   | 'superchargeableTarget'
   | 'occupiedBoonSlot'
+  | 'freshRarityUnavailable'
   | 'replacementUnavailable'
   | 'replacementMaximumRarity'
   | 'replacementRarityMismatch'

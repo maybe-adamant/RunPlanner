@@ -37,7 +37,7 @@ export function RouteTraitsPanel({
                   </span>
                   {row.selectedReplacement === undefined ? null : (
                     <span className="route-trait-replacement">
-                      Replaces {row.selectedReplacement.replacedTraitKey} ·{' '}
+                      Replaces {row.selectedReplacement.replacedTraitLabel} ·{' '}
                       {row.selectedReplacement.oldRarity} to{' '}
                       {row.selectedReplacement.requiredRarity}
                     </span>

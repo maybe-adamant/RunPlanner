@@ -25,7 +25,16 @@ export interface TraitOfferOptionFeedback {
   readonly legal: boolean;
   readonly reasons: readonly string[];
   readonly traitKey: string;
-  readonly replacement?: TraitReplacementTransition;
+  readonly replacement?: TraitReplacementPresentation;
+}
+
+/** Presentation-only replacement evidence resolved through the catalog. */
+export interface TraitReplacementPresentation {
+  readonly slot: string;
+  readonly replacedTraitLabel: string;
+  readonly oldRarity: TraitReplacementTransition['oldRarity'];
+  readonly newTraitKey: TraitReplacementTransition['newTraitKey'];
+  readonly requiredRarity: TraitReplacementTransition['requiredRarity'];
 }
 
 export interface TraitOfferFeedback {
@@ -58,6 +67,7 @@ function unavailableMessage(evaluation: CandidateContextUnavailable): string {
 export function projectTraitOfferFeedback(
   offer: AuthoredTraitOffer,
   candidate: CandidateOptionProjection<AuthoredTraitOffer> | undefined,
+  traitLabel: (traitKey: string) => string = (traitKey) => traitKey,
 ): TraitOfferFeedback {
   if (candidate === undefined) {
     return Object.freeze({ options: Object.freeze([]), support: 'unavailable' });
@@ -104,7 +114,17 @@ export function projectTraitOfferFeedback(
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
-          ...(replacement === undefined ? {} : { replacement }),
+          ...(replacement === undefined
+            ? {}
+            : {
+                replacement: Object.freeze({
+                  slot: replacement.slot,
+                  replacedTraitLabel: traitLabel(replacement.replacedTraitKey),
+                  oldRarity: replacement.oldRarity,
+                  newTraitKey: replacement.newTraitKey,
+                  requiredRarity: replacement.requiredRarity,
+                }),
+              }),
         });
       }),
     ),
@@ -119,7 +139,7 @@ export interface RouteTraitOfferProjection {
   readonly locationLabel: string;
   readonly selectedTraitLabel: string;
   readonly rarity?: string;
-  readonly selectedReplacement?: TraitReplacementTransition;
+  readonly selectedReplacement?: TraitReplacementPresentation;
   readonly invalid: boolean;
   readonly findingCount: number;
   readonly interactionKey: string;
@@ -207,6 +227,20 @@ function uniformReplacement(
   )
     ? first
     : undefined;
+}
+
+function presentReplacement(
+  catalog: Catalog,
+  replacement: TraitReplacementTransition,
+): TraitReplacementPresentation {
+  return Object.freeze({
+    slot: replacement.slot,
+    replacedTraitLabel:
+      catalog.traits.byKey[replacement.replacedTraitKey]?.label ?? replacement.replacedTraitKey,
+    oldRarity: replacement.oldRarity,
+    newTraitKey: replacement.newTraitKey,
+    requiredRarity: replacement.requiredRarity,
+  });
 }
 
 /*
@@ -310,7 +344,9 @@ export function projectRouteTraitOffers(
         locationLabel: ownerLocationForAddress(project, trace.address),
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-        ...(selectedReplacement === undefined ? {} : { selectedReplacement }),
+        ...(selectedReplacement === undefined
+          ? {}
+          : { selectedReplacement: presentReplacement(catalog, selectedReplacement) }),
         invalid: evidence.invalid,
         findingCount: evidence.findingCount,
         interactionKey: key,
