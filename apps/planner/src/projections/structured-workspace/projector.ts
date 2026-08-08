@@ -46,6 +46,7 @@ import type {
   WorkspaceBiome,
   WorkspaceInspectorDestination,
   WorkspaceRewardControl,
+  WorkspaceTraitOfferControl,
   WorkspaceRoomPickerControl,
   WorkspaceStatus,
 } from './contract';
@@ -146,6 +147,7 @@ export function createStructuredWorkspaceProjection(
       >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
+      const traitControls = new Map<string, WorkspaceTraitOfferControl>();
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
@@ -187,6 +189,15 @@ export function createStructuredWorkspaceProjection(
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
+          for (const rewardControl of projected.rewardControls.values()) {
+            for (const traitControl of rewardControl.traitOffers ?? []) {
+              const key = semanticAddressKey(traitControl.address);
+              if (traitControls.has(key)) {
+                throw new Error(`${key} has multiple projected trait controls`);
+              }
+              traitControls.set(key, traitControl);
+            }
+          }
           return projected.biome;
         });
         const routeAddress = { kind: 'route' as const, routeKey: routeSource.routeKey };
@@ -241,6 +252,7 @@ export function createStructuredWorkspaceProjection(
         hubTakeoverInteractionRequirements,
         occurrenceInteractionRequirements,
         rewardControls,
+        traitControls,
         roomControls,
         services,
         startInteractionRequirements,

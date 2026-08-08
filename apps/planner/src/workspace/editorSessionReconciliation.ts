@@ -69,13 +69,18 @@ export function deriveEditorSessionReconciliation(
     focusedSemanticOwner !== null &&
     !hasExactDestination(focusByOwner, semanticAddressKey(focusedSemanticOwner));
   const clearSelectedFinding = selectedFinding !== null && !selectedFindingSurvives;
+  const traitDialogTarget = session.traitDialogTarget ?? null;
+  const clearTraitDialogTarget =
+    traitDialogTarget !== null &&
+    !hasExactDestination(focusByOwner, semanticAddressKey(traitDialogTarget));
 
-  if (!clearFocusedSemanticOwner && !clearSelectedFinding) {
+  if (!clearFocusedSemanticOwner && !clearSelectedFinding && !clearTraitDialogTarget) {
     return null;
   }
   return Object.freeze({
     clearFocusedSemanticOwner,
     clearSelectedFinding,
+    ...(traitDialogTarget === null ? {} : { clearTraitDialogTarget }),
   });
 }
 
@@ -92,7 +97,8 @@ export function createEditorSessionReconciliationCoordinator(options: {
 
     if (
       state.editorSession.focusedSemanticOwner === null &&
-      state.editorSession.selectedFinding === null
+      state.editorSession.selectedFinding === null &&
+      (state.editorSession.traitDialogTarget ?? null) === null
     ) {
       return;
     }

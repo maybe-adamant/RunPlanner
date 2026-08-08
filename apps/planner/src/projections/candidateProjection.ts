@@ -28,8 +28,10 @@ import {
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
   type SideRoomGeneration,
+  type TraitOfferAddress,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
+import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
@@ -158,6 +160,10 @@ export interface CandidateProjectionSession {
     shop: OccurrenceAddress,
     values: readonly (readonly string[])[],
   ) => readonly CandidateOptionProjection<readonly string[]>[];
+  readonly traitOffer: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+  ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
 }
 
 export interface CandidateSessionFactory {
@@ -606,6 +612,16 @@ export function createCandidateSessionFactory(
           )}`,
           values,
           values.map((offerKeys) => ({ kind: 'shopPurchaseOrder', shop, offerKeys })),
+          catalog,
+          options,
+        ),
+      traitOffer: (owner: TraitOfferAddress, value: AuthoredTraitOffer) =>
+        projectOptions(
+          cache,
+          assembly,
+          `trait-offer:${semanticAddressKey(owner)}:${JSON.stringify(value)}`,
+          [value],
+          [{ kind: 'traitOffer', trait: owner, value }],
           catalog,
           options,
         ),

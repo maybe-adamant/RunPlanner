@@ -69,7 +69,11 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
   const keys = [
     room.marker.focusKey,
     ...room.encounterPhases.map((phase) => phase.marker.focusKey),
-    ...room.rewardControls.map((control) => control.marker.focusKey),
+    ...room.localDetailMarkers.map((marker) => marker.focusKey),
+    ...room.rewardControls.flatMap((control) => [
+      control.marker.focusKey,
+      ...(control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+    ]),
   ];
   switch (room.roomLocal.kind) {
     case 'none':
@@ -84,6 +88,12 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
           ...sideRooms.group.slots.flatMap((slot) => [
             slot.marker.focusKey,
             ...slot.encounterPhases.map((phase) => phase.marker.focusKey),
+            ...(slot.generation === 'generated'
+              ? [
+                  slot.rewardControl.marker.focusKey,
+                  ...(slot.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+                ]
+              : []),
           ]),
         );
       }
@@ -96,12 +106,21 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
       keys.push(
         ...room.roomLocal.wheels.flatMap((wheel) => [
           wheel.marker.focusKey,
-          ...wheel.offers.map((offer) => offer.control.marker.focusKey),
+          ...wheel.offers.flatMap((offer) => [
+            offer.control.marker.focusKey,
+            ...(offer.control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+          ]),
         ]),
       );
       break;
     case 'shop':
-      keys.push(...room.roomLocal.offers.map((offer) => offer.purchase.marker.focusKey));
+      keys.push(
+        ...room.roomLocal.offers.flatMap((offer) => [
+          offer.purchase.marker.focusKey,
+          offer.rewardControl.marker.focusKey,
+          ...(offer.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+        ]),
+      );
       break;
   }
   return Object.freeze(keys);

@@ -73,6 +73,7 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
             ownerAddress: address,
             region: 'structure',
             routeKey: input.routeKey,
+            ...(address.kind === 'traitOffer' ? { traitDialogTarget: address } : {}),
           }),
         );
       }
@@ -85,10 +86,11 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
       }
     },
     redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void {
-      requireRegistered(marker);
+      const existing = requireRegistered(marker);
       destinations.set(
         marker.focusKey,
         Object.freeze({
+          ...existing,
           biomeKey: input.biome.biomeKey,
           focusAddress: focus.address,
           focusKey: focus.focusKey,

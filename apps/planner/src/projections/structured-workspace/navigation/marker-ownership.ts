@@ -11,6 +11,16 @@ import type {
 export type WorkspaceDecisionBatchNode =
   WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
+function rewardControlMarkers(control: {
+  readonly marker: WorkspaceMarker;
+  readonly traitOffers?: readonly { readonly marker: WorkspaceMarker }[];
+}): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    control.marker,
+    ...(control.traitOffers ?? []).map((trait) => trait.marker),
+  ]);
+}
+
 /** A workbench's room-local surface excludes its incoming offer. */
 export function workspaceLocalDetailMarkers(
   roomLocal: WorkspaceRoomLocal,
@@ -28,21 +38,24 @@ export function workspaceLocalDetailMarkers(
             ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
               slot.marker,
               ...slot.encounterPhases.map((phase) => phase.marker),
-              ...(slot.generation === 'generated' ? [slot.rewardControl.marker] : []),
+              ...(slot.generation === 'generated' ? rewardControlMarkers(slot.rewardControl) : []),
             ]),
           ]);
     case 'fields':
-      return Object.freeze(roomLocal.cages.map((cage) => cage.control.marker));
+      return Object.freeze(roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)));
     case 'ship':
       return Object.freeze(
         roomLocal.wheels.flatMap((wheel) => [
           wheel.marker,
-          ...wheel.offers.map((offer) => offer.control.marker),
+          ...wheel.offers.flatMap((offer) => rewardControlMarkers(offer.control)),
         ]),
       );
     case 'shop':
       return Object.freeze(
-        roomLocal.offers.flatMap((offer) => [offer.purchase.marker, offer.rewardControl.marker]),
+        roomLocal.offers.flatMap((offer) => [
+          offer.purchase.marker,
+          ...rewardControlMarkers(offer.rewardControl),
+        ]),
       );
   }
 }
@@ -57,7 +70,10 @@ export function workspaceOccurrenceOwnedMarkers(
   return Object.freeze([
     room.marker,
     ...room.encounterPhases.map((phase) => phase.marker),
-    ...room.rewardControls.map((control) => control.marker),
+    ...room.rewardControls.flatMap((control) => [
+      control.marker,
+      ...(control.traitOffers ?? []).map((trait) => trait.marker),
+    ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
@@ -95,20 +111,23 @@ export function workspaceDecisionOwnedMarkers(
 }
 
 /** Hub main-offer owners route to the board rather than a nested workbench. */
-export function workspaceHubMainRewardMarker(
+export function workspaceHubMainRewardMarkers(
   room: WorkspaceRoomSummary,
-): WorkspaceMarker | undefined {
+): readonly WorkspaceMarker[] {
   switch (room.roomLocal.kind) {
     case 'fixed':
-      return room.roomLocal.marker;
+      return Object.freeze([
+        room.roomLocal.marker,
+        ...(room.roomLocal.control?.traitOffers ?? []).map((trait) => trait.marker),
+      ]);
     case 'incomingReward':
-      return room.roomLocal.control.marker;
+      return Object.freeze(rewardControlMarkers(room.roomLocal.control));
     case 'ephyra':
-      return room.roomLocal.incomingReward.marker;
+      return Object.freeze(rewardControlMarkers(room.roomLocal.incomingReward));
     case 'none':
     case 'fields':
     case 'ship':
     case 'shop':
-      return undefined;
+      return Object.freeze([]);
   }
 }

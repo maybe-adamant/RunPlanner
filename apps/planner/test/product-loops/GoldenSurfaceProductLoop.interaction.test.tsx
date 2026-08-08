@@ -4,6 +4,7 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
@@ -41,6 +42,7 @@ import {
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
 
 afterEach(() => {
   cleanup();
@@ -506,6 +508,71 @@ describe('surface product loop', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+
+  it('retains and repairs a reached Hammer after a route loadout change', async () => {
+    const application = createApplication();
+    let authored = createRepresentativeNOPQProject();
+    authored = applyProjectCommand(authored, application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(pBiome, {
+        kind: 'occurrence',
+        occurrenceId: pOccurrenceId('P_Combat07', 4, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    authored = applyProjectCommand(authored, application.catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: { kind: 'route', routeKey: 'Surface' },
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerBackstabAspect',
+    });
+    application.store.dispatch(authoredProjectReplaced(authored));
+    const invalid = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (finding) => finding.origin.kind === 'traitOffer',
+      );
+    if (invalid === undefined) throw new Error('reached Hammer finding is missing');
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings)
+      .getAllByRole('button')
+      .find((button) => button.textContent?.includes('Hammer is incompatible'));
+    if (findingButton === undefined) throw new Error('Hammer finding is not presented');
+    await view.user.click(findingButton);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(document.getElementById(semanticOwnerElementId(invalid.origin))).toBeTruthy();
+    expect(
+      within(dialog).getAllByText(/Hammer is incompatible with this loadout/),
+    ).not.toHaveLength(0);
+
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
+    if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
+    const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
+    if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
+    for (const [index, option] of corrected.options.entries()) {
+      await view.user.selectOptions(
+        within(dialog).getByLabelText(`option${index + 1} trait`),
+        option.traitKey,
+      );
+    }
+    const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
+    await waitFor(() => expect(save).toHaveProperty('disabled', false));
+    await view.user.click(save);
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
+        ),
+    ).toBe(false);
   });
 
   it('treats a shared-workspace rail focus as session-only work', async () => {

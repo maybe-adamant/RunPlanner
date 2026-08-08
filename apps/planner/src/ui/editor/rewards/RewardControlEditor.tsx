@@ -6,6 +6,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
+import { TraitOfferLauncher } from './TraitOfferEditor';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -24,21 +25,34 @@ export function RewardControlEditor({
   );
   const onReplace = (value: Parameters<typeof interaction.intentFor>[0]): void =>
     executeIntent(interaction.intentFor(value));
-  return control.kind === 'countedReward' ? (
-    <CountedRewardEditor
-      candidateOwner={control.owner}
-      idPrefix={idPrefix}
-      interactions={interactions}
-      offer={control.offer}
-      onReplace={onReplace}
-    />
-  ) : (
-    <RewardValueEditor
-      candidateOwner={control.owner}
-      idPrefix={idPrefix}
-      interactions={interactions}
-      offer={control.offer}
-      onReplace={onReplace}
-    />
+  return (
+    <>
+      {control.kind === 'countedReward' ? (
+        <CountedRewardEditor
+          candidateOwner={control.owner}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          offer={control.offer}
+          onReplace={onReplace}
+        />
+      ) : (
+        <RewardValueEditor
+          candidateOwner={control.owner}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          offer={control.offer}
+          onReplace={onReplace}
+        />
+      )}
+      <div className="trait-offer-launchers">
+        {(control.traitOffers ?? []).map((trait) => (
+          <TraitOfferLauncher
+            control={trait}
+            interactions={interactions}
+            key={workspaceInteractionKey(trait.address)}
+          />
+        ))}
+      </div>
+    </>
   );
 }

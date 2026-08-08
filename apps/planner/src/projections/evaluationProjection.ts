@@ -14,6 +14,9 @@ export interface FindingPresentation {
   readonly description: string;
 }
 
+/** Candidate-only trait findings reuse the engine's semantic finding codes. */
+export type TraitCandidateFindingCode = FindingCode | 'duplicateOfferedTrait';
+
 export interface StatusPresentation {
   readonly label: string;
   readonly tone: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
@@ -238,6 +241,21 @@ export function indexFindingsByOwner(findings: readonly SemanticFinding[]): Find
 
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
   return findingCopy[finding.code];
+}
+
+/**
+ * Present an engine candidate finding without re-running its eligibility
+ * policy. Candidate findings are not project findings, so they do not have a
+ * SemanticFinding origin to pass through `presentFinding`.
+ */
+export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): FindingPresentation {
+  if (code === 'duplicateOfferedTrait') {
+    return {
+      title: 'Trait is offered more than once',
+      description: 'Each trait offer must contain three distinct alternatives.',
+    };
+  }
+  return findingCopy[code];
 }
 
 export function semanticFindingKey(finding: SemanticFinding): string {

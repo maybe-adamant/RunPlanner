@@ -29,7 +29,7 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from '../interactions/interaction-requirements';
-import { workspaceHubMainRewardMarker } from '../navigation/marker-ownership';
+import { workspaceHubMainRewardMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 
@@ -137,8 +137,8 @@ function projectHubNode(
       });
       workbenches.push(workbench);
       roomsBySlot.set(slot.slotKey, workbench.room);
-      const mainReward = workspaceHubMainRewardMarker(workbench.room);
-      if (mainReward !== undefined) {
+      const mainRewards = workspaceHubMainRewardMarkers(workbench.room);
+      for (const mainReward of mainRewards) {
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
     }

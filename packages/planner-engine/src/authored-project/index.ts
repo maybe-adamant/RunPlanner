@@ -73,6 +73,7 @@ export {
 export {
   TRAIT_OPTION_KEYS,
   optionIndex,
+  traitGiverForAcquisitionRole,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
   type EquippedTrait,

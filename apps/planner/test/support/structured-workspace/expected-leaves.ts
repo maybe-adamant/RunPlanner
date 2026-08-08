@@ -9,12 +9,15 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
+  createTraitOfferAddress,
   type AuthoredBiomePlan,
+  type AuthoredRewardState,
   type BiomeAddress,
   type EncounterPhaseAddress,
   type ExitDecision,
   type OccurrenceId,
   type SemanticAddress,
+  type TraitOfferOwnerAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
@@ -34,7 +37,8 @@ export type ExpectedWorkspaceLeafInteractionKind =
   | 'shipCombatPhaseCount'
   | 'shopPurchase'
   | 'sideRoomEntryOrder'
-  | 'sideRoomGeneration';
+  | 'sideRoomGeneration'
+  | 'traitOffer';
 
 export interface ExpectedWorkspaceLeafInteraction {
   readonly key: string;
@@ -155,8 +159,28 @@ export function expectedWorkspaceLeafRequirements(
       requirement.interactions.set(interaction.kind, interaction);
     }
   };
-  const requireReward = (address: SemanticAddress): void =>
+  const requireReward = (address: TraitOfferOwnerAddress): void =>
     requireLeaf(address, expectedLeafInteraction('reward', workspaceTestOwnerKey(address)));
+  const requireTraitOffers = (
+    address: TraitOfferOwnerAddress,
+    reward: AuthoredRewardState,
+  ): void => {
+    if (!detailsActive.has(address.occurrenceId)) return;
+    for (const acquisitionRole of Object.keys(reward.traitOffersByAcquisitionRole)) {
+      const traitAddress = createTraitOfferAddress(address, acquisitionRole);
+      requireLeaf(
+        traitAddress,
+        expectedLeafInteraction('traitOffer', workspaceTestOwnerKey(traitAddress)),
+      );
+    }
+  };
+  const requireRewardWithTraits = (
+    address: TraitOfferOwnerAddress,
+    reward: AuthoredRewardState,
+  ): void => {
+    requireReward(address);
+    requireTraitOffers(address, reward);
+  };
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
   const detailsActive = expectedWorkspaceDetailsActiveOccurrenceIds(plan);
@@ -169,20 +193,17 @@ export function expectedWorkspaceLeafRequirements(
         break;
       case 'fixed': {
         const rewardType = catalog.rewards.rewardTypes.byKey[resolveExpectedFixedRewardType(room)];
-        requireLeaf(
-          incoming,
-          ...(rewardType?.payloadDomain === undefined
-            ? []
-            : [expectedLeafInteraction('reward', workspaceTestOwnerKey(incoming))]),
-        );
+        if (rewardType?.payloadDomain !== undefined) {
+          requireRewardWithTraits(incoming, occurrence.state.reward);
+        }
         break;
       }
       case 'counted':
       case 'freeReward':
-        requireReward(incoming);
+        requireRewardWithTraits(incoming, occurrence.state.reward);
         break;
       case 'ephyraCombat': {
-        requireReward(incoming);
+        requireRewardWithTraits(incoming, occurrence.state.reward);
         if (!detailsActive.has(occurrence.occurrenceId)) break;
         const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
         if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) break;
@@ -206,8 +227,9 @@ export function expectedWorkspaceLeafRequirements(
             ),
           );
           if (occurrence.state.sideRooms[slot.slotKey]?.generation === 'generated') {
-            requireReward(
+            requireRewardWithTraits(
               createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
+              occurrence.state.sideRooms[slot.slotKey]!.reward,
             );
           }
         }
@@ -219,9 +241,13 @@ export function expectedWorkspaceLeafRequirements(
           throw new Error(`${room.gameName} Fields state has no bounded cage declaration`);
         }
         for (const slotKey of group.slotKeys) {
-          requireReward(
-            createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slotKey),
+          const rewardAddress = createLocalRewardAddress(
+            biome,
+            occurrence.occurrenceId,
+            group.key,
+            slotKey,
           );
+          requireRewardWithTraits(rewardAddress, occurrence.state.cages[slotKey]!);
         }
         break;
       }
@@ -245,8 +271,15 @@ export function expectedWorkspaceLeafRequirements(
             expectedLeafInteraction('rewardWheelPick', wheelKey),
           );
           for (const offerKey of wheel.offerKeys) {
-            requireReward(
-              createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheel.key, offerKey),
+            const offerAddress = createRewardWheelOfferAddress(
+              biome,
+              occurrence.occurrenceId,
+              wheel.key,
+              offerKey,
+            );
+            requireRewardWithTraits(
+              offerAddress,
+              occurrence.state.wheels[wheel.key]!.offers[offerKey]!,
             );
           }
         }
@@ -264,7 +297,7 @@ export function expectedWorkspaceLeafRequirements(
         }
         for (const slot of profile.slots.values) {
           const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
-          requireReward(offer);
+          requireRewardWithTraits(offer, occurrence.state.shop.offers[slot.key]!.reward);
           const purchase = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
           requireLeaf(
             purchase,
