@@ -25,6 +25,7 @@ import {
   traitCandidates,
   type ProjectEvaluation,
   type ReachedTraitOfferEvaluation,
+  type TraitHistoryState,
   type RewardBranch,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
@@ -402,57 +403,84 @@ describe('Proper Upbringing rarity lifecycle', () => {
     ['DemeterManaBoon', 'Demeter'],
   ] as const;
 
-  function twoEachHistory() {
-    return historyFrom(
-      elementPairs.map(([traitKey, giverKey]) => ({
-        giverKey,
-        traitKey,
-        rarity: 'Common' as const,
-      })),
-    );
-  }
-
-  function activeHistory() {
-    const source = historyFrom([
-      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
-    ]).events[0];
-    if (source === undefined) throw new Error('missing Proper Upbringing event');
-    const result = historyFrom([
-      ...twoEachHistory().events.map((event) => ({
-        giverKey: event.giverKey,
-        traitKey: event.options[0]!.traitKey,
-        rarity: event.options[0]!.rarity,
-      })),
-      {
-        giverKey: source.giverKey,
-        traitKey: source.options[0]!.traitKey,
-        rarity: source.options[0]!.rarity,
-      },
-    ]);
-    return result;
-  }
-
-  function eventFor(
-    sequence: number,
+  function acquireLegalTrait(
+    before: TraitHistoryState,
     giverKey: string,
     traitKey: string,
     rarity: TraitOfferEvent['options'][number]['rarity'],
-    replacementTransition?: TraitOfferEvent['replacementTransition'],
-  ): TraitOfferEvent {
-    return {
+  ): TraitHistoryState {
+    const candidates = traitCandidates(catalog, giverKey, before).filter(
+      (candidate) => candidate.available && candidate.traitKey !== traitKey,
+    );
+    const selected = traitCandidates(catalog, giverKey, before).find(
+      (candidate) =>
+        candidate.available && candidate.traitKey === traitKey && candidate.rarity === rarity,
+    );
+    if (selected === undefined) {
+      throw new Error(`Missing legal ${giverKey}/${traitKey}/${rarity ?? 'untyped'} candidate`);
+    }
+    const alternatives = candidates.filter(
+      (candidate, index, all) =>
+        all.findIndex((other) => other.traitKey === candidate.traitKey) === index,
+    );
+    const firstAlternative = alternatives[0];
+    const secondAlternative = alternatives[1];
+    if (firstAlternative === undefined || secondAlternative === undefined) {
+      throw new Error(`Insufficient legal ${giverKey} alternatives`);
+    }
+    const options: AuthoredTraitOffer['options'] = [
+      {
+        traitKey: selected.traitKey,
+        ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
+      },
+      {
+        traitKey: firstAlternative.traitKey,
+        ...(firstAlternative.rarity === undefined ? {} : { rarity: firstAlternative.rarity }),
+      },
+      {
+        traitKey: secondAlternative.traitKey,
+        ...(secondAlternative.rarity === undefined ? {} : { rarity: secondAlternative.rarity }),
+      },
+    ];
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
       owner,
-      acquisitionRole: `proper-${sequence}`,
-      sequence,
-      giverKey,
-      options: [
-        { traitKey, ...(rarity === undefined ? {} : { rarity }) },
-        { traitKey: catalog.traitGivers.byKey[giverKey]!.traitKeys[1]! },
-        { traitKey: catalog.traitGivers.byKey[giverKey]!.traitKeys[2]! },
-      ],
-      selectedOptionKey: 'option1',
-      acquisitionPoint: 'test',
-      ...(replacementTransition === undefined ? {} : { replacementTransition }),
-    };
+      `proper-${before.events.length + 1}`,
+      {
+        giverKey,
+        options,
+        selectedOptionKey: 'option1',
+      },
+      before,
+      {},
+      before.events.length + 1,
+    );
+    const applied = recordReachedTraitOffer(catalog, evaluation, before.events.length + 1, 'test');
+    if (applied.event === undefined) {
+      throw new Error(`Illegal evaluated ${giverKey}/${traitKey}/${rarity ?? 'untyped'} offer`);
+    }
+    return applied.history;
+  }
+
+  function twoEachHistory() {
+    let history = createTraitHistoryState();
+    for (const [giverKey, traitKey] of [
+      ['Apollo', 'ApolloWeaponBoon'],
+      ['Hermes', 'HermesWeaponBoon'],
+      ['Hermes', 'HermesSpecialBoon'],
+      ['Hermes', 'DodgeChanceBoon'],
+      ['Hermes', 'SprintShieldBoon'],
+      ['Hermes', 'RestockBoon'],
+      ['Poseidon', 'DoubleRewardBoon'],
+      ['Poseidon', 'FocusDamageShaveBoon'],
+    ] as const) {
+      history = acquireLegalTrait(history, giverKey, traitKey, 'Common');
+    }
+    return history;
+  }
+
+  function activeHistory() {
+    return acquireLegalTrait(twoEachHistory(), 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
   }
 
   it('offers at one of each base element while inactive and activates at two of each', () => {
@@ -507,7 +535,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(foldTraitOfferEvents(catalog, history.events)).toEqual(history);
   });
 
-  it('does not promote fixed or excluded domains and deactivation keeps promotions', () => {
+  it('does not promote fixed or excluded domains', () => {
     const history = activeHistory();
     const withFixed = historyFrom([
       ...elementPairs.map(([traitKey, giverKey]) => ({
@@ -519,7 +547,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
     ]);
     expect(withFixed.equippedTraits.ElementalDamageBoon?.rarity).toBe('Common');
-    expect(history.equippedTraits.HeraWeaponBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
     expect(history.minimumScalableGodTraitRarity).toBe('Rare');
   });
 
@@ -554,44 +582,27 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(withoutSource.minimumScalableGodTraitRarity).toBe('Rare');
     const replay = foldTraitOfferEvents(catalog, events);
     expect(replay.minimumScalableGodTraitRarity).toBeUndefined();
-    expect(replay.equippedTraits.HeraWeaponBoon?.rarity).toBe('Common');
+    expect(replay.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
     expect(foldTraitOfferEvents(catalog, withoutSource.events)).toEqual(withoutSource);
   });
 
   it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
-    const initial = twoEachHistory();
-    const source = historyFrom([
-      { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
-    ]).events[0]!;
-    const activated = foldTraitOfferEvents(catalog, [
-      ...initial.events,
-      { ...source, sequence: 9 },
-    ]);
-    const deactivated = foldTraitOfferEvents(catalog, [
-      ...activated.events,
-      eventFor(10, 'Apollo', 'ApolloWeaponBoon', 'Rare', {
-        slot: 'Melee',
-        replacedTraitKey: 'HeraWeaponBoon',
-        oldRarity: 'Rare',
-        newTraitKey: 'ApolloWeaponBoon',
-        requiredRarity: 'Rare',
-      }),
-    ]);
+    const activated = activeHistory();
+    const deactivated = acquireLegalTrait(activated, 'Hera', 'HeraWeaponBoon', 'Epic');
     expect(deactivated.minimumScalableGodTraitRarity).toBeUndefined();
-    expect(deactivated.equippedTraits.HeraCastBoon?.rarity).toBe('Rare');
-    const reactivated = foldTraitOfferEvents(catalog, [
-      ...deactivated.events,
-      eventFor(11, 'Zeus', 'ZeusSpecialBoon', 'Common'),
-      eventFor(12, 'Hera', 'HeraWeaponBoon', 'Epic', {
-        slot: 'Melee',
-        replacedTraitKey: 'ApolloWeaponBoon',
-        oldRarity: 'Rare',
-        newTraitKey: 'HeraWeaponBoon',
-        requiredRarity: 'Epic',
-      }),
-    ]);
+    expect(deactivated.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
+    expect(deactivated.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+    expect(deactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
+    expect(deactivated.events.at(-1)?.replacementTransition).toEqual({
+      slot: 'Melee',
+      replacedTraitKey: 'ApolloWeaponBoon',
+      oldRarity: 'Rare',
+      newTraitKey: 'HeraWeaponBoon',
+      requiredRarity: 'Epic',
+    });
+    const reactivated = acquireLegalTrait(deactivated, 'Hermes', 'SlowProjectileBoon', 'Common');
     expect(reactivated.minimumScalableGodTraitRarity).toBe('Rare');
-    expect(reactivated.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Rare');
+    expect(reactivated.equippedTraits.SlowProjectileBoon?.rarity).toBe('Rare');
     expect(reactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
   });
 
@@ -599,9 +610,9 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const history = activeHistory();
     const replacement = assessTraitOption(
       catalog,
-      'ApolloWeaponBoon',
+      'HeraWeaponBoon',
       history,
-      { resolvedProviderKey: 'Apollo' },
+      { resolvedProviderKey: 'Hera' },
       'Epic',
     );
     expect(replacement.findings).not.toContainEqual(
@@ -610,9 +621,9 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(replacement.replacementTransition?.requiredRarity).toBe('Epic');
     const common = assessTraitOption(
       catalog,
-      'ApolloManaBoon',
+      'HeraSpecialBoon',
       history,
-      { resolvedProviderKey: 'Apollo' },
+      { resolvedProviderKey: 'Hera' },
       'Common',
     );
     expect(common.findings).toContainEqual(
