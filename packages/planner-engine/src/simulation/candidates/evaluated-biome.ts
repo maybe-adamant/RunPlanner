@@ -1,19 +1,12 @@
-import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress, type SemanticAddress } from '../../authored-project/addresses';
+import type { SemanticAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
+  CompleteBlockedBiomeProjectEvaluation,
   CompleteBiomeProjectEvaluation,
-  CompleteValidBiomeProjectEvaluation,
   PrefixIncompleteBiomeProjectEvaluation,
   ProjectEvaluation,
 } from '../project';
 import type { CanonicalAuthoredRoom, MaterializedBiomePrefix } from '../materialization';
-import {
-  evaluateProgressiveBiome,
-  type ProgressiveBiomeContext,
-  type ProgressiveBiomeEvaluation,
-  type ProgressiveSeed,
-} from '../progressive/biome';
 import { CandidateEvaluationContractError } from './contract';
 
 export function completeBiome(
@@ -36,66 +29,25 @@ export function prefixBiome(
   return biome?.authoring === 'incomplete' && 'materializedPrefix' in biome ? biome : undefined;
 }
 
-function previousValidBiome(
-  evaluation: ProjectEvaluation,
-  routeKey: string,
-  biomeKey: string,
-): CompleteValidBiomeProjectEvaluation | undefined {
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
-  const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
-  if (index <= 0 || route === undefined) return undefined;
-  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
-    const candidate = route.biomes[cursor];
-    if (candidate?.authoring === 'complete' && candidate.validity === 'valid') return candidate;
-  }
-  return undefined;
-}
-
-export function progressiveSeed(evaluation: ProjectEvaluation, routeKey: string, biomeKey: string) {
-  const previous = previousValidBiome(evaluation, routeKey, biomeKey);
-  return previous === undefined
-    ? undefined
-    : Object.freeze({ history: previous.history, rewardBranches: previous.rewards.branches });
-}
-
 export type CandidateBiomeEvaluation =
-  | CompleteBiomeProjectEvaluation
-  | PrefixIncompleteBiomeProjectEvaluation
-  | ProgressiveBiomeEvaluation;
+  CompleteBiomeProjectEvaluation | PrefixIncompleteBiomeProjectEvaluation;
+export type CandidatePrefixBiomeEvaluation =
+  CompleteBlockedBiomeProjectEvaluation | PrefixIncompleteBiomeProjectEvaluation;
 
 /** The maximum candidate-safe evaluation through the first blocking authoring boundary. */
 export function candidateBiome(
-  catalog: Catalog,
-  project: ProjectDocument,
   evaluation: ProjectEvaluation,
   routeKey: string,
   biomeKey: string,
 ): CandidateBiomeEvaluation | undefined {
-  const complete = completeBiome(evaluation, routeKey, biomeKey);
-  if (
-    complete?.validity !== 'invalid' ||
-    (complete !== undefined && 'materializedPrefix' in complete)
-  ) {
-    return complete ?? prefixBiome(evaluation, routeKey, biomeKey);
-  }
   return (
-    evaluateProgressiveBiome(
-      catalog,
-      createBiomeAddress(routeKey, biomeKey),
-      planFor(project, routeKey, biomeKey),
-      progressiveContextFor(
-        project,
-        routeKey,
-        completeBiomeCount(evaluation, routeKey, biomeKey),
-        progressiveSeed(evaluation, routeKey, biomeKey),
-      ),
-    ) ?? undefined
+    completeBiome(evaluation, routeKey, biomeKey) ?? prefixBiome(evaluation, routeKey, biomeKey)
   );
 }
 
 export function candidatePrefix(
   biome: CandidateBiomeEvaluation | undefined,
-): PrefixIncompleteBiomeProjectEvaluation | ProgressiveBiomeEvaluation | undefined {
+): CandidatePrefixBiomeEvaluation | undefined {
   return biome !== undefined && 'materializedPrefix' in biome ? biome : undefined;
 }
 
@@ -115,11 +67,7 @@ export function candidateAssessmentPrefix(
 export function candidateBlockedAt(
   biome: CandidateBiomeEvaluation | undefined,
 ): SemanticAddress | undefined {
-  if (biome === undefined) return undefined;
-  if ('coverage' in biome) {
-    return biome.coverage.kind === 'prefix' ? biome.coverage.blockedAt : undefined;
-  }
-  return biome.blockedAt;
+  return biome?.coverage.kind === 'prefix' ? biome.coverage.blockedAt : undefined;
 }
 
 export function planFor(
@@ -135,23 +83,6 @@ export function planFor(
     );
   }
   return plan;
-}
-
-export function progressiveContextFor(
-  project: ProjectDocument,
-  routeKey: string,
-  enteredBiomeCount: number,
-  seed?: ProgressiveSeed,
-): ProgressiveBiomeContext {
-  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
-  if (route === undefined) {
-    throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
-  }
-  return Object.freeze({
-    enteredBiomeCount,
-    loadout: route.loadout,
-    ...(seed === undefined ? {} : { seed }),
-  });
 }
 
 export function completeBiomeCount(

@@ -375,6 +375,13 @@ export interface MaterializedBiomePrefix {
   readonly biomeKey: string;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly decisions: readonly CanonicalDecision[];
+  /**
+   * Completion-tail rooms become part of a structurally complete prefix when
+   * its selected Preboss target has no further authored decision. Keeping the
+   * declared tail on the prefix lets progressive evaluation assess the final
+   * entered room without manufacturing a canonical complete snapshot.
+   */
+  readonly completionRooms?: readonly CanonicalCompletionRoom[];
   readonly frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier;
   readonly biomeState: CanonicalBiomeState;
 }

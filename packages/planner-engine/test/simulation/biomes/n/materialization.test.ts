@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   appendNEntry,
+  authorLegalTraitOffers,
   createRepresentativeNProject,
   nBiome,
   nOccurrenceIds,
@@ -25,7 +26,9 @@ function completeN() {
   const biome = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'N');
-  if (biome?.authoring !== 'complete') throw new Error('N fixture did not complete');
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+    throw new Error('N fixture did not complete-valid');
+  }
   return { project, evaluation, biome };
 }
 
@@ -168,12 +171,14 @@ describe('canonical N Hub materialization', () => {
   });
 
   it('keeps the selected PreHub terminal envelope explicit until its source-bearing Hub takeover', () => {
-    const project = appendNEntry(
-      createProjectDocument(catalog, {
-        projectId: 'n-terminal-envelope',
-        name: 'N terminal envelope',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
+    const project = authorLegalTraitOffers(
+      appendNEntry(
+        createProjectDocument(catalog, {
+          projectId: 'n-terminal-envelope',
+          name: 'N terminal envelope',
+          configuredBiomeCounts: { Surface: 1 },
+        }),
+      ),
     );
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')

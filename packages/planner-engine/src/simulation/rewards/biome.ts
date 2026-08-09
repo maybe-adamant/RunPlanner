@@ -41,7 +41,12 @@ import type {
 import type { CanonicalDecision } from '../materialization/model';
 import { materializeShipCombatState } from '../materialization';
 import type { ResolvedEncounterPhase } from '../encounters';
-import type { SemanticFinding } from '../model';
+import {
+  ownerRegion,
+  type FindingChronology,
+  type FindingRegionEntry,
+  type HistoryFindingChronology,
+} from '../finding-regions';
 import type {
   RewardBranch,
   BiomeRewardSimulation,
@@ -96,6 +101,107 @@ import { prepareShopPurchaseCandidateContext } from './shop-candidates';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
+
+type RewardRoomOwner = {
+  readonly kind: string;
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly occurrenceId?: string;
+  readonly groupKey?: string;
+  readonly slotKey?: string;
+};
+
+function sameRewardRoomOwner(left: RewardRoomOwner, right: RewardRoomOwner): boolean {
+  if (left.routeKey !== right.routeKey || left.biomeKey !== right.biomeKey) return false;
+  if (
+    left.groupKey !== undefined ||
+    left.slotKey !== undefined ||
+    right.groupKey !== undefined ||
+    right.slotKey !== undefined
+  ) {
+    return (
+      left.occurrenceId === right.occurrenceId &&
+      left.groupKey === right.groupKey &&
+      left.slotKey === right.slotKey
+    );
+  }
+  return left.occurrenceId !== undefined && left.occurrenceId === right.occurrenceId;
+}
+
+function historyFindingChronology(sequence: number): HistoryFindingChronology {
+  return Object.freeze({ kind: 'history', sequence, boundary: 'at' });
+}
+
+function hubFindingChronology(
+  snapshot: BiomeRewardSnapshot,
+  owner: RewardRoomOwner,
+  sequence: number,
+  phase: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle',
+): FindingChronology | undefined {
+  for (const decision of snapshot.decisions) {
+    if (decision.kind !== 'hub') continue;
+    for (const [visitIndex, visit] of decision.visits.entries()) {
+      if (sameRewardRoomOwner(visit.target.room.origin, owner)) {
+        return Object.freeze({
+          kind: 'hubVisit',
+          visitIndex,
+          phase: 'targetLifecycle',
+          history: historyFindingChronology(sequence),
+        });
+      }
+      const local = visit.localSlots.find((slot) => sameRewardRoomOwner(slot.origin, owner));
+      if (local !== undefined) {
+        return Object.freeze({
+          kind: 'hubVisit',
+          visitIndex,
+          phase,
+          ...(phase === 'localRoomLifecycle' && local.enteredOrdinal !== null
+            ? { localLifecycleIndex: local.enteredOrdinal - 1 }
+            : {}),
+          history: historyFindingChronology(sequence),
+        });
+      }
+    }
+  }
+  const frontier = hubVisitFrontier(snapshot);
+  if (frontier !== undefined) {
+    if (sameRewardRoomOwner(frontier.target.room.origin, owner)) {
+      return Object.freeze({
+        kind: 'hubVisit',
+        visitIndex: frontier.origin.visitIndex - 1,
+        phase: 'targetLifecycle',
+        history: historyFindingChronology(sequence),
+      });
+    }
+    const local = frontier.localSlots.find((slot) => sameRewardRoomOwner(slot.origin, owner));
+    if (local !== undefined) {
+      const localLifecycleIndex = frontier.enteredLocalRooms.findIndex((slot) =>
+        sameRewardRoomOwner(slot.origin, local.origin),
+      );
+      return Object.freeze({
+        kind: 'hubVisit',
+        visitIndex: frontier.origin.visitIndex - 1,
+        phase,
+        ...(phase === 'localRoomLifecycle' && localLifecycleIndex >= 0
+          ? { localLifecycleIndex }
+          : {}),
+        history: historyFindingChronology(sequence),
+      });
+    }
+  }
+  return undefined;
+}
+
+function rewardFindingChronologyForRoom(
+  snapshot: BiomeRewardSnapshot,
+  owner: RewardRoomOwner,
+  sequence: number,
+  phase: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle',
+): FindingChronology {
+  return (
+    hubFindingChronology(snapshot, owner, sequence, phase) ?? historyFindingChronology(sequence)
+  );
+}
 
 /** The reward engine only needs materialized rooms and selected decisions. */
 export type BiomeRewardSnapshot =
@@ -479,8 +585,10 @@ function processOwnedRewardAcquisition(
   },
   view: HistoryStateView,
   historySequence: number,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   enteredBiomeCount: number,
+  atomicRegion?: string,
+  findingChronology?: FindingChronology,
 ): readonly RewardBranchState[] {
   return processOwnedRewardAcquisitionState(
     catalog,
@@ -490,21 +598,23 @@ function processOwnedRewardAcquisition(
     (history) => rewardFacts(catalog, room, room, declaration, view, history, enteredBiomeCount),
     findings,
     fail,
+    atomicRegion,
+    findingChronology,
   );
 }
 
 function candidateResult(
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   branches: readonly RewardBranchState[],
 ): RewardProducerCandidateResult {
   return Object.freeze({
-    findings: Object.freeze([...findings.values()]),
+    findings: Object.freeze([...findings.values()].map((entry) => entry.finding)),
     supported: branches.length > 0,
   });
 }
 
 function lifecycleCandidateResult(
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   branches: readonly RewardBranchState[],
 ): RoomLifecycleCandidateResult {
   return candidateResult(findings, branches);
@@ -628,7 +738,7 @@ function prepareShipLifecycleCandidateContext(
         encounterPhases: ship.encounterPhases,
         rewardWheels: ship.rewardWheels,
       });
-      const candidateFindings = new Map<string, SemanticFinding>();
+      const candidateFindings = new Map<string, FindingRegionEntry>();
       let candidateBranches = branchesBeforeFirstWheel;
       for (const wheel of ship.rewardWheels) {
         if (candidateBranches.length === 0) {
@@ -660,6 +770,7 @@ function prepareShipLifecycleCandidateContext(
               ),
           })),
           candidateFindings,
+          ownerRegion(wheel.origin),
         );
         const picked = wheel.offers.find(
           (offer: CanonicalRewardWheel['offers'][number]) => offer.picked,
@@ -678,6 +789,7 @@ function prepareShipLifecycleCandidateContext(
             lifecycleView.acquisitionSequence,
             candidateFindings,
             enteredBiomeCount,
+            ownerRegion(wheel.origin),
           );
         }
       }
@@ -686,11 +798,12 @@ function prepareShipLifecycleCandidateContext(
   });
 }
 
-export interface BiomeRewardEvaluationAssembly {
+interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
   readonly producerArtifacts: RewardProducerCandidateArtifacts;
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
   readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
+  readonly findingRegions: readonly FindingRegionEntry[];
 }
 
 function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
@@ -790,7 +903,7 @@ function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
   });
 }
 
-export function evaluateBiomeRewardsAssembly(
+export function evaluateBiomeRewardsAssemblyInternal(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
@@ -859,7 +972,7 @@ export function evaluateBiomeRewardsAssembly(
       readonly exitKeys: readonly string[];
     }
   >();
-  const findings = new Map<string, SemanticFinding>();
+  const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
@@ -1165,11 +1278,28 @@ export function evaluateBiomeRewardsAssembly(
         if (incoming !== undefined) {
           const binding = countedBinding(declaration, incoming);
           const frontierBranches = branches;
+          const offerFindingChronology =
+            event.source === 'hubTarget'
+              ? Object.freeze({
+                  kind: 'hubBoard' as const,
+                  history: historyFindingChronology(event.sequence),
+                })
+              : event.source === 'localChild'
+                ? rewardFindingChronologyForRoom(
+                    snapshot,
+                    room.origin,
+                    event.sequence,
+                    'sideGeneration',
+                  )
+                : undefined;
           const offerContext = {
             catalog,
             reward: incoming,
             ...(binding === undefined ? {} : { binding }),
             historySequence: event.sequence,
+            ...(offerFindingChronology === undefined
+              ? {}
+              : { findingChronology: offerFindingChronology }),
             peers,
             facts: (branchHistory: RewardHistoryState) =>
               rewardFacts(
@@ -1225,7 +1355,7 @@ export function evaluateBiomeRewardsAssembly(
                 if (semanticAddressKey(owner) !== incomingOwnerKey) {
                   return fail('sequential reward frontier received a foreign owner');
                 }
-                const candidateFindings = new Map<string, SemanticFinding>();
+                const candidateFindings = new Map<string, FindingRegionEntry>();
                 let candidateBranches = processRewardOffer(
                   frontierBranches,
                   {
@@ -1250,6 +1380,13 @@ export function evaluateBiomeRewardsAssembly(
                   acquisitionSequence,
                   candidateFindings,
                   enteredBiomeCount,
+                  ownerRegion(incoming.origin),
+                  rewardFindingChronologyForRoom(
+                    snapshot,
+                    room.origin,
+                    acquisitionSequence,
+                    'localRoomLifecycle',
+                  ),
                 );
                 return candidateResult(candidateFindings, candidateBranches);
               },
@@ -1269,11 +1406,23 @@ export function evaluateBiomeRewardsAssembly(
         }
         for (const localReward of localRewards) {
           const frontierBranches = branches;
+          const offerFindingChronology =
+            event.source === 'localChild'
+              ? rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                )
+              : undefined;
           const offerContext = {
             catalog,
             reward: localReward,
             binding: localRewardBinding(declaration, localReward),
             historySequence: event.sequence,
+            ...(offerFindingChronology === undefined
+              ? {}
+              : { findingChronology: offerFindingChronology }),
             peers,
             facts: (branchHistory: RewardHistoryState) =>
               rewardFacts(
@@ -1315,7 +1464,7 @@ export function evaluateBiomeRewardsAssembly(
                 if (semanticAddressKey(owner) !== localOwnerKey) {
                   return fail('local reward frontier received a foreign owner');
                 }
-                const candidateFindings = new Map<string, SemanticFinding>();
+                const candidateFindings = new Map<string, FindingRegionEntry>();
                 let candidateBranches = processRewardOffer(
                   frontierBranches,
                   {
@@ -1339,6 +1488,13 @@ export function evaluateBiomeRewardsAssembly(
                     acquisitionEvent.sequence,
                     candidateFindings,
                     enteredBiomeCount,
+                    ownerRegion(localReward.origin),
+                    rewardFindingChronologyForRoom(
+                      snapshot,
+                      room.origin,
+                      acquisitionEvent.sequence,
+                      'localRoomLifecycle',
+                    ),
                   );
                 }
                 return candidateResult(candidateFindings, candidateBranches);
@@ -1478,6 +1634,8 @@ export function evaluateBiomeRewardsAssembly(
                   metaSelectionValue: support.metaSelectionValue,
                   supportStoreKeys: support.supportStoreKeys,
                 }),
+                ownerRegion(support.origin),
+                { kind: 'history', sequence: event.sequence, boundary: 'at' },
               );
             }
           } else if (rewardStore.kind === 'sourceOfferPoint') {
@@ -1531,6 +1689,12 @@ export function evaluateBiomeRewardsAssembly(
             room,
             declaration,
             historySequence: event.sequence,
+            findingChronology: rewardFindingChronologyForRoom(
+              snapshot,
+              room.origin,
+              event.sequence,
+              'localRoomLifecycle',
+            ),
             facts: (
               branchHistory: RewardHistoryState,
               shopNames: ReadonlySet<string> = new Set(),
@@ -1583,7 +1747,7 @@ export function evaluateBiomeRewardsAssembly(
                       ),
                     }),
                   });
-                  const candidateFindings = new Map<string, SemanticFinding>();
+                  const candidateFindings = new Map<string, FindingRegionEntry>();
                   const candidateBranches = processShopInventory(
                     frontierBranches,
                     { ...shopContext, room: candidateRoom },
@@ -1670,7 +1834,7 @@ export function evaluateBiomeRewardsAssembly(
               if (!ownerKeys.has(ownerKey)) {
                 return fail('reward-wheel frontier received a foreign owner');
               }
-              const candidateFindings = new Map<string, SemanticFinding>();
+              const candidateFindings = new Map<string, FindingRegionEntry>();
               let candidateBranches = processJointUnorderedOffers(
                 frontierBranches,
                 contexts.map((context) =>
@@ -1682,6 +1846,7 @@ export function evaluateBiomeRewardsAssembly(
                     : context,
                 ),
                 candidateFindings,
+                ownerRegion(wheel.origin),
               );
               const selectedOffer = wheel.offers.find(
                 (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
@@ -1706,13 +1871,19 @@ export function evaluateBiomeRewardsAssembly(
                   acquisitionEvent.sequence,
                   candidateFindings,
                   enteredBiomeCount,
+                  ownerRegion(wheel.origin),
                 );
               }
               return candidateResult(candidateFindings, candidateBranches);
             },
           }),
         );
-        branches = processJointUnorderedOffers(branches, contexts, findings);
+        branches = processJointUnorderedOffers(
+          branches,
+          contexts,
+          findings,
+          ownerRegion(wheel.origin),
+        );
         break;
       }
       case 'offerPointAcquired': {
@@ -1751,6 +1922,7 @@ export function evaluateBiomeRewardsAssembly(
           event.sequence,
           findings,
           enteredBiomeCount,
+          ownerRegion(wheel.origin),
         );
         break;
       }
@@ -1781,6 +1953,13 @@ export function evaluateBiomeRewardsAssembly(
             ),
           findings,
           fail,
+          ownerRegion(room.incomingReward?.origin ?? room.origin),
+          rewardFindingChronologyForRoom(
+            snapshot,
+            room.origin,
+            event.sequence,
+            'localRoomLifecycle',
+          ),
         );
         break;
       }
@@ -1817,6 +1996,13 @@ export function evaluateBiomeRewardsAssembly(
           event.sequence,
           findings,
           enteredBiomeCount,
+          undefined,
+          rewardFindingChronologyForRoom(
+            snapshot,
+            room.origin,
+            event.sequence,
+            'localRoomLifecycle',
+          ),
         );
         break;
       }
@@ -1867,6 +2053,12 @@ export function evaluateBiomeRewardsAssembly(
             room,
             declaration,
             historySequence: event.sequence,
+            findingChronology: rewardFindingChronologyForRoom(
+              snapshot,
+              room.origin,
+              event.sequence,
+              'localRoomLifecycle',
+            ),
             facts: (branchHistory, shopNames = new Set()) =>
               rewardFacts(
                 catalog,
@@ -1906,7 +2098,8 @@ export function evaluateBiomeRewardsAssembly(
   }
 
   recordBlankFrontierTargetHistory();
-  const immutableFindings = Object.freeze([...findings.values()]);
+  const immutableFindingRegions = Object.freeze([...findings.values()]);
+  const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(branches);
   const runStatePublication = publishRunStateThroughCoverage(
     [...runStateSnapshotsByOwner.values()],
@@ -1935,6 +2128,7 @@ export function evaluateBiomeRewardsAssembly(
       catalog,
       traitProducts.candidateContexts,
     ),
+    findingRegions: Object.freeze(immutableFindingRegions),
   });
 }
 
@@ -1946,7 +2140,25 @@ export function evaluateBiomeRewards(
   routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
 ): BiomeRewardSimulation {
-  return evaluateBiomeRewardsAssembly(
+  return evaluateBiomeRewardsAssemblyInternal(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    routeLoadout,
+    initialBranches,
+  ).simulation;
+}
+
+export function evaluateBiomeRewardsAssembly(
+  catalog: Catalog,
+  snapshot: BiomeRewardSnapshot,
+  history: BiomeRewardHistory,
+  enteredBiomeCount: number,
+  routeLoadout: RouteLoadout,
+  initialBranches?: readonly RewardBranch[],
+): BiomeRewardSimulation {
+  return evaluateBiomeRewardsAssemblyInternal(
     catalog,
     snapshot,
     history,

@@ -25,6 +25,7 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 
@@ -287,6 +288,8 @@ describe('App', () => {
         kind: 'ReplaceWithHubDecision',
       }),
     );
+    const project = application.store.getState().projectWorkspace.history.present;
+    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
     const finding = application.store
       .getState()
       .projectWorkspace.assembly.evaluation.findings.find(

@@ -4,6 +4,7 @@ import {
   createHubOpenSetAddress,
   createHubSlotAddress,
   semanticAddressKey,
+  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type {
   CanonicalAuthoredRoom,
@@ -11,6 +12,7 @@ import type {
   CanonicalHubDecision,
   CanonicalHubVisit,
   MaterializedBiomePrefix,
+  MaterializedHubVisitFrontier,
 } from '../materialization';
 import type {
   BiomeHistoryPrefix,
@@ -18,6 +20,12 @@ import type {
   ProgressiveRoomHistoryViews,
 } from '../history';
 import type { FindingEvidence, SemanticFinding } from '../model';
+import {
+  findingRegion,
+  ownerRegion,
+  type FindingRegionEntry,
+  type FindingChronology,
+} from '../finding-regions';
 import type {
   HubOpenSlotConstraintSupportEntry,
   HubRoomGenerationValidation,
@@ -35,6 +43,21 @@ export class HubDecisionGenerationContractError extends Error {
 export type HubGenerationSnapshot =
   CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
 export type HubGenerationHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
+
+interface HubGenerationValidationWithRegions extends HubRoomGenerationValidation {
+  readonly findingRegions: readonly FindingRegionEntry[];
+}
+
+/**
+ * The active Hub visit frontier is intentionally smaller than a completed
+ * CanonicalHubVisit: it has not acquired a return restore yet. Generation
+ * validation only needs the visit's physical target and local-slot envelope,
+ * so keep that checkpoint product independent of completion-only topology.
+ */
+type HubVisitGenerationShape = Pick<
+  CanonicalHubVisit,
+  'origin' | 'visitIndex' | 'target' | 'localSlots' | 'enteredLocalRooms'
+>;
 
 function fail(detail: string): never {
   throw new HubDecisionGenerationContractError(detail);
@@ -128,6 +151,25 @@ function roomViews(
   return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
+function hubBoardChronology(
+  history: HubGenerationHistory,
+  roomOrigin: SemanticAddress,
+): FindingChronology {
+  const room = history.rooms.find(
+    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(roomOrigin),
+  );
+  const sequence = room?.targetGenerations.reduce(
+    (latest, target) => Math.max(latest, target.roomCreationSequence),
+    -1,
+  );
+  return sequence === undefined || sequence < 0
+    ? { kind: 'hubBoard' }
+    : {
+        kind: 'hubBoard',
+        history: { kind: 'history', sequence, boundary: 'at' },
+      };
+}
+
 function requiredGeneratedCount(descriptor: HubDecisionDescriptor, visitIndex: number): number {
   const ratio = descriptor.sideRoomGeneration.minimumPerVisit;
   return Math.ceil((visitIndex * ratio.numerator) / ratio.denominator);
@@ -153,14 +195,24 @@ function assertBoardIdentity(
 
 function validateVisit(
   descriptor: HubDecisionDescriptor,
-  visit: CanonicalHubVisit,
+  visit: HubVisitGenerationShape,
   views: ReadonlyMap<string, ProgressiveRoomHistoryViews>,
   findings: SemanticFinding[],
+  findingRegions: FindingRegionEntry[],
+  activeFrontierPhase?: MaterializedHubVisitFrontier['phase'],
 ): readonly HubSideRoomGenerationSupportEntry[] {
+  // Reaching local lifecycle already proves the visit's outgoing generation
+  // checkpoint.  The active frontier must remain available for locating and
+  // clamping later local findings, but it must not re-emit an earlier
+  // side-generation decision as a competing blocker.
+  if (activeFrontierPhase === 'localRoomLifecycle') return Object.freeze([]);
   const view = views.get(semanticAddressKey(visit.target.room.origin));
   const generatedBefore = view?.preOutgoing?.ledgers.counters.numSubRoomsSpawned;
   if (generatedBefore === undefined) {
-    fail(`Hub visit ${visit.visitIndex} has no side-generation history context`);
+    // The topology projection may retain a complete Hub board/visit shape while
+    // the bounded history has not reached this target's outgoing checkpoint.
+    // Leave that later visit unavailable until its own history context exists.
+    return Object.freeze([]);
   }
   const required = requiredGeneratedCount(descriptor, visit.visitIndex);
   let generated = generatedBefore;
@@ -186,31 +238,43 @@ function validateVisit(
       selectedPossible,
     });
     if (!selectedPossible) {
-      findings.push(
-        finding('sideRoomGenerationUnavailable', slot.origin, {
-          visitIndex: visit.visitIndex,
-          availabilityRank: slot.availabilityRank,
-          generatedBefore: generated,
-          requiredGeneratedCount: required,
-          selectedOutcome: slot.generation,
-          supportOutcomes,
-        }),
+      const value = finding('sideRoomGenerationUnavailable', slot.origin, {
+        visitIndex: visit.visitIndex,
+        availabilityRank: slot.availabilityRank,
+        generatedBefore: generated,
+        requiredGeneratedCount: required,
+        selectedOutcome: slot.generation,
+        supportOutcomes,
+      });
+      findings.push(value);
+      const chronology: FindingChronology = {
+        kind: 'hubVisit',
+        // Located Hub positions use the physical zero-based decision index;
+        // the authored visitIndex itself is one-based.
+        visitIndex: visit.visitIndex - 1,
+        phase: 'sideGeneration',
+      };
+      findingRegions.push(
+        findingRegion(value, ownerRegion(value.origin), chronology, 'generation'),
       );
     }
     if (slot.generation === 'generated') generated += 1;
     return entry;
   });
-  if (view?.outgoingGeneration?.ledgers.counters.numSubRoomsSpawned !== generated) {
+  if (
+    activeFrontierPhase === undefined &&
+    view?.outgoingGeneration?.ledgers.counters.numSubRoomsSpawned !== generated
+  ) {
     fail(`Hub visit ${visit.visitIndex} side-generation history diverges from authored state`);
   }
   return Object.freeze(entries);
 }
 
-export function evaluateHubDecisionGeneration(
+export function evaluateHubDecisionGenerationInternal(
   catalog: Catalog,
   snapshot: HubGenerationSnapshot,
   history: HubGenerationHistory,
-): HubRoomGenerationValidation {
+): HubGenerationValidationWithRegions {
   const resolved = requireHubDecision(catalog, snapshot);
   if (resolved === null) {
     return Object.freeze({
@@ -219,6 +283,7 @@ export function evaluateHubDecisionGeneration(
       openSlotConstraints: Object.freeze([]),
       sideRoomGenerations: Object.freeze([]),
       findings: Object.freeze([]),
+      findingRegions: Object.freeze([]),
     });
   }
   const { descriptor, decision } = resolved;
@@ -226,8 +291,27 @@ export function evaluateHubDecisionGeneration(
   if (snapshot.kind === 'biome' && decision.visits.length !== descriptor.requiredVisits) {
     fail(`${descriptor.hubKey} requires exactly ${descriptor.requiredVisits} visits`);
   }
+  const activeFrontier =
+    snapshot.kind === 'biomePrefix' &&
+    snapshot.frontier?.kind === 'hubVisit' &&
+    'target' in snapshot.frontier
+      ? snapshot.frontier
+      : undefined;
+  const visits: readonly HubVisitGenerationShape[] =
+    activeFrontier === undefined
+      ? decision.visits
+      : Object.freeze([
+          ...decision.visits,
+          Object.freeze({
+            origin: activeFrontier.origin,
+            visitIndex: activeFrontier.origin.visitIndex,
+            target: activeFrontier.target,
+            localSlots: activeFrontier.localSlots,
+            enteredLocalRooms: activeFrontier.enteredLocalRooms,
+          }),
+        ]);
   const visited = new Set<string>();
-  for (const [index, visit] of decision.visits.entries()) {
+  for (const [index, visit] of visits.entries()) {
     if (
       visit.visitIndex !== index + 1 ||
       visited.has(visit.target.hubSlotKey) ||
@@ -244,15 +328,53 @@ export function evaluateHubDecisionGeneration(
     decision.board.targets.map((target) => target.hubSlotKey),
   );
   const findings: SemanticFinding[] = [...openSet.findings];
+  const findingRegions: FindingRegionEntry[] = openSet.findings.map((value) =>
+    findingRegion(
+      value,
+      ownerRegion(openSet.entries[0]?.origin ?? decision.board.origin),
+      hubBoardChronology(history, decision.room.origin),
+      'generation',
+    ),
+  );
   const views = roomViews(history);
   const sideRoomGenerations = Object.freeze(
-    decision.visits.flatMap((visit) => validateVisit(descriptor, visit, views, findings)),
+    visits.flatMap((visit) =>
+      validateVisit(
+        descriptor,
+        visit,
+        views,
+        findings,
+        findingRegions,
+        activeFrontier?.origin === visit.origin ? activeFrontier.phase : undefined,
+      ),
+    ),
   );
+  const tracked = new Set(findingRegions.map((entry) => entry.finding));
+  for (const value of findings) {
+    if (!tracked.has(value))
+      findingRegions.push(findingRegion(value, ownerRegion(value.origin), undefined, 'generation'));
+  }
   return Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     openSlotConstraints: openSet.entries,
     sideRoomGenerations,
     findings: Object.freeze(findings),
+    findingRegions: Object.freeze(findingRegions),
+  });
+}
+
+export function evaluateHubDecisionGeneration(
+  catalog: Catalog,
+  snapshot: HubGenerationSnapshot,
+  history: HubGenerationHistory,
+): HubRoomGenerationValidation {
+  const validation = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
+  return Object.freeze({
+    biomeKey: validation.biomeKey,
+    validity: validation.validity,
+    openSlotConstraints: validation.openSlotConstraints,
+    sideRoomGenerations: validation.sideRoomGenerations,
+    findings: validation.findings,
   });
 }

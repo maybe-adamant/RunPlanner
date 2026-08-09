@@ -231,6 +231,8 @@ export interface HistoryStateView {
 export interface TargetGenerationView {
   readonly targetOrigin: HubDecisionAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
+  /** Sequence occupied by the target's room-created event. */
+  readonly roomCreationSequence: number;
   readonly before: HistoryStateView;
   readonly after: HistoryStateView;
 }

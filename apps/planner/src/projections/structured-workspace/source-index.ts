@@ -283,7 +283,7 @@ function createWorkspaceEvaluatedOwnerCoverage(
       isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
     });
   }
-  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
+  if (evaluation.authoring === 'complete' && evaluation.validity === 'valid') {
     const snapshot = evaluation.snapshot;
     appendAuthoredRoomOwners(keys, snapshot.entryRoom);
     for (const decision of snapshot.decisions) appendDecisionOwners(keys, decision);
@@ -322,7 +322,7 @@ function materialized(
   evaluation: ProjectBiomeEvaluation | undefined,
 ): CanonicalBiome | MaterializedBiomePrefix | undefined {
   if (evaluation === undefined) return undefined;
-  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
+  if (evaluation.authoring === 'complete' && evaluation.validity === 'valid') {
     return evaluation.snapshot;
   }
   return hasMaterializedPrefix(evaluation) ? evaluation.materializedPrefix : undefined;

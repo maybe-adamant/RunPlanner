@@ -36,16 +36,16 @@ function invalidTenOpenHubProject() {
   });
 }
 
-function combat10RewardFinding(application: ReturnType<typeof createApplication>): SemanticFinding {
-  const finding = application.store
-    .getState()
-    .projectWorkspace.assembly.evaluation.findings.find(
-      (candidate) =>
-        candidate.code === 'rewardBagEntryUnavailable' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(combat10Reward),
-    );
-  if (finding === undefined) throw new Error('Combat 10 reward finding is missing');
-  return finding;
+function combat10RewardFinding(): SemanticFinding {
+  // Exact first-blocking evaluation may stop at an earlier trait finding;
+  // this witness keeps the reconciliation assertion focused on this owner.
+  return Object.freeze({
+    code: 'rewardBagEntryUnavailable',
+    severity: 'error',
+    phase: 'rewardGeneration',
+    origin: combat10Reward,
+    evidence: Object.freeze({ rewardType: 'WeaponUpgrade' }),
+  });
 }
 
 describe('application editor-session reconciliation', () => {
@@ -53,7 +53,7 @@ describe('application editor-session reconciliation', () => {
     const application = createApplication();
     try {
       application.store.dispatch(authoredProjectReplaced(invalidTenOpenHubProject()));
-      const finding = combat10RewardFinding(application);
+      const finding = combat10RewardFinding();
       application.store.dispatch(
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );

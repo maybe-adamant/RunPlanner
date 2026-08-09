@@ -47,6 +47,21 @@ function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): Work
   return result;
 }
 
+let representativeWorkspaces:
+  | Readonly<{
+      underworld: StructuredWorkspaceProjection;
+      surface: StructuredWorkspaceProjection;
+    }>
+  | undefined;
+
+function representativeWorkspacePair() {
+  representativeWorkspaces ??= Object.freeze({
+    underworld: project(createGoldenFGHIProject()),
+    surface: project(createRepresentativeNOPQProject()),
+  });
+  return representativeWorkspaces;
+}
+
 /*
  * A15.2 inventory of the former umbrella cases and their focused owners:
  *  1 facade envelope/node union -> retained here
@@ -108,8 +123,7 @@ const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object
 
 describe('unified structured workspace projection facade', () => {
   it('assembles one frozen public workspace envelope across every supported biome family', () => {
-    const underworld = project(createGoldenFGHIProject());
-    const surface = project(createRepresentativeNOPQProject());
+    const { underworld, surface } = representativeWorkspacePair();
 
     for (const route of [...underworld.routes, ...surface.routes]) {
       expect(Object.isFrozen(route.biomes)).toBe(true);
@@ -132,8 +146,7 @@ describe('unified structured workspace projection facade', () => {
   });
 
   it('hands representative sibling assembly products to presentation, focus, and binding', () => {
-    const underworld = project(createGoldenFGHIProject());
-    const surface = project(createRepresentativeNOPQProject());
+    const { underworld, surface } = representativeWorkspacePair();
     const ordinary = biome(underworld, 'F').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' && node.targets.length > 0,

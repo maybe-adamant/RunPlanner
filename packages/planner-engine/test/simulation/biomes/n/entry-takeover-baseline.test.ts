@@ -17,15 +17,23 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { appendCompleteN, appendNEntry, nBiome, nOccurrenceIds } from '@run-planner/test-fixtures';
+import {
+  appendCompleteN,
+  appendNEntry,
+  authorLegalTraitOffers,
+  nBiome,
+  nOccurrenceIds,
+} from '@run-planner/test-fixtures';
 
 function currentNEntryProject() {
-  return appendNEntry(
-    createProjectDocument(catalog, {
-      projectId: 'n-b1-entry-baseline',
-      name: 'N B1 entry baseline',
-      configuredBiomeCounts: { Surface: 1 },
-    }),
+  return authorLegalTraitOffers(
+    appendNEntry(
+      createProjectDocument(catalog, {
+        projectId: 'n-b1-entry-baseline',
+        name: 'N B1 entry baseline',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    ),
   );
 }
 

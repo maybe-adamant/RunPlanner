@@ -163,13 +163,15 @@ function requireCompatibleOccurrenceAssemblyRequest(
 
 function statusFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceStatus {
   if (evaluation === undefined) return 'blocked';
-  if (evaluation.authoring === 'incomplete') return 'incomplete';
+  if (evaluation.authoring === 'incomplete') {
+    return evaluation.validity === 'invalid' ? 'invalid' : 'incomplete';
+  }
   return evaluation.validity;
 }
 
 function sourceFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceProjectionSource {
   if (evaluation === undefined) return 'authored';
-  return evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete'
+  return evaluation.authoring === 'complete' && evaluation.validity === 'valid'
     ? 'canonical'
     : 'progressive';
 }
@@ -181,7 +183,7 @@ function assessmentForSource(
   const { evaluation } = source;
   if (evaluation === undefined) return 'blocked';
   if (evaluation.coverage.kind === 'none') return 'unassessed';
-  if (evaluation.authoring === 'complete' && evaluation.coverage.kind === 'complete') {
+  if (evaluation.authoring === 'complete' && evaluation.validity === 'valid') {
     return 'assessed';
   }
   return source.isAssessed(address) || source.findingsFor(address).length > 0

@@ -1,6 +1,5 @@
 export {
   evaluateBiomeRoomGeneration,
-  evaluateBiomeRoomGenerationAssembly,
   roomTargetCandidateContextAtFrontier,
   normalTargetCandidateHistory,
   hubTerminalTakeoverCandidateSupportAtFrontier,
@@ -10,7 +9,6 @@ export {
   BiomeRoomGenerationContractError,
   supportedFieldsCageOutcomes,
 } from './biome';
-export type { BiomeRoomGenerationAssembly } from './biome';
 export {
   evaluateHubOpenSetConstraints,
   evaluateHubDecisionGeneration,

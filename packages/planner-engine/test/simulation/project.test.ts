@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -50,8 +51,8 @@ function completeBiome(project: ProjectDocument, routeKey: string, biomeKey: str
   const evaluated = route(project, routeKey).route.biomes.find(
     (candidate) => candidate.biomeKey === biomeKey,
   );
-  if (evaluated?.authoring !== 'complete') {
-    throw new Error(`${biomeKey} is not a complete project product`);
+  if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+    throw new Error(`${biomeKey} is not a complete-valid project product`);
   }
   return evaluated;
 }
@@ -114,6 +115,63 @@ describe('project simulation composition', () => {
       invalidBiomeCount: 0,
       blockedBiomeCount: 1,
       eligibleForExecutionPlan: false,
+    });
+  });
+
+  it('reports an earlier contextual block as invalid without erasing the later authored frontier', () => {
+    const removedDecision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(9, 1),
+    });
+    const incomplete = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: removedDecision,
+    });
+    const blockedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(incomplete, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: blockedReward,
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ApolloUpgrade',
+          spurnedSource: 'ZeusUpgrade',
+        },
+      },
+    });
+    const { result, route: underworld } = route(project, 'Underworld');
+    const f = underworld.biomes[0];
+
+    expect(result.status).toBe('invalid');
+    expect(underworld.status).toBe('invalid');
+    expect(underworld.processing).toEqual({
+      completeValidPrefix: [],
+      active: { kind: 'invalid', biomeKey: 'F' },
+      blockedSuffix: ['G'],
+    });
+    expect(f).toMatchObject({
+      authoring: 'incomplete',
+      validity: 'invalid',
+      frontier: removedDecision,
+      coverage: { kind: 'prefix', blockedAt: blockedReward },
+    });
+    expect(f?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardSourceUnavailable',
+        origin: blockedReward,
+      }),
+    );
+    expect(f?.findings.every((finding) => finding.phase !== 'completeness')).toBe(true);
+    expect(underworld.summary).toMatchObject({
+      incompleteBiomeCount: 1,
+      invalidBiomeCount: 1,
+      blockedBiomeCount: 1,
+    });
+    expect(result.summary).toMatchObject({
+      incompleteBiomeCount: 1,
+      invalidBiomeCount: 1,
+      blockedBiomeCount: 1,
     });
   });
 
@@ -191,11 +249,7 @@ describe('project simulation composition', () => {
       candidateEncounterKeys: ['GeneratedI_GoalReward'],
     });
 
-    const reset = applyProjectCommand(
-      initial,
-      catalog,
-      { kind: 'ResetEncounter', phase },
-    );
+    const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
     const { result, route: underworld } = route(reset, 'Underworld');
     const i = underworld.biomes.find((biome) => biome.biomeKey === 'I');
     if (i?.authoring !== 'complete' || i.validity !== 'invalid' || !('materializedPrefix' in i)) {
@@ -238,11 +292,11 @@ describe('project simulation composition', () => {
       selectedPossible: false,
       candidateEncounterKeys: ['GeneratedI_GoalReward'],
     });
-    const corrected = applyProjectCommand(
-      reset,
-      catalog,
-      { kind: 'SelectEncounter', phase, encounterKey: 'GeneratedI_GoalReward' },
-    );
+    const corrected = applyProjectCommand(reset, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'GeneratedI_GoalReward',
+    });
 
     expect(simulateProject(catalog, corrected).status).toBe('valid');
   });
@@ -346,7 +400,9 @@ describe('project simulation composition', () => {
     });
     const { result, route: underworld } = route(project, 'Underworld');
     const f = underworld.biomes[0];
-    if (f?.authoring !== 'complete') throw new Error('invalid F lost its canonical product');
+    if (f?.authoring !== 'complete' || f.validity !== 'invalid') {
+      throw new Error('invalid F lost its bounded product');
+    }
 
     expect(result.status).toBe('invalid');
     expect(underworld.processing).toEqual({
@@ -355,8 +411,12 @@ describe('project simulation composition', () => {
       blockedSuffix: ['G'],
     });
     expect(underworld.biomes).toHaveLength(1);
-    expect(f).toMatchObject({ validity: 'invalid', coverage: { kind: 'complete' } });
-    expect(f.snapshot.entryRoom.gameName).toBe('F_Opening01');
+    expect(f).toMatchObject({
+      validity: 'invalid',
+      coverage: { kind: 'prefix', blockedAt: invalidTarget },
+      materializedPrefix: { entryRoom: { gameName: 'F_Opening01' } },
+    });
+    expect('snapshot' in f).toBe(false);
     expect(f.findings).toContainEqual(
       expect.objectContaining({ code: 'targetRoomUnavailable', origin: invalidTarget }),
     );
@@ -412,8 +472,9 @@ describe('project simulation composition', () => {
       biomeKey: 'N',
       authoring: 'complete',
       validity: 'invalid',
-      coverage: { kind: 'complete' },
+      coverage: { kind: 'prefix' },
     });
+    expect('snapshot' in surface.biomes[0]!).toBe(false);
     expect(
       surface.findings.every(
         (finding) =>

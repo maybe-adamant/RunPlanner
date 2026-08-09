@@ -9,6 +9,7 @@ import * as candidateProjection from '@planner/projections/candidateProjection';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const uiRoot = join(repositoryRoot, 'apps/planner/src/ui');
+const candidateRoot = join(repositoryRoot, 'packages/planner-engine/src/simulation/candidates');
 
 function sourceFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -75,6 +76,33 @@ describe('candidate application boundary', () => {
       const source = readFileSync(path, 'utf8');
       for (const authority of forbiddenAuthorities) {
         expect(source, `${relative(uiRoot, path)} imports ${authority}`).not.toContain(authority);
+      }
+    }
+  });
+
+  it('keeps selected-path progressive evaluation out of candidate recovery', () => {
+    const candidateSources = sourceFiles(candidateRoot).map((path) =>
+      Object.freeze({ path, source: readFileSync(path, 'utf8') }),
+    );
+    const progressiveImporters = candidateSources
+      .filter(({ source }) => source.includes("from '../progressive/biome'"))
+      .map(({ path }) => relative(candidateRoot, path).replaceAll('\\', '/'));
+
+    // Hub owns bounded proposal replay for authored alternative orders. No
+    // other candidate family may rerun the selected path to recover artifacts.
+    expect(progressiveImporters).toEqual(['hub.ts']);
+    for (const { path, source } of candidateSources) {
+      const relativePath = relative(candidateRoot, path).replaceAll('\\', '/');
+      for (const forbidden of [
+        'evaluateProgressiveBiomeAssembly',
+        'evaluateProgressiveBiomeAssemblyBeforeClamp',
+        'completeInvalidSoleOwnerSource',
+        'hubRegionRepairForSideRoom',
+      ]) {
+        expect(
+          source,
+          `${relativePath} retains generic candidate recovery ${forbidden}`,
+        ).not.toContain(forbidden);
       }
     }
   });

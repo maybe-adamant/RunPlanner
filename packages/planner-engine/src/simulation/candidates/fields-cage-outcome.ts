@@ -40,13 +40,7 @@ function fieldsOutcomeSupport(
   evaluation: ProjectEvaluation,
   query: FieldsCageOutcomeCandidateQuery,
 ) {
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.decision.routeKey,
-    query.decision.biomeKey,
-  );
+  const biome = candidateBiome(evaluation, query.decision.routeKey, query.decision.biomeKey);
   const selected = biome?.roomGeneration.ordinary.fieldsCageOutcomes.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.decision),
   );

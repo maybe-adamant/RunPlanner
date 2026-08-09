@@ -143,6 +143,7 @@ describe('Q simulation', () => {
       gameName: 'Q_MiniBoss02',
     });
     const { biome: q } = completeQ(project);
+    if (q.validity !== 'valid') throw new Error('Q repeated-room fixture must be valid');
     const thirdBatch = q.snapshot.decisions.filter((decision) => decision.kind === 'batch')[2];
 
     expect(q.validity).toBe('valid');

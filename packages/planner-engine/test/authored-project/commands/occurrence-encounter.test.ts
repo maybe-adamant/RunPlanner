@@ -9,10 +9,12 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   createProjectHistory,
   redoProjectHistory,
   undoProjectHistory,
@@ -25,6 +27,7 @@ import {
 import {
   createRepresentativeNOProject,
   createRepresentativeNOPProject,
+  authorLegalTraitOffers,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -82,15 +85,46 @@ function localSideRoom(project: ProjectDocument) {
 function enteredNLocalProject(): ProjectDocument {
   let project = createCompleteNProject();
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-prehub')),
+      'source',
+    ),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nCombatId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSideRoomGeneration',
+    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceSideRoomGeneration',
     sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     generation: 'generated',
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomEntryOrder',
-    group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-    enteredSlotKeys: ['sideDoor1'],
-  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
+      enteredSlotKeys: ['sideDoor1'],
+    }),
+  );
 }
 
 describe('authored encounter occurrence commands', () => {

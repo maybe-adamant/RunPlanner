@@ -45,6 +45,7 @@ import {
   pBiome,
   pOccurrenceId,
   createRepresentativeNOPQProject,
+  authorLegalTraitOffers,
   oBiome,
 } from '@run-planner/test-fixtures';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
@@ -61,11 +62,11 @@ function support(project: ProjectDocument, owner: ReturnType<typeof phase>) {
 }
 
 function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encounterKey: string) {
-  return applyProjectCommand(
-    project,
-    catalog,
-    { kind: 'SelectEncounter', phase: owner, encounterKey },
-  );
+  return applyProjectCommand(project, catalog, {
+    kind: 'SelectEncounter',
+    phase: owner,
+    encounterKey,
+  });
 }
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
@@ -192,7 +193,7 @@ function oCombatPreparationFixture(): {
   const biome = result.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'O');
-  if (biome?.authoring !== 'complete') {
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
     throw new Error('O did not produce a complete history fixture');
   }
   const firstDecision = biome.snapshot.decisions[0];
@@ -316,6 +317,17 @@ describe('field NPC encounter requirements', () => {
 
     expect(support(project, gArachnePhase)?.candidateEncounterKeys).toContain('ArachneCombatG');
     project = select(project, gArachnePhase, 'ArachneCombatG');
+    for (const occurrenceId of [
+      goldenGOccurrenceId(3, 2),
+      goldenGOccurrenceId(3, 3),
+      goldenGOccurrenceId(4, 1),
+    ]) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenGBiome, occurrenceId),
+        gameName: 'G_Combat04',
+      });
+    }
     expect(support(project, gArachnePhase)).toMatchObject({
       selectedEncounterKey: 'ArachneCombatG',
       selectedPossible: true,
@@ -430,6 +442,7 @@ describe('field NPC encounter requirements', () => {
 
     const valid = select(initial, cage1, 'NemesisCombatH');
     const validBiome = evaluatedBiome(valid, 'H').biome;
+    if (validBiome.validity !== 'valid') throw new Error('H Nemesis fixture must be valid');
     const validRoom = validBiome.history.rooms.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
     );
@@ -484,11 +497,13 @@ describe('field NPC encounter requirements', () => {
     const intro = phase(oBiome, occurrenceId, 'Intro');
     const combat1 = phase(oBiome, occurrenceId, 'Combat1');
     const combat2 = phase(oBiome, occurrenceId, 'Combat2');
-    const withThreePhases = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: room,
-      encounterCount: 3,
-    });
+    const withThreePhases = authorLegalTraitOffers(
+      applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: room,
+        encounterCount: 3,
+      }),
+    );
     const originalState = authoredOccurrence(withThreePhases, 'O', occurrenceId).state;
 
     expect(support(withThreePhases, intro)?.candidateEncounterKeys).toContain('HeraclesCombatO');
@@ -565,7 +580,7 @@ describe('field NPC encounter requirements', () => {
     outdoor = applyProjectCommand(outdoor, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(pBiome, outdoorOccurrenceId),
-      value: { rewardType: 'MaxHealthDrop' },
+      value: { rewardType: 'TalentDrop' },
     });
 
     expect(support(outdoor, outdoorCombat)?.candidateEncounterKeys).toContain('IcarusCombatP');

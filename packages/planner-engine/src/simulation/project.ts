@@ -13,7 +13,8 @@ import type {
   ProjectDocument,
 } from '../authored-project/model';
 import { evaluateBiomeCompleteness } from './completeness';
-import { evaluateBiomeRoomGenerationAssembly, evaluateHubDecisionGeneration } from './generation';
+import { evaluateBiomeRoomGenerationAssemblyInternal } from './generation/biome';
+import { evaluateHubDecisionGenerationInternal } from './generation/hub';
 import {
   createBiomeCandidateArtifacts,
   createEmptyBiomeCandidateArtifacts,
@@ -33,20 +34,19 @@ import {
   type CanonicalBiome,
   type MaterializedBiomePrefix,
 } from './materialization';
-import {
-  evaluateEncounterCandidates,
-  structurallyActiveEncounterRooms,
-  type EncounterCandidateBoundary,
-  type EncounterPhaseCandidateSupport,
-} from './encounters';
+import { evaluateEncounterCandidatesInternal } from './encounters/candidates';
+import { structurallyActiveEncounterRooms } from './encounters/structural';
+import type { EncounterCandidateBoundary } from './encounters/candidates';
+import type { EncounterPhaseCandidateSupport } from './encounters/preparation';
 import type { SemanticFinding } from './model';
+import type { FindingRegionEntry } from './finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
-  runStateSnapshotsThroughCanonicalCoverage,
+  evaluateProgressiveBiomeAssemblyFromSelectedProducts,
   type BiomeGenerationValidation,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
-import { evaluateBiomeRewardsAssembly } from './rewards/biome';
+import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
 import type { BiomeRewardSimulation } from './rewards/model';
 import {
   publishRunStateThroughCoverage,
@@ -71,6 +71,8 @@ export interface BiomeEvaluationBase {
 
 interface IncompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
   readonly authoring: 'incomplete';
+  /** A reached contextual block is invalid even when authored completion is pending. */
+  readonly validity?: 'invalid';
   readonly frontier: SemanticAddress;
   readonly coverage: IncompleteBiomeEvaluationCoverage;
 }
@@ -96,7 +98,6 @@ export type { BiomeGenerationValidation } from './progressive/biome';
 interface CompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
   readonly authoring: 'complete';
   readonly validity: 'invalid' | 'valid';
-  readonly snapshot: CanonicalBiome;
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
 }
@@ -104,26 +105,17 @@ interface CompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
 export interface CompleteValidBiomeProjectEvaluation extends CompleteBiomeProjectEvaluationBase {
   readonly validity: 'valid';
   readonly coverage: CompleteBiomeEvaluationCoverage;
+  readonly snapshot: CanonicalBiome;
   readonly history: CanonicalBiomeHistory;
 }
 
 /**
- * Existing non-encounter validation can diagnose a fully composed canonical
- * biome. It remains non-seedable; route continuation accepts only the valid
- * branch above.
+ * Any complete authored biome that cannot be assessed to a valid checkpoint
+ * publishes one bounded invalid result. The authored materialized prefix is
+ * retained for editing, while assessment products stop at the first blocking
+ * atomic region. No canonical snapshot/history is published for this branch.
  */
-export interface CompleteCanonicalInvalidBiomeProjectEvaluation extends CompleteBiomeProjectEvaluationBase {
-  readonly validity: 'invalid';
-  readonly coverage: CompleteBiomeEvaluationCoverage;
-  readonly history: CanonicalBiomeHistory;
-}
-
-/**
- * Complete authored topology may still stop at an invalid encounter phase.
- * Its full snapshot remains available for authored projection, but only the
- * explicit bounded prefix has lifecycle coverage or history.
- */
-export interface CompleteEncounterBlockedBiomeProjectEvaluation extends CompleteBiomeProjectEvaluationBase {
+export interface CompleteBlockedBiomeProjectEvaluation extends CompleteBiomeProjectEvaluationBase {
   readonly validity: 'invalid';
   readonly coverage: PrefixBiomeEvaluationCoverage;
   readonly materializedPrefix: MaterializedBiomePrefix;
@@ -132,9 +124,7 @@ export interface CompleteEncounterBlockedBiomeProjectEvaluation extends Complete
 }
 
 export type CompleteBiomeProjectEvaluation =
-  | CompleteValidBiomeProjectEvaluation
-  | CompleteCanonicalInvalidBiomeProjectEvaluation
-  | CompleteEncounterBlockedBiomeProjectEvaluation;
+  CompleteValidBiomeProjectEvaluation | CompleteBlockedBiomeProjectEvaluation;
 
 export type ProjectBiomeEvaluation =
   IncompleteBiomeProjectEvaluation | CompleteBiomeProjectEvaluation;
@@ -366,12 +356,7 @@ interface BiomeProjectEvaluationAssembly {
 interface BiomeGenerationAssembly {
   readonly validation: BiomeGenerationValidation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
-}
-
-function declaredRunStateOwners(
-  snapshot: Pick<CanonicalBiome, 'decisions'>,
-): readonly DecisionRunStateOwner[] {
-  return Object.freeze(snapshot.decisions.map((decision) => decision.origin));
+  readonly findingRegions: readonly FindingRegionEntry[];
 }
 
 /**
@@ -423,15 +408,15 @@ function generation(
   traitOffers: TraitOfferCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): BiomeGenerationAssembly {
-  const ordinary = evaluateBiomeRoomGenerationAssembly(
+  const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
     catalog,
     snapshot,
     history,
     enteredBiomeCount,
     rewards.targetHistory,
   );
-  const hub = evaluateHubDecisionGeneration(catalog, snapshot, history);
-  const encounters = evaluateEncounterCandidates(
+  const hub = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
+  const encounters = evaluateEncounterCandidatesInternal(
     catalog,
     structurallyActiveEncounterRooms(snapshot),
     encounterPreparationViews(history),
@@ -462,6 +447,11 @@ function generation(
       encounters.artifacts,
       traitOffers,
     ),
+    findingRegions: Object.freeze([
+      ...ordinary.findingRegions,
+      ...hub.findingRegions,
+      ...encounters.findingRegions,
+    ]),
   });
 }
 
@@ -560,6 +550,7 @@ function evaluateBiomeAssembly(
         origin,
         authoring: 'incomplete',
         frontier: completeness.frontier,
+        ...(progressive.evaluation.blockedAt === undefined ? {} : { validity: 'invalid' as const }),
         coverage: Object.freeze({
           kind: 'prefix',
           through: prefixCoveragePoint(
@@ -580,7 +571,10 @@ function evaluateBiomeAssembly(
           progressive.evaluation.rewards.runStateSnapshots,
           structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
         ),
-        findings: Object.freeze([...completeness.findings, ...progressive.evaluation.findings]),
+        findings:
+          progressive.evaluation.blockedAt === undefined
+            ? Object.freeze([...completeness.findings, ...progressive.evaluation.findings])
+            : progressive.evaluation.findings,
       }),
       candidateArtifacts: progressive.candidateArtifacts,
     });
@@ -598,16 +592,11 @@ function evaluateBiomeAssembly(
     const blockedAt = progressive.evaluation.blockedAt ?? composed.block.blockedAt;
     const assessmentPrefix =
       progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
-    const runStatePublication = publishRunStateThroughCoverage(
+    const reconciledRewards = reconcileRunStateAvailability(
+      progressive.evaluation.rewards,
       progressive.evaluation.rewards.runStateSnapshots,
-      progressive.evaluation.rewards.runStateSnapshots,
-      declaredRunStateOwners(snapshot),
+      structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
     );
-    const reconciledRewards: BiomeRewardSimulation = Object.freeze({
-      ...progressive.evaluation.rewards,
-      runStateSnapshots: runStatePublication.snapshots,
-      runStateAvailability: runStatePublication.availability,
-    });
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
@@ -619,7 +608,6 @@ function evaluateBiomeAssembly(
           blockedAt,
         }),
         validity: 'invalid',
-        snapshot,
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -633,7 +621,7 @@ function evaluateBiomeAssembly(
     });
   }
   const history = composed.history;
-  const rewards = evaluateBiomeRewardsAssembly(
+  const rewards = evaluateBiomeRewardsAssemblyInternal(
     catalog,
     snapshot,
     history,
@@ -672,34 +660,56 @@ function evaluateBiomeAssembly(
       candidateArtifacts: roomGeneration.candidateArtifacts,
     });
   }
-  const runStatePublication = publishRunStateThroughCoverage(
-    rewards.simulation.runStateSnapshots,
-    runStateSnapshotsThroughCanonicalCoverage(
-      snapshot,
-      findings,
-      rewards.simulation.runStateSnapshots,
-    ),
-    declaredRunStateOwners(snapshot),
+  const selectedFindingRegions = Object.freeze([
+    ...roomGeneration.findingRegions,
+    ...rewards.findingRegions,
+  ]);
+  const progressive = evaluateProgressiveBiomeAssemblyFromSelectedProducts(
+    catalog,
+    origin,
+    plan,
+    context,
+    Object.freeze({
+      rewards: rewards.simulation,
+      candidateArtifacts: roomGeneration.candidateArtifacts,
+      findingRegions: selectedFindingRegions,
+    }),
   );
-  const reconciledRewards: BiomeRewardSimulation = Object.freeze({
-    ...rewards.simulation,
-    runStateSnapshots: runStatePublication.snapshots,
-    runStateAvailability: runStatePublication.availability,
-  });
+  if (progressive === null) {
+    throw new ProjectSimulationContractError(
+      `${plan.biomeKey} invalid complete biome has no materialized progressive prefix`,
+    );
+  }
+  const assessmentPrefix =
+    progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
+  const reconciledRewards = reconcileRunStateAvailability(
+    progressive.evaluation.rewards,
+    progressive.evaluation.rewards.runStateSnapshots,
+    structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
+  );
   return Object.freeze({
     evaluation: Object.freeze({
       biomeKey: plan.biomeKey,
       origin,
       authoring: 'complete',
-      coverage: Object.freeze({ kind: 'complete' }),
+      coverage: Object.freeze({
+        kind: 'prefix',
+        through: prefixCoveragePoint(assessmentPrefix),
+        ...(progressive.evaluation.blockedAt === undefined
+          ? {}
+          : { blockedAt: progressive.evaluation.blockedAt }),
+      }),
       validity: 'invalid',
-      snapshot,
-      history,
-      roomGeneration: roomGeneration.validation,
+      materializedPrefix: progressive.evaluation.materializedPrefix,
+      ...(progressive.evaluation.assessmentPrefix === undefined
+        ? {}
+        : { assessmentPrefix: progressive.evaluation.assessmentPrefix }),
+      history: progressive.evaluation.history,
+      roomGeneration: progressive.evaluation.roomGeneration,
       rewards: reconciledRewards,
-      findings,
+      findings: progressive.evaluation.findings,
     }),
-    candidateArtifacts: roomGeneration.candidateArtifacts,
+    candidateArtifacts: progressive.candidateArtifacts,
   });
 }
 
@@ -734,11 +744,11 @@ function routeStatus(
   evaluations: readonly ProjectBiomeEvaluation[],
 ): ProjectRouteEvaluation['status'] {
   if (configuredBiomeCount === 0) return 'empty';
-  if (evaluations.some((evaluation) => evaluation.authoring === 'incomplete')) return 'incomplete';
-  return evaluations.some(
-    (evaluation) => evaluation.authoring === 'complete' && evaluation.validity === 'invalid',
-  )
-    ? 'invalid'
+  if (evaluations.some((evaluation) => evaluation.validity === 'invalid')) {
+    return 'invalid';
+  }
+  return evaluations.some((evaluation) => evaluation.authoring === 'incomplete')
+    ? 'incomplete'
     : 'valid';
 }
 
@@ -751,7 +761,7 @@ function summarizeRoute(
     (evaluation) => evaluation.authoring === 'incomplete',
   ).length;
   const invalidBiomeCount = evaluations.filter(
-    (evaluation) => evaluation.authoring === 'complete' && evaluation.validity === 'invalid',
+    (evaluation) => evaluation.validity === 'invalid',
   ).length;
   return Object.freeze({
     configuredBiomeCount,
@@ -782,10 +792,10 @@ function evaluateRouteAssembly(
   let blockedSuffix: readonly string[] = Object.freeze([]);
   for (const [index, plan] of route.biomes.entries()) {
     const previous = evaluations.at(-1);
-    if (previous?.authoring === 'incomplete') {
+    if (previous?.authoring === 'incomplete' && previous.validity !== 'invalid') {
       throw new ProjectSimulationContractError('incomplete biome cannot seed route continuation');
     }
-    if (previous?.authoring === 'complete' && previous.validity === 'invalid') {
+    if (previous?.validity === 'invalid') {
       throw new ProjectSimulationContractError('invalid biome cannot seed route continuation');
     }
     const seed =
@@ -804,7 +814,7 @@ function evaluateRouteAssembly(
     findings.push(...evaluation.findings);
     if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
       active = Object.freeze({
-        kind: evaluation.authoring === 'incomplete' ? 'incomplete' : 'invalid',
+        kind: evaluation.validity === 'invalid' ? 'invalid' : 'incomplete',
         biomeKey: evaluation.biomeKey,
       });
       blockedSuffix = Object.freeze(route.biomes.slice(index + 1).map((biome) => biome.biomeKey));

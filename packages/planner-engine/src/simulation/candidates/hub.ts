@@ -23,7 +23,6 @@ import type { ProjectEvaluation } from '../project';
 import {
   evaluateProgressiveBiome,
   evaluateProgressiveBiomeBeforeClamp,
-  type ProgressiveBiomeEvaluation,
 } from '../progressive/biome';
 import {
   coverageUnavailable,
@@ -36,8 +35,6 @@ import {
   candidateBlockedAt,
   completeBiomeCount,
   planFor,
-  progressiveSeed,
-  progressiveContextFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 
@@ -142,6 +139,47 @@ interface CandidateHubState {
   readonly plan: ProjectDocument['routes'][number]['biomes'][number];
   readonly topology: NonNullable<ProjectDocument['routes'][number]['biomes'][number]['topology']>;
   readonly decision: HubDecision;
+}
+
+function previousCompleteValidBiome(
+  evaluation: ProjectEvaluation,
+  routeKey: string,
+  biomeKey: string,
+) {
+  const route = evaluation.routes.find((candidate) => candidate.routeKey === routeKey);
+  const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
+  if (index <= 0 || route === undefined) return undefined;
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const candidate = route.biomes[cursor];
+    if (candidate?.authoring === 'complete' && candidate.validity === 'valid') return candidate;
+  }
+  return undefined;
+}
+
+/** Context for the Hub's bounded authored-alternative replay only. */
+function hubAlternativeContext(
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  routeKey: string,
+  biomeKey: string,
+) {
+  const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
+  if (route === undefined) {
+    throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
+  }
+  const previous = previousCompleteValidBiome(evaluation, routeKey, biomeKey);
+  return Object.freeze({
+    enteredBiomeCount: completeBiomeCount(evaluation, routeKey, biomeKey),
+    loadout: route.loadout,
+    ...(previous === undefined
+      ? {}
+      : {
+          seed: Object.freeze({
+            history: previous.history,
+            rewardBranches: previous.rewards.branches,
+          }),
+        }),
+  });
 }
 
 function candidateHubState(
@@ -287,12 +325,7 @@ function hubRegionEvaluation(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
-    progressiveContextFor(
-      project,
-      routeKey,
-      completeBiomeCount(evaluation, routeKey, biomeKey),
-      progressiveSeed(evaluation, routeKey, biomeKey),
-    ),
+    hubAlternativeContext(project, evaluation, routeKey, biomeKey),
   );
 }
 
@@ -316,68 +349,8 @@ function hubVisitOrderEvaluation(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
-    progressiveContextFor(
-      project,
-      routeKey,
-      completeBiomeCount(evaluation, routeKey, biomeKey),
-      progressiveSeed(evaluation, routeKey, biomeKey),
-    ),
+    hubAlternativeContext(project, evaluation, routeKey, biomeKey),
   );
-}
-
-function hubRegionRepairForSideRoom(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  sideRoom: LocalChildAddress,
-  bounded: CandidateBiomeEvaluation | undefined,
-): ProgressiveBiomeEvaluation | undefined {
-  const blockedAt = candidateBlockedAt(bounded);
-  if (blockedAt === undefined || semanticAddressKey(blockedAt) !== semanticAddressKey(sideRoom)) {
-    return undefined;
-  }
-  const plan = planFor(project, sideRoom.routeKey, sideRoom.biomeKey);
-  const descriptor = catalog.biomeLayouts.byKey[plan.biomeKey]?.progression;
-  if (descriptor?.kind !== 'hub') {
-    throw new CandidateEvaluationContractError(`${plan.biomeKey} has no Hub candidate domain`);
-  }
-  const hub = candidateHubState(
-    catalog,
-    project,
-    sideRoom.routeKey,
-    sideRoom.biomeKey,
-    descriptor.hubKey,
-  );
-  const hubSlotKey = hub?.decision.openTargets.find(
-    (target) => target.occurrenceId === sideRoom.occurrenceId,
-  )?.hubSlotKey;
-  const visitIndex =
-    hubSlotKey === undefined ? undefined : (hub?.decision.visitOrder.indexOf(hubSlotKey) ?? -1) + 1;
-  if (visitIndex === undefined || visitIndex <= 0) return undefined;
-  const regionalPlan = hubRegionalPlan(
-    project,
-    sideRoom.routeKey,
-    sideRoom.biomeKey,
-    descriptor.hubKey,
-    visitIndex,
-  );
-  if (regionalPlan === undefined) return undefined;
-  const raw = evaluateProgressiveBiomeBeforeClamp(
-    catalog,
-    createBiomeAddress(sideRoom.routeKey, sideRoom.biomeKey),
-    regionalPlan,
-    progressiveContextFor(
-      project,
-      sideRoom.routeKey,
-      completeBiomeCount(evaluation, sideRoom.routeKey, sideRoom.biomeKey),
-      progressiveSeed(evaluation, sideRoom.routeKey, sideRoom.biomeKey),
-    ),
-  );
-  return raw !== null &&
-    raw.blockedAt !== undefined &&
-    semanticAddressKey(raw.blockedAt) === semanticAddressKey(sideRoom)
-    ? raw
-    : undefined;
 }
 
 function findingOwnsHubVisitOrder(
@@ -400,18 +373,10 @@ function findingOwnsLocalGroup(finding: SemanticFinding, group: LocalChildGroupA
 }
 
 function hubSideSupport(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
   sideRoom: LocalChildAddress,
   biome: CandidateBiomeEvaluation | undefined,
 ): HubSideRoomGenerationSupportEntry | undefined {
-  const support = biome?.roomGeneration.hub.sideRoomGenerations.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(sideRoom),
-  );
-  if (support !== undefined) return support;
-  const repair = hubRegionRepairForSideRoom(catalog, project, evaluation, sideRoom, biome);
-  return repair?.roomGeneration.hub.sideRoomGenerations.find(
+  return biome?.roomGeneration.hub.sideRoomGenerations.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(sideRoom),
   );
 }
@@ -551,10 +516,7 @@ export function evaluateHubVisitOrderCandidate(
   ) {
     throw new CandidateEvaluationContractError('Hub visit order must contain slot keys');
   }
-  if (
-    candidateBiome(catalog, project, evaluation, query.hub.routeKey, query.hub.biomeKey) ===
-    undefined
-  ) {
+  if (candidateBiome(evaluation, query.hub.routeKey, query.hub.biomeKey) === undefined) {
     return unavailableForBiome(
       evaluation,
       query.hub.routeKey,
@@ -640,14 +602,8 @@ export function evaluateSideRoomGenerationCandidate(
     occurrenceId: query.sideRoom.occurrenceId,
     groupKey: query.sideRoom.groupKey,
   });
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.sideRoom.routeKey,
-    query.sideRoom.biomeKey,
-  );
-  const baseline = hubSideSupport(catalog, project, evaluation, query.sideRoom, biome);
+  const biome = candidateBiome(evaluation, query.sideRoom.routeKey, query.sideRoom.biomeKey);
+  const baseline = hubSideSupport(query.sideRoom, biome);
   if (!progressiveHubLocalGroupReached(localGroup, biome) && baseline === undefined) {
     return coverageUnavailable(evaluation, query.sideRoom, 'afterTargetGeneration');
   }
@@ -740,13 +696,7 @@ export function evaluateSideRoomEntryOrderCandidate(
   evaluation: ProjectEvaluation,
   query: SideRoomEntryOrderCandidateQuery,
 ): SideRoomEntryOrderCandidateEvaluation {
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.group.routeKey,
-    query.group.biomeKey,
-  );
+  const biome = candidateBiome(evaluation, query.group.routeKey, query.group.biomeKey);
   if (!progressiveHubLocalGroupReached(query.group, biome)) {
     return coverageUnavailable(evaluation, query.group, 'afterRoomLifecycle');
   }

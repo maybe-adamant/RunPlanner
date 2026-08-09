@@ -10,6 +10,8 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -24,7 +26,6 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures';
-import { evaluateBiomeRewardsAssembly } from '../../../../src/simulation/rewards/biome';
 
 function evaluateO(project = createRepresentativeNOProject()) {
   const evaluation = simulateProject(catalog, project);
@@ -33,6 +34,12 @@ function evaluateO(project = createRepresentativeNOProject()) {
     ?.biomes.find((candidate) => candidate.biomeKey === 'O');
   if (biome?.authoring !== 'complete') throw new Error('O fixture did not complete');
   return { project, evaluation, biome };
+}
+
+function evaluateValidO(project = createRepresentativeNOProject()) {
+  const result = evaluateO(project);
+  if (result.biome.validity !== 'valid') throw new Error('O fixture did not complete-valid');
+  return { ...result, biome: result.biome };
 }
 
 function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject()) {
@@ -106,12 +113,29 @@ describe('selected O validation', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-      gameName: 'O_Combat02',
+      gameName: 'O_Reprieve01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
+      value: { rewardType: 'MaxHealthDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat02),
       gameName: 'O_Devotion01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.combat02),
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AresUpgrade',
+          spurnedSource: 'HephaestusUpgrade',
+        },
+      },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
@@ -129,7 +153,7 @@ describe('selected O validation', () => {
       targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
     });
 
-    const { biome } = evaluateO(project);
+    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
       kind: 'batch',
       rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
@@ -171,10 +195,13 @@ describe('selected O validation', () => {
         event.origin.kind === 'occurrence' &&
         event.origin.occurrenceId === oOccurrenceIds.combat04,
     );
-    expect(blockedPhaseEvents.map((event) => event.kind)).toContain('roomPrepared');
+    const creation = blockedPhaseEvents.find((event) => event.kind === 'roomCreated');
     const preparation = blockedPhaseEvents.find((event) => event.kind === 'roomPrepared');
     const recorded = blockedPhaseEvents.filter((event) => event.kind === 'encounterRecorded');
+    expect(creation).toBeDefined();
+    expect(preparation).toBeDefined();
     expect(recorded.map((event) => event.phaseKey)).toEqual(['Intro', 'Combat1']);
+    expect(blockedPhaseEvents.some((event) => event.kind === 'roomEntered')).toBe(false);
     expect(blockedPhaseEvents.some((event) => event.kind === 'encounterStarted')).toBe(false);
     const blockedFinding = o.findings.find(
       (finding) =>
@@ -191,8 +218,6 @@ describe('selected O validation', () => {
     if (typeof beforeSequence !== 'number') {
       throw new Error('blocked Ship phase lost its numeric preparation evidence');
     }
-    // The transient phase evaluator starts at the real roomPrepared event:
-    // each valid record advances exactly as the retained canonical prefix.
     expect(recorded[0]?.sequence).toBe(preparation.sequence + 1);
     expect(beforeSequence).toBe(recorded.at(-1)?.sequence);
     expect(blockedFinding).toMatchObject({ evidence: { slotKey: 'Combat2' } });
@@ -215,6 +240,57 @@ describe('selected O validation', () => {
     });
   });
 
+  it('retains only the blocked Devotion role capability before its after-combat sibling', () => {
+    const base = authorLegalTraitOffers(createRepresentativeNOProject());
+    const baseO = evaluateValidO(base).biome;
+    const owner = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
+    const selected = baseO.rewards.selectedTraitOffers.filter(
+      (trace) => semanticAddressKey(trace.address.owner) === semanticAddressKey(owner),
+    );
+    const chosen = selected.find((trace) => trace.acquisitionRole === 'chosenSource');
+    const spurned = selected.find((trace) => trace.acquisitionRole === 'spurnedSource');
+    if (chosen === undefined || spurned === undefined) {
+      throw new Error('Devotion capability fixture lost its legal trait roles');
+    }
+    const [first, second, third] = chosen.offer.options;
+    if (first === undefined || second === undefined || third === undefined) {
+      throw new Error('Devotion chosen offer lost its complete options');
+    }
+    const chosenAddress = createTraitOfferAddress(owner, 'chosenSource');
+    const spurnedAddress = createTraitOfferAddress(owner, 'spurnedSource');
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: chosenAddress,
+      value: {
+        giverKey: chosen.offer.giverKey,
+        options: [{ ...first, rarity: 'Heroic' }, second, third],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluated = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'invalid') {
+      throw new Error('invalid Devotion chosen offer did not block complete O');
+    }
+
+    expect(evaluated.coverage).toMatchObject({ kind: 'prefix', blockedAt: chosenAddress });
+    expect(evaluated.rewards.selectedTraitOffers).toContainEqual(
+      expect.objectContaining({ address: chosenAddress }),
+    );
+    expect(evaluated.rewards.selectedTraitOffers).not.toContainEqual(
+      expect.objectContaining({ address: spurnedAddress }),
+    );
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    expect(
+      session.evaluate({ kind: 'traitOffer', trait: chosenAddress, value: chosen.offer }),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
+    expect(
+      session.evaluate({ kind: 'traitOffer', trait: spurnedAddress, value: spurned.offer }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
   it('retains the invalid Combat2 owner for diagnosis while commands remain structural', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
@@ -234,13 +310,7 @@ describe('selected O validation', () => {
       phase,
     });
     expect(selected).not.toBe(project);
-    expect(
-      applyProjectCommand(
-        project,
-        catalog,
-        { kind: 'ResetEncounter', phase },
-      ),
-    ).toBe(project);
+    expect(applyProjectCommand(project, catalog, { kind: 'ResetEncounter', phase })).toBe(project);
   });
 
   it('rejects replacement of the declaration-fixed Devotion reward type', () => {
@@ -326,16 +396,17 @@ describe('selected O validation', () => {
       storeKey: 'MetaProgress',
     });
     const { biome } = evaluateO(project);
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(biome.validity).toBe('invalid');
     expect(biome.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: offer }),
     );
     expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+      session.evaluate({
         kind: 'rewardWheelStore',
         wheel,
         storeKey: 'RunProgress',
@@ -350,10 +421,21 @@ describe('selected O validation', () => {
       },
     });
     expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+      session.evaluate({
+        kind: 'rewardWheelOffer',
+        offer,
+        value: { rewardType: 'GiftDrop' },
+      }),
+    ).toMatchObject({ kind: 'rewardWheelOffer', result: { supported: true, findings: [] } });
+    expect(
+      session.evaluate({
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+        encounterCount: 2,
+      }),
+    ).toMatchObject({ kind: 'shipEncounterCount' });
+    expect(
+      session.evaluate({
         kind: 'shipEncounterCount',
         occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
         encounterCount: 2,
@@ -468,7 +550,7 @@ describe('selected O validation', () => {
     ]);
   });
 
-  it('uses the route loadout for a wheel2 Hammer check when the first wheel offer has no context', () => {
+  it('rejects a stale wheel2 Hammer after the route loadout changes', () => {
     let project = createRepresentativeNOProject();
     const shipOwner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
@@ -507,83 +589,15 @@ describe('selected O validation', () => {
     });
 
     const assembly = simulateProjectAssembly(catalog, project);
-    const currentRoute = project.routes.find((candidate) => candidate.routeKey === 'Surface');
-    if (currentRoute === undefined) throw new Error('O fixture lost Surface route');
-    const evaluatedRoute = assembly.evaluation.routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
-    const n = evaluatedRoute?.biomes.find((candidate) => candidate.biomeKey === 'N');
-    const o = evaluatedRoute?.biomes.find((candidate) => candidate.biomeKey === 'O');
-    if (
-      n?.authoring !== 'complete' ||
-      n.validity !== 'valid' ||
-      o?.authoring !== 'complete' ||
-      o.snapshot === undefined
-    ) {
-      throw new Error('O fixture did not complete after the stale Hammer edit');
-    }
-    const snapshot = o.snapshot;
-    const withoutFirstWheelContext = {
-      ...snapshot,
-      decisions: Object.freeze(
-        snapshot.decisions.map((decision) =>
-          decision.kind !== 'batch'
-            ? decision
-            : Object.freeze({
-                ...decision,
-                targets: Object.freeze(
-                  decision.targets.map((target) =>
-                    target.room.occurrenceId !== oOccurrenceIds.combat07
-                      ? target
-                      : Object.freeze({
-                          ...target,
-                          room: Object.freeze({
-                            ...target.room,
-                            rewardWheels: Object.freeze(
-                              target.room.rewardWheels!.map((candidateWheel) =>
-                                candidateWheel.wheelKey !== 'wheel1'
-                                  ? candidateWheel
-                                  : Object.freeze({
-                                      ...candidateWheel,
-                                      offers: Object.freeze(
-                                        candidateWheel.offers.map((offer, index) => {
-                                          if (index !== 0) return offer;
-                                          const { traitContext, ...withoutContext } = offer;
-                                          void traitContext;
-                                          return Object.freeze(withoutContext);
-                                        }),
-                                      ),
-                                    }),
-                              ),
-                            ),
-                          }),
-                        }),
-                  ),
-                ),
-              }),
-        ),
-      ),
-    };
-    const rewardAssembly = evaluateBiomeRewardsAssembly(
-      catalog,
-      withoutFirstWheelContext,
-      o.history,
-      2,
-      currentRoute.loadout,
-      n.rewards.branches,
-    );
-    const lifecycle = rewardAssembly.lifecycleArtifacts.shipAt(shipOwner);
-    if (lifecycle === undefined) throw new Error('missing Ship lifecycle candidate');
-    const occurrence = project.routes
+    const evaluated = assembly.evaluation.routes
       .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-      );
-    if (occurrence?.state.kind !== 'shipCombat') throw new Error('missing Ship state');
-
-    const result = lifecycle.evaluateState(occurrence.state);
-    expect(result.findings).toContainEqual(expect.objectContaining({ code: 'wrongHammerLoadout' }));
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'invalid') {
+      throw new Error('stale Hammer fixture did not block complete O');
+    }
+    expect(evaluated.findings).toContainEqual(
+      expect.objectContaining({ code: 'wrongHammerLoadout' }),
+    );
   });
 
   it('evaluates dormant wheel2 when a supported encounter-count candidate activates it', () => {

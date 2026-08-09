@@ -4,7 +4,6 @@ import {
   semanticAddressKey,
   type OccurrenceAddress,
   type RewardWheelAddress,
-  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type {
   ProjectDocument,
@@ -14,11 +13,7 @@ import type {
 import type { SemanticFinding } from '../model';
 import { materializeShipCombatState } from '../materialization';
 import type { EncounterCandidateArtifacts } from '../encounters';
-import type { CompleteBiomeProjectEvaluation, ProjectEvaluation } from '../project';
-import {
-  evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
-} from '../progressive/biome';
+import type { ProjectEvaluation } from '../project';
 import type {
   RoomLifecycleCandidateArtifacts,
   RoomLifecycleCandidateResult,
@@ -30,16 +25,7 @@ import {
   type CandidateContextUnavailable,
 } from './availability';
 import { CandidateEvaluationContractError } from './contract';
-import {
-  candidateBlockedAt,
-  completeBiome,
-  completeBiomeCount,
-  planFor,
-  prefixBiome,
-  progressiveSeed,
-  progressiveContextFor,
-  type CandidateBiomeEvaluation,
-} from './evaluated-biome';
+import { candidateBiome, planFor, type CandidateBiomeEvaluation } from './evaluated-biome';
 import { shipState, wheelState } from './ship-owner';
 
 export interface ShipEncounterCountCandidateQuery {
@@ -132,7 +118,6 @@ export type RoomLifecycleCandidateEvaluation =
   | EvaluatedShopPurchaseOrderCandidate;
 
 type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress;
-type LifecycleRepairScope = 'exact' | 'shopPurchaseOrder';
 
 interface LifecycleCandidateSource {
   readonly evaluation: CandidateBiomeEvaluation;
@@ -140,72 +125,13 @@ interface LifecycleCandidateSource {
   readonly encounters: EncounterCandidateArtifacts | undefined;
 }
 
-function lifecycleRepairOwnerMatches(
-  owner: LifecycleRepairOwner,
-  blockedOwner: SemanticAddress,
-  scope: LifecycleRepairScope = 'exact',
-): boolean {
-  if (semanticAddressKey(owner) === semanticAddressKey(blockedOwner)) return true;
-  if (
-    owner.kind === 'occurrence' &&
-    blockedOwner.kind === 'encounterPhase' &&
-    blockedOwner.owner.kind === 'occurrence' &&
-    blockedOwner.routeKey === owner.routeKey &&
-    blockedOwner.biomeKey === owner.biomeKey &&
-    blockedOwner.owner.occurrenceId === owner.occurrenceId
-  ) {
-    return true;
-  }
-  if (
-    scope === 'shopPurchaseOrder' &&
-    owner.kind === 'occurrence' &&
-    blockedOwner.kind === 'shopPurchase' &&
-    blockedOwner.routeKey === owner.routeKey &&
-    blockedOwner.biomeKey === owner.biomeKey &&
-    blockedOwner.occurrenceId === owner.occurrenceId
-  ) {
-    return true;
-  }
-  return (
-    owner.kind === 'rewardWheel' &&
-    blockedOwner.kind === 'rewardWheelOffer' &&
-    blockedOwner.routeKey === owner.routeKey &&
-    blockedOwner.biomeKey === owner.biomeKey &&
-    blockedOwner.occurrenceId === owner.occurrenceId &&
-    blockedOwner.wheelKey === owner.wheelKey
-  );
-}
-
 function selectedLifecycleSource(
-  catalog: Catalog,
-  project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
 ): LifecycleCandidateSource | undefined {
-  const complete = completeBiome(evaluation, owner.routeKey, owner.biomeKey);
-  if (complete?.validity === 'invalid') {
-    const progressive = evaluateProgressiveBiomeAssembly(
-      catalog,
-      createBiomeAddress(owner.routeKey, owner.biomeKey),
-      planFor(project, owner.routeKey, owner.biomeKey),
-      progressiveContextFor(
-        project,
-        owner.routeKey,
-        completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-        progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
-      ),
-    );
-    return progressive === null
-      ? undefined
-      : Object.freeze({
-          evaluation: progressive.evaluation,
-          artifacts: progressive.candidateArtifacts.roomLifecycles,
-          encounters: progressive.candidateArtifacts.encounters,
-        });
-  }
-  const biome = complete ?? prefixBiome(evaluation, owner.routeKey, owner.biomeKey);
+  const biome = candidateBiome(evaluation, owner.routeKey, owner.biomeKey);
   return biome === undefined
     ? undefined
     : Object.freeze({
@@ -215,96 +141,13 @@ function selectedLifecycleSource(
       });
 }
 
-function preClampLifecycleRepairSource(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  selected: LifecycleCandidateSource | undefined,
-  owner: LifecycleRepairOwner,
-  scope: LifecycleRepairScope,
-): LifecycleCandidateSource | undefined {
-  const blockedAt = candidateBlockedAt(selected?.evaluation);
-  if (blockedAt === undefined || !lifecycleRepairOwnerMatches(owner, blockedAt, scope)) {
-    return undefined;
-  }
-  const raw = evaluateProgressiveBiomeAssemblyBeforeClamp(
-    catalog,
-    createBiomeAddress(owner.routeKey, owner.biomeKey),
-    planFor(project, owner.routeKey, owner.biomeKey),
-    progressiveContextFor(
-      project,
-      owner.routeKey,
-      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
-    ),
-  );
-  return raw !== null &&
-    raw.evaluation.blockedAt !== undefined &&
-    lifecycleRepairOwnerMatches(owner, raw.evaluation.blockedAt, scope)
-    ? Object.freeze({
-        evaluation: raw.evaluation,
-        artifacts: raw.candidateArtifacts.roomLifecycles,
-        encounters: raw.candidateArtifacts.encounters,
-      })
-    : undefined;
-}
-
-/**
- * A complete biome can lack a materializable progressive form. Its complete
- * lifecycle capability is safe only when the queried owner owns every finding.
- */
-function completeInvalidSoleOwnerSource(
-  evaluation: ProjectEvaluation,
-  selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
-  selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
-  owner: LifecycleRepairOwner,
-  scope: LifecycleRepairScope,
-): LifecycleCandidateSource | undefined {
-  const complete: CompleteBiomeProjectEvaluation | undefined = completeBiome(
-    evaluation,
-    owner.routeKey,
-    owner.biomeKey,
-  );
-  if (complete?.validity !== 'invalid' || complete.findings.length === 0) return undefined;
-  return complete.findings.every((finding) =>
-    lifecycleRepairOwnerMatches(owner, finding.origin, scope),
-  )
-    ? Object.freeze({
-        evaluation: complete,
-        artifacts: selectedArtifacts,
-        encounters: selectedEncounterArtifacts,
-      })
-    : undefined;
-}
-
 function lifecycleSourceForOwner(
-  catalog: Catalog,
-  project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   owner: LifecycleRepairOwner,
-  scope: LifecycleRepairScope = 'exact',
   selectedEncounterArtifacts?: EncounterCandidateArtifacts,
 ): LifecycleCandidateSource | undefined {
-  const selected = selectedLifecycleSource(
-    catalog,
-    project,
-    evaluation,
-    selectedArtifacts,
-    selectedEncounterArtifacts,
-    owner,
-  );
-  return (
-    preClampLifecycleRepairSource(catalog, project, evaluation, selected, owner, scope) ??
-    completeInvalidSoleOwnerSource(
-      evaluation,
-      selectedArtifacts,
-      selectedEncounterArtifacts,
-      owner,
-      scope,
-    ) ??
-    selected
-  );
+  return selectedLifecycleSource(evaluation, selectedArtifacts, selectedEncounterArtifacts, owner);
 }
 
 function replaceWheel(
@@ -349,12 +192,9 @@ export function evaluateShipEncounterCountCandidate(
   query: ShipEncounterCountCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
   const source = lifecycleSourceForOwner(
-    catalog,
-    project,
     evaluation,
     selectedArtifacts,
     query.occurrence,
-    'exact',
     selectedEncounterArtifacts,
   );
   const context = source?.artifacts?.shipAt(query.occurrence);
@@ -433,13 +273,7 @@ export function evaluateRewardWheelLifecycleCandidate(
     | RewardWheelPickedCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
   const { owner, ship, descriptor, wheel } = wheelState(catalog, project, query.wheel);
-  const source = lifecycleSourceForOwner(
-    catalog,
-    project,
-    evaluation,
-    selectedArtifacts,
-    query.wheel,
-  );
+  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, query.wheel);
   const context = source?.artifacts?.shipAt(owner);
   if (source === undefined || context === undefined) {
     return unavailableForBiome(
@@ -530,14 +364,7 @@ export function evaluateShopPurchaseOrderCandidate(
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
   query: ShopPurchaseOrderCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
-  const source = lifecycleSourceForOwner(
-    catalog,
-    project,
-    evaluation,
-    selectedArtifacts,
-    query.shop,
-    'shopPurchaseOrder',
-  );
+  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, query.shop);
   if (source === undefined) {
     return unavailableForBiome(
       evaluation,
@@ -572,7 +399,11 @@ export function evaluateShopPurchaseOrderCandidate(
     seen.add(offerKey);
   }
   const context = source.artifacts?.shopAt(query.shop);
-  if (context === undefined) return producerUnavailable(query.shop);
+  if (context === undefined) {
+    return source.evaluation.coverage.kind === 'prefix'
+      ? coverageUnavailable(evaluation, query.shop, 'afterRoomLifecycle')
+      : producerUnavailable(query.shop);
+  }
   return Object.freeze({
     kind: 'shopPurchaseOrder',
     result: context.evaluateState(

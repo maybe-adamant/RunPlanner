@@ -46,7 +46,7 @@ export interface ProjectFeedbackPresentation {
 }
 
 export type BiomeStatusEvaluation =
-  | { readonly authoring: 'incomplete' }
+  | { readonly authoring: 'incomplete'; readonly validity?: 'invalid' }
   | { readonly authoring: 'complete'; readonly validity: 'invalid' | 'valid' };
 
 const findingCopy = {
@@ -243,6 +243,10 @@ const incompleteBiomeStatus = Object.freeze({
   label: 'Incomplete',
   tone: 'incomplete',
 } as const satisfies StatusPresentation);
+const invalidIncompleteBiomeStatus = Object.freeze({
+  label: 'Invalid',
+  tone: 'invalid',
+} as const satisfies StatusPresentation);
 const validBiomeStatus = Object.freeze({
   label: 'Complete · Valid',
   tone: 'valid',
@@ -314,7 +318,7 @@ export function presentBiomeStatus(
     return blockedBiomeStatus;
   }
   if (evaluation.authoring === 'incomplete') {
-    return incompleteBiomeStatus;
+    return evaluation.validity === 'invalid' ? invalidIncompleteBiomeStatus : incompleteBiomeStatus;
   }
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;
 }

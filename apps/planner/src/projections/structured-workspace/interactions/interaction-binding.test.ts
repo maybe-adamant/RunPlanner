@@ -42,6 +42,7 @@ import {
   createRepresentativeNOPQProject,
   appendCompleteN,
   appendNEntry,
+  authorLegalTraitOffers,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -367,12 +368,14 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds the terminal Hub takeover and completed handoff to exact commands', () => {
-    const boardProject = appendNEntry(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        name: 'Bound Hub board',
-        projectId: 'bound-hub-board',
-      }),
+    const boardProject = authorLegalTraitOffers(
+      appendNEntry(
+        createProjectDocument(catalog, {
+          configuredBiomeCounts: { Surface: 1 },
+          name: 'Bound Hub board',
+          projectId: 'bound-hub-board',
+        }),
+      ),
     );
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const terminalOwner = createExitDecisionAddress(nBiome, {

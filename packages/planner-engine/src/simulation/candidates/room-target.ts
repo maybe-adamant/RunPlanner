@@ -26,7 +26,6 @@ import type {
   CanonicalPhysicalExit,
 } from '../materialization';
 import type { ProjectEvaluation } from '../project';
-import { evaluateProgressiveBiomeAssembly } from '../progressive/biome';
 import {
   coverageUnavailable,
   unavailable,
@@ -38,13 +37,13 @@ import { unresolvedBatchRewardStorePrerequisite } from './batch-reward-store';
 import { CandidateEvaluationContractError } from './contract';
 import {
   candidateAssessmentPrefix,
-  completeBiome,
+  candidateBiome,
+  candidatePrefix,
   completeBiomeCount,
   planFor,
   prefixAuthoredRooms,
   prefixBiome,
-  progressiveSeed,
-  progressiveContextFor,
+  type CandidateBiomeEvaluation,
 } from './evaluated-biome';
 
 export interface RoomTargetCandidateQuery {
@@ -209,8 +208,11 @@ function evaluatePrefixRoomTarget(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   query: RoomTargetCandidateQuery,
+  candidate?: CandidateBiomeEvaluation,
 ): EvaluatedRoomTargetCandidate | undefined {
-  const biome = prefixBiome(evaluation, query.target.routeKey, query.target.biomeKey);
+  const biome = candidatePrefix(
+    candidate ?? prefixBiome(evaluation, query.target.routeKey, query.target.biomeKey),
+  );
   const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
@@ -268,82 +270,6 @@ function evaluatePrefixRoomTarget(
   });
 }
 
-function evaluateInvalidCompleteRoomTarget(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: RoomTargetCandidateQuery,
-): EvaluatedRoomTargetCandidate | undefined {
-  const biome = completeBiome(evaluation, query.target.routeKey, query.target.biomeKey);
-  if (biome?.validity !== 'invalid') return undefined;
-  const progressive = evaluateProgressiveBiomeAssembly(
-    catalog,
-    createBiomeAddress(query.target.routeKey, query.target.biomeKey),
-    planFor(project, query.target.routeKey, query.target.biomeKey),
-    progressiveContextFor(
-      project,
-      query.target.routeKey,
-      completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
-      progressiveSeed(evaluation, query.target.routeKey, query.target.biomeKey),
-    ),
-  );
-  if (progressive === null) return undefined;
-  const covered = progressive.candidateArtifacts.roomTargets.at(query.target);
-  if (covered !== undefined) {
-    return Object.freeze({ kind: 'roomTarget', result: covered.evaluateGameName(query.gameName) });
-  }
-  if (
-    blockedPhysicalTargetPrecedes(catalog, project, progressive.evaluation.blockedAt, query.target)
-  ) {
-    return undefined;
-  }
-  const prefix =
-    progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
-  const frontier = prefix.frontier;
-  if (frontier?.kind !== 'exitDecision') return undefined;
-  const decision = createExitDecisionAddress(
-    createBiomeAddress(query.target.routeKey, query.target.biomeKey),
-    query.target.source,
-  );
-  if (semanticAddressKey(frontier.origin) !== semanticAddressKey(decision)) return undefined;
-  if (frontier.parent.origin.kind !== 'occurrence') return undefined;
-  const source = prefixAuthoredRooms(prefix).find(
-    (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
-  );
-  const physicalExits = physicalExitsForTarget(catalog, project, query.target);
-  const physicalExit = physicalExits?.find((exit) => exit.exitKey === query.target.exitKey);
-  const sourceViews =
-    source === undefined
-      ? undefined
-      : progressive.evaluation.history.rooms.find(
-          (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
-        );
-  const firstTargetHistory =
-    source === undefined || sourceViews === undefined
-      ? undefined
-      : sourceCandidateHistory(catalog, project, query.target, source, sourceViews);
-  const sourceHistory =
-    physicalExits === undefined || sourceViews === undefined || firstTargetHistory === undefined
-      ? undefined
-      : historyBeforePhysicalTarget(sourceViews, physicalExits, query.target, firstTargetHistory);
-  if (source === undefined || physicalExit === undefined || sourceHistory === undefined) {
-    return undefined;
-  }
-  const context = roomTargetCandidateContextAtFrontier(
-    catalog,
-    prefix.biomeKey,
-    ordinaryBatchCount(catalog, prefix.decisions),
-    source,
-    query.target,
-    physicalExit,
-    sourceHistory,
-    completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
-    frontier.targets.length === 0,
-    progressive.evaluation.rewards.targetHistory,
-  );
-  return Object.freeze({ kind: 'roomTarget', result: context.evaluateGameName(query.gameName) });
-}
-
 function assertRoomTargetDomain(
   catalog: Catalog,
   project: ProjectDocument,
@@ -395,31 +321,16 @@ export function evaluateRoomTargetCandidate(
   query: RoomTargetCandidateQuery,
 ): RoomTargetCandidateEvaluation {
   assertRoomTargetDomain(catalog, project, query.target);
-  const biome = completeBiome(evaluation, query.target.routeKey, query.target.biomeKey);
-  if (biome?.validity === 'invalid') {
-    return (
-      evaluateInvalidCompleteRoomTarget(catalog, project, evaluation, query) ??
-      coverageUnavailable(evaluation, query.target, 'afterTargetGeneration')
-    );
-  }
+  const storePrerequisite = unresolvedBatchRewardStorePrerequisite(
+    project,
+    createBatchRewardStoreAddress(
+      createBiomeAddress(query.target.routeKey, query.target.biomeKey),
+      query.target.source,
+    ),
+  );
+  if (storePrerequisite !== undefined) return unavailable(storePrerequisite);
+  const biome = candidateBiome(evaluation, query.target.routeKey, query.target.biomeKey);
   if (biome === undefined) {
-    const storePrerequisite = unresolvedBatchRewardStorePrerequisite(
-      project,
-      createBatchRewardStoreAddress(
-        createBiomeAddress(query.target.routeKey, query.target.biomeKey),
-        query.target.source,
-      ),
-    );
-    if (storePrerequisite !== undefined) return unavailable(storePrerequisite);
-    const selectedContext = candidateArtifacts?.at(query.target);
-    if (selectedContext !== undefined) {
-      return Object.freeze({
-        kind: 'roomTarget',
-        result: selectedContext.evaluateGameName(query.gameName),
-      });
-    }
-    const prefix = evaluatePrefixRoomTarget(catalog, project, evaluation, query);
-    if (prefix !== undefined) return prefix;
     return unavailableForBiome(
       evaluation,
       query.target.routeKey,
@@ -428,10 +339,16 @@ export function evaluateRoomTargetCandidate(
       'afterTargetGeneration',
     );
   }
-  const context = candidateArtifacts?.at(query.target);
-  if (context === undefined) return unreachableTarget(query.target);
-  return Object.freeze({
-    kind: 'roomTarget',
-    result: context.evaluateGameName(query.gameName),
-  });
+  const selectedContext = candidateArtifacts?.at(query.target);
+  if (selectedContext !== undefined) {
+    return Object.freeze({
+      kind: 'roomTarget',
+      result: selectedContext.evaluateGameName(query.gameName),
+    });
+  }
+  const prefix = evaluatePrefixRoomTarget(catalog, project, evaluation, query, biome);
+  if (prefix !== undefined) return prefix;
+  return 'snapshot' in biome
+    ? unreachableTarget(query.target)
+    : coverageUnavailable(evaluation, query.target, 'afterTargetGeneration');
 }
