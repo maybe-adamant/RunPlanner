@@ -28,7 +28,6 @@ import {
   evaluateBiomeRoomGeneration,
   materializeBiomePrefix,
   simulateProject,
-  simulateProjectAssembly,
   type BiomeHistoryPrefix,
   type CanonicalAuthoredRoom,
   type HistoryEvent,
@@ -186,11 +185,7 @@ function selectEncounter(
   encounterKey: string,
 ): ProjectDocument {
   const phase = createEncounterPhaseAddress(biome, source(occurrenceId), 'Encounter');
-  return applyProjectCommand(
-    project,
-    catalog,
-    { kind: 'SelectEncounter', phase, encounterKey },
-  );
+  return applyProjectCommand(project, catalog, { kind: 'SelectEncounter', phase, encounterKey });
 }
 
 function appendSingleTargetBatch(
@@ -967,11 +962,11 @@ describe('route-detour simulation', () => {
         1,
         traitContext(project, gBiome),
       );
-      const traces = rewards.branches
-        .flatMap((branch) => branch.traitEvaluations ?? [])
-        .filter((trace) => semanticAddressKey(trace.address) === semanticAddressKey(incoming));
+      const traces = rewards.selectedTraitOffers.filter(
+        (trace) => semanticAddressKey(trace.address.owner) === semanticAddressKey(incoming),
+      );
       const trace = traces?.[0];
-      expect(trace?.assessments[0]).toMatchObject({
+      expect(trace?.branches[0]?.assessments[0]).toMatchObject({
         legal: false,
         findings: [{ code: 'offerContext', detail: 'blockGiftBoons', traitKey }],
       });

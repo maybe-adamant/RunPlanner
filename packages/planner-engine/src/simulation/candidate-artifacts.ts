@@ -1,8 +1,11 @@
 import {
   semanticAddressKey,
   type BiomeAddress,
+  type TraitOfferAddress,
   type TargetAddress,
 } from '../authored-project/addresses';
+import type { Catalog } from '../catalog-schema';
+import type { AuthoredTraitOffer } from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
   createEmptyRewardProducerCandidateArtifacts,
@@ -13,6 +16,13 @@ import {
   type RoomLifecycleCandidateArtifacts,
 } from './rewards/lifecycle-artifacts';
 import type { EncounterCandidateArtifacts } from './encounters';
+import {
+  assessTraitOffer,
+  assessTraitOfferComposition,
+  assessTraitReplacementComposition,
+  type TraitOfferBranchAssessment,
+  type TraitOfferCandidateContext,
+} from './traits';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({ at: () => undefined, roomAt: () => undefined });
@@ -28,12 +38,26 @@ export interface RoomTargetCandidateArtifacts {
   readonly at: (target: TargetAddress) => RoomTargetCandidateContext | undefined;
 }
 
+/**
+ * Exact trait-offer contact retained by one biome reward evaluation. The
+ * pre-offer histories and resolved contexts are intentionally reachable only
+ * through this capability; they are not part of the public simulation data.
+ */
+export interface TraitOfferCandidateCapability {
+  readonly evaluateOffer: (value: AuthoredTraitOffer) => readonly TraitOfferBranchAssessment[];
+}
+
+export interface TraitOfferCandidateArtifacts {
+  readonly at: (address: TraitOfferAddress) => TraitOfferCandidateCapability | undefined;
+}
+
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
   readonly roomTargets: RoomTargetCandidateArtifacts;
   readonly rewardProducers: RewardProducerCandidateArtifacts;
   readonly roomLifecycles: RoomLifecycleCandidateArtifacts;
   readonly encounters: EncounterCandidateArtifacts;
+  readonly traitOffers: TraitOfferCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -63,8 +87,50 @@ export function createBiomeCandidateArtifacts(
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   encounters: EncounterCandidateArtifacts = emptyEncounterCandidateArtifacts(),
+  traitOffers: TraitOfferCandidateArtifacts = createEmptyTraitOfferCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
-  return Object.freeze({ origin, roomTargets, rewardProducers, roomLifecycles, encounters });
+  return Object.freeze({
+    origin,
+    roomTargets,
+    rewardProducers,
+    roomLifecycles,
+    encounters,
+    traitOffers,
+  });
+}
+
+export function createTraitOfferCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>,
+): TraitOfferCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: TraitOfferAddress) => {
+      const branchContexts = privateContexts.get(semanticAddressKey(address));
+      if (branchContexts === undefined) return undefined;
+      return Object.freeze({
+        evaluateOffer: (value: AuthoredTraitOffer) =>
+          Object.freeze(
+            branchContexts.map((context) =>
+              Object.freeze({
+                assessments: assessTraitOffer(catalog, value, context.before, context.context),
+                composition: assessTraitOfferComposition(catalog, value, context.before),
+                replacementComposition: assessTraitReplacementComposition(
+                  catalog,
+                  value,
+                  context.before,
+                  context.context,
+                ),
+              }),
+            ),
+          ),
+      });
+    },
+  });
+}
+
+export function createEmptyTraitOfferCandidateArtifacts(): TraitOfferCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeCandidateArtifacts {
@@ -74,6 +140,7 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
     createEmptyRewardProducerCandidateArtifacts(),
     createEmptyRoomLifecycleCandidateArtifacts(),
     emptyEncounterCandidateArtifacts(),
+    createEmptyTraitOfferCandidateArtifacts(),
   );
 }
 

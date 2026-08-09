@@ -1,18 +1,16 @@
 import type { Catalog } from '../../catalog-schema';
-import { semanticAddressKey, type TraitOfferAddress } from '../../authored-project/addresses';
+import type { TraitOfferAddress } from '../../authored-project/addresses';
 import type { AuthoredTraitOffer } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectEvaluation } from '../project';
-import {
-  assessTraitOffer,
-  assessTraitOfferComposition,
-  assessTraitReplacementComposition,
-  type TraitAssessment,
-  type TraitFindingCode,
-  type TraitOfferCompositionAssessment,
+import type { TraitOfferCandidateArtifacts } from '../candidate-artifacts';
+import type {
+  TraitAssessment,
+  TraitFindingCode,
+  TraitOfferCompositionAssessment,
+  TraitReplacementCompositionAssessment,
 } from '../traits';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
-import { candidateBiome } from './evaluated-biome';
 
 export type TraitOfferCandidateFindingCode = TraitFindingCode | 'duplicateOfferedTrait';
 
@@ -30,7 +28,7 @@ export interface EvaluatedTraitOfferCandidate {
     readonly branches: readonly {
       readonly assessments: readonly TraitAssessment[];
       readonly composition: TraitOfferCompositionAssessment;
-      readonly replacementComposition?: ReturnType<typeof assessTraitReplacementComposition>;
+      readonly replacementComposition?: TraitReplacementCompositionAssessment;
     }[];
     readonly findings: readonly {
       readonly code: TraitOfferCandidateFindingCode;
@@ -47,16 +45,11 @@ export function evaluateTraitOfferCandidate(
   catalog: Catalog,
   _project: ProjectDocument,
   evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: TraitOfferCandidateQuery,
 ): TraitOfferCandidateEvaluation {
-  const biome = candidateBiome(
-    catalog,
-    _project,
-    evaluation,
-    query.trait.routeKey,
-    query.trait.biomeKey,
-  );
-  if (biome === undefined || !('rewards' in biome)) {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) {
     return unavailableForBiome(
       evaluation,
       query.trait.routeKey,
@@ -65,42 +58,15 @@ export function evaluateTraitOfferCandidate(
       'afterRoomLifecycle',
     );
   }
-  const ownerKey = semanticAddressKey(query.trait.owner);
-  const reached = Object.freeze(
-    biome.rewards.branches.flatMap((branch) =>
-      (branch.traitEvaluations ?? []).filter(
-        (candidate) =>
-          candidate.reached &&
-          candidate.acquisitionRole === query.trait.acquisitionRole &&
-          semanticAddressKey(candidate.address) === ownerKey,
-      ),
-    ),
-  );
-  if (reached.length === 0) {
-    return unavailableForBiome(
-      evaluation,
-      query.trait.routeKey,
-      query.trait.biomeKey,
-      query.trait.owner,
-      'afterRoomLifecycle',
-    );
-  }
-  const branches = reached.map((trace) =>
+  const reached = capability.evaluateOffer(query.value);
+  const branches = reached.map((branch) =>
     Object.freeze({
-      assessments: assessTraitOffer(catalog, query.value, trace.before, trace.context),
-      composition: assessTraitOfferComposition(catalog, query.value, trace.before),
-      ...(() => {
-        const replacementComposition = assessTraitReplacementComposition(
-          catalog,
-          query.value,
-          trace.before,
-          trace.context,
-        );
-        return replacementComposition.applies &&
-          (replacementComposition.replacementCount > 0 || !replacementComposition.legal)
-          ? { replacementComposition }
-          : {};
-      })(),
+      assessments: branch.assessments,
+      composition: branch.composition,
+      ...(branch.replacementComposition.applies &&
+      (branch.replacementComposition.replacementCount > 0 || !branch.replacementComposition.legal)
+        ? { replacementComposition: branch.replacementComposition }
+        : {}),
     }),
   );
   const assessments = branches.map((branch) => branch.assessments);

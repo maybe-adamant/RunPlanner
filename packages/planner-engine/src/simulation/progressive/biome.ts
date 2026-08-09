@@ -104,6 +104,7 @@ function generation(
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
+  traitOffers: import('../candidate-artifacts').TraitOfferCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
@@ -143,6 +144,7 @@ function generation(
       rewardProducers,
       roomLifecycles,
       encounters.artifacts,
+      traitOffers,
     ),
   });
 }
@@ -200,6 +202,7 @@ function products(
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
+    rewards.traitOfferArtifacts,
     encounterBoundary,
   );
   return Object.freeze({
@@ -870,6 +873,7 @@ export function evaluateProgressiveBiomeAssembly(
       retainedInteractions.rewardProducers,
       retainedInteractions.roomLifecycles,
       encounterArtifacts,
+      retainedInteractions.traitOffers,
     ),
   });
 }

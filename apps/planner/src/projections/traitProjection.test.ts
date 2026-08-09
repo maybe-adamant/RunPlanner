@@ -19,9 +19,7 @@ describe('route trait projection', () => {
     const fEvaluation = route?.biomes.find((biome) => biome.biomeKey === 'F');
     const traces =
       fEvaluation !== undefined && 'rewards' in fEvaluation
-        ? fEvaluation.rewards.branches
-            .flatMap((branch) => branch.traitEvaluations ?? [])
-            .filter((trace) => 'biomeKey' in trace.address && trace.address.biomeKey === 'F')
+        ? fEvaluation.rewards.selectedTraitOffers.filter((trace) => trace.address.biomeKey === 'F')
         : [];
     const firstTrace = traces[0];
     const secondTrace = traces[1];
@@ -50,16 +48,23 @@ describe('route trait projection', () => {
       legal: false,
       findings: Object.freeze([duplicateFinding, duplicateFinding, secondFinding]),
     });
-    const invalidTrace = Object.freeze({
-      ...firstTrace,
-      assessments: Object.freeze([invalidAssessment, ...firstTrace.assessments.slice(1)]),
+    const invalidBranch = Object.freeze({
+      ...firstTrace.branches[0]!,
+      assessments: Object.freeze([
+        invalidAssessment,
+        ...firstTrace.branches[0]!.assessments.slice(1),
+      ]),
       composition: Object.freeze({
-        ...firstTrace.composition,
+        ...firstTrace.branches[0]!.composition,
         legal: false,
         findings: Object.freeze([
           { code: 'nonPriorityTrait' as const, traitKey: selectedTraitKey },
         ]),
       }),
+    });
+    const invalidTrace = Object.freeze({
+      ...firstTrace,
+      branches: Object.freeze([invalidBranch]),
       chronologicalIndex: 5,
     });
     const validTrace = Object.freeze({ ...firstTrace, chronologicalIndex: 10 });
@@ -79,24 +84,10 @@ describe('route trait projection', () => {
                       ...biome,
                       rewards: Object.freeze({
                         ...biome.rewards,
-                        branches: Object.freeze(
+                        selectedTraitOffers: Object.freeze(
                           biome.biomeKey === 'F'
-                            ? [
-                                Object.freeze({
-                                  ...biome.rewards.branches[0],
-                                  traitEvaluations: Object.freeze([validTrace, otherTrace]),
-                                }),
-                                Object.freeze({
-                                  ...biome.rewards.branches[0],
-                                  traitEvaluations: Object.freeze([invalidTrace]),
-                                }),
-                              ]
-                            : [
-                                Object.freeze({
-                                  ...biome.rewards.branches[0],
-                                  traitEvaluations: Object.freeze([]),
-                                }),
-                              ],
+                            ? [validTrace, otherTrace, invalidTrace]
+                            : biome.rewards.selectedTraitOffers,
                         ),
                       }),
                     });
@@ -116,14 +107,19 @@ describe('route trait projection', () => {
     );
     const firstKey = semanticAddressKey(firstTrace.address);
     const secondKey = semanticAddressKey(secondTrace.address);
-    const firstRow = rows.find((row) => semanticAddressKey(row.address.owner) === firstKey);
-    const secondRow = rows.find((row) => semanticAddressKey(row.address.owner) === secondKey);
+    const firstRow = rows.find((row) => semanticAddressKey(row.address) === firstKey);
+    const secondRow = rows.find((row) => semanticAddressKey(row.address) === secondKey);
     if (firstRow === undefined || secondRow === undefined) {
       throw new Error('aggregated trait rows are missing');
     }
     expect(firstRow.invalid).toBe(true);
     expect(firstRow.findingCount).toBe(3);
     expect(rows.indexOf(firstRow)).toBeLessThan(rows.indexOf(secondRow));
+    // Chronology restarts for each biome. F's local indices are deliberately
+    // later than the first G offer, but the route projection must still keep
+    // the earlier biome's rows ahead of the later biome's rows.
+    const firstGBiomeRowIndex = rows.findIndex((row) => row.biomeKey === 'G');
+    expect(firstGBiomeRowIndex).toBeGreaterThan(rows.indexOf(secondRow));
     const feedback = projectTraitOfferFeedback(firstTrace.offer, {
       value: firstTrace.offer,
       evaluation: {
@@ -131,7 +127,7 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
-          assessments: invalidTrace.assessments,
+          assessments: invalidTrace.branches.flatMap((branch) => branch.assessments),
           findings: [duplicateFinding, duplicateFinding, secondFinding],
         },
       },
@@ -154,19 +150,15 @@ describe('route trait projection', () => {
     const gEvaluation = routeEvaluation?.biomes.find((biome) => biome.biomeKey === 'G');
     const trace =
       gEvaluation !== undefined && 'rewards' in gEvaluation
-        ? gEvaluation.rewards.branches
-            .flatMap((branch) => branch.traitEvaluations ?? [])
-            .find(
-              (candidate) =>
-                'biomeKey' in candidate.address &&
-                candidate.address.biomeKey === 'G' &&
-                'occurrenceId' in candidate.address,
-            )
+        ? gEvaluation.rewards.selectedTraitOffers.find(
+            (candidate) =>
+              candidate.address.biomeKey === 'G' && 'occurrenceId' in candidate.address.owner,
+          )
         : undefined;
-    if (trace === undefined || !('occurrenceId' in trace.address)) {
+    if (trace === undefined || !('occurrenceId' in trace.address.owner)) {
       throw new Error('G trait trace with an occurrence owner is missing');
     }
-    const traceAddress = trace.address;
+    const traceAddress = trace.address.owner;
     if (!('biomeKey' in traceAddress) || !('occurrenceId' in traceAddress)) {
       throw new Error('G trait trace address is not occurrence-owned');
     }

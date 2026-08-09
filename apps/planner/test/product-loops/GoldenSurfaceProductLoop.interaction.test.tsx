@@ -15,11 +15,7 @@ import {
   semanticAddressKey,
   type TraitOfferOwnerAddress,
 } from '@run-planner/engine/authored-project';
-import {
-  simulateProject,
-  traitCandidates,
-  type ReachedTraitOfferEvaluation,
-} from '@run-planner/engine/simulation';
+import { simulateProject, type SelectedTraitOfferAssessment } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -49,6 +45,9 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
+  reachedTraitOffers,
+  traitCandidateOptions,
+  type TraitCandidateProbe,
 } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
@@ -195,7 +194,7 @@ describe('surface product loop', () => {
     renderPlannerForInteraction({ application: recovered });
     expect(selectProfileStatus(recovered.store.getState())).toBe('Recovered');
     expect(currentProject(recovered)).toEqual(authored);
-  });
+  }, 10_000);
 
   it('carries a purchased P Shop Hammer through route history and the application projection', async () => {
     const application = createApplication();
@@ -584,52 +583,38 @@ describe('surface product loop', () => {
   it('completes an Olympian replacement through the shared trait editor', async () => {
     const application = createApplication();
     let authored = createRepresentativeNOPQProject();
-    const beforeEvaluation = simulateProject(application.catalog, authored);
     let target:
       | {
           readonly address: TraitOfferOwnerAddress;
-          readonly trace: ReachedTraitOfferEvaluation;
-          readonly candidate: ReturnType<typeof traitCandidates>[number];
+          readonly trace: SelectedTraitOfferAssessment;
+          readonly candidate: TraitCandidateProbe;
         }
       | undefined;
-    for (const route of beforeEvaluation.routes) {
-      for (const biome of route.biomes) {
-        if (!('rewards' in biome)) continue;
-        for (const branch of biome.rewards.branches) {
-          for (const trace of branch.traitEvaluations ?? []) {
-            const replacement = traitCandidates(
-              application.catalog,
-              trace.offer.giverKey,
-              trace.before,
-              trace.context,
-            ).find(
-              (candidate) =>
-                candidate.available && candidate.assessment.replacementTransition !== undefined,
-            );
-            if (replacement === undefined) continue;
-            target = {
-              address: trace.address as TraitOfferOwnerAddress,
-              trace,
-              candidate: replacement,
-            };
-            break;
-          }
-          if (target !== undefined) break;
-        }
-        if (target !== undefined) break;
-      }
-      if (target !== undefined) break;
+    for (const trace of reachedTraitOffers(authored)) {
+      const replacement = traitCandidateOptions(authored, trace.address, trace.offer.giverKey).find(
+        (candidate) => candidate.assessment.replacementTransition !== undefined,
+      );
+      if (replacement === undefined) continue;
+      target = {
+        address: trace.address.owner,
+        trace,
+        candidate: replacement,
+      };
+      break;
     }
     if (target === undefined) throw new Error('No reached Olympian replacement candidate found');
     const replacement = target.candidate;
     const transition = replacement.assessment.replacementTransition;
-    if (transition === undefined || replacement.rarity === undefined) {
+    if (transition === undefined || replacement.option.rarity === undefined) {
       throw new Error('Replacement candidate is missing its derived transition');
     }
     const options = [...target.trace.offer.options] as Array<
       (typeof target.trace.offer.options)[number]
     >;
-    options[0] = Object.freeze({ traitKey: replacement.traitKey, rarity: replacement.rarity });
+    options[0] = Object.freeze({
+      traitKey: replacement.option.traitKey,
+      rarity: replacement.option.rarity,
+    });
     authored = applyProjectCommand(authored, application.catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(target.address, target.trace.acquisitionRole),

@@ -1,5 +1,4 @@
 import {
-  createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type ProjectDocument,
@@ -9,7 +8,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   CandidateContextUnavailable,
   ProjectEvaluation,
-  ReachedTraitOfferEvaluation,
+  SelectedTraitOfferAssessment,
   TraitReplacementTransition,
 } from '@run-planner/engine/simulation';
 
@@ -147,7 +146,10 @@ export interface RouteTraitOfferProjection {
 
 function ownerLocation(
   project: ProjectDocument,
-  owner: Extract<ReachedTraitOfferEvaluation['address'], { readonly occurrenceId: string }>,
+  owner: Extract<
+    SelectedTraitOfferAssessment['address']['owner'],
+    { readonly occurrenceId: string }
+  >,
 ): string {
   const route = project.routes.find((candidate) => candidate.routeKey === owner.routeKey);
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === owner.biomeKey);
@@ -159,17 +161,17 @@ function ownerLocation(
 
 function ownerLocationForAddress(
   project: ProjectDocument,
-  owner: ReachedTraitOfferEvaluation['address'],
+  owner: SelectedTraitOfferAssessment['address']['owner'],
 ): string {
-  if (!('occurrenceId' in owner)) return owner.kind;
   return ownerLocation(project, owner);
 }
 
 interface AggregatedTraitTrace {
-  readonly trace: ReachedTraitOfferEvaluation;
-  readonly assessments: ReachedTraitOfferEvaluation['assessments'][number][];
-  readonly compositions: ReachedTraitOfferEvaluation['composition'][];
-  readonly replacementCompositions: ReachedTraitOfferEvaluation['replacementComposition'][];
+  readonly trace: SelectedTraitOfferAssessment;
+  readonly assessments: SelectedTraitOfferAssessment['branches'][number]['assessments'][number][];
+  readonly compositions: SelectedTraitOfferAssessment['branches'][number]['composition'][];
+  readonly replacementCompositions: SelectedTraitOfferAssessment['branches'][number]['replacementComposition'][];
+  biomeOrder: number;
   chronologicalIndex: number;
 }
 
@@ -205,7 +207,7 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
 }
 
 function uniformReplacement(
-  assessments: readonly ReachedTraitOfferEvaluation['assessments'][number][],
+  assessments: readonly SelectedTraitOfferAssessment['branches'][number]['assessments'][number][],
   branchCount: number,
   traitKey: string,
 ): TraitReplacementTransition | undefined {
@@ -253,43 +255,40 @@ function groupedTraitTraces(
   route: ProjectEvaluation['routes'][number],
 ): readonly AggregatedTraitTrace[] {
   const grouped = new Map<string, AggregatedTraitTrace>();
-  for (const biome of route.biomes) {
+  for (const [biomeOrder, biome] of route.biomes.entries()) {
     if (!('rewards' in biome)) continue;
-    for (const branch of biome.rewards.branches) {
-      for (const trace of branch.traitEvaluations ?? []) {
-        const address = createTraitOfferAddress(
-          trace.address as Extract<
-            typeof trace.address,
-            { kind: 'incomingReward' | 'localReward' | 'rewardWheelOffer' | 'shopOffer' }
-          >,
-          trace.acquisitionRole,
+    for (const trace of biome.rewards.selectedTraitOffers) {
+      const key = semanticAddressKey(trace.address);
+      const existing = grouped.get(key);
+      if (existing === undefined) {
+        grouped.set(key, {
+          assessments: trace.branches.flatMap((branch) => [...branch.assessments]),
+          compositions: trace.branches.map((branch) => branch.composition),
+          replacementCompositions: trace.branches.map((branch) => branch.replacementComposition),
+          biomeOrder,
+          chronologicalIndex: trace.chronologicalIndex,
+          trace,
+        });
+      } else {
+        existing.assessments.push(...trace.branches.flatMap((branch) => [...branch.assessments]));
+        existing.compositions.push(...trace.branches.map((branch) => branch.composition));
+        existing.replacementCompositions.push(
+          ...trace.branches.map((branch) => branch.replacementComposition),
         );
-        const key = semanticAddressKey(address);
-        const existing = grouped.get(key);
-        if (existing === undefined) {
-          grouped.set(key, {
-            assessments: [...trace.assessments],
-            compositions: [trace.composition],
-            replacementCompositions: [trace.replacementComposition],
-            chronologicalIndex: trace.chronologicalIndex,
-            trace,
-          });
-        } else {
-          existing.assessments.push(...trace.assessments);
-          existing.compositions.push(trace.composition);
-          existing.replacementCompositions.push(trace.replacementComposition);
-          existing.chronologicalIndex = Math.min(
-            existing.chronologicalIndex,
-            trace.chronologicalIndex,
-          );
-        }
+        existing.chronologicalIndex = Math.min(
+          existing.chronologicalIndex,
+          trace.chronologicalIndex,
+        );
+        existing.biomeOrder = Math.min(existing.biomeOrder, biomeOrder);
       }
     }
   }
   return Object.freeze(
     [...grouped.values()].sort((left, right) => {
-      const chronology = left.chronologicalIndex - right.chronologicalIndex;
+      const chronology = left.biomeOrder - right.biomeOrder;
       if (chronology !== 0) return chronology;
+      const localChronology = left.chronologicalIndex - right.chronologicalIndex;
+      if (localChronology !== 0) return localChronology;
       return semanticAddressKey(left.trace.address).localeCompare(
         semanticAddressKey(right.trace.address),
       );
@@ -309,13 +308,7 @@ export function projectRouteTraitOffers(
   const rows: RouteTraitOfferProjection[] = [];
   for (const grouped of groupedTraitTraces(route)) {
     const trace = grouped.trace;
-    const address = createTraitOfferAddress(
-      trace.address as Extract<
-        typeof trace.address,
-        { kind: 'incomingReward' | 'localReward' | 'rewardWheelOffer' | 'shopOffer' }
-      >,
-      trace.acquisitionRole,
-    );
+    const address = trace.address;
     const key = semanticAddressKey(address);
     const control = interactions.traitOffers.get(key);
     const option =
@@ -341,7 +334,7 @@ export function projectRouteTraitOffers(
         address,
         biomeKey: address.biomeKey,
         giverLabel: giver.label,
-        locationLabel: ownerLocationForAddress(project, trace.address),
+        locationLabel: ownerLocationForAddress(project, trace.address.owner),
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
         ...(selectedReplacement === undefined

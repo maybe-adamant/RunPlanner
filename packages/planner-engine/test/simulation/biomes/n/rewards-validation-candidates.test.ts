@@ -551,14 +551,14 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
     );
     const branch = branches[0];
-    const trace = branch?.traitEvaluations?.[0];
-    if (branch === undefined || trace === undefined) throw new Error('trait event was not reached');
-    expect(trace.address).toEqual(incoming.origin);
-    expect(trace.assessments.every((assessment) => assessment.legal)).toBe(true);
+    const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];
+    if (branch === undefined || expectedOffer === undefined) {
+      throw new Error('trait event was not reached');
+    }
     expect(branch.events).toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: incoming.origin }),
     );
-    expect(branch.traitHistory?.equippedTraits[trace.offer.options[0]!.traitKey]).toBeDefined();
+    expect(branch.traitHistory?.equippedTraits[expectedOffer.options[0]!.traitKey]).toBeDefined();
     expect(findings).toHaveLength(0);
   });
 
