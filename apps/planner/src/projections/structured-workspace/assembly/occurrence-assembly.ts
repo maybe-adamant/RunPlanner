@@ -1103,9 +1103,11 @@ export function assembleWorkspaceOccurrence(
           ...(occurrence.state.kind === 'shipCombat'
             ? { shipEncounterCount: occurrence.state.encounterCount }
             : {}),
-          ...(input.fieldsBatchFacts === undefined
-            ? {}
-            : { fieldsCageRewardCount: input.fieldsBatchFacts.doorCageRewardCount }),
+          ...(occurrence.state.kind === 'fieldsCombat'
+            ? {
+                fieldsCageRewardCount: input.fieldsBatchFacts?.doorCageRewardCount ?? 0,
+              }
+            : {}),
         },
       )
     : Object.freeze([]);
