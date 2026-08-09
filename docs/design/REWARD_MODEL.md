@@ -987,7 +987,7 @@ god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
 target and Boon Decay's superchargeable target are distinct predicates over
 that ledger and are not aliases or persisted shadow counters. The old
 ordinary-source increment approximation is retired. NPC/Story effect-backed
-choices, rarity mutation, stacks, and other deferred providers remain outside
+choices, other rarity mutations, stacks, and other deferred providers remain outside
 this persistent trait lifecycle.
 
 Proper Upbringing is the one modeled rarity lifecycle in this slice. Its

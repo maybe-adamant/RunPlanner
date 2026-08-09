@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
+import type { ScalableGodTraitRarityFloorEffect } from '@run-planner/engine/catalog-schema';
 
 const expectedPositiveRequirementOwners = [
   'DoorHealToFullBoon',
@@ -1061,7 +1062,13 @@ describe('trait offer catalog closure', () => {
         traitCatalog: {
           ...declarations.traitCatalog,
           traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === proper.key ? { ...trait, rarityFloorEffect: effect } : trait,
+            trait.key === proper.key
+              ? {
+                  ...trait,
+                  // Deliberately malformed values enter through the raw declaration boundary.
+                  rarityFloorEffect: effect as unknown as ScalableGodTraitRarityFloorEffect,
+                }
+              : trait,
           ),
         },
       });

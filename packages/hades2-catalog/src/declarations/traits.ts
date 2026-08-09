@@ -4,6 +4,7 @@ import type {
   TraitOfferDefaults,
   TraitRequirementExpression,
   TraitRarity,
+  ScalableGodTraitRarityFloorEffect,
 } from '@run-planner/engine/catalog-schema';
 
 /** Raw catalog declarations intentionally remain separate from normalized
@@ -20,7 +21,7 @@ export interface RawTraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
-  readonly rarityFloorEffect?: unknown;
+  readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: TraitDeclaration['hammerCompatibility'];
 }
