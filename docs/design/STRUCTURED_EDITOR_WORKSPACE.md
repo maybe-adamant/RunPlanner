@@ -129,6 +129,28 @@ features, items, or other room-local products remain available through the conta
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight.
 
+### Run State Join and Outer-Decision Placement
+
+The workspace joins each engine-published decision Run State snapshot to its
+exact semantic decision owner. A structurally eligible decision projects one
+launcher: an available launcher binds that exact snapshot, while an unreached
+launcher carries the engine coverage reason and binds no invented state.
+Presentation owns structural titles, catalog-backed labels, section ordering,
+and compact requirement copy; it does not evaluate requirements, fold traits,
+derive bags, or infer availability.
+
+The launcher belongs in the selected decision workbench header, never in the
+rail or on every room card. Ordinary generated decisions, including generated
+Preboss, follow the same owner rule. N has an explicit two-layer presentation:
+its outer chronology is Opening -> PreHub -> Hub -> Preboss, while Hub visits,
+slots, side rooms, restores, and local children are inner chronology. Opening
+remains a fixed stage. Run State checkpoints occur before PreHub, before Hub,
+and before Preboss; the one Hub launcher is owned by the Hub decision before
+board generation. The visible completed-Hub handoff remains the outer transition
+to Preboss, and any future outer decision follows the same generic owner rule.
+React consumes these projected owners and never distinguishes them from room
+names or rendered nesting.
+
 The center region does not attempt to make ordinary decision topology and the
 Hub board look structurally identical. It does give both the same route rail,
 semantic focus, finding navigation, coverage, and focused-inspector language.

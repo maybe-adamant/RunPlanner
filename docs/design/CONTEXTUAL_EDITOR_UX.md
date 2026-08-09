@@ -96,6 +96,23 @@ The application presentation layer owns:
 React owns accessible interaction and transient picker state. It does not
 reevaluate requirements, bags, force pressure, or sibling legality.
 
+## Read-Only Run State Sheet
+
+An available decision Run State launcher opens a non-modal contextual sheet
+anchored to the left edge of the editor workspace. On desktop it overlays the
+route and general-navigation side while leaving the active inspector in place;
+at narrow widths it becomes a full-width sheet rather than a compressed column.
+It uses the workspace visual language and is descriptive only: no Save, Cancel,
+Apply, or authored controls appear.
+
+The sheet presents the projected god pool, elements, equipped traits, current
+counters, and collapsed-by-default counted reward bags. Bag disclosures use the
+projected `Eligible now` and `Ineligible now` groups; they do not claim which
+upcoming door can be selected. Opening moves focus to the sheet close control,
+Escape and that control close it, and close restores focus to the launcher.
+The target and disclosure state are transient presentation state, outside
+authored history and persistence.
+
 The application also projects the ordered picker sections consumed by React.
 The shared component may mechanically render those sections, manage search and
 focus, and open an unavailable disclosure; it does not decide category order,

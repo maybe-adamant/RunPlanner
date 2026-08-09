@@ -241,6 +241,39 @@ A complete biome is the maximal form of that same evaluation. It adds the
 selected Preboss and completion sequence, canonical snapshot, final biome history,
 selected-plan validity, and the ability to seed the next biome when valid.
 
+### Decision Run-State Snapshots
+
+The evaluation also publishes a data-only Run State snapshot for each reached
+outer decision at its exact `beforeTargetGeneration` checkpoint. The snapshot
+is one aligned view of the history and reward branches at that event: all prior
+picked-room lifecycle effects, prior offer-time bag consumption, acquisitions,
+traits, sources, and counters are present; none of the current decision's
+targets, rewards, peer exclusions, or target-local filters has been generated.
+Changing only current-decision authorship therefore cannot change its snapshot.
+
+Snapshot availability is part of progressive coverage, not an application
+inference. A snapshot exists only when valid evaluation reached that exact
+checkpoint. Invalid or incomplete upstream ownership prevents later snapshots;
+an invalid value within the current decision and downstream incompleteness do
+not erase the already-reached pre-decision snapshot. Complete and progressive
+biome products expose the same snapshot vocabulary.
+
+Each snapshot retains its exact exit- or Hub-decision semantic owner,
+history sequence, checkpoint, ordinary god-pool state, canonical trait and
+element history, existing history counters, and the effective remaining counted
+reward bags. Bag eligibility means only that an entry's own requirement holds
+against exact pre-decision facts. It excludes current-target filters,
+forced-store resolution, peer/source exclusion, payload support, and
+target-local Shop conflicts, which do not yet exist at the checkpoint.
+Presentation aggregates branches first by reward type and eligibility for a
+compact row, then retains distinct condition groups for expanded detail; an
+eligible and ineligible copy never merge. Exact branch totals stay exact, while
+a real branch difference publishes a range. Lazy bags project as their
+declaration-owned initial contents without materializing a branch. The snapshot
+producer reuses existing source support, trait folds, counter projections, and
+requirement evaluation; it neither reconstructs history backwards nor creates a
+second diagnostic policy.
+
 If a covered selected value has no supporting pre-state, alternatives at that
 owner may still use its last valid pre-decision view for repair. Contextual
 claims after an unsupported upstream state remain unavailable; materialized
