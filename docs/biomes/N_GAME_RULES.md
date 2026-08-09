@@ -4,7 +4,7 @@
 
 This document is the game-rule authority for Ephyra (`N`) under the
 progressed-save static baseline with supported Artemis and Heracles combat. It distinguishes the game's literal route
-mechanism from the implemented schema-13 planner normalization. Shared
+mechanism from the current planner normalization. Shared
 occurrence, reward, and completion rules are
 defined by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). N

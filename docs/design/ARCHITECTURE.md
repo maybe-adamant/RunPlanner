@@ -69,12 +69,11 @@ normalized catalog + authored project
       -> execute catalog-selected room lifecycle profiles
       -> apply declaration-selected typed lifecycle effects
       -> compose occurrence-addressed room history fragments
-      -> canonical route snapshots
-      -> lifecycle history and ledgers
-      -> validation and candidate results
-      -> semantic findings
+      -> one exact project-evaluation assembly
+          -> data-only evaluation, coverage, history, and findings
+          -> private candidate artifacts from the same execution
 
-authored state + derived result
+authored state + matching evaluation assembly
   -> presentation projectors
       -> React editor
 
@@ -393,18 +392,18 @@ The initial lifecycle is intentionally simple:
 create/load project
   -> decode and normalize authored state
   -> run full pure simulation
-  -> atomically publish authored + derived view
+  -> atomically publish authored project + exact evaluation assembly
 
 semantic edit
   -> apply one authored command
   -> push undo history when appropriate
   -> run full pure simulation
-  -> atomically publish replacement derived result
+  -> atomically publish replacement exact evaluation assembly
 
 undo/redo
   -> replace authored state
   -> run full pure simulation
-  -> atomically publish replacement derived result
+  -> atomically publish replacement exact evaluation assembly
 ```
 
 There is no source revision, rebuild revision, incremental invalidation graph,
@@ -419,7 +418,23 @@ is necessary.
 
 ## Atomic Derived Publication
 
-One simulation attempt produces one coherent immutable result:
+One simulation attempt produces one coherent immutable assembly. Its public
+surface carries the exact authored identity and data-only evaluation; its
+implementation privately retains the candidate artifacts produced by that
+same execution:
+
+```ts
+interface ProjectEvaluationAssembly {
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+  // Candidate artifacts remain opaque outside the prepared-session boundary.
+}
+```
+
+`simulateProject` is the data-only facade over this assembly. It does not run a
+second evaluation to obtain public data, and candidate-session construction
+rejects an assembly that was not produced by the exact simulator execution.
+The public evaluation remains:
 
 ```ts
 interface ProjectEvaluation {
@@ -435,30 +450,79 @@ interface ProjectEvaluation {
 One route evaluation publishes explicit `completeValidPrefix`, `active`, and
 `blockedSuffix` processing regions. Only a complete and valid biome enters the
 prefix and seeds the next biome. Every biome result separately reports
-authoring state and evaluation coverage. Incomplete active biomes publish their
-semantic authoring frontier and no canonical snapshot. Biomes with generated
-progression publish one immutable materialized prefix with its partial history,
-room-generation proof, reward witnesses, counters, and findings. The prefix is
-folded by the same lifecycle, reward, and generation authorities as complete
-simulation and is clamped at the first unsupported state. The Hub progression
-publishes the same class of partial products through its fixed entry, one atomic
-open board, and ordered visits with parent-local side state. Hub coverage never
-claims a prefix of rendered board slots: the board is either not generated or
-materialized and evaluated in full. Neither progression variant introduces a
-second candidate-only evaluation path.
+authoring state and evaluation coverage.
 
-Complete biome results strengthen that same progressive result with the
-selected Preboss and derived completion sequence, canonical snapshot, final
-biome history, selected-plan validity, and downstream seed eligibility.
-Incomplete biome results cannot carry those complete-biome products. The UI
-must never combine prefix or final history from one authored snapshot with
-findings or candidate decoration from another.
+- An unevaluated incomplete biome publishes its semantic authoring frontier
+  and no materialized or canonical snapshot.
+- A reached valid incomplete biome publishes its maximum structurally
+  materializable authored prefix and the assessment products reached through
+  that prefix.
+- A contextually blocked complete or incomplete biome publishes that maximum
+  structurally materializable prefix separately from an optional clamped
+  `assessmentPrefix`. Coverage, findings, Run State, and candidate artifacts
+  stop at the first blocking atomic region. The `ProjectDocument` alone retains
+  any remaining authored suffix; neither retained prefix nor suffix becomes
+  assessed truth merely because it is authored.
+- Only a complete-valid biome publishes `CanonicalBiome`, final biome history,
+  completion transition, and a route seed for the next biome.
+
+The first blocking region is located from existing materialization,
+generation, reward, encounter, and lifecycle chronology rather than finding
+array order. Aggregate authorities attach an internal atomic-region key when
+they produce findings. Every co-owned error finding at the first region is
+retained; later findings and capabilities are withheld. Hub open-board and
+other jointly unordered products remain atomic and never claim a false
+rendered-child prefix.
+
+Run State observes the same coverage. A snapshot remains available through the
+outer decision containing the blocked value and is explicitly unavailable
+afterward. There is no canonical-only repair clamp or candidate-only selected
+evaluation path. The UI must never combine prefix or final history from one
+authored snapshot with findings, Run State, or candidate decoration from
+another.
 
 `empty` identifies a project with no configured biome prefix and no invented
 finding. Ordinary incomplete and invalid plans remain first-class editor states.
 Malformed project documents, impossible catalog construction, and violated
 internal invariants throw at their contact boundary and do not masquerade as
 user feedback.
+
+### Authored-first workspace assembly
+
+The planner application composes one structured-workspace source index from
+the full `ProjectDocument` and its matching data-only evaluation:
+
+```text
+ProjectDocument + matching ProjectEvaluation
+  -> WorkspaceProjectSourceIndex
+      -> one WorkspaceBiomeSource per authored biome
+          -> full authored plan and topology
+          -> one context-free BiomeCompletenessResult
+          -> explicit assessed-owner coverage and findings
+          -> reached evaluator overlays only
+  -> semantic assembly + topology-interaction assembly
+  -> bound interaction catalog + React presentation
+```
+
+`WorkspaceBiomeSource` is the only planner production boundary that acquires
+biome completeness. Semantic frontier assembly and topology-interaction
+assembly consume that immutable product; React and Redux neither recompute it
+nor infer coverage.
+
+Authored topology is always the structural base. A complete-valid biome may
+overlay its canonical snapshot. A progressive or complete-blocked biome
+overlays `assessmentPrefix` when present, otherwise its reached materialized
+prefix; it never overlays the larger retained materialization past a clamp.
+Assessed-owner indexing and source-contact validation reject evaluator products
+that extend beyond declared coverage. Findings remain separately indexed so
+the first blocked owner stays navigable even when its value is the boundary
+rather than an assessed downstream product.
+
+Rooms and decisions after that boundary remain visible, editable, and marked
+unassessed from authored structure. They do not receive canonical `entered`,
+Clockwork, physical-exit, or room-local evaluator facts. Declaration-owned
+availability and authored local controls remain intact, and lazy candidate
+contact reports unavailable until evaluation reaches their exact owner.
 
 ## Composition and Dependency Injection
 
@@ -583,6 +647,14 @@ and use ledgers. It is carried through validated route branches, not persisted
 as a second authored model. Stable trait offer owners are reward-owner plus
 acquisition-role addresses; option keys are evidence within that offer's
 assessment and never semantic owners or finding addresses.
+
+Reached selected-offer assessments are biome-level, data-only reward products.
+The exact assembly separately retains opaque address-indexed alternative
+capabilities backed by private branch-local pre-offer history and context.
+Reward branches carry downstream trait state, not diagnostic assessment traces
+or candidate capabilities; the application may present selected assessment but
+cannot use it to evaluate a replacement.
+
 No room, Shop, or component may switch on Hammer trait names.
 
 ## Rejected Shapes
