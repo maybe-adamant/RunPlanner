@@ -44,8 +44,9 @@ serialized topology.
 ## Preserved Contracts
 
 - Authored topology and Room Occurrences remain the only topology authority.
-- Progressive evaluation enriches an incomplete authored prefix without
-  publishing a canonical biome snapshot.
+- Any non-complete-valid biome remains an authored-topology projection with
+  only its reached assessment prefix overlaid. A complete-invalid biome does
+  not publish canonical topology merely because authorship is complete.
 - Only a complete-valid biome publishes canonical products and seeds the next
   route biome.
 - UI destinations use occurrence IDs and semantic addresses, never rendered
@@ -139,6 +140,11 @@ Presentation owns structural titles, catalog-backed labels, section ordering,
 and compact requirement copy; it does not evaluate requirements, fold traits,
 derive bags, or infer availability.
 
+Run State remains available through the covered decision that contains the
+first blocking value and unavailable afterward. The workspace consumes that
+engine-published coverage directly; it does not apply a second canonical or
+finding-order clamp.
+
 The launcher belongs in the selected decision workbench header, never in the
 rail or on every room card. Ordinary generated decisions, including generated
 Preboss, follow the same owner rule. N has an explicit two-layer presentation:
@@ -176,9 +182,11 @@ Each structurally active pool-backed encounter phase is a first-class
 workspace owner. Its exact `EncounterPhaseAddress` resolves to the containing
 occurrence or local-child inspector, one marker, one focus destination, and—if
 the declared set has meaningful choice cardinality—one bound selection
-interaction. The projector consumes engine candidate support and lifecycle
-activation facts; it never derives phase activity from a rendered ordinal,
-finding, or room template.
+interaction. The projector consumes the engine's context-free
+`EncounterPhaseAuthoringDomain`, whose activation comes from catalog,
+persisted selection, and template-controlled authored facts. Reached candidate
+support decorates that product; it does not decide whether the control exists.
+The projector never derives phase activity from a rendered ordinal or finding.
 
 The workspace publishes active phases even behind an invalid evaluated prefix,
 so a retained invalid selection can be corrected. A dormant potential phase
@@ -285,8 +293,9 @@ focus, but generated continuation has no navigation-only `Go to next step`
 action or separate `Add Preboss doors` control. A completed-Hub handoff and
 repair of an already-authored takeover remain distinct declared interactions.
 
-Incomplete-biome structure is an authored-topology projection enriched by
-progressive evaluation. It must not be described as canonical topology.
+Every non-complete-valid biome is an authored-topology projection, optionally
+enriched by reached progressive evaluation when coverage exists. It must not
+be described as canonical topology.
 
 ### Authored-First Assembly
 
@@ -295,6 +304,15 @@ Evaluation is an optional overlay indexed by semantic owner; it may add
 assessment, availability, Goal state, simulated entry, and derived lifecycle
 facts. Evaluation must not create, remove, or replace a persisted decision,
 target, occurrence, or editable offer-time leaf.
+
+`WorkspaceBiomeSource` acquires the context-free completeness product once for
+semantic and interaction assembly. For a blocked result it builds evaluated
+overlays from the clamped assessment prefix, never from the larger retained
+authored materialization. The full document remains the source of downstream
+decisions and controls. Those retained owners stay editable and unassessed;
+they receive no canonical entered state, evaluator-derived physical-state
+overlay, Clockwork reward, or room-local evaluation fact. Declaration-derived
+physical exits and authored activation still keep their controls usable.
 
 The projector walks the authored start and then authored exit decisions or the
 Hub in selected-topology order. A selected target subtree precedes retained
@@ -507,12 +525,20 @@ actions continue to use their exact semantic owner destinations.
 The workspace consumes the single atomic project evaluation:
 
 - evaluated owners render their contextual support and findings;
+- published coverage stops at the first blocking atomic region, whose co-owned
+  findings and exact repair interaction remain navigable;
 - the coverage frontier is visible at its semantic stop or Hub region;
 - retained later authored owners remain editable but are marked unassessed;
+- later findings and candidate context remain unavailable rather than leaking
+  from the retained authored materialization;
 - a downstream biome blocked by an earlier biome shows the upstream gate rather
   than fabricated local invalidity;
 - invalidity propagates to biome, route, and project summaries without losing
   the exact semantic owner.
+
+When an earlier reached value is invalid and authorship is also incomplete,
+the invalid status takes precedence without hiding or moving the later
+authored frontier.
 
 Color is supplementary. Icons, labels, grouping, descriptions, and accessible
 names carry the same state.

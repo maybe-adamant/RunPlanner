@@ -121,11 +121,13 @@ visibility from raw candidates.
 
 ## Progressive Evaluation Foundation
 
-The central project evaluator derives the maximum truthful prefix of the
-active biome from the current authored project. The same result becomes the
-canonical biome evaluation when authorship reaches the required Preboss
-selection and completion sequence. Contextual selectors consume addressed pre-decision views from that
-single result.
+The central project evaluator derives the maximum truthful assessed prefix of
+the active biome from the current authored project. Only a complete-valid
+biome publishes a canonical snapshot, final history, completion transition,
+and downstream seed. A complete-invalid or incomplete-invalid biome instead
+publishes retained authored materialization plus assessment clamped to its
+first blocking region. Contextual selectors consume addressed pre-decision
+views from that single result.
 
 Downstream incompleteness does not block an already-covered selector. An F
 plan may therefore explain that Combat 14 is unavailable at Decision 3 before
@@ -150,6 +152,11 @@ Within the active biome, a selector is assessed when evaluation coverage has
 reached its exact semantic pre-decision point. Missing unrelated downstream
 decisions or Preboss-handoff structure does not make that context unavailable. A
 missing or unsupported upstream state still does.
+
+Earlier covered controls retain their candidate context, the blocked owner
+retains its exact repair interaction, and later owners report unavailable
+coverage. The application does not replay selected-path evaluation to recover
+facts beyond that horizon.
 
 The UI may display an addressed coverage point as `evaluated through Decision
 4`, but decision indexes and rendered rows never enter simulation identity.
@@ -195,6 +202,10 @@ requirements, not from findings, candidate support, or evaluation coverage.
 Those overlays may change a control's assessed state, availability, reason
 text, or emphasis, but they never suppress the control. An unassessed control
 remains visible without fabricated support.
+
+A structurally active set-backed encounter phase therefore keeps its declared
+selection and authoring control when coverage is unavailable. Only a genuinely
+dormant authored slot is absent.
 
 A missing interaction for a required semantic address is an application
 contract error, not a React visibility condition. Fine-grained finding

@@ -21,16 +21,16 @@ between them:
 Candidate results are replaceable derived data. They never enter the authored
 project, profile document, autosave, undo history, or canonical game history.
 
-## Current Production Shape and Refactor Motivation
+## Current Production Shape
 
 One semantic edit or profile replacement creates a new immutable
 `ProjectDocument` and one exact evaluation assembly; undo and redo restore
-prior immutable identities and may reuse their cached matching assemblies. Its data-only
-`ProjectEvaluation` remains the public derived-result selector, while the
-assembly carries opaque candidate capabilities produced by the same simulation
-execution. Room-target, reward-producer, and lifecycle preparation bind that
-one assembly and never acquire another project evaluation or resolve a
-capability from public evaluation data.
+prior immutable identities and may reuse their cached matching assemblies. Its
+data-only `ProjectEvaluation` remains the public derived-result selector, while
+the assembly carries opaque candidate capabilities produced by the same
+simulation execution. Room-target, reward-producer, lifecycle, encounter, and
+trait-offer preparation bind that one assembly. None reacquires project
+evaluation or recovers a capability from public evaluation data.
 
 Before the candidate refactor, the application expanded control domains into
 independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
@@ -77,7 +77,7 @@ simulation.
 
 ```text
 ProjectEvaluationAssembly
-  { project, data-only evaluation, opaque candidate artifacts }
+  { public project + data-only evaluation; private opaque candidate artifacts }
   -> PreparedCandidateSession
       -> locate semantic owner
       -> require route and biome coverage
@@ -97,8 +97,10 @@ owner and the checkpoint required by that candidate family.
 
 The existing route distinctions remain exact:
 
-- `upstreamIncomplete`: an earlier route biome is incomplete;
-- `upstreamInvalid`: an earlier complete biome is invalid;
+- `upstreamIncomplete`: the earlier active route biome is incomplete without a
+  reached contextual block;
+- `upstreamInvalid`: the earlier active route biome stopped at a contextual
+  block, whether its authored state was complete or incomplete;
 - `authoredPrerequisiteMissing`: the active biome reached the decision source,
   but a required authored reward pool, Fields door roll, or biome outcome must
   be selected before this dependent option can be assessed;
@@ -143,7 +145,7 @@ A prepared session belongs to exactly one identity-attested assembly:
 interface ProjectEvaluationAssembly {
   readonly project: ProjectDocument;
   readonly evaluation: ProjectEvaluation;
-  // Opaque, non-persisted candidate capabilities from this exact execution.
+  // The exact implementation privately retains non-persisted candidate artifacts.
 }
 
 interface PreparedCandidateSession {
@@ -176,6 +178,30 @@ The application API is domain-shaped rather than scalar-shaped. The former
 scalar compatibility service has been deleted. Engine fixtures bind the same
 production session factory, workspace fixtures compose the production
 structured-workspace boundary, and React fixtures activate its descriptors.
+
+### First-blocking artifact horizon
+
+The exact assembly privately retains candidate capability only through the first
+blocking atomic region. Earlier reached owners retain their captured
+capabilities, and the blocking owner retains the capability needed to repair
+that complete decision. Later authored owners remain in the document but have
+no candidate artifact and report `coverageNotReached`.
+
+The evaluator locates the first region from its existing materialization,
+generation, reward, encounter, and lifecycle chronology. Aggregate evaluators
+attach an internal atomic-region key while producing their findings; the
+shared locator does not infer grouping from finding codes or rendered UI
+sections. Every error finding in that first region is retained, and
+later-region findings are withheld. Warnings do not establish the horizon.
+Exact finding identity and deduplication belong to the selected evaluator, not
+the candidate session.
+
+Candidate consumers select the already-published complete-valid or assessed
+prefix product. They do not call a progressive evaluator to reconstruct a
+missing selected-path context. The only replay after publication is the
+declared scoped alternative replay owned by the candidate family itself, such
+as one proposed Hub visit order, side-room region, Shop order, or joint reward
+group.
 
 ## Evaluation Strategies
 
@@ -466,17 +492,39 @@ Candidate observers are production instrumentation points shared by runtime
 and tests. They may record project evaluations, candidate batches, replay
 horizons, and cache behavior without changing evaluation semantics.
 
-## Delivery Boundary
+## Exact Artifact Boundaries
 
 ### Trait offer candidate boundary
 
 Trait-offer candidates use the same project-bound session as reward and Shop
-interactions. A query names one exact `TraitOfferAddress` and receives the
-matching reached pre-acquisition trait state, route loadout, resolved giver
-context, and complete authored offer. The engine assesses all three options
-against that one snapshot and returns applicable fresh rarities for ranked
-providers; Hammer options have no rarity domain. Provider membership and
-trait-local rarity shape remain structural command/codec checks.
+interactions. Selected assessment and alternative capability are separate
+products of the same reached reward walk:
+
+- `BiomeRewardSimulation.selectedTraitOffers` publishes data-only
+  `SelectedTraitOfferAssessment` values addressed by exact
+  `TraitOfferAddress`. Each value contains the selected authored offer,
+  acquisition role, chronological index, and branch-grouped option,
+  composition, and replacement-composition assessments. It does not contain
+  pre-offer trait histories or resolved giver contexts.
+- `BiomeCandidateArtifacts.traitOffers.at(address)` returns only an opaque
+  `evaluateOffer(value)` capability. Its private branch-local inputs are the
+  exact pre-offer `TraitHistoryState` and resolved `TraitOfferContext` captured
+  before the selected offer was processed and before equivalent post-state
+  branches could merge.
+
+A query names one exact address and passes one complete proposed offer to that
+capability. The engine assesses all three options against every retained
+branch-local context and returns branch-grouped evidence. The application may
+present the selected assessment, but it cannot use that data-only product to
+assess a replacement. Provider membership and trait-local rarity shape remain
+structural command/codec checks.
+
+The selected assessment is published once at biome reward ownership and only
+through the first blocking region. The blocking trait offer retains both its
+complete selected finding group and its exact alternative capability; later
+offers publish neither. Public reward branches carry reachable reward state,
+trait history, and events downstream, but do not carry diagnostic trait-offer
+assessment traces or candidate contexts.
 
 The returned findings cover prerequisite, negative predicate, context,
 element, rarity-count, rarifiable/superchargeable target, occupied-slot,
@@ -510,18 +558,14 @@ distinct legal ordinary-key count, the maximum replacement count, and an
 offer-level excess finding. Option assessments and composition must succeed in
 one branch; evidence from separate branch histories is never combined.
 
-The candidate refactor is complete. `../progress/IMPLEMENTATION_PLAN.md`
-preserves its numbered delivery slices and acceptance gates;
-`../progress/IMPLEMENTATION_PROGRESS.md` records their completion evidence.
-Phase 7 Commit 11 may resume against the sealed workspace-interaction
-boundary.
-
-The completed refactor establishes:
+The established boundary provides:
 
 - one project/evaluation-bound candidate session;
 - one prepared context per contacted semantic owner;
 - domain-shaped room and reward evaluation;
 - scoped room-local and Hub region replay;
+- first-blocking publication with no generic selected-path recovery replay;
+- exact-address trait artifacts distinct from biome-level selected assessment;
 - structured-workspace ownership of lazy React candidate contact;
 - declaration-owned interaction domains for every live candidate family;
 - one React-side activation adapter and no render-time evaluation authority;

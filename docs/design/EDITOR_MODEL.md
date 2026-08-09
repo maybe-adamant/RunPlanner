@@ -253,7 +253,9 @@ the exhaustive workspace projection even when they do not receive independent
 rail stops.
 
 The structure projection consumes authored topology plus progressive or
-canonical evaluation. An incomplete biome is never described as canonical. Its
+canonical evaluation. Only a complete-valid biome is described as canonical.
+Complete-invalid and incomplete results use the same authored-first projection
+with an optional reached assessment overlay when coverage exists; their
 coverage frontier, retained later authorship, and blocked or unassessed regions
 remain visibly distinct.
 
@@ -627,6 +629,12 @@ does not suppress findings and candidate support for an earlier covered owner. T
 page renders that one atomic prefix result; it does not request or assemble a
 separate partial history.
 
+Published validation stops at the first blocked atomic region. Every co-owned
+finding there and the exact repair interaction remain navigable, while later
+findings and candidate context remain unavailable. If an earlier reached value
+is invalid and authorship is also incomplete, invalid presentation takes
+precedence without hiding the later authored frontier.
+
 Later biomes blocked by an earlier incomplete or invalid biome remain visible
 and editable. Their contextual validity is unavailable because the required
 history does not exist. The view should communicate that state without
@@ -776,8 +784,10 @@ catalog and engine outputs.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:
-whether the rule applies comes from the engine's reached pre-offer ledger and
-its derived empty ordinary-boon slots.
+whether the rule applies comes from the engine's selected-offer assessment
+published through coverage. Alternative assessment remains behind the exact
+bound replacement interaction. The editor neither reads nor reconstructs
+pre-offer histories or contexts and does not rerun selected-path evaluation.
 
 The same modal presents an engine-derived Olympian replacement as an option
 annotation with its exact old trait, slot transition, and promoted rarity. The

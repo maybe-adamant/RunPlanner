@@ -7,13 +7,12 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 12 Boundary
+## Schema 15 Boundary
 
-Schema 12 is the sole persisted authored-project contract. The codec rejects
-schema 11 and earlier documents rather than manufacturing N's normalized PreHub
-decision, terminal Hub envelope, source-bearing Hub, or concrete room-local
-encounter selections for a stale document. There is no migration path; catalog
-versions must match exactly.
+Schema 15 is the sole persisted authored-project contract. The codec rejects
+every other schema version rather than manufacturing current topology or leaf
+state for a stale document. There is no migration path; catalog versions must
+match exactly.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -346,10 +345,12 @@ selections and nested local-child state together.
 
 An active retained selection may become context-invalid after a different
 semantic edit. It remains persisted and repairable; the authored model never
-falls back to another definition. `SelectEncounter` accepts an exact eligible
-candidate at one active `EncounterPhaseAddress`. `ResetEncounter` restores the
-set's static declared default even when that default is currently invalid; it
-is a reset, not an automatic repair.
+falls back to another definition. `SelectEncounter` accepts an exact member of
+the phase's declared Encounter Set at one structurally addressable occurrence
+or local child, including a dormant or context-invalid selection.
+`ResetEncounter` restores the set's static declared default even when that
+default is dormant or currently invalid; it is a reset, not an automatic
+repair.
 
 ## Semantic Addresses
 
@@ -372,13 +373,23 @@ canonical projection for maps and markers, not another identity source.
 | derived completion                | `CompletionRoomAddress`                                                           |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-14 addresses.
+batch-store identity, and rendered target indexes are not schema-15 addresses.
 
 ## Commands
 
 Commands are semantic immutable transitions. Every successful proposal passes
 through the project decoder before publication. A structural failure reports
 its semantic owner and never leaves partial topology.
+
+`applyProjectCommand(document, catalog, command)` accepts every transition that
+is structurally representable. Command handlers may enforce exact semantic
+ownership and address contact, catalog membership and declaration-owned static
+domains, topology closure and bounds, fixed-versus-selectable slots, declared
+set membership, and complete declaration-owned defaults. They do not consume a
+project evaluation, candidate capability, history or reward branch, encounter
+activation result, or contextual trait assessment. Contextual impossibility is
+derived validation truth, so an authored value remains persisted until an
+explicit semantic command changes or removes it.
 
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
@@ -399,7 +410,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 13;
+  schemaVersion: 15;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -409,9 +420,9 @@ interface ProjectDocument {
 
 Unknown fields, malformed discriminants, wrong schema or catalog versions,
 unauthorized cross-biome rooms, invalid leaf state, and malformed structural
-ownership fail at decode contact. The codec preserves structurally representable incomplete
-and context-invalid authored choices; simulation findings, not fallback,
-describe context invalidity.
+ownership fail at decode contact. The codec preserves structurally
+representable incomplete and context-invalid authored choices; simulation
+findings, not fallback, describe context invalidity.
 
 Persistence excludes Redux state, editor tabs, graph positions, candidate sets,
 findings, simulation output, save baselines, autosave status, and an alternate

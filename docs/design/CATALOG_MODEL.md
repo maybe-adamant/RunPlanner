@@ -10,9 +10,9 @@ It owns declaration families, provenance, normalization policy, requirement
 scope, labels, defaults, and catalog versioning. It does not own concrete
 authored choices or lifecycle simulation algorithms.
 
-## Schema 12 Unified Biome Decisions and Encounter Composition
+## Unified Biome Decisions and Encounter Composition
 
-Schema 12 is the current authored contract over one `BiomeLayout` envelope
+The current authored contract uses one `BiomeLayout` envelope
 instead of a layout-specific split. It also gives every Room Declaration one
 explicit room-local encounter composition; concrete authored encounter choices
 are defined below rather than inferred from a room template or baseline

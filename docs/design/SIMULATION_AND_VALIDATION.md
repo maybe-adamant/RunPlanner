@@ -15,9 +15,10 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-13 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-15 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
-validation, and candidate support consume the same canonical biome product.
+validation, and candidate support consume the same explicit biome-evaluation
+products.
 The application publishes those derived results to the editor, profiles, and
 recovery workflow; it does not select a separate simulator by biome family.
 
@@ -66,10 +67,9 @@ normalized catalog + authored project
   -> normalize every configured topology
   -> walk routes and configured biomes in order
       -> completeness gate
-      -> canonical biome snapshot
-      -> lifecycle event stream
-      -> history and counter ledgers
-      -> selected-plan validation
+      -> retained authored materialization
+      -> selected-path lifecycle, history, rewards, and validation
+      -> first-blocking assessment clamp or complete-valid canonical snapshot
       -> candidate evaluation
       -> semantic findings
   -> route and project summaries
@@ -165,17 +165,48 @@ For the active biome:
 
 1. check structural contacts and derive the first incomplete semantic owner;
 2. materialize every fully authored entry, decision, target-generation point,
-   picked-room lifecycle, reward offer, and local child before that owner;
+   picked-room lifecycle, reward offer, and local child supported by that
+   authorship;
 3. fold those operations through the normal history, room-generation, reward,
-   and counter authorities;
-4. publish addressed findings, pre-decision views, and candidate support for
-   every covered owner;
-5. retain the incomplete frontier without inventing selected-Preboss or completion
-   facts;
-6. when authorship reaches a selected Preboss and its declared completion sequence,
-   strengthen the same result into a complete biome evaluation;
-7. admit a complete valid result to the route prefix, or stop before the next
-   biome when the complete result is invalid.
+   and counter authorities in declared chronology;
+4. stop published assessment truth at the earliest incomplete frontier or
+   error-severity blocking region, while retaining every co-owned finding in
+   that atomic region;
+5. publish pre-decision views and candidate repair capabilities through that
+   region, but no finding, history effect, candidate capability, assessed
+   marker, or Run State snapshot from a later region;
+6. retain later authored structure without inventing selected-Preboss or
+   completion facts; and
+7. only when complete authorship reaches the declared completion sequence and
+   all selected facts are valid, publish the canonical biome, final history,
+   completion transition, and downstream route seed.
+
+An evaluator that owns an aggregate decision also owns its atomic-region key.
+One complete trait offer, N's jointly generated board, or one jointly generated
+reward group may therefore retain several co-owned findings without inventing
+an order inside that decision. Warnings remain diagnostics and do not establish
+a blocking horizon. When an incomplete authored biome is invalid at an earlier
+reached owner, the invalidity controls biome, route, and project status while
+the later authored frontier remains intact; incomplete and invalid summary
+counts remain orthogonal.
+
+The internal blocking-region locator composes chronology already published by
+materialization and the owning evaluators. Physical target and Hub-visit order
+locate failures before a history event exists; generation and offer views,
+room lifecycle sequences, and encounter history sequences locate reached room
+phases. It does not maintain a parallel chronology table or independently walk
+the lifecycle. Two findings at the same rendered decision are not co-owned
+unless their producing authority supplied the same atomic-region key.
+`SimulationPhase` alone is presentation classification, not sufficient
+chronology, and subsystem finding-array order is never authority.
+
+Before the first region is retained, findings deduplicate by complete semantic
+identity: code, severity, phase, origin, and deterministically compared
+structural evidence. Exact duplicates collapse; findings with different
+evidence remain distinct. An unlocatable error is an evaluator contract
+failure. Public `blockedAt` remains the deterministic representative semantic
+owner for the retained first region; the internal atomic-region key is not
+persisted.
 
 This is one evaluator and one ordered lifecycle authority. Progressive
 evaluation is not a candidate-only simulator and does not publish a second
@@ -204,21 +235,43 @@ coordinator remains the coherent authority.
 Biome authoring completion and evaluation coverage are separate facts:
 
 ```ts
-type ProgressiveBiomeEvaluation =
+type ProjectBiomeEvaluation =
   | {
       readonly authoring: 'incomplete';
       readonly frontier: SemanticAddress;
-      readonly coverage:
-        | { readonly kind: 'none'; readonly reason: 'notEvaluated' }
-        | {
-            readonly kind: 'prefix';
-            readonly through: BiomeEvaluationPoint;
-            readonly blockedAt?: SemanticAddress;
-          };
+      readonly coverage: { readonly kind: 'none'; readonly reason: 'notEvaluated' };
+    }
+  | {
+      readonly authoring: 'incomplete';
+      readonly validity?: 'invalid';
+      readonly frontier: SemanticAddress;
+      readonly coverage: {
+        readonly kind: 'prefix';
+        readonly through: BiomeEvaluationPoint;
+        readonly blockedAt?: SemanticAddress;
+      };
+      readonly materializedPrefix: MaterializedBiomePrefix;
+      readonly assessmentPrefix?: MaterializedBiomePrefix;
+      readonly history: BiomeHistoryPrefix;
     }
   | {
       readonly authoring: 'complete';
+      readonly validity: 'valid';
       readonly coverage: { readonly kind: 'complete' };
+      readonly snapshot: CanonicalBiome;
+      readonly history: CanonicalBiomeHistory;
+    }
+  | {
+      readonly authoring: 'complete';
+      readonly validity: 'invalid';
+      readonly coverage: {
+        readonly kind: 'prefix';
+        readonly through: BiomeEvaluationPoint;
+        readonly blockedAt?: SemanticAddress;
+      };
+      readonly materializedPrefix: MaterializedBiomePrefix;
+      readonly assessmentPrefix?: MaterializedBiomePrefix;
+      readonly history: BiomeHistoryPrefix;
     };
 
 interface BiomeEvaluationPoint {
@@ -235,11 +288,27 @@ identity.
 An incomplete biome produces no canonical biome snapshot, final biome history,
 completion event, or downstream route seed. It may carry a materialized prefix,
 prefix lifecycle operations, folded history state, generation views, reward
-witnesses, counters, and findings for the owners it actually covered.
+witnesses, counters, and findings for the owners it actually covered. Its
+authored frontier and contextual validity are independent: a block reached
+before a later incomplete frontier makes the evaluation invalid without
+discarding that frontier.
 
-A complete biome is the maximal form of that same evaluation. It adds the
-selected Preboss and completion sequence, canonical snapshot, final biome history,
-selected-plan validity, and the ability to seed the next biome when valid.
+Complete authorship has two result forms. A complete-valid biome alone carries
+`coverage: complete`, the `CanonicalBiome`, final biome history, completion
+transition, and the ability to seed the next biome. A complete-blocked biome
+carries prefix coverage through its first blocking region, a retained
+`materializedPrefix`, prefix history and assessment products, and exact repair
+capabilities. It has no canonical snapshot or final history and cannot seed a
+downstream biome.
+
+`materializedPrefix` is the maximum structurally materializable authored
+prefix and retains authored materialization beyond the assessment horizon. The
+`ProjectDocument` remains the source of the rest of the authored suffix.
+`assessmentPrefix`, when present, is the smaller prefix replayed through the
+first blocking region. Evaluation overlays, history, rewards, findings, and
+candidate capabilities are bounded to that assessment; coverage derives its
+`through` point from `assessmentPrefix ?? materializedPrefix`. Retained
+materialization alone never asserts that a later owner was reached.
 
 ### Decision Run-State Snapshots
 
@@ -252,11 +321,20 @@ targets, rewards, peer exclusions, or target-local filters has been generated.
 Changing only current-decision authorship therefore cannot change its snapshot.
 
 Snapshot availability is part of progressive coverage, not an application
-inference. A snapshot exists only when valid evaluation reached that exact
+inference. A snapshot exists only when evaluation reached that exact
 checkpoint. Invalid or incomplete upstream ownership prevents later snapshots;
 an invalid value within the current decision and downstream incompleteness do
 not erase the already-reached pre-decision snapshot. Complete and progressive
 biome products expose the same snapshot vocabulary.
+
+Prefix and complete-blocked results enumerate every structurally eligible
+outer exit or Hub decision from the retained `materializedPrefix`. Owners with
+a covered pre-generation snapshot are explicitly `available`; later retained
+owners are explicitly `unavailable` with `coverageNotReached`. The blocked
+decision therefore keeps its snapshot when its pre-generation checkpoint was
+reached, while no later decision snapshot escapes. This publication is derived
+from the same assessment coverage as the rest of simulation; there is no
+canonical-only Run State filtering policy.
 
 Each snapshot retains its exact exit- or Hub-decision semantic owner,
 history sequence, checkpoint, ordinary god-pool state, canonical trait and
@@ -312,15 +390,15 @@ They must label contextual state unassessed and must not simulate from defaults
 or hypothetical predecessor completions.
 
 The authoring/coverage axes and route processing regions are the production
-result shape. Complete biomes publish `coverage: complete`. An incomplete
-biome publishes a materialized prefix, partial lifecycle history, generation
-proof, reward witnesses, counters, and addressed findings whenever its start
-and selected spine before the frontier are materializable. The frontier may be
-an ordinary exit decision, a Hub board, a Hub visit, or the Hub-owned Handoff
-decision. An unsupported selected fact clamps coverage at its semantic owner;
-persisted downstream authorship remains intact but receives no contextual
-claim. A biome whose start or required biome field cannot yet be materialized
-publishes `coverage: none`.
+result shape. Only complete-valid biomes publish `coverage: complete`.
+Incomplete and complete-blocked biomes publish a materialized prefix, partial
+lifecycle history, generation proof, reward witnesses, counters, and addressed
+findings whenever their selected spine is materializable. The incomplete
+frontier may be an ordinary exit decision, a Hub board, a Hub visit, or the
+Hub-owned Handoff decision. An unsupported selected fact clamps assessment
+coverage at its semantic owner; persisted downstream authorship remains intact
+but receives no contextual claim. A biome whose start or required biome field
+cannot yet be materialized publishes `coverage: none`.
 
 ## Completeness
 
@@ -443,7 +521,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-13's non-authoritative decision-array order and keeps shared
+preserves schema-15's non-authoritative decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -829,12 +907,12 @@ their reached prefix. A structurally dormant potential slot retains authored
 state but publishes no candidate, finding, history, or editor control.
 
 This is normal selected-plan validation, not an NPC evaluator or a second
-history. Candidate authorization and correction remain part of the existing
+history. Candidate assessment and correction remain part of the existing
 project-bound candidate session.
 
 ## Structural and Eligibility Validation
 
-Validation checks complete canonical facts in lifecycle order:
+Validation checks reached selected facts in lifecycle order:
 
 - start, fixed-entry, selected-Preboss, and layout roles;
 - physical exits and target compatibility;
@@ -1185,14 +1263,18 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the validated route prefix;
-- complete F/G/H/I/N/O/P/Q evaluations with decision-spine canonical snapshots, lifecycle events,
-  ledgers, room-generation proof, reward witnesses, and findings;
+- complete-valid F/G/H/I/N/O/P/Q evaluations with decision-spine canonical
+  snapshots, lifecycle events, ledgers, room-generation proof, reward
+  witnesses, and findings;
+- complete-blocked evaluations with retained authored materialization, clamped
+  assessment products through the first blocking region, and no canonical
+  snapshot, final history, completion transition, or downstream seed;
 - incomplete active-biome evaluation with covered-prefix materialization,
   partial lifecycle history, counters, generation proof, reward witnesses, and
   addressed findings; Hub board coverage remains one all-or-nothing semantic
   generation region rather than a physical-slot prefix;
 - no canonical snapshot, final biome history, completion event, or downstream
-  seed on an incomplete active biome;
+  seed on an incomplete or complete-blocked active biome;
 - validated-prefix identity and an exact route-end, incomplete, or invalid
   processing horizon;
 - semantic findings in stable route and phase order;
@@ -1332,8 +1414,8 @@ Required categories include:
 - repeated game names across distinct occurrence IDs;
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
-- complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
-  schema-13 fixtures across F through Q;
+- complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
+  retained, and upstream-blocked schema-15 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every
