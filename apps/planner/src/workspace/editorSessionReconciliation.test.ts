@@ -1,5 +1,7 @@
 import {
   createBiomeAddress,
+  createExitDecisionAddress,
+  createOccurrenceId,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -44,6 +46,7 @@ function destinations(
 function session(options: {
   readonly focusedSemanticOwner?: SemanticAddress | null;
   readonly selectedFinding?: FindingSelection | null;
+  readonly runStateTarget?: EditorSessionState['runStateTarget'];
 }): EditorSessionState {
   return {
     activePanelByRoute: { Underworld: { kind: 'biome', biomeKey: 'F' } },
@@ -51,10 +54,29 @@ function session(options: {
     semanticNavigationRevision: 1,
     focusedSemanticOwner: options.focusedSemanticOwner ?? null,
     selectedFinding: options.selectedFinding ?? null,
+    ...(options.runStateTarget === undefined ? {} : { runStateTarget: options.runStateTarget }),
   };
 }
 
 describe('editor-session reconciliation', () => {
+  it('clears a stale Run State target when its exact published launcher disappears', () => {
+    const target = createExitDecisionAddress(owner, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('stale-run-state'),
+    });
+    expect(
+      deriveEditorSessionReconciliation({
+        availableRunStateOwnerKeys: new Set(),
+        findings: [],
+        focusByOwner: destinations(),
+        session: session({ runStateTarget: target }),
+      }),
+    ).toEqual({
+      clearFocusedSemanticOwner: false,
+      clearRunStateTarget: true,
+      clearSelectedFinding: false,
+    });
+  });
   it('retains independently live focus and finding references', () => {
     const selected = finding(owner);
 

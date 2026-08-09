@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createProjectDocument,
   createHubSlotAddress,
   createIncomingRewardAddress,
   semanticAddressKey,
@@ -9,7 +10,7 @@ import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { semanticFindingKey } from '../projections/evaluationProjection';
-import { findingSelected } from '../state/editorSessionSlice';
+import { findingSelected, runStateOpened } from '../state/editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -105,6 +106,64 @@ describe('application editor-session reconciliation', () => {
         throw new Error('Ephyra workspace is missing after closing a slot');
       expect(nWorkspace.nodes.some((node) => node.kind === 'hubDecision')).toBe(true);
       expect(nWorkspace.defaultInspectorDestination).not.toBeNull();
+    } finally {
+      application.dispose();
+    }
+  });
+
+  it('clears, rather than rehomes, an open Run State target after a published replacement removes its launcher', () => {
+    const application = createApplication();
+    try {
+      const project = createRepresentativeNProject();
+      application.store.dispatch(authoredProjectReplaced(project));
+      const n = application
+        .selectStructuredWorkspace(application.store.getState())
+        .routes.flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'N');
+      const hub = n?.nodes.find((node) => node.kind === 'hubDecision');
+      if (hub?.kind !== 'hubDecision' || hub.runState === undefined)
+        throw new Error('published N Hub Run State launcher is missing');
+      application.store.dispatch(runStateOpened(hub.runState.owner));
+
+      application.store.dispatch(
+        authoredProjectReplaced(
+          createProjectDocument(catalog, {
+            configuredBiomeCounts: { Surface: 1 },
+            name: 'replacement without an N launcher',
+            projectId: 'replacement-without-run-state',
+          }),
+        ),
+      );
+
+      expect(application.store.getState().editorSession.runStateTarget).toBeNull();
+    } finally {
+      application.dispose();
+    }
+  });
+
+  it('retains the exact completed-Hub handoff target when its visible Preboss launcher survives publication', () => {
+    const application = createApplication();
+    try {
+      const project = createRepresentativeNProject();
+      application.store.dispatch(authoredProjectReplaced(project));
+      const n = application
+        .selectStructuredWorkspace(application.store.getState())
+        .routes.flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'N');
+      const preboss = n?.nodes.find(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === nOccurrenceId('preboss'),
+      );
+      if (preboss?.kind !== 'occurrenceWorkbench' || preboss.runState === undefined)
+        throw new Error('visible N Preboss Run State launcher is missing');
+      const target = preboss.runState.owner;
+      application.store.dispatch(runStateOpened(target));
+      const equivalent = Object.freeze({ ...project, routes: Object.freeze([...project.routes]) });
+
+      application.store.dispatch(authoredProjectReplaced(equivalent));
+
+      expect(application.store.getState().editorSession.runStateTarget).toEqual(target);
     } finally {
       application.dispose();
     }

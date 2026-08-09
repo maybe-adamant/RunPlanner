@@ -57,6 +57,7 @@ import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
+import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 
@@ -851,6 +852,7 @@ function assembleBatchDecision(
             assembly: chaosAssembly,
           });
         })();
+  const runState = input.source.runState(owner);
   const base = {
     batchState: decision.normal.batchState,
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
@@ -903,6 +905,27 @@ function assembleBatchDecision(
     source: decision.source,
     targets: Object.freeze(targets),
     topologyState: topologyStateForAuthoredBatch(input, owner, evaluated),
+    ...(runState === undefined
+      ? {}
+      : {
+          runState:
+            runState.availability === 'available'
+              ? Object.freeze({
+                  availability: 'available' as const,
+                  owner,
+                  state: presentRunState(input.catalog, runState.snapshot),
+                  title: 'Decision',
+                })
+              : Object.freeze({
+                  availability: 'unavailable' as const,
+                  owner,
+                  reason:
+                    runState.reason === 'coverageNotReached'
+                      ? 'Run State is unavailable because this decision has not been reached.'
+                      : 'Run State is unavailable for this decision.',
+                  title: 'Decision',
+                }),
+        }),
   } as const;
   const batch: WorkspaceDecisionBatchNode =
     kind === 'takeoverBatch'

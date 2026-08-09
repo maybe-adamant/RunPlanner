@@ -167,6 +167,74 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
+  it('opens an available Run State sheet without changing inspector selection or authored history, and restores launcher focus on close', async () => {
+    const evaluationEvents: string[] = [];
+    const application = createApplication({
+      observeEvaluationWork: (event) => evaluationEvents.push(event.kind),
+    });
+    const { user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F', application);
+    const launcher = screen.getAllByRole('button', { name: 'Run State' })[0];
+    if (launcher === undefined) throw new Error('available Run State launcher is missing');
+    const beforeHistory = application.store.getState().projectWorkspace.history;
+    const beforeFocus = application.store.getState().editorSession.focusedSemanticOwner;
+    const beforePanel = application.store.getState().editorSession.activePanelByRoute.Underworld;
+    const beforeEvaluationEvents = [...evaluationEvents];
+
+    await user.click(launcher);
+    const sheet = screen.getByRole('region', { name: /Run state — before/ });
+    expect(within(sheet).getByRole('heading', { name: 'God pool' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Elements' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Equipped traits' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Counters' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Counted reward bags' })).toBeTruthy();
+    const bagSummary = within(sheet).getByText(/Major Reward \(RunProgress\)/);
+    expect(bagSummary.textContent).toMatch(/x4.*Eligible now x2.*Ineligible now x2/);
+    await user.click(bagSummary);
+    await user.click(within(sheet).getAllByText(/Max Health \(MaxHealthDrop\)/)[0]!);
+    expect(
+      within(sheet).getAllByRole('list', { name: 'Max Health conditions' })[0]!.textContent,
+    ).toContain('No additional condition.');
+    expect(sheet.getAttribute('aria-modal')).toBeNull();
+    expect(application.store.getState().projectWorkspace.history).toBe(beforeHistory);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(beforeFocus);
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual(
+      beforePanel,
+    );
+
+    await user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
+    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(document.activeElement).toBe(launcher);
+    expect(evaluationEvents).toEqual(beforeEvaluationEvents);
+
+    await user.click(launcher);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(document.activeElement).toBe(launcher);
+  });
+
+  it('renders an engine-unavailable Run State launcher as disabled and never opens its sheet', async () => {
+    let project = createGoldenFGHIProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const { user } = renderWorkspace(project, 'Underworld', 'F');
+    const launcher = screen.getByRole('button', { name: 'Run State' });
+    if (!(launcher instanceof HTMLButtonElement))
+      throw new Error('Run State launcher is not a button');
+    const descriptionId = launcher.getAttribute('aria-describedby');
+
+    expect(launcher.disabled).toBe(true);
+    expect(descriptionId).not.toBeNull();
+    const reason = descriptionId === null ? null : document.getElementById(descriptionId);
+    expect(reason?.textContent).toBe(
+      'Run State is unavailable because this decision has not been reached.',
+    );
+    await user.click(launcher);
+    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+  });
+
   it('keeps the fixed N start room in the rail next step', () => {
     renderWorkspace(emptyProject('Surface', 1), 'Surface', 'N');
 

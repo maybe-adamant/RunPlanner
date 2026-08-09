@@ -17,6 +17,7 @@ import {
   type WorkspaceRailReward,
   type WorkspaceRailSelectedTarget,
   type WorkspaceRoomSummary,
+  type WorkspaceRunStateLauncher,
   type WorkspaceTakeoverBatchNode,
 } from '../contract';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
@@ -29,6 +30,68 @@ import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-
 export interface WorkspaceBiomePresentation {
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
+}
+
+/**
+ * Run State labels share the final structural-stage authority with the rail.
+ * React receives the finished title and never has to rediscover route shape.
+ */
+function withRunStateTitle(node: WorkspaceHubDecisionNode, title: string): WorkspaceHubDecisionNode;
+function withRunStateTitle(
+  node: WorkspaceOrdinaryBatchNode,
+  title: string,
+): WorkspaceOrdinaryBatchNode;
+function withRunStateTitle(node: WorkspaceMixedBatchNode, title: string): WorkspaceMixedBatchNode;
+function withRunStateTitle(
+  node: WorkspaceTakeoverBatchNode,
+  title: string,
+): WorkspaceTakeoverBatchNode;
+function withRunStateTitle(
+  node:
+    | WorkspaceHubDecisionNode
+    | WorkspaceOrdinaryBatchNode
+    | WorkspaceMixedBatchNode
+    | WorkspaceTakeoverBatchNode,
+  title: string,
+):
+  | WorkspaceHubDecisionNode
+  | WorkspaceOrdinaryBatchNode
+  | WorkspaceMixedBatchNode
+  | WorkspaceTakeoverBatchNode;
+function withRunStateTitle(
+  node:
+    | WorkspaceHubDecisionNode
+    | WorkspaceOrdinaryBatchNode
+    | WorkspaceMixedBatchNode
+    | WorkspaceTakeoverBatchNode,
+  title: string,
+): typeof node {
+  if (node.runState === undefined) return node;
+  return Object.freeze({
+    ...node,
+    runState: Object.freeze({ ...node.runState, title }),
+  });
+}
+
+function titledNode(node: WorkspaceNode, title: string): WorkspaceNode {
+  switch (node.kind) {
+    case 'hubDecision':
+    case 'ordinaryBatch':
+    case 'mixedBatch':
+    case 'takeoverBatch':
+      return withRunStateTitle(node, title);
+    case 'completion':
+    case 'occurrenceWorkbench':
+      return node;
+  }
+}
+
+function withoutHandoffRunState(
+  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
+): WorkspaceNode {
+  const copy = { ...node };
+  delete copy.runState;
+  return Object.freeze(copy);
 }
 
 function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
@@ -286,7 +349,7 @@ export function presentWorkspaceBiome(
       node,
     });
   };
-  const rail = Object.freeze([
+  const unboundRail = Object.freeze([
     ...railNodes.map(railEntryForNode),
     ...(railFrontier === undefined
       ? []
@@ -299,10 +362,92 @@ export function presentWorkspaceBiome(
           }),
         ]),
   ]);
+  const titleByNodeKey = new Map<string, string>();
+  for (const entry of unboundRail) {
+    if (entry.kind === 'node') titleByNodeKey.set(entry.node.key, entry.label);
+    else if (entry.kind === 'hubGroup') titleByNodeKey.set(entry.node.key, 'Hub');
+  }
+  const titledStructuralNodes = Object.freeze(
+    semantic.nodes.map((node) =>
+      titledNode(node, titleByNodeKey.get(node.key) ?? nodeRailPresentation(node, undefined).label),
+    ),
+  );
+  const handoffRunStateByOccurrence = new Map<OccurrenceId, WorkspaceRunStateLauncher>();
+  for (const node of titledStructuralNodes) {
+    if (
+      (node.kind === 'ordinaryBatch' ||
+        node.kind === 'mixedBatch' ||
+        node.kind === 'takeoverBatch') &&
+      node.source.kind === 'hubDecision' &&
+      node.runState !== undefined
+    ) {
+      for (const target of node.targets)
+        handoffRunStateByOccurrence.set(target.room.occurrenceId, node.runState);
+    }
+  }
+  const nodes = Object.freeze(
+    titledStructuralNodes.map((node) => {
+      if (
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.source.kind === 'hubDecision' &&
+        node.runState !== undefined
+      ) {
+        // The completed-Hub decision is shown through its visible Preboss room.
+        return withoutHandoffRunState(node);
+      }
+      if (node.kind !== 'occurrenceWorkbench') return node;
+      const runState = handoffRunStateByOccurrence.get(node.room.occurrenceId);
+      return runState === undefined ? node : Object.freeze({ ...node, runState });
+    }),
+  );
+  const rail: readonly WorkspaceRailEntry[] = Object.freeze(
+    unboundRail.map((entry): WorkspaceRailEntry => {
+      if (entry.kind === 'frontier') return entry;
+      if (entry.kind === 'hubGroup') {
+        const node: WorkspaceHubDecisionNode = withRunStateTitle(entry.node, 'Hub');
+        return Object.freeze({ ...entry, node });
+      }
+      switch (entry.node.kind) {
+        case 'ordinaryBatch':
+          return Object.freeze({
+            kind: 'node' as const,
+            key: entry.key,
+            label: entry.label,
+            marker: entry.marker,
+            node: withRunStateTitle(entry.node, entry.label),
+            ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
+          });
+        case 'mixedBatch':
+          return Object.freeze({
+            kind: 'node' as const,
+            key: entry.key,
+            label: entry.label,
+            marker: entry.marker,
+            node: withRunStateTitle(entry.node, entry.label),
+            ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
+          });
+        case 'takeoverBatch':
+          return Object.freeze({
+            kind: 'node' as const,
+            key: entry.key,
+            label: entry.label,
+            marker: entry.marker,
+            node: withRunStateTitle(entry.node, entry.label),
+            ...(entry.mainReward === undefined ? {} : { mainReward: entry.mainReward }),
+          });
+        case 'completion':
+        case 'occurrenceWorkbench':
+        case 'hubDecision':
+          return entry;
+      }
+    }),
+  );
   const inspectorDefaults = Object.freeze({
     ...(entry === undefined ? {} : { entry }),
     frontier,
-    nodes: semantic.nodes,
+    nodes,
     rail,
   });
   const defaultInspector = defaultInspectorDestination(inspectorDefaults);
@@ -316,7 +461,7 @@ export function presentWorkspaceBiome(
     frontier,
     label: semantic.label,
     marker: semantic.marker,
-    nodes: semantic.nodes,
+    nodes,
     owner: semantic.biome,
     rail,
     source: semantic.source,

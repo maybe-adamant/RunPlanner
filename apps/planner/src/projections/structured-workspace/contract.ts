@@ -906,6 +906,7 @@ interface WorkspaceBatchNodeBase {
   readonly source: ExitDecisionSourceAddress;
   readonly targets: readonly WorkspacePhysicalTarget[];
   readonly topologyState: 'complete' | 'partial' | 'retained';
+  readonly runState?: WorkspaceRunStateLauncher;
 }
 
 export type WorkspaceAuthoringFrontier =
@@ -985,6 +986,80 @@ export interface WorkspaceHubDecisionNode {
   readonly requiredVisitCount: number;
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
+  readonly runState?: WorkspaceRunStateLauncher;
+}
+
+/** A read-only checkpoint published by the engine for one outer decision. */
+export type WorkspaceRunStateLauncher =
+  | {
+      readonly availability: 'available';
+      readonly owner: ExitDecisionAddress | HubDecisionAddress;
+      readonly state: WorkspaceRunStatePresentation;
+      /** Final structured-stage title, never reconstructed by React. */
+      readonly title: string;
+    }
+  | {
+      readonly availability: 'unavailable';
+      readonly owner: ExitDecisionAddress | HubDecisionAddress;
+      /** Engine coverage reason, translated to visible application copy. */
+      readonly reason: string;
+      readonly title: string;
+    };
+
+export interface WorkspaceRunStatePresentation {
+  readonly bags: readonly WorkspaceRunStateBagPresentation[];
+  readonly counters: readonly { readonly key: string; readonly value: number }[];
+  readonly elements: readonly { readonly key: string; readonly value: number }[];
+  readonly godPool: {
+    readonly acquired: readonly WorkspaceRunStateSource[];
+    readonly capNarrowed: boolean;
+    readonly effective: readonly WorkspaceRunStateSource[];
+  };
+  readonly traits: {
+    readonly activeMinimumScalableRarity?: TraitRarity;
+    readonly equipped: readonly WorkspaceRunStateTrait[];
+    readonly upgradableCount: number;
+  };
+}
+
+export interface WorkspaceRunStateSource {
+  readonly key: string;
+  readonly label: string;
+}
+
+export interface WorkspaceRunStateTrait {
+  readonly giverKey: string;
+  readonly giverLabel: string;
+  readonly label: string;
+  readonly ordinarySlot?: string;
+  readonly rarity?: TraitRarity;
+  readonly traitKey: string;
+}
+
+export interface WorkspaceRunStateBagPresentation {
+  readonly eligible: WorkspaceRunStateBagSection;
+  readonly ineligible: WorkspaceRunStateBagSection;
+  readonly label: string;
+  readonly remaining: string;
+  readonly technicalKey: string;
+}
+
+export interface WorkspaceRunStateBagSection {
+  readonly entries: readonly WorkspaceRunStateBagEntry[];
+  readonly total: string;
+}
+
+export interface WorkspaceRunStateBagEntry {
+  readonly conditions: readonly WorkspaceRunStateBagCondition[];
+  readonly count: string;
+  readonly label: string;
+  readonly technicalKey: string;
+}
+
+export interface WorkspaceRunStateBagCondition {
+  readonly count: string;
+  readonly explanation: string;
+  readonly technicalKey: string;
 }
 
 export interface WorkspaceOccurrenceWorkbenchNode {
@@ -992,6 +1067,8 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly key: string;
   readonly localDetailMarkers: readonly WorkspaceMarker[];
   readonly marker: WorkspaceMarker;
+  /** A completed-Hub outer decision rendered through its visible Preboss room. */
+  readonly runState?: WorkspaceRunStateLauncher;
   readonly inspectorPresentation: 'full' | 'hubRoomLocal';
   readonly sourceDecisionRemoval?: WorkspaceStageDecisionRemoval;
   readonly railMarker?: WorkspaceMarker;

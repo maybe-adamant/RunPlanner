@@ -22,6 +22,7 @@ export interface EditorSessionReconciliationInput {
   readonly findings: readonly SemanticFinding[];
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly session: EditorSessionState;
+  readonly availableRunStateOwnerKeys?: ReadonlySet<string>;
 }
 
 function hasExactDestination(
@@ -73,14 +74,25 @@ export function deriveEditorSessionReconciliation(
   const clearTraitDialogTarget =
     traitDialogTarget !== null &&
     !hasExactDestination(focusByOwner, semanticAddressKey(traitDialogTarget));
+  const runStateTarget = session.runStateTarget ?? null;
+  const clearRunStateTarget =
+    runStateTarget !== null &&
+    input.availableRunStateOwnerKeys !== undefined &&
+    !input.availableRunStateOwnerKeys.has(semanticAddressKey(runStateTarget));
 
-  if (!clearFocusedSemanticOwner && !clearSelectedFinding && !clearTraitDialogTarget) {
+  if (
+    !clearFocusedSemanticOwner &&
+    !clearSelectedFinding &&
+    !clearTraitDialogTarget &&
+    !clearRunStateTarget
+  ) {
     return null;
   }
   return Object.freeze({
     clearFocusedSemanticOwner,
     clearSelectedFinding,
     ...(traitDialogTarget === null ? {} : { clearTraitDialogTarget }),
+    ...(runStateTarget === null ? {} : { clearRunStateTarget }),
   });
 }
 
@@ -98,13 +110,23 @@ export function createEditorSessionReconciliationCoordinator(options: {
     if (
       state.editorSession.focusedSemanticOwner === null &&
       state.editorSession.selectedFinding === null &&
-      (state.editorSession.traitDialogTarget ?? null) === null
+      (state.editorSession.traitDialogTarget ?? null) === null &&
+      (state.editorSession.runStateTarget ?? null) === null
     ) {
       return;
     }
 
     const workspace = options.structuredWorkspace.project(assembly);
+    const availableRunStateOwnerKeys = new Set<string>();
+    for (const route of workspace.routes)
+      for (const biome of route.biomes)
+        for (const node of biome.nodes) {
+          if ('runState' in node && node.runState?.availability === 'available') {
+            availableRunStateOwnerKeys.add(semanticAddressKey(node.runState.owner));
+          }
+        }
     const reconciliation = deriveEditorSessionReconciliation({
+      availableRunStateOwnerKeys,
       findings: assembly.evaluation.findings,
       focusByOwner: workspace.focusByOwner,
       session: state.editorSession,

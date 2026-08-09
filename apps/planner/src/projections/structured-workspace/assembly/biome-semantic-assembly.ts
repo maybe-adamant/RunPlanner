@@ -602,6 +602,7 @@ export function assembleWorkspaceBiomeSemantics(
       descriptor,
       markerDestinations,
       ...(nextHubVisitIndex === undefined ? {} : { nextVisitIndex: nextHubVisitIndex }),
+      source,
       topology: plan.topology,
     };
     if (hub !== undefined) {

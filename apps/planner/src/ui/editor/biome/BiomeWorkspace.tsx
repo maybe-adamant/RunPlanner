@@ -29,6 +29,7 @@ import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './Deci
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+import { RunStateSheet } from './RunStateSheet';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -100,6 +101,14 @@ function nodeLabel(node: WorkspaceNode): string {
     case 'hubDecision':
       return 'Hub';
   }
+}
+
+function structureLabelForNode(biome: WorkspaceBiome, node: WorkspaceNode): string {
+  for (const entry of biome.rail) {
+    if (entry.kind === 'node' && entry.node.key === node.key) return entry.label;
+    if (entry.kind === 'hubGroup' && entry.node.key === node.key) return 'Hub';
+  }
+  return nodeLabel(node);
 }
 
 function FocusButton({
@@ -357,6 +366,7 @@ function InspectorNode({
             {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
             presentation={node.inspectorPresentation}
             room={node.room}
+            {...(node.runState === undefined ? {} : { runState: node.runState })}
           />
           {sourceRemovalAnchor === undefined || sourceRemoval === undefined ? null : (
             <TopologyRemovalAction interaction={sourceRemoval} label={sourceRemovalAnchor.label} />
@@ -406,20 +416,13 @@ function CompletionOutline({
   );
 }
 
-function structureLabelForNode(biome: WorkspaceBiome, node: WorkspaceNode): string {
-  for (const entry of biome.rail) {
-    if (entry.kind === 'node' && entry.node.key === node.key) return entry.label;
-    if (entry.kind === 'hubGroup' && entry.node.key === node.key) return 'Hub';
-  }
-  return nodeLabel(node);
-}
-
 /**
  * Projection-driven workbench for every biome.  It intentionally has
  * no catalog or authored-plan prop: structural facts and room-local state come
  * exclusively from the Slice 3a workspace envelope and semantic interactions.
  */
 export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorkspaceProps) {
+  const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const scopedFocusedOwner =
     focusedOwner !== null && ownsBiome(focusedOwner, biome) ? focusedOwner : undefined;
@@ -471,9 +474,21 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
           interactions.topologyRemovals,
           workspaceInteractionKey(biome.owner),
         );
+  const runStateNode =
+    runStateTarget === null || runStateTarget === undefined
+      ? undefined
+      : biome.nodes.find(
+          (node) =>
+            'runState' in node &&
+            node.runState !== undefined &&
+            semanticAddressKey(node.runState.owner) === semanticAddressKey(runStateTarget),
+        );
+  const runState =
+    runStateNode !== undefined && 'runState' in runStateNode ? runStateNode.runState : undefined;
 
   return (
     <div className="biome-workspace">
+      {runState === undefined ? null : <RunStateSheet launcher={runState} />}
       <section
         aria-label={`${biome.label} route structure`}
         className="biome-structure-region"

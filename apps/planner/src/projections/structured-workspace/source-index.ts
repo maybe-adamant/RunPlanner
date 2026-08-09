@@ -36,6 +36,8 @@ import type {
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   SemanticFinding,
+  DecisionRunStateAvailability,
+  DecisionRunStateSnapshot,
 } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
@@ -63,6 +65,13 @@ export interface WorkspaceBiomeSource {
   readonly hubDecision: (hubKey: string) => HubDecision | undefined;
   readonly isAssessed: (owner: SemanticAddress) => boolean;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
+  readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
+    | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }
+    | {
+        readonly availability: 'unavailable';
+        readonly reason?: DecisionRunStateAvailability['reason'];
+      }
+    | undefined;
 }
 
 export interface WorkspaceRouteSource {
@@ -492,6 +501,18 @@ function createWorkspaceBiomeSource(
   }
   const findingsByOwner = indexFindings(evaluation?.findings ?? []);
   const coverage = createWorkspaceEvaluatedOwnerCoverage(evaluation);
+  const runStateAvailability = new Map<string, DecisionRunStateAvailability>(
+    (evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.runStateAvailability
+      : []
+    ).map((item) => [semanticAddressKey(item.owner), item] as const),
+  );
+  const runStateSnapshots = new Map<string, DecisionRunStateSnapshot>(
+    (evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.runStateSnapshots
+      : []
+    ).map((item) => [semanticAddressKey(item.owner), item] as const),
+  );
   return Object.freeze({
     biome,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
@@ -510,6 +531,23 @@ function createWorkspaceBiomeSource(
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     plan,
+    runState: (owner: ExitDecisionAddress | HubDecisionAddress) => {
+      const availability = runStateAvailability.get(semanticAddressKey(owner));
+      if (availability === undefined) return undefined;
+      const snapshot = runStateSnapshots.get(semanticAddressKey(owner));
+      if (availability.availability === 'available') {
+        if (snapshot === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} publishes available Run State without a snapshot`,
+          );
+        }
+        return Object.freeze({ availability: 'available' as const, snapshot });
+      }
+      return Object.freeze({
+        availability: 'unavailable' as const,
+        ...(availability.reason === undefined ? {} : { reason: availability.reason }),
+      });
+    },
   });
 }
 

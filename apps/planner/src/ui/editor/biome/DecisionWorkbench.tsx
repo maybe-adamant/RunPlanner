@@ -36,6 +36,7 @@ import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomOfferEditor } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
+import { RunStateLauncher } from './RunStateSheet';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -707,6 +708,7 @@ export function BatchWorkbench({
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
+          {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
