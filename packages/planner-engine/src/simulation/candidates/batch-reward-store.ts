@@ -136,13 +136,7 @@ export function evaluateBatchRewardStoreCandidate(
   evaluation: ProjectEvaluation,
   query: BatchRewardStoreCandidateQuery,
 ): BatchRewardStoreCandidateEvaluation {
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.rewardStore.routeKey,
-    query.rewardStore.biomeKey,
-  );
+  const biome = candidateBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey);
   if (biome === undefined) {
     const prefixSupport = prefixBatchRewardStoreSupport(catalog, project, evaluation, query);
     return prefixSupport === undefined

@@ -278,8 +278,10 @@ describe('F candidate support', () => {
         findings: [],
       },
     });
-    if (selectedBiome?.authoring !== 'complete' || !('roomGeneration' in selectedBiome)) {
-      throw new Error('F candidate parity fixture did not preserve complete F evaluation');
+    if (selectedBiome?.authoring !== 'complete') {
+      throw new Error(
+        `F candidate parity fixture did not preserve complete F evaluation: ${JSON.stringify(selectedBiome?.findings)}`,
+      );
     }
     const selectedPressure = selectedBiome.roomGeneration.ordinary.forcePressure.find(
       (entry) => semanticAddressKey(entry.targetOrigin) === semanticAddressKey(target),
@@ -297,15 +299,13 @@ describe('F candidate support', () => {
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(target),
       ),
     );
-    expect(selectedBiome.roomGeneration.ordinary.findings).toContainEqual(
+    expect(selectedBiome.roomGeneration.ordinary.findings).not.toContainEqual(
       expect.objectContaining({
-        code: 'targetRoomUnavailable',
         origin: createTargetAddress(
           fBiome,
           { kind: 'occurrence', occurrenceId: fGenerationOccurrenceId(1, 1) },
           'exit2',
         ),
-        evidence: expect.objectContaining({ exclusionReasons: ['physicalExitUnavailable'] }),
       }),
     );
   });
@@ -597,8 +597,8 @@ describe('F candidate support', () => {
 
     expect(results).toMatchObject([
       { kind: 'incomingReward', result: { supported: true, findings: [] } },
-      { kind: 'unavailable', reason: 'producerFrontierUnavailable' },
-      { kind: 'unavailable', reason: 'producerFrontierUnavailable' },
+      { kind: 'unavailable', reason: 'coverageNotReached' },
+      { kind: 'unavailable', reason: 'coverageNotReached' },
     ]);
   });
 
@@ -617,14 +617,14 @@ describe('F candidate support', () => {
         target,
         gameName: 'F_Combat04',
       }),
-    ).toEqual({
+    ).toMatchObject({
       kind: 'unavailable',
       reason: 'coverageNotReached',
       evidence: {
         kind: 'coverageNotReached',
         requiredOwner: target,
         requiredCheckpoint: 'afterTargetGeneration',
-        coverage: { kind: 'complete' },
+        coverage: { kind: 'prefix' },
       },
     });
   });

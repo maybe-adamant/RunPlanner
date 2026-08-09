@@ -78,13 +78,7 @@ function evaluatePrefixHubTerminalTakeover(
   evaluation: ProjectEvaluation,
   query: HubTerminalTakeoverCandidateQuery,
 ): EvaluatedHubTerminalTakeoverCandidate | undefined {
-  const candidate = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.source.routeKey,
-    query.source.biomeKey,
-  );
+  const candidate = candidateBiome(evaluation, query.source.routeKey, query.source.biomeKey);
   const biome = candidatePrefix(candidate);
   const prefix = candidateAssessmentPrefix(biome);
   const frontier = prefix?.frontier;

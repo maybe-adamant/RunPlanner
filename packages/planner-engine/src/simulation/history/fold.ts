@@ -388,6 +388,7 @@ function foldHistoryEventStream(
           Object.freeze({
             targetOrigin: event.origin,
             roomOrigin: event.roomOrigin,
+            roomCreationSequence: pending.creation.sequence,
             before: pending.before,
             after,
           }),

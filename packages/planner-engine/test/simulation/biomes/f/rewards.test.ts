@@ -11,6 +11,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -20,6 +21,8 @@ import {
   evaluateBiomeCompleteness,
   evaluateBiomeRewards,
   materializeBiome,
+  createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
   type CompleteBiomeCompletenessResult,
 } from '@run-planner/engine/simulation';
@@ -28,6 +31,11 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
+
+import {
+  createFGenerationProject,
+  fGenerationOccurrenceId,
+} from '../../support/f-generation-project';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -183,7 +191,7 @@ function ratioBoundaryProject(): ProjectDocument {
   project = addBatch(project, start, 'MetaProgress', [{ id: meta, gameName: 'F_Combat02' }]);
   project = addBatch(project, meta, 'RunProgress', [
     { id: run, gameName: 'F_Combat03' },
-    { id: runPeer, gameName: 'F_Combat05', offer: { rewardType: 'MaxHealthDrop' } },
+    { id: runPeer, gameName: 'F_Combat07', offer: { rewardType: 'MaxHealthDrop' } },
   ]);
   project = addBatch(project, run, 'MetaProgress', [
     { id: mixed, gameName: 'F_Combat04', offer: { rewardType: 'MetaCurrencyDrop' } },
@@ -229,7 +237,56 @@ function refillProject(): ProjectDocument {
     ]);
     parent = id;
   });
-  return addTakeover(project, parent, [createOccurrenceId('refill-preboss-shop')]);
+  project = addTakeover(project, parent, [createOccurrenceId('refill-preboss-shop')]);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('refill-miniboss-1')),
+      'source',
+    ),
+    value: {
+      giverKey: 'Hestia',
+      options: [
+        { traitKey: 'HestiaCastBoon', rarity: 'Common' },
+        { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        { traitKey: 'HestiaManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('refill-miniboss-2')),
+      'source',
+    ),
+    value: {
+      giverKey: 'Zeus',
+      options: [
+        { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        { traitKey: 'ZeusManaBoon', rarity: 'Common' },
+        { traitKey: 'ZeusManaBoltBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('refill-miniboss-3')),
+      'source',
+    ),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+        { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return project;
 }
 
 function sameRoomAcquisitionProject(): ProjectDocument {
@@ -326,9 +383,49 @@ function shopTimingProject(): ProjectDocument {
     createOccurrenceId('shop-trace-preboss-shop'),
     createOccurrenceId('shop-trace-preboss-free'),
   ]);
-  return replaceIncoming(project, createOccurrenceId('shop-trace-preboss-free'), {
+  project = replaceIncoming(project, createOccurrenceId('shop-trace-preboss-free'), {
     rewardType: 'MaxHealthDrop',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, third), 'source'),
+    value: {
+      giverKey: 'Hestia',
+      options: [
+        { traitKey: 'HestiaCastBoon', rarity: 'Common' },
+        { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        { traitKey: 'HestiaManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'source'),
+    value: {
+      giverKey: 'Ares',
+      options: [
+        { traitKey: 'AresSprintBoon', rarity: 'Common' },
+        { traitKey: 'AresManaBoon', rarity: 'Common' },
+        { traitKey: 'AresExCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, fifth), 'source'),
+    value: {
+      giverKey: 'Zeus',
+      options: [
+        { traitKey: 'ZeusManaBoon', rarity: 'Common' },
+        { traitKey: 'ZeusManaBoltBoon', rarity: 'Common' },
+        { traitKey: 'BoltRetaliateBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return project;
 }
 
 function invalidShopOfferProject(): ProjectDocument {
@@ -483,9 +580,62 @@ function devotionProject(): ProjectDocument {
     createOccurrenceId('devotion-preboss-shop'),
     createOccurrenceId('devotion-preboss-free'),
   ]);
-  return replaceIncoming(project, createOccurrenceId('devotion-preboss-free'), {
+  project = replaceIncoming(project, createOccurrenceId('devotion-preboss-free'), {
     rewardType: 'MaxManaDrop',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, run1), 'source'),
+    value: {
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonCastBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, run2), 'source'),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, devotion), 'chosenSource'),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+        { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, devotion), 'spurnedSource'),
+    value: {
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonManaBoon', rarity: 'Common' },
+        { traitKey: 'EncounterStartOffenseBuffBoon', rarity: 'Common' },
+        { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return project;
 }
 
 describe('F reward-history simulation', () => {
@@ -744,6 +894,147 @@ describe('F reward-history simulation', () => {
         origin: createShopPurchaseAddress(biome, createOccurrenceId('blind-shop'), 'Boon'),
       }),
     ]);
+  });
+
+  it('retains the blocked Shop purchase-order artifact while withholding its suffix', () => {
+    const batches = [
+      { targets: ['F_Combat02'], pickedExitIndex: 1 },
+      {
+        targets: ['F_Combat03', 'F_Combat03'],
+        pickedExitIndex: 1,
+        offers: [
+          { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+          { rewardType: 'MaxHealthDrop' },
+        ],
+      },
+      {
+        targets: ['F_Combat04', 'F_Combat04'],
+        pickedExitIndex: 1,
+        offers: [
+          { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+          { rewardType: 'MaxManaDrop' },
+        ],
+      },
+      {
+        targets: ['F_Combat05', 'F_Combat11'],
+        pickedExitIndex: 1,
+        offers: [
+          { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+          { rewardType: 'SpellDrop' },
+        ],
+      },
+      {
+        targets: ['F_Shop01', 'F_Combat11'],
+        pickedExitIndex: 1,
+        storeKey: 'MetaProgress',
+        offers: [undefined, { rewardType: 'MetaCurrencyDrop' }],
+      },
+      {
+        targets: ['F_MiniBoss01', 'F_MiniBoss02'],
+        pickedExitIndex: 1,
+        offers: [
+          { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+          { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+        ],
+      },
+    ] as const;
+    const shopId = fGenerationOccurrenceId(5, 1);
+    const shop = createOccurrenceAddress(biome, shopId);
+    let project = createFGenerationProject(batches, { includeTakeover: false });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, shopId, 'Boon'),
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseOrder',
+      shop,
+      offerKeys: ['Boon', 'MajorNonBoon'],
+    });
+    const preShopOffers = [
+      {
+        owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(2, 1)),
+        giverKey: 'Poseidon',
+        options: [
+          { traitKey: 'PoseidonWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+      {
+        owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(3, 1)),
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'HestiaCastBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+      {
+        owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(4, 1)),
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+          { traitKey: 'ZeusManaBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option3',
+      },
+    ] as const;
+    for (const authored of preShopOffers) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(authored.owner, 'source'),
+        value: {
+          giverKey: authored.giverKey,
+          options: authored.options,
+          selectedOptionKey: authored.selectedOptionKey,
+        },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createShopOfferAddress(biome, shopId, 'Boon'), 'hiddenSource'),
+      value: {
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'DemeterWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+          { traitKey: 'CastNovaBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluated = assembly.evaluation.routes[0]?.biomes[0];
+    if (evaluated?.authoring !== 'incomplete' || evaluated.validity !== 'invalid') {
+      throw new Error('invalid Shop purchase fixture did not produce a blocked evaluation');
+    }
+    const blockedPurchase = createShopPurchaseAddress(biome, shopId, 'Boon');
+    expect(evaluated.coverage).toMatchObject({ kind: 'prefix', blockedAt: blockedPurchase });
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    expect(
+      session.evaluate({
+        kind: 'shopPurchaseOrder',
+        shop,
+        offerKeys: ['MajorNonBoon'],
+      }),
+    ).toMatchObject({
+      kind: 'shopPurchaseOrder',
+      result: { supported: true, findings: [] },
+    });
+    expect(
+      session.evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, fGenerationOccurrenceId(6, 1)),
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
   it('emits Devotion chosen and spurned acquisitions at their declared ordered points', () => {

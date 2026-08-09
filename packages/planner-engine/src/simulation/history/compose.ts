@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { semanticAddressKey } from '../../authored-project/addresses';
+import { createBiomeAddress, semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalAuthoredRoom,
@@ -20,6 +20,7 @@ import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
+  appendCompletionTail,
   composeBiomeHistoryEnvelope,
   composeBiomeHistoryEnvelopeWithEncounterValidation,
   composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
@@ -658,6 +659,21 @@ function composeBiomeHistoryPrefixResult(
         current = appendCompletedDecision(writer, catalog, decision, current);
       }
       const frontier = snapshot.frontier;
+      if (frontier === undefined && snapshot.completionRooms !== undefined) {
+        if (current.kind !== 'authored') {
+          fail('completion tail does not follow an authored Preboss room');
+        }
+        appendCanonicalRoomLifecycle(writer, catalog, current, fail);
+        appendCompletionTail(
+          writer,
+          catalog,
+          createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
+          current,
+          snapshot.completionRooms,
+          fail,
+        );
+        return;
+      }
       if (frontier?.kind === 'exitDecision') {
         if (current.kind === 'hub') {
           if (frontier.targets.length > 0) {

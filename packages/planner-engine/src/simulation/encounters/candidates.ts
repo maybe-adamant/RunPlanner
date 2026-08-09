@@ -8,6 +8,11 @@ import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom, CanonicalLocalChildRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
+  findingRegion,
+  type FindingRegionEntry,
+  type HistoryFindingChronology,
+} from '../finding-regions';
+import {
   prepareRoomEncounterPhases,
   type EncounterAuthoringRoom,
   type EncounterPhaseCandidateSupport,
@@ -42,12 +47,6 @@ export interface EncounterCandidateEvaluation {
 
 export interface EncounterCandidateBoundary {
   /**
-   * The last canonical checkpoint available to a structurally retained room
-   * without its own preparation view. It never fabricates a later lifecycle,
-   * counter, or reward effect.
-   */
-  readonly fallback: HistoryStateView;
-  /**
    * An encounter block has one more precise owner checkpoint: the failed
    * room itself must evaluate from before its valid record-only prefix.
    */
@@ -69,7 +68,7 @@ function candidateContext(
   if (boundary.blocked !== undefined && key === semanticAddressKey(boundary.blocked.room.origin)) {
     return projectRoomPreparationCheckpoint(boundary.blocked.before);
   }
-  return boundary.fallback;
+  return undefined;
 }
 
 function hasExactCandidateContext(
@@ -87,19 +86,20 @@ function hasExactCandidateContext(
 /**
  * Projects candidate support for every structurally active editable phase.
  * Canonically entered rooms use their own preparation checkpoint. A bounded
- * prefix may retain later authored controls: those rooms use only its final
- * canonical checkpoint, while an encounter-blocked owner restarts from its
- * exact predecessor checkpoint. Neither case fabricates lifecycle effects.
+ * prefix exposes only rooms with exact preparation checkpoints. An
+ * encounter-blocked owner restarts from its exact predecessor checkpoint;
+ * later authored rooms remain unavailable until their own checkpoint exists.
  */
-export function evaluateEncounterCandidates(
+export function evaluateEncounterCandidatesInternal(
   catalog: Catalog,
   rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalChildRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
   boundary?: EncounterCandidateBoundary,
-): EncounterCandidateEvaluation {
+): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
+  const findingChronologies = new Map<string, HistoryFindingChronology>();
   for (const room of rooms) {
     if (!room.entered) continue;
     const context = candidateContext(room, views, boundary);
@@ -128,6 +128,15 @@ export function evaluateEncounterCandidates(
       entries.set(key, support);
     }
     findings.push(...prepared.findings);
+    prepared.findings.forEach((finding) => {
+      // Finding regions are produced here while the exact room-preparation
+      // checkpoint is still available; do not infer this lifecycle position
+      // later from encounter finding codes.
+      findingChronologies.set(
+        semanticAddressKey(finding.origin),
+        Object.freeze({ kind: 'history', sequence: context.sequence, boundary: 'at' }),
+      );
+    });
   }
   const privateEntries = new Map(entries);
   const privateRooms = new Map(roomsByOwner);
@@ -137,5 +146,21 @@ export function evaluateEncounterCandidates(
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
+    findingRegions: Object.freeze(
+      findings.map((finding) => {
+        const chronology = findingChronologies.get(semanticAddressKey(finding.origin));
+        return findingRegion(finding, undefined, chronology, 'encounter');
+      }),
+    ),
   });
+}
+
+export function evaluateEncounterCandidates(
+  catalog: Catalog,
+  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalChildRoom)[],
+  views: ReadonlyMap<string, HistoryStateView>,
+  boundary?: EncounterCandidateBoundary,
+): EncounterCandidateEvaluation {
+  const evaluation = evaluateEncounterCandidatesInternal(catalog, rooms, views, boundary);
+  return Object.freeze({ artifacts: evaluation.artifacts, findings: evaluation.findings });
 }

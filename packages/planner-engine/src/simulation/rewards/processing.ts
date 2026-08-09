@@ -39,6 +39,13 @@ import type {
   SemanticFinding,
   TraitFindingCode,
 } from '../model';
+import {
+  findingRegion,
+  findingIdentityKey,
+  ownerRegion,
+  type FindingChronology,
+  type FindingRegionEntry,
+} from '../finding-regions';
 import type { RewardBranch, RewardEvent } from './model';
 import {
   attachTraitHistory,
@@ -183,7 +190,8 @@ function applyTraitOfferForAcquisition(
   role: string,
   lifecyclePoint: string,
   sequence: number,
-  findings?: Map<string, SemanticFinding>,
+  findings?: Map<string, FindingRegionEntry>,
+  findingChronology?: FindingChronology,
 ): RewardBranchState {
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   if (authored === undefined) return branch;
@@ -218,14 +226,26 @@ function applyTraitOfferForAcquisition(
             owner,
             role,
             lifecyclePoint,
+            sequence,
             finding.code,
             finding.traitKey,
             finding.detail,
+            findingChronology,
           );
         }),
       );
       evaluation.composition.findings.forEach((finding) => {
-        addTraitFinding(findings, owner, role, lifecyclePoint, finding.code, finding.traitKey);
+        addTraitFinding(
+          findings,
+          owner,
+          role,
+          lifecyclePoint,
+          sequence,
+          finding.code,
+          finding.traitKey,
+          undefined,
+          findingChronology,
+        );
       });
       evaluation.replacementComposition.findings.forEach((finding) => {
         addTraitFinding(
@@ -233,9 +253,11 @@ function applyTraitOfferForAcquisition(
           owner,
           role,
           lifecyclePoint,
+          sequence,
           finding.code,
           undefined,
           finding.detail,
+          findingChronology,
         );
       });
     }
@@ -266,13 +288,15 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
 }
 
 function addTraitFinding(
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   owner: TraitOfferOwnerAddress,
   acquisitionRole: string,
   lifecyclePoint: string,
+  sequence: number,
   code: TraitFindingCode,
   traitKey: string | undefined,
   detail?: string,
+  findingChronology?: FindingChronology,
 ): void {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
   const value: SemanticFinding = Object.freeze({
@@ -287,7 +311,12 @@ function addTraitFinding(
       ...(detail === undefined ? {} : { detail }),
     }),
   });
-  addRewardFinding(findings, value);
+  addRewardFinding(
+    findings,
+    value,
+    ownerRegion(origin),
+    findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+  );
 }
 
 export function advanceRewardBranch(
@@ -366,14 +395,20 @@ export function rewardFinding(
 }
 
 function findingKey(value: SemanticFinding): string {
-  return JSON.stringify([value.code, semanticAddressKey(value.origin), value.evidence]);
+  return findingIdentityKey(value);
 }
 
 export function addRewardFinding(
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   value: SemanticFinding,
+  atomicRegion = ownerRegion(value.origin),
+  chronology?: FindingChronology,
 ): void {
-  findings.set(findingKey(value), value);
+  findings.set(findingKey(value), findingRegion(value, atomicRegion, chronology, 'reward'));
+}
+
+function historyChronology(sequence: number): FindingChronology {
+  return Object.freeze({ kind: 'history', sequence, boundary: 'at' });
 }
 
 export function offerEvidence(offer: CanonicalResolvedIncomingReward['offer']): FindingEvidence {
@@ -458,6 +493,8 @@ export interface OfferProcessingContext {
   };
   readonly binding?: CountedRewardBinding;
   readonly historySequence: number;
+  /** Exact producer checkpoint used for first-blocking ordering. */
+  readonly findingChronology?: FindingChronology;
   readonly peers: readonly OfferProcessingPeer[];
   readonly facts: RewardFactsFactory;
 }
@@ -482,9 +519,9 @@ function permutations<T>(values: readonly T[]): readonly (readonly T[])[] {
 export function processRewardOffer(
   branches: readonly RewardBranchState[],
   context: OfferProcessingContext,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
-  const { catalog, reward, historySequence } = context;
+  const { catalog, reward, historySequence, findingChronology } = context;
   const rewardType = catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
   if (
     rewardType === undefined ||
@@ -493,6 +530,8 @@ export function processRewardOffer(
     addRewardFinding(
       findings,
       rewardFinding('rewardPayloadInvalid', reward.origin, offerEvidence(reward.offer)),
+      ownerRegion(reward.origin),
+      findingChronology ?? historyChronology(historySequence),
     );
     return Object.freeze([]);
   }
@@ -621,6 +660,8 @@ export function processRewardOffer(
             }
           : {}),
       }),
+      ownerRegion(reward.origin),
+      findingChronology ?? historyChronology(historySequence),
     );
   }
   return Object.freeze(next);
@@ -650,18 +691,19 @@ function recordCanonicalOffer(
 export function processJointUnorderedOffers(
   branches: readonly RewardBranchState[],
   contexts: readonly OfferProcessingContext[],
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
+  atomicRegion?: string,
 ): readonly RewardBranchState[] {
   if (contexts.length <= 1) {
     const context = contexts[0];
     return context === undefined ? branches : processRewardOffer(branches, context, findings);
   }
   const supported: RewardBranchState[] = [];
-  let representativeFailures: readonly SemanticFinding[] = Object.freeze([]);
+  let representativeFailures: readonly FindingRegionEntry[] = Object.freeze([]);
   for (const branch of branches) {
     for (const ordering of permutations(contexts)) {
       let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
-      const localFindings = new Map<string, SemanticFinding>();
+      const localFindings = new Map<string, FindingRegionEntry>();
       const priorOffers: OfferProcessingPeer[] = [];
       for (const context of ordering) {
         candidates = processRewardOffer(
@@ -694,7 +736,12 @@ export function processJointUnorderedOffers(
   }
   if (supported.length === 0) {
     for (const value of representativeFailures) {
-      addRewardFinding(findings, value);
+      addRewardFinding(
+        findings,
+        value.finding,
+        atomicRegion ?? value.atomicRegion,
+        value.chronology,
+      );
     }
   }
   return mergeEquivalentRewardBranches(supported);
@@ -717,6 +764,7 @@ interface ShopProcessingContext {
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
   readonly historySequence: number;
+  readonly findingChronology?: FindingChronology;
   readonly facts: RewardFactsFactory;
   readonly fail: (detail: string) => never;
 }
@@ -724,7 +772,7 @@ interface ShopProcessingContext {
 export function processShopInventory(
   branches: readonly RewardBranchState[],
   context: ShopProcessingContext,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
   const { catalog, room, declaration, historySequence, fail } = context;
   const entry = room.entryState;
@@ -803,6 +851,8 @@ export function processShopInventory(
       addRewardFinding(
         findings,
         rewardFinding(code, offer.offerOrigin, offerEvidence(offer.offer)),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
       );
     }
     if (unsupportedIndexes.length === 0) {
@@ -812,6 +862,8 @@ export function processShopInventory(
           offerKeys: entry.offers.map((offer) => offer.offerKey),
           kind: 'jointOfferSet',
         }),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
       );
     }
   }
@@ -821,7 +873,7 @@ export function processShopInventory(
 export function processShopPurchases(
   branches: readonly RewardBranchState[],
   context: ShopProcessingContext,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
   const { catalog, room, declaration, historySequence, fail } = context;
   const entry = room.entryState;
@@ -918,6 +970,8 @@ export function processShopPurchases(
       addRewardFinding(
         findings,
         rewardFinding('shopPurchaseUnavailable', offer.purchaseOrigin, offerEvidence(offer.offer)),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
       );
     }
     if (failedIndexes.length === 0) {
@@ -927,6 +981,8 @@ export function processShopPurchases(
           kind: 'jointPurchaseOrder',
           offerKeys: entry.purchaseOrder,
         }),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
       );
     }
   }
@@ -939,8 +995,10 @@ export function processProducerRole(
   room: CanonicalRewardRoom,
   event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
   facts: RewardFactsFactory,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   fail: (detail: string) => never,
+  atomicRegion?: string,
+  findingChronology?: FindingChronology,
 ): readonly RewardBranchState[] {
   const incoming = room.incomingReward;
   if (
@@ -979,6 +1037,7 @@ export function processProducerRole(
       event.lifecyclePoint,
       event.sequence,
       findings,
+      findingChronology,
     );
     next.push(
       appendRewardEvent(withTrait, event.sequence, {
@@ -996,6 +1055,8 @@ export function processProducerRole(
         role: event.role,
         lifecyclePoint: event.lifecyclePoint,
       }),
+      atomicRegion,
+      findingChronology ?? historyChronology(event.sequence),
     );
   }
   return Object.freeze(next);
@@ -1013,8 +1074,10 @@ export function processOwnedRewardAcquisition(
   },
   historySequence: number,
   facts: RewardFactsFactory,
-  findings: Map<string, SemanticFinding>,
+  findings: Map<string, FindingRegionEntry>,
   fail: (detail: string) => never,
+  atomicRegion?: string,
+  findingChronology?: FindingChronology,
 ): readonly RewardBranchState[] {
   const producer = catalog.rewards.producerLifecycles.byKey[reward.producerLifecycleKey];
   const lifecycle = producer?.rewardTypes.byKey[reward.offer.rewardType];
@@ -1052,6 +1115,7 @@ export function processOwnedRewardAcquisition(
         binding.lifecyclePoint,
         historySequence,
         findings,
+        findingChronology,
       );
       next.push(
         appendRewardEvent(withTrait, historySequence, {
@@ -1069,6 +1133,8 @@ export function processOwnedRewardAcquisition(
           role: binding.role,
           lifecyclePoint: binding.lifecyclePoint,
         }),
+        atomicRegion,
+        findingChronology ?? historyChronology(historySequence),
       );
       return Object.freeze([]);
     }

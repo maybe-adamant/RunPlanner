@@ -43,7 +43,11 @@ import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
 } from '../../src/simulation/candidates/trait-offer';
-import { simulateProject } from '../../src/simulation';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProject,
+  simulateProjectAssembly,
+} from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -994,34 +998,31 @@ describe('reached trait offer chronology', () => {
         trace.address.owner.occurrenceId === goldenFOccurrenceId(2, 1) &&
         trace.acquisitionRole === 'source',
     );
-    if (firstTrace === undefined || laterTrace === undefined) {
-      throw new Error('first-offer repair traces are missing');
-    }
+    if (firstTrace === undefined) throw new Error('first-offer repair trace is missing');
     expect(firstTrace.branches[0]?.composition).toMatchObject({ applies: true, legal: false });
-    expect(laterTrace.branches[0]?.composition).toEqual({
-      applies: true,
-      legal: true,
-      findings: [],
-    });
+    expect(laterTrace).toBeUndefined();
     expect(branch.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ owner, acquisitionRole: 'source' }),
     );
-    expect(branch.traitHistory?.events).toContainEqual(
-      expect.objectContaining({
-        owner: laterTrace.address.owner,
-        acquisitionRole: 'source',
-        selectedOptionKey: laterTrace.offer.selectedOptionKey,
+    expect(branch.traitHistory?.events).toHaveLength(0);
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'traitOffer',
+        trait: traitAddress,
+        value: {
+          giverKey: 'Apollo',
+          options: [
+            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        },
       }),
-    );
-    const selectedIndex =
-      laterTrace.offer.selectedOptionKey === 'option1'
-        ? 0
-        : laterTrace.offer.selectedOptionKey === 'option2'
-          ? 1
-          : 2;
-    const selectedTraitKey = laterTrace.offer.options[selectedIndex]?.traitKey;
-    expect(selectedTraitKey).toBeDefined();
-    expect(branch.traitHistory?.equippedTraits[selectedTraitKey!]).toBeDefined();
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
   });
 
   it('keeps first-offer candidate support and evidence grouped by reached branch', () => {

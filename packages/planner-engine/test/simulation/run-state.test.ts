@@ -6,6 +6,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -92,7 +93,9 @@ describe('decision run-state snapshots', () => {
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
-    if (biome?.authoring !== 'complete') throw new Error('N did not evaluate');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('N did not evaluate validly');
+    }
     expect(biome.rewards.runStateSnapshots).toHaveLength(3);
     expect(biome.rewards.runStateSnapshots.map((snapshot) => snapshot.owner)).toEqual(
       biome.snapshot.decisions.map((decision) => decision.origin),
@@ -239,6 +242,15 @@ describe('decision run-state snapshots', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
+    const laterOwner = createExitDecisionAddress(biomeAddress, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(2, 1),
+    });
+    expect(
+      progressive?.rewards.runStateSnapshots.some(
+        (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(laterOwner),
+      ),
+    ).toBe(false);
   });
 
   it('publishes complete-invalid snapshots only through progressive coverage', () => {
@@ -261,7 +273,11 @@ describe('decision run-state snapshots', () => {
     if (biome?.authoring !== 'complete' || biome.validity !== 'invalid') {
       throw new Error('expected complete-invalid F evaluation');
     }
-    expect(biome.coverage).toEqual({ kind: 'complete' });
+    expect(biome.coverage).toMatchObject({
+      kind: 'prefix',
+      blockedAt: createIncomingRewardAddress(biomeAddress, goldenFOccurrenceId(1, 1)),
+    });
+    expect('snapshot' in biome).toBe(false);
     expect(biome.rewards.runStateSnapshots).toHaveLength(1);
     expect(biome.rewards.runStateAvailability).toEqual(
       expect.arrayContaining([
@@ -272,6 +288,17 @@ describe('decision run-state snapshots', () => {
     expect(
       biome.rewards.runStateAvailability.filter((entry) => entry.availability === 'available'),
     ).toHaveLength(1);
+    const laterOwner = createExitDecisionAddress(biomeAddress, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(2, 1),
+    });
+    expect(biome.rewards.runStateAvailability).toContainEqual(
+      expect.objectContaining({
+        owner: laterOwner,
+        availability: 'unavailable',
+        reason: 'coverageNotReached',
+      }),
+    );
   });
 
   it('publishes encounter-blocked decision availability through the canonical frontier', () => {

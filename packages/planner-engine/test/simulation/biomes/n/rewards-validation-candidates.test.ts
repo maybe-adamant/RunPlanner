@@ -48,6 +48,12 @@ function completeN(project = createRepresentativeNProject()) {
   return { project, evaluation, biome };
 }
 
+function validN(project = createRepresentativeNProject()) {
+  const result = completeN(project);
+  if (result.biome.validity !== 'valid') throw new Error('N fixture did not complete-valid');
+  return { ...result, biome: result.biome };
+}
+
 describe('N Hub rewards, validation, and candidates', () => {
   it('owns takeover candidates only at the completed Hub decision', () => {
     const openingId = nOccurrenceId('candidate-opening-domain');
@@ -102,7 +108,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('consumes the physical board while acquiring only the six visited target rewards', () => {
-    const { biome } = completeN();
+    const { biome } = validN();
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
     const boardOrigins = new Set(
@@ -401,7 +407,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
       },
     });
-    const { biome } = completeN(project);
+    const { biome } = validN(project);
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
 
@@ -418,7 +424,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('jointly consumes generated side siblings but acquires only the entered local rooms', () => {
-    const { biome } = completeN();
+    const { biome } = validN();
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
     const generated = hub.visits.flatMap((visit) =>
@@ -609,7 +615,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
       },
     );
-    const { biome } = completeN(project);
+    const { biome } = validN(project);
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
     const story = hub.board.targets.find((target) => target.hubSlotKey === 'story');
@@ -658,7 +664,12 @@ describe('N Hub rewards, validation, and candidates', () => {
       offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
     });
-    expect(completeN(invalidProject).biome.findings).toContainEqual(
+    const invalidBiome = completeN(invalidProject).biome;
+    expect(invalidBiome.coverage).toMatchObject({
+      kind: 'prefix',
+      blockedAt: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
+    });
+    expect(invalidBiome.findings).toContainEqual(
       expect.objectContaining({
         code: 'shopOfferUnavailable',
         origin: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
@@ -958,7 +969,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('preserves the fixed opening and PreHub reward surfaces as normal authored occurrences', () => {
-    const { biome } = completeN();
+    const { biome } = validN();
     const opening = biome.snapshot.entryRoom;
     const openingBatch = biome.snapshot.decisions.find(
       (decision) =>
@@ -989,7 +1000,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
       value: { rewardType: 'RoomMoneyTinyDrop' },
     });
-    const { biome } = completeN(project);
+    const { biome } = validN(project);
     const owner = createLocalRewardAddress(
       nBiome,
       nOccurrenceId('combat02'),

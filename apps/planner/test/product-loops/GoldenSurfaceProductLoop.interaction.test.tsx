@@ -36,6 +36,7 @@ import { selectProfileStatus } from '@planner/state/store';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
+  authorLegalTraitOffers,
   createRepresentativeNOPQShopTraitProject,
   nBiome,
   nOccurrenceId,
@@ -533,11 +534,11 @@ describe('surface product loop', () => {
     const application = createApplication();
     const target = createTargetAddress(
       pBiome,
-      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      { kind: 'occurrence', occurrenceId: pOccurrenceIds.intro },
       'exit1',
     );
     const invalidProject = applyProjectCommand(
-      createRepresentativeNOPQProject(),
+      authorLegalTraitOffers(createRepresentativeNOPQProject()),
       application.catalog,
       {
         kind: 'ReplaceOccurrenceRoom',

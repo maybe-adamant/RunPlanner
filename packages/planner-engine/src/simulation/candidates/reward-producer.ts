@@ -1,7 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
 import {
-  createBiomeAddress,
-  semanticAddressKey,
   type IncomingRewardAddress,
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
@@ -10,11 +8,6 @@ import {
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { ProjectEvaluation } from '../project';
-import {
-  evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
-  type ProgressiveBiomeEvaluationAssembly,
-} from '../progressive/biome';
 import type {
   RewardProducerCandidateArtifacts,
   RewardProducerCandidateCapability,
@@ -22,20 +15,12 @@ import type {
   RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
 import {
+  coverageUnavailable,
   producerUnavailable,
   unavailableForBiome,
   type CandidateContextUnavailable,
 } from './availability';
-import {
-  candidateBlockedAt,
-  completeBiome,
-  completeBiomeCount,
-  planFor,
-  prefixBiome,
-  progressiveSeed,
-  progressiveContextFor,
-  type CandidateBiomeEvaluation,
-} from './evaluated-biome';
+import { candidateBiome, type CandidateBiomeEvaluation } from './evaluated-biome';
 import { wheelState } from './ship-owner';
 
 export interface IncomingRewardCandidateQuery {
@@ -101,81 +86,14 @@ interface RewardProducerSource {
 }
 
 function selectedRewardProducerSource(
-  catalog: Catalog,
-  project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RewardProducerCandidateArtifacts | undefined,
   owner: RewardProducerOwnerAddress,
 ): RewardProducerSource | undefined {
-  const complete = completeBiome(evaluation, owner.routeKey, owner.biomeKey);
-  if (complete?.validity === 'invalid') {
-    const progressive = evaluateProgressiveBiomeAssembly(
-      catalog,
-      createBiomeAddress(owner.routeKey, owner.biomeKey),
-      planFor(project, owner.routeKey, owner.biomeKey),
-      progressiveContextFor(
-        project,
-        owner.routeKey,
-        completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-        progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
-      ),
-    );
-    return progressive === null
-      ? undefined
-      : Object.freeze({
-          evaluation: progressive.evaluation,
-          artifacts: progressive.candidateArtifacts.rewardProducers,
-        });
-  }
-  const biome = complete ?? prefixBiome(evaluation, owner.routeKey, owner.biomeKey);
+  const biome = candidateBiome(evaluation, owner.routeKey, owner.biomeKey);
   return biome === undefined
     ? undefined
     : Object.freeze({ evaluation: biome, artifacts: selectedArtifacts });
-}
-
-function repairAssemblyForOwner(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  selected: RewardProducerSource,
-  owner: RewardProducerOwnerAddress,
-): ProgressiveBiomeEvaluationAssembly | undefined {
-  // Incoming/free rewards are produced when their target is generated. The
-  // progressive assembly now retains that exact offer-time boundary without
-  // the target's lifecycle; reopening the raw full prefix here would add
-  // acquisition and downstream reward facts back into a blocked route.
-  if (owner.kind === 'incomingReward') return undefined;
-  const blockedAt = candidateBlockedAt(selected.evaluation);
-  if (blockedAt === undefined || semanticAddressKey(blockedAt) !== semanticAddressKey(owner)) {
-    return undefined;
-  }
-  const raw = evaluateProgressiveBiomeAssemblyBeforeClamp(
-    catalog,
-    createBiomeAddress(owner.routeKey, owner.biomeKey),
-    planFor(project, owner.routeKey, owner.biomeKey),
-    progressiveContextFor(
-      project,
-      owner.routeKey,
-      completeBiomeCount(evaluation, owner.routeKey, owner.biomeKey),
-      progressiveSeed(evaluation, owner.routeKey, owner.biomeKey),
-    ),
-  );
-  return raw !== null &&
-    raw.evaluation.blockedAt !== undefined &&
-    semanticAddressKey(raw.evaluation.blockedAt) === semanticAddressKey(owner)
-    ? raw
-    : undefined;
-}
-
-function producerCapability(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  selected: RewardProducerSource,
-  owner: RewardProducerOwnerAddress,
-): RewardProducerCandidateCapability | undefined {
-  const repair = repairAssemblyForOwner(catalog, project, evaluation, selected, owner);
-  return repair?.candidateArtifacts.rewardProducers.at(owner) ?? selected.artifacts?.at(owner);
 }
 
 function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddress {
@@ -201,13 +119,7 @@ export function evaluateRewardProducerCandidate(
     wheelState(catalog, project, query.offer);
   }
   const owner = ownerFor(query);
-  const selected = selectedRewardProducerSource(
-    catalog,
-    project,
-    evaluation,
-    selectedArtifacts,
-    owner,
-  );
+  const selected = selectedRewardProducerSource(evaluation, selectedArtifacts, owner);
   if (selected === undefined) {
     return unavailableForBiome(
       evaluation,
@@ -217,9 +129,11 @@ export function evaluateRewardProducerCandidate(
       checkpointFor(query),
     );
   }
-  const capability = producerCapability(catalog, project, evaluation, selected, owner);
+  const capability: RewardProducerCandidateCapability | undefined = selected.artifacts?.at(owner);
   if (capability === undefined) {
-    return producerUnavailable(owner);
+    return selected.evaluation.coverage.kind === 'prefix'
+      ? coverageUnavailable(evaluation, owner, checkpointFor(query))
+      : producerUnavailable(owner);
   }
   const result = capability.evaluateOffer(owner, query.value);
   switch (query.kind) {

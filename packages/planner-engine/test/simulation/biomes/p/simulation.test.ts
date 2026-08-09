@@ -198,7 +198,7 @@ describe('P core loop', () => {
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
-  it('uses the complete-invalid sole-owner lifecycle artifact when the prefix cannot reach the Shop', () => {
+  it('retains the exact completion-tail Shop purchase block and lifecycle artifact', () => {
     const purchase = createShopPurchaseAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
     let project = createRepresentativeNOPProject();
     project = applyProjectCommand(project, catalog, {
@@ -240,8 +240,8 @@ describe('P core loop', () => {
         : null;
     const shopOwner = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
     expect(progressive).not.toBeNull();
-    expect(progressive?.evaluation.blockedAt).toBeUndefined();
-    expect(progressive?.candidateArtifacts.roomLifecycles.shopAt(shopOwner)).toBeUndefined();
+    expect(progressive?.evaluation.blockedAt).toEqual(purchase);
+    expect(progressive?.candidateArtifacts.roomLifecycles.shopAt(shopOwner)).toBeDefined();
     expect(
       candidateArtifactsForProjectEvaluationAssembly(assembly)
         .biomeAt(pBiome)

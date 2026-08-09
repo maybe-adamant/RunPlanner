@@ -340,7 +340,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation({
   });
 }
 
-function appendCompletionTail(
+export function appendCompletionTail(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   biome: BiomeAddress,

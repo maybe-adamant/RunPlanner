@@ -1,9 +1,12 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeFieldAddress,
+  createExitDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -295,7 +298,47 @@ describe('structured workspace biome semantic assembly', () => {
     });
   });
 
-  it('keeps a fully authored canonical biome published when evaluation is invalid', () => {
+  it('presents a reached contextual block as invalid ahead of a later authored frontier', () => {
+    let project = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Blocked incomplete semantic assembly',
+      projectId: 'blocked-incomplete-semantic-assembly',
+    });
+    const openingId = createOccurrenceId('blocked-incomplete-f-opening');
+    const openingDecision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      decision: openingDecision,
+      kind: 'CreateBatch',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, openingDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      gameName: 'F_Combat14',
+      kind: 'CreateTarget',
+      occurrenceId: createOccurrenceId('blocked-incomplete-f-target'),
+      target: createTargetAddress(goldenFBiome, openingDecision.source, 'exit1'),
+    });
+
+    const source = biomeSource(project, 'Underworld', 'F');
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
+
+    expect(source.evaluation).toMatchObject({ authoring: 'incomplete', validity: 'invalid' });
+    expect(assembly).toMatchObject({ source: 'progressive', status: 'invalid' });
+  });
+
+  it('keeps the full authored biome visible under a blocked progressive overlay', () => {
     const invalid = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       gameName: 'P_Combat02',
       kind: 'ReplaceOccurrenceRoom',
@@ -308,7 +351,7 @@ describe('structured workspace biome semantic assembly', () => {
     });
     const assembly = assembleWorkspaceBiomeSemantics(catalog, biomeSource(invalid, 'Surface', 'P'));
 
-    expect(assembly).toMatchObject({ source: 'canonical', status: 'invalid' });
+    expect(assembly).toMatchObject({ source: 'progressive', status: 'invalid' });
     expect(
       assembly.nodes.some(
         (node) =>

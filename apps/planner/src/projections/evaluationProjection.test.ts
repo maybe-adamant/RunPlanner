@@ -246,6 +246,10 @@ describe('evaluation presentation', () => {
       label: 'Incomplete',
       tone: 'incomplete',
     });
+    expect(presentBiomeStatus({ authoring: 'incomplete', validity: 'invalid' })).toEqual({
+      label: 'Invalid',
+      tone: 'invalid',
+    });
     expect(
       presentBiomeStatus({
         authoring: 'complete',

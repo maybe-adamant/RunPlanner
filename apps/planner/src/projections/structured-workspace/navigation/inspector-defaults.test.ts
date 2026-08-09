@@ -154,8 +154,9 @@ describe('workspace inspector defaults', () => {
 
   it('keeps ordinary default priority in final projection order', () => {
     const complete = createGoldenFGHIProject();
+    const completeWorkspace = project(complete);
     for (const biomeKey of ['F', 'G', 'H', 'I'] as const) {
-      const value = biome(complete, biomeKey);
+      const value = requireWorkspaceBiome(completeWorkspace, biomeKey);
       expect(value.defaultInspectorDestination?.kind).toBe('node');
       if (value.defaultInspectorDestination?.kind !== 'node') continue;
       expect(nodeByKey(value, value.defaultInspectorDestination.nodeKey).kind).toMatch(
@@ -163,8 +164,9 @@ describe('workspace inspector defaults', () => {
       );
     }
     const surface = createRepresentativeNOPQProject();
+    const surfaceWorkspace = project(surface);
     for (const biomeKey of ['O', 'P', 'Q'] as const) {
-      const value = biome(surface, biomeKey);
+      const value = requireWorkspaceBiome(surfaceWorkspace, biomeKey);
       expect(value.defaultInspectorDestination?.kind).toBe('node');
       if (value.defaultInspectorDestination?.kind !== 'node') continue;
       expect(nodeByKey(value, value.defaultInspectorDestination.nodeKey).kind).toMatch(
@@ -173,10 +175,7 @@ describe('workspace inspector defaults', () => {
     }
 
     const partial = biome(
-      withUnresolvedFSelections(createGoldenFGHIProject(), [
-        goldenFOccurrenceId(1, 1),
-        goldenFOccurrenceId(2, 1),
-      ]),
+      withUnresolvedFSelections(complete, [goldenFOccurrenceId(1, 1), goldenFOccurrenceId(2, 1)]),
       'F',
     );
     const latestIncomplete = partial.nodes
@@ -193,7 +192,7 @@ describe('workspace inspector defaults', () => {
     expectNode(partial.defaultInspectorDestination, latestIncomplete.key);
 
     const retained = biome(
-      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      applyProjectCommand(complete, catalog, {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
         gameName: 'F_Combat01',
@@ -207,10 +206,7 @@ describe('workspace inspector defaults', () => {
       'takeoverBatch',
     );
 
-    const blocked = biome(
-      withUnresolvedFSelections(createGoldenFGHIProject(), [goldenFOccurrenceId(1, 1)]),
-      'G',
-    );
+    const blocked = biome(withUnresolvedFSelections(complete, [goldenFOccurrenceId(1, 1)]), 'G');
     expect(blocked.status).toBe('blocked');
     expect(blocked.defaultInspectorDestination?.kind).toBe('node');
     if (blocked.defaultInspectorDestination?.kind !== 'node') return;

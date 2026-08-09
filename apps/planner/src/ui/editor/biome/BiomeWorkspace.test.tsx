@@ -35,6 +35,7 @@ import {
 import {
   appendCompleteN,
   appendNEntry,
+  authorLegalTraitOffers,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -213,13 +214,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders an engine-unavailable Run State launcher as disabled and never opens its sheet', async () => {
-    let project = createGoldenFGHIProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
-      value: { rewardType: 'WeaponUpgrade' },
-    });
-    const { user } = renderWorkspace(project, 'Underworld', 'F');
+    const { user } = renderWorkspace(appendNEntry(emptyProject('Surface', 1)), 'Surface', 'N');
     const launcher = screen.getByRole('button', { name: 'Run State' });
     if (!(launcher instanceof HTMLButtonElement))
       throw new Error('Run State launcher is not a button');
@@ -632,7 +627,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('replaces the terminal PreHub decision with Hub and restores it through undo and redo', async () => {
-    const terminalProject = appendNEntry(emptyProject('Surface', 1));
+    const terminalProject = authorLegalTraitOffers(appendNEntry(emptyProject('Surface', 1)));
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,

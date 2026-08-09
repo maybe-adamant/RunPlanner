@@ -219,18 +219,22 @@ describe('candidate session', () => {
     expect(results).toMatchObject([
       {
         kind: 'unavailable',
-        reason: 'producerFrontierUnavailable',
+        reason: 'coverageNotReached',
         evidence: {
-          kind: 'producerFrontierUnavailable',
-          producer: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
+          kind: 'coverageNotReached',
+          requiredOwner: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
+          requiredCheckpoint: 'afterRoomLifecycle',
+          coverage: { kind: 'prefix' },
         },
       },
       {
         kind: 'unavailable',
-        reason: 'producerFrontierUnavailable',
+        reason: 'coverageNotReached',
         evidence: {
-          kind: 'producerFrontierUnavailable',
-          producer: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
+          kind: 'coverageNotReached',
+          requiredOwner: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
+          requiredCheckpoint: 'afterRoomLifecycle',
+          coverage: { kind: 'prefix' },
         },
       },
     ]);

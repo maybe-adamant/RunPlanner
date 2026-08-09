@@ -181,7 +181,9 @@ function withMalformedFSnapshot(
       ...route,
       biomes: route.biomes.map((biome) => {
         if (biome.biomeKey !== 'F') return biome;
-        if (biome.authoring !== 'complete') throw new Error('F fixture must be complete');
+        if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
+          throw new Error('F fixture must be complete-valid');
+        }
         replaced = true;
         return { ...biome, snapshot: transform(biome.snapshot) };
       }),
@@ -226,7 +228,9 @@ function withMalformedNSnapshot(
       ...route,
       biomes: route.biomes.map((biome) => {
         if (biome.biomeKey !== 'N') return biome;
-        if (biome.authoring !== 'complete') throw new Error('N fixture must be complete');
+        if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
+          throw new Error('N fixture must be complete-valid');
+        }
         replaced = true;
         return { ...biome, snapshot: transform(biome.snapshot) };
       }),

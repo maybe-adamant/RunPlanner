@@ -670,6 +670,7 @@ function prefix(
   entryRoom: CanonicalAuthoredRoom | undefined,
   decisions: readonly CanonicalDecision[],
   frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier,
+  completionRooms?: CanonicalBiome['completionRooms'],
 ): MaterializedBiomePrefix {
   return Object.freeze({
     kind: 'biomePrefix',
@@ -677,8 +678,30 @@ function prefix(
     biomeKey: biome.biomeKey,
     ...(entryRoom === undefined ? {} : { entryRoom }),
     decisions: Object.freeze([...decisions]),
+    ...(completionRooms === undefined ? {} : { completionRooms }),
     ...(frontier === undefined ? {} : { frontier }),
     biomeState,
+  });
+}
+
+function completionTailForSelectedPreboss(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  preboss: CanonicalAuthoredRoom,
+): CanonicalBiome['completionRooms'] {
+  return materializeCompletionRooms({
+    catalog,
+    biome,
+    completion: layout.completion,
+    enteredStorePolicy: {
+      kind: 'declared',
+      ...(preboss.incomingReward?.resolvedStoreKey === undefined
+        ? {}
+        : { resolvedOfferStoreKey: preboss.incomingReward.resolvedStoreKey }),
+    },
+    lifecycleProducerPolicy: 'encounterCompatible',
+    fail,
   });
 }
 
@@ -959,7 +982,17 @@ export function materializeBiomePrefix(
           loadout,
         );
         decisions.push(materialized.batch);
-        return prefix(biome, biomeState, entryRoom, decisions);
+        const selected = selectedBatchContinuation(materialized.batch);
+        return prefix(
+          biome,
+          biomeState,
+          entryRoom,
+          decisions,
+          undefined,
+          selected?.kind === 'normal' && selected.target.continuation === 'startsCompletion'
+            ? completionTailForSelectedPreboss(catalog, biome, layout, selected.target.room)
+            : undefined,
+        );
       }
       return prefix(
         biome,
@@ -1027,11 +1060,18 @@ export function materializeBiomePrefix(
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
     const selected = selectedBatchContinuation(materialized.batch);
-    if (
-      selected === undefined ||
-      (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion')
-    ) {
+    if (selected === undefined) {
       return prefix(biome, biomeState, entryRoom, decisions);
+    }
+    if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
+      return prefix(
+        biome,
+        biomeState,
+        entryRoom,
+        decisions,
+        undefined,
+        completionTailForSelectedPreboss(catalog, biome, layout, selected.target.room),
+      );
     }
     current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
   }

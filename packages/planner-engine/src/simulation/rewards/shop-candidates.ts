@@ -2,7 +2,7 @@ import type { ShopState } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type { CanonicalAuthoredRoom } from '../materialization';
-import type { SemanticFinding } from '../model';
+import type { FindingRegionEntry } from '../finding-regions';
 import type { ShopPurchaseCandidateContext } from './lifecycle-artifacts';
 import { processShopPurchases, type RewardBranchState } from './processing';
 
@@ -36,7 +36,7 @@ export function prepareShopPurchaseCandidateContext({
   return Object.freeze({
     origin: room.origin,
     evaluateState: (state: ShopState) => {
-      const candidateFindings = new Map<string, SemanticFinding>();
+      const candidateFindings = new Map<string, FindingRegionEntry>();
       const candidateRoom: CanonicalAuthoredRoom = Object.freeze({
         ...room,
         entryState: Object.freeze({
@@ -72,7 +72,7 @@ export function prepareShopPurchaseCandidateContext({
         candidateFindings,
       );
       return Object.freeze({
-        findings: Object.freeze([...candidateFindings.values()]),
+        findings: Object.freeze([...candidateFindings.values()].map((entry) => entry.finding)),
         supported: branches.length > 0,
       });
     },

@@ -266,7 +266,7 @@ describe('structured workspace Hub assembly', () => {
       'unassessed',
       'unassessed',
       'unassessed',
-      'assessed',
+      'unassessed',
     ]);
     expect(retained.hubInteractionRequirements[0]?.visitOrder).toEqual(retainedKit.hub.visitOrder);
   });

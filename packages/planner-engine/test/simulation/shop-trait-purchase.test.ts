@@ -202,7 +202,7 @@ describe('Shop trait acquisition processing', () => {
       purchaseFindings,
     );
     const purchasedBranch = purchased[0];
-    expect([...purchaseFindings.values()]).toContainEqual(
+    expect([...purchaseFindings.values()].map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'wrongHammerLoadout',
         origin: expect.objectContaining({ owner: major.offerOrigin }),

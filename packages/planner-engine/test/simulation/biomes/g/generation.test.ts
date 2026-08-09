@@ -275,6 +275,7 @@ describe('G generation and takeover', () => {
 
   it('materializes a declaration-ordered three-door takeover batch', () => {
     const { result, g } = completeG(createCompleteFGProject({ prebossSource: 'G_Combat14' }));
+    if (g.validity !== 'valid') throw new Error('Golden G fixture must be valid');
     const takeover = g.snapshot.decisions.at(-1);
     if (takeover?.kind !== 'batch') throw new Error('Golden G fixture lost its takeover batch');
 

@@ -1,7 +1,9 @@
-import { catalog } from '@run-planner/hades2-catalog';
+import { catalog, createCatalog } from '@run-planner/hades2-catalog';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
@@ -13,6 +15,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -24,11 +27,31 @@ import { describe, expect, it } from 'vitest';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 
 import {
+  authorLegalTraitOffers,
   createRepresentativeNProject,
   nBiome,
   nOccurrenceId,
   nOpenSlotKeys,
 } from '@run-planner/test-fixtures';
+
+function catalogWithImpossibleEncounters(keys: readonly string[]) {
+  const impossibleKeys = new Set(keys);
+  return createCatalog({
+    ...declarations,
+    encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+      impossibleKeys.has(definition.key)
+        ? {
+            ...definition,
+            requirements: {
+              kind: 'counterRange' as const,
+              axis: 'biomeDepthCache' as const,
+              range: { min: 999 },
+            },
+          }
+        : definition,
+    ),
+  });
+}
 
 function openHub(slotCount: number, resolvedBoardRewards = false) {
   const opening = createOccurrenceId('progressive-n-opening');
@@ -56,6 +79,19 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
     occurrenceId: preHub,
     gameName: 'N_PreHub01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(nBiome, preHub), 'source'),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
   });
   const preHubDecision = createExitDecisionAddress(nBiome, {
     kind: 'occurrence',
@@ -108,7 +144,7 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
       });
     }
   }
-  return project;
+  return authorLegalTraitOffers(project);
 }
 
 function nEvaluation(project: ReturnType<typeof openHub>) {
@@ -225,6 +261,73 @@ describe('Hub progressive biome evaluation', () => {
     );
   });
 
+  it('orders one Hub visit as target lifecycle, side generation, then local lifecycle', () => {
+    const base = createRepresentativeNProject();
+    let sideBlocked = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    sideBlocked = applyProjectCommand(sideBlocked, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: createLocalChildAddress(
+        nBiome,
+        nOccurrenceId('combat05'),
+        'sideRooms',
+        'sideDoor1',
+      ),
+      generation: 'notGenerated',
+    });
+    const evaluation = (project: typeof base, impossibleEncounterKeys: readonly string[]) => {
+      const biome = simulateProject(
+        catalogWithImpossibleEncounters(impossibleEncounterKeys),
+        project,
+      )
+        .routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+      if (
+        biome?.authoring !== 'complete' ||
+        biome.validity !== 'invalid' ||
+        !('assessmentPrefix' in biome)
+      ) {
+        throw new Error('Hub phase-order fixture did not produce a bounded invalid evaluation');
+      }
+      return biome;
+    };
+    const targetLifecycle = evaluation(sideBlocked, ['GeneratedN', 'GeneratedNSubRoom']);
+    const sideGeneration = evaluation(sideBlocked, ['GeneratedNSubRoom']);
+    const localRoomLifecycle = evaluation(base, ['GeneratedNSubRoom']);
+    const combat05 = nOccurrenceId('combat05');
+    const localOwner = createLocalChildAddress(nBiome, combat05, 'sideRooms', 'sideDoor2');
+
+    expect(targetLifecycle.coverage).toMatchObject({
+      blockedAt: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: combat05 },
+        'Encounter',
+      ),
+    });
+    expect(targetLifecycle.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      phase: 'targetLifecycle',
+    });
+    expect(sideGeneration.coverage).toMatchObject({
+      blockedAt: createLocalChildAddress(nBiome, combat05, 'sideRooms', 'sideDoor1'),
+    });
+    expect(sideGeneration.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      phase: 'sideGeneration',
+    });
+    expect(localRoomLifecycle.coverage).toMatchObject({
+      blockedAt: createEncounterPhaseAddress(nBiome, localOwner, 'Encounter'),
+    });
+    expect(localRoomLifecycle.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      phase: 'localRoomLifecycle',
+      enteredLocalRooms: [expect.objectContaining({ origin: localOwner })],
+    });
+  });
+
   it('publishes the reached visit as coverage at a Hub local frontier', () => {
     const project = applyProjectCommand(openHub(9, true), catalog, {
       kind: 'ReplaceHubVisitOrder',
@@ -326,7 +429,50 @@ describe('Hub progressive biome evaluation', () => {
     expect(side.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
   });
 
-  it('stops a local reward-bag failure before local lifecycle and Hub restore', () => {
+  it('blocks at invalid Hub board generation before a simultaneous first-visit failure', () => {
+    let project = createRepresentativeNProject();
+    const boardReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: boardReward,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    const laterVisitFailure = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: laterVisitFailure,
+      generation: 'notGenerated',
+    });
+    const biome = nEvaluation(project as ReturnType<typeof openHub>);
+    if (
+      biome.authoring !== 'complete' ||
+      biome.validity !== 'invalid' ||
+      !('assessmentPrefix' in biome)
+    ) {
+      throw new Error('simultaneous Hub failure did not produce a bounded invalid evaluation');
+    }
+
+    expect(biome.coverage).toMatchObject({ kind: 'prefix', blockedAt: boardReward });
+    expect(biome.assessmentPrefix?.frontier).toMatchObject({ kind: 'hubBoard' });
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: boardReward }),
+    );
+    expect(biome.findings).not.toContainEqual(
+      expect.objectContaining({ origin: laterVisitFailure }),
+    );
+  });
+
+  it('stops a local reward-bag failure within side generation before Hub entry', () => {
     let project = createRepresentativeNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
@@ -357,12 +503,12 @@ describe('Hub progressive biome evaluation', () => {
       }),
     );
     expect(
-      progressive.history.rooms.some(
-        (room) =>
-          room.origin.kind === 'localChild' &&
-          room.origin.occurrenceId === nOccurrenceId('combat05'),
+      progressive.history.ledgers.roomCreations.some(
+        (event) =>
+          event.origin.kind === 'localChild' &&
+          event.origin.occurrenceId === nOccurrenceId('combat05'),
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(progressive.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
   });
 

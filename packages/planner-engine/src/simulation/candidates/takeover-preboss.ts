@@ -173,13 +173,7 @@ export function evaluateTakeoverPrebossBatch(
   query: TakeoverPrebossBatchCandidateQuery,
 ): TakeoverPrebossBatchCandidateEvaluation {
   assertTakeoverPrebossBatchDomain(catalog, project, query);
-  const candidate = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.source.routeKey,
-    query.source.biomeKey,
-  );
+  const candidate = candidateBiome(evaluation, query.source.routeKey, query.source.biomeKey);
   if (candidate === undefined || !('snapshot' in candidate)) {
     return (
       evaluatePrefixTakeover(catalog, project, evaluation, query, candidate) ??

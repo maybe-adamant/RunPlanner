@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { catalog } from '@run-planner/hades2-catalog';
+import { catalog, createCatalog } from '@run-planner/hades2-catalog';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -53,6 +56,7 @@ import {
   createCompleteFGProject,
   authorLegalTraitOffers,
   goldenFBiome,
+  goldenFStartId,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
@@ -71,6 +75,48 @@ import {
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
+}
+
+function catalogWithImpossibleEncounter(encounterKey: string) {
+  return createCatalog({
+    ...declarations,
+    encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+      definition.key !== encounterKey
+        ? definition
+        : {
+            ...definition,
+            requirements: {
+              kind: 'counterRange' as const,
+              axis: 'biomeDepthCache' as const,
+              range: { min: 999 },
+            },
+          },
+    ),
+  });
+}
+
+function catalogWithImpossibleNaturalChaosSource(gameName: string) {
+  return createCatalog({
+    ...declarations,
+    rooms: declarations.rooms.map((room) => {
+      if (room.gameName !== gameName || room.additionalExits === undefined) return room;
+      return {
+        ...room,
+        additionalExits: room.additionalExits.map((exit) =>
+          exit.kind !== 'naturalChaos'
+            ? exit
+            : {
+                ...exit,
+                requirement: {
+                  kind: 'counterRange' as const,
+                  axis: 'biomeDepthCache' as const,
+                  range: { min: 999 },
+                },
+              },
+        ),
+      };
+    }),
+  });
 }
 
 function appendBatch(
@@ -196,6 +242,7 @@ function partialGWithOnePhysicalTarget() {
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
     'RunProgress',
   );
+  project = authorLegalTraitOffers(project);
   project = appendBatch(
     project,
     goldenGBiome,
@@ -236,6 +283,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
     'RunProgress',
   );
+  project = authorLegalTraitOffers(project);
   project = appendBatch(
     project,
     goldenGBiome,
@@ -256,7 +304,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
     reward: createIncomingRewardAddress(goldenGBiome, second),
     value: { rewardType: 'MetaCurrencyBigDrop' },
   });
-  return { project, source: first, firstTarget: second };
+  return { project: authorLegalTraitOffers(project), source: first, firstTarget: second };
 }
 
 function partialGWithEarlierInvalidReward() {
@@ -268,6 +316,62 @@ function partialGWithEarlierInvalidReward() {
       reward: createIncomingRewardAddress(goldenGBiome, fixture.firstTarget),
       value: { rewardType: 'MetaCurrencyDrop' },
     }),
+  };
+}
+
+function partialFWithInvalidSiblingAdditionsAndNormalTarget() {
+  const batches = [
+    { targets: ['F_Combat02'], pickedExitIndex: 1 },
+    {
+      targets: ['F_Combat03', 'F_Combat03'],
+      pickedExitIndex: 1,
+      offers: [{ rewardType: 'MaxHealthDrop' }, { rewardType: 'MaxManaDrop' }],
+    },
+    {
+      targets: ['F_Combat04', 'F_Combat04'],
+      pickedExitIndex: 1,
+      offers: [{ rewardType: 'RoomMoneyDrop' }, { rewardType: 'WeaponUpgrade' }],
+    },
+    {
+      targets: ['F_Combat05', 'F_Combat11'],
+      pickedExitIndex: 2,
+      offers: [{ rewardType: 'HermesUpgrade' }, { rewardType: 'SpellDrop' }],
+    },
+    {
+      targets: ['F_Shop01', 'F_Combat06'],
+      pickedExitIndex: 1,
+      storeKey: 'MetaProgress',
+      offers: [undefined, { rewardType: 'MetaCurrencyDrop' }],
+    },
+    {
+      targets: ['F_Combat02', 'F_Combat13'],
+      pickedExitIndex: 1,
+      offers: [{ rewardType: 'MaxHealthDrop' }, { rewardType: 'MaxManaDrop' }],
+    },
+  ] as const;
+  const secondChaos = createOccurrenceId('progressive-additional-second-chaos');
+  const secondContract = createOccurrenceId('progressive-additional-second-contract');
+  const shop = fGenerationOccurrenceId(5, 1);
+  let project = createFGenerationProject(batches, { includeTakeover: false });
+  const naturalChaos = createAdditionalExitAddress(fGenerationBiome, shop, 'naturalChaos');
+  const zagreusContract = createAdditionalExitAddress(fGenerationBiome, shop, 'zagreusContract');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddNaturalChaos',
+    additional: naturalChaos,
+    occurrenceId: secondChaos,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional: zagreusContract,
+    occurrenceId: secondContract,
+  });
+  project = authorLegalTraitOffers(project);
+  return {
+    project,
+    evaluationCatalog: catalogWithImpossibleNaturalChaosSource('F_Shop01'),
+    shop,
+    naturalChaos,
+    zagreusContract,
   };
 }
 
@@ -348,7 +452,17 @@ describe('progressive biome evaluation', () => {
         }),
       }),
     );
-
+    const retainedHammerFindings = evaluation?.findings.filter(
+      (finding) =>
+        finding.code === 'wrongHammerLoadout' &&
+        finding.origin.kind === 'traitOffer' &&
+        finding.origin.owner.kind === 'incomingReward' &&
+        finding.origin.owner.occurrenceId === goldenFOccurrenceId(8, 1),
+    );
+    expect(retainedHammerFindings).toHaveLength(3);
+    expect(new Set(retainedHammerFindings?.map((finding) => finding.evidence.traitKey)).size).toBe(
+      3,
+    );
     const plan = project.routes
       .find((candidate) => candidate.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'F');
@@ -390,6 +504,26 @@ describe('progressive biome evaluation', () => {
         }),
       }),
     );
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(goldenFBiome);
+    const blockedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1));
+    const blockedTrait = createTraitOfferAddress(blockedReward, 'self');
+    const containingTarget = createTargetAddress(
+      goldenFBiome,
+      source(goldenFOccurrenceId(7, 1)),
+      'exit1',
+    );
+    const laterTarget = createTargetAddress(
+      goldenFBiome,
+      source(goldenFOccurrenceId(8, 1)),
+      'exit1',
+    );
+    expect(artifacts?.traitOffers.at(blockedTrait)).toBeDefined();
+    expect(artifacts?.rewardProducers.at(blockedReward)).toBeDefined();
+    expect(artifacts?.roomTargets.at(containingTarget)).toBeDefined();
+    expect(artifacts?.roomTargets.at(laterTarget)).toBeUndefined();
   });
 
   it('carries exact room-target and reward-producer artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
@@ -515,7 +649,7 @@ describe('progressive biome evaluation', () => {
 
     const retainedBlockedProducer =
       blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner);
-    expect(retainedBlockedProducer).toMatchObject({ acquisitionHorizon: 'generationOnly' });
+    expect(retainedBlockedProducer).toMatchObject({ acquisitionHorizon: 'ownEnteredLifecycle' });
     expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toMatchObject({
       acquisitionHorizon: 'ownEnteredLifecycle',
     });
@@ -528,6 +662,95 @@ describe('progressive biome evaluation', () => {
         ),
       ),
     ).toBeUndefined();
+  });
+
+  it('does not publish broad interaction replay products after an earlier reward block', () => {
+    let project = authorLegalTraitOffers(createCompleteFGProject());
+    const baseline = simulateProjectAssembly(catalog, project).evaluation;
+    const baselineF = baseline.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (baselineF?.authoring !== 'complete') throw new Error('missing complete F baseline');
+    const laterTrait = baselineF.rewards.selectedTraitOffers.find(
+      (offer) =>
+        offer.address.owner.kind === 'incomingReward' &&
+        offer.address.owner.occurrenceId !== goldenFStartId &&
+        offer.address.owner.occurrenceId !== goldenFOccurrenceId(1, 1),
+    );
+    if (laterTrait === undefined) throw new Error('fixture has no reached later trait offer');
+
+    const laterOccurrence = goldenFOccurrenceId(9, 1);
+    const laterReward = createIncomingRewardAddress(goldenFBiome, laterOccurrence);
+    const laterRoomTarget = createTargetAddress(
+      goldenFBiome,
+      source(goldenFOccurrenceId(8, 1)),
+      'exit1',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, laterOccurrence),
+      gameName: 'F_Combat03',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: laterReward,
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ApolloUpgrade',
+          spurnedSource: 'ZeusUpgrade',
+        },
+      },
+    });
+    const earlyReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: earlyReward,
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ApolloUpgrade',
+          spurnedSource: 'ZeusUpgrade',
+        },
+      },
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluation = assembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (
+      evaluation?.authoring !== 'complete' ||
+      evaluation.validity !== 'invalid' ||
+      evaluation.coverage.kind !== 'prefix'
+    ) {
+      throw new Error('broad replay fixture did not produce a complete-invalid prefix');
+    }
+    expect(evaluation.coverage.blockedAt).toEqual(earlyReward);
+    const laterOccurrenceMarker = String(laterOccurrence);
+    expect(
+      evaluation.roomGeneration.findings.some((finding) =>
+        JSON.stringify(finding.origin).includes(laterOccurrenceMarker),
+      ),
+    ).toBe(false);
+    expect(
+      evaluation.rewards.findings.some((finding) =>
+        JSON.stringify(finding.origin).includes(laterOccurrenceMarker),
+      ),
+    ).toBe(false);
+    expect(
+      evaluation.rewards.selectedTraitOffers.some(
+        (offer) => semanticAddressKey(offer.address) === semanticAddressKey(laterTrait.address),
+      ),
+    ).toBe(false);
+
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(goldenFBiome);
+    expect(artifacts?.roomTargets.at(laterRoomTarget)).toBeUndefined();
+    expect(artifacts?.rewardProducers.at(laterReward)).toBeUndefined();
+    expect(artifacts?.traitOffers.at(laterTrait.address)).toBeUndefined();
   });
 
   it('carries opaque lifecycle artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
@@ -582,7 +805,7 @@ describe('progressive biome evaluation', () => {
       occurrenceId: oOccurrenceIds.combat04,
       wheelKey: 'wheel1',
     });
-    expect(clampedLifecycle).toBeUndefined();
+    expect(clampedLifecycle).toBeDefined();
     expect(beforeClampLifecycle).toBeDefined();
     expect(beforeClampLifecycle).not.toBe(clampedLifecycle);
   });
@@ -657,7 +880,11 @@ describe('progressive biome evaluation', () => {
     {
       biomeKey: 'F',
       routeKey: 'Underworld',
-      project: createFGenerationProject(undefined, { includeTakeover: false }),
+      project: incompleteAtMissingDecision(
+        createCompleteFGProject(),
+        goldenFBiome,
+        goldenFOccurrenceId(8, 1),
+      ),
     },
     {
       biomeKey: 'G',
@@ -725,7 +952,7 @@ describe('progressive biome evaluation', () => {
       expect('snapshot' in evaluation).toBe(false);
       expect(evaluation.materializedPrefix.entryRoom).toBeDefined();
       expect(evaluation.coverage.through).toMatchObject({
-        checkpoint: biomeKey === 'F' ? 'afterTargetGeneration' : 'beforeTargetGeneration',
+        checkpoint: 'beforeTargetGeneration',
       });
 
       if (biomeKey === 'H') {
@@ -896,7 +1123,7 @@ describe('progressive biome evaluation', () => {
 
   it('blocks a later partial-batch target after an invalid generated first door', () => {
     const fixture = partialGWithOnePhysicalTarget();
-    const project = applyProjectCommand(fixture.project, catalog, {
+    const project = applyProjectCommand(authorLegalTraitOffers(fixture.project), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenGBiome, fixture.firstTarget),
       gameName: 'G_Combat10',
@@ -929,7 +1156,7 @@ describe('progressive biome evaluation', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'roomTarget' });
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
   it('records an unselected takeover’s complete physical target set at its nullable frontier', () => {
@@ -990,7 +1217,142 @@ describe('progressive biome evaluation', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'roomTarget' });
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
+  it('replays every physical peer when a later forced room changes the shared batch store', () => {
+    const target = goldenFOccurrenceId(5, 2);
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, target),
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, target),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(() => simulateProject(catalog, project)).not.toThrow();
+    const evaluation = assembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(goldenFBiome);
+    const firstReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
+    const laterReward = createIncomingRewardAddress(goldenFBiome, target);
+    expect(artifacts?.rewardProducers.at(firstReward)).toMatchObject({
+      acquisitionHorizon: 'ownEnteredLifecycle',
+      resolvedStoreKey: 'RunProgress',
+    });
+    expect(artifacts?.rewardProducers.at(laterReward)).toBeUndefined();
+    expect(
+      artifacts?.traitOffers.at(createTraitOfferAddress(laterReward, 'source')),
+    ).toBeUndefined();
+    expect(evaluation).toMatchObject({
+      authoring: 'complete',
+      validity: 'invalid',
+      coverage: { kind: 'prefix' },
+    });
+    expect(evaluation?.coverage).toMatchObject({
+      blockedAt: firstReward,
+    });
+    expect(evaluation?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: firstReward,
+      }),
+    );
+  });
+
+  it('orders a target offer before the same room encounter independently of subsystem assembly', () => {
+    const target = goldenGOccurrenceId(1, 1);
+    const encounter = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: target },
+      'Encounter',
+    );
+    let project = authorLegalTraitOffers(createCompleteFGProject());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenGBiome, target),
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ZeusUpgrade',
+          spurnedSource: 'PoseidonUpgrade',
+        },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: encounter,
+      encounterKey: 'ArtemisCombatG',
+    });
+    const encounterCatalog = catalogWithImpossibleEncounter('ArtemisCombatG');
+    const assembly = simulateProjectAssembly(encounterCatalog, project);
+    const evaluation = assembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    if (
+      evaluation?.authoring !== 'complete' ||
+      evaluation.validity !== 'invalid' ||
+      evaluation.coverage.kind !== 'prefix'
+    ) {
+      throw new Error('same-room chronology fixture did not produce an invalid prefix');
+    }
+    const reward = createIncomingRewardAddress(goldenGBiome, target);
+
+    expect(evaluation.coverage.blockedAt).toEqual(reward);
+    expect(evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardSourceUnavailable', origin: reward }),
+    );
+    expect(evaluation.findings).not.toContainEqual(expect.objectContaining({ origin: encounter }));
+    expect(
+      candidateArtifactsForProjectEvaluationAssembly(assembly)
+        .biomeAt(goldenGBiome)
+        ?.encounters.at(encounter),
+    ).toBeUndefined();
+  });
+
+  it('orders sibling additional continuations before normal targets deterministically', () => {
+    const fixture = partialFWithInvalidSiblingAdditionsAndNormalTarget();
+    const evaluate = () => {
+      const evaluation = simulateProject(fixture.evaluationCatalog, fixture.project)
+        .routes.find((candidate) => candidate.routeKey === 'Underworld')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+      if (
+        evaluation?.authoring !== 'incomplete' ||
+        evaluation.validity !== 'invalid' ||
+        evaluation.coverage.kind !== 'prefix'
+      ) {
+        throw new Error('additional ordering fixture did not produce an invalid prefix');
+      }
+      return evaluation;
+    };
+    const first = evaluate();
+    const second = evaluate();
+
+    expect(first.coverage).toMatchObject({ kind: 'prefix', blockedAt: fixture.naturalChaos });
+    expect(second.coverage).toMatchObject({ kind: 'prefix', blockedAt: fixture.naturalChaos });
+    expect(first.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: fixture.naturalChaos,
+        evidence: expect.objectContaining({ kind: 'naturalChaos' }),
+      }),
+    );
+    expect(first.findings).not.toContainEqual(
+      expect.objectContaining({ origin: fixture.zagreusContract }),
+    );
+    expect(first.findings).not.toContainEqual(
+      expect.objectContaining({
+        origin: createTargetAddress(goldenFBiome, source(fixture.shop), 'exit1'),
+      }),
+    );
   });
 
   it('clamps an invalid semantic replacement before later generated decisions without deleting it', () => {

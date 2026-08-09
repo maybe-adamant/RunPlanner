@@ -135,20 +135,20 @@ describe('Proper Upbringing product loop', () => {
     for (const trace of reachedTraitOffers(authored)) {
       if (semanticAddressKey(trace.address) === semanticAddressKey(activationTrace.address))
         continue;
-      const rankedOptions = trace.offer.options.map((option) => {
+      const repaired = supportedTraitOffer(
+        authored,
+        trace.address,
+        trace.offer.giverKey,
+        undefined,
+        staleSession,
+      );
+      if (repaired === undefined) continue;
+      const repairedOptions = repaired.options;
+      const commonIndex = repairedOptions.findIndex((option) => {
         const domain = application.catalog.traits.byKey[option.traitKey]?.rarityDomain;
-        if (domain?.kind !== 'ranked' || !domain.freshOfferRarities.includes('Rare')) {
-          return undefined;
-        }
-        return option;
+        return domain?.kind === 'ranked' && domain.freshOfferRarities.includes('Rare');
       });
-      const commonIndex = rankedOptions.findIndex((option) => option !== undefined);
       if (commonIndex !== 0) continue;
-      const repairedOptions = trace.offer.options.map((option) => {
-        const domain = application.catalog.traits.byKey[option.traitKey]?.rarityDomain;
-        if (domain?.kind !== 'ranked' || !domain.freshOfferRarities.includes('Rare')) return option;
-        return { ...option, rarity: option.rarity === 'Common' ? 'Rare' : option.rarity };
-      }) as unknown as AuthoredTraitOffer['options'];
       const staleOptions = repairedOptions.map((option, index) =>
         index === commonIndex ? { ...option, rarity: 'Common' as const } : option,
       ) as unknown as AuthoredTraitOffer['options'];
@@ -241,17 +241,15 @@ describe('Proper Upbringing product loop', () => {
       ).toBe(false),
     );
     const repairedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
-    const repairedEvent = repairedEvaluation.routes
+    const repairedOffer = repairedEvaluation.routes
       .flatMap((route) => route.biomes)
-      .flatMap((biome) => ('rewards' in biome ? biome.rewards.branches : []))
-      .flatMap((branch) => branch.traitHistory?.events ?? [])
+      .flatMap((biome) => ('rewards' in biome ? biome.rewards.selectedTraitOffers : []))
       .find(
-        (event) =>
-          semanticAddressKey(event.owner) === semanticAddressKey(stale!.address) &&
-          event.acquisitionRole === stale!.trace.acquisitionRole,
+        (offer) =>
+          semanticAddressKey(offer.address) ===
+          semanticAddressKey(createTraitOfferAddress(stale!.address, stale!.trace.acquisitionRole)),
       );
-    const selectedIndex = repairedEvent?.selectedOptionKey === 'option1' ? 0 : 1;
-    expect(repairedEvent?.options[selectedIndex]?.rarity).toBe('Rare');
+    expect(repairedOffer?.offer.options[0]?.rarity).toBe('Rare');
     application.dispose();
   });
 });

@@ -61,6 +61,12 @@ import type {
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
 import {
+  findingRegion,
+  ownerRegion,
+  type FindingRegionEntry,
+  type HistoryFindingChronology,
+} from '../finding-regions';
+import {
   createRoomTargetCandidateArtifacts,
   type RoomTargetCandidateArtifacts,
 } from '../candidate-artifacts';
@@ -806,6 +812,7 @@ function evaluateAdditionalContinuationEntries(
   history: BiomeGenerationHistory,
   rooms: ReadonlyMap<string, CanonicalGenerationSource>,
   findings: SemanticFinding[],
+  findingRegions: FindingRegionEntry[],
 ): void {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -866,7 +873,9 @@ function evaluateAdditionalContinuationEntries(
         if (recentOffer !== undefined) failedConditions.push('offerSpacing');
       }
       if (failedConditions.length > 0) {
-        findings.push(
+        appendFinding(
+          findings,
+          findingRegions,
           finding('targetRoomUnavailable', continuation.origin, {
             kind: 'naturalChaos',
             sourceGameName: source.gameName,
@@ -905,7 +914,9 @@ function evaluateAdditionalContinuationEntries(
       (appearance) => appearance.gameName === continuation.room.gameName,
     ).length;
     if (priorEnteredContractCount > declaration.maxEnteredThisRoute) {
-      findings.push(
+      appendFinding(
+        findings,
+        findingRegions,
         finding('targetRoomUnavailable', continuation.origin, {
           kind: 'zagreusContract',
           sourceGameName: source.gameName,
@@ -931,6 +942,49 @@ function finding(
     origin,
     evidence: Object.freeze(evidence),
   });
+}
+
+function appendFinding(
+  findings: SemanticFinding[],
+  findingRegions: FindingRegionEntry[],
+  value: SemanticFinding,
+  atomicRegion = ownerRegion(value.origin),
+): void {
+  findings.push(value);
+  findingRegions.push(findingRegion(value, atomicRegion, undefined, 'generation'));
+}
+
+function generationFindingChronology(
+  history: BiomeGenerationHistory,
+  origin: SemanticFinding['origin'],
+): HistoryFindingChronology | undefined {
+  const target = history.rooms
+    .flatMap((room) => room.targetGenerations)
+    .find((candidate) => semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(origin));
+  if (target !== undefined) {
+    return Object.freeze({
+      kind: 'history',
+      sequence: target.roomCreationSequence,
+      boundary: 'before',
+    });
+  }
+  const additional = history.events.find(
+    (event) =>
+      event.kind === 'roomCreated' &&
+      event.source === 'additionalExit' &&
+      semanticAddressKey(event.additionalOrigin) === semanticAddressKey(origin),
+  );
+  if (additional !== undefined) {
+    return Object.freeze({ kind: 'history', sequence: additional.sequence, boundary: 'before' });
+  }
+  const fields = history.events.find(
+    (event) =>
+      event.kind === 'fieldsBatchOutcomeRecorded' &&
+      semanticAddressKey(event.origin) === semanticAddressKey(origin),
+  );
+  return fields === undefined
+    ? undefined
+    : Object.freeze({ kind: 'history', sequence: fields.sequence, boundary: 'at' });
 }
 
 function fieldsCageOutcomeEvidence(entry: FieldsCageOutcomeSupportEntry): FindingEvidence {
@@ -1617,6 +1671,7 @@ function evaluateTargetSlots(
   anomalyTakeovers: AnomalyTakeoverCandidateSupport[],
   pressure: ForcePressureLedgerEntry[],
   findings: SemanticFinding[],
+  findingRegions: FindingRegionEntry[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
 ): void {
@@ -1660,17 +1715,19 @@ function evaluateTargetSlots(
     pressure.push(result.pressure);
     const anomaly = anomalyReplacementEligibility(layout, source, target, before);
     if (anomaly?.selectedPossible !== false) {
-      findings.push(...result.findings);
+      result.findings.forEach((value) => appendFinding(findings, findingRegions, value));
       return view.after;
     }
     // Preserve any ordinary support-empty diagnosis, but consolidate the
     // normal target and Anomaly source failures at the target's one stable
     // semantic owner.  A second generic unavailable finding would otherwise
     // be deduplicated later and discard the source-side evidence.
-    findings.push(
-      ...result.findings.filter((findingEntry) => findingEntry.code !== 'targetRoomUnavailable'),
-    );
-    findings.push(
+    result.findings
+      .filter((findingEntry) => findingEntry.code !== 'targetRoomUnavailable')
+      .forEach((value) => appendFinding(findings, findingRegions, value));
+    appendFinding(
+      findings,
+      findingRegions,
       finding('targetRoomUnavailable', target.origin, {
         ...selectedEvidence(result.pressure),
         anomalyReplacement: anomaly.evidence,
@@ -1986,12 +2043,13 @@ export function evaluateTakeoverPrebossBatchCandidate(
   );
 }
 
-export interface BiomeRoomGenerationAssembly {
+interface BiomeRoomGenerationAssembly {
   readonly validation: GeneratedRoomGenerationValidation;
   readonly candidateArtifacts: RoomTargetCandidateArtifacts;
+  readonly findingRegions: readonly FindingRegionEntry[];
 }
 
-export function evaluateBiomeRoomGenerationAssembly(
+export function evaluateBiomeRoomGenerationAssemblyInternal(
   catalog: Catalog,
   snapshot: BiomeGenerationSnapshot,
   history: BiomeGenerationHistory,
@@ -2011,6 +2069,11 @@ export function evaluateBiomeRoomGenerationAssembly(
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
   const anomalyTakeovers: AnomalyTakeoverCandidateSupport[] = [];
   const findings: SemanticFinding[] = [];
+  const findingRegions: FindingRegionEntry[] = [];
+  const addFinding = (value: SemanticFinding, region = ownerRegion(value.origin)): void => {
+    findings.push(value);
+    findingRegions.push(findingRegion(value, region, undefined, 'generation'));
+  };
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
     throw new BiomeRoomGenerationContractError(
@@ -2054,14 +2117,15 @@ export function evaluateBiomeRoomGenerationAssembly(
         gameName,
         enteredBiomeCount,
       );
-      findings.push(...support.findings);
+      support.findings.forEach((value) => addFinding(value, ownerRegion(batch.origin)));
       if (!support.selectedPossible) {
-        findings.push(
+        addFinding(
           finding('targetRoomUnavailable', batch.origin, {
             gameName,
             requiredExitKeys: support.requiredExitKeys,
             requiredTargetCount: support.requiredTargetCount,
           }),
+          ownerRegion(batch.origin),
         );
       }
       continue;
@@ -2102,12 +2166,13 @@ export function evaluateBiomeRoomGenerationAssembly(
       );
       fieldsCageOutcomes.push(support);
       if (!support.selectedPossible) {
-        findings.push(
+        addFinding(
           finding(
             'fieldsCageOutcomeUnavailable',
             support.origin,
             fieldsCageOutcomeEvidence(support),
           ),
+          ownerRegion(batch.origin),
         );
       }
     }
@@ -2125,14 +2190,30 @@ export function evaluateBiomeRoomGenerationAssembly(
       anomalyTakeovers,
       pressure,
       findings,
+      findingRegions,
       enteredBiomeCount,
       rewardHistories,
     );
     ordinaryBatchIndex += 1;
   }
 
-  evaluateAdditionalContinuationEntries(catalog, snapshot, history, rooms, findings);
+  evaluateAdditionalContinuationEntries(
+    catalog,
+    snapshot,
+    history,
+    rooms,
+    findings,
+    findingRegions,
+  );
 
+  const publishedFindingRegions = Object.freeze(
+    findingRegions.map((entry) => {
+      const chronology = generationFindingChronology(history, entry.finding.origin);
+      return chronology === undefined
+        ? entry
+        : findingRegion(entry.finding, entry.atomicRegion, chronology, entry.aggregate);
+    }),
+  );
   const validation: GeneratedRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
@@ -2143,6 +2224,7 @@ export function evaluateBiomeRoomGenerationAssembly(
   });
   return Object.freeze({
     validation,
+    findingRegions: publishedFindingRegions,
     candidateArtifacts: createRoomTargetCandidateArtifacts(candidateContexts),
   });
 }
@@ -2154,7 +2236,7 @@ export function evaluateBiomeRoomGeneration(
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
 ): GeneratedRoomGenerationValidation {
-  return evaluateBiomeRoomGenerationAssembly(
+  return evaluateBiomeRoomGenerationAssemblyInternal(
     catalog,
     snapshot,
     history,
