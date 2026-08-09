@@ -661,6 +661,7 @@ Session state may include:
 - panel expansion;
 - selector category and search text;
 - zoom or viewport if a graph projection is introduced;
+- an exact open Run State decision target and its local disclosures.
 
 Session state must never be required to reconstruct the authored project.
 
@@ -673,6 +674,13 @@ the current route or panel, or enters authored history. A finding that remains
 live without an exact workspace destination is a workspace-projection contract
 failure, not ordinary stale session state. Native keyboard focus remains a
 local React concern and is not reconstructed from this session cleanup.
+
+An open Run State target is reconciled against the newly published set of
+available snapshot owners. If its exact launcher or snapshot disappears, it
+clears rather than rehoming to another decision. Route, panel, and semantic
+navigation also close the read-only sheet. Opening and closing it publish no
+authored command, persistence value, undo entry, candidate-session preparation,
+or project evaluation; the editor reads its already-published workspace product.
 
 ## Profile Files, Autosave, and Dirty State
 
