@@ -1,12 +1,18 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
+  createBiomeAddress,
   createBiomeFieldAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -19,6 +25,7 @@ import {
   goldenFBiome,
   goldenIBiome,
   nBiome,
+  nOccurrenceId,
   nOccurrenceIds,
   pBiome,
   pOccurrenceId,
@@ -40,6 +47,71 @@ function biomeSource(
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
+}
+
+function blockBiomeAtFirstBoon(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+): ProjectDocument {
+  const evaluated = simulateProject(catalog, project)
+    .routes.find((route) => route.routeKey === routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+  if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+    throw new Error(`${routeKey}/${biomeKey} block fixture did not start complete-valid`);
+  }
+  const selected = evaluated.rewards.selectedTraitOffers.find(
+    (trace) => trace.offer.giverKey !== 'WeaponUpgrade',
+  );
+  const [first, second, third] = selected?.offer.options ?? [];
+  if (
+    selected === undefined ||
+    first === undefined ||
+    second === undefined ||
+    third === undefined
+  ) {
+    throw new Error(`${routeKey}/${biomeKey} block fixture has no complete boon offer`);
+  }
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: selected.address,
+    value: {
+      giverKey: selected.offer.giverKey,
+      options: [{ ...first, rarity: 'Heroic' }, second, third],
+      selectedOptionKey: 'option1',
+    },
+  });
+}
+
+function selectedContractWithoutNormalTargets() {
+  const base = createGoldenFGHIProject();
+  const located = base.routes.flatMap((route) =>
+    route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+          ? [{ occurrence, plan, route }]
+          : [];
+      }),
+    ),
+  )[0];
+  if (located === undefined) throw new Error('semantic assembly selected contract is missing');
+  const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+  const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+  const owner = createExitDecisionAddress(biome, source);
+  const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'zagreusContract');
+  let project = applyProjectCommand(base, catalog, { kind: 'RemoveExitDecision', decision: owner });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional,
+    occurrenceId: createOccurrenceId('semantic-assembly-additional-only-contract'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, source),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+  });
+  return { additional, biome, owner, project };
 }
 
 function emptyNProject(): ProjectDocument {
@@ -89,7 +161,42 @@ function indexOfNode(
   return index;
 }
 
+function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantics>) {
+  return assembly.nodes.flatMap((node) =>
+    node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
+      ? node.targets
+      : [],
+  );
+}
+
 describe('structured workspace biome semantic assembly', () => {
+  it('projects and focuses an evaluated selected continuation without a normal-target overlay', () => {
+    const fixture = selectedContractWithoutNormalTargets();
+    const source = biomeSource(fixture.project, fixture.biome.routeKey, fixture.biome.biomeKey);
+    const authored = source.exitDecision(fixture.owner.source);
+    if (authored?.normal.kind !== 'batch') {
+      throw new Error('semantic assembly additional-only batch is missing');
+    }
+    expect(authored.normal.targets).toEqual([]);
+    expect(source.evaluatedBatch(fixture.owner)).toBeUndefined();
+    expect(source.evaluatedAdditional(fixture.owner)).toHaveLength(1);
+
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
+    const node = assembly.nodes.find(
+      (candidate) =>
+        (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+        semanticAddressKey(candidate.owner) === semanticAddressKey(fixture.owner),
+    );
+    if (node?.kind !== 'ordinaryBatch' && node?.kind !== 'mixedBatch') {
+      throw new Error('semantic assembly additional-only decision is missing');
+    }
+    expect(node.targets).toEqual([]);
+    expect(node.zagreusContract?.contractRoom.entered).toBe(true);
+    expect(
+      assembly.preliminaryFocusDestinations.get(semanticAddressKey(fixture.additional))?.nodeKey,
+    ).toBe(node.key);
+  });
+
   it('publishes only engine-available Anomaly takeovers while retaining authored Anomaly controls', () => {
     const project = createGoldenFGHIProject();
     const source = biomeSource(project, 'Underworld', 'G');
@@ -357,6 +464,171 @@ describe('structured workspace biome semantic assembly', () => {
         (node) =>
           (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
           node.targets.some((target) => target.marker.findingCount > 0),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps blocked suffix controls without projecting downstream evaluated room facts', () => {
+    const base = createGoldenFGHIProject();
+    const project = blockBiomeAtFirstBoon(base, 'Underworld', 'F');
+    const source = biomeSource(project, 'Underworld', 'F');
+    const laterDecision = source.exitDecisions.find(
+      (decision) => !source.isAssessed(createExitDecisionAddress(goldenFBiome, decision.source)),
+    );
+    if (laterDecision === undefined || laterDecision.normal.kind !== 'batch') {
+      throw new Error('semantic assembly F fixture has no retained batch suffix');
+    }
+    const owner = createExitDecisionAddress(goldenFBiome, laterDecision.source);
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
+    const node = assembly.nodes.find(
+      (
+        candidate,
+      ): candidate is Extract<
+        (typeof assembly.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' }
+      > =>
+        (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+        semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
+    );
+    if (node === undefined) throw new Error('semantic assembly lost retained batch node');
+
+    expect(node.topologyState).toBe('retained');
+    expect(node.targets).not.toHaveLength(0);
+    for (const target of node.targets) {
+      expect(target).toMatchObject({ physicalState: 'available', retained: true });
+      expect(target.room.entered).toBe(false);
+      expect(target).not.toHaveProperty('clockworkReward');
+      expect(
+        assembly.roomControls.has(
+          semanticAddressKey(
+            createTargetAddress(goldenFBiome, laterDecision.source, target.exitKey),
+          ),
+        ),
+      ).toBe(true);
+      expect(
+        assembly.rewardControls.has(
+          semanticAddressKey(createIncomingRewardAddress(goldenFBiome, target.room.occurrenceId)),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('keeps biome-specific retained room state without downstream evaluator overlays', () => {
+    const underworld = createGoldenFGHIProject();
+
+    const validH = assembleWorkspaceBiomeSemantics(
+      catalog,
+      biomeSource(underworld, 'Underworld', 'H'),
+    );
+    const blockedHSource = biomeSource(
+      blockBiomeAtFirstBoon(underworld, 'Underworld', 'H'),
+      'Underworld',
+      'H',
+    );
+    const blockedH = assembleWorkspaceBiomeSemantics(catalog, blockedHSource);
+    const retainedFields = batchTargets(blockedH).find(
+      (target) =>
+        target.marker.assessment === 'unassessed' && target.room.roomLocal.kind === 'fields',
+    );
+    if (retainedFields?.room.roomLocal.kind !== 'fields') {
+      throw new Error('blocked H fixture has no retained Fields room');
+    }
+    const validFields = batchTargets(validH).find(
+      (target) =>
+        semanticAddressKey(target.marker.address) ===
+        semanticAddressKey(retainedFields.marker.address),
+    );
+    if (validFields?.room.roomLocal.kind !== 'fields') {
+      throw new Error('valid H fixture lost the matching Fields room');
+    }
+    expect(retainedFields.room.entered).toBe(false);
+    expect(retainedFields.room.roomLocal.cages).not.toHaveLength(0);
+    expect(retainedFields.room.roomLocal.cages.map((cage) => cage.active)).toEqual(
+      validFields.room.roomLocal.cages.map((cage) => cage.active),
+    );
+    expect(
+      retainedFields.room.roomLocal.cages.every((cage) =>
+        blockedH.rewardControls.has(semanticAddressKey(cage.control.owner.address)),
+      ),
+    ).toBe(true);
+
+    const validISource = biomeSource(underworld, 'Underworld', 'I');
+    const validI = assembleWorkspaceBiomeSemantics(catalog, validISource);
+    const blockedIProject = applyProjectCommand(underworld, catalog, {
+      kind: 'ResetEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenIBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-i-combat01') },
+        'Encounter',
+      ),
+    });
+    const blockedISource = biomeSource(blockedIProject, 'Underworld', 'I');
+    const blockedI = assembleWorkspaceBiomeSemantics(catalog, blockedISource);
+    const validClockworkTarget = batchTargets(validI).find(
+      (target) =>
+        target.clockworkReward !== undefined && !blockedISource.isAssessed(target.marker.address),
+    );
+    if (validClockworkTarget === undefined) {
+      throw new Error('blocked I fixture has no retained target with a valid Clockwork overlay');
+    }
+    const retainedClockworkTarget = batchTargets(blockedI).find(
+      (target) =>
+        semanticAddressKey(target.marker.address) ===
+        semanticAddressKey(validClockworkTarget.marker.address),
+    );
+    if (retainedClockworkTarget?.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('blocked I fixture lost the retained Clockwork reward room');
+    }
+    expect(validClockworkTarget.clockworkReward).toBeDefined();
+    expect(retainedClockworkTarget.room.entered).toBe(false);
+    expect(retainedClockworkTarget).not.toHaveProperty('clockworkReward');
+    expect(retainedClockworkTarget.room.roomLocal).not.toHaveProperty('clockworkReward');
+
+    const surface = createRepresentativeNOPQProject();
+    const blockedOSource = biomeSource(
+      blockBiomeAtFirstBoon(surface, 'Surface', 'O'),
+      'Surface',
+      'O',
+    );
+    const blockedO = assembleWorkspaceBiomeSemantics(catalog, blockedOSource);
+    const retainedO = batchTargets(blockedO).filter(
+      (target) => target.marker.assessment === 'unassessed',
+    );
+    const retainedShip = retainedO.find((target) => target.room.roomLocal.kind === 'ship');
+    const retainedShop = retainedO.find((target) => target.room.roomLocal.kind === 'shop');
+    if (
+      retainedShip?.room.roomLocal.kind !== 'ship' ||
+      retainedShop?.room.roomLocal.kind !== 'shop'
+    ) {
+      throw new Error('blocked O fixture lost its retained Ship or Shop room');
+    }
+    expect(retainedShip.room.entered).toBe(false);
+    expect(retainedShip.room.roomLocal.wheels).not.toHaveLength(0);
+    expect(retainedShop.room.entered).toBe(false);
+    expect(retainedShop.room.roomLocal).toMatchObject({ materialized: true });
+
+    const blockedNSource = biomeSource(
+      blockBiomeAtFirstBoon(surface, 'Surface', 'N'),
+      'Surface',
+      'N',
+    );
+    const blockedN = assembleWorkspaceBiomeSemantics(catalog, blockedNSource);
+    const hub = blockedN.nodes.find((node) => node.kind === 'hubDecision');
+    if (hub?.kind !== 'hubDecision') throw new Error('blocked N fixture lost its Hub');
+    const retainedEphyra = hub.slots.find(
+      (slot) => slot.marker.assessment === 'unassessed' && slot.room?.roomLocal.kind === 'ephyra',
+    );
+    if (retainedEphyra?.room?.roomLocal.kind !== 'ephyra') {
+      throw new Error('blocked N fixture has no retained Ephyra room');
+    }
+    expect(retainedEphyra).toMatchObject({ open: true, visited: true });
+    expect(retainedEphyra.room).toMatchObject({ detailsActive: true, entered: false });
+    expect(retainedEphyra.room.roomLocal.sideRooms).toMatchObject({ kind: 'published' });
+    expect(
+      blockedN.rewardControls.has(
+        semanticAddressKey(
+          createIncomingRewardAddress(nBiome, nOccurrenceId(retainedEphyra.hubSlotKey)),
+        ),
       ),
     ).toBe(true);
   });

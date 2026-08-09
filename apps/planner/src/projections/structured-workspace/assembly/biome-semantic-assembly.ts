@@ -18,7 +18,6 @@ import type {
   Catalog,
 } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
-import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
 import {
   appendUniqueRewardControls,
@@ -275,7 +274,6 @@ function requireOccurrenceAssemblyFacts(
 }
 
 function authoringFrontier(
-  catalog: Catalog,
   source: WorkspaceBiomeSource,
   marker: WorkspaceMarkerDestinationEmitter,
 ): WorkspaceAuthoringFrontier | null {
@@ -288,7 +286,7 @@ function authoringFrontier(
       owner: biome,
     });
   }
-  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  const completeness = source.completeness;
   if (completeness.completion === 'complete') return null;
   const frontier = completeness.frontier;
   switch (frontier.kind) {
@@ -451,7 +449,7 @@ export function assembleWorkspaceBiomeSemantics(
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const topologyInteractions = assembleWorkspaceTopologyInteractions({ catalog, source });
-  let frontier = authoringFrontier(catalog, source, markerDestinations);
+  let frontier = authoringFrontier(source, markerDestinations);
   const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
   const fields = projectBiomeFields(biome, markerDestinations, plan, layout);
   let startRoomPicker: WorkspaceRoomPickerControl | undefined;

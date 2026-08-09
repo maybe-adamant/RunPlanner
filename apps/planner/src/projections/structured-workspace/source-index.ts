@@ -22,6 +22,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
+  BiomeCompletenessResult,
+  CanonicalAdditionalContinuation,
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalBiome,
@@ -39,6 +41,10 @@ import type {
   DecisionRunStateAvailability,
   DecisionRunStateSnapshot,
 } from '@run-planner/engine/simulation';
+import {
+  evaluateBiomeCompleteness,
+  materializedBiomePrefixCoveragePoint,
+} from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
 import { compareAuthoredTargetsInPhysicalOrder, compareCodeUnitStrings } from './assembly/ordering';
@@ -50,6 +56,7 @@ export interface WorkspaceEvaluatedBatchOverlay {
 
 export interface WorkspaceBiomeSource {
   readonly biome: BiomeAddress;
+  readonly completeness: BiomeCompletenessResult;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
@@ -59,6 +66,9 @@ export interface WorkspaceBiomeSource {
   readonly evaluatedBatch: (
     owner: ExitDecisionAddress,
   ) => WorkspaceEvaluatedBatchOverlay | undefined;
+  readonly evaluatedAdditional: (
+    owner: ExitDecisionAddress,
+  ) => readonly CanonicalAdditionalContinuation[];
   readonly evaluatedHub: (owner: HubDecisionAddress) => CanonicalHubDecision | undefined;
   readonly exitDecision: (source: ExitDecisionSourceAddress) => ExitDecision | undefined;
   readonly findingsFor: (owner: SemanticAddress) => readonly SemanticFinding[];
@@ -92,6 +102,10 @@ export interface WorkspaceProjectSourceIndex {
  */
 export interface WorkspaceEvaluatedOwnerCoverage {
   readonly isAssessed: (owner: SemanticAddress) => boolean;
+}
+
+interface WorkspaceEvaluatedOwnerCoverageIndex extends WorkspaceEvaluatedOwnerCoverage {
+  readonly hasKey: (key: string) => boolean;
 }
 
 type WorkspaceHubVisitFrontier = Extract<
@@ -158,12 +172,23 @@ function appendTargetOwners(keys: Set<string>, target: CanonicalTarget): void {
   appendAuthoredRoomOwners(keys, target.room);
 }
 
+function appendAdditionalContinuationOwners(
+  keys: Set<string>,
+  continuation: CanonicalAdditionalContinuation,
+): void {
+  appendOwner(keys, continuation.origin);
+  appendAuthoredRoomOwners(keys, continuation.room);
+}
+
 function appendBatchOwners(keys: Set<string>, batch: CanonicalBatch): void {
   appendOwner(keys, batch.origin);
   appendOwner(keys, batch.parent.origin);
   appendOwner(keys, batch.rewardStore.origin);
   appendOwner(keys, batch.selectedOrigin);
   for (const target of batch.targets) appendTargetOwners(keys, target);
+  for (const continuation of batch.additional) {
+    appendAdditionalContinuationOwners(keys, continuation);
+  }
 }
 
 function appendHubTargetOwners(keys: Set<string>, target: CanonicalHubTarget): void {
@@ -241,6 +266,16 @@ function appendPrefixOwners(
     hubVisitFrontier?.phase === 'targetLifecycle'
       ? semanticAddressKey(hubVisitFrontier.target.origin)
       : undefined;
+  const derivedCoverage = materializedBiomePrefixCoveragePoint(prefix);
+  if (
+    derivedCoverage.checkpoint !== evaluation.coverage.through.checkpoint ||
+    semanticAddressKey(derivedCoverage.owner) !==
+      semanticAddressKey(evaluation.coverage.through.owner)
+  ) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${evaluation.biomeKey} assessment prefix extends beyond declared coverage`,
+    );
+  }
 
   if (prefix.entryRoom !== undefined) appendAuthoredRoomOwners(keys, prefix.entryRoom);
   for (const decision of prefix.decisions) {
@@ -256,6 +291,9 @@ function appendPrefixOwners(
     appendOwner(keys, frontier.selectedOrigin);
     if (frontier.partialBatch !== undefined) appendBatchOwners(keys, frontier.partialBatch);
     else for (const target of frontier.targets) appendTargetOwners(keys, target);
+    for (const continuation of frontier.additional) {
+      appendAdditionalContinuationOwners(keys, continuation);
+    }
   }
   if (hubVisitFrontier !== undefined) {
     if (hubVisitFrontier.phase !== 'targetLifecycle') {
@@ -276,10 +314,11 @@ function appendPrefixOwners(
 
 function createWorkspaceEvaluatedOwnerCoverage(
   evaluation: ProjectBiomeEvaluation | undefined,
-): WorkspaceEvaluatedOwnerCoverage {
+): WorkspaceEvaluatedOwnerCoverageIndex {
   const keys = new Set<string>();
   if (evaluation === undefined || evaluation.coverage.kind === 'none') {
     return Object.freeze({
+      hasKey: (key: string) => keys.has(key),
       isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
     });
   }
@@ -301,6 +340,7 @@ function createWorkspaceEvaluatedOwnerCoverage(
     );
   }
   return Object.freeze({
+    hasKey: (key: string) => keys.has(key),
     isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
   });
 }
@@ -318,14 +358,16 @@ function indexFindings(
   return new Map([...mutable].map(([key, value]) => [key, Object.freeze(value)] as const));
 }
 
-function materialized(
+function assessedMaterialization(
   evaluation: ProjectBiomeEvaluation | undefined,
 ): CanonicalBiome | MaterializedBiomePrefix | undefined {
   if (evaluation === undefined) return undefined;
   if (evaluation.authoring === 'complete' && evaluation.validity === 'valid') {
     return evaluation.snapshot;
   }
-  return hasMaterializedPrefix(evaluation) ? evaluation.materializedPrefix : undefined;
+  return hasMaterializedPrefix(evaluation)
+    ? (evaluation.assessmentPrefix ?? evaluation.materializedPrefix)
+    : undefined;
 }
 
 function partialBatchFromPrefix(prefix: MaterializedBiomePrefix): CanonicalBatch | undefined {
@@ -333,6 +375,7 @@ function partialBatchFromPrefix(prefix: MaterializedBiomePrefix): CanonicalBatch
 }
 
 interface EvaluatedBiomeOverlay {
+  readonly additional: ReadonlyMap<string, readonly CanonicalAdditionalContinuation[]>;
   readonly batches: ReadonlyMap<string, WorkspaceEvaluatedBatchOverlay>;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly hubs: ReadonlyMap<string, CanonicalHubDecision>;
@@ -340,7 +383,9 @@ interface EvaluatedBiomeOverlay {
 
 function evaluatedBiomeOverlay(
   snapshot: CanonicalBiome | MaterializedBiomePrefix | undefined,
+  coverage: WorkspaceEvaluatedOwnerCoverageIndex,
 ): EvaluatedBiomeOverlay {
+  const additional = new Map<string, readonly CanonicalAdditionalContinuation[]>();
   const batches = new Map<string, WorkspaceEvaluatedBatchOverlay>();
   const hubs = new Map<string, CanonicalHubDecision>();
   const insert = <T>(map: Map<string, T>, key: string, value: T, label: string): void => {
@@ -356,9 +401,26 @@ function evaluatedBiomeOverlay(
     switch (decision.kind) {
       case 'batch':
         insert(batches, key, Object.freeze({ batch: decision, partial: false }), 'batch');
+        if (decision.additional.length > 0) additional.set(key, decision.additional);
         break;
       case 'hub':
-        insert(hubs, key, decision, 'Hub');
+        insert(
+          hubs,
+          key,
+          Object.freeze({
+            ...decision,
+            board: Object.freeze({
+              ...decision.board,
+              targets: Object.freeze(
+                decision.board.targets.filter(
+                  (target) =>
+                    coverage.isAssessed(target.origin) && coverage.isAssessed(target.room.origin),
+                ),
+              ),
+            }),
+          }),
+          'Hub',
+        );
         break;
     }
   }
@@ -372,11 +434,57 @@ function evaluatedBiomeOverlay(
     }
     batches.set(key, Object.freeze({ batch: partial, partial: true }));
   }
+  if (
+    snapshot?.kind === 'biomePrefix' &&
+    snapshot.frontier?.kind === 'exitDecision' &&
+    snapshot.frontier.additional.length > 0
+  ) {
+    const key = semanticAddressKey(snapshot.frontier.origin);
+    if (additional.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `evaluation has duplicate additional-continuation owner ${key}`,
+      );
+    }
+    additional.set(key, snapshot.frontier.additional);
+  }
   return Object.freeze({
+    additional,
     batches,
     ...(snapshot?.entryRoom === undefined ? {} : { entryRoom: snapshot.entryRoom }),
     hubs,
   });
+}
+
+function requireOverlayWithinCoverage(
+  overlay: EvaluatedBiomeOverlay,
+  coverage: WorkspaceEvaluatedOwnerCoverageIndex,
+): void {
+  const requireOwners = (label: string, append: (keys: Set<string>) => void): void => {
+    const keys = new Set<string>();
+    append(keys);
+    for (const key of keys) {
+      if (coverage.hasKey(key)) continue;
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has ${label} after evaluated coverage`,
+      );
+    }
+  };
+  if (overlay.entryRoom !== undefined) {
+    requireOwners('entry overlay', (keys) => appendAuthoredRoomOwners(keys, overlay.entryRoom!));
+  }
+  for (const { batch } of overlay.batches.values()) {
+    requireOwners('batch overlay', (keys) => appendBatchOwners(keys, batch));
+  }
+  for (const continuations of overlay.additional.values()) {
+    for (const additional of continuations) {
+      requireOwners('additional continuation overlay', (keys) =>
+        appendAdditionalContinuationOwners(keys, additional),
+      );
+    }
+  }
+  for (const hub of overlay.hubs.values()) {
+    requireOwners('Hub overlay', (keys) => appendHubOwners(keys, hub));
+  }
 }
 
 function physicalExitsForSource(
@@ -477,6 +585,10 @@ function createWorkspaceBiomeSource(
       hubDecisionsByKey.set(key, decision);
     }
   }
+  // Reject malformed authored identity cheaply before asking the evaluator to
+  // traverse the biome. Completeness remains one explicit source product, but
+  // it is not the structural contract validator for workspace construction.
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
   const exitDecisions = authoredExitDecisionsInTopologyOrder(
     catalog,
     biome,
@@ -484,11 +596,20 @@ function createWorkspaceBiomeSource(
     plan,
     exitDecisionsByOwner,
   );
-  const overlay = evaluatedBiomeOverlay(materialized(evaluation));
+  const coverage = createWorkspaceEvaluatedOwnerCoverage(evaluation);
+  const overlay = evaluatedBiomeOverlay(assessedMaterialization(evaluation), coverage);
+  requireOverlayWithinCoverage(overlay, coverage);
   for (const key of overlay.batches.keys()) {
     if (exitDecisionsByOwner.get(key)?.normal.kind !== 'batch') {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has an evaluated batch without an authored batch decision`,
+      );
+    }
+  }
+  for (const key of overlay.additional.keys()) {
+    if (exitDecisionsByOwner.get(key)?.normal.kind !== 'batch') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has evaluated additional continuations without an authored batch decision`,
       );
     }
   }
@@ -500,7 +621,6 @@ function createWorkspaceBiomeSource(
     }
   }
   const findingsByOwner = indexFindings(evaluation?.findings ?? []);
-  const coverage = createWorkspaceEvaluatedOwnerCoverage(evaluation);
   const runStateAvailability = new Map<string, DecisionRunStateAvailability>(
     (evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.runStateAvailability
@@ -515,8 +635,11 @@ function createWorkspaceBiomeSource(
   );
   return Object.freeze({
     biome,
+    completeness,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
+    evaluatedAdditional: (owner: ExitDecisionAddress) =>
+      overlay.additional.get(semanticAddressKey(owner)) ?? Object.freeze([]),
     evaluatedBatch: (owner: ExitDecisionAddress) => overlay.batches.get(semanticAddressKey(owner)),
     evaluatedHub: (owner: HubDecisionAddress) => overlay.hubs.get(semanticAddressKey(owner)),
     exitDecision: (source: ExitDecisionSourceAddress) =>

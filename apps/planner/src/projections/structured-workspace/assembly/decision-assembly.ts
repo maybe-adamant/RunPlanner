@@ -629,7 +629,7 @@ function assembleBatchDecision(
     evaluatedTargets.set(target.exit.exitKey, target);
   }
   const evaluatedAdditional = new Map<string, CanonicalAdditionalContinuation>();
-  for (const additional of evaluated?.batch.additional ?? []) {
+  for (const additional of source.evaluatedAdditional(owner)) {
     if (evaluatedAdditional.has(additional.key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${semanticAddressKey(owner)} has duplicate evaluated additional exit ${additional.key}`,

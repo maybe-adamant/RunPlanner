@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const plannerSourceRoot = join(repositoryRoot, 'apps/planner/src');
 const uiRoot = join(repositoryRoot, 'apps/planner/src/ui');
 const engineRoot = join(repositoryRoot, 'packages/planner-engine/src');
 
@@ -19,6 +20,18 @@ function productionSources(directory: string): readonly string[] {
 }
 
 describe('unified workspace ownership boundary', () => {
+  it('acquires biome completeness only at the structured-workspace source boundary', () => {
+    const importerPaths = productionSources(plannerSourceRoot).filter((path) =>
+      readFileSync(path, 'utf8').includes('evaluateBiomeCompleteness'),
+    );
+    const importers = importerPaths.map((path) => relative(plannerSourceRoot, path));
+
+    expect(importers).toEqual(['projections/structured-workspace/source-index.ts']);
+    expect([
+      ...readFileSync(importerPaths[0]!, 'utf8').matchAll(/\bevaluateBiomeCompleteness\s*\(/g),
+    ]).toHaveLength(1);
+  });
+
   it('keeps topology-impact calculation out of React components', () => {
     const forbiddenAuthorities = [
       'applyProjectCommand',

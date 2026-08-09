@@ -455,7 +455,9 @@ function generation(
   });
 }
 
-function prefixCoveragePoint(prefix: MaterializedBiomePrefix): BiomeEvaluationPoint {
+export function materializedBiomePrefixCoveragePoint(
+  prefix: MaterializedBiomePrefix,
+): BiomeEvaluationPoint {
   if (prefix.frontier?.kind === 'exitDecision') {
     const lastTarget = prefix.frontier.targets.at(-1);
     return lastTarget === undefined
@@ -553,7 +555,7 @@ function evaluateBiomeAssembly(
         ...(progressive.evaluation.blockedAt === undefined ? {} : { validity: 'invalid' as const }),
         coverage: Object.freeze({
           kind: 'prefix',
-          through: prefixCoveragePoint(
+          through: materializedBiomePrefixCoveragePoint(
             progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix,
           ),
           ...(progressive.evaluation.blockedAt === undefined
@@ -604,7 +606,7 @@ function evaluateBiomeAssembly(
         authoring: 'complete',
         coverage: Object.freeze({
           kind: 'prefix',
-          through: prefixCoveragePoint(assessmentPrefix),
+          through: materializedBiomePrefixCoveragePoint(assessmentPrefix),
           blockedAt,
         }),
         validity: 'invalid',
@@ -694,7 +696,7 @@ function evaluateBiomeAssembly(
       authoring: 'complete',
       coverage: Object.freeze({
         kind: 'prefix',
-        through: prefixCoveragePoint(assessmentPrefix),
+        through: materializedBiomePrefixCoveragePoint(assessmentPrefix),
         ...(progressive.evaluation.blockedAt === undefined
           ? {}
           : { blockedAt: progressive.evaluation.blockedAt }),
