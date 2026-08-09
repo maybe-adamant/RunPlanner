@@ -7,6 +7,7 @@ import type {
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SemanticFinding } from '../model';
 import type { ReachedTraitOfferEvaluation, TraitHistoryState } from '../traits';
+import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './run-state';
 
 interface RewardEventBase {
   readonly rewardSequence: number;
@@ -76,6 +77,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
+  readonly runStateSnapshots: readonly DecisionRunStateSnapshot[];
+  readonly runStateAvailability: readonly DecisionRunStateAvailability[];
 }
 
 export type RewardSimulation = BiomeRewardSimulation;

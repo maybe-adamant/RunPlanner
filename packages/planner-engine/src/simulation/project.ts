@@ -42,11 +42,17 @@ import {
 import type { SemanticFinding } from './model';
 import {
   evaluateProgressiveBiomeAssembly,
+  runStateSnapshotsThroughCanonicalCoverage,
   type BiomeGenerationValidation,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
 import { evaluateBiomeRewardsAssembly } from './rewards/biome';
 import type { BiomeRewardSimulation } from './rewards/model';
+import {
+  publishRunStateThroughCoverage,
+  type DecisionRunStateOwner,
+  type DecisionRunStateSnapshot,
+} from './rewards/run-state';
 import {
   resolveCountedRewardTypeDomain,
   type CountedRewardOwnerAddress,
@@ -361,6 +367,43 @@ interface BiomeGenerationAssembly {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
 }
 
+function declaredRunStateOwners(
+  snapshot: Pick<CanonicalBiome, 'decisions'>,
+): readonly DecisionRunStateOwner[] {
+  return Object.freeze(snapshot.decisions.map((decision) => decision.origin));
+}
+
+/**
+ * Materialized prefixes can expose the current outer decision before it has a
+ * reward-walk checkpoint. Keep that owner explicit so consumers never infer
+ * unavailable from a missing snapshot. Hub visits are intentionally internal
+ * chronology: their owner is not a Run State launcher.
+ */
+function structurallyEligibleRunStateOwners(
+  prefix: MaterializedBiomePrefix,
+): readonly DecisionRunStateOwner[] {
+  // Canonical decisions are the outer biome chronology. A Hub remains one
+  // decision regardless of how many visits and local children it contains.
+  const owners: DecisionRunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
+  if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'exitDecision') {
+    owners.push(prefix.frontier.origin);
+  }
+  return Object.freeze(owners);
+}
+
+function reconcileRunStateAvailability(
+  rewards: BiomeRewardSimulation,
+  covered: readonly DecisionRunStateSnapshot[],
+  owners: readonly DecisionRunStateOwner[],
+): BiomeRewardSimulation {
+  const publication = publishRunStateThroughCoverage(rewards.runStateSnapshots, covered, owners);
+  return Object.freeze({
+    ...rewards,
+    runStateSnapshots: publication.snapshots,
+    runStateAvailability: publication.availability,
+  });
+}
+
 function encounterPreparationViews(
   history: CanonicalBiomeHistory | BiomeHistoryPrefix,
 ): ReadonlyMap<string, HistoryStateView> {
@@ -529,7 +572,11 @@ function evaluateBiomeAssembly(
           : { assessmentPrefix: progressive.evaluation.assessmentPrefix }),
         history: progressive.evaluation.history,
         roomGeneration: progressive.evaluation.roomGeneration,
-        rewards: progressive.evaluation.rewards,
+        rewards: reconcileRunStateAvailability(
+          progressive.evaluation.rewards,
+          progressive.evaluation.rewards.runStateSnapshots,
+          structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
+        ),
         findings: Object.freeze([...completeness.findings, ...progressive.evaluation.findings]),
       }),
       candidateArtifacts: progressive.candidateArtifacts,
@@ -548,6 +595,16 @@ function evaluateBiomeAssembly(
     const blockedAt = progressive.evaluation.blockedAt ?? composed.block.blockedAt;
     const assessmentPrefix =
       progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
+    const runStatePublication = publishRunStateThroughCoverage(
+      progressive.evaluation.rewards.runStateSnapshots,
+      progressive.evaluation.rewards.runStateSnapshots,
+      declaredRunStateOwners(snapshot),
+    );
+    const reconciledRewards: BiomeRewardSimulation = Object.freeze({
+      ...progressive.evaluation.rewards,
+      runStateSnapshots: runStatePublication.snapshots,
+      runStateAvailability: runStatePublication.availability,
+    });
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
@@ -566,7 +623,7 @@ function evaluateBiomeAssembly(
           : { assessmentPrefix: progressive.evaluation.assessmentPrefix }),
         history: progressive.evaluation.history,
         roomGeneration: progressive.evaluation.roomGeneration,
-        rewards: progressive.evaluation.rewards,
+        rewards: reconciledRewards,
         findings: progressive.evaluation.findings,
       }),
       candidateArtifacts: progressive.candidateArtifacts,
@@ -611,6 +668,20 @@ function evaluateBiomeAssembly(
       candidateArtifacts: roomGeneration.candidateArtifacts,
     });
   }
+  const runStatePublication = publishRunStateThroughCoverage(
+    rewards.simulation.runStateSnapshots,
+    runStateSnapshotsThroughCanonicalCoverage(
+      snapshot,
+      findings,
+      rewards.simulation.runStateSnapshots,
+    ),
+    declaredRunStateOwners(snapshot),
+  );
+  const reconciledRewards: BiomeRewardSimulation = Object.freeze({
+    ...rewards.simulation,
+    runStateSnapshots: runStatePublication.snapshots,
+    runStateAvailability: runStatePublication.availability,
+  });
   return Object.freeze({
     evaluation: Object.freeze({
       biomeKey: plan.biomeKey,
@@ -621,7 +692,7 @@ function evaluateBiomeAssembly(
       snapshot,
       history,
       roomGeneration: roomGeneration.validation,
-      rewards: rewards.simulation,
+      rewards: reconciledRewards,
       findings,
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,

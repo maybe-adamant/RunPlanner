@@ -23,6 +23,7 @@ import {
   type EncounterHistoryBlock,
 } from '../history';
 import type {
+  CanonicalBiome,
   CanonicalDecision,
   CanonicalHubVisit,
   CanonicalTarget,
@@ -44,6 +45,7 @@ import {
 } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
+import type { DecisionRunStateSnapshot } from '../rewards/run-state';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -445,12 +447,16 @@ interface PrefixDecisionEntry {
   readonly frontierBatch: boolean;
 }
 
-function prefixDecisionEntries(prefix: MaterializedBiomePrefix): readonly PrefixDecisionEntry[] {
+function prefixDecisionEntries(
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
+): readonly PrefixDecisionEntry[] {
   const completed = prefix.decisions.map((decision, decisionIndex) =>
     Object.freeze({ decision, decisionIndex, frontierBatch: false }),
   );
   const partialBatch =
-    prefix.frontier?.kind === 'exitDecision' ? prefix.frontier.partialBatch : undefined;
+    prefix.kind === 'biomePrefix' && prefix.frontier?.kind === 'exitDecision'
+      ? prefix.frontier.partialBatch
+      : undefined;
   return partialBatch === undefined
     ? Object.freeze(completed)
     : Object.freeze([
@@ -464,7 +470,7 @@ function prefixDecisionEntries(prefix: MaterializedBiomePrefix): readonly Prefix
 }
 
 function locateFinding(
-  prefix: MaterializedBiomePrefix,
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
   finding: SemanticFinding,
 ): LocatedFinding | undefined {
   if (
@@ -499,6 +505,39 @@ function locateFinding(
             : { hubLocalLifecycleIndex: hubVisitLocation.localLifecycleIndex }),
         }),
   });
+}
+
+/**
+ * Canonical invalid evaluation has already completed its one reward/history
+ * walk. Reuse the progressive finding-location ordering to publish only the
+ * decision checkpoints reached before the first invalid owner, without
+ * re-evaluating a materialized prefix.
+ */
+export function runStateSnapshotsThroughCanonicalCoverage(
+  snapshot: CanonicalBiome,
+  findings: readonly SemanticFinding[],
+  discovered: readonly DecisionRunStateSnapshot[],
+): readonly DecisionRunStateSnapshot[] {
+  const firstInvalid = findings
+    .flatMap((finding) => {
+      const location = locateFinding(snapshot, finding);
+      return location === undefined ? [] : [location];
+    })
+    .sort(compareLocatedFindings)[0];
+  if (firstInvalid === undefined) return discovered;
+
+  const decisionIndexByOwner = new Map(
+    snapshot.decisions.map((decision, decisionIndex) => [
+      semanticAddressKey(decision.origin),
+      decisionIndex,
+    ]),
+  );
+  return Object.freeze(
+    discovered.filter((runState) => {
+      const decisionIndex = decisionIndexByOwner.get(semanticAddressKey(runState.owner));
+      return decisionIndex !== undefined && decisionIndex <= firstInvalid.decisionIndex;
+    }),
+  );
 }
 
 function firstUnsupportedFinding(
