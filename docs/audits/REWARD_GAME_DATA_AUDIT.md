@@ -74,7 +74,7 @@ rather than unioning every externally gated entry.
 | Offer-time depletion       | Every generated counted offer removes one exact bag entry, including unpicked doors, wheels, cages, and side rooms                                                      | Exact                         | Offer materialization mutates bags before entry/acquisition                                   |
 | Offer-time fact projection | Devotion setup records `LastDevotionDepth` when the offer is materialized, including for an unpicked target                                                             | Exact                         | Add a reward-type `devotionSpacing` offer projection; never infer it from acquisition         |
 | Same-batch duplicates      | Entry-level `AllowDuplicates`; otherwise an earlier peer with the same duplicate key blocks the later peer                                                              | Exact                         | Normalize `allowDuplicates`, default false                                                    |
-| Entry selection            | The game randomly removes one eligible concrete entry                                                                                                                   | Exact support, not RNG replay | If several entries can explain one authored reward, preserve every reachable latent bag state |
+| Entry selection            | The game randomly removes one eligible concrete entry                                                                                                                   | Exact support, not RNG replay | Retain exact states internally; diagnostics aggregate only proven-equivalent semantic states. |
 | Refill                     | When no entry in the whole bag is eligible, append a complete base set while retaining leftovers; repeat once more; after two refills fall back to `RoomRewardHealDrop` | Exact raw picker behavior     | Supported planner consumers require at most one refill; see the reachability proof below      |
 | Reward priority queue      | Keepsakes can prioritize an otherwise eligible reward                                                                                                                   | Excluded                      | Neutral equipment baseline contains no priority queue                                         |
 | Bounty overrides           | Active bounties can replace store declarations and forced rewards                                                                                                       | Excluded                      | No bounty predicates or alternate bags                                                        |
@@ -105,15 +105,32 @@ consumer and remains outside the canonical projection.
 ### Latent Bag State
 
 Multiplicity entries are not interchangeable merely because they share a
-reward name. Two `WeaponUpgrade` entries, for example, carry different
-requirements. If both are eligible and an authored `WeaponUpgrade` is offered,
-the game may remove either exact entry.
+reward name. Once `ordinaryLootCount` is satisfied, for example, both the base
+and qualified `MaxHealthDrop` entries are eligible and the game may remove
+either exact entry. The possibility simulator therefore retains distinct exact
+post-consumption bag states and must not choose declaration order as a hidden
+tie-breaker.
 
-The possibility simulator must therefore carry a deduplicated set of reachable
-bag states whenever one authored offer matches more than one eligible entry.
-Choosing declaration order as a hidden tie-breaker would reject later histories
-that the game can produce. This branching is internal derived state; the editor
-still exposes one complete resolved-offer value.
+That exact internal split does **not** currently imply two behaviorally
+different supported futures. A fresh audit of the normalized stores found:
+
+- the base and `ordinaryLootCount` copies of `MaxHealthDrop`, `MaxManaDrop`, and
+  `RoomMoneyDrop` become interchangeable after their requirements overlap,
+  because ordinary-loot history is monotonic;
+- the two `StackUpgrade` copies share `stackLegal`, and the qualified copy only
+  adds the same monotonic ordinary-loot condition;
+- the early and late `WeaponUpgrade` requirements cannot overlap: the first
+  requires no prior Hammer, while the second requires exactly one prior Hammer
+  and at least three entered biomes;
+- every other same-reward multiplicity in the normalized stores has the same
+  requirement as its peers.
+
+The generic kernel deliberately keeps exact entry identity so later catalog
+changes do not acquire an invented tie-breaker. A diagnostic editor surface,
+however, should project the effective bag: aggregate states by reward,
+eligibility, and retained requirement evidence, and expose a range only if a
+future catalog makes the aggregate count genuinely differ. It must not present
+today's unobservable exact-entry split as multiple run histories.
 
 ## Counted Store Inventory
 
@@ -585,7 +602,9 @@ following are true:
 1. store entries own `allowDuplicates` and exact current-run requirements;
    the shared picker appends at most one complete base set while retaining
    leftovers, and a still-empty supported call fails its refill invariant;
-2. counted simulation can preserve alternative latent bag states;
+2. counted simulation preserves distinct exact post-consumption bag states
+   without requiring diagnostic consumers to expose behaviorally equivalent
+   internal splits;
 3. reward types, resolved offers, concrete acquisitions, and history
    projections are distinct; reward types own closed self/fixed/payload-source
    roles and producer lifecycle supports zero/multiple acquisition points;
