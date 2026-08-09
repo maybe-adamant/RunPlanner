@@ -46,6 +46,11 @@ import type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from './model';
+import {
+  createRunState,
+  publishRunStateThroughCoverage,
+  type DecisionRunStateSnapshot,
+} from './run-state';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
   createRoomLifecycleCandidateArtifacts,
@@ -751,8 +756,57 @@ export function evaluateBiomeRewardsAssembly(
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
+  const runStateSnapshotsByOwner = new Map<string, DecisionRunStateSnapshot>();
+  const hubDecisionsBySource = new Map(
+    snapshot.decisions
+      .filter(
+        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
+          decision.kind === 'hub',
+      )
+      .map((decision) => [semanticAddressKey(decision.source.origin), decision]),
+  );
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
+
+  function captureRunState(
+    owner: DecisionRunStateSnapshot['owner'],
+    source: CanonicalRewardSource,
+    view: HistoryStateView,
+  ): void {
+    const ownerKey = semanticAddressKey(owner);
+    if (runStateSnapshotsByOwner.has(ownerKey) || branches.length === 0) return;
+    const declaration = catalog.rooms.byKey[source.gameName];
+    if (declaration === undefined) {
+      throw new BiomeRewardSimulationContractError(
+        `${source.gameName} has no declaration for run-state snapshot`,
+      );
+    }
+    const currentShopNames = new Set(
+      (source.kind === 'authored' && source.entryState?.kind === 'shop'
+        ? source.entryState.offers
+        : []
+      ).map((offer) => offer.offer.rewardType),
+    );
+    const snapshot = createRunState({
+      catalog,
+      owner,
+      historyView: view,
+      branches,
+      enteredBiomeCount,
+      rewardFacts: (branchHistory) =>
+        rewardFacts(
+          catalog,
+          source,
+          source,
+          declaration,
+          view,
+          branchHistory,
+          enteredBiomeCount,
+          currentShopNames,
+        ),
+    });
+    if (snapshot !== undefined) runStateSnapshotsByOwner.set(ownerKey, snapshot);
+  }
 
   function recordTargetSlotHistory(origin: TargetAddress, historySequence: number): void {
     if (branches.length === 0) {
@@ -815,6 +869,27 @@ export function evaluateBiomeRewardsAssembly(
         branches = beginRewardRoom(branches, event.sequence);
         break;
       case 'roomCreated': {
+        if (event.source === 'generatedTarget' && event.parentOrigin.kind === 'hubRoom') {
+          const handoff = batchesByParent.get(semanticAddressKey(event.parentOrigin));
+          const parent = rooms.get(semanticAddressKey(event.parentOrigin));
+          const parentViews = views.get(semanticAddressKey(event.parentOrigin));
+          const handoffView = parentViews?.targetGenerations.find(
+            (candidate) =>
+              semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(event.targetOrigin),
+          )?.before;
+          const handoffTarget = handoff?.targets.find(
+            (target) =>
+              semanticAddressKey(target.origin) === semanticAddressKey(event.targetOrigin),
+          );
+          if (
+            handoffTarget !== undefined &&
+            handoff?.origin.source.kind === 'hubDecision' &&
+            parent?.kind === 'hub' &&
+            handoffView !== undefined
+          ) {
+            captureRunState(handoff.origin, parent, handoffView);
+          }
+        }
         const room = rooms.get(semanticAddressKey(event.origin));
         if (room === undefined) {
           branches = advanceRewardBranches(branches, event.sequence);
@@ -1207,6 +1282,28 @@ export function evaluateBiomeRewardsAssembly(
           );
         }
         const batch = batchesByParent.get(semanticAddressKey(event.origin));
+        const hubDecision = hubDecisionsBySource.get(semanticAddressKey(event.origin));
+        if (hubDecision !== undefined) {
+          const checkpoint = sourceViews.preOutgoing;
+          if (checkpoint !== undefined) {
+            captureRunState(hubDecision.origin, source, checkpoint);
+          }
+        } else if (batch !== undefined) {
+          const checkpoint = sourceViews.preOutgoing;
+          if (checkpoint !== undefined) {
+            captureRunState(batch.origin, source, checkpoint);
+          }
+        } else if (
+          batch === undefined &&
+          frontierSource === semanticAddressKey(event.origin) &&
+          snapshot.kind === 'biomePrefix' &&
+          snapshot.frontier?.kind === 'exitDecision'
+        ) {
+          const checkpoint = sourceViews.preOutgoing;
+          if (checkpoint !== undefined) {
+            captureRunState(snapshot.frontier.origin, source, checkpoint);
+          }
+        }
         const targetSet = batch?.targets;
         if (targetSet === undefined) {
           if (
@@ -1689,8 +1786,24 @@ export function evaluateBiomeRewardsAssembly(
     }
   }
 
+  if (
+    snapshot.kind === 'biomePrefix' &&
+    snapshot.frontier?.kind === 'exitDecision' &&
+    snapshot.frontier.parent.origin.kind === 'hubRoom'
+  ) {
+    const source = rooms.get(semanticAddressKey(snapshot.frontier.parent.origin));
+    if (source?.kind === 'hub') {
+      const current = 'current' in history ? history.current : history.afterTransition;
+      captureRunState(snapshot.frontier.origin, source, current);
+    }
+  }
+
   recordBlankFrontierTargetHistory();
   const immutableFindings = Object.freeze([...findings.values()]);
+  const runStatePublication = publishRunStateThroughCoverage(
+    [...runStateSnapshotsByOwner.values()],
+    [...runStateSnapshotsByOwner.values()],
+  );
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
@@ -1699,6 +1812,8 @@ export function evaluateBiomeRewardsAssembly(
     branches: Object.freeze(branches.map(publicRewardBranch)),
     findings: immutableFindings,
     rewardLookups: rewardLookup.public,
+    runStateSnapshots: runStatePublication.snapshots,
+    runStateAvailability: runStatePublication.availability,
   });
   return Object.freeze({
     simulation,

@@ -150,6 +150,16 @@ export {
   type RewardStoreCandidateSupport,
   type RewardStoreSupportEntry,
   type TargetRewardHistoryCheckpoint,
+  type DecisionCounterState,
+  type DecisionGodPoolState,
+  type DecisionRewardBagCount,
+  type DecisionRewardBagConditionGroup,
+  type DecisionRewardBagEntryGroup,
+  type DecisionRewardBagState,
+  type DecisionRunStateAvailability,
+  type DecisionRunStateOwner,
+  type DecisionRunStateSnapshot,
+  type DecisionTraitState,
 } from './rewards';
 export {
   materializeBiome,

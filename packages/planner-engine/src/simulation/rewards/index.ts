@@ -17,3 +17,15 @@ export type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from './model';
+export type {
+  DecisionCounterState,
+  DecisionGodPoolState,
+  DecisionRewardBagCount,
+  DecisionRewardBagConditionGroup,
+  DecisionRewardBagEntryGroup,
+  DecisionRewardBagState,
+  DecisionRunStateAvailability,
+  DecisionRunStateOwner,
+  DecisionRunStateSnapshot,
+  DecisionTraitState,
+} from './run-state';

@@ -130,12 +130,16 @@ outer: Opening -> PreHub -> Hub -> Preboss
 inner Hub: ordered combat/story room visits and their local children
 ```
 
-N exposes exactly two Run State launchers:
+N follows the same outer-decision rule as every other biome. Its current
+structure therefore exposes snapshots before PreHub, before Hub, and before
+Preboss. Any future outer decision or detour receives the same treatment
+without a room-name exception.
 
-- one `before Hub` snapshot after Opening and PreHub have completed but before
-  the Hub board's room and reward offers are generated;
-- one `before Preboss` snapshot after the complete ordered Hub visit prefix and
-  its local effects, but before the completed-Hub handoff generates Preboss.
+The Hub itself remains one outer decision: its snapshot is captured after
+Opening and PreHub have completed but before the Hub board's room and reward
+offers are generated. The following Preboss snapshot is captured after the
+complete ordered Hub visit prefix and its local effects, but before the
+completed-Hub handoff generates Preboss.
 
 Hub visits, Hub slots, story rooms, combat rooms, side rooms, and Hub restores
 remain real chronological simulation events, but they do not receive separate
@@ -405,7 +409,8 @@ Deliver one engine-owned vertical product through progressive and canonical
 evaluation:
 
 - capture ordinary decision state at the aligned outgoing-generation event;
-- capture `before Hub` and `before Preboss` around the existing N chronology;
+- capture every N outer decision while treating the Hub as one decision rather
+  than its individual visits;
 - bound snapshot publication to the exact progressive-validation coverage
   point;
 - derive god pool, traits/elements, existing counters, and effective bags;
@@ -458,7 +463,7 @@ The implementation is not complete until these claims are witnessed:
 | An invalid value inside the current decision leaves that decision's pre-state snapshot available | progressive engine test                   |
 | Downstream invalidity leaves earlier reached snapshots available                                 | progressive engine test                   |
 | F publishes one snapshot for each reached generated decision                                     | engine + workspace representative test    |
-| N publishes only `before Hub` and `before Preboss` launchers                                     | engine + workspace N test                 |
+| N publishes every outer decision while Hub visits receive no independent launcher                | engine + workspace N test                 |
 | N's Preboss snapshot includes all ordered Hub visits and local effects                           | engine N chronological test               |
 | An unused counted store displays its full declaration without initializing the branch bag        | reward-kernel/snapshot test               |
 | Prior offers deplete the displayed effective bag at offer time even when unpicked                | reward snapshot test                      |
