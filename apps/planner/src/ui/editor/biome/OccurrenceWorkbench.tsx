@@ -15,6 +15,7 @@ import {
   type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRoomSummary,
   type WorkspaceNaturalChaosSpawnControl,
+  type WorkspaceRunStateLauncher,
   type WorkspaceZagreusSpawnControl,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -30,6 +31,7 @@ import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
 import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RoomSelector } from './RoomSelector';
+import { RunStateLauncher } from './RunStateSheet';
 
 interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
@@ -39,6 +41,7 @@ interface OccurrenceWorkbenchProps {
   /** Hub visits retain their editable main offer on the Hub board. */
   readonly presentation: 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
+  readonly runState?: WorkspaceRunStateLauncher;
 }
 
 function HubRewardContext({
@@ -866,6 +869,7 @@ export function OccurrenceWorkbench({
   nextDecisionIntent,
   presentation,
   room,
+  runState,
 }: OccurrenceWorkbenchProps) {
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
@@ -888,6 +892,7 @@ export function OccurrenceWorkbench({
         <div className="owner-markers">
           <span className="room-kind">{room.kind}</span>
           <SemanticOwnerMarker address={room.address} />
+          {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>
       {roomInteraction === undefined ? null : (

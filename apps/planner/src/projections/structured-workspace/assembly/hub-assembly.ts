@@ -32,6 +32,8 @@ import type {
 import { workspaceHubMainRewardMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
+import type { WorkspaceBiomeSource } from '../source-index';
+import { presentRunState } from '../presentation/run-state';
 
 /**
  * The Hub board owns its slots, visits, room-local workbenches, and the
@@ -55,6 +57,7 @@ interface WorkspaceHubAssemblyBaseInput {
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly nextVisitIndex?: number;
   readonly topology: BiomeTopology | null;
+  readonly source?: WorkspaceBiomeSource;
 }
 
 /** An authored Hub board and its optional evaluator overlay. */
@@ -201,6 +204,7 @@ function projectHubNode(
       visitIndex,
     });
   });
+  const runState = input.source?.runState(owner);
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
@@ -217,6 +221,27 @@ function projectHubNode(
     requiredVisitCount: descriptor.requiredVisits,
     slots: Object.freeze(slots),
     visits: Object.freeze(visits),
+    ...(runState === undefined
+      ? {}
+      : {
+          runState:
+            runState.availability === 'available'
+              ? Object.freeze({
+                  availability: 'available' as const,
+                  owner,
+                  state: presentRunState(input.catalog, runState.snapshot),
+                  title: 'Hub',
+                })
+              : Object.freeze({
+                  availability: 'unavailable' as const,
+                  owner,
+                  reason:
+                    runState.reason === 'coverageNotReached'
+                      ? 'Run State is unavailable because this decision has not been reached.'
+                      : 'Run State is unavailable for this decision.',
+                  title: 'Hub',
+                }),
+        }),
   });
   markerDestinations.redirect(
     Object.freeze([

@@ -2,7 +2,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createHubDecisionAddress,
+  createExitDecisionAddress,
   createProjectDocument,
+  semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -65,6 +67,91 @@ function hubRailEntry(rail: readonly WorkspaceRailEntry[]) {
 }
 
 describe('structured workspace biome presentation', () => {
+  it('places exactly one Run State launcher on every reached F outer decision in engine order', () => {
+    const project = createGoldenFGHIProject();
+    const source = biomeSource(project, 'Underworld', 'F');
+    const biome = present(project, 'Underworld', 'F').presentation.biome;
+    const launchers = biome.nodes.flatMap((node) =>
+      node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
+        ? node.runState === undefined
+          ? []
+          : [node.runState]
+        : [],
+    );
+
+    expect(launchers.map((launcher) => launcher.title)).toEqual([
+      'Decision 1',
+      'Decision 2',
+      'Decision 3',
+      'Decision 4',
+      'Decision 5',
+      'Decision 6',
+      'Decision 7',
+      'Decision 8',
+      'Decision 9',
+      'Decision 10',
+      'Preboss',
+    ]);
+    expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual(
+      source.exitDecisions.map((decision) =>
+        semanticAddressKey(createExitDecisionAddress(source.biome, decision.source)),
+      ),
+    );
+  });
+
+  it('keeps Run State on N outer decisions and binds the completed-Hub handoff to visible Preboss', () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'N run-state placement',
+        projectId: 'n-run-state-placement',
+      }),
+      { includePreboss: true },
+    );
+    const biome = present(project, 'Surface', 'N').presentation.biome;
+    const launchers = biome.nodes.flatMap((node) => {
+      if (
+        node.kind === 'hubDecision' ||
+        node.kind === 'ordinaryBatch' ||
+        node.kind === 'mixedBatch' ||
+        node.kind === 'takeoverBatch'
+      )
+        return node.runState === undefined ? [] : [node.runState];
+      if (node.kind === 'occurrenceWorkbench')
+        return node.runState === undefined ? [] : [node.runState];
+      return [];
+    });
+    expect(launchers.map((launcher) => launcher.title)).toEqual(['Decision 1', 'Hub', 'Preboss']);
+    const source = biomeSource(project, 'Surface', 'N');
+    const preHub = source.exitDecisions.find((decision) => decision.source.kind === 'occurrence');
+    const handoff = source.exitDecisions.find(
+      (decision) => decision.source.kind === 'hubDecision' && decision.source.decisionKey === 'hub',
+    );
+    if (preHub === undefined || handoff === undefined)
+      throw new Error('N outer decision owners missing');
+    expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual([
+      semanticAddressKey(createExitDecisionAddress(source.biome, preHub.source)),
+      semanticAddressKey(createHubDecisionAddress(source.biome, 'hub')),
+      semanticAddressKey(createExitDecisionAddress(source.biome, handoff.source)),
+    ]);
+    const preboss = biome.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('preboss'),
+    );
+    expect(preboss?.kind === 'occurrenceWorkbench' && preboss.runState?.title).toBe('Preboss');
+    const hub = biome.nodes.find((node) => node.kind === 'hubDecision');
+    expect(hub?.kind === 'hubDecision' && hub.visits.some((visit) => 'runState' in visit)).toBe(
+      false,
+    );
+    expect(
+      biome.nodes
+        .filter((node) => node.kind === 'occurrenceWorkbench')
+        .every((node) => node.runState === undefined),
+    ).toBe(false);
+    expect(hub?.kind === 'hubDecision' && hub.visits.every((visit) => !('runState' in visit))).toBe(
+      true,
+    );
+  });
   it('presents the Hub only after it is authored, then nests only authored visit workbenches', () => {
     const empty = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },

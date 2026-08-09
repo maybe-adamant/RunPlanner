@@ -30,6 +30,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -1199,6 +1200,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
             <div className="owner-markers">
               <h3 id={`${titleId}-board-title`}>Hub traversal</h3>
               <SemanticOwnerMarker address={node.owner} />
+              {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
               <SemanticOwnerMarker address={node.openSet.address} />
             </div>
           </div>

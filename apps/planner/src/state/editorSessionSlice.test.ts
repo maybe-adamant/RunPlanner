@@ -15,6 +15,8 @@ import {
   findingSelected,
   routePanelSelected,
   routeSelected,
+  runStateClosed,
+  runStateOpened,
   semanticOwnerFocused,
   semanticOwnerNavigated,
   settingsSelected,
@@ -58,6 +60,19 @@ describe('editor session navigation', () => {
       selectedFinding: null,
       semanticNavigationRevision: 0,
     });
+  });
+
+  it('keeps Run State open/close transient and clears it on navigation', () => {
+    const owner = {
+      kind: 'exitDecision' as const,
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      source: { kind: 'occurrence' as const, occurrenceId: createOccurrenceId('run-state') },
+    };
+    const opened = reducer(undefined, runStateOpened(owner));
+    expect(opened.runStateTarget).toEqual(owner);
+    expect(reducer(opened, runStateClosed()).runStateTarget).toBeNull();
+    expect(reducer(opened, routeSelected('Surface')).runStateTarget).toBeNull();
   });
 
   it('selects route panels without losing another route panel selection', () => {

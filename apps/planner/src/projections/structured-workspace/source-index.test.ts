@@ -143,6 +143,94 @@ function clampedHubTargetLifecycleEvaluation(
 }
 
 describe('structured workspace source index', () => {
+  it('returns exact available and unavailable Run State products, and rejects an available owner without its snapshot', () => {
+    const project = createGoldenFGHIProject();
+    const evaluation = simulateProject(catalog, project);
+    const indexed = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
+    const source = biomeSource(indexed, 'Underworld', 'F');
+    const owner = createExitDecisionAddress(goldenFBiome, source.exitDecisions[0]!.source);
+    const published = source.runState(owner);
+
+    expect(published).toMatchObject({ availability: 'available', snapshot: { owner } });
+
+    const fEvaluation = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')!
+      .biomes.find((biome) => biome.biomeKey === 'F')!;
+    const unavailableEvaluation = Object.freeze({
+      ...evaluation,
+      routes: Object.freeze(
+        evaluation.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : Object.freeze({
+                ...route,
+                biomes: Object.freeze(
+                  route.biomes.map((biome) =>
+                    biome !== fEvaluation || !('rewards' in biome)
+                      ? biome
+                      : Object.freeze({
+                          ...biome,
+                          rewards: Object.freeze({
+                            ...biome.rewards,
+                            runStateAvailability: Object.freeze([
+                              {
+                                availability: 'unavailable' as const,
+                                owner,
+                                reason: 'coverageNotReached' as const,
+                              },
+                            ]),
+                            runStateSnapshots: Object.freeze([]),
+                          }),
+                        }),
+                  ),
+                ),
+              }),
+        ),
+      ),
+    });
+    const unavailable = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, project, unavailableEvaluation),
+      'Underworld',
+      'F',
+    ).runState(owner);
+    expect(unavailable).toEqual({ availability: 'unavailable', reason: 'coverageNotReached' });
+
+    const malformedEvaluation = Object.freeze({
+      ...unavailableEvaluation,
+      routes: Object.freeze(
+        unavailableEvaluation.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : Object.freeze({
+                ...route,
+                biomes: Object.freeze(
+                  route.biomes.map((biome) =>
+                    biome.biomeKey !== 'F' || !('rewards' in biome)
+                      ? biome
+                      : Object.freeze({
+                          ...biome,
+                          rewards: Object.freeze({
+                            ...biome.rewards,
+                            runStateAvailability: Object.freeze([
+                              { availability: 'available' as const, owner },
+                            ]),
+                          }),
+                        }),
+                  ),
+                ),
+              }),
+        ),
+      ),
+    });
+    expect(() =>
+      biomeSource(
+        createWorkspaceProjectSourceIndex(catalog, project, malformedEvaluation),
+        'Underworld',
+        'F',
+      ).runState(owner),
+    ).toThrow(/publishes available Run State without a snapshot/);
+  });
+
   it('keeps authored source lookup and decision order independent of serialization order', () => {
     const project = createGoldenFGHIProject();
     const indexed = createWorkspaceProjectSourceIndex(

@@ -1,5 +1,10 @@
 import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit';
-import type { SemanticAddress, TraitOfferAddress } from '@run-planner/engine/authored-project';
+import type {
+  ExitDecisionAddress,
+  HubDecisionAddress,
+  SemanticAddress,
+  TraitOfferAddress,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 export interface FindingSelection {
@@ -12,6 +17,7 @@ export interface EditorSessionReconciliation {
   readonly clearFocusedSemanticOwner: boolean;
   readonly clearSelectedFinding: boolean;
   readonly clearTraitDialogTarget?: boolean;
+  readonly clearRunStateTarget?: boolean;
 }
 
 /** One catalog-driven panel selection retained independently for each route. */
@@ -33,6 +39,8 @@ export interface EditorSessionState {
   readonly selectedFinding: FindingSelection | null;
   /** Exact transient trait dialog target; never part of authored history. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
+  /** Exact outer decision whose read-only Run State sheet is open. */
+  readonly runStateTarget?: ExitDecisionAddress | HubDecisionAddress | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
   readonly semanticNavigationRevision: number;
 }
@@ -68,28 +76,33 @@ const editorSessionSlice = createSlice({
       state.activeRouteKey = action.payload;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.runStateTarget = null;
     },
     settingsSelected(state) {
       state.activeRouteKey = null;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.runStateTarget = null;
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
       state.activeRouteKey = action.payload.routeKey;
       state.activePanelByRoute[action.payload.routeKey] = action.payload.panel;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.runStateTarget = null;
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.traitDialogTarget = null;
+      state.runStateTarget = null;
     },
     semanticOwnerNavigated(state, action: PayloadAction<SemanticAddress>) {
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget = action.payload.kind === 'traitOffer' ? action.payload : null;
+      state.runStateTarget = null;
       const route = routeKey(action.payload);
       if (route === null) {
         return;
@@ -103,6 +116,7 @@ const editorSessionSlice = createSlice({
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget =
         action.payload.origin.kind === 'traitOffer' ? action.payload.origin : null;
+      state.runStateTarget = null;
       const route = routeKey(action.payload.origin);
       if (route === null) {
         return;
@@ -120,12 +134,19 @@ const editorSessionSlice = createSlice({
       if (action.payload.clearTraitDialogTarget) {
         state.traitDialogTarget = null;
       }
+      if (action.payload.clearRunStateTarget) state.runStateTarget = null;
     },
     traitOfferDialogOpened(state, action: PayloadAction<TraitOfferAddress>) {
       state.traitDialogTarget = action.payload;
     },
     traitOfferDialogClosed(state) {
       state.traitDialogTarget = null;
+    },
+    runStateOpened(state, action: PayloadAction<ExitDecisionAddress | HubDecisionAddress>) {
+      state.runStateTarget = action.payload;
+    },
+    runStateClosed(state) {
+      state.runStateTarget = null;
     },
   },
 });
@@ -140,6 +161,8 @@ export const {
   settingsSelected,
   traitOfferDialogClosed,
   traitOfferDialogOpened,
+  runStateClosed,
+  runStateOpened,
 } = editorSessionSlice.actions;
 
 function requireRoute(catalog: Catalog, routeKeyValue: string): void {

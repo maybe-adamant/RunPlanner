@@ -58,6 +58,8 @@ export type {
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
   WorkspaceRoomSummary,
+  WorkspaceRunStateBagSection,
+  WorkspaceRunStateLauncher,
   WorkspaceShopPurchaseOrderOption,
   WorkspaceRoute,
   WorkspaceTakeoverBatchInteraction,
