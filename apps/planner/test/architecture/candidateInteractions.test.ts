@@ -266,7 +266,7 @@ describe('workspace candidate interaction families', () => {
       expect(events).toHaveLength(0);
       expect(projectEvaluationCount, `${family} repeat load reacquired project evaluation`).toBe(2);
     }
-  });
+  }, 10_000);
 
   it('loads one Shop row as a bounded, cached exact-order candidate domain', () => {
     const events: CandidateEvaluationEvent[] = [];

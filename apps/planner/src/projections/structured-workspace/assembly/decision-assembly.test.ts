@@ -583,9 +583,16 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.topologyState).toBe('retained');
     expect(assembly.batch.marker.assessment).toBe('unassessed');
     expect(assembly.batch.targets.every((target) => target.retained)).toBe(true);
+    expect(assembly.batch.targets.every((target) => target.physicalState === 'available')).toBe(
+      true,
+    );
+    expect(assembly.batch.repairIntent).toBeUndefined();
     expect(
       assembly.batch.targets.every((target) => target.marker.assessment === 'unassessed'),
     ).toBe(true);
+    expect(
+      assembly.roomControls.filter((control) => control.kind === 'targetRoomPicker'),
+    ).toHaveLength(assembly.batch.targets.length);
     expect(kit.markers.destinations().get(retainedTarget.room.marker.focusKey)?.nodeKey).toBe(
       assembly.batch.key,
     );

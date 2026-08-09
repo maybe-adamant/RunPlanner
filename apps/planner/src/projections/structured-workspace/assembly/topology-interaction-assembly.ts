@@ -10,7 +10,6 @@ import {
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import {
@@ -223,7 +222,7 @@ function takeoverInteractionRequirements(
       continue;
     }
   }
-  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  const completeness = source.completeness;
   if (completeness.completion !== 'incomplete' || completeness.frontier.kind !== 'exitDecision') {
     return Object.freeze([...requirementsByOwner.values()]);
   }
@@ -301,11 +300,11 @@ function hubTakeoverInteractionRequirements(
 function frontierInteractionRequirements(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): readonly WorkspaceFrontierInteractionRequirement[] {
-  const { catalog, source } = input;
-  const { biome, plan } = source;
+  const { source } = input;
+  const { plan } = source;
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
-  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  const completeness = source.completeness;
   if (completeness.completion !== 'incomplete') return Object.freeze([]);
   switch (completeness.frontier.kind) {
     case 'exitDecision': {

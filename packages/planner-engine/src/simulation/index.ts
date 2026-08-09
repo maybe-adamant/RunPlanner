@@ -223,6 +223,7 @@ export {
   countedRewardTypeDomain,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   evaluateBiome,
+  materializedBiomePrefixCoveragePoint,
   ProjectSimulationContractError,
   simulateProject,
   simulateProjectAssembly,

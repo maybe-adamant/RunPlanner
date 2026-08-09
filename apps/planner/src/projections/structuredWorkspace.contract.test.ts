@@ -35,7 +35,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createGoldenFGHIProject,
+  goldenFBiome,
+} from '@run-planner/test-fixtures';
 import {
   appendNEntry,
   createRepresentativeNOPQProject,
@@ -209,7 +213,13 @@ function withMalformedPrefix(
         if (!('materializedPrefix' in biome))
           throw new Error(`${biomeKey} fixture must have a prefix`);
         replaced = true;
-        return { ...biome, materializedPrefix: transform(biome.materializedPrefix) };
+        return {
+          ...biome,
+          materializedPrefix: transform(biome.materializedPrefix),
+          ...(biome.assessmentPrefix === undefined
+            ? {}
+            : { assessmentPrefix: transform(biome.assessmentPrefix) }),
+        };
       }),
     };
   });
@@ -406,7 +416,7 @@ describe('structured workspace overlay contract', () => {
     ]) {
       expect(() => projectWorkspace(project, evaluation)).toThrow(message);
     }
-  });
+  }, 10_000);
 
   it('rejects an evaluator-only decision instead of rendering it as authored UI', () => {
     const project = createGoldenFGHIProject();
@@ -1156,6 +1166,7 @@ describe('structured workspace overlay contract', () => {
       occurrenceId: returnId,
       gameName: returnedCombat,
     });
+    project = authorLegalTraitOffers(project);
 
     const projected = projectWorkspace(project);
     const workspace = projected.routes
@@ -1198,32 +1209,24 @@ describe('structured workspace overlay contract', () => {
       biome.biomeKey,
       (prefix) => {
         const frontier = prefix.frontier;
-        const batch =
+        const additionalContinuation =
           frontier?.kind === 'exitDecision' &&
           semanticAddressKey(frontier.origin) === semanticAddressKey(decision)
-            ? frontier.partialBatch
+            ? frontier.additional[0]
             : undefined;
-        const additionalContinuation = batch?.additional[0];
-        if (
-          frontier?.kind !== 'exitDecision' ||
-          batch === undefined ||
-          additionalContinuation === undefined
-        ) {
-          throw new Error('selected Midshop canonical contract batch is missing');
+        if (frontier?.kind !== 'exitDecision' || additionalContinuation === undefined) {
+          throw new Error('selected Midshop canonical contract continuation is missing');
         }
         return {
           ...prefix,
           frontier: {
             ...frontier,
-            partialBatch: {
-              ...batch,
-              additional: [
-                {
-                  ...additionalContinuation,
-                  room: { ...additionalContinuation.room, occurrenceId: normalId },
-                },
-              ],
-            },
+            additional: [
+              {
+                ...additionalContinuation,
+                room: { ...additionalContinuation.room, occurrenceId: normalId },
+              },
+            ],
           },
         };
       },

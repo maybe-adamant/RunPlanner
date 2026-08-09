@@ -1,7 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createBiomeAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -12,7 +15,7 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type SemanticFinding } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -21,12 +24,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures';
-import {
-  createRepresentativeNProject,
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
 function biomeSource(
@@ -66,83 +64,198 @@ function reversedFDecisionSerialization() {
   };
 }
 
-function clampedHubTargetLifecycleEvaluation(
-  project: ReturnType<typeof createRepresentativeNProject>,
-) {
-  const evaluation = simulateProject(catalog, project);
-  const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
-  const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
-  if (
-    route === undefined ||
-    biome === undefined ||
-    biome.authoring !== 'incomplete' ||
-    biome.coverage.kind !== 'prefix' ||
-    !('materializedPrefix' in biome)
-  ) {
-    throw new Error('source-index Hub fixture did not produce an incomplete N prefix');
-  }
-  const hub = biome.materializedPrefix.decisions.find((decision) => decision.kind === 'hub');
-  const target = hub?.board.targets.find((candidate) => candidate.hubSlotKey === 'combat05');
-  if (hub?.kind !== 'hub' || target === undefined) {
-    throw new Error('source-index Hub fixture lost the first target');
-  }
-  const visit = createHubVisitAddress(nBiome, 'hub', 1);
-  const targetReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
-  const finding = Object.freeze({
-    code: 'rewardAcquisitionUnavailable' as const,
-    evidence: Object.freeze({}),
-    origin: targetReward,
-    phase: 'rewardGeneration' as const,
-    severity: 'error' as const,
-  }) satisfies SemanticFinding;
-  const clampedHub = Object.freeze({ ...hub, visits: Object.freeze([]) });
-  const materializedPrefix = Object.freeze({
-    ...biome.materializedPrefix,
-    decisions: Object.freeze(
-      biome.materializedPrefix.decisions.map((decision) =>
-        decision === hub ? clampedHub : decision,
-      ),
+function selectedContractWithoutNormalTargets() {
+  const base = createGoldenFGHIProject();
+  const located = base.routes.flatMap((route) =>
+    route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'zagreusContract')
+          ? [{ occurrence, plan, route }]
+          : [];
+      }),
     ),
-    frontier: Object.freeze({
-      enteredLocalRooms: Object.freeze([]),
-      kind: 'hubVisit' as const,
-      localSlots: Object.freeze([]),
-      origin: visit,
-      parentRestores: Object.freeze([]),
-      phase: 'targetLifecycle' as const,
-      target,
-    }),
+  )[0];
+  if (located === undefined) throw new Error('source-index selected contract is missing');
+  const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+  const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+  const owner = createExitDecisionAddress(biome, source);
+  const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'zagreusContract');
+  let project = applyProjectCommand(base, catalog, { kind: 'RemoveExitDecision', decision: owner });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional,
+    occurrenceId: createOccurrenceId('source-index-additional-only-contract'),
   });
-  const clampedBiome = Object.freeze({
-    ...biome,
-    coverage: Object.freeze({
-      kind: 'prefix' as const,
-      through: Object.freeze({ checkpoint: 'beforeTargetGeneration' as const, owner: visit }),
-    }),
-    findings: Object.freeze([...biome.findings, finding]),
-    materializedPrefix,
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, source),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
   });
-  return Object.freeze({
-    ...evaluation,
-    findings: Object.freeze([...evaluation.findings, finding]),
-    routes: Object.freeze(
-      evaluation.routes.map((candidate) =>
-        candidate !== route
-          ? candidate
-          : Object.freeze({
-              ...candidate,
-              biomes: Object.freeze(
-                candidate.biomes.map((candidateBiome) =>
-                  candidateBiome !== biome ? candidateBiome : clampedBiome,
-                ),
-              ),
-            }),
-      ),
-    ),
-  });
+  return { additional, biome, owner, project };
 }
 
 describe('structured workspace source index', () => {
+  it('indexes an evaluated selected continuation without manufacturing a partial normal batch, and rejects an orphan continuation owner', () => {
+    const fixture = selectedContractWithoutNormalTargets();
+    const evaluation = simulateProject(catalog, fixture.project);
+    const evaluatedBiome = evaluation.routes
+      .find((route) => route.routeKey === fixture.biome.routeKey)
+      ?.biomes.find((biome) => biome.biomeKey === fixture.biome.biomeKey);
+    if (
+      evaluatedBiome?.authoring !== 'incomplete' ||
+      evaluatedBiome.coverage.kind !== 'prefix' ||
+      !('materializedPrefix' in evaluatedBiome) ||
+      evaluatedBiome.assessmentPrefix !== undefined ||
+      evaluatedBiome.materializedPrefix.frontier?.kind !== 'exitDecision'
+    ) {
+      throw new Error('source-index additional-only fixture did not produce an ordinary prefix');
+    }
+    expect(evaluatedBiome.materializedPrefix.frontier.partialBatch).toBeUndefined();
+    expect(evaluatedBiome.materializedPrefix.frontier.additional).toHaveLength(1);
+
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, fixture.project, evaluation),
+      fixture.biome.routeKey,
+      fixture.biome.biomeKey,
+    );
+    expect(source.evaluatedBatch(fixture.owner)).toBeUndefined();
+    expect(source.evaluatedAdditional(fixture.owner)).toEqual([
+      expect.objectContaining({
+        origin: fixture.additional,
+        room: expect.objectContaining({ entered: true }),
+      }),
+    ]);
+
+    const orphan = createExitDecisionAddress(fixture.biome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('evaluator-only-additional-owner'),
+    });
+    const malformedPrefix = Object.freeze({
+      ...evaluatedBiome.materializedPrefix,
+      frontier: Object.freeze({ ...evaluatedBiome.materializedPrefix.frontier, origin: orphan }),
+    });
+    const malformedBiome = Object.freeze({
+      ...evaluatedBiome,
+      coverage: Object.freeze({
+        ...evaluatedBiome.coverage,
+        through: Object.freeze({ ...evaluatedBiome.coverage.through, owner: orphan }),
+      }),
+      materializedPrefix: malformedPrefix,
+    });
+    const malformedEvaluation = Object.freeze({
+      ...evaluation,
+      routes: Object.freeze(
+        evaluation.routes.map((route) =>
+          route.routeKey !== fixture.biome.routeKey
+            ? route
+            : Object.freeze({
+                ...route,
+                biomes: Object.freeze(
+                  route.biomes.map((biome) =>
+                    biome.biomeKey === fixture.biome.biomeKey ? malformedBiome : biome,
+                  ),
+                ),
+              }),
+        ),
+      ),
+    });
+    expect(() =>
+      createWorkspaceProjectSourceIndex(catalog, fixture.project, malformedEvaluation),
+    ).toThrow(/evaluated additional continuations without an authored batch decision/);
+  });
+
+  it('keeps complete authored suffixes while limiting evaluator overlays to the assessed prefix', () => {
+    const base = createGoldenFGHIProject();
+    const validF = simulateProject(catalog, base)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (validF?.authoring !== 'complete' || validF.validity !== 'valid') {
+      throw new Error('source-index F fixture did not complete-valid');
+    }
+    const selected = validF.rewards.selectedTraitOffers.find(
+      (trace) => trace.offer.giverKey !== 'WeaponUpgrade',
+    );
+    const [first, second, third] = selected?.offer.options ?? [];
+    if (
+      selected === undefined ||
+      first === undefined ||
+      second === undefined ||
+      third === undefined
+    ) {
+      throw new Error('source-index F fixture has no complete boon offer');
+    }
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: {
+        giverKey: selected.offer.giverKey,
+        options: [{ ...first, rarity: 'Heroic' }, second, third],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const evaluation = simulateProject(catalog, project);
+    const invalidF = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (
+      invalidF?.authoring !== 'complete' ||
+      invalidF.validity !== 'invalid' ||
+      invalidF.coverage.kind !== 'prefix'
+    ) {
+      throw new Error('source-index F fixture did not complete-block');
+    }
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, project, evaluation),
+      'Underworld',
+      'F',
+    );
+    const later = source.exitDecisions
+      .map((decision) => createExitDecisionAddress(goldenFBiome, decision.source))
+      .find((owner) => !source.isAssessed(owner));
+    if (later === undefined) throw new Error('source-index F fixture has no retained suffix');
+    if (invalidF.coverage.blockedAt === undefined) {
+      throw new Error('source-index F fixture has no blocking owner');
+    }
+
+    expect(source.completeness.completion).toBe('complete');
+    expect(source.exitDecisions).toHaveLength(
+      project.routes
+        .find((route) => route.routeKey === 'Underworld')!
+        .biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.decisions.filter((decision) => decision.kind === 'exit').length,
+    );
+    expect(source.evaluatedBatch(later)).toBeUndefined();
+    expect(source.isAssessed(invalidF.coverage.blockedAt)).toBe(false);
+    expect(source.findingsFor(invalidF.coverage.blockedAt)).not.toHaveLength(0);
+
+    if (!('materializedPrefix' in invalidF)) {
+      throw new Error('source-index F fixture has no retained materialization');
+    }
+    const malformedF = Object.freeze({
+      ...invalidF,
+      assessmentPrefix: invalidF.materializedPrefix,
+    });
+    const malformedEvaluation = Object.freeze({
+      ...evaluation,
+      routes: Object.freeze(
+        evaluation.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : Object.freeze({
+                ...route,
+                biomes: Object.freeze(
+                  route.biomes.map((biome) => (biome.biomeKey === 'F' ? malformedF : biome)),
+                ),
+              }),
+        ),
+      ),
+    });
+    expect(() => createWorkspaceProjectSourceIndex(catalog, project, malformedEvaluation)).toThrow(
+      /assessment prefix extends beyond declared coverage/,
+    );
+  });
+
   it('returns exact available and unavailable Run State products, and rejects an available owner without its snapshot', () => {
     const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
@@ -489,51 +602,6 @@ describe('structured workspace source index', () => {
     expect(
       source.isAssessed(createLocalChildAddress(nBiome, dormant, 'sideRooms', 'sideDoor1')),
     ).toBe(false);
-  });
-
-  it('uses the clamped Hub lifecycle frontier rather than nested canonical target shape', () => {
-    const targetOccurrenceId = nOccurrenceId('combat05');
-    const visit = createHubVisitAddress(nBiome, 'hub', 1);
-    const target = createHubSlotAddress(nBiome, 'hub', 'combat05');
-    const targetOccurrence = createOccurrenceAddress(nBiome, targetOccurrenceId);
-    const targetReward = createIncomingRewardAddress(nBiome, targetOccurrenceId);
-    const project = createRepresentativeNProject({ includePreboss: false });
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(
-        catalog,
-        project,
-        clampedHubTargetLifecycleEvaluation(project),
-      ),
-      'Surface',
-      'N',
-    );
-
-    expect(source.evaluation).toMatchObject({
-      authoring: 'incomplete',
-      coverage: {
-        kind: 'prefix',
-        through: { checkpoint: 'beforeTargetGeneration', owner: visit },
-      },
-    });
-    expect(source.isAssessed(visit)).toBe(true);
-    expect(source.isAssessed(target)).toBe(false);
-    expect(source.isAssessed(targetOccurrence)).toBe(false);
-    expect(source.isAssessed(targetReward)).toBe(false);
-    expect(
-      source.isAssessed(
-        createLocalChildAddress(nBiome, targetOccurrenceId, 'sideRooms', 'sideDoor1'),
-      ),
-    ).toBe(false);
-    expect(source.isAssessed(createOccurrenceAddress(nBiome, nOccurrenceId('combat10')))).toBe(
-      true,
-    );
-
-    // Findings remain a separate feedback index. Assembly can use this exact
-    // owner for a visible assessed marker without claiming evaluation reached it.
-    expect(source.findingsFor(targetReward)).toHaveLength(1);
-    expect(source.isAssessed(targetReward) || source.findingsFor(targetReward).length > 0).toBe(
-      true,
-    );
   });
 
   it('keeps evaluator products and findings addressed to authored owners', () => {

@@ -32,6 +32,7 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import {
+  authorLegalTraitOffers,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -735,13 +736,15 @@ describe('DecisionWorkbench', () => {
   it('distinguishes a forced effective reward pool from the authored base pool', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
-      occurrenceId: goldenFOccurrenceId(4, 1),
+      occurrenceId: goldenFStartId,
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      gameName: 'F_Combat01',
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 2)),
-    });
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        gameName: 'F_Combat01',
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      }),
+    );
     renderStaticDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
 
     expect(screen.getByLabelText('Base reward pool')).toBeTruthy();
@@ -801,6 +804,12 @@ describe('DecisionWorkbench', () => {
       throw new Error('selected retained offer is missing');
     expect(within(offer).getByText('Room selected')).toBeTruthy();
     expect(within(offer).queryByText('Door taken')).toBeNull();
+    expect(selectedControl).not.toHaveProperty('disabled', true);
+    expect(within(offer).getByRole('button', { name: /Door \d+ room/ })).not.toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).toBeNull();
   });
 
   it('executes fixed width-one O and reordered-Q takeovers through Door 1', async () => {
