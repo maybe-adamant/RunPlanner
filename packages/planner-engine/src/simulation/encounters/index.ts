@@ -17,7 +17,12 @@ export {
   type EncounterCandidateBoundary,
   type EncounterRoomCandidateCapability,
 } from './candidates';
-export { createEncounterCommandAuthorization } from './authorization';
+export {
+  encounterPhaseAuthoringDomainForRoom,
+  type EncounterPhaseAuthoringDomain,
+  type EncounterPhaseAuthoringOwner,
+  type EncounterPhaseAuthoringRoomOptions,
+} from './authoring-domain';
 export {
   structurallyActiveEncounterRooms,
   type EncounterStructuralRoom,

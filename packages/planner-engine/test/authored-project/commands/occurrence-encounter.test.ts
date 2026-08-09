@@ -19,7 +19,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  createEncounterCommandAuthorization,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -59,12 +58,8 @@ const pCombatPhase = createEncounterPhaseAddress(
   'Combat',
 );
 
-function withAuthorization(project: ProjectDocument) {
-  const assembly = simulateProjectAssembly(catalog, project);
-  return Object.freeze({
-    assembly,
-    encounterAuthorization: createEncounterCommandAuthorization(catalog, assembly),
-  });
+function withAssembly(project: ProjectDocument) {
+  return simulateProjectAssembly(catalog, project);
 }
 
 function occurrence(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
@@ -99,9 +94,9 @@ function enteredNLocalProject(): ProjectDocument {
 }
 
 describe('authored encounter occurrence commands', () => {
-  it('authorizes a valid top-level selection, resets it, and records one atomic history edit', () => {
+  it('applies a valid top-level selection, resets it, and records one atomic history edit', () => {
     const initial = createRepresentativeNOPProject();
-    const { assembly, encounterAuthorization } = withAuthorization(initial);
+    const assembly = withAssembly(initial);
     const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       assembly,
       pIntroPhase,
@@ -115,16 +110,11 @@ describe('authored encounter occurrence commands', () => {
     expect(support?.candidateEncounterKeys).toContain('P_Combat03_PreCombat01');
 
     const history = createProjectHistory(initial);
-    const selected = applyProjectHistoryCommand(
-      history,
-      catalog,
-      {
-        kind: 'SelectEncounter',
-        phase: pIntroPhase,
-        encounterKey: 'P_Combat03_PreCombat01',
-      },
-      { encounterAuthorization },
-    );
+    const selected = applyProjectHistoryCommand(history, catalog, {
+      kind: 'SelectEncounter',
+      phase: pIntroPhase,
+      encounterKey: 'P_Combat03_PreCombat01',
+    });
 
     expect(selected.past).toEqual([initial]);
     expect(
@@ -136,12 +126,10 @@ describe('authored encounter occurrence commands', () => {
     expect(undone.present).toBe(initial);
     expect(redoProjectHistory(undone).present).toBe(selected.present);
 
-    const reset = applyProjectHistoryCommand(
-      selected,
-      catalog,
-      { kind: 'ResetEncounter', phase: pIntroPhase },
-      withAuthorization(selected.present),
-    );
+    const reset = applyProjectHistoryCommand(selected, catalog, {
+      kind: 'ResetEncounter',
+      phase: pIntroPhase,
+    });
     expect(occurrence(reset.present, 'P', pCombatId).encounters.encounterKeyByPhase).toMatchObject({
       Intro: 'GeneratedP_PreCombat',
     });
@@ -151,16 +139,11 @@ describe('authored encounter occurrence commands', () => {
 
   it('retains a top-level selected encounter while its room is unpicked, then republishes it on repick', () => {
     const initial = createRepresentativeNOPProject();
-    const selected = applyProjectCommand(
-      initial,
-      catalog,
-      {
-        kind: 'SelectEncounter',
-        phase: pIntroPhase,
-        encounterKey: 'P_Combat03_PreCombat01',
-      },
-      withAuthorization(initial),
-    );
+    const selected = applyProjectCommand(initial, catalog, {
+      kind: 'SelectEncounter',
+      phase: pIntroPhase,
+      encounterKey: 'P_Combat03_PreCombat01',
+    });
     const openingSelection = createExitSelectionAddress(pBiome, {
       kind: 'occurrence',
       occurrenceId: pOccurrenceIds.intro,
@@ -184,7 +167,7 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-        withAuthorization(unpicked).assembly,
+        withAssembly(unpicked),
         pIntroPhase,
       ),
     ).toBeUndefined();
@@ -203,7 +186,7 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-        withAuthorization(reauthored).assembly,
+        withAssembly(reauthored),
         pIntroPhase,
       ),
     ).toMatchObject({
@@ -213,9 +196,9 @@ describe('authored encounter occurrence commands', () => {
     });
   });
 
-  it('authorizes a selected, entered N local child and retains its selection across removal and re-entry', () => {
+  it('edits a selected, entered N local child and retains its selection across removal and re-entry', () => {
     const entered = enteredNLocalProject();
-    const { assembly, encounterAuthorization } = withAuthorization(entered);
+    const assembly = withAssembly(entered);
     const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       assembly,
       nLocalPhase,
@@ -228,16 +211,11 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(support?.candidateEncounterKeys).toContain('GeneratedNSubRoom_Bigger');
 
-    const selected = applyProjectCommand(
-      entered,
-      catalog,
-      {
-        kind: 'SelectEncounter',
-        phase: nLocalPhase,
-        encounterKey: 'GeneratedNSubRoom_Bigger',
-      },
-      { encounterAuthorization },
-    );
+    const selected = applyProjectCommand(entered, catalog, {
+      kind: 'SelectEncounter',
+      phase: nLocalPhase,
+      encounterKey: 'GeneratedNSubRoom_Bigger',
+    });
     expect(localSideRoom(selected).encounters.encounterKeyByPhase).toEqual({
       Encounter: 'GeneratedNSubRoom_Bigger',
     });
@@ -271,17 +249,15 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-        withAuthorization(reentered).assembly,
+        withAssembly(reentered),
         nLocalPhase,
       ),
     ).toMatchObject({ selectedPossible: true, selectedEncounterKey: 'GeneratedNSubRoom_Bigger' });
 
-    const reset = applyProjectCommand(
-      reentered,
-      catalog,
-      { kind: 'ResetEncounter', phase: nLocalPhase },
-      withAuthorization(reentered),
-    );
+    const reset = applyProjectCommand(reentered, catalog, {
+      kind: 'ResetEncounter',
+      phase: nLocalPhase,
+    });
     expect(localSideRoom(reset).encounters.encounterKeyByPhase).toEqual({
       Encounter: 'GeneratedNSubRoom',
     });
@@ -289,16 +265,11 @@ describe('authored encounter occurrence commands', () => {
 
   it('restores a deleted parent-local encounter selection through authored history undo', () => {
     const entered = enteredNLocalProject();
-    const selected = applyProjectCommand(
-      entered,
-      catalog,
-      {
-        kind: 'SelectEncounter',
-        phase: nLocalPhase,
-        encounterKey: 'GeneratedNSubRoom_Bigger',
-      },
-      withAuthorization(entered),
-    );
+    const selected = applyProjectCommand(entered, catalog, {
+      kind: 'SelectEncounter',
+      phase: nLocalPhase,
+      encounterKey: 'GeneratedNSubRoom_Bigger',
+    });
     const initial = createProjectHistory(selected);
     const withoutVisit = applyProjectHistoryCommand(initial, catalog, {
       kind: 'ReplaceHubVisitOrder',
@@ -350,56 +321,38 @@ describe('authored encounter occurrence commands', () => {
     }
   });
 
-  it('rejects missing, stale, wrong-catalog, noncandidate, fixed, and dormant encounter edits', () => {
+  it('keeps command acceptance structural while evaluation reports contextual invalidity', () => {
     const topLevel = createRepresentativeNOPProject();
     const command = {
       kind: 'SelectEncounter' as const,
       phase: pIntroPhase,
       encounterKey: 'P_Combat03_PreCombat01',
     };
-    const authorization = withAuthorization(topLevel).encounterAuthorization;
+    expect(
+      occurrence(applyProjectCommand(topLevel, catalog, command), 'P', pCombatId).encounters
+        .encounterKeyByPhase,
+    ).toMatchObject({ Intro: 'P_Combat03_PreCombat01' });
 
-    expect(() => applyProjectCommand(topLevel, catalog, command)).toThrow(
-      'encounter selection requires an exact candidate authorization',
+    const contextInvalid = applyProjectCommand(topLevel, catalog, {
+      kind: 'SelectEncounter',
+      phase: pCombatPhase,
+      encounterKey: 'GeneratedP_Large',
+    });
+    expect(occurrence(contextInvalid, 'P', pCombatId).encounters.encounterKeyByPhase).toMatchObject(
+      { Combat: 'GeneratedP_Large' },
     );
-    const stale = applyProjectCommand(topLevel, catalog, { kind: 'RenameProject', name: 'Stale' });
-    expect(() =>
-      applyProjectCommand(stale, catalog, command, { encounterAuthorization: authorization }),
-    ).toThrow('encounter authorization requires the exact current evaluation assembly');
 
-    const catalogClone = Object.freeze({ ...catalog }) as typeof catalog;
-    expect(() =>
-      applyProjectCommand(topLevel, catalogClone, command, {
-        encounterAuthorization: authorization,
-      }),
-    ).toThrow('encounter authorization was created for a different catalog');
-
-    expect(() =>
-      applyProjectCommand(
-        topLevel,
-        catalog,
-        { kind: 'SelectEncounter', phase: pCombatPhase, encounterKey: 'GeneratedP_Large' },
-        { encounterAuthorization: authorization },
-      ),
-    ).toThrow('GeneratedP_Large is not an eligible encounter candidate');
-
-    const permissiveAuthorization = Object.freeze({ assertAuthorized: () => undefined });
     const unknownPhase = createEncounterPhaseAddress(
       pBiome,
       { kind: 'occurrence', occurrenceId: pCombatId },
       'NotADeclaredPhase',
     );
     expect(() =>
-      applyProjectCommand(
-        topLevel,
-        catalog,
-        {
-          kind: 'SelectEncounter',
-          phase: unknownPhase,
-          encounterKey: 'P_Combat03_PreCombat01',
-        },
-        { encounterAuthorization: permissiveAuthorization },
-      ),
+      applyProjectCommand(topLevel, catalog, {
+        kind: 'SelectEncounter',
+        phase: unknownPhase,
+        encounterKey: 'P_Combat03_PreCombat01',
+      }),
     ).toThrow('P_Combat03 has no encounter phase NotADeclaredPhase');
 
     const fixed = createEncounterPhaseAddress(
@@ -408,22 +361,21 @@ describe('authored encounter occurrence commands', () => {
       'Encounter',
     );
     expect(() =>
-      applyProjectCommand(
-        createCompleteNProject(),
-        catalog,
-        { kind: 'ResetEncounter', phase: fixed },
-        { encounterAuthorization: permissiveAuthorization },
-      ),
+      applyProjectCommand(createCompleteNProject(), catalog, {
+        kind: 'ResetEncounter',
+        phase: fixed,
+      }),
     ).toThrow('N_PreHub01.Encounter is a fixed encounter phase');
 
     const dormant = createCompleteNProject();
-    expect(() =>
-      applyProjectCommand(
-        dormant,
-        catalog,
-        { kind: 'SelectEncounter', phase: nLocalPhase, encounterKey: 'GeneratedNSubRoom_Bigger' },
-        { encounterAuthorization: withAuthorization(dormant).encounterAuthorization },
-      ),
-    ).toThrow('encounter phase is not structurally active in the current evaluation');
+    expect(
+      localSideRoom(
+        applyProjectCommand(dormant, catalog, {
+          kind: 'SelectEncounter',
+          phase: nLocalPhase,
+          encounterKey: 'GeneratedNSubRoom_Bigger',
+        }),
+      ).encounters.encounterKeyByPhase,
+    ).toEqual({ Encounter: 'GeneratedNSubRoom_Bigger' });
   });
 });

@@ -23,9 +23,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  createEncounterCommandAuthorization,
   simulateProject,
-  simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -755,12 +753,6 @@ describe('OccurrenceWorkbench', () => {
       initial,
       catalog,
       { kind: 'ResetEncounter', phase },
-      {
-        encounterAuthorization: createEncounterCommandAuthorization(
-          catalog,
-          simulateProjectAssembly(catalog, initial),
-        ),
-      },
     );
     const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
     const finding = simulateProject(catalog, reset).findings.find(

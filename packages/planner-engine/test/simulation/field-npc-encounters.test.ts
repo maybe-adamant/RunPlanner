@@ -19,7 +19,6 @@ import type {
   EncounterSet,
 } from '@run-planner/engine/catalog-schema';
 import {
-  createEncounterCommandAuthorization,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -62,12 +61,10 @@ function support(project: ProjectDocument, owner: ReturnType<typeof phase>) {
 }
 
 function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encounterKey: string) {
-  const assembly = simulateProjectAssembly(catalog, project);
   return applyProjectCommand(
     project,
     catalog,
     { kind: 'SelectEncounter', phase: owner, encounterKey },
-    { encounterAuthorization: createEncounterCommandAuthorization(catalog, assembly) },
   );
 }
 

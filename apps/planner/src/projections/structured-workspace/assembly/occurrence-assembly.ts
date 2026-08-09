@@ -1,7 +1,6 @@
 import {
   createAdditionalExitAddress,
   createIncomingRewardAddress,
-  createEncounterPhaseAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
@@ -26,10 +25,10 @@ import type {
   RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type {
-  CanonicalAuthoredRoom,
-  EncounterPhaseCandidateSupport,
-  FieldsBatchFacts,
+import type { CanonicalAuthoredRoom, FieldsBatchFacts } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseAuthoringDomainForRoom,
+  type EncounterPhaseAuthoringRoomOptions,
 } from '@run-planner/engine/simulation';
 
 import type {
@@ -78,10 +77,6 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
-  /** Exact engine-owned active candidate capability for one pool-backed phase. */
-  readonly encounterCandidateAt: (
-    phase: EncounterPhaseAddress,
-  ) => EncounterPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -429,67 +424,53 @@ function requireRewardWheelAttachment(
 }
 
 /**
- * Maps a declaration-owned pool into one renderable phase only when the exact
- * engine artifact says that phase is structurally active. This deliberately
- * does not use envelope position, encounter count, requirement results, or
- * suffix policy to decide visibility.
+ * Maps a declaration-owned pool into one renderable phase from the authored
+ * encounter domain. Candidate eligibility remains a lazy interaction product;
+ * it never controls whether the authored phase exists in the workspace.
  */
 function activeEncounterPhasesForOwner(
   input: WorkspaceOccurrenceAssemblyInput,
   room: RoomDeclaration,
   owner: EncounterPhaseAddress['owner'],
+  encounters: RoomOccurrence['encounters'],
+  options: EncounterPhaseAuthoringRoomOptions = {},
 ): readonly WorkspaceEncounterPhase[] {
   const phases: WorkspaceEncounterPhase[] = [];
-  for (const binding of room.encounterSlotBindings) {
-    if (binding.kind !== 'set') continue;
-    const address = createEncounterPhaseAddress(input.biome, owner, binding.slotKey);
-    const support = input.encounterCandidateAt(address);
-    if (support === undefined) continue;
-    if (
-      semanticAddressKey(support.origin) !== semanticAddressKey(address) ||
-      support.active !== true
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(address)} received mismatched encounter candidate support`,
-      );
-    }
-    const set = input.catalog.encounterSets.byKey[binding.encounterSetKey];
-    if (set === undefined) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${room.gameName} has no encounter set ${binding.encounterSetKey}`,
-      );
-    }
-    if (!set.encounterDefinitionKeys.includes(support.selectedEncounterKey)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(address)} selected ${support.selectedEncounterKey} outside ${set.key}`,
-      );
-    }
+  for (const domain of encounterPhaseAuthoringDomainForRoom(
+    input.catalog,
+    input.biome,
+    room,
+    owner,
+    encounters,
+    options,
+  )) {
+    const address = domain.origin;
     const candidateChoices = Object.freeze(
-      set.encounterDefinitionKeys.map((encounterKey) => {
+      domain.declaredEncounterKeys.map((encounterKey) => {
         const definition = input.catalog.encounterDefinitions.byKey[encounterKey];
         if (definition === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${set.key} has no encounter definition ${encounterKey}`,
+            `${semanticAddressKey(address)} has no encounter definition ${encounterKey}`,
           );
         }
         return Object.freeze({ label: definition.label, value: definition.key });
       }),
     );
     const selectedDefinition =
-      input.catalog.encounterDefinitions.byKey[support.selectedEncounterKey];
+      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey];
     if (selectedDefinition === undefined) {
       throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(address)} has no selected encounter definition ${support.selectedEncounterKey}`,
+        `${semanticAddressKey(address)} has no selected encounter definition ${domain.selectedEncounterKey}`,
       );
     }
     phases.push(
       Object.freeze({
         address,
         candidateChoices,
-        customizable: set.encounterDefinitionKeys.length > 1,
-        label: binding.slotKey,
+        customizable: domain.declaredEncounterKeys.length > 1,
+        label: domain.slotKey,
         marker: input.markerDestinations.marker(address),
-        resettable: support.selectedEncounterKey !== set.defaultEncounterDefinitionKey,
+        resettable: domain.selectedEncounterKey !== domain.defaultEncounterKey,
         selectedEncounter: Object.freeze({
           key: selectedDefinition.key,
           label: selectedDefinition.label,
@@ -654,12 +635,20 @@ function roomLocalForOccurrence(
             group.key,
             slot.slotKey,
           );
-          const encounterPhases = activeEncounterPhasesForOwner(input, sideRoom, {
-            kind: 'localChild',
-            occurrenceId: occurrence.occurrenceId,
-            groupKey: group.key,
-            slotKey: slot.slotKey,
-          });
+          const encounterPhases =
+            side.generation === 'generated'
+              ? activeEncounterPhasesForOwner(
+                  input,
+                  sideRoom,
+                  {
+                    kind: 'localChild',
+                    occurrenceId: occurrence.occurrenceId,
+                    groupKey: group.key,
+                    slotKey: slot.slotKey,
+                  },
+                  side.encounters,
+                )
+              : Object.freeze([]);
           const descriptor = {
             address,
             availabilityRank: slot.availabilityRank,
@@ -1104,10 +1093,22 @@ export function assembleWorkspaceOccurrence(
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
-  const encounterPhases = activeEncounterPhasesForOwner(input, room, {
-    kind: 'occurrence',
-    occurrenceId: occurrence.occurrenceId,
-  });
+  const encounterPhases = input.facts.detailsActive
+    ? activeEncounterPhasesForOwner(
+        input,
+        room,
+        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+        occurrence.encounters,
+        {
+          ...(occurrence.state.kind === 'shipCombat'
+            ? { shipEncounterCount: occurrence.state.encounterCount }
+            : {}),
+          ...(input.fieldsBatchFacts === undefined
+            ? {}
+            : { fieldsCageRewardCount: input.fieldsBatchFacts.doorCageRewardCount }),
+        },
+      )
+    : Object.freeze([]);
   const roomLocal = roomLocalForOccurrence(input, room, rewardControls);
   const zagreusDeclaration = room.additionalExits.find(
     (candidate) => candidate.kind === 'zagreusContract',

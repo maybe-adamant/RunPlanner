@@ -24,7 +24,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   composeBiomeHistoryPrefix,
-  createEncounterCommandAuthorization,
   evaluateBiomeRewards,
   evaluateBiomeRoomGeneration,
   materializeBiomePrefix,
@@ -187,12 +186,10 @@ function selectEncounter(
   encounterKey: string,
 ): ProjectDocument {
   const phase = createEncounterPhaseAddress(biome, source(occurrenceId), 'Encounter');
-  const assembly = simulateProjectAssembly(catalog, project);
   return applyProjectCommand(
     project,
     catalog,
     { kind: 'SelectEncounter', phase, encounterKey },
-    { encounterAuthorization: createEncounterCommandAuthorization(catalog, assembly) },
   );
 }
 

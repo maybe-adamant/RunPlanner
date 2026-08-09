@@ -82,9 +82,7 @@ export {
 export {
   applyProjectCommand,
   projectCommandAddress,
-  type EncounterCommandAuthorization,
   type EncounterOccurrenceCommand,
-  type ProjectCommandApplyOptions,
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';

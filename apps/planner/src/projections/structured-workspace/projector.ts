@@ -1,13 +1,7 @@
-import {
-  createTraitOfferAddress,
-  semanticAddressKey,
-  type EncounterPhaseAddress,
-} from '@run-planner/engine/authored-project';
+import { createTraitOfferAddress, semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
-  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
-  type EncounterPhaseCandidateSupport,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -56,9 +50,6 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
-  encounterCandidateAt: (
-    phase: EncounterPhaseAddress,
-  ) => EncounterPhaseCandidateSupport | undefined,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -88,7 +79,7 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const semantic = assembleWorkspaceBiomeSemantics(catalog, source, encounterCandidateAt);
+  const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
   const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
@@ -231,9 +222,7 @@ export function createStructuredWorkspaceProjection(
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
-          const projected = projectBiome(catalog, biomeSource, (phase) =>
-            encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
-          );
+          const projected = projectBiome(catalog, biomeSource);
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueOccurrenceInteractionRequirements(
             occurrenceInteractionRequirements,
