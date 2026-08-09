@@ -15,7 +15,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  createEncounterCommandAuthorization,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -196,7 +195,6 @@ describe('project simulation composition', () => {
       initial,
       catalog,
       { kind: 'ResetEncounter', phase },
-      { encounterAuthorization: createEncounterCommandAuthorization(catalog, initialAssembly) },
     );
     const { result, route: underworld } = route(reset, 'Underworld');
     const i = underworld.biomes.find((biome) => biome.biomeKey === 'I');
@@ -244,7 +242,6 @@ describe('project simulation composition', () => {
       reset,
       catalog,
       { kind: 'SelectEncounter', phase, encounterKey: 'GeneratedI_GoalReward' },
-      { encounterAuthorization: createEncounterCommandAuthorization(catalog, resetAssembly) },
     );
 
     expect(simulateProject(catalog, corrected).status).toBe('valid');

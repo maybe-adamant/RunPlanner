@@ -9,10 +9,6 @@ import {
   semanticAddressKey,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
-import {
-  createEncounterCommandAuthorization,
-  simulateProjectAssembly,
-} from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -63,12 +59,6 @@ function projectWithArtemisInErebus() {
       initial,
       catalog,
       { kind: 'SelectEncounter', phase, encounterKey: 'ArtemisCombatF' },
-      {
-        encounterAuthorization: createEncounterCommandAuthorization(
-          catalog,
-          simulateProjectAssembly(catalog, initial),
-        ),
-      },
     ),
   };
 }

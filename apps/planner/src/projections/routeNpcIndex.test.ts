@@ -8,7 +8,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, EncounterDefinition } from '@run-planner/engine/catalog-schema';
 import {
-  createEncounterCommandAuthorization,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type EncounterHistoryEntry,
@@ -49,12 +48,10 @@ function selectEncounter(
   phase: typeof fArtemisPhase,
   encounterKey: string,
 ): ProjectDocument {
-  const assembly = simulateProjectAssembly(catalog, project);
   return applyProjectCommand(
     project,
     catalog,
     { kind: 'SelectEncounter', phase, encounterKey },
-    { encounterAuthorization: createEncounterCommandAuthorization(catalog, assembly) },
   );
 }
 

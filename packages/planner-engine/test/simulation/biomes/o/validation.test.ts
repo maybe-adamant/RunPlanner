@@ -12,7 +12,6 @@ import {
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import {
-  createEncounterCommandAuthorization,
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   simulateProject,
@@ -216,35 +215,30 @@ describe('selected O validation', () => {
     });
   });
 
-  it('retains the invalid Combat2 owner for diagnosis, rejects Select, and permits Reset', () => {
+  it('retains the invalid Combat2 owner for diagnosis while commands remain structural', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
     });
-    const assembly = simulateProjectAssembly(catalog, project);
-    const authorization = createEncounterCommandAuthorization(catalog, assembly);
     const phase = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
       'Combat2',
     );
 
-    expect(() =>
-      applyProjectCommand(
-        project,
-        catalog,
-        { encounterKey: 'GeneratedO', kind: 'SelectEncounter', phase },
-        { encounterAuthorization: authorization },
-      ),
-    ).toThrow(/activation is unavailable/);
+    const selected = applyProjectCommand(project, catalog, {
+      encounterKey: 'IcarusCombatO',
+      kind: 'SelectEncounter',
+      phase,
+    });
+    expect(selected).not.toBe(project);
     expect(
       applyProjectCommand(
         project,
         catalog,
         { kind: 'ResetEncounter', phase },
-        { encounterAuthorization: authorization },
       ),
     ).toBe(project);
   });

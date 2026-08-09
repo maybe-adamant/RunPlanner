@@ -75,8 +75,11 @@ export {
   type RoomLifecycleProducerInput,
 } from './lifecycle';
 export {
-  createEncounterCommandAuthorization,
   type EncounterPhaseCandidateSupport,
+  encounterPhaseAuthoringDomainForRoom,
+  type EncounterPhaseAuthoringDomain,
+  type EncounterPhaseAuthoringOwner,
+  type EncounterPhaseAuthoringRoomOptions,
   type ResolvedEncounterPhase,
 } from './encounters';
 export {

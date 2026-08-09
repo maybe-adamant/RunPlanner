@@ -7,7 +7,6 @@ import {
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
-  type EncounterPhaseAddress,
   type ExitDecision,
   type OccurrenceAddress,
   type RoomOccurrence,
@@ -18,10 +17,7 @@ import type {
   BiomeLayout,
   Catalog,
 } from '@run-planner/engine/catalog-schema';
-import type {
-  EncounterPhaseCandidateSupport,
-  ProjectBiomeEvaluation,
-} from '@run-planner/engine/simulation';
+import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
 import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
 import {
@@ -413,9 +409,6 @@ function enrichFrontierPredecessor(
 export function assembleWorkspaceBiomeSemantics(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
-  encounterCandidateAt: (
-    phase: EncounterPhaseAddress,
-  ) => EncounterPhaseCandidateSupport | undefined = () => undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -485,7 +478,6 @@ export function assembleWorkspaceBiomeSemantics(
       ...(request.fieldsBatchFacts === undefined
         ? {}
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
-      encounterCandidateAt,
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       markerDestinations,
       occurrence: request.occurrence,

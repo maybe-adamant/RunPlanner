@@ -91,7 +91,6 @@ function assemble(
   const assembly = assembleWorkspaceOccurrence({
     biome: source.biome,
     catalog,
-    encounterCandidateAt: () => undefined,
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     markerDestinations: markers.emitter,
@@ -157,6 +156,25 @@ describe('structured workspace occurrence assembly', () => {
     ).toBe(ordinary.assembly.node.key);
   });
 
+  it('publishes authored encounter choices without candidate support', () => {
+    const nCombat = assemble(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'N',
+      nOccurrenceId('combat05'),
+    ).assembly;
+    const nPhase = nCombat.node.room.encounterPhases.find((phase) => phase.label === 'Encounter');
+    expect(nPhase?.selectedEncounter.key).toBe('GeneratedN');
+    expect(nPhase?.candidateChoices.length).toBeGreaterThan(1);
+    const nRequirement = nCombat.occurrenceInteractionRequirements.find(
+      (requirement) => requirement.kind === 'encounterPhases',
+    );
+    expect(nRequirement?.kind).toBe('encounterPhases');
+    if (nRequirement?.kind === 'encounterPhases') {
+      expect(nRequirement.phases[0]?.candidateChoices.length).toBeGreaterThan(1);
+    }
+  });
+
   it('publishes active Ephyra side details but withholds dormant side details without hiding incoming rewards', () => {
     const project = createRepresentativeNOPQProject();
     const active = assemble(project, 'Surface', 'N', nOccurrenceId('combat05')).assembly;
@@ -167,7 +185,12 @@ describe('structured workspace occurrence assembly', () => {
     const activeSideRooms = active.node.room.roomLocal.sideRooms;
     expect(activeSideRooms.kind).toBe('published');
     if (activeSideRooms.kind !== 'published') throw new Error('active Ephyra sides are withheld');
-    expect(active.occurrenceInteractionRequirements).toHaveLength(1);
+    expect(active.occurrenceInteractionRequirements).toHaveLength(5);
+    expect(
+      active.occurrenceInteractionRequirements.some(
+        (requirement) => requirement.kind === 'ephyraSideRooms',
+      ),
+    ).toBe(true);
     const group = activeSideRooms.group;
     const sideDoor2 = group.slots.find((slot) => slot.key === 'sideDoor2');
     const sideDoor3 = group.slots.find((slot) => slot.key === 'sideDoor3');
@@ -250,8 +273,10 @@ describe('structured workspace occurrence assembly', () => {
         (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
       )?.marker.findingCount,
     ).toBe(1);
-    expect(assembly.occurrenceInteractionRequirements).toHaveLength(1);
-    const requirement = assembly.occurrenceInteractionRequirements[0];
+    expect(assembly.occurrenceInteractionRequirements).toHaveLength(5);
+    const requirement = assembly.occurrenceInteractionRequirements.find(
+      (candidate) => candidate.kind === 'ephyraSideRooms',
+    );
     if (requirement?.kind !== 'ephyraSideRooms') {
       throw new Error('invalid active Ephyra side-room requirement is missing');
     }
@@ -450,7 +475,11 @@ describe('structured workspace occurrence assembly', () => {
           wheel.offers.every((offer) => Object.isFrozen(offer) && Object.isFrozen(offer.control)),
       ),
     ).toBe(true);
-    expect(ship.occurrenceInteractionRequirements[0]?.kind).toBe('shipCombatPhaseCount');
+    expect(
+      ship.occurrenceInteractionRequirements.some(
+        (requirement) => requirement.kind === 'shipCombatPhaseCount',
+      ),
+    ).toBe(true);
   });
 
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {

@@ -24,7 +24,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type TraitAssessment,
   type TraitReplacementTransition,
@@ -87,9 +86,7 @@ function bind(
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
-  const assembly = assembleWorkspaceBiomeSemantics(catalog, source, (phase) =>
-    encounterPhaseCandidateSupportForProjectEvaluationAssembly(projectAssembly, phase),
-  );
+  const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
   const traitControls = new Map(
     [...assembly.rewardControls.values()]
       .flatMap((control) => control.traitOffers ?? [])

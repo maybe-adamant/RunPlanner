@@ -11,7 +11,6 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
-  createEncounterCommandAuthorization,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -60,13 +59,7 @@ export function createProjectWorkspaceReducer(
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
-      const encounterAuthorization =
-        action.payload.kind === 'SelectEncounter' || action.payload.kind === 'ResetEncounter'
-          ? createEncounterCommandAuthorization(catalog, state.assembly)
-          : undefined;
-      const history = applyProjectHistoryCommand(state.history, catalog, action.payload, {
-        ...(encounterAuthorization === undefined ? {} : { encounterAuthorization }),
-      });
+      const history = applyProjectHistoryCommand(state.history, catalog, action.payload);
       return history === state.history
         ? state
         : publishWorkspace(history, assembleProjectEvaluation);

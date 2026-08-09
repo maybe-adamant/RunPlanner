@@ -3,7 +3,6 @@ import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
 import { ProjectDocumentContractError } from '../validation';
 import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
-import type { ProjectCommandApplyOptions } from './encounter-authorization';
 import { applyOccurrenceCommand } from './occurrence';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
@@ -16,7 +15,6 @@ function applyUnchecked(
   document: ProjectDocument,
   catalog: Catalog,
   command: ProjectCommand,
-  options: ProjectCommandApplyOptions,
 ): ProjectDocument {
   switch (command.kind) {
     case 'RenameProject':
@@ -96,14 +94,6 @@ function applyUnchecked(
       );
     case 'SelectEncounter':
     case 'ResetEncounter':
-      if (options.encounterAuthorization === undefined) {
-        throw new ProjectCommandContractError(
-          command.kind,
-          projectCommandAddress(command),
-          'encounter selection requires an exact candidate authorization',
-        );
-      }
-      options.encounterAuthorization.assertAuthorized(document, catalog, command);
       return applyOccurrenceCommand(
         document,
         catalog,
@@ -117,10 +107,9 @@ export function applyProjectCommand(
   document: ProjectDocument,
   catalog: Catalog,
   command: ProjectCommand,
-  options: ProjectCommandApplyOptions = {},
 ): ProjectDocument {
   try {
-    const proposal = applyUnchecked(document, catalog, command, options);
+    const proposal = applyUnchecked(document, catalog, command);
     return proposal === document ? document : decodeProjectDocument(proposal, catalog);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
@@ -138,7 +127,3 @@ export function applyProjectCommand(
 
 export { projectCommandAddress, ProjectCommandContractError } from './contract';
 export type { EncounterOccurrenceCommand, ProjectCommand } from './types';
-export type {
-  EncounterCommandAuthorization,
-  ProjectCommandApplyOptions,
-} from './encounter-authorization';
