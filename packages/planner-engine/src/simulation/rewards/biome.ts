@@ -1,11 +1,14 @@
 import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
+  type TraitOfferAddress,
+  type TraitOfferOwnerAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
@@ -46,6 +49,12 @@ import type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from './model';
+import { createTraitOfferCandidateArtifacts } from '../candidate-artifacts';
+import type {
+  ReachedTraitOfferEvaluation,
+  SelectedTraitOfferAssessment,
+  TraitOfferCandidateContext,
+} from '../traits';
 import {
   createRunState,
   publishRunStateThroughCoverage,
@@ -681,6 +690,104 @@ export interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
   readonly producerArtifacts: RewardProducerCandidateArtifacts;
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
+  readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
+}
+
+function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
+  switch (origin.kind) {
+    case 'incomingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'shopOffer':
+      return origin;
+    default:
+      return undefined;
+  }
+}
+
+function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
+  readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
+  readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
+} {
+  const grouped = new Map<
+    string,
+    {
+      readonly address: TraitOfferAddress;
+      readonly acquisitionRole: string;
+      readonly offer: ReachedTraitOfferEvaluation['offer'];
+      readonly branches: ReachedTraitOfferEvaluation[];
+      chronologicalIndex: number;
+    }
+  >();
+  for (const branch of branches) {
+    for (const trace of branch.traitEvaluations ?? []) {
+      const owner = traitOwnerAddress(trace.address);
+      if (owner === undefined) continue;
+      const address = createTraitOfferAddress(owner, trace.acquisitionRole);
+      const key = semanticAddressKey(address);
+      const current = grouped.get(key);
+      if (current === undefined) {
+        grouped.set(key, {
+          address,
+          acquisitionRole: trace.acquisitionRole,
+          offer: trace.offer,
+          branches: [trace],
+          chronologicalIndex: trace.chronologicalIndex,
+        });
+      } else {
+        const duplicate = current.branches.some(
+          (candidate) =>
+            JSON.stringify([candidate.before, candidate.context, candidate.offer]) ===
+            JSON.stringify([trace.before, trace.context, trace.offer]),
+        );
+        if (!duplicate) current.branches.push(trace);
+        current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
+      }
+    }
+  }
+  const selectedTraitOffers = Object.freeze(
+    [...grouped.values()]
+      .sort((left, right) => {
+        const chronology = left.chronologicalIndex - right.chronologicalIndex;
+        return chronology !== 0
+          ? chronology
+          : semanticAddressKey(left.address).localeCompare(semanticAddressKey(right.address));
+      })
+      .map((entry) =>
+        Object.freeze({
+          address: entry.address,
+          acquisitionRole: entry.acquisitionRole,
+          offer: entry.offer,
+          branches: Object.freeze(
+            entry.branches.map((trace) =>
+              Object.freeze({
+                assessments: trace.assessments,
+                composition: trace.composition,
+                replacementComposition: trace.replacementComposition,
+              }),
+            ),
+          ),
+          reached: true as const,
+          chronologicalIndex: entry.chronologicalIndex,
+        }),
+      ),
+  );
+  const candidateContexts = new Map<string, readonly TraitOfferCandidateContext[]>();
+  for (const entry of grouped.values()) {
+    const address = createTraitOfferAddress(entry.address.owner, entry.acquisitionRole);
+    candidateContexts.set(
+      semanticAddressKey(address),
+      Object.freeze(
+        entry.branches.map((trace) =>
+          Object.freeze({ before: trace.before, context: trace.context }),
+        ),
+      ),
+    );
+  }
+  return Object.freeze({
+    selectedTraitOffers,
+    candidateContexts,
+  });
 }
 
 export function evaluateBiomeRewardsAssembly(
@@ -1800,6 +1907,7 @@ export function evaluateBiomeRewardsAssembly(
 
   recordBlankFrontierTargetHistory();
   const immutableFindings = Object.freeze([...findings.values()]);
+  const traitProducts = selectedTraitOfferProducts(branches);
   const runStatePublication = publishRunStateThroughCoverage(
     [...runStateSnapshotsByOwner.values()],
     [...runStateSnapshotsByOwner.values()],
@@ -1814,6 +1922,7 @@ export function evaluateBiomeRewardsAssembly(
     rewardLookups: rewardLookup.public,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
+    selectedTraitOffers: traitProducts.selectedTraitOffers,
   });
   return Object.freeze({
     simulation,
@@ -1821,6 +1930,10 @@ export function evaluateBiomeRewardsAssembly(
     lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
       shipLifecycleContexts,
       shopPurchaseContexts,
+    ),
+    traitOfferArtifacts: createTraitOfferCandidateArtifacts(
+      catalog,
+      traitProducts.candidateContexts,
     ),
   });
 }

@@ -59,6 +59,7 @@ import {
 } from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
+import type { TraitOfferCandidateArtifacts } from './candidate-artifacts';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -419,6 +420,7 @@ function generation(
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
+  traitOffers: TraitOfferCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
@@ -458,6 +460,7 @@ function generation(
       rewardProducers,
       roomLifecycles,
       encounters.artifacts,
+      traitOffers,
     ),
   });
 }
@@ -646,6 +649,7 @@ function evaluateBiomeAssembly(
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
+    rewards.traitOfferArtifacts,
   );
   const findings = Object.freeze([
     ...roomGeneration.validation.findings,

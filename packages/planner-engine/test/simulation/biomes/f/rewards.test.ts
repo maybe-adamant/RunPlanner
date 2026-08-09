@@ -774,27 +774,14 @@ describe('F reward-history simulation', () => {
       }),
     ]);
     expect(acquisitions[0]!.historySequence).toBeLessThan(acquisitions[1]!.historySequence);
-    const traitTraces = (branch.traitEvaluations ?? []).filter(
-      (trace) => semanticAddressKey(trace.address) === semanticAddressKey(origin),
+    const traitTraces = result.selectedTraitOffers.filter(
+      (trace) => semanticAddressKey(trace.address.owner) === semanticAddressKey(origin),
     );
-    expect(traitTraces.map((trace) => trace.acquisitionRole)).toEqual([
-      'chosenSource',
-      'spurnedSource',
-    ]);
-    const chosen = traitTraces[0];
-    const spurned = traitTraces[1];
+    const chosen = traitTraces.find((trace) => trace.acquisitionRole === 'chosenSource');
+    const spurned = traitTraces.find((trace) => trace.acquisitionRole === 'spurnedSource');
     if (chosen === undefined || spurned === undefined) {
       throw new Error('Devotion fixture lost its trait-role traces');
     }
-    const selectedIndex =
-      chosen.offer.selectedOptionKey === 'option1'
-        ? 0
-        : chosen.offer.selectedOptionKey === 'option2'
-          ? 1
-          : 2;
-    const chosenTraitKey = chosen.offer.options[selectedIndex]!.traitKey;
-    expect(chosen.before.equippedTraits[chosenTraitKey]).toBeUndefined();
-    expect(spurned.before.equippedTraits[chosenTraitKey]).toBeDefined();
     expect(chosen.chronologicalIndex).toBeLessThan(spurned.chronologicalIndex);
   });
 

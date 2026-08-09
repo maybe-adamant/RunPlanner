@@ -5,7 +5,7 @@ import type {
   TraitRarity,
   TraitRequirementExpression,
 } from '../catalog-schema';
-import type { SemanticAddress } from '../authored-project/addresses';
+import type { SemanticAddress, TraitOfferAddress } from '../authored-project/addresses';
 import type { AuthoredTraitOffer, EquippedTrait, TraitOptionKey } from '../authored-project/traits';
 import type { RewardHistoryState } from '../reward-kernel/model';
 import type { TraitFindingCode } from './model';
@@ -268,6 +268,33 @@ export interface ReachedTraitOfferEvaluation {
   readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
+}
+
+/** The branch-local evidence published for one reached selected offer. */
+export interface TraitOfferBranchAssessment {
+  readonly assessments: readonly TraitAssessment[];
+  readonly composition: TraitOfferCompositionAssessment;
+  readonly replacementComposition: TraitReplacementCompositionAssessment;
+}
+
+/**
+ * Data-only selected-offer evidence.  Pre-offer histories and resolved
+ * contexts stay behind the exact candidate artifact instead of crossing the
+ * reward simulation boundary.
+ */
+export interface SelectedTraitOfferAssessment {
+  readonly address: TraitOfferAddress;
+  readonly acquisitionRole: string;
+  readonly offer: AuthoredTraitOffer;
+  readonly branches: readonly TraitOfferBranchAssessment[];
+  readonly reached: true;
+  readonly chronologicalIndex: number;
+}
+
+/** Inputs retained by the opaque exact-address candidate capability. */
+export interface TraitOfferCandidateContext {
+  readonly before: TraitHistoryState;
+  readonly context: TraitOfferContext;
 }
 
 export interface TraitContextUnavailable {

@@ -104,9 +104,29 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     },
     pendingShops: orderedRecord(branch.pendingShops),
     traitHistory: branch.traitHistory,
-    traitEvaluations: branch.traitEvaluations,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
+}
+
+function mergeTraitEvaluations(
+  left: readonly ReachedTraitOfferEvaluation[] | undefined,
+  right: readonly ReachedTraitOfferEvaluation[] | undefined,
+): readonly ReachedTraitOfferEvaluation[] | undefined {
+  const values = [...(left ?? []), ...(right ?? [])];
+  if (values.length === 0) return undefined;
+  const unique = new Map<string, ReachedTraitOfferEvaluation>();
+  for (const value of values) {
+    const key = JSON.stringify([
+      semanticAddressKey(value.address),
+      value.acquisitionRole,
+      value.chronologicalIndex,
+      value.before,
+      value.context,
+      value.offer,
+    ]);
+    unique.set(key, value);
+  }
+  return Object.freeze([...unique.values()]);
 }
 
 export function mergeEquivalentRewardBranches(
@@ -115,8 +135,20 @@ export function mergeEquivalentRewardBranches(
   const merged = new Map<string, RewardBranchState>();
   for (const branch of branches) {
     const key = equivalentBranchStateKey(branch);
-    if (!merged.has(key)) {
+    const previous = merged.get(key);
+    if (previous === undefined) {
       merged.set(key, branch);
+    } else {
+      const traitEvaluations = mergeTraitEvaluations(
+        previous.traitEvaluations,
+        branch.traitEvaluations,
+      );
+      merged.set(
+        key,
+        traitEvaluations === undefined
+          ? previous
+          : Object.freeze({ ...previous, traitEvaluations }),
+      );
     }
   }
   return Object.freeze([...merged.values()]);
@@ -313,7 +345,7 @@ export function initializeRewardBranches(
         pendingShops: Object.freeze({}),
         processedThroughHistorySequence: 0,
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
-        traitEvaluations: branch.traitEvaluations ?? Object.freeze([]),
+        traitEvaluations: Object.freeze([]),
       }),
     ),
   );
@@ -1052,6 +1084,5 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
     ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
-    ...(branch.traitEvaluations === undefined ? {} : { traitEvaluations: branch.traitEvaluations }),
   });
 }

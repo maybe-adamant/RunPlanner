@@ -1,49 +1,150 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   applyProjectCommand,
-  createTraitOfferAddress,
-  semanticAddressKey,
   type ProjectDocument,
-  type SemanticAddress,
-  type TraitOfferOwnerAddress,
+  type AuthoredTraitOffer,
 } from '@run-planner/engine/authored-project';
 import {
-  simulateProject,
-  traitCandidates,
-  type ReachedTraitOfferEvaluation,
+  simulateProjectAssembly,
+  createPreparedProjectCandidateSession,
+  type TraitAssessment,
+  type SelectedTraitOfferAssessment,
 } from '@run-planner/engine/simulation';
 
-function traitOwner(address: SemanticAddress): TraitOfferOwnerAddress | undefined {
-  switch (address.kind) {
-    case 'incomingReward':
-    case 'localReward':
-    case 'rewardWheelOffer':
-    case 'shopOffer':
-      return address;
-    default:
-      return undefined;
-  }
+export type TraitCandidateSession = ReturnType<typeof createPreparedProjectCandidateSession>;
+
+interface PreparedTraitCandidateProject {
+  readonly assembly: ReturnType<typeof simulateProjectAssembly>;
+  readonly session: TraitCandidateSession;
 }
 
-function reachedOffers(project: ProjectDocument): readonly ReachedTraitOfferEvaluation[] {
-  const evaluation = simulateProject(catalog, project);
-  const seen = new Set<string>();
-  const result: ReachedTraitOfferEvaluation[] = [];
-  for (const route of evaluation.routes) {
-    for (const biome of route.biomes) {
-      if (!('rewards' in biome)) continue;
-      for (const branch of biome.rewards.branches) {
-        for (const trace of branch.traitEvaluations ?? []) {
-          const key = `${semanticAddressKey(trace.address)}:${trace.acquisitionRole}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          result.push(trace);
-        }
-      }
+const preparedCandidateProjects = new WeakMap<ProjectDocument, PreparedTraitCandidateProject>();
+
+function preparedCandidateProjectFor(project: ProjectDocument): PreparedTraitCandidateProject {
+  const existing = preparedCandidateProjects.get(project);
+  if (existing !== undefined) return existing;
+  const assembly = simulateProjectAssembly(catalog, project);
+  const prepared = Object.freeze({
+    assembly,
+    session: createPreparedProjectCandidateSession(catalog, assembly),
+  });
+  preparedCandidateProjects.set(project, prepared);
+  return prepared;
+}
+
+function candidateSessionFor(project: ProjectDocument): TraitCandidateSession {
+  return preparedCandidateProjectFor(project).session;
+}
+
+export function reachedTraitOffers(
+  project: ProjectDocument,
+): readonly SelectedTraitOfferAssessment[] {
+  const evaluation = preparedCandidateProjectFor(project).assembly.evaluation;
+  return Object.freeze(
+    evaluation.routes.flatMap((route) =>
+      route.biomes.flatMap((biome) =>
+        'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
+      ),
+    ),
+  );
+}
+
+/** Return the prepared exact-address candidate surface for one immutable project. */
+export function traitCandidateSession(project: ProjectDocument): TraitCandidateSession {
+  return candidateSessionFor(project);
+}
+
+export interface TraitCandidateProbe {
+  readonly option: AuthoredTraitOffer['options'][number];
+  readonly assessment: TraitAssessment;
+}
+
+export interface TraitCandidateProbeOptions {
+  readonly session?: TraitCandidateSession;
+}
+
+export function traitCandidateOptions(
+  project: ProjectDocument,
+  address: SelectedTraitOfferAssessment['address'],
+  giverKey: string,
+  options: TraitCandidateProbeOptions = {},
+): readonly TraitCandidateProbe[] {
+  const session = options.session ?? candidateSessionFor(project);
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined) return Object.freeze([]);
+  const result: TraitCandidateProbe[] = [];
+  for (const traitKey of giver.traitKeys) {
+    const trait = catalog.traits.byKey[traitKey];
+    if (trait === undefined) continue;
+    const rarities =
+      trait.rarityDomain.kind === 'ranked' ? trait.rarityDomain.freshOfferRarities : [undefined];
+    for (const rarity of rarities) {
+      const option = Object.freeze({
+        traitKey,
+        ...(rarity === undefined ? {} : { rarity }),
+      }) as AuthoredTraitOffer['options'][number];
+      const value = Object.freeze({
+        giverKey,
+        options: Object.freeze([option, option, option]) as AuthoredTraitOffer['options'],
+        selectedOptionKey: 'option1' as const,
+      });
+      const evaluation = session.evaluate({ kind: 'traitOffer', trait: address, value });
+      if (evaluation.kind !== 'traitOffer') continue;
+      const assessments = evaluation.result.branches.flatMap((branch) => branch.assessments);
+      const assessment = assessments.find((candidate) => candidate.legal);
+      if (assessment === undefined) continue;
+      result.push(Object.freeze({ option, assessment }));
+      break;
     }
   }
-  return result;
+  return Object.freeze(result);
+}
+
+/**
+ * Find one complete, supported three-option offer through the exact candidate
+ * session. The preferred trait, when supplied, is placed in option 1 so the
+ * returned value can be used as a concrete acquisition in a fixture.
+ */
+export function supportedTraitOffer(
+  project: ProjectDocument,
+  address: SelectedTraitOfferAssessment['address'],
+  giverKey: string,
+  preferredTraitKey?: string,
+  session: TraitCandidateSession = candidateSessionFor(project),
+): AuthoredTraitOffer | undefined {
+  const probes = traitCandidateOptions(project, address, giverKey, { session });
+  const unique = probes.filter(
+    (candidate, index, all) =>
+      all.findIndex((other) => other.option.traitKey === candidate.option.traitKey) === index,
+  );
+  const preferred =
+    preferredTraitKey === undefined
+      ? undefined
+      : unique.find((candidate) => candidate.option.traitKey === preferredTraitKey);
+  if (preferredTraitKey !== undefined && preferred === undefined) return undefined;
+  const ordered = [
+    ...(preferred === undefined ? [] : [preferred]),
+    ...unique.filter((candidate) => candidate !== preferred),
+  ];
+  const first = preferred ?? ordered[0];
+  if (first === undefined) return undefined;
+  const remainder = ordered.filter((candidate) => candidate !== first);
+  for (let left = 0; left < remainder.length; left += 1) {
+    for (let right = left + 1; right < remainder.length; right += 1) {
+      const value = Object.freeze({
+        giverKey,
+        options: Object.freeze([
+          first.option,
+          remainder[left]!.option,
+          remainder[right]!.option,
+        ]) as AuthoredTraitOffer['options'],
+        selectedOptionKey: 'option1' as const,
+      });
+      const evaluation = session.evaluate({ kind: 'traitOffer', trait: address, value });
+      if (evaluation.kind === 'traitOffer' && evaluation.result.supported) return value;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -55,57 +156,52 @@ function reachedOffers(project: ProjectDocument): readonly ReachedTraitOfferEval
 export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 32; pass += 1) {
-    const invalids = reachedOffers(current).filter((trace) =>
-      trace.assessments.some((assessment) => !assessment.legal),
+    const assembly = simulateProjectAssembly(catalog, current);
+    const evaluation = assembly.evaluation;
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const invalids = evaluation.routes.flatMap((route) =>
+      route.biomes.flatMap((biome) =>
+        'rewards' in biome
+          ? biome.rewards.selectedTraitOffers.filter((offer) =>
+              offer.branches.some((branch) =>
+                branch.assessments.some((assessment) => !assessment.legal),
+              ),
+            )
+          : [],
+      ),
     );
     if (invalids.length === 0) return current;
     let changed = false;
     for (const invalid of invalids) {
-      const owner = traitOwner(invalid.address);
-      if (owner === undefined) continue;
-      const optionsByTrait = new Map<
-        string,
-        {
-          readonly traitKey: string;
-          readonly rarity?: TraitRarity;
-        }
-      >();
-      const candidates = traitCandidates(
-        catalog,
-        invalid.offer.giverKey,
-        invalid.before,
-        invalid.context,
-      );
-      // Keep fixture repair on ordinary variants whenever the engine reports
-      // a rich ordinary pool. Replacement alternatives are still exercised
-      // by focused replacement fixtures and are chosen only when ordinary
-      // candidates cannot complete the three-option surface.
-      const orderedCandidates = [
-        ...candidates.filter(
-          (candidate) => candidate.assessment.replacementTransition === undefined,
-        ),
-        ...candidates.filter(
-          (candidate) => candidate.assessment.replacementTransition !== undefined,
-        ),
+      const giver = catalog.traitGivers.byKey[invalid.offer.giverKey];
+      if (giver === undefined) continue;
+      const probes = traitCandidateOptions(current, invalid.address, invalid.offer.giverKey, {
+        session,
+      });
+      const candidates = [
+        ...probes
+          .filter((candidate) => candidate.assessment.replacementTransition === undefined)
+          .map((candidate) => candidate.option),
+        ...probes
+          .filter((candidate) => candidate.assessment.replacementTransition !== undefined)
+          .map((candidate) => candidate.option),
       ];
-      for (const candidate of orderedCandidates) {
-        if (!candidate.available || optionsByTrait.has(candidate.traitKey)) continue;
-        optionsByTrait.set(candidate.traitKey, {
-          traitKey: candidate.traitKey,
-          ...(candidate.rarity === undefined ? {} : { rarity: candidate.rarity }),
-        });
-        if (optionsByTrait.size === 3) break;
-      }
-      if (optionsByTrait.size < 3) continue;
-      const optionValues = [...optionsByTrait.values()];
-      if (optionValues.length !== 3) continue;
-      const options = [optionValues[0]!, optionValues[1]!, optionValues[2]!] as const;
+      const unique = candidates.filter(
+        (candidate, index, all) =>
+          all.findIndex((other) => other.traitKey === candidate.traitKey) === index,
+      );
+      if (unique.length < 3) continue;
+      const replacement = Object.freeze([
+        unique[0]!,
+        unique[1]!,
+        unique[2]!,
+      ]) as AuthoredTraitOffer['options'];
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(owner, invalid.acquisitionRole),
+        trait: invalid.address,
         value: Object.freeze({
           giverKey: invalid.offer.giverKey,
-          options: Object.freeze(options),
+          options: replacement,
           selectedOptionKey: 'option1',
         }),
       });

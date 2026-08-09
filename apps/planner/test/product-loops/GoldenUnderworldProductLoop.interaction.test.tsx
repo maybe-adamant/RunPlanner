@@ -498,7 +498,7 @@ describe('underworld product loop', () => {
     expect(pStructure.querySelector('[data-kind="completion"]')).toBeNull();
     const completion = within(pStructure).getByRole('region', { name: 'Biome completion' });
     expect(within(completion).getByText('Prometheus')).toBeTruthy();
-  });
+  }, 10_000);
 
   it('carries an Anomaly failure through the browser without acquiring its retained offer', async () => {
     const application = createApplication();

@@ -71,17 +71,16 @@ describe('Shop trait acquisition processing', () => {
     if (pEvaluation === undefined || !('rewards' in pEvaluation)) {
       throw new Error('complete Surface fixture did not evaluate P rewards');
     }
-    const branch = pEvaluation.rewards.branches[0];
-    if (branch === undefined) throw new Error('complete Surface fixture has no P reward branch');
-
     const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
-    const trace = branch.traitEvaluations?.find(
-      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(shopOffer),
+    const trace = pEvaluation.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(shopOffer),
     );
     if (trace === undefined) throw new Error('purchased Shop Hammer trace is missing');
-    expect(trace.address).toEqual(shopOffer);
+    expect(trace.address.owner).toEqual(shopOffer);
     expect(trace.acquisitionRole).toBe('weaponUpgrade');
 
+    const branch = pEvaluation.rewards.branches[0];
+    if (branch === undefined) throw new Error('complete Surface fixture has no P reward branch');
     const event = branch.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
     );
@@ -203,20 +202,17 @@ describe('Shop trait acquisition processing', () => {
       purchaseFindings,
     );
     const purchasedBranch = purchased[0];
-    const shopOfferKey = semanticAddressKey(major.offerOrigin);
-    const trace = purchasedBranch?.traitEvaluations?.find(
-      (evaluation) => semanticAddressKey(evaluation.address) === shopOfferKey,
-    );
-    if (trace === undefined) throw new Error('missing purchased Hammer trait trace');
     expect([...purchaseFindings.values()]).toContainEqual(
       expect.objectContaining({
         code: 'wrongHammerLoadout',
         origin: expect.objectContaining({ owner: major.offerOrigin }),
       }),
     );
-    expect(trace.assessments.every((assessment) => !assessment.legal)).toBe(true);
+    expect(purchasedBranch?.traitHistory?.events).toHaveLength(0);
     expect(
-      purchasedBranch?.traitHistory?.equippedTraits[trace.offer.options[0]!.traitKey],
+      purchasedBranch?.traitHistory?.equippedTraits[
+        major.traitOffersByAcquisitionRole?.weaponUpgrade?.options[0]?.traitKey ?? ''
+      ],
     ).toBeUndefined();
   });
 });

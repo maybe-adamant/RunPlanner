@@ -1,4 +1,4 @@
-import { createTraitOfferAddress, semanticAddressKey } from '@run-planner/engine/authored-project';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
@@ -115,23 +115,16 @@ function enrichTraitReplacementRarities(
   >();
   for (const evaluated of source.evaluation === undefined ? [] : [source.evaluation]) {
     if (!('rewards' in evaluated)) continue;
-    for (const branch of evaluated.rewards.branches) {
-      for (const trace of branch.traitEvaluations ?? []) {
-        const owner = createTraitOfferAddress(
-          trace.address as Extract<
-            typeof trace.address,
-            { kind: 'incomingReward' | 'localReward' | 'rewardWheelOffer' | 'shopOffer' }
-          >,
-          trace.acquisitionRole,
-        );
-        const key = semanticAddressKey(owner);
-        const ownerEvidence = replacementByOwner.get(key) ?? {
-          branchCount: 0,
-          replacements: new Map(),
-          replacementSeen: new Map(),
-        };
-        ownerEvidence.branchCount += 1;
-        for (const assessment of trace.assessments) {
+    for (const trace of evaluated.rewards.selectedTraitOffers) {
+      const key = semanticAddressKey(trace.address);
+      const ownerEvidence = replacementByOwner.get(key) ?? {
+        branchCount: 0,
+        replacements: new Map(),
+        replacementSeen: new Map(),
+      };
+      ownerEvidence.branchCount += trace.branches.length;
+      for (const branch of trace.branches) {
+        for (const assessment of branch.assessments) {
           const replacement = assessment.replacementTransition;
           if (replacement === undefined) continue;
           const rarities = ownerEvidence.replacements.get(replacement.newTraitKey) ?? new Set();
@@ -142,8 +135,8 @@ function enrichTraitReplacementRarities(
             (ownerEvidence.replacementSeen.get(replacement.newTraitKey) ?? 0) + 1,
           );
         }
-        replacementByOwner.set(key, ownerEvidence);
       }
+      replacementByOwner.set(key, ownerEvidence);
     }
   }
   if (replacementByOwner.size === 0) return controls;

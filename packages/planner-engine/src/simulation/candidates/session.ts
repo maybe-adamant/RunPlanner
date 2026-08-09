@@ -272,7 +272,14 @@ function evaluateCandidateQuery(
         query,
       );
     case 'traitOffer':
-      return evaluateTraitOfferCandidate(catalog, project, evaluation, query);
+      return evaluateTraitOfferCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
