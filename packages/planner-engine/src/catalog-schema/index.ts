@@ -24,6 +24,7 @@ export type {
   TraitRarity,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
+  TargetedTraitAcquisition,
   WeaponDeclaration,
 } from './traits';
 import type {

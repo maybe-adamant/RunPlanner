@@ -176,6 +176,59 @@ describe('structured workspace interaction binding', () => {
     expect(events).toEqual([expect.objectContaining({ queryCount: expect.any(Number) })]);
   });
 
+  it('binds the selected targeted option to its exact engine target domain', async () => {
+    const project = createGoldenFGHIProject();
+    const baseSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const target = Object.freeze({
+      evaluation: Object.freeze({
+        kind: 'traitAcquisitionTarget' as const,
+        result: Object.freeze({
+          branchSupport: Object.freeze([true]),
+          findings: Object.freeze([]),
+          supported: true,
+          traitKey: 'ApolloCastBoon',
+        }),
+      }),
+      value: 'ApolloCastBoon',
+    });
+    const traitAcquisitionTargets = vi.fn(() => Object.freeze([target]));
+    const candidateSession = Object.freeze({ ...baseSession, traitAcquisitionTargets });
+    const { interactions } = bind(project, 'Underworld', 'F', undefined, candidateSession);
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (interaction === undefined) throw new Error('ranked trait interaction is missing');
+    const draft = Object.freeze({
+      ...interaction.value,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'BoonDecayBoon', rarity: 'Common' as const }),
+        interaction.value.options[1],
+        interaction.value.options[2],
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+
+    const domain = interaction.optionDomain(draft, 'option1');
+    expect(domain.hasTargetPicker).toBe(true);
+    expect(traitAcquisitionTargets).not.toHaveBeenCalled();
+    const projected = await domain.load();
+    expect(traitAcquisitionTargets).toHaveBeenCalledWith(
+      interaction.owner,
+      draft,
+      'option1',
+      undefined,
+    );
+    expect(
+      projected.targetPicker?.sections.flatMap((section) =>
+        section.items.map((item) => item.value),
+      ),
+    ).toEqual(['ApolloCastBoon']);
+
+    expect(interaction.optionDomain(draft, 'option2').hasTargetPicker).toBe(false);
+  });
+
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {
     const events: CandidateEvaluationEvent[] = [];
     const project = createGoldenFGHIProject();

@@ -1349,8 +1349,11 @@ used as a shadow eligibility model. Boon Growth and Boon Decay evaluate their
 distinct next-rarity predicates from the same equipped ledger. Route evaluation
 seeds the branch's trait ledger across every validated biome and resets only
 the reward records declared as biome-local; dormant/unpicked/unpurchased
-offers do not enter it. NPC/Story effect-backed choices, stacks, rarity
-mutation, and other deferred providers remain outside this persistent slice.
+offers do not enter it. A declaration-owned targeted acquisition may add the
+source and then mutate one exact authored eligible target in the same event;
+Bridal Glow currently promotes that target to Heroic. NPC/Story effect-backed
+choices without such a declaration, levels/stacks, and other rarity mutations
+remain outside this persistent slice.
 
 Before folding a reached Olympian role, simulation derives whether the
 pre-offer ledger has empty ordinary boon slots. If so, it evaluates the whole

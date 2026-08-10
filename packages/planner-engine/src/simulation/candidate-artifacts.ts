@@ -6,6 +6,7 @@ import {
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
 import type { AuthoredTraitOffer } from '../authored-project/traits';
+import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
   createEmptyRewardProducerCandidateArtifacts,
@@ -20,6 +21,8 @@ import {
   assessTraitOffer,
   assessTraitOfferComposition,
   assessTraitReplacementComposition,
+  assessSelectedTargetedAcquisition,
+  targetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
 } from './traits';
@@ -45,6 +48,13 @@ export interface RoomTargetCandidateArtifacts {
  */
 export interface TraitOfferCandidateCapability {
   readonly evaluateOffer: (value: AuthoredTraitOffer) => readonly TraitOfferBranchAssessment[];
+  readonly targetedAcquisitionTargets: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => readonly {
+    readonly sourceSupported: boolean;
+    readonly targetTraitKeys: readonly string[];
+  }[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -121,8 +131,39 @@ export function createTraitOfferCandidateArtifacts(
                   context.before,
                   context.context,
                 ),
+                targetedAcquisition: assessSelectedTargetedAcquisition(
+                  catalog,
+                  value,
+                  context.before,
+                ),
               }),
             ),
+          ),
+        targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+          Object.freeze(
+            branchContexts.map((context) => {
+              const option = value.options[optionIndex(optionKey)];
+              if (option === undefined) {
+                return Object.freeze({
+                  sourceSupported: false,
+                  targetTraitKeys: Object.freeze([]),
+                });
+              }
+              const sourceAssessment = assessTraitOffer(
+                catalog,
+                value,
+                context.before,
+                context.context,
+              )[optionIndex(optionKey)];
+              return Object.freeze({
+                sourceSupported: sourceAssessment?.legal ?? false,
+                targetTraitKeys: targetedAcquisitionTargetKeys(
+                  catalog,
+                  option.traitKey,
+                  context.before,
+                ),
+              });
+            }),
           ),
       });
     },

@@ -742,7 +742,6 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["HephaestusWeaponBoon","HephaestusSpecialBoon","HephaestusSprintBoon"]},{"kind":"anyEquippedTrait","traitKeys":["HestiaWeaponBoon","HestiaSpecialBoon","HestiaCastBoon","HestiaSprintBoon","HestiaManaBoon"]}]}]',
   LinkedDeathDamageBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["HeraWeaponBoon","HeraSpecialBoon","HeraCastBoon","HeraSprintBoon"]}]',
-  BoonDecayBoon: '[{"kind":"superchargeableTrait"}]',
   DamageSharePotencyBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["HeraWeaponBoon","HeraSpecialBoon","HeraCastBoon","HeraSprintBoon"]}]',
   SpawnCastDamageBoon:
@@ -886,8 +885,9 @@ describe('trait offer catalog closure', () => {
     expect(traits?.traits.byKey.BoonGrowthBoon?.offerRequirements).toContainEqual({
       kind: 'rarifiableTrait',
     });
-    expect(traits?.traits.byKey.BoonDecayBoon?.offerRequirements).toContainEqual({
-      kind: 'superchargeableTrait',
+    expect(traits?.traits.byKey.BoonDecayBoon?.targetedAcquisition).toEqual({
+      kind: 'promoteGodTraitToHeroic',
+      target: 'superchargeableGodTrait',
     });
     expect(traits?.traits.byKey.ElementalUnifiedBoon?.offerRequirements).toContainEqual({
       kind: 'highestBaseElementCount',

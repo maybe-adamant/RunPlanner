@@ -1,5 +1,6 @@
 import {
   createOccurrenceAddress,
+  optionIndex,
   semanticAddressKey,
   type OccurrenceId,
   type SemanticAddress,
@@ -1517,12 +1518,19 @@ export function bindWorkspaceInteractions(
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
       const prepared = services.traitDomain.prepare(control.giver, value, optionKey);
       const domainKey = `${optionKey}:${JSON.stringify(value)}:${prepared.variants
-        .map((option) => `${option.traitKey}:${option.rarity ?? ''}`)
+        .map((option) => `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`)
         .join(',')}`;
       const existing = optionDomains.get(domainKey);
       if (existing !== undefined) return existing;
+      const option = value.options[optionIndex(optionKey)];
+      const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
+      const hasTargetPicker =
+        option !== undefined &&
+        value.selectedOptionKey === optionKey &&
+        declaration?.targetedAcquisition !== undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
+        hasTargetPicker,
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(
@@ -1531,7 +1539,22 @@ export function bindWorkspaceInteractions(
             optionKey,
             prepared.variants,
           );
-          projected = services.traitDomain.project(control.giver, value, prepared, focused);
+          const targets =
+            hasTargetPicker && option !== undefined
+              ? candidates.traitAcquisitionTargets(
+                  control.address,
+                  value,
+                  optionKey,
+                  option.targetTraitKey,
+                )
+              : undefined;
+          projected = services.traitDomain.project(
+            control.giver,
+            value,
+            prepared,
+            focused,
+            targets,
+          );
           return projected;
         },
       });

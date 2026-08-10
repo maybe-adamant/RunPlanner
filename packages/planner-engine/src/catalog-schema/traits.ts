@@ -31,6 +31,14 @@ export interface ScalableGodTraitRarityFloorEffect {
   readonly minimumRarity: 'Rare';
 }
 
+/** One acquisition-time transition targeting exactly one equipped trait. */
+export interface PromoteGodTraitToHeroicAcquisition {
+  readonly kind: 'promoteGodTraitToHeroic';
+  readonly target: 'superchargeableGodTrait';
+}
+
+export type TargetedTraitAcquisition = PromoteGodTraitToHeroicAcquisition;
+
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
 export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons';
@@ -65,9 +73,6 @@ export type TraitRequirementExpression =
     }
   | {
       readonly kind: 'rarifiableTrait';
-    }
-  | {
-      readonly kind: 'superchargeableTrait';
     }
   | {
       readonly kind: 'offerContext';
@@ -105,6 +110,7 @@ export interface TraitDeclaration {
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
+  readonly targetedAcquisition?: TargetedTraitAcquisition;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: HammerCompatibility;
 }

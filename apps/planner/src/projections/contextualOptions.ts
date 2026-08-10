@@ -290,6 +290,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'No equipped trait can be rarified for this offer.' };
     case 'superchargeableTarget':
       return { kind: 'trait', message: 'No equipped trait can be supercharged for this offer.' };
+    case 'targetedAcquisitionTargetMissing':
+      return { kind: 'trait', message: 'Choose an eligible equipped trait for this acquisition.' };
+    case 'targetedAcquisitionTargetUnavailable':
+      return { kind: 'trait', message: 'This equipped trait cannot receive the acquisition.' };
     case 'occupiedBoonSlot':
       return { kind: 'trait', message: 'This ordinary boon slot is already occupied.' };
     case 'freshRarityUnavailable':
@@ -452,7 +456,8 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
           const explanation =
             display.explanation ??
             (option.evaluation.kind === 'encounter' ||
-            option.evaluation.kind === 'traitOfferFocusedOption'
+            option.evaluation.kind === 'traitOfferFocusedOption' ||
+            option.evaluation.kind === 'traitAcquisitionTarget'
               ? undefined
               : explainCandidateEvaluation(catalog, option.evaluation));
           return Object.freeze({

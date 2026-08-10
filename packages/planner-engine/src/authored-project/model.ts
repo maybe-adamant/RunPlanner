@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 16 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 17 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 

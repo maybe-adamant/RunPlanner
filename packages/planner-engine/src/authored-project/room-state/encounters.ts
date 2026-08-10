@@ -183,9 +183,10 @@ function decodeEncounterTraitOffer(
     const index = TRAIT_OPTION_KEYS.indexOf(optionKey);
     const option = expectRecord(rawOptions[index], `${path}.options.${optionKey}`);
     const hasRarity = option.rarity !== undefined;
+    const hasTarget = option.targetTraitKey !== undefined;
     expectExactKeys(
       option,
-      hasRarity ? ['traitKey', 'rarity'] : ['traitKey'],
+      ['traitKey', ...(hasRarity ? ['rarity'] : []), ...(hasTarget ? ['targetTraitKey'] : [])],
       `${path}.options.${optionKey}`,
     );
     const traitKey = expectString(option.traitKey, `${path}.options.${optionKey}.traitKey`);
@@ -211,11 +212,30 @@ function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.rarity`,
         `unsupported authored rarity for ${traitKey}`,
       );
-    options.push(
+    const targetTraitKey = hasTarget
+      ? expectString(option.targetTraitKey, `${path}.options.${optionKey}.targetTraitKey`)
+      : undefined;
+    if (targetTraitKey !== undefined) {
+      if (trait.targetedAcquisition === undefined)
+        failProjectDocument(
+          `${path}.options.${optionKey}.targetTraitKey`,
+          `${traitKey} does not target another trait on acquisition`,
+        );
+      if (catalog.traits.byKey[targetTraitKey] === undefined)
+        failProjectDocument(
+          `${path}.options.${optionKey}.targetTraitKey`,
+          `unknown trait ${targetTraitKey}`,
+        );
+    }
+    const decodedOption: AuthoredTraitOption =
       rarity === undefined
-        ? Object.freeze({ traitKey })
-        : Object.freeze({ traitKey, rarity: rarity as AuthoredTraitOption['rarity'] }),
-    );
+        ? { traitKey, ...(targetTraitKey === undefined ? {} : { targetTraitKey }) }
+        : {
+            traitKey,
+            rarity: rarity as NonNullable<AuthoredTraitOption['rarity']>,
+            ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+          };
+    options.push(Object.freeze(decodedOption));
   }
   const selectedOptionKey = expectString(record.selectedOptionKey, `${path}.selectedOptionKey`);
   if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey))

@@ -216,6 +216,7 @@ function applyTraitOfferForAcquisition(
     findings !== undefined &&
     (evaluation.composition.findings.length > 0 ||
       evaluation.replacementComposition.findings.length > 0 ||
+      evaluation.targetedAcquisition.findings.length > 0 ||
       evaluation.assessments.some((assessment) => !assessment.legal))
   ) {
     const owner = traitOwnerAddress(reward.origin);
@@ -261,6 +262,20 @@ function applyTraitOfferForAcquisition(
           undefined,
           finding.detail,
           undefined,
+          findingChronology,
+        );
+      });
+      evaluation.targetedAcquisition.findings.forEach((finding) => {
+        addTraitFinding(
+          findings,
+          owner,
+          role,
+          lifecyclePoint,
+          sequence,
+          finding.code,
+          finding.traitKey,
+          finding.detail,
+          finding.requirementTraitKeys,
           findingChronology,
         );
       });

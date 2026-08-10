@@ -15,6 +15,7 @@ import type {
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
   TraitReplacementCompositionAssessment,
+  TraitTargetedAcquisitionAssessment,
 } from '../traits';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
@@ -49,10 +50,42 @@ export interface TraitOfferFocusedOptionCandidateQuery {
   readonly optionKey: TraitOptionKey;
 }
 
+/**
+ * Requests the exact-target domain for one selected targeted acquisition.
+ * The engine enumerates it from retained pre-offer branches; consumers do not
+ * inspect or reconstruct trait history.
+ */
+export interface TraitAcquisitionTargetDomainQuery {
+  readonly kind: 'traitAcquisitionTargetDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+  readonly retainedTargetTraitKey?: string;
+}
+
+export interface EvaluatedTraitAcquisitionTargetCandidate {
+  readonly kind: 'traitAcquisitionTarget';
+  readonly result: {
+    readonly traitKey: string;
+    readonly supported: boolean;
+    readonly branchSupport: readonly boolean[];
+    readonly findings: readonly TraitOfferCandidateFinding[];
+  };
+}
+
+export interface EvaluatedTraitAcquisitionTargetDomain {
+  readonly kind: 'traitAcquisitionTargetDomain';
+  readonly result: {
+    readonly sourceTraitKey: string;
+    readonly candidates: readonly EvaluatedTraitAcquisitionTargetCandidate[];
+  };
+}
+
 export interface TraitOfferCandidateBranch {
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition?: TraitReplacementCompositionAssessment;
+  readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
 }
 
 export interface EvaluatedTraitOfferCandidate {
@@ -75,7 +108,8 @@ export interface TraitOfferFocusedOptionEvidence {
     | 'siblingOption'
     | 'duplicate'
     | 'firstOfferComposition'
-    | 'replacementComposition';
+    | 'replacementComposition'
+    | 'targetedAcquisition';
   readonly blocksFocusedOption: boolean;
   readonly finding: TraitOfferCandidateFinding;
 }
@@ -100,6 +134,9 @@ export type TraitOfferCandidateEvaluation =
 
 export type TraitOfferFocusedOptionCandidateEvaluation =
   CandidateContextUnavailable | EvaluatedTraitOfferFocusedOptionCandidate;
+
+export type TraitAcquisitionTargetDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedTraitAcquisitionTargetDomain;
 
 interface TraitOfferCandidateAssessment {
   readonly branches: readonly TraitOfferCandidateBranch[];
@@ -154,6 +191,7 @@ function assessTraitOfferCandidate(
     readonly assessments: readonly TraitAssessment[];
     readonly composition: TraitOfferCompositionAssessment;
     readonly replacementComposition: TraitReplacementCompositionAssessment;
+    readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   }[],
   duplicateFindings: readonly TraitOfferCandidateFinding[],
 ): TraitOfferCandidateAssessment {
@@ -166,6 +204,9 @@ function assessTraitOfferCandidate(
         (branch.replacementComposition.replacementCount > 0 || !branch.replacementComposition.legal)
           ? { replacementComposition: branch.replacementComposition }
           : {}),
+        ...(branch.targetedAcquisition.applies
+          ? { targetedAcquisition: branch.targetedAcquisition }
+          : {}),
       }),
     ),
   );
@@ -175,6 +216,7 @@ function assessTraitOfferCandidate(
       ...branch.assessments.flatMap((entry) => entry.findings.map(candidateFinding)),
       ...branch.composition.findings.map(candidateFinding),
       ...(branch.replacementComposition?.findings.map(candidateFinding) ?? []),
+      ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
     ]),
     ...duplicateFindings,
   ]);
@@ -189,6 +231,7 @@ function assessTraitOfferCandidate(
         (branch) =>
           branch.composition.legal &&
           (branch.replacementComposition?.legal ?? true) &&
+          (branch.targetedAcquisition?.legal ?? true) &&
           branch.assessments.every((entry) => entry.legal),
       ),
   });
@@ -268,6 +311,17 @@ function focusedEvidenceForBranch(
       }),
     );
   }
+  for (const finding of branch.targetedAcquisition?.findings ?? []) {
+    evidence.push(
+      Object.freeze({
+        source: 'targetedAcquisition',
+        // A valid target is the next compound picker step. The focused trait
+        // remains selectable when its nonempty target domain is legal.
+        blocksFocusedOption: false,
+        finding: candidateFinding(finding),
+      }),
+    );
+  }
   const frozenEvidence = Object.freeze(evidence);
   return Object.freeze({
     supported: frozenEvidence.every((entry) => !entry.blocksFocusedOption),
@@ -343,4 +397,65 @@ export function evaluateTraitOfferFocusedOptionCandidate(
     duplicateFindings,
   );
   return evaluatedFocusedTraitOfferOptionCandidate(assessment, query.optionKey);
+}
+
+export function evaluateTraitAcquisitionTargetDomain(
+  catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: TraitAcquisitionTargetDomainQuery,
+): TraitAcquisitionTargetDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const option = query.value.options[optionIndex(query.optionKey)];
+  if (option === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const branchTargets = capability.targetedAcquisitionTargets(query.value, query.optionKey);
+  const supportedKeys = new Set(
+    branchTargets.flatMap((branch) => (branch.sourceSupported ? branch.targetTraitKeys : [])),
+  );
+  const orderedKeys = catalog.traits.values
+    .map((trait) => trait.key)
+    .filter((traitKey) => supportedKeys.has(traitKey));
+  if (
+    query.retainedTargetTraitKey !== undefined &&
+    !orderedKeys.includes(query.retainedTargetTraitKey)
+  ) {
+    orderedKeys.push(query.retainedTargetTraitKey);
+  }
+  return Object.freeze({
+    kind: 'traitAcquisitionTargetDomain',
+    result: Object.freeze({
+      sourceTraitKey: option.traitKey,
+      candidates: Object.freeze(
+        orderedKeys.map((traitKey) => {
+          const branchSupport = Object.freeze(
+            branchTargets.map(
+              (branch) => branch.sourceSupported && branch.targetTraitKeys.includes(traitKey),
+            ),
+          );
+          const supported = branchSupport.some(Boolean);
+          return Object.freeze({
+            kind: 'traitAcquisitionTarget' as const,
+            result: Object.freeze({
+              traitKey,
+              supported,
+              branchSupport,
+              findings: Object.freeze(
+                supported
+                  ? []
+                  : [
+                      Object.freeze({
+                        code: 'targetedAcquisitionTargetUnavailable' as const,
+                        traitKey,
+                        detail: traitKey,
+                      }),
+                    ],
+              ),
+            }),
+          });
+        }),
+      ),
+    }),
+  });
 }

@@ -332,4 +332,21 @@ describe('persisted authored room-state codec', () => {
       ),
     ).toThrow('is duplicated in the trait offer');
   });
+
+  it('rejects a target on a trait without targeted acquisition', () => {
+    const fixture = traitFixture();
+    const offer = findTraitOffer(fixture.state);
+    if (offer === undefined) throw new Error('trait fixture did not contain an offer');
+    const options = offer.options as Record<string, unknown>[];
+    options[0]!.targetTraitKey = 'ApolloSpecialBoon';
+    expect(() =>
+      decodeRoomState(
+        fixture.state,
+        catalog,
+        fixture.declaration,
+        { role: 'ordinary', entryActive: true },
+        path,
+      ),
+    ).toThrow('does not target another trait on acquisition');
+  });
 });

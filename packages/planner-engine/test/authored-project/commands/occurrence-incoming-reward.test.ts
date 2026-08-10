@@ -6,6 +6,8 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -41,6 +43,76 @@ describe('authored-project incoming reward commands', () => {
     expect(
       applyProjectCommand(project, catalog, { kind: 'ReplaceIncomingReward', reward, value }),
     ).toBe(project);
+  });
+
+  it('accepts a declaration-owned target and rejects targets on ordinary traits', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+      },
+    });
+    const trait = createTraitOfferAddress(reward, 'source');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        giverKey: 'Hera',
+        options: [
+          {
+            traitKey: 'BoonDecayBoon',
+            rarity: 'Common',
+            targetTraitKey: 'ApolloWeaponBoon',
+          },
+          { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
+    expect(occurrence?.state).toMatchObject({
+      reward: {
+        traitOffersByAcquisitionRole: {
+          source: {
+            options: expect.arrayContaining([
+              expect.objectContaining({
+                traitKey: 'BoonDecayBoon',
+                targetTraitKey: 'ApolloWeaponBoon',
+              }),
+            ]),
+          },
+        },
+      },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: {
+          giverKey: 'Hera',
+          options: [
+            {
+              traitKey: 'HeraWeaponBoon',
+              rarity: 'Common',
+              targetTraitKey: 'ApolloWeaponBoon',
+            },
+            { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+            { traitKey: 'HeraCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        },
+      }),
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceTraitOffer' }));
   });
 
   it('replaces counted and free-reward offers and preserves unchanged document identity', () => {

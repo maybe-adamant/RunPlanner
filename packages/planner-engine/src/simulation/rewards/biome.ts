@@ -908,6 +908,7 @@ function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
                 assessments: trace.assessments,
                 composition: trace.composition,
                 replacementComposition: trace.replacementComposition,
+                targetedAcquisition: trace.targetedAcquisition,
               }),
             ),
           ),

@@ -34,6 +34,10 @@ const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
   sections: Object.freeze([]),
 });
 
+const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
+  sections: Object.freeze([]),
+});
+
 function rarityLabel(rarity: TraitRarity): string {
   return rarity;
 }
@@ -55,7 +59,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
     interaction.giver.key,
     interaction.choices.map((choice) => choice.value).join(','),
     interaction.value.options
-      .map((option) => `${option.traitKey}:${option.rarity ?? ''}`)
+      .map((option) => `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`)
       .join(','),
     interaction.value.selectedOptionKey,
   ].join('|');
@@ -98,6 +102,7 @@ function TraitOfferOptionEditor({
   const domain = loaded.result;
   const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
   const rarityPicker = domain?.rarityPickerFor(option.traitKey) ?? emptyRarityPicker;
+  const targetPicker = domain?.targetPicker ?? emptyTargetPicker;
   const hasRarity = interaction.giver.providerKind !== 'hammer';
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
   const selectTrait = (traitKey: string): void => {
@@ -106,7 +111,10 @@ function TraitOfferOptionEditor({
     onUpdate(replaceOption(value, index, preferred));
   };
   const selectRarity = (rarity: TraitRarity): void => {
-    onUpdate(replaceOption(value, index, { traitKey: option.traitKey, rarity }));
+    onUpdate(replaceOption(value, index, { ...option, rarity }));
+  };
+  const selectTarget = (targetTraitKey: string): void => {
+    onUpdate(replaceOption(value, index, { ...option, targetTraitKey }));
   };
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
@@ -137,6 +145,23 @@ function TraitOfferOptionEditor({
           onSelect={selectRarity}
           placeholder="Choose a rarity"
           {...(option.rarity === undefined ? {} : { triggerLabel: rarityLabel(option.rarity) })}
+        />
+      )}
+      {!loadable.hasTargetPicker ? null : (
+        <ContextualPicker
+          ariaLabel={`${optionKey} acquisition target`}
+          id={`${idPrefix}-target`}
+          label="Target"
+          loading={loaded.pending}
+          model={targetPicker}
+          onOpenChange={(open) => {
+            if (open) controller.activate(loadable);
+          }}
+          onSelect={selectTarget}
+          placeholder="Choose an equipped trait"
+          {...(option.targetTraitKey === undefined
+            ? {}
+            : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
         />
       )}
       <label className="trait-option-selected">

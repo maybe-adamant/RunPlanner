@@ -5,6 +5,7 @@ import type {
   TraitRequirementExpression,
   TraitRarity,
   ScalableGodTraitRarityFloorEffect,
+  TargetedTraitAcquisition,
 } from '@run-planner/engine/catalog-schema';
 
 /** Raw catalog declarations intentionally remain separate from normalized
@@ -22,6 +23,7 @@ export interface RawTraitDeclaration {
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
+  readonly targetedAcquisition?: TargetedTraitAcquisition;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: TraitDeclaration['hammerCompatibility'];
 }

@@ -993,10 +993,14 @@ god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
 target and Boon Decay's superchargeable target are distinct predicates over
 that ledger and are not aliases or persisted shadow counters. The old
 ordinary-source increment approximation is retired. NPC/Story effect-backed
-choices, other rarity mutations, stacks, and other deferred providers remain outside
-this persistent trait lifecycle.
+choices remain outside this persistent trait lifecycle unless their declaration
+owns one of the engine's closed acquisition transitions. Bridal Glow is the
+first such transition: the source remains equipped and one authored eligible
+god trait is promoted to Heroic at acquisition. Its added levels/stacks and the
+Hephaestus cooldown exception remain deferred, as do other undeclared rarity
+mutations and providers.
 
-Proper Upbringing is the one modeled rarity lifecycle in this slice. Its
+Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
 normalized declaration supplies a `Common`-to-`Rare` floor that activates when
 the equipped ledger reaches its declaration-owned base-element minimums.
 Chronological replay promotes eligible equipped Common persistent god traits on
