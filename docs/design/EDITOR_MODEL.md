@@ -787,10 +787,12 @@ Trait offers are projected from reached engine evaluations, never recomputed
 in React. A room/reward summary, the chronological route Traits panel, and a
 finding destination all reference the same `TraitOfferAddress` and bound
 interaction. The shared modal renders three stable option rows, the selected
-option, and contextual trait pickers. Ranked Olympian/Hermes options also
-receive contextual rarity pickers; Hammer rows intentionally expose no rarity
-field. Giver labels, selected trait labels, contextual support, and findings
-are presentation products derived from catalog and engine outputs.
+option, and contextual trait pickers. Selectable-rarity givers receive a
+contextual rarity picker; fixed-rarity providers such as Icarus retain rarity
+in the authored value and summary but expose no rarity control, and Hammer rows
+intentionally expose no rarity field. Giver labels, selected trait labels,
+contextual support, and findings are presentation products derived from catalog
+and engine outputs.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:
@@ -806,6 +808,12 @@ editor does not infer occupied slots, rarity promotion, replacement limits, or
 eligibility. Structurally supported but context-invalid rarities remain visible
 for repair, while Heroic is offered only when the engine exposes an
 Epic-to-Heroic replacement.
+
+When a declaration-owned option targets another equipped trait, the same row
+renders a generic engine-backed target picker. Catalog labels present the exact
+target domain; a missing or stale selected target remains visible for repair
+and keeps Save disabled. React does not infer a target, traverse equipped
+history, or switch on Bridal Glow, Latest Model, Icarus, or Hammer names.
 
 Picker activation evaluates one focused option domain with the other two draft
 options held fixed. Sibling findings therefore remain visible in the complete

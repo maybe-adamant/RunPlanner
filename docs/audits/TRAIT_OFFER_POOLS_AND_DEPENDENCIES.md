@@ -543,8 +543,8 @@ they do not receive placeholder declarations in this slice.
 
 ## Offer-Context Restrictions
 
-Some offer restrictions belong to the room or reward that produced the
-choice, not to equipped trait history. The first slice has two such rules.
+Some offer restrictions belong to the room or reward that produced the choice,
+not to equipped trait history. The normalized catalog has two such rules.
 
 ### Devotion blocks Duo traits
 
@@ -722,9 +722,9 @@ therefore chooses exactly one eligible equipped target and promotes it to
 Heroic. It records that target on Bridal Glow as `UpgradedTraitName`; the
 source boon remains equipped with its own rarity and Water element.
 
-Trait levels and stacks are outside this slice, so the Hephaestus
-rarity/cooldown exception cannot yet be represented. The first slice therefore
-applies the generic non-`BlockStacking`, next-rarity rule to Hephaestus Weapon,
+Trait levels and stacks are outside the current model, so the Hephaestus
+rarity/cooldown exception cannot yet be represented. The supported lifecycle
+therefore applies the generic non-`BlockStacking`, next-rarity rule to Hephaestus Weapon,
 Special, and Sprint boons as well. This is an explicit temporary collapse, not
 an implicit claim that every source cooldown state passes the game check. The
 planner models the exact chosen target and its Heroic promotion; the additional
@@ -732,7 +732,7 @@ level/stack grant and later `CreditMissingStacks` adjustment remain deferred.
 
 ### Other direct condition dispositions
 
-| Source condition                                   | First-slice disposition                                                                                             |
+| Source condition                                   | Normalized disposition                                                                                              |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | already equipped                                   | modeled from exact equipped keys                                                                                    |
 | `BlockOfferIfPreviouslyPicked`                     | equivalent to already equipped under the slice's no-sale/no-replacement lifecycle                                   |
@@ -924,10 +924,10 @@ the maximum replacement count is `ordinaryCandidateCount >= 2 ? 1 : 3 -
 ordinaryCandidateCount`. Replacement alternatives remain independent against
 the same pre-offer state.
 
-## Gate A Source-Closure Fields
+## Normalized Source-Closure Fields
 
-The first trait-offer slice consumes the following additional declaration
-facts from the installed scripts. These are normalized in the catalog without
+The supported trait-offer catalog consumes the following declaration facts
+from the installed scripts. These are normalized without
 moving any lifecycle, authored-state, or simulation policy into declarations:
 
 | Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                                                                     |
@@ -943,13 +943,14 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                    |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
 
-The Gate-A/Gate-B normalized inventory has six weapons, 24 weapon/aspect pairs,
-285 unique included trait declarations, 228 Olympian/Hermes/field-NPC
-memberships (including Artemis and Athena), 92 Hammer memberships, and one
+The normalized inventory has six weapons, 24 weapon/aspect pairs, 293 unique
+included trait declarations, 236 Olympian/Hermes/field-NPC memberships across
+13 non-Hammer givers, 92 Hammer memberships under the fourteenth giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
-spell/talent operands remain exact keys only; Artemis and Athena are the
-modeled field-NPC providers in these gates, while other NPC, Story, Spell, or
-Talent providers remain outside the persistent trait catalog. Other source
+spell/talent operands remain exact keys
+only; Artemis, Athena, and Icarus are the modeled field-NPC providers, while
+other NPC, Story, Spell, or Talent providers remain outside the persistent
+trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline, mechanical-effect, and Hephaestus level/cooldown
 deferrals. Newly discovered predicates are explicitly listed above rather than

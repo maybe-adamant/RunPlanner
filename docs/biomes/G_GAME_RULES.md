@@ -254,9 +254,11 @@ rooms resolve their direct definitions and are not NPC candidate surfaces.
 
 The NPC definitions use ordinary exact-key eligibility and history requirements;
 the planner does not add a G-specific NPC resolver or family ledger. Raw set
-weights, external predicates, NPC interactions, random/Shop events, and
-enemy-wave detail remain audit or future-feature concerns rather than
-production authored state.
+weights, external predicates, Arachne and Nemesis interactions, random/Shop
+events, and enemy-wave detail remain audit or future-feature concerns rather
+than production authored state. When `ArtemisCombatG` is selected and entered,
+its exact phase owns Artemis's three-choice trait offer and folds the selected
+trait at encounter completion.
 
 ## Current Product Boundary
 

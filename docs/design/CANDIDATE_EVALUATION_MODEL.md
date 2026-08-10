@@ -518,11 +518,12 @@ products of the same reached reward walk:
   acquisition role, chronological index, and branch-grouped option,
   composition, and replacement-composition assessments. It does not contain
   pre-offer trait histories or resolved giver contexts.
-- `BiomeCandidateArtifacts.traitOffers.at(address)` returns only an opaque
-  `evaluateOffer(value)` capability. Its private branch-local inputs are the
-  exact pre-offer `TraitHistoryState` and resolved `TraitOfferContext` captured
-  before the selected offer was processed and before equivalent post-state
-  branches could merge.
+- `BiomeCandidateArtifacts.traitOffers.at(address)` returns only opaque
+  `evaluateOffer(value)` and
+  `targetedAcquisitionTargets(value, optionKey)` capabilities. Their private
+  branch-local inputs are the exact pre-offer `TraitHistoryState` and resolved
+  `TraitOfferContext` captured before the selected offer was processed and
+  before equivalent post-state branches could merge.
 
 A query names one exact address and passes one complete proposed offer to that
 capability. The engine assesses all three options against every retained
@@ -539,15 +540,26 @@ trait history, and events downstream, but do not carry diagnostic trait-offer
 assessment traces or candidate contexts.
 
 The returned findings cover prerequisite, negative predicate, context,
-element, rarity-count, rarifiable/superchargeable target, occupied-slot,
-wrong-loadout, and acquired-Hammer exclusion rules. For an occupied Olympian
-slot, the same product may carry one exact derived replacement transition and
-its promoted rarity; Heroic is emitted only for Epic-to-Heroic replacement and
-never as a fresh candidate. Replacement candidates remain limited to
+element, rarity-count, targeted-acquisition source and exact-target,
+occupied-slot, wrong-loadout, and acquired-Hammer exclusion rules. For an
+occupied Olympian slot, the same product may carry one exact derived
+replacement transition and its promoted rarity; Heroic is emitted only for
+Epic-to-Heroic replacement and never as a fresh candidate. Replacement
+candidates remain limited to
 `priorityTraitKeys`, and waive only occupied-slot failure. Candidate evaluation
 does not equip a sibling option, rewrite trait history, or persist counters.
 React receives only the bound interaction projection and cannot recreate this
 policy.
+
+The target-domain query is a sibling view of that exact offer capability. It
+enumerates a declaration-owned targeted option's legal exact targets per
+retained branch and never unions support into a target that exists in no single
+history. A targeted source with no eligible target is unavailable. Only the
+selected targeted option requires an authored `targetTraitKey`; a missing or
+stale selected target blocks the complete offer while remaining pinned and
+repairable in the application picker. Target enumeration and selected-target
+validation share the engine predicate, including god-trait superchargeability
+and Hammer Rank-II capability.
 
 When the reached pre-acquisition history carries
 `minimumScalableGodTraitRarity`, a fresh Common candidate is additionally

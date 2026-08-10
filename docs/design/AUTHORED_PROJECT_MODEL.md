@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 15 Boundary
+## Schema 17 Boundary
 
-Schema 15 is the sole persisted authored-project contract. The codec rejects
+Schema 17 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -352,6 +352,20 @@ or local child, including a dormant or context-invalid selection.
 default is dormant or currently invalid; it is a reset, not an automatic
 repair.
 
+An Encounter Definition may additionally declare one `traitOfferProducer`.
+The owning room or local child then persists its complete three-option offer
+sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`. Selecting
+that encounter installs its declaration-owned default when no retained offer
+exists; selecting another definition makes the prior offer dormant, and
+reselecting it restores the retained value. Only the selected, active, entered
+definition publishes, validates, or acquires its offer.
+
+The exact encounter phase owns the offer's `TraitOfferAddress` with child role
+`selection`. An option may retain an exact `targetTraitKey` only when its trait
+declares a targeted acquisition. Dormant and unselected options may remain
+incomplete or context-invalid; the selected targeted option must resolve to an
+eligible equipped target before the offer can fold.
+
 ## Semantic Addresses
 
 Addresses are immutable discriminated values. `semanticAddressKey` is a
@@ -410,7 +424,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 15;
+  schemaVersion: 17;
   projectId: string;
   name: string;
   catalogVersion: string;

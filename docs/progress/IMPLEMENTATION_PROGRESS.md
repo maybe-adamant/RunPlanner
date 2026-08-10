@@ -111,6 +111,19 @@ matrices and unmodeled NPC event behavior in the encounter audit.
 The final repository gate passed 107 test files / 985 tests, typecheck, lint,
 formatting, and the production build.
 
+The field-NPC trait-offer expansion is complete. Artemis in F/G/N, Athena in P,
+and Icarus in O/P now publish declaration-owned three-choice offers from their
+exact selected encounter phases through the existing trait lifecycle. Schema
+17 preserves sparse dormant encounter offers and exact targeted-acquisition
+outcomes; the closed Bridal Glow and Latest Model transitions respectively
+promote one eligible god trait to Heroic and one source-capable Rank-I Hammer
+to Rank II. Catalog-owned selectable, fixed, and rarityless policies keep
+Athena, Icarus, and Hammer authoring on one generic editor path. Delivery landed
+in `36fcfa4`, `1fc84dc`, `3dcbf44`, and `e35994d`; the final repository check
+passed. The temporary field-NPC plan is retired, and its durable catalog,
+authored, simulation, candidate, editor, and biome contracts are absorbed into
+their owning authorities.
+
 Phase 8's narrow portable-shell implementation is complete. The
 permission-minimal Tauri host wraps the existing Vite application without
 plugins, frontend capabilities, or Rust-side application behavior. The Windows
