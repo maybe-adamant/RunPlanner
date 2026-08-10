@@ -25,6 +25,7 @@ import {
   targetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
+  type TraitOfferContext,
 } from './traits';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -91,6 +92,19 @@ export function createRoomTargetCandidateArtifacts(
   });
 }
 
+/** Candidate-authored conditions replace the persisted offer facts captured at this frontier. */
+function traitOfferCandidateContext(
+  context: TraitOfferContext,
+  value: AuthoredTraitOffer,
+): TraitOfferContext {
+  return value.deathDefianceConditionMet === undefined
+    ? context
+    : Object.freeze({
+        ...context,
+        deathDefianceConditionMet: value.deathDefianceConditionMet,
+      });
+}
+
 export function createBiomeCandidateArtifacts(
   origin: BiomeAddress,
   roomTargets: RoomTargetCandidateArtifacts,
@@ -121,23 +135,24 @@ export function createTraitOfferCandidateArtifacts(
       return Object.freeze({
         evaluateOffer: (value: AuthoredTraitOffer) =>
           Object.freeze(
-            branchContexts.map((context) =>
-              Object.freeze({
-                assessments: assessTraitOffer(catalog, value, context.before, context.context),
+            branchContexts.map((context) => {
+              const candidateContext = traitOfferCandidateContext(context.context, value);
+              return Object.freeze({
+                assessments: assessTraitOffer(catalog, value, context.before, candidateContext),
                 composition: assessTraitOfferComposition(catalog, value, context.before),
                 replacementComposition: assessTraitReplacementComposition(
                   catalog,
                   value,
                   context.before,
-                  context.context,
+                  candidateContext,
                 ),
                 targetedAcquisition: assessSelectedTargetedAcquisition(
                   catalog,
                   value,
                   context.before,
                 ),
-              }),
-            ),
+              });
+            }),
           ),
         targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
@@ -153,7 +168,7 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                context.context,
+                traitOfferCandidateContext(context.context, value),
               )[optionIndex(optionKey)];
               return Object.freeze({
                 sourceSupported: sourceAssessment?.legal ?? false,

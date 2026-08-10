@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
+import { applyProjectCommand, type AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 
 import {
   createApplication,
@@ -18,7 +18,7 @@ import {
 } from '@planner/projections/traitDomainProjection';
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { TraitOfferEditor } from './TraitOfferEditor';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject, createRepresentativeNProject } from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
 
@@ -81,6 +81,62 @@ describe('trait offer editor', () => {
     expect(onCommit).toHaveBeenCalledWith(
       expect.objectContaining({ deathDefianceConditionMet: true }),
     );
+    application.dispose();
+  });
+
+  it('reevaluates a Medea draft immediately when its Death Defiance condition changes', async () => {
+    const application = createApplication();
+    const project = createRepresentativeNProject({
+      openSlotKeys: [
+        'combat11',
+        'combat10',
+        'combat09',
+        'combat05',
+        'story',
+        'combat02',
+        'combat01',
+        'miniBoss01',
+        'combat23',
+      ],
+      visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const initial = [...initialWorkspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.key === 'Medea',
+    );
+    if (initial === undefined) throw new Error('Medea trait offer interaction is missing');
+    const invalidProject = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: initial.owner,
+      value: {
+        ...initial.value,
+        options: [
+          { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' },
+          initial.value.options[1],
+          initial.value.options[2],
+        ],
+        deathDefianceConditionMet: false,
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(invalidProject));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interaction = workspace.interactions.traitOffers.get(initial.key);
+    if (interaction === undefined) throw new Error('edited Medea trait interaction is missing');
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
+      </Provider>,
+    );
+
+    expect(await screen.findByText(/deathDefianceConditionMet/)).toBeTruthy();
+    await user.click(screen.getByLabelText('Death Defiance condition met'));
+
+    await waitFor(() => expect(screen.queryByText(/deathDefianceConditionMet/)).toBeNull());
+    expect(
+      (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
     application.dispose();
   });
 
