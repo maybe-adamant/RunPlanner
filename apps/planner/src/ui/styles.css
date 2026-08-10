@@ -2054,8 +2054,6 @@ select {
 
 .room-customization-content > .encounter-editor,
 .room-customization-content > .ephyra-side-editor,
-.room-customization-content > .local-reward-editor,
-.room-customization-content > .ship-combat-editor,
 .room-customization-content > .shop-editor {
   margin-top: 0;
   padding-top: 0;

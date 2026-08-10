@@ -60,6 +60,23 @@ export function workspaceLocalDetailMarkers(
   }
 }
 
+/** Owners actually nested beneath the room's Customize disclosure. */
+export function workspaceCustomizationMarkers(
+  roomLocal: WorkspaceRoomLocal,
+): readonly WorkspaceMarker[] {
+  switch (roomLocal.kind) {
+    case 'ephyra':
+      return workspaceLocalDetailMarkers(roomLocal);
+    case 'fields':
+    case 'none':
+    case 'fixed':
+    case 'incomingReward':
+    case 'ship':
+    case 'shop':
+      return Object.freeze([]);
+  }
+}
+
 /**
  * Exact occurrence owners may be nested in a decision workbench, but they
  * retain one shared marker package for containment routing.

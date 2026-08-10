@@ -37,7 +37,7 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { findingSelected } from '@planner/state/editorSessionSlice';
+import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -946,6 +946,18 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    const ship = screen.getByLabelText('Ship combat structure');
+    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
+
+    expect(customize.open).toBe(false);
+    expect(ship.closest('.room-customization')).toBeNull();
+    expect(count.closest('.room-customization')).toBeNull();
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
+      ),
+    );
+    await waitFor(() => expect(customize.open).toBe(false));
 
     await view.user.click(count);
     await waitFor(() => {
@@ -1004,6 +1016,21 @@ describe('OccurrenceWorkbench', () => {
     expect(within(restoredCage).getByRole('button', { name: 'Reward' }).textContent).toContain(
       'Hestia',
     );
+  });
+
+  it('keeps unpicked Fields cage rewards on the main room surface', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat03')),
+    );
+
+    const cages = screen.getByLabelText('Fields cage rewards');
+    expect(within(cages).getByLabelText('Cage 1')).toBeTruthy();
+    expect(within(cages).getByLabelText('Cage 2')).toBeTruthy();
+    expect(cages.closest('.room-customization')).toBeNull();
+    expect(screen.queryByLabelText('Customize')).toBeNull();
   });
 
   it('omits the Fields section when its retained cages are all inactive', () => {
@@ -1067,12 +1094,12 @@ describe('OccurrenceWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    const initialWheel = screen.getByLabelText('Reward wheel 2');
-    const ship = screen.getByLabelText('Ship combat details');
+    const initialWheel = screen.getByLabelText('Combat 2 reward');
+    const ship = screen.getByLabelText('Ship combat structure');
     expect(
       Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
-    ).toEqual(['Reward wheel 1', 'Reward wheel 2']);
-    expect(within(screen.getByLabelText('Reward wheel 1')).queryByLabelText('Offer 2')).toBeNull();
+    ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
+    expect(within(screen.getByLabelText('Combat 1 reward')).queryByLabelText('Offer 2')).toBeNull();
     expect(
       (within(initialWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
         .value,
@@ -1094,10 +1121,10 @@ describe('OccurrenceWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.queryByLabelText('Reward wheel 2')).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText('Combat 2 reward')).toBeNull());
     expect(
       Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
-    ).toEqual(['Reward wheel 1']);
+    ).toEqual(['Combat 1 reward']);
 
     act(() =>
       view.application.store.dispatch(
@@ -1108,12 +1135,12 @@ describe('OccurrenceWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.getByLabelText('Reward wheel 2')).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText('Combat 2 reward')).toBeTruthy());
     expect(
       Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
-    ).toEqual(['Reward wheel 1', 'Reward wheel 2']);
+    ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
 
-    const restoredWheel = screen.getByLabelText('Reward wheel 2');
+    const restoredWheel = screen.getByLabelText('Combat 2 reward');
     expect(
       (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
         .value,
@@ -1155,7 +1182,7 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
-    const rewardWheel = screen.getByLabelText('Reward wheel 1');
+    const rewardWheel = screen.getByLabelText('Combat 1 reward');
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
     act(() =>

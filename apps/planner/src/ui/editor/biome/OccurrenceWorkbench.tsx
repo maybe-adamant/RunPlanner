@@ -412,7 +412,10 @@ function ShipWorkbench({
   const activeWheels = room.wheels.filter((wheel) => wheel.active);
 
   return (
-    <div aria-label="Ship combat details" className="ship-combat-editor">
+    <section aria-label="Ship combat structure" className="ship-combat-editor">
+      <div className="local-reward-heading">
+        <h4>Ship combat</h4>
+      </div>
       <CandidateSelect
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={encounter}
@@ -517,7 +520,7 @@ function ShipWorkbench({
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -759,7 +762,7 @@ function RoomCustomizationDisclosure({
     focusedSemanticOwner === null ? undefined : semanticAddressKey(focusedSemanticOwner);
   const focusedLocalOwner =
     focusedOwnerKey !== undefined &&
-    room.localDetailMarkers.some((marker) => marker.focusKey === focusedOwnerKey);
+    room.customizationMarkers.some((marker) => marker.focusKey === focusedOwnerKey);
 
   useLayoutEffect(() => {
     if (disclosureRef.current !== null) disclosureRef.current.open = initiallyOpen;
@@ -862,6 +865,12 @@ export function RoomOfferEditor({
       {state.kind === 'shop' && state.materialized ? (
         <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
+      {state.kind === 'fields' ? (
+        <FieldsWorkbench interactions={interactions} room={state} />
+      ) : null}
+      {state.kind === 'ship' ? (
+        <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      ) : null}
       {room.hasRoomLocalCustomization ? (
         <RoomCustomizationDisclosure
           initiallyOpen={presentation === 'hubRoomLocal'}
@@ -875,12 +884,6 @@ export function RoomOfferEditor({
           />
           {state.kind === 'ephyra' ? (
             <EphyraWorkbench interactions={interactions} room={state} />
-          ) : null}
-          {state.kind === 'fields' ? (
-            <FieldsWorkbench interactions={interactions} room={state} />
-          ) : null}
-          {state.kind === 'ship' ? (
-            <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
           ) : null}
           {state.kind === 'shop' && room.zagreusSpawn?.materialized === true ? (
             <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
