@@ -55,6 +55,7 @@ export type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
+  WorkspaceTraitOptionDomainInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
   WorkspaceRoomSummary,

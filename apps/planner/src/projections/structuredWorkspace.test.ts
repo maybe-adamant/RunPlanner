@@ -15,6 +15,7 @@ import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
+import { createTraitDomainProjection } from './traitDomainProjection';
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
@@ -22,15 +23,14 @@ import {
   type WorkspaceNode,
 } from './structured-workspace';
 
+const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
 const projection = createStructuredWorkspaceProjection(
   catalog,
   {
     candidateSessions: createCandidateSessionFactory(catalog),
-    contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
-    rewardPicker: createRewardPickerProjection(
-      catalog,
-      createContextualPickerProjection(createContextualOptionResolver(catalog)),
-    ),
+    contextualPicker,
+    rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
+    traitDomain: createTraitDomainProjection(catalog, contextualPicker),
   },
   () => createOccurrenceId('structured-workspace-facade-start'),
 );

@@ -8,7 +8,11 @@ import type {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CounterAxis } from '@run-planner/engine/requirements';
 
-import { candidateSupport, type CandidateOptionProjection } from './candidateProjection';
+import {
+  candidateSupport,
+  type CandidateOptionProjection,
+  type CandidateProjectionEvaluation,
+} from './candidateProjection';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -29,13 +33,17 @@ export interface ContextualOption<T> {
 export interface ContextualOptionPresentation {
   readonly label: string;
   readonly category?: string;
+  /** A domain-specific, typed explanation supplied by its application projector. */
+  readonly explanation?: CandidateExplanation;
   readonly selected: boolean;
 }
 
 export interface ContextualOptionResolver {
   readonly resolve: <T>(
-    options: readonly CandidateOptionProjection<T>[],
-    presentationFor: (option: CandidateOptionProjection<T>) => ContextualOptionPresentation,
+    options: readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],
+    presentationFor: (
+      option: CandidateOptionProjection<T, CandidateProjectionEvaluation>,
+    ) => ContextualOptionPresentation,
   ) => readonly ContextualOption<T>[];
 }
 
@@ -408,7 +416,7 @@ export function explainCandidateEvaluation(
   };
 }
 
-function state(evaluation: ProjectCandidateEvaluation): ContextualOptionState {
+function state(evaluation: CandidateProjectionEvaluation): ContextualOptionState {
   const support = candidateSupport({ value: null, evaluation });
   return support === 'unavailable' ? 'unassessed' : support;
 }
@@ -419,13 +427,15 @@ function presentationKey(values: readonly ContextualOptionPresentation[]): strin
 
 export function createContextualOptionResolver(catalog: Catalog): ContextualOptionResolver {
   const cache = new WeakMap<
-    readonly CandidateOptionProjection<unknown>[],
+    readonly CandidateOptionProjection<unknown, CandidateProjectionEvaluation>[],
     Map<string, readonly ContextualOption<unknown>[]>
   >();
   return Object.freeze({
     resolve<T>(
-      options: readonly CandidateOptionProjection<T>[],
-      presentationFor: (option: CandidateOptionProjection<T>) => ContextualOptionPresentation,
+      options: readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],
+      presentationFor: (
+        option: CandidateOptionProjection<T, CandidateProjectionEvaluation>,
+      ) => ContextualOptionPresentation,
     ): readonly ContextualOption<T>[] {
       const presentation = options.map(presentationFor);
       let byPresentation = cache.get(options);
@@ -439,7 +449,12 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
       const projected = Object.freeze(
         options.map((option, index) => {
           const display = presentation[index]!;
-          const explanation = explainCandidateEvaluation(catalog, option.evaluation);
+          const explanation =
+            display.explanation ??
+            (option.evaluation.kind === 'encounter' ||
+            option.evaluation.kind === 'traitOfferFocusedOption'
+              ? undefined
+              : explainCandidateEvaluation(catalog, option.evaluation));
           return Object.freeze({
             value: option.value,
             label: display.label,

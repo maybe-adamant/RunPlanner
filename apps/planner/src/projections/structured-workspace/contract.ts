@@ -23,6 +23,7 @@ import {
   type ShopPurchaseAddress,
   type TargetAddress,
   type TraitOfferAddress,
+  type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
   CompletionRoomDescriptor,
@@ -43,6 +44,10 @@ import type {
 import type { ContextualPickerModel, ContextualPickerProjectionService } from '../contextualPicker';
 import type { ProjectedRewardDomain } from '../rewardDomainProjection';
 import type { RewardPickerProjectionService, RewardPickerStep } from '../rewardPicker';
+import type {
+  TraitDomainProjectionService,
+  TraitOptionDomainProjection,
+} from '../traitDomainProjection';
 import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
 
 /**
@@ -165,8 +170,11 @@ export interface WorkspaceTraitOfferControl {
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
   readonly rewardOwner: RewardCandidateOwner['address'];
-  /** Engine-derived exact replacement rarity by proposed trait key. */
-  readonly replacementRarities?: Readonly<Record<string, TraitRarity>>;
+}
+
+/** One lazy focused-option domain bound to a complete local trait-offer draft. */
+export interface WorkspaceTraitOptionDomainInteraction {
+  readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
 }
 
 export interface WorkspaceTraitOfferInteraction {
@@ -181,9 +189,12 @@ export interface WorkspaceTraitOfferInteraction {
     value?: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
+  readonly optionDomain: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => WorkspaceTraitOptionDomainInteraction;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
-  readonly rarityChoicesFor: (traitKey: string, optionIndex?: number) => readonly TraitRarity[];
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;
@@ -1250,4 +1261,5 @@ export interface StructuredWorkspaceContextualServices {
   readonly candidateSessions: CandidateSessionFactory;
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly rewardPicker: RewardPickerProjectionService;
+  readonly traitDomain: TraitDomainProjectionService;
 }

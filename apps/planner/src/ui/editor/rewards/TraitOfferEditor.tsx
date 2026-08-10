@@ -4,9 +4,11 @@ import {
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
 import { projectTraitOfferFeedback } from '@planner/projections/traitProjection';
 import {
   requireWorkspaceInteraction,
@@ -18,10 +20,19 @@ import {
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
+
+const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
+  sections: Object.freeze([]),
+});
+
+const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
+  sections: Object.freeze([]),
+});
 
 function rarityLabel(rarity: TraitRarity): string {
   return rarity;
@@ -48,6 +59,97 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
       .join(','),
     interaction.value.selectedOptionKey,
   ].join('|');
+}
+
+function replaceOption(
+  value: AuthoredTraitOffer,
+  index: number,
+  next: AuthoredTraitOffer['options'][number],
+): AuthoredTraitOffer {
+  const options = [...value.options] as AuthoredTraitOffer['options'][number][];
+  options[index] = Object.freeze({ ...next });
+  return Object.freeze({
+    ...value,
+    options: Object.freeze(options) as AuthoredTraitOffer['options'],
+  });
+}
+
+function TraitOfferOptionEditor({
+  index,
+  interaction,
+  optionKey,
+  value,
+  onUpdate,
+}: {
+  readonly index: number;
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly optionKey: AuthoredTraitOffer['selectedOptionKey'];
+  readonly value: AuthoredTraitOffer;
+  readonly onUpdate: (value: AuthoredTraitOffer) => void;
+}) {
+  const option = value.options[index];
+  if (option === undefined) throw new Error(`Trait offer is missing ${optionKey}`);
+  const loadable = useMemo(
+    () => interaction.optionDomain(value, optionKey),
+    [interaction, optionKey, value],
+  );
+  const controller = useWorkspaceInteractionController<TraitOptionDomainProjection>();
+  const loaded = controller.observe(loadable);
+  const domain = loaded.result;
+  const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
+  const rarityPicker = domain?.rarityPickerFor(option.traitKey) ?? emptyRarityPicker;
+  const hasRarity = interaction.giver.providerKind !== 'hammer';
+  const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
+  const selectTrait = (traitKey: string): void => {
+    const preferred = domain?.preferredOptionFor(traitKey);
+    if (preferred === undefined) return;
+    onUpdate(replaceOption(value, index, preferred));
+  };
+  const selectRarity = (rarity: TraitRarity): void => {
+    onUpdate(replaceOption(value, index, { traitKey: option.traitKey, rarity }));
+  };
+  return (
+    <fieldset className="trait-offer-option" key={optionKey}>
+      <legend>{optionKey.replace('option', 'Option ')}</legend>
+      <ContextualPicker
+        ariaLabel={`${optionKey} trait`}
+        id={`${idPrefix}-trait`}
+        label="Trait"
+        loading={loaded.pending}
+        model={traitPicker}
+        onOpenChange={(open) => {
+          if (open) controller.activate(loadable);
+        }}
+        onSelect={selectTrait}
+        placeholder="Choose a trait"
+        triggerLabel={interaction.traitLabel(option.traitKey)}
+      />
+      {!hasRarity ? null : (
+        <ContextualPicker
+          ariaLabel={`${optionKey} rarity`}
+          id={`${idPrefix}-rarity`}
+          label="Rarity"
+          loading={loaded.pending}
+          model={rarityPicker}
+          onOpenChange={(open) => {
+            if (open) controller.activate(loadable);
+          }}
+          onSelect={selectRarity}
+          placeholder="Choose a rarity"
+          {...(option.rarity === undefined ? {} : { triggerLabel: rarityLabel(option.rarity) })}
+        />
+      )}
+      <label className="trait-option-selected">
+        <input
+          checked={value.selectedOptionKey === optionKey}
+          name={`${semanticAddressKey(interaction.owner)}-selected`}
+          onChange={() => onUpdate(Object.freeze({ ...value, selectedOptionKey: optionKey }))}
+          type="radio"
+        />
+        Selected
+      </label>
+    </fieldset>
+  );
 }
 
 export function TraitOfferLauncher({
@@ -96,9 +198,6 @@ export function TraitOfferEditor({
     workspaceInteractionKey(address),
   );
   const [value, setValue] = useState<AuthoredTraitOffer>(interaction.value);
-  const [draftRarityChoices, setDraftRarityChoices] = useState<
-    Readonly<Record<string, readonly TraitRarity[]>>
-  >({});
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
   const [loadable, setLoadable] = useState(() =>
@@ -122,7 +221,6 @@ export function TraitOfferEditor({
     authoritativeInteractionRef.current = interaction;
     const nextLoadable = traitOfferLoadable(interaction, interaction.value);
     setValue(interaction.value);
-    setDraftRarityChoices({});
     setLoadable(nextLoadable);
     controller.activate(nextLoadable);
   }, [controller, interaction]);
@@ -137,96 +235,21 @@ export function TraitOfferEditor({
     setLoadable(nextLoadable);
     controller.activate(nextLoadable);
   };
-  const setOption = (index: number, patch: { traitKey?: string; rarity?: TraitRarity }): void => {
-    const options = [...value.options] as Array<AuthoredTraitOffer['options'][number]>;
-    const current = options[index]!;
-    const nextTraitKey = patch.traitKey ?? current.traitKey;
-    const nextRarities = interaction.rarityChoicesFor(nextTraitKey, index);
-    setDraftRarityChoices((previous) =>
-      Object.freeze({ ...previous, [nextTraitKey]: nextRarities }),
-    );
-    const nextRarity =
-      patch.rarity ??
-      (nextRarities.length === 0
-        ? undefined
-        : current.rarity !== undefined && nextRarities.includes(current.rarity)
-          ? current.rarity
-          : nextRarities[0]);
-    options[index] = Object.freeze({
-      traitKey: nextTraitKey,
-      ...(nextRarity === undefined ? {} : { rarity: nextRarity }),
-    });
-    updateValue(
-      Object.freeze({
-        ...value,
-        options: Object.freeze(options) as AuthoredTraitOffer['options'],
-      }),
-    );
-  };
   return (
     <div className="trait-offer-editor">
       <div className="trait-offer-options">
         {OPTION_KEYS.map((optionKey, index) => {
-          const option = value.options[index]!;
           const optionFeedback = feedback.options[index];
-          const rarityChoices =
-            draftRarityChoices[option.traitKey] ?? interaction.rarityChoicesFor(option.traitKey);
           return (
-            <fieldset
-              className="trait-offer-option"
-              data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0}
-              key={optionKey}
-            >
-              <legend>{optionKey.replace('option', 'Option ')}</legend>
-              <label className="field-control">
-                <span>Trait</span>
-                <select
-                  aria-label={`${optionKey} trait`}
-                  onChange={(event) => setOption(index, { traitKey: event.target.value })}
-                  value={option.traitKey}
-                >
-                  {interaction.choices.map((choice) => (
-                    <option key={choice.value} value={choice.value}>
-                      {choice.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {rarityChoices.length === 0 ? null : rarityChoices.length === 1 ? (
-                <span className="field-control trait-rarity-fixed">
-                  <span>Rarity</span>
-                  <strong>{rarityLabel(rarityChoices[0]!)}</strong>
-                </span>
-              ) : (
-                <label className="field-control">
-                  <span>Rarity</span>
-                  <select
-                    aria-label={`${optionKey} rarity`}
-                    onChange={(event) =>
-                      setOption(index, { rarity: event.target.value as TraitRarity })
-                    }
-                    value={option.rarity ?? rarityChoices[0]}
-                  >
-                    {rarityChoices.map((rarity) => (
-                      <option key={rarity} value={rarity}>
-                        {rarityLabel(rarity)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label className="trait-option-selected">
-                <input
-                  checked={value.selectedOptionKey === optionKey}
-                  name={`${semanticAddressKey(address)}-selected`}
-                  onChange={() =>
-                    updateValue(Object.freeze({ ...value, selectedOptionKey: optionKey }))
-                  }
-                  type="radio"
-                />
-                Selected
-              </label>
-            </fieldset>
+            <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
+              <TraitOfferOptionEditor
+                index={index}
+                interaction={interaction}
+                onUpdate={updateValue}
+                optionKey={optionKey}
+                value={value}
+              />
+            </div>
           );
         })}
       </div>
@@ -328,7 +351,9 @@ export function TraitOfferDialog({
     const onKeyDown = (event: KeyboardEvent): void => {
       // Native modal dialogs emit `cancel`; this local fallback only covers
       // DOMs that cannot implement the dialog top layer (for example jsdom).
-      if (event.key !== 'Escape') return;
+      // A nested picker handles its own Escape first and prevents the default;
+      // preserve the in-progress local draft until a later Escape reaches us.
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault();
       close();
     };

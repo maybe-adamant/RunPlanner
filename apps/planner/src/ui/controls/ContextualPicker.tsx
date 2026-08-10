@@ -9,6 +9,7 @@ import type {
 } from '@planner/projections/contextualPicker';
 
 interface ContextualPickerProps<T> {
+  readonly ariaLabel?: string;
   readonly cancelLabel?: string;
   readonly choiceLabel?: string;
   readonly closeOnSelect?: boolean;
@@ -83,11 +84,14 @@ function PickerContent<T>({
   const [query, setQuery] = useState('');
   const [collapsibleOpen, setCollapsibleOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const previousLoading = useRef(loading);
   const collapsible = model.sections.find((section) => section.collapsible);
   const ordinarySections = model.sections.filter((section) => !section.collapsible);
 
   useEffect(() => {
-    if (!loading && stepLabel !== undefined) {
+    const loadingFinished = previousLoading.current && !loading;
+    previousLoading.current = loading;
+    if ((!loading && stepLabel !== undefined) || loadingFinished) {
       input.current?.focus();
     }
   }, [loading, stepLabel]);
@@ -149,6 +153,7 @@ function PickerContent<T>({
 }
 
 export function ContextualPicker<T>({
+  ariaLabel,
   cancelLabel,
   choiceLabel,
   closeOnSelect = true,
@@ -198,6 +203,7 @@ export function ContextualPicker<T>({
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-invalid={selected?.state === 'impossible' || undefined}
+            {...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
             disabled={disabled}

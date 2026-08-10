@@ -258,6 +258,33 @@ describe('planner history interaction', () => {
     expect(document.activeElement?.id).toBe(launcher.id);
   });
 
+  it('lets an open trait picker consume Escape before dismissing its dialog draft', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    const launcher = screen.getAllByRole('button', { name: /Edit Trait:/ })[0];
+    if (launcher === undefined) throw new Error('route trait launcher is missing');
+    await view.user.click(launcher);
+    const dialog = await screen.findByRole('dialog');
+    const selected = within(dialog).getAllByLabelText('Selected')[1];
+    if (selected === undefined) throw new Error('option 2 selected radio is missing');
+    await view.user.click(selected);
+    const traitPicker = within(dialog).getByLabelText('option1 trait');
+    await view.user.click(traitPicker);
+    expect(screen.getByRole('combobox')).toBeTruthy();
+
+    await view.user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(document.activeElement).toBe(traitPicker);
+    expect(selected).toHaveProperty('checked', true);
+
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement?.id).toBe(launcher.id);
+  });
+
   it('resets an open trait editor across parent replacement and undo', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -288,8 +315,9 @@ describe('planner history interaction', () => {
     if (launcher === null) throw new Error('trait editor launcher is missing');
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
-    expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
-      initialValue.options[0]?.traitKey,
+    const traitTrigger = within(dialog).getByLabelText('option1 trait');
+    expect(traitTrigger.textContent).toContain(
+      application.catalog.traits.byKey[initialValue.options[0]?.traitKey ?? '']?.label,
     );
 
     application.store.dispatch(
@@ -307,8 +335,8 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
     await waitFor(() =>
-      expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
-        replacement.value.options[0]?.traitKey,
+      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
+        application.catalog.traits.byKey[replacement.value.options[0]?.traitKey ?? '']?.label,
       ),
     );
     expect(replacement.value).not.toEqual(initialValue);
@@ -322,8 +350,8 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (restored === undefined) throw new Error('restored trait interaction is missing');
     await waitFor(() =>
-      expect((within(dialog).getByLabelText('option1 trait') as HTMLSelectElement).value).toBe(
-        restored.value.options[0]?.traitKey,
+      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
+        application.catalog.traits.byKey[restored.value.options[0]?.traitKey ?? '']?.label,
       ),
     );
     expect(restored.value).toEqual(initialValue);
@@ -381,10 +409,12 @@ describe('planner history interaction', () => {
     const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
     if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
     for (const [index, option] of corrected.options.entries()) {
-      await view.user.selectOptions(
-        within(dialog).getByLabelText(`option${index + 1} trait`),
-        option.traitKey,
-      );
+      await view.user.click(within(dialog).getByLabelText(`option${index + 1} trait`));
+      const choice = screen
+        .getAllByText(application.catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey)
+        .find((element) => element.closest('[cmdk-item]') !== null);
+      if (choice === undefined) throw new Error(`Hammer picker has no ${option.traitKey} choice`);
+      await view.user.click(choice);
     }
     const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
