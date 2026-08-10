@@ -523,16 +523,23 @@ describe('HubDecisionWorkbench', () => {
     const rewardTypes = within(
       await screen.findByRole('listbox', {}, { timeout: 5_000 }),
     ).getAllByRole('option');
-    const replacementType = rewardTypes.find(
-      (option) =>
-        option.getAttribute('aria-disabled') !== 'true' &&
-        option.getAttribute('data-selected-value') !== 'true',
-    );
+    const replacementType =
+      rewardTypes.find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      ) ??
+      rewardTypes.find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') === 'true' &&
+          option.textContent?.includes('Boon') === true,
+      );
     if (replacementType === undefined) {
       throw new Error('Combat 04 has no editable alternative reward type');
     }
     await view.user.click(replacementType);
-    if (replacementType.textContent === 'Boon') {
+    if (replacementType.textContent?.includes('Boon')) {
       const boonSources = within(await screen.findByRole('listbox')).getAllByRole('option');
       const replacementSource = boonSources.find(
         (option) =>

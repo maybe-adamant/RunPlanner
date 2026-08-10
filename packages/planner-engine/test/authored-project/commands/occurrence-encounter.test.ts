@@ -13,6 +13,7 @@ import {
   createOccurrenceAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   createProjectHistory,
@@ -117,6 +118,11 @@ function enteredNLocalProject(): ProjectDocument {
     kind: 'ReplaceSideRoomGeneration',
     sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    value: { rewardType: 'MaxHealthDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {

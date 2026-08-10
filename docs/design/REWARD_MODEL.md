@@ -577,9 +577,15 @@ selected-Preboss lifecycle.
 ### N Persistent Hub Composition
 
 N resolves one persistent hub offer board. Every open fixed hub target emits
-its incoming offer exactly once in physical generation order; open unvisited
-targets consume counted-bag entries but never acquire. Hub restores reuse the
-same offers without repeating bag mutation.
+its incoming offer exactly once. Fixed slots provide stable ownership and the
+published declaration order, but the planner does not author the game's hidden
+offer-generation order. Possibility validation therefore accepts a complete
+board when its offer-time source assignments admit at least one generation
+ordering, then publishes the supported offers in stable slot order. Open
+unvisited targets consume counted-bag entries but never acquire, and Hub
+restores reuse the same offers without repeating bag mutation. The authored
+six-room visit order is exclusively an acquisition order; it cannot constrain
+or supply facts to board generation.
 
 Combat targets force `HubRewards`, while miniboss targets force RunProgress
 and filter it to Boon. Every supported target therefore resolves store

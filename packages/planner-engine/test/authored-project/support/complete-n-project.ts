@@ -5,6 +5,7 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -60,6 +61,35 @@ export function createCompleteNProject(): ProjectDocument {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', slotKey),
       occurrenceId: createOccurrenceId(`round-trip-n-${slotKey}`),
+    });
+  }
+  for (const [slotKey, value] of Object.entries({
+    combat01: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'AphroditeUpgrade' },
+    },
+    combat02: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'AresUpgrade' },
+    },
+    combat03: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    combat04: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+    },
+    combat05: { rewardType: 'MaxHealthDropBig' },
+    combat06: { rewardType: 'MaxManaDropBig' },
+    combat07: { rewardType: 'WeaponUpgrade' },
+    combat08: { rewardType: 'HermesUpgrade' },
+    combat09: { rewardType: 'SpellDrop' },
+  } as const)) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, createOccurrenceId(`round-trip-n-${slotKey}`)),
+      value,
     });
   }
   document = applyProjectCommand(document, catalog, {

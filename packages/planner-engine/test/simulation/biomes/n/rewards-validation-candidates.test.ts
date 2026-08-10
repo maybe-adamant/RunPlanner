@@ -423,6 +423,132 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).toHaveLength(2);
   });
 
+  it('treats Hub board generation independently from its six-room acquisition order', () => {
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'OpenHubSlot',
+      slot: createHubSlotAddress(nBiome, 'hub', 'story'),
+      occurrenceId: nOccurrenceId('story'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+    });
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+
+    for (const slotKey of ['combat09', 'miniBoss01'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      });
+    }
+    expect(validN(project).biome.validity).toBe('valid');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat02', 'combat09', 'miniBoss01', 'combat05', 'combat03', 'combat01'],
+    });
+    const { biome } = validN(project);
+    const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
+
+    expect(
+      hub.board.targets
+        .filter(
+          (target) =>
+            target.room.incomingReward?.offer.payload?.kind === 'BoonSource' &&
+            target.room.incomingReward.offer.payload.source === 'ZeusUpgrade',
+        )
+        .map((target) => target.hubSlotKey),
+    ).toEqual(['combat02', 'combat09', 'miniBoss01']);
+    expect(hub.visits.map((visit) => visit.target.hubSlotKey)).toEqual([
+      'combat02',
+      'combat09',
+      'miniBoss01',
+      'combat05',
+      'combat03',
+      'combat01',
+    ]);
+    expect(hub.board.targets).toHaveLength(10);
+    const zeusRewardOwners = new Set(
+      hub.board.targets.flatMap((target) =>
+        target.room.incomingReward?.offer.payload?.kind === 'BoonSource' &&
+        target.room.incomingReward.offer.payload.source === 'ZeusUpgrade'
+          ? [semanticAddressKey(target.room.incomingReward.origin)]
+          : [],
+      ),
+    );
+    expect(
+      biome.rewards.branches[0]?.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          zeusRewardOwners.has(semanticAddressKey(event.origin)),
+      ),
+    ).toHaveLength(3);
+    expect(biome.rewards.validity).toBe('valid');
+  });
+
+  it('still rejects a repeated Hub source when no hidden generation order reaches the cap', () => {
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat11')),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+    });
+    const repeatedZeus = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+    };
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat23')),
+        value: repeatedZeus,
+      }),
+    ).toMatchObject({
+      kind: 'incomingReward',
+      result: {
+        supported: false,
+        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
+      },
+    });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat23')),
+      value: repeatedZeus,
+    });
+    const { biome } = completeN(project);
+    expect(biome.validity).toBe('invalid');
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardSourceUnavailable' }),
+    );
+  });
+
   it('jointly consumes generated side siblings but acquires only the entered local rooms', () => {
     const { biome } = validN();
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
