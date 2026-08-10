@@ -13,6 +13,7 @@ export interface HubBoardRanking {
 }
 
 export type HubBoardMove =
+  | { readonly kind: 'addToVisits'; readonly slotKey: string }
   | { readonly kind: 'moveEarlier'; readonly slotKey: string }
   | { readonly kind: 'moveLater'; readonly slotKey: string }
   | { readonly kind: 'removeFromVisits'; readonly slotKey: string };
@@ -244,6 +245,21 @@ export function moveHubBoardRoom(
   if (sourceIndex === -1) return undefined;
 
   switch (move.kind) {
+    case 'addToVisits': {
+      if (
+        sourceIndex < authoredVisitCount ||
+        requiredVisitCount < 1 ||
+        authoredVisitCount > requiredVisitCount
+      ) {
+        return undefined;
+      }
+      const withoutSource = removeAt(ranking.rankedSlotKeys, sourceIndex);
+      const nextVisitCount = Math.min(authoredVisitCount + 1, requiredVisitCount);
+      return semanticMoveResult(
+        insertAt(withoutSource, nextVisitCount - 1, move.slotKey),
+        nextVisitCount,
+      );
+    }
     case 'moveEarlier': {
       if (sourceIndex === 0) return undefined;
       const next = swap(ranking.rankedSlotKeys, sourceIndex, sourceIndex - 1);
