@@ -27,6 +27,9 @@ export function RouteTraitsPanel({
           {rows.map((row) => {
             const interaction = interactions.traitOffers.get(row.interactionKey);
             if (interaction === undefined) return null;
+            const editLabel = `Edit Trait: ${row.selectedTraitLabel}${
+              row.rarity === undefined ? '' : ` · ${row.rarity}`
+            }`;
             return (
               <li className="route-trait-row" data-invalid={row.invalid} key={row.interactionKey}>
                 <div>
@@ -44,14 +47,13 @@ export function RouteTraitsPanel({
                   )}
                 </div>
                 <button
-                  aria-label={`Edit ${interaction.acquisitionRoleLabel} offer`}
+                  aria-label={editLabel}
                   className="quiet-action action-compact"
                   id={`trait-launcher-${semanticAddressKey(row.address)}`}
                   onClick={() => dispatch(semanticOwnerNavigated(row.address))}
                   type="button"
                 >
-                  Edit offer{' '}
-                  <span className="route-trait-role">· {interaction.acquisitionRoleLabel}</span>
+                  {editLabel}
                 </button>
               </li>
             );

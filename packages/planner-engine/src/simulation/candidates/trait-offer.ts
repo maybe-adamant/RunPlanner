@@ -34,6 +34,7 @@ export interface EvaluatedTraitOfferCandidate {
       readonly code: TraitOfferCandidateFindingCode;
       readonly traitKey?: string;
       readonly detail?: string;
+      readonly requirementTraitKeys?: readonly string[];
     }[];
   };
 }

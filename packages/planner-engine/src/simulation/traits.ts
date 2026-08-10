@@ -221,13 +221,17 @@ export interface TraitOfferContext {
   readonly resolvedProviderKey?: string;
 }
 
+export interface TraitAssessmentFinding {
+  readonly code: TraitFindingCode;
+  readonly traitKey: string;
+  readonly detail?: string;
+  /** Exact declaration keys participating in a positive or negative prerequisite. */
+  readonly requirementTraitKeys?: readonly string[];
+}
+
 export interface TraitAssessment {
   readonly legal: boolean;
-  readonly findings: readonly {
-    readonly code: TraitFindingCode;
-    readonly traitKey: string;
-    readonly detail?: string;
-  }[];
+  readonly findings: readonly TraitAssessmentFinding[];
   readonly replacementTransition?: TraitReplacementTransition;
 }
 
@@ -473,7 +477,7 @@ function checkRequirement(
   trait: TraitDeclaration,
   history: TraitHistoryState,
   context: TraitOfferContext,
-): { readonly code: TraitFindingCode; readonly detail?: string } | undefined {
+): Omit<TraitAssessmentFinding, 'traitKey'> | undefined {
   switch (requirement.kind) {
     case 'all':
       return requirement.requirements
@@ -482,10 +486,16 @@ function checkRequirement(
     case 'anyEquippedTrait':
       return requirement.traitKeys.some((key) => history.equippedTraits[key] !== undefined)
         ? undefined
-        : { code: 'missingPrerequisite', detail: requirement.traitKeys.join(',') };
+        : {
+            code: 'missingPrerequisite',
+            requirementTraitKeys: Object.freeze([...requirement.traitKeys]),
+          };
     case 'notEquippedTrait':
       return requirement.traitKeys.some((key) => history.equippedTraits[key] !== undefined)
-        ? { code: 'negativePrerequisite', detail: requirement.traitKeys.join(',') }
+        ? {
+            code: 'negativePrerequisite',
+            requirementTraitKeys: Object.freeze([...requirement.traitKeys]),
+          }
         : undefined;
     case 'elementCount':
       return (history.elementCounts[requirement.element] ?? 0) >= requirement.minimum
@@ -565,7 +575,7 @@ export function assessTraitOption(
       legal: false,
       findings: [{ code: 'missingPrerequisite', traitKey, detail: 'unknown trait' }],
     };
-  const findings: { code: TraitFindingCode; traitKey: string; detail?: string }[] = [];
+  const findings: TraitAssessmentFinding[] = [];
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
   for (const requirement of trait.offerRequirements) {

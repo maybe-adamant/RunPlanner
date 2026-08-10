@@ -76,11 +76,8 @@ export function TraitOfferLauncher({
       onClick={() => dispatch(traitOfferDialogOpened(control.address))}
       type="button"
     >
-      Edit {control.acquisitionRoleLabel} {control.giver.label} trait offer{' '}
-      <span aria-label={`selected ${label}`}>
-        {label}
-        {rarity}
-      </span>
+      Edit Trait: {label}
+      {rarity}
     </button>
   );
 }
@@ -111,6 +108,14 @@ export function TraitOfferEditor({
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
   const feedback = projectTraitOfferFeedback(value, candidate, interaction.traitLabel);
+  const offerMessage =
+    feedback.contextMessage ??
+    (support === 'impossible'
+      ? 'This offer is unavailable in the current route context.'
+      : undefined);
+  const hasOptionFeedback = feedback.options.some(
+    (option) => option.reasons.length > 0 || option.replacement !== undefined,
+  );
   const authoritativeInteractionRef = useRef(interaction);
   useEffect(() => {
     if (authoritativeInteractionRef.current === interaction) return;
@@ -163,10 +168,15 @@ export function TraitOfferEditor({
       <div className="trait-offer-options">
         {OPTION_KEYS.map((optionKey, index) => {
           const option = value.options[index]!;
+          const optionFeedback = feedback.options[index];
           const rarityChoices =
             draftRarityChoices[option.traitKey] ?? interaction.rarityChoicesFor(option.traitKey);
           return (
-            <fieldset className="trait-offer-option" key={optionKey}>
+            <fieldset
+              className="trait-offer-option"
+              data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0}
+              key={optionKey}
+            >
               <legend>{optionKey.replace('option', 'Option ')}</legend>
               <label className="field-control">
                 <span>Trait</span>
@@ -216,34 +226,37 @@ export function TraitOfferEditor({
                 />
                 Selected
               </label>
-              {feedback.options[index]?.reasons.length === 0 ? null : (
-                <ul className="trait-option-feedback" aria-label={`${optionKey} feedback`}>
-                  {feedback.options[index]?.reasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              )}
-              {feedback.options[index]?.replacement === undefined ? null : (
-                <p className="trait-option-replacement" role="status">
-                  Replaces {feedback.options[index]!.replacement!.replacedTraitLabel} ·{' '}
-                  {feedback.options[index]!.replacement!.oldRarity} to{' '}
-                  {feedback.options[index]!.replacement!.requiredRarity}
-                </p>
-              )}
             </fieldset>
           );
         })}
       </div>
-      {feedback.contextMessage === undefined && support === 'impossible' ? (
-        <p className="feedback-text" role="status">
-          This offer is unavailable in the current route context.
-        </p>
-      ) : null}
-      {feedback.contextMessage === undefined ? null : (
-        <p className="feedback-text" role="status">
-          {feedback.contextMessage}
-        </p>
-      )}
+      <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
+        <h3>Offer feedback</h3>
+        {!hasOptionFeedback && offerMessage === undefined ? (
+          <p className="trait-offer-feedback-empty">No current findings.</p>
+        ) : null}
+        {feedback.options.map((option, index) =>
+          option.reasons.length === 0 && option.replacement === undefined ? null : (
+            <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
+              <strong>Option {index + 1}</strong>
+              {option.reasons.length === 0 ? null : (
+                <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
+                  {option.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+              {option.replacement === undefined ? null : (
+                <p className="trait-option-replacement">
+                  Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity}{' '}
+                  to {option.replacement.requiredRarity}
+                </p>
+              )}
+            </div>
+          ),
+        )}
+        {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
+      </section>
       <button
         className="primary-action"
         disabled={support === 'impossible'}

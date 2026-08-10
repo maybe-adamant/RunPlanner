@@ -55,11 +55,11 @@ function projectWithArtemisInErebus() {
   );
   return {
     phase,
-    project: applyProjectCommand(
-      initial,
-      catalog,
-      { kind: 'SelectEncounter', phase, encounterKey: 'ArtemisCombatF' },
-    ),
+    project: applyProjectCommand(initial, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    }),
   };
 }
 
@@ -232,7 +232,7 @@ describe('planner history interaction', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
-    const launcher = screen.getAllByRole('button', { name: /Edit .* offer/ })[0];
+    const launcher = screen.getAllByRole('button', { name: /Edit Trait:/ })[0];
     if (launcher === undefined) throw new Error('route trait launcher is missing');
     launcher.focus();
     await view.user.keyboard('{Enter}');

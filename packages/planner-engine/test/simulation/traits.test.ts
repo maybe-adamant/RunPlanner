@@ -694,6 +694,29 @@ describe('trait legality and derived facts', () => {
     ).toContain(code);
   });
 
+  it('retains prerequisite trait keys as typed finding evidence', () => {
+    const finding = assessTraitOption(
+      catalog,
+      'SlowExAttackBoon',
+      createTraitHistoryState(),
+    ).findings.find((candidate) => candidate.code === 'missingPrerequisite');
+    expect(finding).toEqual({
+      code: 'missingPrerequisite',
+      traitKey: 'SlowExAttackBoon',
+      requirementTraitKeys: [
+        'AphroditeWeaponBoon',
+        'ApolloWeaponBoon',
+        'DemeterWeaponBoon',
+        'HephaestusWeaponBoon',
+        'HeraWeaponBoon',
+        'HestiaWeaponBoon',
+        'PoseidonWeaponBoon',
+        'ZeusWeaponBoon',
+        'AresWeaponBoon',
+      ],
+    });
+  });
+
   it('accepts satisfied positive, element, and zero-Common requirements', () => {
     expect(
       assessTraitOption(
@@ -763,7 +786,7 @@ describe('trait legality and derived facts', () => {
         {
           code: 'negativePrerequisite',
           traitKey: 'LobPulseAmmoTrait',
-          detail: 'LobAmmoMagnetismTrait',
+          requirementTraitKeys: ['LobAmmoMagnetismTrait'],
         },
       ],
     });
@@ -783,7 +806,7 @@ describe('trait legality and derived facts', () => {
         {
           code: 'negativePrerequisite',
           traitKey: 'LobAmmoMagnetismTrait',
-          detail: 'LobPulseAmmoTrait',
+          requirementTraitKeys: ['LobPulseAmmoTrait'],
         },
       ],
     });
