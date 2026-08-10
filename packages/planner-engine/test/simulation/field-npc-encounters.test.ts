@@ -28,6 +28,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
+  traitCandidates,
   type CanonicalAuthoredRoom,
   type EncounterHistoryEntry,
   type HistoryStateView,
@@ -925,6 +926,53 @@ describe('field NPC encounter requirements', () => {
     });
 
     expect(support(outdoor, outdoorCombat)?.candidateEncounterKeys).toContain('IcarusCombatP');
+  });
+
+  it('uses the shared encounter-owned trait path for Athena across P phase dormancy and completion', () => {
+    const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
+    const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
+    let project = createRepresentativeNOPQProject();
+
+    expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
+    project = select(project, athenaPhase, 'AthenaCombatP');
+    const selected = authoredOccurrence(project, 'P', occurrenceId);
+    expect(selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP).toMatchObject({
+      giverKey: 'Athena',
+      selectedOptionKey: 'option1',
+    });
+    expect(
+      selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP?.options.map(
+        (option) => option.traitKey,
+      ),
+    ).toEqual(['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon']);
+
+    project = select(project, athenaPhase, 'GeneratedP');
+    expect(
+      authoredOccurrence(project, 'P', occurrenceId).encounters.traitOffersByPhase?.Combat
+        ?.AthenaCombatP?.selectedOptionKey,
+    ).toBe('option1');
+    expect(support(project, athenaPhase)).toMatchObject({
+      selectedEncounterKey: 'GeneratedP',
+      selectedPossible: true,
+    });
+
+    project = select(project, athenaPhase, 'AthenaCombatP');
+    const evaluation = evaluatedSurfaceBiome(project, 'P').biome;
+    if (!('rewards' in evaluation) || evaluation.validity !== 'valid') {
+      throw new Error('P Athena fixture did not produce a valid reward evaluation');
+    }
+    const traitHistory = evaluation.rewards.branches[0]?.traitHistory;
+    if (traitHistory === undefined) throw new Error('P Athena trait history is missing');
+    expect(traitHistory?.equippedTraits.InvulnerabilityDashBoon).toMatchObject({
+      giverKey: 'Athena',
+      providerKind: 'fieldNpc',
+    });
+    expect(traitHistory?.elementCounts.Fire).toBeGreaterThan(0);
+    expect(
+      traitCandidates(catalog, 'Athena', traitHistory).find(
+        (candidate) => candidate.traitKey === 'OlympianSpellCountBoon',
+      ),
+    ).toMatchObject({ available: false });
   });
 
   it('marks only a valid fixed terminating Intro as a dormant Combat suffix', () => {

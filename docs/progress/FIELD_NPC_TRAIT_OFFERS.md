@@ -2,7 +2,9 @@
 
 ## Status
 
-**Draft implementation plan.** Baseline: `3088b80`.
+**Active delivery plan.** Planning baseline: `3088b80`. Gate A landed in
+`36fcfa4`; Gate B (Athena) is next. Icarus is deliberately deferred until its
+`UpgradeHammerBoon` acquisition effect has a locked engine contract.
 
 This is an isolated delivery document. Do not link it from the stable design or
 progress indexes while implementation is active. At closure, absorb durable
@@ -196,7 +198,7 @@ Included:
 - chronological acquisition, equipped state, candidates, findings, run state,
   persistence, undo/redo, and navigation.
 
-Excluded:
+Excluded from the shared Artemis/Athena path:
 
 - Artemis/Icarus/Athena intro and cross-run reweight identities;
 - save/profile progression predicates already collapsed by the encounter
@@ -204,15 +206,18 @@ Excluded:
 - probability and weighting of options or rarities;
 - spell/Hex/Talent acquisition;
 - trait mechanical effects, damage, armor, Death Defiance, consumable drops,
-  levels, and stacks;
+  levels, and stacks. Gate C may admit only the minimum general acquisition
+  effect required by `UpgradeHammerBoon`; it does not open a generic trait
+  effect language;
 - Story-room givers, Arachne, Nemesis random events, Heracles rewards, Wells,
   Keepsakes, and other trait providers;
 - a generic effect language or synthetic reward representation.
 
 ## Preflight Facts That Must Be Closed
 
-Before the first production edit, update the trait audit with these exact
-source-backed dispositions:
+Close these facts from source before the production gate that consumes them.
+Artemis facts were closed in Gate A; Athena facts belong to Gate B, while the
+Icarus persistence/effect decision is reserved for Gate C:
 
 1. Fresh and equipped rarity domains for all three givers. In particular,
    distinguish provider roll possibilities from per-trait fixed Legendary
@@ -262,11 +267,63 @@ Acceptance:
   control;
 - no reward owner or `npcPresentationKey` becomes semantic authority.
 
-### Gate B — Icarus extension
+### Gate B — Athena extension
 
-Add the eight Icarus declarations and attach the giver to `IcarusCombatO/P`.
+Add the eight Athena declarations and attach the giver to `AthenaCombatP`.
 Reuse Gate A's authored, simulation, candidate, and UI paths without an
-Icarus-specific dispatcher.
+Athena-specific dispatcher or another schema change.
+
+Acceptance:
+
+- the source preflight records Athena's exact labels, rarity domains, elements,
+  persistence flags, and requirements before declarations are added;
+- Athena uses the shared field-NPC path;
+- P's multi-phase envelope owns the offer at the exact selected Athena phase;
+- switching between Athena and an ordinary identity hides but retains the
+  Athena offer, and switching back restores it;
+- exact equipped-trait prerequisites participate in progressive candidates;
+- `OlympianSpellCountBoon` remains unavailable until its real dependency is
+  modeled;
+- Athena traits do not trigger first-Olympian or ordinary replacement rules;
+- a reached Athena encounter equips its selected persistent trait at
+  `encounterCompleted` and later state sees its derived facts;
+- the existing workspace control, dialog, route index, navigation, and run
+  state consume Athena without provider-specific UI.
+
+### Gate C — Icarus acquisition-effect contract
+
+Do not edit Icarus production declarations in this gate. Probe the Icarus
+provider and all eight pool members, with `UpgradeHammerBoon` as the
+adversarial case, then lock the smallest general engine contract that preserves
+the game's acquisition semantics.
+
+The contract must decide, from executable source evidence:
+
+- whether `UpgradeHammerBoon` remains in persistent equipped-trait history;
+- what exact Hammer state it reads and changes;
+- whether its authored offer still uses the ordinary three-option shape and
+  rarity domain;
+- how an acquired option declares either a persistent trait outcome or a pure
+  acquisition effect without branching on Icarus names in simulation;
+- how that effect is represented in chronological history and run state;
+- what happens when no legal Hammer upgrade target exists.
+
+Acceptance:
+
+- the audit contains the exact Icarus labels, pool, rarity, requirements,
+  persistence, and effect facts;
+- one narrow declaration-owned outcome contract is locked for both persistent
+  trait acquisition and effect-only acquisition;
+- the contract does not introduce a generic scripting/effect language, an
+  Icarus dispatcher, a synthetic reward, or a second trait fold;
+- Gate D has concrete engine, persistence, candidate, UI, and test
+  deliverables before implementation starts.
+
+### Gate D — Icarus implementation
+
+After Gate C is locked, add the eight Icarus declarations and attach the giver
+to `IcarusCombatO/P`. Reuse the encounter-owned offer path and implement only
+the acquisition-outcome capability approved by Gate C.
 
 Acceptance:
 
@@ -274,26 +331,13 @@ Acceptance:
 - P's multi-phase envelope addresses the actual selected Icarus phase;
 - switching among Icarus, Athena, and ordinary identities in one legal phase
   retains each NPC's independent dormant offer;
-- `UpgradeHammerBoon` follows the preflight's persistent/transient
-  classification and never silently mutates Hammer state while that effect is
-  deferred;
-- no weapon/aspect Hammer pool is incorrectly substituted for the Icarus
-  giver.
+- ordinary Icarus traits use the existing equipped-trait path;
+- `UpgradeHammerBoon` follows the locked persistent/effect classification and
+  changes only the declared Hammer state at the correct lifecycle point;
+- no weapon/aspect Hammer offer pool is substituted for the Icarus giver;
+- no provider-name conditional is added to shared simulation or React.
 
-### Gate C — Athena extension
-
-Add the eight Athena declarations and attach the giver to `AthenaCombatP`.
-
-Acceptance:
-
-- Athena uses the shared field-NPC path;
-- exact equipped-trait prerequisites participate in progressive candidates;
-- `OlympianSpellCountBoon` remains unavailable until its real dependency is
-  modeled;
-- Athena traits do not trigger first-Olympian or ordinary replacement rules;
-- the P phase can retain separate dormant Icarus and Athena offers.
-
-### Gate D — Closure
+### Gate E — Closure
 
 - Run focused catalog, authored codec/command, encounter simulation, trait
   candidate, workspace, UI, and product-loop suites during development.
@@ -322,19 +366,19 @@ chronology witnesses.
 
 ## Estimated Commit Shape
 
-The expected delivery is **six to eight focused commits**, not another broad
-campaign:
+The remaining delivery is expected to take **four to six focused commits**,
+not another broad campaign:
 
-1. preflight audit closure;
-2. Artemis catalog plus encounter-owned authored contract;
-3. Artemis simulation/candidates;
-4. Artemis application/UI closure;
-5. Icarus extension;
-6. Athena extension;
-7. focused corrections, only if review finds a concrete defect;
-8. documentation absorption and plan retirement.
+1. Athena source closure and shared-path extension;
+2. an Athena correction only if review finds a concrete defect;
+3. Icarus source audit and locked acquisition-effect contract;
+4. the general acquisition-outcome engine slice;
+5. Icarus catalog/application closure;
+6. documentation absorption and plan retirement.
 
-If Gate A requires a second trait fold, a new NPC history model, generalized
-effect execution, or pervasive reward-owner conditionals, stop. Those are
-signals that the proposed ownership seam is wrong or that the scope has grown
-beyond field-NPC trait offers.
+If Athena requires any path other than Gate A's shared field-NPC machinery,
+stop and identify the violated contract before broadening it. If the later
+Icarus work requires a second trait fold, NPC history model, generalized effect
+execution, or pervasive provider-name conditionals, stop: those are signals
+that the acquisition-outcome seam is wrong or the scope has grown beyond this
+plan.

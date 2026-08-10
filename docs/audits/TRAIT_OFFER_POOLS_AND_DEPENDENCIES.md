@@ -274,6 +274,52 @@ provider path.
 `FocusLastStandBoon`, `DeathDefianceRefillBoon`, `AthenaProjectileBoon`,
 `InvulnerabilityCastBoon`, `ManaSpearBoon`, `OlympianSpellCountBoon`.
 
+The installed `NPCData_Athena.lua` declaration is the authoritative field-NPC
+provider: it exposes the eight keys above in that order, has no priority
+upgrades, uses the selectable Common/Rare/Epic field-NPC rarity domain, and
+does not declare a fixed Legendary option. Its `RarityRollOrder` also mentions
+Heroic, but the provider inherits the normal progressed `BoonData` rarity
+chances, which have no fresh Heroic chance; Heroic is therefore equipped-only
+for this pool. `ScreenData.UpgradeChoice.MaxChoices` remains three and the
+supported baseline has no `RestrictBoonChoices` effect, so the offer is three
+distinct options. The English player-facing labels from `TraitText.en.sjson`
+are:
+
+| Trait                          | Player-facing label | Fresh rarities     | Equipped rarities          | Element | Persistent / flags                                   |
+| ------------------------------ | ------------------- | ------------------ | -------------------------- | ------- | ---------------------------------------------------- |
+| `InvulnerabilityDashBoon`      | Divine Dash         | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `RetaliateInvulnerabilityBoon` | Defensive Posture   | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `FocusLastStandBoon`           | Stalwart Stand      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `DeathDefianceRefillBoon`      | Renewed Faith       | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `AthenaProjectileBoon`         | Phalanx Shot        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `InvulnerabilityCastBoon`      | Mental Block        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `ManaSpearBoon`                | Righteous Pike      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| `OlympianSpellCountBoon`       | Task Force          | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+
+All eight are ordinary persistent trait entries after selection; their
+`AcquireFunction` side effects do not replace the equipped trait key with an
+effect-only transient outcome. The source requirements that are representable
+or intentionally deferred by the planner are:
+
+- `InvulnerabilityDashBoon` and `AthenaProjectileBoon` require
+  `CurrentRun.TextLinesRecord.AthenaFirstMeeting` to be absent;
+- `DeathDefianceRefillBoon` requires the named `MissingLastStand` predicate and
+  the same absent `AthenaFirstMeeting` flag;
+- `OlympianSpellCountBoon` requires `GameState.TextLinesRecord.AthenaGrantsReward01`
+  and at least one of `PolymorphZeusTalent`, `MeteorHestiaTalent`,
+  `TransformAphroditeTalent`, `LeapHephaestusTalent`, `LaserApolloTalent`,
+  `SummonHeraTalent`, `TimeSlowDemeterTalent`, `PotionPoseidonTalent`, or
+  `MoonBeamAresTalent` in the hero trait dictionary. The nine talent keys stay
+  deferred operands, so this option remains candidate-ineligible until that
+  dependency is modeled.
+
+`RetaliateInvulnerabilityBoon`, `FocusLastStandBoon`, `InvulnerabilityCastBoon`,
+and `ManaSpearBoon` declare no additional offer requirement in the installed
+trait data. Athena contributes no ordinary boon slot, no negative equipped-trait
+requirement, no non-stacking/rerify block, and no exclusion from rarity count.
+The narrative/save predicates above remain source evidence rather than guessed
+production state.
+
 ### Story-Room Choice Givers
 
 #### Arachne
@@ -847,11 +893,12 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                          |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                            |
 
-The Gate-A normalized inventory has six weapons, 24 weapon/aspect pairs, 277
-unique included trait declarations, 220 Olympian/Hermes/Artemis memberships,
-92 Hammer memberships, and one loadout-keyed Hammer default triple for each of
-the 24 pairs. Deferred spell/talent operands remain exact keys only; Artemis is
-the modeled field-NPC provider in this gate, while other NPC, Story, Spell, or
+The Gate-A/Gate-B normalized inventory has six weapons, 24 weapon/aspect pairs,
+285 unique included trait declarations, 228 Olympian/Hermes/field-NPC
+memberships (including Artemis and Athena), 92 Hammer memberships, and one
+loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
+spell/talent operands remain exact keys only; Artemis and Athena are the
+modeled field-NPC providers in these gates, while other NPC, Story, Spell, or
 Talent providers remain outside the persistent trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline, mechanical-effect, and Hephaestus level/cooldown

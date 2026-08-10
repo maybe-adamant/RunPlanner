@@ -3,6 +3,7 @@ import { aphroditeGiver, aphroditeTraits } from './aphrodite';
 import { apolloGiver, apolloTraits } from './apollo';
 import { aresGiver, aresTraits } from './ares';
 import { artemisGiver, artemisTraits } from './artemis';
+import { athenaGiver, athenaTraits } from './athena';
 import { demeterGiver, demeterTraits } from './demeter';
 import { hephaestusGiver, hephaestusTraits } from './hephaestus';
 import { heraGiver, heraTraits } from './hera';
@@ -99,6 +100,7 @@ const aspects = [
 const traits = [
   ...aphroditeTraits,
   ...artemisTraits,
+  ...athenaTraits,
   ...apolloTraits,
   ...aresTraits,
   ...demeterTraits,
@@ -114,6 +116,7 @@ const traits = [
 const givers = [
   aphroditeGiver,
   artemisGiver,
+  athenaGiver,
   apolloGiver,
   aresGiver,
   demeterGiver,

@@ -81,6 +81,7 @@ const expectedPositiveRequirementOwners = [
   'FireballRendBoon',
   'BloodManaBurstBoon',
   'SorceryCritBoon',
+  'OlympianSpellCountBoon',
 ] as const;
 
 const expectedOrdinarySlots = Object.fromEntries(
@@ -172,7 +173,9 @@ const expectedElementTraitKeys = {
     AllElementalBoon HestiaWeaponBoon HestiaSpecialBoon HestiaCastBoon HestiaSprintBoon
     HestiaManaBoon OmegaZeroBurnBoon CastProjectileBoon FireballManaSpecialBoon
     BurnExplodeBoon BurnArmorBoon BurnStackBoon AloneDamageBoon BurnSprintBoon
-    SprintShieldBoon RestockBoon
+    SprintShieldBoon RestockBoon InvulnerabilityDashBoon RetaliateInvulnerabilityBoon
+    FocusLastStandBoon DeathDefianceRefillBoon AthenaProjectileBoon InvulnerabilityCastBoon
+    ManaSpearBoon OlympianSpellCountBoon
   `),
   Water: sourceKeys(`
     AphroditeWeaponBoon AphroditeSpecialBoon DoorHealToFullBoon WeakPotencyBoon
@@ -500,6 +503,16 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'FocusCritBoon',
     'SorceryCritBoon',
   ],
+  Athena: [
+    'InvulnerabilityDashBoon',
+    'RetaliateInvulnerabilityBoon',
+    'FocusLastStandBoon',
+    'DeathDefianceRefillBoon',
+    'AthenaProjectileBoon',
+    'InvulnerabilityCastBoon',
+    'ManaSpearBoon',
+    'OlympianSpellCountBoon',
+  ],
   WeaponUpgrade: [
     'StaffDoubleAttackTrait',
     'StaffLongAttackTrait',
@@ -649,6 +662,8 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon","AresWeaponBoon"]}]',
   SorceryCritBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
+  OlympianSpellCountBoon:
+    '[{"kind":"anyEquippedTrait","traitKeys":["PolymorphZeusTalent","MeteorHestiaTalent","TransformAphroditeTalent","LeapHephaestusTalent","LaserApolloTalent","SummonHeraTalent","TimeSlowDemeterTalent","PotionPoseidonTalent","MoonBeamAresTalent"]}]',
   ElementalRallyBoon: '[{"kind":"elementCount","element":"Fire","minimum":2}]',
   DoubleExManaBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["ApolloWeaponBoon","ApolloSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ApolloCastBoon","ApolloSprintBoon","ApolloManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DoubleStrikeChanceBoon","ApolloCastAreaBoon","ApolloBlindBoon","ApolloExCastBoon"]}]}]',
@@ -804,10 +819,11 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(277);
+    expect(traits?.traits.values).toHaveLength(285);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Artemis', 9],
+      ['Athena', 8],
       ['Apollo', 22],
       ['Ares', 22],
       ['Demeter', 22],
