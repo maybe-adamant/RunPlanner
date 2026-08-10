@@ -11,7 +11,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -26,7 +26,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -41,7 +41,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -56,7 +56,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -71,7 +71,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -86,7 +86,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -100,7 +100,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -133,7 +133,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -147,7 +147,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -174,7 +174,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -193,7 +193,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -212,7 +212,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -230,7 +230,7 @@ export const zeusTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -273,7 +273,7 @@ export const zeusTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -307,7 +307,7 @@ export const zeusTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,

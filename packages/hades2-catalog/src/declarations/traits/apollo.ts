@@ -11,7 +11,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -26,7 +26,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -41,7 +41,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -56,7 +56,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -71,7 +71,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -86,7 +86,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -100,7 +100,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -119,7 +119,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -138,7 +138,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -167,7 +167,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -181,7 +181,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -210,7 +210,7 @@ export const apolloTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -228,7 +228,7 @@ export const apolloTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -265,7 +265,7 @@ export const apolloTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -293,7 +293,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -321,7 +321,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -365,7 +365,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -399,7 +399,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -438,7 +438,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -471,7 +471,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -510,7 +510,7 @@ export const apolloTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,

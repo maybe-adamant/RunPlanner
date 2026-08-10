@@ -119,7 +119,8 @@ export interface TraitDeclaration {
   readonly offerRequirements: readonly TraitRequirementExpression[];
   readonly ordinaryBoonSlot?: TraitOrdinaryBoonSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
-  readonly isPersistentGodTrait: boolean;
+  readonly usesBoonRarity: boolean;
+  readonly isCoreGodTrait: boolean;
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;

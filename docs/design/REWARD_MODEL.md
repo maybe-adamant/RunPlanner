@@ -994,17 +994,20 @@ The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,
 god-boon rarity counts, and `upgradableTraitCount`. Boon Growth's rarifiable
 target and Boon Decay's superchargeable target are distinct predicates over
-that ledger and are not aliases or persisted shadow counters. The old
-ordinary-source increment approximation is retired. NPC/Story effect-backed
-choices remain outside this persistent trait lifecycle unless their declaration
-owns one of the engine's closed acquisition transitions. Added levels/stacks,
+that ledger and are not aliases or persisted shadow counters. Those three
+upgradeability products use the core-god declaration fact, excluding Hermes
+and field-NPC traits while leaving their independent boon-rarity facts intact.
+The old ordinary-source increment approximation is retired. NPC/Story
+effect-backed choices remain outside this persistent trait lifecycle unless
+their declaration owns one of the engine's closed acquisition transitions.
+Added levels/stacks,
 the Bridal Glow Hephaestus cooldown exception, and other undeclared mutations
 and providers remain deferred.
 
 Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
 normalized declaration supplies a `Common`-to-`Rare` floor that activates when
 the equipped ledger reaches its declaration-owned base-element minimums.
-Chronological replay promotes eligible equipped Common persistent god traits on
+Chronological replay promotes eligible equipped Common boon-rarity traits on
 the inactive-to-active transition, leaves the effect source and
 `BlockInRunRarify`/fixed-rarity traits unchanged, and exposes the active floor
 as a derived history fact. Deactivation removes only the future-offer floor;

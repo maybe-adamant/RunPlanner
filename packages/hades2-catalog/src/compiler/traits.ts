@@ -262,6 +262,7 @@ function normalizeTraits(
   weapons: CatalogCollection<WeaponDeclaration>,
   aspects: CatalogCollection<AspectDeclaration>,
   deferred: ReadonlySet<string>,
+  coreGodTraitKeys: ReadonlySet<string>,
 ): CatalogCollection<TraitDeclaration> {
   const declarations = requireArray(raw, 'traits').map(
     (value, index) => requireObject(value, `traits[${index}]`) as unknown as RawTraitDeclaration,
@@ -274,6 +275,11 @@ function normalizeTraits(
   const values = declarations.map((trait, index) => {
     const path = `traits[${index}]`;
     const isHammer = trait.hammerCompatibility !== undefined;
+    const usesBoonRarity = requireBoolean(trait.usesBoonRarity, `${path}.usesBoonRarity`);
+    const isCoreGodTrait = coreGodTraitKeys.has(trait.key);
+    if (isCoreGodTrait && !usesBoonRarity) {
+      fail(`${path}.usesBoonRarity`, 'core god traits must use boon rarity');
+    }
     const freshOfferRarities = freezeUniqueStrings(
       (trait.freshOfferRarities === undefined
         ? []
@@ -479,10 +485,8 @@ function normalizeTraits(
             ),
           }),
       elementContributions: Object.freeze(elementContributions),
-      isPersistentGodTrait: requireBoolean(
-        trait.isPersistentGodTrait,
-        `${path}.isPersistentGodTrait`,
-      ),
+      usesBoonRarity,
+      isCoreGodTrait,
       blockStacking: requireBoolean(trait.blockStacking, `${path}.blockStacking`),
       blockInRunRarify: requireBoolean(trait.blockInRunRarify, `${path}.blockInRunRarify`),
       excludeFromRarityCount: requireBoolean(
@@ -510,6 +514,26 @@ function normalizeTraits(
     );
   }
   return collection;
+}
+
+function collectCoreGodTraitKeys(raw: RawTraitCatalogInput['givers']): ReadonlySet<string> {
+  const keys = new Set<string>();
+  requireArray(raw, 'givers').forEach((value, index) => {
+    const path = `givers[${index}]`;
+    const giver = requireObject(value, path) as unknown as RawTraitGiverDeclaration;
+    const providerKind = closedValue(
+      giver.providerKind,
+      ['olympian', 'hermes', 'hammer', 'npc'] as const,
+      `${path}.providerKind`,
+    );
+    if (providerKind !== 'olympian') return;
+    (requireArray(giver.traitKeys, `${path}.traitKeys`) as readonly string[]).forEach(
+      (traitKey, traitIndex) => {
+        keys.add(requireNonEmpty(traitKey, `${path}.traitKeys[${traitIndex}]`));
+      },
+    );
+  });
+  return keys;
 }
 
 function normalizeGivers(
@@ -790,7 +814,8 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const deferred = new Set([...declaredDeferred, ...COMPILER_LOCAL_DEFERRED_TRAIT_KEYS]);
   const weapons = normalizeWeapons(input.weapons);
   const aspects = normalizeAspects(input.aspects, weapons);
-  const traits = normalizeTraits(input.traits, weapons, aspects, deferred);
+  const coreGodTraitKeys = collectCoreGodTraitKeys(input.givers);
+  const traits = normalizeTraits(input.traits, weapons, aspects, deferred, coreGodTraitKeys);
   for (const key of declaredDeferred) {
     if (traits.byKey[key] !== undefined) {
       fail('deferredTraitKeys', `${key} is also an included trait`);

@@ -328,18 +328,18 @@ supported baseline has no `RestrictBoonChoices` effect, so the offer is three
 distinct options. The English player-facing labels from `TraitText.en.sjson`
 are:
 
-| Trait                          | Player-facing label | Fresh rarities     | Equipped rarities          | Element | Persistent / flags                                   |
-| ------------------------------ | ------------------- | ------------------ | -------------------------- | ------- | ---------------------------------------------------- |
-| `InvulnerabilityDashBoon`      | Divine Dash         | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `RetaliateInvulnerabilityBoon` | Defensive Posture   | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `FocusLastStandBoon`           | Stalwart Stand      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `DeathDefianceRefillBoon`      | Renewed Faith       | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `AthenaProjectileBoon`         | Phalanx Shot        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `InvulnerabilityCastBoon`      | Mental Block        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `ManaSpearBoon`                | Righteous Pike      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
-| `OlympianSpellCountBoon`       | Task Force          | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | persistent god trait; stackable; rarifiable; counted |
+| Trait                          | Player-facing label | Fresh rarities     | Equipped rarities          | Element | Boon-rarity / flags                |
+| ------------------------------ | ------------------- | ------------------ | -------------------------- | ------- | ---------------------------------- |
+| `InvulnerabilityDashBoon`      | Divine Dash         | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `RetaliateInvulnerabilityBoon` | Defensive Posture   | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `FocusLastStandBoon`           | Stalwart Stand      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `DeathDefianceRefillBoon`      | Renewed Faith       | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `AthenaProjectileBoon`         | Phalanx Shot        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `InvulnerabilityCastBoon`      | Mental Block        | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `ManaSpearBoon`                | Righteous Pike      | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
+| `OlympianSpellCountBoon`       | Task Force          | Common, Rare, Epic | Common, Rare, Epic, Heroic | Fire    | no Pom levels; rarifiable; counted |
 
-All eight are ordinary persistent trait entries after selection; their
+All eight are retained boon-rarity trait entries after selection; their
 `AcquireFunction` side effects do not replace the equipped trait key with an
 effect-only transient outcome. The source requirements that are representable
 or intentionally deferred by the planner are:
@@ -695,17 +695,20 @@ temporary or all rarity bonuses remain outside the slice.
 
 The source has three similar but distinct queries:
 
-1. `Hero.UpgradableTraitCount` counts persistent god traits that do not declare
+1. `Hero.UpgradableTraitCount` counts core god traits that do not declare
    `BlockStacking` and do not exclude themselves through
-   `RequiredFalseTrait`. It does not inspect the current rarity's next step.
+   `RequiredFalseTrait`. The query uses plain `IsGodTrait`, so it excludes
+   boon-rarity providers outside the core nine. It does not inspect the current
+   rarity's next step.
 2. `RequiredUpgradeableGodTraits`, used by `BoonGrowthBoon`, calls
    `UpgradableGodTraitCountAtLeast(1)`. That query requires a unique persistent
-   god trait whose concrete rarity has a supported next in-run rarity and that
-   does not declare `BlockInRunRarify`.
+   core god trait whose concrete rarity has a supported next in-run rarity
+   and that does not declare `BlockInRunRarify`. It uses the same plain
+   `IsGodTrait` classification.
 3. `HasSuperchargeableBoon`, used by `BoonDecayBoon`, applies the same
    next-rarity and `BlockInRunRarify` tests and additionally rejects
-   `BlockStacking` traits. It has a special minimum-cooldown branch for
-   Hephaestus Weapon, Special, and Sprint boons.
+   `BlockStacking` traits. It also uses plain `IsGodTrait` and has a special
+   minimum-cooldown branch for Hephaestus Weapon, Special, and Sprint boons.
 
 These must not collapse into one generic counter. The first implementation
 slice models the first count exactly and evaluates the latter two predicates
@@ -714,6 +717,19 @@ ordinary rarity has a next step through `Heroic`, Boon Decay will ordinarily
 succeed when at least one equipped non-`BlockStacking` god trait exists. The
 explicit next-rarity test is still retained so an all-`Heroic` ledger is
 correctly ineligible when later work can create it.
+
+This is deliberately separate from whether a provider rolls variable rarity.
+In the supported normal-run model, the nine core gods are the only
+providers whose eligible traits can receive Pom levels. Variable offer rarity
+belongs to those nine plus Hermes, Artemis, Athena, and Dionysus. Hammers use
+their independent Rank I/Rank II domain, with Icarus's Latest Model as the
+modeled in-run Rank II transition. Other normal-run providers are fixed-rarity
+and do not receive Pom levels. Hades participates in the source's broader
+`IsGodTrait(..., { ForShop = true })` query and its traits carry processed
+rarity tables, but its live field offer is effectively fixed Common and every
+Hades trait declares `BlockInRunRarify`. Icarus choices
+also explicitly author Common in normal runs; the dream-run rarity rewrite is
+outside the supported route baseline.
 
 On acquisition, `AddTraitData` first retains Bridal Glow itself, then
 `HeraSuperchargeBoon` calls `AddRarityToTraits` with `NumTraits = 1`,
@@ -936,7 +952,7 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer declarations use a `none` rarity domain (source `ForceCommon` is not player rarity, while the exact 65-member source Legendary capability is normalized separately as Hammer Rank-II data) |
 | ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                                                               |
 | element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                                                                         |
-| god-trait/rareness flags      | inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits are not persistent god traits                                                                                                                                                                            |
+| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                                                                          |
 | self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                                                                |
 | offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                         |
 | element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                 |

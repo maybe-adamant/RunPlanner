@@ -99,14 +99,14 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     }
     if (declaration.ordinaryBoonSlot !== undefined) slots[declaration.ordinaryBoonSlot] = equipped;
     if (
-      declaration.isPersistentGodTrait &&
+      declaration.usesBoonRarity &&
       equipped.rarity !== undefined &&
       !declaration.excludeFromRarityCount
     ) {
       rarityCounts[equipped.rarity] = (rarityCounts[equipped.rarity] ?? 0) + 1;
     }
     if (
-      declaration.isPersistentGodTrait &&
+      declaration.isCoreGodTrait &&
       !declaration.blockStacking &&
       declaration.selfExclusion !== equipped.traitKey
     )
@@ -162,7 +162,7 @@ function promoteActiveFloorTargets(
     const declaration = catalog.traits.byKey[traitKey];
     if (
       declaration === undefined ||
-      !declaration.isPersistentGodTrait ||
+      !declaration.usesBoonRarity ||
       declaration.blockInRunRarify ||
       activeSources.has(traitKey) ||
       declaration.rarityDomain.kind !== 'ranked' ||
@@ -575,7 +575,7 @@ function checkRequirement(
         const declaration = traitFor(catalog, equipped.traitKey);
         return (
           declaration !== undefined &&
-          declaration.isPersistentGodTrait &&
+          declaration.isCoreGodTrait &&
           declaration.rarityDomain.kind === 'ranked' &&
           equipped.rarity !== undefined &&
           nextRarity(catalog, equipped.traitKey, equipped.rarity) !== undefined &&
@@ -620,7 +620,7 @@ function superchargeableGodTraitTargetKeys(
     catalog.traits.values.flatMap((declaration) => {
       const equipped = history.equippedTraits[declaration.key];
       return equipped !== undefined &&
-        declaration.isPersistentGodTrait &&
+        declaration.isCoreGodTrait &&
         declaration.rarityDomain.kind === 'ranked' &&
         equipped.rarity !== undefined &&
         nextRarity(catalog, declaration.key, equipped.rarity) !== undefined &&
@@ -709,7 +709,7 @@ export function assessTraitOption(
   if (
     history.minimumScalableGodTraitRarity !== undefined &&
     rarity === 'Common' &&
-    trait.isPersistentGodTrait &&
+    trait.usesBoonRarity &&
     trait.rarityDomain.kind === 'ranked' &&
     trait.rarityDomain.freshOfferRarities.includes('Rare')
   ) {
