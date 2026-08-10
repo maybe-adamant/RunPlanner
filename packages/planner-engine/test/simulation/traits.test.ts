@@ -12,12 +12,14 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   assessTraitOption,
+  assessSelectedTargetedAcquisition,
   assessTraitOfferComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitOfferEvents,
   recordReachedTraitOffer,
   traitCandidates,
+  targetedAcquisitionTargetKeys,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
   type TraitHistoryState,
@@ -347,6 +349,76 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     const history = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
     expect(findingCode('BoonGrowthBoon', history)).toBeUndefined();
     expect(findingCode('BoonDecayBoon', history)).toBeUndefined();
+  });
+
+  it('excludes every non-superchargeable category from the exact target domain', () => {
+    const history = historyFrom([
+      { giverKey: 'Demeter', traitKey: 'DemeterWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Demeter', traitKey: 'ElementalDamageCapBoon', rarity: 'Rare' },
+      { giverKey: 'Demeter', traitKey: 'BoonGrowthBoon', rarity: 'Common' },
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Heroic' },
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' },
+    ]);
+
+    expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', history)).toEqual([
+      'DemeterWeaponBoon',
+    ]);
+  });
+
+  it('requires one exact selected target and promotes only that target to Heroic', () => {
+    const before = historyFrom([
+      { giverKey: 'Demeter', traitKey: 'DemeterWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Apollo', traitKey: 'ApolloCastBoon', rarity: 'Rare' },
+    ]);
+    const baseOffer: AuthoredTraitOffer = Object.freeze({
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1',
+    });
+    expect(assessSelectedTargetedAcquisition(catalog, baseOffer, before)).toMatchObject({
+      applies: true,
+      legal: false,
+      findings: [{ code: 'targetedAcquisitionTargetMissing', traitKey: 'BoonDecayBoon' }],
+    });
+
+    const offer = Object.freeze({
+      ...baseOffer,
+      options: Object.freeze([
+        { ...baseOffer.options[0], targetTraitKey: 'ApolloCastBoon' },
+        baseOffer.options[1],
+        baseOffer.options[2],
+      ]) as AuthoredTraitOffer['options'],
+    });
+    const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
+    expect(assessment).toMatchObject({
+      applies: true,
+      legal: true,
+      transition: {
+        kind: 'promoteGodTraitToHeroic',
+        sourceTraitKey: 'BoonDecayBoon',
+        targetTraitKey: 'ApolloCastBoon',
+        oldRarity: 'Rare',
+        newRarity: 'Heroic',
+      },
+    });
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'bridal-glow',
+      offer,
+      before,
+      Object.freeze({}),
+      before.events.length,
+    );
+    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+    expect(recorded.event?.targetedAcquisitionTransition).toEqual(assessment.transition);
+    expect(recorded.history.equippedTraits.ApolloCastBoon?.rarity).toBe('Heroic');
+    expect(recorded.history.equippedTraits.DemeterWeaponBoon?.rarity).toBe('Common');
+    expect(recorded.history.equippedTraits.BoonDecayBoon?.rarity).toBe('Common');
   });
 });
 

@@ -46,6 +46,8 @@ export type TraitFindingCode =
   | 'rarityCount'
   | 'rarifiableTarget'
   | 'superchargeableTarget'
+  | 'targetedAcquisitionTargetMissing'
+  | 'targetedAcquisitionTargetUnavailable'
   | 'occupiedBoonSlot'
   | 'freshRarityUnavailable'
   | 'rarityBelowActiveFloor'

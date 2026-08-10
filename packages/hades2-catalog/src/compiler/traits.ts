@@ -10,6 +10,7 @@ import type {
   TraitOfferOptionDefault,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
+  TargetedTraitAcquisition,
   TraitElement,
   TraitRarity,
   WeaponDeclaration,
@@ -132,7 +133,6 @@ function normalizeRequirement(
         ...(requirement.maximum === undefined ? {} : { maximum: requirement.maximum }),
       });
     case 'rarifiableTrait':
-    case 'superchargeableTrait':
       return Object.freeze({ kind: requirement.kind });
     case 'offerContext':
       return Object.freeze({
@@ -405,6 +405,27 @@ function normalizeTraits(
         minimumRarity: 'Rare',
       });
     }
+    let targetedAcquisition: TargetedTraitAcquisition | undefined;
+    if (trait.targetedAcquisition !== undefined) {
+      const acquisitionPath = `${path}.targetedAcquisition`;
+      if (isHammer)
+        fail(acquisitionPath, 'Hammer traits cannot target another trait on acquisition');
+      const acquisition = requireObject(trait.targetedAcquisition, acquisitionPath) as unknown as {
+        readonly kind?: unknown;
+        readonly target?: unknown;
+      };
+      const kind = closedValue(
+        acquisition.kind,
+        ['promoteGodTraitToHeroic'] as const,
+        `${acquisitionPath}.kind`,
+      );
+      const target = closedValue(
+        acquisition.target,
+        ['superchargeableGodTrait'] as const,
+        `${acquisitionPath}.target`,
+      );
+      targetedAcquisition = Object.freeze({ kind, target });
+    }
     // Requirement operands are checked against the complete trait collection after it exists.
     const rarityDomain = Object.freeze(
       isHammer
@@ -444,6 +465,7 @@ function normalizeTraits(
         `${path}.excludeFromRarityCount`,
       ),
       ...(rarityFloorEffect === undefined ? {} : { rarityFloorEffect }),
+      ...(targetedAcquisition === undefined ? {} : { targetedAcquisition }),
       ...(trait.selfExclusion === undefined
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),

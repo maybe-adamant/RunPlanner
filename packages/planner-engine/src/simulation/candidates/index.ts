@@ -78,11 +78,15 @@ export type {
   HubTerminalTakeoverCandidateQuery,
 } from './takeover-hub';
 export type {
+  EvaluatedTraitAcquisitionTargetCandidate,
+  EvaluatedTraitAcquisitionTargetDomain,
   EvaluatedTraitOfferCandidate,
   EvaluatedTraitOfferFocusedOptionCandidate,
   TraitOfferCandidateFinding,
   TraitOfferCandidateFindingCode,
   TraitOfferCandidateQuery,
+  TraitAcquisitionTargetDomainEvaluation,
+  TraitAcquisitionTargetDomainQuery,
   TraitOfferFocusedOptionCandidateEvaluation,
   TraitOfferFocusedOptionCandidateQuery,
   TraitOfferFocusedOptionEvidence,

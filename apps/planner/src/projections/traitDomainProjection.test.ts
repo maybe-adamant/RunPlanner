@@ -47,6 +47,31 @@ function candidate(
   return Object.freeze({ value, evaluation });
 }
 
+function targetCandidate(traitKey: string, supported: boolean) {
+  return Object.freeze({
+    value: traitKey,
+    evaluation: Object.freeze({
+      kind: 'traitAcquisitionTarget' as const,
+      result: Object.freeze({
+        branchSupport: Object.freeze([supported]),
+        findings: Object.freeze(
+          supported
+            ? []
+            : [
+                Object.freeze({
+                  code: 'targetedAcquisitionTargetUnavailable' as const,
+                  detail: traitKey,
+                  traitKey,
+                }),
+              ],
+        ),
+        supported,
+        traitKey,
+      }),
+    }),
+  });
+}
+
 function itemValues<T>(model: {
   readonly sections: readonly { readonly items: readonly { value: T }[] }[];
 }) {
@@ -261,5 +286,41 @@ describe('trait option domain projection', () => {
       Object.freeze(hammerPrepared.variants.map((option) => candidate(option, focused(true)))),
     );
     expect(hammerProjection.rarityPickerFor(hammer1)).toBeUndefined();
+  });
+
+  it('projects exact acquisition targets with catalog labels and pins a stale authored target', () => {
+    const hera = giver('Hera');
+    const draft = offer('Hera', [
+      Object.freeze({
+        traitKey: 'BoonDecayBoon',
+        rarity: 'Common',
+        targetTraitKey: 'ZeusWeaponBoon',
+      }),
+      rankedOption('HeraWeaponBoon', 'Common'),
+      rankedOption('HeraSpecialBoon', 'Common'),
+    ]);
+    const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
+    const service = createTraitDomainProjection(catalog, picker);
+    const prepared = service.prepare(hera, draft, 'option1');
+    const projection = service.project(
+      hera,
+      draft,
+      prepared,
+      Object.freeze(prepared.variants.map((option) => candidate(option, focused(true)))),
+      Object.freeze([
+        targetCandidate('ApolloCastBoon', true),
+        targetCandidate('ZeusWeaponBoon', false),
+      ]),
+    );
+
+    const targetPicker = projection.targetPicker;
+    if (targetPicker === undefined) throw new Error('target picker is missing');
+    expect(itemValues(targetPicker)).toEqual(['ZeusWeaponBoon', 'ApolloCastBoon']);
+    expect(targetPicker.selected).toMatchObject({
+      label: catalog.traits.byKey.ZeusWeaponBoon?.label,
+      state: 'impossible',
+    });
+    expect(targetPicker.selected?.explanation).not.toContain('ZeusWeaponBoon');
+    expect(projection.preferredOptionFor('HeraWeaponBoon')).not.toHaveProperty('targetTraitKey');
   });
 });

@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.19.0-field-npc-athena',
+  version: '0.20.0-targeted-trait-acquisition',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

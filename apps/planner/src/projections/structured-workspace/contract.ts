@@ -182,6 +182,8 @@ export interface WorkspaceTraitOfferControl {
 
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
 export interface WorkspaceTraitOptionDomainInteraction {
+  /** Whether this exact selected option owns a downstream acquisition-target step. */
+  readonly hasTargetPicker: boolean;
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
 }
 

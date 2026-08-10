@@ -22,6 +22,8 @@ export interface TraitOfferEvent {
   readonly acquisitionPoint: string;
   /** Derived from the pre-offer state; never persisted in authored state. */
   readonly replacementTransition?: TraitReplacementTransition;
+  /** Exact declaration-owned acquisition mutation derived from pre-offer state. */
+  readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
 }
 
 export interface TraitReplacementTransition {
@@ -30,6 +32,23 @@ export interface TraitReplacementTransition {
   readonly oldRarity: TraitRarity;
   readonly newTraitKey: string;
   readonly requiredRarity: TraitRarity;
+}
+
+export interface TraitTargetedAcquisitionTransition {
+  readonly kind: 'promoteGodTraitToHeroic';
+  readonly sourceTraitKey: string;
+  readonly targetTraitKey: string;
+  readonly oldRarity: TraitRarity;
+  readonly newRarity: 'Heroic';
+}
+
+export interface TraitTargetedAcquisitionAssessment {
+  readonly applies: boolean;
+  readonly legal: boolean;
+  readonly sourceTraitKey?: string;
+  readonly targetTraitKey?: string;
+  readonly findings: readonly TraitAssessmentFinding[];
+  readonly transition?: TraitTargetedAcquisitionTransition;
 }
 
 export interface TraitHistoryState {
@@ -172,6 +191,16 @@ export function foldTraitOfferEvents(
       ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
       sourceRole: event.acquisitionRole,
     });
+    const targeted = event.targetedAcquisitionTransition;
+    if (targeted !== undefined) {
+      const target = equipped[targeted.targetTraitKey];
+      if (target !== undefined) {
+        equipped[targeted.targetTraitKey] = Object.freeze({
+          ...target,
+          rarity: targeted.newRarity,
+        });
+      }
+    }
     const afterAcquisition = deriveFacts(catalog, equipped);
     const nextActiveSources = activeRarityFloorSources(
       catalog,
@@ -270,6 +299,7 @@ export interface ReachedTraitOfferEvaluation {
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
+  readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -279,6 +309,7 @@ export interface TraitOfferBranchAssessment {
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
+  readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
 }
 
 /**
@@ -319,6 +350,7 @@ export function evaluateReachedTraitOffer(
 ): ReachedTraitOfferEvaluation {
   const composition = assessTraitOfferComposition(catalog, offer, before);
   const replacementComposition = assessTraitReplacementComposition(catalog, offer, before, context);
+  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, before);
   return Object.freeze({
     address,
     acquisitionRole,
@@ -328,6 +360,7 @@ export function evaluateReachedTraitOffer(
     assessments: assessTraitOffer(catalog, offer, before, context),
     composition,
     replacementComposition,
+    targetedAcquisition,
     reached: true,
     chronologicalIndex,
   });
@@ -451,6 +484,7 @@ export function recordReachedTraitOffer(
   const valid =
     evaluation.composition.legal &&
     evaluation.replacementComposition.legal &&
+    evaluation.targetedAcquisition.legal &&
     evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
   const selectedAssessment =
@@ -466,6 +500,9 @@ export function recordReachedTraitOffer(
     ...(selectedAssessment?.replacementTransition === undefined
       ? {}
       : { replacementTransition: selectedAssessment.replacementTransition }),
+    ...(evaluation.targetedAcquisition.transition === undefined
+      ? {}
+      : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
   });
   const history = foldTraitOfferEvents(catalog, [...evaluation.before.events, event]);
   return Object.freeze({ history, event });
@@ -526,20 +563,6 @@ function checkRequirement(
       })
         ? undefined
         : { code: 'rarifiableTarget' };
-    case 'superchargeableTrait':
-      return Object.values(history.equippedTraits).some((equipped) => {
-        const declaration = traitFor(catalog, equipped.traitKey);
-        return (
-          declaration !== undefined &&
-          declaration.isPersistentGodTrait &&
-          declaration.rarityDomain.kind === 'ranked' &&
-          equipped.rarity !== undefined &&
-          nextRarity(catalog, equipped.traitKey, equipped.rarity) !== undefined &&
-          !declaration.blockStacking
-        );
-      })
-        ? undefined
-        : { code: 'superchargeableTarget' };
     case 'offerContext':
       // Context requirements are exact predicates, not one-way blockers: a
       // declaration may require the context to be active or explicitly absent.
@@ -562,6 +585,40 @@ function traitFor(catalog: Catalog, key: string) {
   return catalog.traits.byKey[key];
 }
 
+function superchargeableGodTraitTargetKeys(
+  catalog: Catalog,
+  history: TraitHistoryState,
+): readonly string[] {
+  return Object.freeze(
+    catalog.traits.values.flatMap((declaration) => {
+      const equipped = history.equippedTraits[declaration.key];
+      return equipped !== undefined &&
+        declaration.isPersistentGodTrait &&
+        declaration.rarityDomain.kind === 'ranked' &&
+        equipped.rarity !== undefined &&
+        nextRarity(catalog, declaration.key, equipped.rarity) !== undefined &&
+        !declaration.blockInRunRarify &&
+        !declaration.blockStacking
+        ? [declaration.key]
+        : [];
+    }),
+  );
+}
+
+/** Exact pre-acquisition target domain for one declaration-owned transition. */
+export function targetedAcquisitionTargetKeys(
+  catalog: Catalog,
+  sourceTraitKey: string,
+  history: TraitHistoryState,
+): readonly string[] {
+  const acquisition = catalog.traits.byKey[sourceTraitKey]?.targetedAcquisition;
+  if (acquisition === undefined) return Object.freeze([]);
+  switch (acquisition.kind) {
+    case 'promoteGodTraitToHeroic':
+      return superchargeableGodTraitTargetKeys(catalog, history);
+  }
+}
+
 export function assessTraitOption(
   catalog: Catalog,
   traitKey: string,
@@ -581,6 +638,12 @@ export function assessTraitOption(
   for (const requirement of trait.offerRequirements) {
     const failure = checkRequirement(catalog, requirement, trait, history, context);
     if (failure !== undefined) findings.push({ ...failure, traitKey });
+  }
+  if (
+    trait.targetedAcquisition !== undefined &&
+    targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0
+  ) {
+    findings.push({ code: 'superchargeableTarget', traitKey });
   }
   if (context.devotionNoDuo && rarity === 'Duo')
     findings.push({ code: 'offerContext', traitKey, detail: 'devotionNoDuo' });
@@ -695,6 +758,75 @@ export function assessTraitOffer(
       assessTraitOption(catalog, option.traitKey, history, offerContext, option.rarity),
     ),
   );
+}
+
+export function assessSelectedTargetedAcquisition(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  history: TraitHistoryState,
+): TraitTargetedAcquisitionAssessment {
+  const option = offer.options[optionIndex(offer.selectedOptionKey)];
+  if (option === undefined) {
+    return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
+  }
+  const acquisition = catalog.traits.byKey[option.traitKey]?.targetedAcquisition;
+  if (acquisition === undefined) {
+    return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
+  }
+  const targets = targetedAcquisitionTargetKeys(catalog, option.traitKey, history);
+  if (targets.length === 0) {
+    return Object.freeze({
+      applies: true,
+      legal: true,
+      sourceTraitKey: option.traitKey,
+      findings: Object.freeze([]),
+    });
+  }
+  if (option.targetTraitKey === undefined) {
+    const finding = Object.freeze({
+      code: 'targetedAcquisitionTargetMissing' as const,
+      traitKey: option.traitKey,
+    });
+    return Object.freeze({
+      applies: true,
+      legal: false,
+      sourceTraitKey: option.traitKey,
+      findings: Object.freeze([finding]),
+    });
+  }
+  if (!targets.includes(option.targetTraitKey)) {
+    const finding = Object.freeze({
+      code: 'targetedAcquisitionTargetUnavailable' as const,
+      traitKey: option.traitKey,
+      detail: option.targetTraitKey,
+    });
+    return Object.freeze({
+      applies: true,
+      legal: false,
+      sourceTraitKey: option.traitKey,
+      targetTraitKey: option.targetTraitKey,
+      findings: Object.freeze([finding]),
+    });
+  }
+  const target = history.equippedTraits[option.targetTraitKey];
+  if (target?.rarity === undefined) {
+    throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
+  }
+  const transition: TraitTargetedAcquisitionTransition = Object.freeze({
+    kind: acquisition.kind,
+    sourceTraitKey: option.traitKey,
+    targetTraitKey: option.targetTraitKey,
+    oldRarity: target.rarity,
+    newRarity: 'Heroic',
+  });
+  return Object.freeze({
+    applies: true,
+    legal: true,
+    sourceTraitKey: option.traitKey,
+    targetTraitKey: option.targetTraitKey,
+    findings: Object.freeze([]),
+    transition,
+  });
 }
 
 export interface TraitCandidateAssessment {

@@ -344,4 +344,48 @@ describe('route trait projection', () => {
     ]);
     expect(feedback.options[0]?.reasons.join(' ')).not.toContain('WeaponBoon');
   });
+
+  it('presents an invalid acquisition target with its player-facing label', () => {
+    const offer = {
+      giverKey: 'Hera',
+      options: [
+        {
+          traitKey: 'BoonDecayBoon',
+          rarity: 'Common' as const,
+          targetTraitKey: 'ZeusWeaponBoon',
+        },
+        { traitKey: 'HeraWeaponBoon', rarity: 'Common' as const },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const feedback = projectTraitOfferFeedback(
+      offer,
+      {
+        value: offer,
+        evaluation: {
+          kind: 'traitOffer',
+          result: {
+            supported: false,
+            branches: [],
+            assessments: [],
+            findings: [
+              {
+                code: 'targetedAcquisitionTargetUnavailable' as const,
+                traitKey: 'BoonDecayBoon',
+                detail: 'ZeusWeaponBoon',
+              },
+            ],
+          },
+        },
+      },
+      (traitKey) =>
+        ({
+          ZeusWeaponBoon: 'Heaven Strike',
+        })[traitKey] ?? traitKey,
+    );
+
+    expect(feedback.options[0]?.reasons).toEqual([expect.stringContaining('Heaven Strike')]);
+    expect(feedback.options[0]?.reasons.join(' ')).not.toContain('ZeusWeaponBoon');
+  });
 });

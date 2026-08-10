@@ -173,7 +173,11 @@ function decodeTraitOffers(
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
       expectExactKeys(
         option,
-        option.rarity === undefined ? ['traitKey'] : ['traitKey', 'rarity'],
+        [
+          'traitKey',
+          ...(option.rarity === undefined ? [] : ['rarity']),
+          ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
+        ],
         `${rolePath}.options.${key}`,
       );
       const traitKey = expectString(option.traitKey, `${rolePath}.options.${key}.traitKey`);
@@ -206,7 +210,29 @@ function decodeTraitOffers(
           `${rolePath}.options.${key}.rarity`,
           `unsupported authored rarity for ${traitKey}`,
         );
-      options.push(Object.freeze({ traitKey, ...(rarity === undefined ? {} : { rarity }) }));
+      const targetTraitKey =
+        option.targetTraitKey === undefined
+          ? undefined
+          : expectString(option.targetTraitKey, `${rolePath}.options.${key}.targetTraitKey`);
+      if (targetTraitKey !== undefined) {
+        if (trait.targetedAcquisition === undefined)
+          failProjectDocument(
+            `${rolePath}.options.${key}.targetTraitKey`,
+            `${traitKey} does not target another trait on acquisition`,
+          );
+        if (catalog.traits.byKey[targetTraitKey] === undefined)
+          failProjectDocument(
+            `${rolePath}.options.${key}.targetTraitKey`,
+            `unknown trait ${targetTraitKey}`,
+          );
+      }
+      options.push(
+        Object.freeze({
+          traitKey,
+          ...(rarity === undefined ? {} : { rarity }),
+          ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+        }),
+      );
     }
     const selected = expectString(record.selectedOptionKey, `${rolePath}.selectedOptionKey`);
     if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selected))

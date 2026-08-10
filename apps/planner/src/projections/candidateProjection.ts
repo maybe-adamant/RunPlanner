@@ -3,6 +3,8 @@ import {
   createPreparedProjectCandidateSession,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   type CandidateEvaluationEvent,
+  type EvaluatedTraitAcquisitionTargetCandidate,
+  type EvaluatedTraitOfferFocusedOptionCandidate,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
@@ -83,7 +85,10 @@ export interface EncounterCandidateProjectionEvaluation {
 }
 
 export type CandidateProjectionEvaluation =
-  ProjectCandidateSessionEvaluation | EncounterCandidateProjectionEvaluation;
+  | ProjectCandidateEvaluation
+  | EvaluatedTraitOfferFocusedOptionCandidate
+  | EvaluatedTraitAcquisitionTargetCandidate
+  | EncounterCandidateProjectionEvaluation;
 
 export interface CandidateOptionProjection<
   T,
@@ -189,6 +194,12 @@ export interface CandidateProjectionSession {
     optionKey: TraitOptionKey,
     variants: readonly AuthoredTraitOption[],
   ) => readonly CandidateOptionProjection<AuthoredTraitOption, CandidateProjectionEvaluation>[];
+  readonly traitAcquisitionTargets: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+    retainedTargetTraitKey?: string,
+  ) => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
 }
 
 export interface CandidateSessionFactory {
@@ -209,7 +220,7 @@ function domainKey(values: readonly string[]): string {
 }
 
 function traitOptionKey(option: AuthoredTraitOption): string {
-  return `${option.traitKey}:${option.rarity ?? ''}`;
+  return `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`;
 }
 
 function offerWithFocusedOption(
@@ -224,6 +235,15 @@ function offerWithFocusedOption(
     ...value,
     options: Object.freeze(options) as AuthoredTraitOffer['options'],
   });
+}
+
+function candidateOptionEvaluation(
+  evaluation: ProjectCandidateSessionEvaluation,
+): CandidateProjectionEvaluation {
+  if (evaluation.kind === 'traitAcquisitionTargetDomain') {
+    throw new Error('a target-domain aggregate cannot be projected as one candidate option');
+  }
+  return evaluation;
 }
 
 function rewardQueries(
@@ -286,7 +306,7 @@ function projectOptions<T>(
       if (evaluation === undefined) {
         throw new Error(`candidate projection ${key} omitted value ${index}`);
       }
-      return Object.freeze({ value, evaluation });
+      return Object.freeze({ value, evaluation: candidateOptionEvaluation(evaluation) });
     }),
   ) as readonly CandidateOptionProjection<T>[];
   projectCache.options.set(key, projected);
@@ -327,7 +347,12 @@ async function projectOptionsCooperatively<T>(
     if (evaluation === undefined) {
       throw new Error(`candidate projection ${key} omitted value ${index}`);
     }
-    projected.push(Object.freeze({ value: values[index]!, evaluation }));
+    projected.push(
+      Object.freeze({
+        value: values[index]!,
+        evaluation: candidateOptionEvaluation(evaluation),
+      }),
+    );
     if (index + 1 < queries.length) {
       await yieldToHost();
     }
@@ -702,6 +727,40 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      traitAcquisitionTargets: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+        retainedTargetTraitKey?: string,
+      ) => {
+        const key = `trait-acquisition-targets:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${retainedTargetTraitKey ?? ''}`;
+        const projectCache = requireProjectCache(cache, assembly, catalog, options);
+        const existing = projectCache.options.get(key);
+        if (existing !== undefined) {
+          return existing as readonly CandidateOptionProjection<
+            string,
+            CandidateProjectionEvaluation
+          >[];
+        }
+        const evaluation = projectCache.evaluator.evaluate({
+          kind: 'traitAcquisitionTargetDomain',
+          trait: owner,
+          value,
+          optionKey,
+          ...(retainedTargetTraitKey === undefined ? {} : { retainedTargetTraitKey }),
+        });
+        const projected = Object.freeze(
+          evaluation.kind === 'unavailable'
+            ? retainedTargetTraitKey === undefined
+              ? []
+              : [Object.freeze({ value: retainedTargetTraitKey, evaluation })]
+            : evaluation.result.candidates.map((candidate) =>
+                Object.freeze({ value: candidate.result.traitKey, evaluation: candidate }),
+              ),
+        );
+        projectCache.options.set(key, projected);
+        return projected;
+      },
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
@@ -757,6 +816,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'traitOffer':
       return evaluation.result.supported;
     case 'traitOfferFocusedOption':
+    case 'traitAcquisitionTarget':
       return evaluation.result.supported;
     default:
       return evaluation.result.selectedPossible;
@@ -810,6 +870,7 @@ function candidateForced(
       return evaluation.result.support === 'required';
     case 'traitOffer':
     case 'traitOfferFocusedOption':
+    case 'traitAcquisitionTarget':
       return false;
   }
 }

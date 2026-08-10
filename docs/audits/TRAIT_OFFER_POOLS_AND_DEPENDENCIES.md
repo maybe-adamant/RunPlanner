@@ -660,9 +660,9 @@ The source has three similar but distinct queries:
    god trait whose concrete rarity has a supported next in-run rarity and that
    does not declare `BlockInRunRarify`.
 3. `HasSuperchargeableBoon`, used by `BoonDecayBoon`, applies the same
-   next-rarity test and additionally rejects `BlockStacking` traits. It has a
-   special minimum-cooldown branch for Hephaestus Weapon, Special, and Sprint
-   boons.
+   next-rarity and `BlockInRunRarify` tests and additionally rejects
+   `BlockStacking` traits. It has a special minimum-cooldown branch for
+   Hephaestus Weapon, Special, and Sprint boons.
 
 These must not collapse into one generic counter. The first implementation
 slice models the first count exactly and evaluates the latter two predicates
@@ -672,14 +672,20 @@ succeed when at least one equipped non-`BlockStacking` god trait exists. The
 explicit next-rarity test is still retained so an all-`Heroic` ledger is
 correctly ineligible when later work can create it.
 
+On acquisition, `AddTraitData` first retains Bridal Glow itself, then
+`HeraSuperchargeBoon` calls `AddRarityToTraits` with `NumTraits = 1`,
+`TargetRarity = 4`, `MaxRarity = 3`, and `StackEligibleOnly = true`. The game
+therefore chooses exactly one eligible equipped target and promotes it to
+Heroic. It records that target on Bridal Glow as `UpgradedTraitName`; the
+source boon remains equipped with its own rarity and Water element.
+
 Trait levels and stacks are outside this slice, so the Hephaestus
 rarity/cooldown exception cannot yet be represented. The first slice therefore
 applies the generic non-`BlockStacking`, next-rarity rule to Hephaestus Weapon,
 Special, and Sprint boons as well. This is an explicit temporary collapse, not
-an implicit claim that every source cooldown state passes the game check. Boon
-Decay's effect—choosing targets, changing rarity, and adding levels/stacks—is
-also deferred. This slice models only whether the trait may appear in an
-offer.
+an implicit claim that every source cooldown state passes the game check. The
+planner models the exact chosen target and its Heroic promotion; the additional
+level/stack grant and later `CreditMissingStacks` adjustment remain deferred.
 
 ### Other direct condition dispositions
 

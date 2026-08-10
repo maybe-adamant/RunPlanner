@@ -36,6 +36,12 @@ function validateOffer(
     ) {
       failCommand(command, `unsupported authored rarity for ${option.traitKey}`);
     }
+    if (option.targetTraitKey !== undefined) {
+      if (trait.targetedAcquisition === undefined)
+        failCommand(command, `${option.traitKey} does not target another trait on acquisition`);
+      if (catalog.traits.byKey[option.targetTraitKey] === undefined)
+        failCommand(command, `unknown target trait ${option.targetTraitKey}`);
+    }
   }
   return Object.freeze({
     giverKey: value.giverKey,

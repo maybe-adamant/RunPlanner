@@ -22,6 +22,7 @@ import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-plan
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 import {
+  evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
@@ -83,6 +84,46 @@ function reachedContext(before = createTraitHistoryState()): TraitOfferCandidate
 }
 
 describe('focused trait offer candidates', () => {
+  it('publishes a branch-aware target union and pins a stale authored target', () => {
+    const targetDomain = evaluateTraitAcquisitionTargetDomain(
+      catalog,
+      project,
+      evaluation,
+      artifacts([
+        reachedContext(historyWith('Demeter', 'DemeterWeaponBoon', 'Common')),
+        reachedContext(historyWith('Apollo', 'ApolloCastBoon', 'Rare')),
+      ]),
+      {
+        kind: 'traitAcquisitionTargetDomain',
+        trait,
+        value: offer(
+          'Hera',
+          Object.freeze([
+            { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+            { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+            { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+          ]) as AuthoredTraitOffer['options'],
+        ),
+        optionKey: 'option1',
+        retainedTargetTraitKey: 'ZeusWeaponBoon',
+      },
+    );
+    if (targetDomain.kind !== 'traitAcquisitionTargetDomain') {
+      throw new Error('target domain was unavailable');
+    }
+    expect(
+      targetDomain.result.candidates.map((candidate) => ({
+        traitKey: candidate.result.traitKey,
+        supported: candidate.result.supported,
+        branchSupport: candidate.result.branchSupport,
+      })),
+    ).toEqual([
+      { traitKey: 'ApolloCastBoon', supported: true, branchSupport: [false, true] },
+      { traitKey: 'DemeterWeaponBoon', supported: true, branchSupport: [true, false] },
+      { traitKey: 'ZeusWeaponBoon', supported: false, branchSupport: [false, false] },
+    ]);
+  });
+
   it('isolates a focused option from sibling prerequisites while retaining its own failure', () => {
     const value = offer(
       'Aphrodite',

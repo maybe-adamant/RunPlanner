@@ -5,6 +5,8 @@ export interface AuthoredTraitOption {
   readonly traitKey: string;
   /** Hammers intentionally omit rarity. */
   readonly rarity?: TraitRarity;
+  /** Exact random equipped-trait outcome for a targeted acquisition. */
+  readonly targetTraitKey?: string;
 }
 
 export interface AuthoredTraitOffer {

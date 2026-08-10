@@ -85,6 +85,9 @@ function presentTraitCandidateReason(
       return `${copy.title}: Cannot be equipped alongside ${alternatives}.`;
     }
   }
+  if (finding.code === 'targetedAcquisitionTargetUnavailable' && finding.detail !== undefined) {
+    return `${copy.title}: ${copy.description} (${traitLabel(finding.detail)})`;
+  }
   return finding.detail === undefined
     ? `${copy.title}: ${copy.description}`
     : `${copy.title}: ${copy.description} (${finding.detail})`;
@@ -208,6 +211,7 @@ interface AggregatedTraitTrace {
   readonly assessments: SelectedTraitOfferAssessment['branches'][number]['assessments'][number][];
   readonly compositions: SelectedTraitOfferAssessment['branches'][number]['composition'][];
   readonly replacementCompositions: SelectedTraitOfferAssessment['branches'][number]['replacementComposition'][];
+  readonly targetedAcquisitions: SelectedTraitOfferAssessment['branches'][number]['targetedAcquisition'][];
   biomeOrder: number;
   chronologicalIndex: number;
 }
@@ -239,6 +243,10 @@ function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {
     for (const composition of trace.replacementCompositions) {
       if (!composition.legal) invalid = true;
       for (const finding of composition.findings) findingKeys.add(findingKey(finding));
+    }
+    for (const acquisition of trace.targetedAcquisitions) {
+      if (!acquisition.legal) invalid = true;
+      for (const finding of acquisition.findings) findingKeys.add(findingKey(finding));
     }
   }
   return Object.freeze({ invalid, findingCount: findingKeys.size });
@@ -303,6 +311,7 @@ function groupedTraitTraces(
           assessments: trace.branches.flatMap((branch) => [...branch.assessments]),
           compositions: trace.branches.map((branch) => branch.composition),
           replacementCompositions: trace.branches.map((branch) => branch.replacementComposition),
+          targetedAcquisitions: trace.branches.map((branch) => branch.targetedAcquisition),
           biomeOrder,
           chronologicalIndex: trace.chronologicalIndex,
           trace,
@@ -312,6 +321,9 @@ function groupedTraitTraces(
         existing.compositions.push(...trace.branches.map((branch) => branch.composition));
         existing.replacementCompositions.push(
           ...trace.branches.map((branch) => branch.replacementComposition),
+        );
+        existing.targetedAcquisitions.push(
+          ...trace.branches.map((branch) => branch.targetedAcquisition),
         );
         existing.chronologicalIndex = Math.min(
           existing.chronologicalIndex,

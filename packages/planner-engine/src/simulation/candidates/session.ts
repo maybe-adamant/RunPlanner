@@ -79,10 +79,14 @@ import {
 } from './takeover-hub';
 import type { CandidateContextUnavailable } from './availability';
 import {
+  evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
+  type EvaluatedTraitAcquisitionTargetDomain,
   type EvaluatedTraitOfferCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
+  type TraitAcquisitionTargetDomainEvaluation,
+  type TraitAcquisitionTargetDomainQuery,
   type TraitOfferCandidateQuery,
   type TraitOfferFocusedOptionCandidateEvaluation,
   type TraitOfferFocusedOptionCandidateQuery,
@@ -112,7 +116,7 @@ export type ProjectCandidateQuery =
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
-  ProjectCandidateQuery | TraitOfferFocusedOptionCandidateQuery;
+  ProjectCandidateQuery | TraitOfferFocusedOptionCandidateQuery | TraitAcquisitionTargetDomainQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -139,7 +143,9 @@ export type ProjectCandidateEvaluation =
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
-  ProjectCandidateEvaluation | EvaluatedTraitOfferFocusedOptionCandidate;
+  | ProjectCandidateEvaluation
+  | EvaluatedTraitOfferFocusedOptionCandidate
+  | EvaluatedTraitAcquisitionTargetDomain;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -158,6 +164,10 @@ export interface ProjectCandidateSession {
     (
       queries: readonly TraitOfferFocusedOptionCandidateQuery[],
     ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
+    (query: TraitAcquisitionTargetDomainQuery): TraitAcquisitionTargetDomainEvaluation;
+    (
+      queries: readonly TraitAcquisitionTargetDomainQuery[],
+    ): readonly TraitAcquisitionTargetDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
     (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
@@ -309,6 +319,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'traitAcquisitionTargetDomain':
+      return evaluateTraitAcquisitionTargetDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -331,6 +350,12 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly TraitOfferFocusedOptionCandidateQuery[],
   ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
+  function evaluate(
+    query: TraitAcquisitionTargetDomainQuery,
+  ): TraitAcquisitionTargetDomainEvaluation;
+  function evaluate(
+    queries: readonly TraitAcquisitionTargetDomainQuery[],
+  ): readonly TraitAcquisitionTargetDomainEvaluation[];
   function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
   function evaluate(
     queries: readonly ProjectCandidateSessionQuery[],

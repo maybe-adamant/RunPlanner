@@ -33,6 +33,7 @@ export interface TraitOptionDomainProjection {
   >[];
   readonly preferredOptionFor: (traitKey: string) => AuthoredTraitOption | undefined;
   readonly rarityPickerFor: (traitKey: string) => ContextualPickerModel<TraitRarity> | undefined;
+  readonly targetPicker?: ContextualPickerModel<string>;
   readonly traitPicker: ContextualPickerModel<string>;
 }
 
@@ -47,11 +48,16 @@ export interface TraitDomainProjectionService {
     draft: AuthoredTraitOffer,
     prepared: PreparedTraitOptionDomain,
     candidates: readonly TraitCandidate[],
+    targetCandidates?: readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[],
   ) => TraitOptionDomainProjection;
 }
 
 function sameOption(left: AuthoredTraitOption, right: AuthoredTraitOption): boolean {
-  return left.traitKey === right.traitKey && left.rarity === right.rarity;
+  return (
+    left.traitKey === right.traitKey &&
+    left.rarity === right.rarity &&
+    left.targetTraitKey === right.targetTraitKey
+  );
 }
 
 function appendUnique(
@@ -117,6 +123,13 @@ function candidateExplanation(
   traitLabel: (traitKey: string) => string,
 ): CandidateExplanation | undefined {
   if (evaluation.kind === 'encounter') return undefined;
+  if (evaluation.kind === 'traitAcquisitionTarget') {
+    if (evaluation.result.supported) return undefined;
+    const finding = evaluation.result.findings[0];
+    if (finding === undefined) return undefined;
+    const copy = presentTraitCandidateFinding(finding.code);
+    return Object.freeze({ kind: 'trait', message: `${copy.title}: ${copy.description}` });
+  }
   if (evaluation.kind !== 'traitOfferFocusedOption') {
     return explainCandidateEvaluation(catalog, evaluation);
   }
@@ -211,10 +224,6 @@ export function createTraitDomainProjection(
   contextualPicker: ContextualPickerProjectionService,
 ): TraitDomainProjectionService {
   const preparedCache = new WeakMap<AuthoredTraitOffer, Map<string, PreparedTraitOptionDomain>>();
-  const projectedCache = new WeakMap<
-    readonly CandidateOptionProjection<AuthoredTraitOption, CandidateProjectionEvaluation>[],
-    TraitOptionDomainProjection
-  >();
   const traitLabel = (traitKey: string): string =>
     catalog.traits.byKey[traitKey]?.label ?? traitKey;
   const service: TraitDomainProjectionService = {
@@ -231,9 +240,7 @@ export function createTraitDomainProjection(
       byFocus.set(cacheKey, prepared);
       return prepared;
     },
-    project(giver, draft, prepared, candidates) {
-      const existing = projectedCache.get(candidates);
-      if (existing !== undefined) return existing;
+    project(giver, draft, prepared, candidates, targetCandidates) {
       const selected = draft.options[optionIndex(prepared.optionKey)];
       if (selected === undefined) throw new Error(`Trait offer is missing ${prepared.optionKey}`);
       const visible = Object.freeze(
@@ -303,9 +310,28 @@ export function createTraitDomainProjection(
           return option;
         },
         rarityPickerFor,
+        ...(targetCandidates === undefined
+          ? {}
+          : {
+              targetPicker: contextualPicker.project(
+                targetCandidates,
+                (candidate) => {
+                  const explanation = candidateExplanation(
+                    catalog,
+                    candidate.evaluation,
+                    traitLabel,
+                  );
+                  return Object.freeze({
+                    label: traitLabel(candidate.value),
+                    selected: candidate.value === selected.targetTraitKey,
+                    ...(explanation === undefined ? {} : { explanation }),
+                  });
+                },
+                (traitKey) => traitKey,
+              ),
+            }),
         traitPicker,
       });
-      projectedCache.set(candidates, projection);
       return projection;
     },
   };

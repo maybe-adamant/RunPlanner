@@ -115,11 +115,7 @@ export const heraTraits = [
     label: 'Bridal Glow',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
-      {
-        kind: 'superchargeableTrait',
-      },
-    ],
+    offerRequirements: [],
     elementContributions: {
       Water: 1,
     },
@@ -127,6 +123,10 @@ export const heraTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    targetedAcquisition: {
+      kind: 'promoteGodTraitToHeroic',
+      target: 'superchargeableGodTrait',
+    },
   },
   {
     key: 'DamageSharePotencyBoon',

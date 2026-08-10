@@ -183,6 +183,14 @@ const findingCopy = {
     title: 'No superchargeable trait is equipped',
     description: 'This offer requires an equipped trait that can be supercharged.',
   },
+  targetedAcquisitionTargetMissing: {
+    title: 'Acquisition target is missing',
+    description: 'Choose which eligible equipped trait received this acquisition effect.',
+  },
+  targetedAcquisitionTargetUnavailable: {
+    title: 'Acquisition target is unavailable',
+    description: 'The selected equipped trait cannot receive this acquisition effect.',
+  },
   occupiedBoonSlot: {
     title: 'Ordinary boon slot is occupied',
     description: 'The ordinary boon slot for this trait already has an equipped trait.',
