@@ -30,6 +30,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
@@ -443,7 +444,7 @@ function HubRankAction({
   ) => void;
   readonly requiredVisitCount: number;
   readonly result: HubBoardMoveResult | undefined;
-  readonly symbol: '↑' | '↓';
+  readonly symbol: string;
   readonly slotLabel: string;
 }) {
   const executeIntent = useCommandIntent();
@@ -539,6 +540,8 @@ function HubRoomOrderControls({
     authoredVisitCount < requiredVisitCount
       ? 'removeFromVisits'
       : 'moveLater';
+  const visitMembershipKind: HubBoardMove['kind'] =
+    visitPosition === -1 ? 'addToVisits' : 'removeFromVisits';
   const earlierLabel =
     visitPosition === -1 && tailPosition === 0
       ? authoredVisitCount < requiredVisitCount
@@ -559,6 +562,20 @@ function HubRoomOrderControls({
       data-visit-position={visitPosition === -1 ? undefined : visitPosition + 1}
       role="group"
     >
+      <HubRankAction
+        action={Object.freeze({ kind: visitMembershipKind, slotKey: slot.hubSlotKey })}
+        actionLabel={
+          visitPosition === -1
+            ? `Add ${slot.label} to visited rooms`
+            : `Remove ${slot.label} from visited rooms`
+        }
+        interaction={interaction}
+        onApplied={onApplied}
+        requiredVisitCount={requiredVisitCount}
+        result={proposal(visitMembershipKind)}
+        symbol={visitPosition === -1 ? '+ Visit' : '− Visit'}
+        slotLabel={slot.label}
+      />
       <HubRankAction
         action={Object.freeze({ kind: 'moveEarlier', slotKey: slot.hubSlotKey })}
         actionLabel={earlierLabel}
@@ -685,6 +702,10 @@ function OpenHubRoomCard({
   const rewardOwnerKey =
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);
   const focusedMainReward = rewardOwnerKey === focusedRewardOwnerKey;
+  const encounterTraitOffers =
+    slot.room?.encounterPhases.flatMap((phase) =>
+      phase.traitOffer === undefined ? [] : [phase.traitOffer],
+    ) ?? [];
   const canInspectLocalDetail =
     slot.visited && slot.room !== undefined && slot.room.hasRoomLocalCustomization;
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
@@ -789,6 +810,17 @@ function OpenHubRoomCard({
               interactions={interactions}
             />
           )}
+        </div>
+      )}
+      {encounterTraitOffers.length === 0 ? null : (
+        <div className="trait-offer-launchers hub-room-trait-offers">
+          {encounterTraitOffers.map((traitOffer) => (
+            <TraitOfferLauncher
+              control={traitOffer}
+              interactions={interactions}
+              key={workspaceInteractionKey(traitOffer.address)}
+            />
+          ))}
         </div>
       )}
     </article>
@@ -1127,7 +1159,12 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     ) {
       return;
     }
-    const nextAction = pending.action === 'removeFromVisits' ? 'moveEarlier' : pending.action;
+    const nextAction =
+      pending.action === 'removeFromVisits'
+        ? 'addToVisits'
+        : pending.action === 'addToVisits'
+          ? 'removeFromVisits'
+          : pending.action;
     const card = Array.from(
       openMembershipRegion.current?.querySelectorAll<HTMLElement>('[data-hub-slot-key]') ?? [],
     ).find((element) => element.dataset.hubSlotKey === pending.slotKey);

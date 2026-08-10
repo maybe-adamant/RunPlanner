@@ -177,6 +177,55 @@ describe('Hub ranked-board presentation', () => {
     );
   });
 
+  it('adds a remaining room at the end of a partial visit prefix', () => {
+    const ranking = reconcileHubBoardRanking({
+      authoredVisitOrder: ['combat01', 'combat02'],
+      declarationOpenSlotKeys: ['combat01', 'combat02', 'combat03', 'combat05'],
+    });
+    const result = moveHubBoardRoom(ranking, 6, {
+      kind: 'addToVisits',
+      slotKey: 'combat05',
+    });
+
+    expect(result?.proposedVisitOrder).toEqual(['combat01', 'combat02', 'combat05']);
+    expect(result?.ranking.rankedSlotKeys).toEqual([
+      'combat01',
+      'combat02',
+      'combat05',
+      'combat03',
+    ]);
+  });
+
+  it('adds a remaining room to a full prefix by moving the prior final visit to the tail', () => {
+    const ranking = reconcileHubBoardRanking({
+      authoredVisitOrder: ['combat01', 'combat02', 'combat03', 'combat05', 'combat09', 'combat10'],
+      declarationOpenSlotKeys: [
+        'combat01',
+        'combat02',
+        'combat03',
+        'combat05',
+        'combat09',
+        'combat10',
+        'combat11',
+        'combat23',
+      ],
+    });
+    const result = moveHubBoardRoom(ranking, 6, {
+      kind: 'addToVisits',
+      slotKey: 'combat23',
+    });
+
+    expect(result?.proposedVisitOrder).toEqual([
+      'combat01',
+      'combat02',
+      'combat03',
+      'combat05',
+      'combat09',
+      'combat23',
+    ]);
+    expect(result?.ranking.tailSlotKeys).toEqual(['combat10', 'combat11']);
+  });
+
   it('reorders a full authored prefix through a slot drop', () => {
     const ranking = reconcileHubBoardRanking({
       authoredVisitOrder: ['combat01', 'combat02', 'combat03'],

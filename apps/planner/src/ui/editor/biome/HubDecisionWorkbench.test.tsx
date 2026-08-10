@@ -655,6 +655,39 @@ describe('HubDecisionWorkbench', () => {
     );
   });
 
+  it('exposes a visited Medea encounter trait offer on its Hub room card', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-medea-trait-offer',
+        name: 'Hub Medea trait offer',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      {
+        openSlotKeys: [
+          'combat11',
+          'combat10',
+          'combat09',
+          'combat05',
+          'story',
+          'combat02',
+          'combat01',
+          'miniBoss01',
+          'combat23',
+        ],
+        visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
+      },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const story = screen.getByRole('article', { name: 'Medea Hub room' });
+    const launcher = within(story).getByRole('button', { name: /^Edit Trait:/ });
+
+    await view.user.click(launcher);
+
+    expect(view.application.store.getState().editorSession.traitDialogTarget).toEqual(
+      expect.objectContaining({ kind: 'traitOffer' }),
+    );
+  });
+
   it('reveals the closed-room disclosure for exact closed-slot focus without authoring history', async () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
@@ -778,6 +811,48 @@ describe('HubDecisionWorkbench', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05', 'miniBoss01']),
+    );
+  });
+
+  it('adds and removes an open room through explicit visited-room controls', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-visit-membership-controls',
+        name: 'Hub visit membership controls',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const add = within(hubCard('combat01')).getByRole('button', {
+      name: 'Add Combat 01 to visited rooms',
+    });
+
+    await view.user.click(add);
+
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat05',
+        'miniBoss01',
+        'combat01',
+      ]),
+    );
+    const remove = within(hubCard('combat01')).getByRole('button', {
+      name: 'Remove Combat 01 from visited rooms',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(remove));
+
+    await view.user.click(remove);
+
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05', 'miniBoss01']),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(hubCard('combat01')).getByRole('button', {
+          name: 'Add Combat 01 to visited rooms',
+        }),
+      ),
     );
   });
 
