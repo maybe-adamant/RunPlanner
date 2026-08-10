@@ -177,7 +177,7 @@ export interface WorkspaceTraitOfferControl {
   readonly giver: TraitGiverDeclaration;
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
-  readonly rewardOwner: RewardCandidateOwner['address'];
+  readonly rewardOwner: SemanticAddress;
 }
 
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
@@ -683,6 +683,8 @@ export interface WorkspaceEncounterPhase {
   readonly customizable: boolean;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** Selected encounter-local trait offer, when this phase owns one. */
+  readonly traitOffer?: WorkspaceTraitOfferControl;
   /** A reset is useful only after the authored selection diverges from its static default. */
   readonly resettable: boolean;
   readonly selectedEncounter: {

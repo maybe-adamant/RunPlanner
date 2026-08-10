@@ -165,7 +165,9 @@ export function expectedWorkspaceLeafRequirements(
     address: TraitOfferOwnerAddress,
     reward: AuthoredRewardState,
   ): void => {
-    if (!detailsActive.has(address.occurrenceId)) return;
+    const occurrenceId =
+      address.kind === 'encounterPhase' ? address.owner.occurrenceId : address.occurrenceId;
+    if (!detailsActive.has(occurrenceId)) return;
     for (const acquisitionRole of Object.keys(reward.traitOffersByAcquisitionRole)) {
       const traitAddress = createTraitOfferAddress(address, acquisitionRole);
       requireLeaf(

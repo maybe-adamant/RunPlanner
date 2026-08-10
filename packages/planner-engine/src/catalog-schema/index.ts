@@ -114,6 +114,11 @@ export interface EncounterDefinition {
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   /** Presentation-only grouping for the later read-only NPC route index. */
   readonly npcPresentationKey?: string;
+  /** Explicit declaration-owned producer for an encounter-local trait offer. */
+  readonly traitOfferProducer?: {
+    readonly kind: 'traitOffer';
+    readonly giverKey: string;
+  };
 }
 
 /** Unique possibility support for one selectable slot, with a static default. */

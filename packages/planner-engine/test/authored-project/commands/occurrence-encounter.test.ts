@@ -28,7 +28,10 @@ import {
 import {
   createRepresentativeNOProject,
   createRepresentativeNOPProject,
+  createCompleteFGProject,
   authorLegalTraitOffers,
+  goldenFBiome,
+  goldenFOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -134,6 +137,26 @@ function enteredNLocalProject(): ProjectDocument {
 }
 
 describe('authored encounter occurrence commands', () => {
+  it('rejects an invalid selected option key for an encounter-owned trait offer', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitSelection',
+        trait: createTraitOfferAddress(phase, 'selection'),
+        selectedOptionKey: 'option4' as never,
+      }),
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceTraitSelection' }));
+  });
+
   it('applies a valid top-level selection, resets it, and records one atomic history edit', () => {
     const initial = createRepresentativeNOPProject();
     const assembly = withAssembly(initial);

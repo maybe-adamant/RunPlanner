@@ -23,6 +23,7 @@ export const fEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     npcPresentationKey: 'Artemis',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     requirements: {
       kind: 'all',
       requirements: [

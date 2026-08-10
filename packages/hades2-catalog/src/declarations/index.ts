@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.17.0-natural-chaos',
+  version: '0.18.0-field-npc-artemis',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

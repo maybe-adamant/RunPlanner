@@ -268,7 +268,10 @@ function updateState(
           }),
         });
       }
+    case 'encounterPhase':
+      return failCommand(command, 'encounter trait offers are updated by the encounter owner path');
   }
+  return failCommand(command, `unsupported trait offer owner ${owner.kind}`);
 }
 
 export function applyTraitOfferCommand(
@@ -279,9 +282,97 @@ export function applyTraitOfferCommand(
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const owner = command.trait.owner;
-  const occurrence = requireOccurrence(located.plan, owner.occurrenceId, command);
+  const occurrenceId =
+    owner.kind === 'encounterPhase' ? owner.owner.occurrenceId : owner.occurrenceId;
+  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   if (owner.routeKey !== command.trait.routeKey || owner.biomeKey !== command.trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
+  if (owner.kind === 'encounterPhase') {
+    const encounterOwner = owner.owner;
+    let currentEncounters = occurrence.encounters;
+    let localSide:
+      | Extract<RoomOccurrence['state'], { readonly kind: 'ephyraCombat' }>['sideRooms'][string]
+      | undefined;
+    if (encounterOwner.kind === 'localChild') {
+      if (occurrence.state.kind !== 'ephyraCombat')
+        failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
+      const parent = catalog.rooms.byKey[occurrence.gameName];
+      const group = parent?.localChildren.find((child) => child.key === encounterOwner.groupKey);
+      if (group?.kind !== 'fixedRoomSlots')
+        failCommand(command, `unknown side-room group ${encounterOwner.groupKey}`);
+      localSide = occurrence.state.sideRooms[encounterOwner.slotKey];
+      if (localSide === undefined)
+        failCommand(command, `missing side-room ${encounterOwner.slotKey}`);
+      currentEncounters = localSide.encounters;
+    }
+    const phaseOffersValue = currentEncounters.traitOffersByPhase?.[owner.phaseKey];
+    if (phaseOffersValue === undefined)
+      failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
+    const phaseOffers = phaseOffersValue;
+    const encounterKeyValue = currentEncounters.encounterKeyByPhase[owner.phaseKey];
+    if (encounterKeyValue === undefined)
+      failCommand(command, `no selected encounter at phase ${owner.phaseKey}`);
+    const encounterKey = encounterKeyValue;
+    const existing = phaseOffers[encounterKey];
+    if (existing === undefined) failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
+    const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+    if (expectedProducer === undefined)
+      failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
+    if (existing.giverKey !== expectedProducer.giverKey)
+      failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
+    if (owner.phaseKey.trim().length === 0 || command.trait.acquisitionRole !== 'selection')
+      failCommand(command, 'encounter trait offers use selection acquisition role');
+    if (
+      command.kind === 'ReplaceTraitSelection' &&
+      !['option1', 'option2', 'option3'].includes(command.selectedOptionKey)
+    ) {
+      failCommand(command, 'selected option must be option1, option2, or option3');
+    }
+    const value =
+      command.kind === 'ReplaceTraitSelection'
+        ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
+        : validateOffer(catalog, command.value, command);
+    if (value.giverKey !== expectedProducer.giverKey)
+      failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
+    if (sameOccurrenceValue(value, existing)) return document;
+    const nextPhaseOffers = Object.freeze({ ...phaseOffers, [encounterKey]: value });
+    const nextEncounters = Object.freeze({
+      ...currentEncounters,
+      traitOffersByPhase: Object.freeze({
+        ...(currentEncounters.traitOffersByPhase ?? {}),
+        [owner.phaseKey]: nextPhaseOffers,
+      }),
+    });
+    if (encounterOwner.kind === 'occurrence') {
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: nextEncounters })),
+      );
+    }
+    if (encounterOwner.kind !== 'localChild' || localSide === undefined)
+      failCommand(command, 'encounter owner must be a local child');
+    if (occurrence.state.kind !== 'ephyraCombat')
+      failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
+    const ephyraState = occurrence.state;
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...occurrence,
+          state: Object.freeze({
+            ...occurrence.state,
+            sideRooms: Object.freeze({
+              ...ephyraState.sideRooms,
+              [encounterOwner.slotKey]: Object.freeze({ ...localSide, encounters: nextEncounters }),
+            }),
+          }),
+        }),
+      ),
+    );
+  }
   const reward = locateReward(catalog, located, occurrence, occurrence.state, command);
   if (reward === undefined)
     failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);

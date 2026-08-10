@@ -31,7 +31,11 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const traitCatalog = createTraitCatalog(input.traitCatalog);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
-  const encounterDefinitions = normalizeEncounterDefinitions(input.encounterDefinitions, rewards);
+  const encounterDefinitions = normalizeEncounterDefinitions(
+    input.encounterDefinitions,
+    rewards,
+    traitCatalog,
+  );
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
     input.roomLifecycleProfiles,

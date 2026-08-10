@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
+  createTraitOfferAddress,
   createShopOfferAddress,
   semanticAddressKey,
   encodeProjectDocument,
@@ -224,6 +225,40 @@ describe('planner history interaction', () => {
     const encounter = screen.getByRole('button', { name: 'Encounter' });
     expect(encounter.textContent).toContain('Artemis combat');
     await waitFor(() => expect(document.activeElement).toBe(encounter));
+
+    const traitAddress = createTraitOfferAddress(phase, 'selection');
+    const traitLauncher = within(customize).getByRole('button', { name: /Edit Trait:/ });
+    await view.user.click(traitLauncher);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Artemis');
+    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(traitAddress);
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.traitOffers.get(semanticAddressKey(traitAddress)),
+    ).toBeDefined();
+
+    const selectedOption = within(dialog).getAllByLabelText('Selected')[1];
+    if (selectedOption === undefined) throw new Error('Artemis option 2 selected radio is missing');
+    await view.user.click(selectedOption);
+    const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
+    await waitFor(() => expect(save).toHaveProperty('disabled', false));
+    const historyBeforeSave = application.store.getState().projectWorkspace.history;
+    await view.user.click(save);
+
+    const savedInteraction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(traitAddress));
+    expect(savedInteraction?.value.selectedOptionKey).toBe('option2');
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeSave.past.length + 1,
+    );
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    const restoredInteraction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(traitAddress));
+    expect(restoredInteraction?.value.selectedOptionKey).toBe('option1');
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {

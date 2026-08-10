@@ -173,10 +173,12 @@ export interface RouteTraitOfferProjection {
 
 function ownerLocation(
   project: ProjectDocument,
-  owner: Extract<
-    SelectedTraitOfferAssessment['address']['owner'],
-    { readonly occurrenceId: string }
-  >,
+  owner: {
+    readonly kind: string;
+    readonly routeKey: string;
+    readonly biomeKey: string;
+    readonly occurrenceId: string;
+  },
 ): string {
   const route = project.routes.find((candidate) => candidate.routeKey === owner.routeKey);
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === owner.biomeKey);
@@ -190,6 +192,14 @@ function ownerLocationForAddress(
   project: ProjectDocument,
   owner: SelectedTraitOfferAssessment['address']['owner'],
 ): string {
+  if (owner.kind === 'encounterPhase') {
+    return ownerLocation(project, {
+      routeKey: owner.routeKey,
+      biomeKey: owner.biomeKey,
+      kind: 'occurrence',
+      occurrenceId: owner.owner.occurrenceId,
+    });
+  }
   return ownerLocation(project, owner);
 }
 

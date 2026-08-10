@@ -1018,6 +1018,7 @@ describe('reached trait offer chronology', () => {
     );
     const laterTrace = f.rewards.selectedTraitOffers.find(
       (trace) =>
+        trace.address.owner.kind !== 'encounterPhase' &&
         trace.address.owner.occurrenceId === goldenFOccurrenceId(2, 1) &&
         trace.acquisitionRole === 'source',
     );

@@ -1,5 +1,6 @@
 import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
 import {
+  createEncounterPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
@@ -89,6 +90,7 @@ import {
   processProducerRole,
   processOfferGenerationCohort,
   processOwnedRewardAcquisition as processOwnedRewardAcquisitionState,
+  processEncounterTraitOffer,
   processRewardOffer,
   processShopInventory,
   processShopPurchases,
@@ -839,6 +841,8 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+      return origin;
+    case 'encounterPhase':
       return origin;
     default:
       return undefined;
@@ -2128,12 +2132,55 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
-        if (room.kind !== 'authored') {
+        if (room.kind !== 'authored' && room.kind !== 'localChild') {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
+        const selectedEncounterKey = room.encounters.encounterKeyByPhase[event.phaseKey];
+        const authoredEncounterOffer =
+          selectedEncounterKey === undefined
+            ? undefined
+            : room.encounters.traitOffersByPhase?.[event.phaseKey]?.[selectedEncounterKey];
+        if (authoredEncounterOffer !== undefined && selectedEncounterKey !== undefined) {
+          const phaseOwner =
+            room.origin.kind === 'occurrence'
+              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
+              : {
+                  kind: 'localChild' as const,
+                  occurrenceId: room.origin.occurrenceId,
+                  groupKey: room.origin.groupKey,
+                  slotKey: room.origin.slotKey,
+                };
+          const phaseAddress = createEncounterPhaseAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            phaseOwner,
+            event.phaseKey,
+          );
+          branches = Object.freeze(
+            branches.map((branch) =>
+              processEncounterTraitOffer(
+                catalog,
+                branch,
+                phaseAddress,
+                authoredEncounterOffer,
+                event.sequence,
+                'encounterCompleted',
+                findings,
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+              ),
+            ),
+          );
+        }
         const matchingRewards =
-          room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
+          room.kind === 'authored'
+            ? (room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ??
+              [])
+            : [];
         if (matchingRewards.length === 0) {
           branches = advanceRewardBranches(branches, event.sequence);
           break;

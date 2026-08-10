@@ -8,6 +8,7 @@ import type {
   EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
+import type { TraitCatalog } from '@run-planner/engine/catalog-schema';
 
 import type {
   RawEncounterDefinitionDeclaration,
@@ -170,6 +171,7 @@ export function normalizeEncounterEnvelopes(
 export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
   rewards: RewardKernelCatalog,
+  traits: TraitCatalog,
 ): CatalogCollection<EncounterDefinition> {
   const definitions = createCollection(
     rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
@@ -199,6 +201,25 @@ export function normalizeEncounterDefinitions(
         raw.npcPresentationKey === undefined
           ? undefined
           : requireNonEmpty(raw.npcPresentationKey, `${path}.npcPresentationKey`);
+      const traitOfferProducer =
+        raw.traitOfferProducer === undefined
+          ? undefined
+          : (() => {
+              if (raw.traitOfferProducer.kind !== 'traitOffer') {
+                fail(
+                  `${path}.traitOfferProducer.kind`,
+                  `unknown trait offer producer ${String(raw.traitOfferProducer.kind)}`,
+                );
+              }
+              const giverKey = requireNonEmpty(
+                raw.traitOfferProducer.giverKey,
+                `${path}.traitOfferProducer.giverKey`,
+              );
+              if (traits.givers.byKey[giverKey] === undefined) {
+                fail(`${path}.traitOfferProducer.giverKey`, `unknown trait giver ${giverKey}`);
+              }
+              return Object.freeze({ kind: 'traitOffer' as const, giverKey });
+            })();
       return Object.freeze({
         key,
         label,
@@ -209,6 +230,7 @@ export function normalizeEncounterDefinitions(
           ? {}
           : { sequenceEffect: Object.freeze({ kind: 'terminateSuffix' as const }) }),
         ...(npcPresentationKey === undefined ? {} : { npcPresentationKey }),
+        ...(traitOfferProducer === undefined ? {} : { traitOfferProducer }),
       });
     }),
     'encounterDefinitions',

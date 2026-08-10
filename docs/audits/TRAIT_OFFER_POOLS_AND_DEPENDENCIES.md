@@ -244,6 +244,24 @@ Hermes declares 13 pooled traits:
 `HighHealthCritBoon`, `InsideCastCritBoon`, `OmegaCastVolleyBoon`,
 `TimedCritVulnerabilityBoon`, `FocusCritBoon`, `SorceryCritBoon`.
 
+The installed `NPCData_Artemis.lua` declaration is the authoritative field-NPC
+provider: it has no priority upgrades, declares the nine keys above, and rolls
+fresh ordinary choices in `Common`, `Rare`, `Epic` order (`Rare` and `Epic`
+chance entries are both zero in the current script). The first eight keys have
+`Common`/`Rare`/`Epic` fresh domains and `Common`/`Rare`/`Epic`/`Heroic`
+equipped domains. `SorceryCritBoon` appears in the source's Legendary pool
+comment, but its executable `TraitData_Artemis.lua` declaration explicitly uses
+the same `Common`/`Rare`/`Epic` fresh and `Common`/`Rare`/`Epic`/`Heroic`
+equipped domains; the comment does not override that declaration. Its
+declaration also requires one of `SpellLaserTrait`, `SpellLeapTrait`, `SpellSummonTrait`,
+`SpellMeteorTrait`, `SpellTransformTrait`, `SpellMoonBeamTrait`, or
+`SpellPolymorphTrait`, plus the `ArtemisGrantsReward01` narrative flag. The
+spell operands remain deferred evidence, not placeholder production traits.
+All nine contribute one `Air` or `Earth` element as inherited by the source
+trait declarations; `FocusCritBoon` is explicitly non-stacking. Artemis has no
+Olympian priority/replacement policy and uses the non-Olympian field-NPC
+provider path.
+
 #### Icarus
 
 `FocusAttackDamageTrait`, `FocusSpecialDamageTrait`, `OmegaExplodeBoon`,
@@ -784,9 +802,9 @@ the preceding rows come from `TraitRequirements`.
    an additive trait event ledger and folded equipped-trait state; it does not
    justify replacing the existing exact loot ledgers.
 10. The closure inventory contains 21 givers, 386 giver-to-trait memberships,
-    351 unique trait keys, and 75 in-scope traits with positive
+    351 unique trait keys, and 76 in-scope traits with positive
     equipped-trait prerequisites. The broader source graph contains 77 such
-    owners after retaining the deferred Artemis/Athena spell-state rows.
+    owners after retaining the remaining deferred Athena spell-state rows.
 
 ## Olympian Replacement Source Closure
 
@@ -818,24 +836,24 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 
 | Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                           |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, and Hammer key                                                                                                                                                                                                                                |
+| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                     |
 | fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer declarations use a `none` rarity domain (source `ForceCommon` is not player rarity, and source Hammer Legendary levels are deferred Icarus data) |
 | ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                     |
 | element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                               |
 | god-trait/rareness flags      | inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits are not persistent god traits                                                                                                                                  |
 | self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                      |
-| offer requirements            | all 75 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including deferred Artemis/Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                     |
+| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements               |
 | element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`       |
 | rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                          |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                            |
 
-The Gate-A normalized inventory has six weapons, 24 weapon/aspect pairs, 268
-unique included trait declarations, 211 Olympian/Hermes memberships, 92 Hammer
-memberships, and one loadout-keyed Hammer default triple for each of the 24
-pairs. The 25 exact deferred-provider operands discovered in the included
-dependency graph remain keys only; no NPC, Story, Spell, or Talent wrapper is
-introduced into the persistent trait catalog. Other source predicates retain
-the dispositions above or the previously recorded progressed-baseline,
-mechanical-effect, and Hephaestus level/cooldown deferrals. Newly discovered
-predicates are explicitly listed above rather than covered by a no-unlisted
-claim.
+The Gate-A normalized inventory has six weapons, 24 weapon/aspect pairs, 277
+unique included trait declarations, 220 Olympian/Hermes/Artemis memberships,
+92 Hammer memberships, and one loadout-keyed Hammer default triple for each of
+the 24 pairs. Deferred spell/talent operands remain exact keys only; Artemis is
+the modeled field-NPC provider in this gate, while other NPC, Story, Spell, or
+Talent providers remain outside the persistent trait catalog. Other source
+predicates retain the dispositions above or the previously recorded
+progressed-baseline, mechanical-effect, and Hephaestus level/cooldown
+deferrals. Newly discovered predicates are explicitly listed above rather than
+covered by a no-unlisted claim.

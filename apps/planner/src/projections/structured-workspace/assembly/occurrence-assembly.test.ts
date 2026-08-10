@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -103,6 +104,37 @@ function assemble(
   return { assembly, markers, source };
 }
 
+function expectActiveEphyraInteractionOwners(
+  assembly: ReturnType<typeof assemble>['assembly'],
+): void {
+  if (
+    assembly.node.room.roomLocal.kind !== 'ephyra' ||
+    assembly.node.room.roomLocal.sideRooms.kind !== 'published'
+  ) {
+    throw new Error('active Ephyra side rooms are missing');
+  }
+  const group = assembly.node.room.roomLocal.sideRooms.group;
+  const encounterOwnerKeys = assembly.occurrenceInteractionRequirements
+    .filter((requirement) => requirement.kind === 'encounterPhases')
+    .map((requirement) => semanticAddressKey(requirement.owner));
+  expect(encounterOwnerKeys).toEqual([
+    semanticAddressKey(assembly.node.room.address),
+    ...group.slots
+      .filter((sideRoom) => sideRoom.encounterPhases.some((phase) => phase.customizable))
+      .map((sideRoom) => semanticAddressKey(sideRoom.address)),
+  ]);
+
+  const sideRoomRequirement = assembly.occurrenceInteractionRequirements.find(
+    (requirement) => requirement.kind === 'ephyraSideRooms',
+  );
+  if (sideRoomRequirement?.kind !== 'ephyraSideRooms') {
+    throw new Error('active Ephyra side-room requirement is missing');
+  }
+  expect(
+    sideRoomRequirement.sideRooms.map((sideRoom) => semanticAddressKey(sideRoom.address)),
+  ).toEqual(group.slots.map((sideRoom) => semanticAddressKey(sideRoom.address)));
+}
+
 function withFPrebossSelection(
   project: ProjectDocument,
   exitKey: 'exit1' | 'exit2',
@@ -179,6 +211,32 @@ describe('structured workspace occurrence assembly', () => {
     }
   });
 
+  it('publishes the selected Artemis phase offer as an encounter-owned trait control', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    const assembly = assemble(project, 'Underworld', 'F', goldenFOccurrenceId(5, 1)).assembly;
+    const encounter = assembly.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Encounter',
+    );
+    expect(encounter?.traitOffer).toMatchObject({
+      acquisitionRoleLabel: 'Selection',
+      giver: { key: 'Artemis' },
+      offer: {
+        giverKey: 'Artemis',
+        selectedOptionKey: 'option1',
+      },
+    });
+    expect(encounter?.traitOffer?.address.owner).toEqual(phase);
+  });
+
   it('publishes active Ephyra side details but withholds dormant side details without hiding incoming rewards', () => {
     const project = createRepresentativeNOPQProject();
     const active = assemble(project, 'Surface', 'N', nOccurrenceId('combat05')).assembly;
@@ -189,12 +247,7 @@ describe('structured workspace occurrence assembly', () => {
     const activeSideRooms = active.node.room.roomLocal.sideRooms;
     expect(activeSideRooms.kind).toBe('published');
     if (activeSideRooms.kind !== 'published') throw new Error('active Ephyra sides are withheld');
-    expect(active.occurrenceInteractionRequirements).toHaveLength(5);
-    expect(
-      active.occurrenceInteractionRequirements.some(
-        (requirement) => requirement.kind === 'ephyraSideRooms',
-      ),
-    ).toBe(true);
+    expectActiveEphyraInteractionOwners(active);
     const group = activeSideRooms.group;
     const sideDoor2 = group.slots.find((slot) => slot.key === 'sideDoor2');
     const sideDoor3 = group.slots.find((slot) => slot.key === 'sideDoor3');
@@ -277,7 +330,7 @@ describe('structured workspace occurrence assembly', () => {
         (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
       )?.marker.findingCount,
     ).toBe(1);
-    expect(assembly.occurrenceInteractionRequirements).toHaveLength(5);
+    expectActiveEphyraInteractionOwners(assembly);
     const requirement = assembly.occurrenceInteractionRequirements.find(
       (candidate) => candidate.kind === 'ephyraSideRooms',
     );
