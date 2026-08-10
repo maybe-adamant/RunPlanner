@@ -87,13 +87,14 @@ import {
   countedBinding,
   initializeRewardBranches,
   processProducerRole,
-  processJointUnorderedOffers,
+  processOfferGenerationCohort,
   processOwnedRewardAcquisition as processOwnedRewardAcquisitionState,
   processRewardOffer,
   processShopInventory,
   processShopPurchases,
   publicRewardBranch,
   rewardFinding,
+  type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
@@ -101,6 +102,15 @@ import { prepareShopPurchaseCandidateContext } from './shop-candidates';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
+
+interface IncomingOfferCandidateContext {
+  readonly context: OfferProcessingContext;
+  readonly room: CanonicalRewardRoom;
+  readonly declaration: RoomDeclaration;
+  readonly incoming: CanonicalResolvedIncomingReward;
+  readonly acquisitionView?: HistoryStateView;
+  readonly acquisitionSequence?: number;
+}
 
 type RewardRoomOwner = {
   readonly kind: string;
@@ -746,7 +756,7 @@ function prepareShipLifecycleCandidateContext(
         }
         const lifecycleView = wheelLifecycleViews(history, candidateRoom, roomView, wheel);
         const binding = rewardWheelBinding(catalog, declaration, wheel);
-        candidateBranches = processJointUnorderedOffers(
+        candidateBranches = processOfferGenerationCohort(
           candidateBranches,
           wheel.offers.map((offer: CanonicalRewardWheel['offers'][number]) => ({
             catalog,
@@ -770,7 +780,7 @@ function prepareShipLifecycleCandidateContext(
               ),
           })),
           candidateFindings,
-          ownerRegion(wheel.origin),
+          { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
         );
         const picked = wheel.offers.find(
           (offer: CanonicalRewardWheel['offers'][number]) => offer.picked,
@@ -987,6 +997,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
   );
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
+  let pendingHubBoard:
+    | {
+        readonly frontierBranches: readonly RewardBranchState[];
+        readonly offers: IncomingOfferCandidateContext[];
+      }
+    | undefined;
 
   function captureRunState(
     owner: DecisionRunStateSnapshot['owner'],
@@ -1078,6 +1094,106 @@ export function evaluateBiomeRewardsAssemblyInternal(
     if (!targetHistoryByOrigin.has(semanticAddressKey(origin))) {
       recordTargetSlotHistory(origin, historySequence);
     }
+  }
+
+  function completeIncomingOfferCandidate(
+    entry: IncomingOfferCandidateContext,
+    offer: CanonicalResolvedIncomingReward['offer'],
+    candidateBranches: readonly RewardBranchState[],
+    candidateFindings: Map<string, FindingRegionEntry>,
+  ): RewardProducerCandidateResult {
+    if (
+      candidateBranches.length > 0 &&
+      entry.acquisitionView !== undefined &&
+      entry.acquisitionSequence !== undefined
+    ) {
+      candidateBranches = processOwnedRewardAcquisition(
+        catalog,
+        candidateBranches,
+        entry.room,
+        entry.declaration,
+        Object.freeze({ ...entry.incoming, offer }),
+        entry.acquisitionView,
+        entry.acquisitionSequence,
+        candidateFindings,
+        enteredBiomeCount,
+        ownerRegion(entry.incoming.origin),
+        rewardFindingChronologyForRoom(
+          snapshot,
+          entry.room.origin,
+          entry.acquisitionSequence,
+          'localRoomLifecycle',
+        ),
+      );
+    }
+    return candidateResult(candidateFindings, candidateBranches);
+  }
+
+  function flushPendingHubBoard(): void {
+    const pending = pendingHubBoard;
+    if (pending === undefined || pending.offers.length === 0) return;
+    const contexts = Object.freeze(pending.offers.map((entry) => entry.context));
+    const owners = Object.freeze(pending.offers.map((entry) => entry.incoming.origin));
+    const ownerKeys = new Set(owners.map(semanticAddressKey));
+    const generationHistorySequence = Math.max(
+      ...contexts.map((context) => context.historySequence),
+    );
+    const selectedBoardBranches = processOfferGenerationCohort(branches, contexts, findings, {
+      ordering: 'sourceOffers',
+    });
+    const evaluateHubBoardOffer = (
+      owner: SemanticAddress,
+      offer: CanonicalResolvedIncomingReward['offer'],
+    ): RewardProducerCandidateResult => {
+      const ownerKey = semanticAddressKey(owner);
+      if (!ownerKeys.has(ownerKey)) {
+        return fail('Hub-board frontier received a foreign owner');
+      }
+      const candidateFindings = new Map<string, FindingRegionEntry>();
+      const candidateContexts = contexts.map((context) =>
+        semanticAddressKey(context.reward.origin) === ownerKey
+          ? {
+              ...context,
+              reward: Object.freeze({ ...context.reward, offer }),
+            }
+          : context,
+      );
+      const selected = pending.offers.find(
+        (entry) => semanticAddressKey(entry.incoming.origin) === ownerKey,
+      );
+      if (selected === undefined) return fail('Hub-board frontier lost its owner');
+      const candidateBranches = processOfferGenerationCohort(
+        pending.frontierBranches,
+        candidateContexts,
+        candidateFindings,
+        { ordering: 'sourceOffers' },
+      );
+      return completeIncomingOfferCandidate(selected, offer, candidateBranches, candidateFindings);
+    };
+    for (const entry of pending.offers) {
+      indexRewardProducerFrontier(
+        producerFrontiers,
+        Object.freeze({
+          generationPolicy: 'jointUnordered',
+          generationHistorySequence,
+          reachableBranchCount: pending.frontierBranches.length,
+          acquisitionHorizon:
+            entry.acquisitionView === undefined || entry.acquisitionSequence === undefined
+              ? 'generationOnly'
+              : 'ownEnteredLifecycle',
+          owners: Object.freeze([entry.incoming.origin]),
+          ...(entry.context.reward.resolvedStoreKey === undefined
+            ? {}
+            : { resolvedStoreKey: entry.context.reward.resolvedStoreKey }),
+          evaluateOffer: evaluateHubBoardOffer,
+        }),
+      );
+    }
+    branches = selectedBoardBranches;
+    peers = Object.freeze(
+      contexts.map((context) => ({ origin: context.reward.origin, offer: context.reward.offer })),
+    );
+    pendingHubBoard = undefined;
   }
 
   for (const event of history.events) {
@@ -1334,70 +1450,62 @@ export function evaluateBiomeRewardsAssemblyInternal(
             incoming.acquisitionEnabled === false
               ? undefined
               : (acquisitionEvents.at(-1)?.sequence ?? acquisitionView?.sequence);
-          indexRewardProducerFrontier(
-            producerFrontiers,
-            Object.freeze({
-              generationPolicy: 'sequential',
-              generationHistorySequence: event.sequence,
-              reachableBranchCount: frontierBranches.length,
-              acquisitionHorizon:
-                acquisitionView === undefined || acquisitionSequence === undefined
-                  ? 'generationOnly'
-                  : 'ownEnteredLifecycle',
-              owners: Object.freeze([incoming.origin]),
-              ...(binding === undefined || incoming.resolvedStoreKey === undefined
-                ? {}
-                : { resolvedStoreKey: incoming.resolvedStoreKey }),
-              evaluateOffer: (
-                owner: SemanticAddress,
-                offer: CanonicalResolvedIncomingReward['offer'],
-              ) => {
-                if (semanticAddressKey(owner) !== incomingOwnerKey) {
-                  return fail('sequential reward frontier received a foreign owner');
-                }
-                const candidateFindings = new Map<string, FindingRegionEntry>();
-                let candidateBranches = processRewardOffer(
-                  frontierBranches,
-                  {
-                    ...offerContext,
-                    reward: Object.freeze({ ...incoming, offer }),
-                  },
-                  candidateFindings,
-                );
-                if (candidateBranches.length === 0) {
-                  return candidateResult(candidateFindings, candidateBranches);
-                }
-                if (acquisitionView === undefined || acquisitionSequence === undefined) {
-                  return candidateResult(candidateFindings, candidateBranches);
-                }
-                candidateBranches = processOwnedRewardAcquisition(
-                  catalog,
-                  candidateBranches,
-                  room,
-                  declaration,
-                  Object.freeze({ ...incoming, offer }),
-                  acquisitionView,
-                  acquisitionSequence,
-                  candidateFindings,
-                  enteredBiomeCount,
-                  ownerRegion(incoming.origin),
-                  rewardFindingChronologyForRoom(
-                    snapshot,
-                    room.origin,
-                    acquisitionSequence,
-                    'localRoomLifecycle',
-                  ),
-                );
-                return candidateResult(candidateFindings, candidateBranches);
-              },
-            }),
-          );
-          branches = processRewardOffer(branches, offerContext, findings);
-          if (
-            event.source === 'generatedTarget' ||
-            event.source === 'hubTarget' ||
-            event.source === 'localChild'
-          ) {
+          const candidateContext: IncomingOfferCandidateContext = Object.freeze({
+            context: offerContext,
+            room,
+            declaration,
+            incoming,
+            ...(acquisitionView === undefined ? {} : { acquisitionView }),
+            ...(acquisitionSequence === undefined ? {} : { acquisitionSequence }),
+          });
+          if (event.source === 'hubTarget') {
+            if (pendingHubBoard === undefined) {
+              pendingHubBoard = { frontierBranches, offers: [] };
+            }
+            pendingHubBoard.offers.push(candidateContext);
+          } else {
+            indexRewardProducerFrontier(
+              producerFrontiers,
+              Object.freeze({
+                generationPolicy: 'sequential',
+                generationHistorySequence: event.sequence,
+                reachableBranchCount: frontierBranches.length,
+                acquisitionHorizon:
+                  acquisitionView === undefined || acquisitionSequence === undefined
+                    ? 'generationOnly'
+                    : 'ownEnteredLifecycle',
+                owners: Object.freeze([incoming.origin]),
+                ...(binding === undefined || incoming.resolvedStoreKey === undefined
+                  ? {}
+                  : { resolvedStoreKey: incoming.resolvedStoreKey }),
+                evaluateOffer: (
+                  owner: SemanticAddress,
+                  offer: CanonicalResolvedIncomingReward['offer'],
+                ) => {
+                  if (semanticAddressKey(owner) !== incomingOwnerKey) {
+                    return fail('sequential reward frontier received a foreign owner');
+                  }
+                  const candidateFindings = new Map<string, FindingRegionEntry>();
+                  const candidateBranches = processRewardOffer(
+                    frontierBranches,
+                    {
+                      ...offerContext,
+                      reward: Object.freeze({ ...incoming, offer }),
+                    },
+                    candidateFindings,
+                  );
+                  return completeIncomingOfferCandidate(
+                    candidateContext,
+                    offer,
+                    candidateBranches,
+                    candidateFindings,
+                  );
+                },
+              }),
+            );
+            branches = processRewardOffer(branches, offerContext, findings);
+          }
+          if (event.source === 'generatedTarget' || event.source === 'localChild') {
             peers = Object.freeze([
               ...peers,
               { origin: event.targetOrigin, offer: incoming.offer },
@@ -1510,6 +1618,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
         break;
       }
       case 'targetGenerationCompleted': {
+        if (
+          event.origin.kind === 'hubSlot' &&
+          pendingHubBoard?.offers.length === hubTargetByOrigin.size
+        ) {
+          flushPendingHubBoard();
+        }
         if (event.origin.kind === 'target') {
           const generation = targetGenerationByParent.get(semanticAddressKey(event.parentOrigin));
           const currentOffset = generation?.exitKeys.indexOf(event.origin.exitKey) ?? -1;
@@ -1835,7 +1949,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 return fail('reward-wheel frontier received a foreign owner');
               }
               const candidateFindings = new Map<string, FindingRegionEntry>();
-              let candidateBranches = processJointUnorderedOffers(
+              let candidateBranches = processOfferGenerationCohort(
                 frontierBranches,
                 contexts.map((context) =>
                   semanticAddressKey(context.reward.origin) === ownerKey
@@ -1846,7 +1960,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     : context,
                 ),
                 candidateFindings,
-                ownerRegion(wheel.origin),
+                { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
               );
               const selectedOffer = wheel.offers.find(
                 (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
@@ -1878,12 +1992,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
             },
           }),
         );
-        branches = processJointUnorderedOffers(
-          branches,
-          contexts,
-          findings,
-          ownerRegion(wheel.origin),
-        );
+        branches = processOfferGenerationCohort(branches, contexts, findings, {
+          ordering: 'allOffers',
+          atomicRegion: ownerRegion(wheel.origin),
+        });
         break;
       }
       case 'offerPointAcquired': {

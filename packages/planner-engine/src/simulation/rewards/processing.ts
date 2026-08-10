@@ -521,6 +521,65 @@ function permutations<T>(values: readonly T[]): readonly (readonly T[])[] {
   );
 }
 
+interface SourceOrderingFailure {
+  readonly blocked: OfferProcessingContext;
+  readonly prior: readonly OfferProcessingContext[];
+}
+
+function isSourceOrderingFailure(
+  value: readonly OfferProcessingContext[] | SourceOrderingFailure,
+): value is SourceOrderingFailure {
+  return 'blocked' in value;
+}
+
+function sourceOrdering(
+  branch: RewardBranchState,
+  contexts: readonly OfferProcessingContext[],
+): readonly OfferProcessingContext[] | SourceOrderingFailure {
+  const sourceContexts = contexts.filter((context) => {
+    const type = context.catalog.rewards.rewardTypes.byKey[context.reward.offer.rewardType];
+    return type?.sourceSupport !== undefined && type.sourceResolution?.kind === 'offer';
+  });
+  const completeMask = (1 << sourceContexts.length) - 1;
+  const failedMasks = new Set<number>();
+  let failure: SourceOrderingFailure = Object.freeze({
+    blocked: sourceContexts[0]!,
+    prior: Object.freeze([]),
+  });
+  const visit = (mask: number): readonly OfferProcessingContext[] | undefined => {
+    if (mask === completeMask) return Object.freeze([]);
+    if (failedMasks.has(mask)) return undefined;
+    const prior = sourceContexts.filter((_, offset) => (mask & (1 << offset)) !== 0);
+    for (const [offset, context] of sourceContexts.entries()) {
+      if ((mask & (1 << offset)) !== 0) continue;
+      if (
+        !isOfferSupportedAtResolutionPoint(
+          context.catalog.rewards,
+          context.reward.offer,
+          context.facts(branch.history),
+          'offer',
+          { priorOffers: prior.map((entry) => entry.reward.offer) },
+        )
+      ) {
+        if (prior.length >= failure.prior.length) {
+          failure = Object.freeze({ blocked: context, prior: Object.freeze(prior) });
+        }
+        continue;
+      }
+      const tail = visit(mask | (1 << offset));
+      if (tail !== undefined) return Object.freeze([context, ...tail]);
+    }
+    failedMasks.add(mask);
+    return undefined;
+  };
+  const orderedSources = visit(0);
+  if (orderedSources === undefined) return failure;
+  let sourceOffset = 0;
+  return contexts.map((context) =>
+    sourceContexts.includes(context) ? orderedSources[sourceOffset++]! : context,
+  );
+}
+
 export function processRewardOffer(
   branches: readonly RewardBranchState[],
   context: OfferProcessingContext,
@@ -693,11 +752,14 @@ function recordCanonicalOffer(
   });
 }
 
-export function processJointUnorderedOffers(
+export function processOfferGenerationCohort(
   branches: readonly RewardBranchState[],
   contexts: readonly OfferProcessingContext[],
   findings: Map<string, FindingRegionEntry>,
-  atomicRegion?: string,
+  policy: {
+    readonly ordering: 'allOffers' | 'sourceOffers';
+    readonly atomicRegion?: string;
+  },
 ): readonly RewardBranchState[] {
   if (contexts.length <= 1) {
     const context = contexts[0];
@@ -706,7 +768,33 @@ export function processJointUnorderedOffers(
   const supported: RewardBranchState[] = [];
   let representativeFailures: readonly FindingRegionEntry[] = Object.freeze([]);
   for (const branch of branches) {
-    for (const ordering of permutations(contexts)) {
+    const sourceResult =
+      policy.ordering === 'sourceOffers' ? sourceOrdering(branch, contexts) : undefined;
+    if (sourceResult !== undefined && isSourceOrderingFailure(sourceResult)) {
+      const localFindings = new Map<string, FindingRegionEntry>();
+      processRewardOffer(
+        Object.freeze([branch]),
+        {
+          ...sourceResult.blocked,
+          peers: Object.freeze(
+            sourceResult.prior.map((context) => ({
+              origin: context.reward.origin,
+              offer: context.reward.offer,
+            })),
+          ),
+        },
+        localFindings,
+      );
+      if (representativeFailures.length === 0) {
+        representativeFailures = Object.freeze([...localFindings.values()]);
+      }
+      continue;
+    }
+    const orderings =
+      policy.ordering === 'allOffers'
+        ? permutations(contexts)
+        : Object.freeze([sourceResult ?? contexts]);
+    for (const ordering of orderings) {
       let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
       const localFindings = new Map<string, FindingRegionEntry>();
       const priorOffers: OfferProcessingPeer[] = [];
@@ -744,7 +832,7 @@ export function processJointUnorderedOffers(
       addRewardFinding(
         findings,
         value.finding,
-        atomicRegion ?? value.atomicRegion,
+        policy.atomicRegion ?? value.atomicRegion,
         value.chronology,
       );
     }

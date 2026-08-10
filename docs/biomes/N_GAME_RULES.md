@@ -148,6 +148,14 @@ identity, physical-door evidence, target game name, incoming reward, pylon
 requirements, and side-slot descriptors remain catalog facts. The UI must not
 offer arbitrary room replacement for one of those slots.
 
+The game's internal order for resolving the already-open board is not authored
+state. Order-sensitive offer facts, including ordinary-god peer support, are
+validated against the complete board by requiring one supported hidden
+generation ordering. The engine then publishes offers in stable declaration
+order. It must not substitute the six-room visit list for that hidden ordering:
+all board offers exist before the first visit, while only visited targets add
+their acquisitions in authored visit order.
+
 All open Hub offers contribute to the Hub reward lookup before the final shop
 is validated. This includes unvisited targets, because the game creates the
 full board as one reward region. The Preboss Shop's lookup therefore cannot be
