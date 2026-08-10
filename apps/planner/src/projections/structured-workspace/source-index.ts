@@ -13,6 +13,7 @@ import {
   type ExitDecision,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
+  type EncounterPhaseAddress,
   type HubDecision,
   type HubDecisionAddress,
   type OccurrenceId,
@@ -33,6 +34,7 @@ import type {
   CanonicalHubTarget,
   CanonicalHubVisit,
   CanonicalLocalChildRoom,
+  EncounterPhaseSequenceStatus,
   CanonicalTarget,
   MaterializedBiomePrefix,
   ProjectBiomeEvaluation,
@@ -58,6 +60,10 @@ export interface WorkspaceBiomeSource {
   readonly biome: BiomeAddress;
   readonly completeness: BiomeCompletenessResult;
   readonly entryRoom?: CanonicalAuthoredRoom;
+  /** Exact engine preparation status; absent means the phase is not covered. */
+  readonly encounterPhaseStatus: (
+    phase: EncounterPhaseAddress,
+  ) => EncounterPhaseSequenceStatus | undefined;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
@@ -545,6 +551,7 @@ function createWorkspaceBiomeSource(
   routeKey: string,
   plan: AuthoredBiomePlan,
   evaluation: ProjectBiomeEvaluation | undefined,
+  encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -636,6 +643,7 @@ function createWorkspaceBiomeSource(
   return Object.freeze({
     biome,
     completeness,
+    encounterPhaseStatus,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
     evaluatedAdditional: (owner: ExitDecisionAddress) =>
@@ -683,6 +691,7 @@ export function createWorkspaceProjectSourceIndex(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
+  encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -698,6 +707,7 @@ export function createWorkspaceProjectSourceIndex(
                 route.routeKey,
                 plan,
                 routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
+                encounterPhaseStatus,
               ),
             ),
           ),

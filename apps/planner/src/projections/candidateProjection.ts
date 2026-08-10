@@ -67,6 +67,17 @@ export type CountedRewardCandidateOwner = Exclude<
 export interface EncounterCandidateProjectionEvaluation {
   readonly kind: 'encounter';
   readonly result: {
+    /**
+     * Presentation can distinguish missing assessment from a reached phase
+     * that is inactive or absent from the engine support set. The latter is a
+     * generic support-set exclusion, not application evidence of one exact
+     * requirement. React never reevaluates an encounter requirement.
+     */
+    readonly evidence:
+      | { readonly kind: 'coverageUnavailable' }
+      | { readonly kind: 'inactiveSlot' }
+      | { readonly kind: 'requirementsExcluded' }
+      | { readonly kind: 'supported' };
     readonly support: CandidateSupport;
   };
 }
@@ -465,21 +476,33 @@ export function createCandidateSessionFactory(
     const candidateKeys = support?.candidateEncounterKeys ?? [];
     const projected = Object.freeze(
       encounterKeys.map((encounterKey) => {
-        const candidateSupport: CandidateSupport =
+        const result =
           support === undefined
-            ? 'unavailable'
+            ? Object.freeze({
+                evidence: Object.freeze({ kind: 'coverageUnavailable' as const }),
+                support: 'unavailable' as const,
+              })
             : !support.activationSatisfied
-              ? 'impossible'
+              ? Object.freeze({
+                  evidence: Object.freeze({ kind: 'inactiveSlot' as const }),
+                  support: 'impossible' as const,
+                })
               : candidateKeys.includes(encounterKey)
-                ? candidateKeys.length === 1
-                  ? 'forced'
-                  : 'possible'
-                : 'impossible';
+                ? Object.freeze({
+                    evidence: Object.freeze({ kind: 'supported' as const }),
+                    support: (candidateKeys.length === 1
+                      ? 'forced'
+                      : 'possible') as CandidateSupport,
+                  })
+                : Object.freeze({
+                    evidence: Object.freeze({ kind: 'requirementsExcluded' as const }),
+                    support: 'impossible' as const,
+                  });
         return Object.freeze({
           value: encounterKey,
           evaluation: Object.freeze({
             kind: 'encounter' as const,
-            result: Object.freeze({ support: candidateSupport }),
+            result,
           }),
         });
       }),

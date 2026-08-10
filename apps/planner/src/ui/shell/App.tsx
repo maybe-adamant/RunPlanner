@@ -278,7 +278,9 @@ function RouteWorkspace({
       return;
     }
     const phaseControl = document.getElementById(semanticOwnerControlElementId(phase));
-    const selector = phaseControl?.querySelector<HTMLSelectElement>('select:not(:disabled)');
+    const selector = phaseControl?.querySelector<HTMLButtonElement>(
+      'button.contextual-picker-trigger:not(:disabled)',
+    );
     pendingNpcPhaseFocus.current = null;
     selector?.focus({ preventScroll: true });
   }, [activePanel, workspaceRoute.routeKey]);

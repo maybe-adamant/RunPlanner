@@ -83,6 +83,7 @@ export {
 } from './lifecycle';
 export {
   type EncounterPhaseCandidateSupport,
+  type EncounterPhaseSequenceStatus,
   encounterPhaseAuthoringDomainForRoom,
   type EncounterPhaseAuthoringDomain,
   type EncounterPhaseAuthoringOwner,
@@ -229,6 +230,7 @@ export {
   assertProjectEvaluationSource,
   countedRewardTypeDomain,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   evaluateBiome,
   materializedBiomePrefixCoveragePoint,
   ProjectSimulationContractError,

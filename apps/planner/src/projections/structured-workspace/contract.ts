@@ -136,13 +136,21 @@ export interface WorkspaceCandidateInteraction<T> {
  * semantic mutation because the phase address—not a rendered ordinal or room
  * name—identifies the persisted selection.
  */
-export interface WorkspaceEncounterInteraction extends WorkspaceCandidateInteraction<string> {
+export interface WorkspaceEncounterInteraction {
   readonly intentFor: (
     encounterKey: string,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SelectEncounter' }>>;
+  readonly key: string;
+  /**
+   * The one lazy candidate contact returns the application-owned contextual
+   * picker model rather than exposing raw encounter evidence to React.
+   */
+  readonly load: () => ContextualPickerModel<string>;
+  readonly owner: EncounterPhaseAddress;
   readonly resetIntent: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ResetEncounter' }>
   >;
+  readonly selected: string;
 }
 
 export interface WorkspaceRewardInteraction {

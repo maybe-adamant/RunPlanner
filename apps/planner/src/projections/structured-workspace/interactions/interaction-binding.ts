@@ -19,6 +19,7 @@ import {
   type CandidateProjectionSession,
 } from '@planner/projections/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import { projectEncounterPicker } from '@planner/projections/encounterPickerProjection';
 import {
   roomCategoryForKind,
   roomSelectorCategories,
@@ -174,6 +175,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
 function bindOccurrenceLocalInteractions(
   allocateOccurrenceId: OccurrenceIdFactory,
   candidates: CandidateProjectionSession,
+  contextualPicker: StructuredWorkspaceContextualServices['contextualPicker'],
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
@@ -253,17 +255,15 @@ function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
-          const base = candidateInteraction(
-            phase.owner,
-            phase.candidateChoices,
-            phase.selectedEncounterKey,
-            () => candidates.encounterPhases(phase.owner, encounterKeys),
-          );
-          set(
-            encounterPhases,
+          if (encounterPhases.has(key)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${key} has multiple bound encounter phase interactions`,
+            );
+          }
+          let model: ContextualPickerModel<string> | undefined;
+          encounterPhases.set(
             key,
             Object.freeze({
-              ...base,
               intentFor: (encounterKey: string) =>
                 Object.freeze({
                   command: Object.freeze({
@@ -272,11 +272,20 @@ function bindOccurrenceLocalInteractions(
                     phase: phase.owner,
                   }),
                 }),
+              key,
+              load: () =>
+                (model ??= projectEncounterPicker(
+                  contextualPicker,
+                  phase.candidateChoices,
+                  phase.selectedEncounterKey,
+                  candidates.encounterPhases(phase.owner, encounterKeys),
+                )),
+              owner: phase.owner,
               resetIntent: Object.freeze({
                 command: Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner }),
               }),
+              selected: phase.selectedEncounterKey,
             }),
-            'encounter phase',
           );
         }
         break;
@@ -1184,6 +1193,7 @@ export function bindWorkspaceInteractions(
   } = bindOccurrenceLocalInteractions(
     allocateOccurrenceId,
     candidates,
+    services.contextualPicker,
     occurrenceInteractionRequirements.values(),
   );
   const {

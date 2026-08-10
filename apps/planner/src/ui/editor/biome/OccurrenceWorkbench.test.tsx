@@ -53,6 +53,7 @@ import {
   oBiome,
   oOccurrenceIds,
   pBiome,
+  pOccurrenceId,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import {
@@ -165,6 +166,21 @@ function occurrenceState(
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)?.state;
   if (state === undefined) throw new Error(`${occurrenceId} state is missing`);
   return state;
+}
+
+function occurrenceEncounterSelections(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+  occurrenceId: string,
+) {
+  const selections = project.routes
+    .find((route) => route.routeKey === routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+    ?.encounters.encounterKeyByPhase;
+  if (selections === undefined) throw new Error(`${occurrenceId} encounter selections are missing`);
+  return selections;
 }
 
 function hCages(project: ProjectDocument) {
@@ -424,6 +440,126 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 
+  it('withholds and restores the P Combat suffix after a terminating Heracles Intro selection', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+    const owner = { kind: 'occurrence' as const, occurrenceId };
+    const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
+    const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(occurrenceId),
+    );
+    const retainedCombat = occurrenceEncounterSelections(
+      view.application.store.getState().projectWorkspace.history.present,
+      'Surface',
+      'P',
+      occurrenceId,
+    ).Combat;
+
+    if (retainedCombat === undefined)
+      throw new Error('P Combat 02 has no retained Combat selection');
+
+    const introControl = screen.getByLabelText('Intro encounter phase');
+    expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(combat),
+      ),
+    ).toBe(true);
+
+    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
+
+    await waitFor(() => expect(screen.queryByLabelText('Combat encounter phase')).toBeNull());
+    expect(
+      occurrenceEncounterSelections(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'P',
+        occurrenceId,
+      ),
+    ).toMatchObject({ Combat: retainedCombat, Intro: 'HeraclesCombatP' });
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(combat),
+      ),
+    ).toBe(false);
+    expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(combat))).toBe(
+      false,
+    );
+
+    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
+
+    await waitFor(() => expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy());
+    expect(
+      occurrenceEncounterSelections(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'P',
+        occurrenceId,
+      ),
+    ).toMatchObject({ Combat: retainedCombat, Intro: 'GeneratedP_PreCombat' });
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.get(
+        semanticAddressKey(combat),
+      ),
+    ).toMatchObject({
+      owner: combat,
+      selected: retainedCombat,
+    });
+    expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(intro))).toBe(
+      true,
+    );
+  });
+
+  it('keeps P Combat interactive when the selected Heracles Intro is invalid', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+    const owner = { kind: 'occurrence' as const, occurrenceId };
+    const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
+    const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      encounterKey: 'HeraclesCombatP',
+      kind: 'SelectEncounter',
+      phase: intro,
+    });
+    project = applyProjectCommand(project, catalog, {
+      encounterKey: 'HeraclesCombatN',
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceId('combat05') },
+        'Encounter',
+      ),
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+
+    const introControl = screen.getByLabelText('Intro encounter phase');
+    const combatControl = screen.getByLabelText('Combat encounter phase');
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(combat),
+      ),
+    ).toBe(true);
+    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await waitFor(() =>
+      expect(
+        within(introControl)
+          .getByRole('button', { name: 'Encounter' })
+          .getAttribute('data-candidate-state'),
+      ).toBe('impossible'),
+    );
+
+    const combatPicker = within(combatControl).getByRole('button', { name: 'Encounter' });
+    expect((combatPicker as HTMLButtonElement).disabled).toBe(false);
+    await view.user.click(combatPicker);
+    await waitFor(() =>
+      expect(combatPicker.getAttribute('data-candidate-state')).toBe('unassessed'),
+    );
+  });
+
   it('keeps impossible side-room positions visible and disabled when not generated', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'ReplaceSideRoomGeneration',
@@ -623,16 +759,11 @@ describe('OccurrenceWorkbench', () => {
     expect(
       encounter.querySelector('.semantic-owner-marker')?.getAttribute('data-semantic-owner'),
     ).toBe(semanticAddressKey(phase));
-    const select = within(encounter).getByRole('combobox', { name: 'Encounter' });
+    const picker = within(encounter).getByRole('button', { name: 'Encounter' });
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(select);
-    await waitFor(() =>
-      expect(
-        Array.from((select as HTMLSelectElement).options).map((option) => option.value),
-      ).toContain('GeneratedNSubRoom_Bigger'),
-    );
-    await view.user.selectOptions(select, 'GeneratedNSubRoom_Bigger');
+    await view.user.click(picker);
+    await view.user.click(screen.getByText('Large side-room combat'));
     await waitFor(() => {
       const state = occurrenceState(
         view.application.store.getState().projectWorkspace.history.present,
@@ -720,16 +851,13 @@ describe('OccurrenceWorkbench', () => {
       expect(count.options[1]?.disabled).toBe(true);
     });
     expect(phase.dataset.readOnly).toBeUndefined();
-    const encounter = within(phase).getByRole('combobox', { name: /^Encounter/ });
+    const encounter = within(phase).getByRole('button', { name: 'Encounter' });
     await view.user.click(encounter);
     await waitFor(() => {
-      expect(encounter.getAttribute('data-candidate-support')).toBe('impossible');
+      expect(encounter.getAttribute('data-candidate-state')).toBe('impossible');
       expect(
-        Array.from((encounter as HTMLSelectElement).options).map((option) => option.value),
-      ).toEqual(['GeneratedO']);
-      expect(
-        Array.from((encounter as HTMLSelectElement).options).every((option) => option.disabled),
-      ).toBe(true);
+        screen.getAllByText('This encounter phase is not active for the selected room setup.'),
+      ).not.toHaveLength(0);
     });
     expect(within(phase).queryByRole('button', { name: 'Reset to default' })).toBeNull();
     expect(
@@ -781,22 +909,19 @@ describe('OccurrenceWorkbench', () => {
       historyLength,
     );
     const encounter = screen.getByLabelText('Encounter encounter phase');
-    const select = within(encounter).getByRole('combobox') as HTMLSelectElement;
+    const picker = within(encounter).getByRole('button', { name: 'Encounter' });
 
-    await view.user.click(select);
+    await view.user.click(picker);
     await waitFor(() => {
-      expect(select.value).toBe('GeneratedI');
-      expect(select.dataset.candidateSupport).toBe('impossible');
-      expect(Array.from(select.options).map((option) => option.value)).toEqual([
-        'GeneratedI',
-        'GeneratedI_GoalReward',
-      ]);
-      expect(select.options[0]?.disabled).toBe(true);
-      expect(select.options[0]?.textContent).toContain('unavailable');
-      expect(select.options[1]?.disabled).toBe(false);
+      expect(picker.getAttribute('data-candidate-state')).toBe('impossible');
+      expect(screen.getByText('Current selection')).toBeTruthy();
+      expect(
+        screen.getAllByText('This encounter does not meet the current encounter requirements.'),
+      ).not.toHaveLength(0);
+      expect(screen.getByText('Goal combat')).toBeTruthy();
     });
 
-    await view.user.selectOptions(select, 'GeneratedI_GoalReward');
+    await view.user.click(screen.getByText('Goal combat'));
     await waitFor(() =>
       expect(
         view.application.store

@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type {
   ContextualPickerItem,
@@ -169,6 +169,11 @@ export function ContextualPicker<T>({
   triggerLabel,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const captureTrigger = useCallback((node: HTMLButtonElement | null): void => {
+    const container = node?.closest<HTMLElement>('dialog') ?? null;
+    setPortalContainer((current) => (current === container ? current : container));
+  }, []);
   const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
   const selectedExplanationId =
@@ -208,6 +213,7 @@ export function ContextualPicker<T>({
             data-candidate-state={selected?.state ?? 'unspecified'}
             disabled={disabled}
             id={id}
+            ref={captureTrigger}
             type="button"
           >
             <span>{disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder)}</span>
@@ -216,7 +222,7 @@ export function ContextualPicker<T>({
             </span>
           </button>
         </Popover.Trigger>
-        <Popover.Portal>
+        <Popover.Portal container={portalContainer ?? undefined}>
           <Popover.Content
             align="start"
             className="contextual-picker-popover"

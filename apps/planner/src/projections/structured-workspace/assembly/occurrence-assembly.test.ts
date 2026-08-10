@@ -15,7 +15,11 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { fieldsBatchFacts, simulateProject } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  fieldsBatchFacts,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -40,10 +44,9 @@ import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/mark
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 
 function biomeSource(project: ProjectDocument, routeKey: string, biomeKey: string) {
-  const source = createWorkspaceProjectSourceIndex(
-    catalog,
-    project,
-    simulateProject(catalog, project),
+  const assembly = simulateProjectAssembly(catalog, project);
+  const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -91,6 +94,7 @@ function assemble(
   const assembly = assembleWorkspaceOccurrence({
     biome: source.biome,
     catalog,
+    encounterPhaseStatus: source.encounterPhaseStatus,
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     markerDestinations: markers.emitter,

@@ -8,6 +8,8 @@ export {
   prepareRoomEncounterPhases,
   type EncounterAuthoringRoom,
   type EncounterPhaseCandidateSupport,
+  type EncounterPhaseSequenceStatus,
+  type EncounterPhaseSequenceStatusEntry,
   type PreparedEncounterPhases,
 } from './preparation';
 export {

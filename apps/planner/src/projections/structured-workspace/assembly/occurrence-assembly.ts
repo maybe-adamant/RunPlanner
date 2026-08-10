@@ -25,7 +25,11 @@ import type {
   RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CanonicalAuthoredRoom, FieldsBatchFacts } from '@run-planner/engine/simulation';
+import type {
+  CanonicalAuthoredRoom,
+  EncounterPhaseSequenceStatus,
+  FieldsBatchFacts,
+} from '@run-planner/engine/simulation';
 import {
   encounterPhaseAuthoringDomainForRoom,
   type EncounterPhaseAuthoringRoomOptions,
@@ -77,6 +81,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
+  readonly encounterPhaseStatus: (
+    phase: EncounterPhaseAddress,
+  ) => EncounterPhaseSequenceStatus | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -445,6 +452,7 @@ function activeEncounterPhasesForOwner(
     options,
   )) {
     const address = domain.origin;
+    if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
     const candidateChoices = Object.freeze(
       domain.declaredEncounterKeys.map((encounterKey) => {
         const definition = input.catalog.encounterDefinitions.byKey[encounterKey];

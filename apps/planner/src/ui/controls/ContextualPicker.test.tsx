@@ -144,6 +144,54 @@ describe('ContextualPicker', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('keeps unassessed choices selectable through search and keyboard', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <ContextualPicker
+        id="encounter-picker"
+        label="Encounter"
+        model={model}
+        onSelect={onSelect}
+        placeholder="Choose an encounter"
+      />,
+    );
+
+    await user.click(screen.getByLabelText('Encounter'));
+    const search = screen.getByRole('combobox', { name: 'Encounter choices' });
+    await user.type(search, 'Story 01');
+    await user.keyboard('{Enter}');
+
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith('story-01');
+  });
+
+  it('keeps portaled choices inside a containing modal dialog', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <dialog aria-label="Trait offer" open>
+        <ContextualPicker
+          id="trait-picker"
+          label="Trait"
+          model={model}
+          onSelect={onSelect}
+          placeholder="Choose a trait"
+        />
+      </dialog>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Trait offer' });
+    await user.click(within(dialog).getByLabelText('Trait'));
+    const choice = within(dialog).getByText('Preboss').closest('[cmdk-item]');
+    if (!(choice instanceof HTMLElement)) throw new Error('dialog trait choice is missing');
+
+    await user.click(choice);
+
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith('preboss');
+  });
+
   it('supports a multi-step interaction that stays open until explicit cancellation', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

@@ -3,6 +3,7 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubSlotAddress,
@@ -120,6 +121,20 @@ function createRecoveryPersistence(): {
 
 function currentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
+}
+
+function encounterSelections(
+  application: PlannerApplication,
+  biomeKey: string,
+  occurrenceId: string,
+) {
+  const selections = currentProject(application)
+    .routes.flatMap((route) => route.biomes)
+    .find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+    ?.encounters.encounterKeyByPhase;
+  if (selections === undefined) throw new Error(`${occurrenceId} encounter selections are missing`);
+  return selections;
 }
 
 function hubRailButton(): HTMLElement {
@@ -258,6 +273,73 @@ describe('surface product loop', () => {
     expect(within(dialog).queryByLabelText('option1 rarity')).toBeNull();
     expect(within(dialog).getByRole('button', { name: 'Close trait offer' })).toBeTruthy();
     application.dispose();
+  });
+
+  it('withholds and restores a P Combat suffix through its terminating Heracles Intro picker', async () => {
+    const application = createApplication();
+    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+    const owner = { kind: 'occurrence' as const, occurrenceId };
+    const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
+    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    const retainedCombat = encounterSelections(application, 'P', occurrenceId).Combat;
+    if (retainedCombat === undefined)
+      throw new Error('P Combat 02 has no retained Combat selection');
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
+    const decisionRail = Array.from(
+      screen
+        .getByRole('region', { name: 'Olympus route structure' })
+        .querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
+    ).find(
+      (button) =>
+        button.dataset.workspaceNode ===
+        semanticAddressKey(
+          createExitDecisionAddress(pBiome, {
+            kind: 'occurrence',
+            occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
+          }),
+        ),
+    );
+    if (decisionRail === undefined) throw new Error('P Combat 02 decision rail node is missing');
+    await view.user.click(decisionRail);
+
+    const offer = screen.getByRole('article', { name: 'Combat 02 room offer' });
+    await view.user.click(within(offer).getByText('Customize'));
+    const intro = within(offer).getByLabelText('Intro encounter phase');
+    expect(within(offer).getByLabelText('Combat encounter phase')).toBeTruthy();
+    await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
+
+    await waitFor(() =>
+      expect(within(offer).queryByLabelText('Combat encounter phase')).toBeNull(),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.encounterPhases.has(semanticAddressKey(combat)),
+    ).toBe(false);
+    expect(encounterSelections(application, 'P', occurrenceId)).toMatchObject({
+      Combat: retainedCombat,
+      Intro: 'HeraclesCombatP',
+    });
+
+    await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
+
+    await waitFor(() =>
+      expect(within(offer).getByLabelText('Combat encounter phase')).toBeTruthy(),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.encounterPhases.get(semanticAddressKey(combat)),
+    ).toMatchObject({ owner: combat, selected: retainedCombat });
+    expect(encounterSelections(application, 'P', occurrenceId)).toMatchObject({
+      Combat: retainedCombat,
+      Intro: 'GeneratedP_PreCombat',
+    });
   });
 
   it('records an N Hub order move as one undoable semantic command and autosaves both states', async () => {

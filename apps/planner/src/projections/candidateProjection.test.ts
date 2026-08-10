@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
@@ -202,6 +203,46 @@ describe('candidate projection', () => {
       kind: 'unavailable',
       evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
     });
+  });
+
+  it('adapts exact encounter support into typed coverage, activation, and requirement evidence', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ResetEncounter',
+      phase: createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'I'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-i-combat01') },
+        'Encounter',
+      ),
+    });
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'I'),
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-i-combat01') },
+      'Encounter',
+    );
+    const candidates = createCandidateSessionFactory(catalog)
+      .bind(simulateProjectAssembly(catalog, project))
+      .encounterPhases(phase, ['GeneratedI', 'GeneratedI_GoalReward']);
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        evaluation: expect.objectContaining({
+          result: expect.objectContaining({
+            evidence: { kind: 'requirementsExcluded' },
+            support: 'impossible',
+          }),
+        }),
+        value: 'GeneratedI',
+      }),
+      expect.objectContaining({
+        evaluation: expect.objectContaining({
+          result: expect.objectContaining({
+            evidence: { kind: 'supported' },
+            support: 'forced',
+          }),
+        }),
+        value: 'GeneratedI_GoalReward',
+      }),
+    ]);
   });
 
   it('addresses batch-store candidates by their source rather than an array position', () => {

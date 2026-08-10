@@ -25,7 +25,7 @@ import {
 } from './traits';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
-  return Object.freeze({ at: () => undefined, roomAt: () => undefined });
+  return Object.freeze({ at: () => undefined, statusAt: () => undefined, roomAt: () => undefined });
 }
 
 /**

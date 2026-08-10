@@ -2,6 +2,7 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -140,7 +141,9 @@ export function createStructuredWorkspaceProjection(
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const traitControls = new Map<string, WorkspaceTraitOfferControl>();
-      const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
+      const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
+        encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+      );
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
           const projected = projectBiome(catalog, biomeSource);
