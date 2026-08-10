@@ -167,6 +167,7 @@ export const pEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     npcPresentationKey: 'Athena',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Athena' },
     requirements: {
       kind: 'all',
       requirements: [
