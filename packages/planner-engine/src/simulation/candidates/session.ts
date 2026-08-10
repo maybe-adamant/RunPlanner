@@ -80,8 +80,12 @@ import {
 import type { CandidateContextUnavailable } from './availability';
 import {
   evaluateTraitOfferCandidate,
+  evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitOfferCandidate,
+  type EvaluatedTraitOfferFocusedOptionCandidate,
   type TraitOfferCandidateQuery,
+  type TraitOfferFocusedOptionCandidateEvaluation,
+  type TraitOfferFocusedOptionCandidateQuery,
 } from './trait-offer';
 
 export type ProjectCandidateQuery =
@@ -106,6 +110,10 @@ export type ProjectCandidateQuery =
   | HubTerminalTakeoverCandidateQuery
   | TraitOfferCandidateQuery;
 
+/** Candidate-session-only query vocabulary, including focused trait support. */
+export type ProjectCandidateSessionQuery =
+  ProjectCandidateQuery | TraitOfferFocusedOptionCandidateQuery;
+
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
   | EvaluatedBatchRewardStoreCandidate
@@ -129,6 +137,10 @@ export type ProjectCandidateEvaluation =
   | EvaluatedHubTerminalTakeoverCandidate
   | EvaluatedTraitOfferCandidate;
 
+/** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
+export type ProjectCandidateSessionEvaluation =
+  ProjectCandidateEvaluation | EvaluatedTraitOfferFocusedOptionCandidate;
+
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
   readonly queryCount: number;
@@ -142,8 +154,16 @@ export interface ProjectCandidateSession {
   readonly project: ProjectDocument;
   readonly evaluation: ProjectEvaluation;
   readonly evaluate: {
+    (query: TraitOfferFocusedOptionCandidateQuery): TraitOfferFocusedOptionCandidateEvaluation;
+    (
+      queries: readonly TraitOfferFocusedOptionCandidateQuery[],
+    ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
+    (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
+    (
+      queries: readonly ProjectCandidateSessionQuery[],
+    ): readonly ProjectCandidateSessionEvaluation[];
   };
 }
 
@@ -155,8 +175,8 @@ function evaluateCandidateQuery(
   catalog: Catalog,
   assembly: ProjectEvaluationAssembly,
   candidateArtifacts: ProjectCandidateArtifacts,
-  query: ProjectCandidateQuery,
-): ProjectCandidateEvaluation {
+  query: ProjectCandidateSessionQuery,
+): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
     case 'startRoom':
@@ -280,6 +300,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'traitOfferFocusedOption':
+      return evaluateTraitOfferFocusedOptionCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -297,17 +326,27 @@ export function createPreparedProjectCandidateSession(
     queries: readonly ProjectCandidateQuery[],
   ): readonly ProjectCandidateEvaluation[];
   function evaluate(
-    queryOrQueries: ProjectCandidateQuery | readonly ProjectCandidateQuery[],
-  ): ProjectCandidateEvaluation | readonly ProjectCandidateEvaluation[] {
+    query: TraitOfferFocusedOptionCandidateQuery,
+  ): TraitOfferFocusedOptionCandidateEvaluation;
+  function evaluate(
+    queries: readonly TraitOfferFocusedOptionCandidateQuery[],
+  ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
+  function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
+  function evaluate(
+    queries: readonly ProjectCandidateSessionQuery[],
+  ): readonly ProjectCandidateSessionEvaluation[];
+  function evaluate(
+    queryOrQueries: ProjectCandidateSessionQuery | readonly ProjectCandidateSessionQuery[],
+  ): ProjectCandidateSessionEvaluation | readonly ProjectCandidateSessionEvaluation[] {
     if (!Array.isArray(queryOrQueries)) {
       return evaluateCandidateQuery(
         catalog,
         assembly,
         candidateArtifacts,
-        queryOrQueries as ProjectCandidateQuery,
+        queryOrQueries as ProjectCandidateSessionQuery,
       );
     }
-    const queries = queryOrQueries as readonly ProjectCandidateQuery[];
+    const queries = queryOrQueries as readonly ProjectCandidateSessionQuery[];
     options.observe?.(Object.freeze({ kind: 'queryBatch', queryCount: queries.length }));
     return Object.freeze(
       queries.map((query) => evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query)),

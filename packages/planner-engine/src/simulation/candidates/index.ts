@@ -60,6 +60,8 @@ export {
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
+  type ProjectCandidateSessionEvaluation,
+  type ProjectCandidateSessionQuery,
   type ProjectCandidateSessionOptions,
 } from './session';
 export type {
@@ -77,6 +79,11 @@ export type {
 } from './takeover-hub';
 export type {
   EvaluatedTraitOfferCandidate,
+  EvaluatedTraitOfferFocusedOptionCandidate,
+  TraitOfferCandidateFinding,
   TraitOfferCandidateFindingCode,
   TraitOfferCandidateQuery,
+  TraitOfferFocusedOptionCandidateEvaluation,
+  TraitOfferFocusedOptionCandidateQuery,
+  TraitOfferFocusedOptionEvidence,
 } from './trait-offer';
