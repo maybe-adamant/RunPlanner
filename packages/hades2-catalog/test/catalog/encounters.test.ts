@@ -172,6 +172,7 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterDefinitions.byKey.ArtemisCombatF).toMatchObject({
       countsEncounterDepth: true,
       npcPresentationKey: 'Artemis',
+      traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     });
     expect(catalog.encounterDefinitions.byKey.ArachneCombatF).toMatchObject({
       countsEncounterDepth: false,

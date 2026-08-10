@@ -69,6 +69,10 @@ export interface RawEncounterDefinitionDeclaration {
   readonly requirements?: RequirementExpression;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly npcPresentationKey?: string;
+  readonly traitOfferProducer?: {
+    readonly kind: 'traitOffer';
+    readonly giverKey: string;
+  };
 }
 
 export interface RawEncounterSetDeclaration {

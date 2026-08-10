@@ -48,6 +48,23 @@ import type {
 } from './contract';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
+function appendEncounterTraitControls(
+  controls: Map<string, WorkspaceTraitOfferControl>,
+  rooms: readonly {
+    readonly encounterPhases: readonly { readonly traitOffer?: WorkspaceTraitOfferControl }[];
+  }[],
+): void {
+  for (const room of rooms) {
+    for (const phase of room.encounterPhases) {
+      const traitControl = phase.traitOffer;
+      if (traitControl === undefined) continue;
+      const key = semanticAddressKey(traitControl.address);
+      if (controls.has(key)) continue;
+      controls.set(key, traitControl);
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -189,6 +206,29 @@ export function createStructuredWorkspaceProjection(
                 throw new Error(`${key} has multiple projected trait controls`);
               }
               traitControls.set(key, traitControl);
+            }
+          }
+          for (const node of projected.biome.nodes) {
+            if (node.kind === 'occurrenceWorkbench') {
+              appendEncounterTraitControls(traitControls, [node.room]);
+            } else if (
+              node.kind === 'ordinaryBatch' ||
+              node.kind === 'takeoverBatch' ||
+              node.kind === 'mixedBatch'
+            ) {
+              appendEncounterTraitControls(
+                traitControls,
+                node.targets.map((target) => target.room),
+              );
+            } else if (node.kind === 'hubDecision') {
+              appendEncounterTraitControls(
+                traitControls,
+                node.slots.flatMap((slot) => (slot.room === undefined ? [] : [slot.room])),
+              );
+              appendEncounterTraitControls(
+                traitControls,
+                node.visits.flatMap((visit) => (visit.room === undefined ? [] : [visit.room])),
+              );
             }
           }
           return projected.biome;

@@ -29,6 +29,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
 import { hubMainRewardPresentation } from './hubMainRewardPresentation';
@@ -206,6 +207,9 @@ function EncounterPhaseControl({
           </div>
         </div>
         <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
+        {phase.traitOffer === undefined ? null : (
+          <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
+        )}
       </section>
     );
   }
@@ -230,6 +234,9 @@ function EncounterPhaseControl({
         interaction={interaction}
         phase={phase}
       />
+      {phase.traitOffer === undefined ? null : (
+        <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
+      )}
     </section>
   );
 }
@@ -244,7 +251,8 @@ function EncounterWorkbench({
   readonly phases: readonly WorkspaceEncounterPhase[];
 }) {
   const presentedPhases = phases.filter(
-    (phase) => phase.customizable || phase.marker.findingCount > 0,
+    (phase) =>
+      phase.customizable || phase.marker.findingCount > 0 || phase.traitOffer !== undefined,
   );
   if (presentedPhases.length === 0) return null;
   return (

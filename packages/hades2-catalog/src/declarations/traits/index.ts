@@ -2,6 +2,7 @@ import type { RawTraitCatalogInput } from '../traits';
 import { aphroditeGiver, aphroditeTraits } from './aphrodite';
 import { apolloGiver, apolloTraits } from './apollo';
 import { aresGiver, aresTraits } from './ares';
+import { artemisGiver, artemisTraits } from './artemis';
 import { demeterGiver, demeterTraits } from './demeter';
 import { hephaestusGiver, hephaestusTraits } from './hephaestus';
 import { heraGiver, heraTraits } from './hera';
@@ -97,6 +98,7 @@ const aspects = [
 ] as const;
 const traits = [
   ...aphroditeTraits,
+  ...artemisTraits,
   ...apolloTraits,
   ...aresTraits,
   ...demeterTraits,
@@ -111,6 +113,7 @@ const traits = [
 
 const givers = [
   aphroditeGiver,
+  artemisGiver,
   apolloGiver,
   aresGiver,
   demeterGiver,
@@ -133,18 +136,12 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     { key: 'blockGiftBoons', kind: 'roomFlag', roomFlag: 'BlockGiftBoons' },
   ],
   deferredTraitKeys: [
-    'CritBonusBoon',
-    'DashOmegaBuffBoon',
-    'FocusCritBoon',
-    'HighHealthCritBoon',
-    'InsideCastCritBoon',
     'LaserApolloTalent',
     'LeapHephaestusTalent',
     'MeteorHestiaTalent',
     'MoonBeamAresTalent',
     'PolymorphZeusTalent',
     'PotionPoseidonTalent',
-    'SorceryCritBoon',
     'SpellLaserTrait',
     'SpellLeapTrait',
     'SpellMeteorTrait',
@@ -154,7 +151,6 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     'SpellTransformTrait',
     'SummonHeraTalent',
     'TimeSlowDemeterTalent',
-    'TimedCritVulnerabilityBoon',
     'TransformAphroditeTalent',
   ],
 };

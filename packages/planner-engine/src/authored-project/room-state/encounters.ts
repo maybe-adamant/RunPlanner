@@ -6,8 +6,16 @@ import type {
   EncounterSlotBinding,
   RoomDeclaration,
 } from '../../catalog-schema';
+import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
+import { TRAIT_OPTION_KEYS, createDefaultEncounterTraitOffer } from '../traits';
 import type { RoomEncounterState } from '../model';
-import { expectExactKeys, expectRecord, expectString, failProjectDocument } from '../validation';
+import {
+  expectArray,
+  expectExactKeys,
+  expectRecord,
+  expectString,
+  failProjectDocument,
+} from '../validation';
 
 function requireEnvelope(catalog: Catalog, room: RoomDeclaration, path: string) {
   const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
@@ -140,7 +148,91 @@ export function createDefaultRoomEncounterState(
     );
     values[binding.slotKey] = set.defaultEncounterDefinitionKey;
   }
-  return Object.freeze({ encounterKeyByPhase: Object.freeze(values) });
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  for (const [phaseKey, encounterKey] of Object.entries(values)) {
+    const offer = createDefaultEncounterTraitOffer(catalog, encounterKey);
+    if (offer !== undefined) traitOffersByPhase[phaseKey] = { [encounterKey]: offer };
+  }
+  return Object.freeze({
+    encounterKeyByPhase: Object.freeze(values),
+    ...(Object.keys(traitOffersByPhase).length === 0
+      ? {}
+      : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+  });
+}
+
+function decodeEncounterTraitOffer(
+  value: unknown,
+  catalog: Catalog,
+  giverKey: string,
+  path: string,
+): AuthoredTraitOffer {
+  const record = expectRecord(value, path);
+  expectExactKeys(record, ['giverKey', 'options', 'selectedOptionKey'], path);
+  if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
+    failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
+  }
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined) failProjectDocument(path, `unknown giver ${giverKey}`);
+  const rawOptions = expectArray(record.options, `${path}.options`);
+  if (rawOptions.length !== TRAIT_OPTION_KEYS.length)
+    failProjectDocument(`${path}.options`, 'must contain exactly three options');
+  const options: AuthoredTraitOption[] = [];
+  const seen = new Set<string>();
+  for (const optionKey of TRAIT_OPTION_KEYS) {
+    const index = TRAIT_OPTION_KEYS.indexOf(optionKey);
+    const option = expectRecord(rawOptions[index], `${path}.options.${optionKey}`);
+    const hasRarity = option.rarity !== undefined;
+    expectExactKeys(
+      option,
+      hasRarity ? ['traitKey', 'rarity'] : ['traitKey'],
+      `${path}.options.${optionKey}`,
+    );
+    const traitKey = expectString(option.traitKey, `${path}.options.${optionKey}.traitKey`);
+    if (seen.has(traitKey))
+      failProjectDocument(`${path}.options.${optionKey}`, `${traitKey} is duplicated`);
+    seen.add(traitKey);
+    const trait = catalog.traits.byKey[traitKey];
+    if (trait === undefined || !giver.traitKeys.includes(traitKey))
+      failProjectDocument(
+        `${path}.options.${optionKey}.traitKey`,
+        `${traitKey} is not in giver ${giverKey}`,
+      );
+    const rarity = hasRarity
+      ? expectString(option.rarity, `${path}.options.${optionKey}.rarity`)
+      : undefined;
+    if (trait.rarityDomain.kind === 'none' && rarity !== undefined)
+      failProjectDocument(`${path}.options.${optionKey}.rarity`, 'Hammer options have no rarity');
+    if (
+      trait.rarityDomain.kind === 'ranked' &&
+      (rarity === undefined || !trait.rarityDomain.equippedRarities.includes(rarity as never))
+    )
+      failProjectDocument(
+        `${path}.options.${optionKey}.rarity`,
+        `unsupported authored rarity for ${traitKey}`,
+      );
+    options.push(
+      rarity === undefined
+        ? Object.freeze({ traitKey })
+        : Object.freeze({ traitKey, rarity: rarity as AuthoredTraitOption['rarity'] }),
+    );
+  }
+  const selectedOptionKey = expectString(record.selectedOptionKey, `${path}.selectedOptionKey`);
+  if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey))
+    failProjectDocument(`${path}.selectedOptionKey`, 'must select option1, option2, or option3');
+  return Object.freeze({
+    giverKey,
+    options: Object.freeze(options) as AuthoredTraitOffer['options'],
+    selectedOptionKey: selectedOptionKey as AuthoredTraitOffer['selectedOptionKey'],
+  });
+}
+
+function legalTraitOfferEncounterKeys(
+  catalog: Catalog,
+  binding: EncounterSlotBinding,
+): readonly string[] {
+  if (binding.kind === 'fixed') return [];
+  return encounterSetForBinding(catalog, binding, 'encounter trait offers').encounterDefinitionKeys;
 }
 
 export function decodeRoomEncounterState(
@@ -150,7 +242,13 @@ export function decodeRoomEncounterState(
   path: string,
 ): RoomEncounterState {
   const state = expectRecord(value, path);
-  expectExactKeys(state, ['encounterKeyByPhase'], path);
+  expectExactKeys(
+    state,
+    state.traitOffersByPhase === undefined
+      ? ['encounterKeyByPhase']
+      : ['encounterKeyByPhase', 'traitOffersByPhase'],
+    path,
+  );
   const rawSelections = expectRecord(state.encounterKeyByPhase, `${path}.encounterKeyByPhase`);
   const bindings = encounterBindingsBySlot(catalog, room, path);
   const selectedSlotKeys = [...bindings.values()]
@@ -180,7 +278,57 @@ export function decodeRoomEncounterState(
     encounterDefinitionForKey(catalog, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterKeyByPhase[slotKey] = encounterKey;
   }
-  return Object.freeze({ encounterKeyByPhase: Object.freeze(encounterKeyByPhase) });
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  if (state.traitOffersByPhase !== undefined) {
+    const rawByPhase = expectRecord(state.traitOffersByPhase, `${path}.traitOffersByPhase`);
+    const legalPhaseKeys = [...bindings.values()]
+      .filter(
+        (binding): binding is Extract<EncounterSlotBinding, { readonly kind: 'set' }> =>
+          binding.kind === 'set',
+      )
+      .map((binding) => binding.slotKey);
+    for (const phaseKey of Object.keys(rawByPhase)) {
+      if (!legalPhaseKeys.includes(phaseKey))
+        failProjectDocument(`${path}.traitOffersByPhase.${phaseKey}`, 'unknown encounter phase');
+      const binding = bindings.get(phaseKey);
+      if (binding === undefined)
+        failProjectDocument(`${path}.traitOffersByPhase.${phaseKey}`, 'unknown encounter phase');
+      const rawByEncounter = expectRecord(
+        rawByPhase[phaseKey],
+        `${path}.traitOffersByPhase.${phaseKey}`,
+      );
+      const legalEncounterKeys = legalTraitOfferEncounterKeys(catalog, binding);
+      if (Object.keys(rawByEncounter).length === 0)
+        failProjectDocument(`${path}.traitOffersByPhase.${phaseKey}`, 'must not be empty');
+      const phaseOffers: Record<string, AuthoredTraitOffer> = {};
+      for (const encounterKey of Object.keys(rawByEncounter)) {
+        if (!legalEncounterKeys.includes(encounterKey))
+          failProjectDocument(
+            `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
+            'is not available from this encounter set',
+          );
+        const producer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+        if (producer === undefined)
+          failProjectDocument(
+            `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
+            'encounter has no trait offer producer',
+          );
+        phaseOffers[encounterKey] = decodeEncounterTraitOffer(
+          rawByEncounter[encounterKey],
+          catalog,
+          producer.giverKey,
+          `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
+        );
+      }
+      traitOffersByPhase[phaseKey] = phaseOffers;
+    }
+  }
+  return Object.freeze({
+    encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
+    ...(Object.keys(traitOffersByPhase).length === 0
+      ? {}
+      : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+  });
 }
 
 /**
@@ -229,5 +377,40 @@ export function reconcileRoomEncounterState(
         ? retained
         : fallback;
   }
-  return Object.freeze({ encounterKeyByPhase: Object.freeze(selections) });
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  for (const binding of replacementBindings.values()) {
+    if (binding.kind !== 'set') continue;
+    const selected = selections[binding.slotKey];
+    const legalKeys = new Set(
+      encounterSetForBinding(
+        catalog,
+        binding,
+        `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
+      ).encounterDefinitionKeys,
+    );
+    const priorPhase = previous.traitOffersByPhase?.[binding.slotKey];
+    const phaseOffers: Record<string, AuthoredTraitOffer> = {};
+    if (previousBindings.get(binding.slotKey)?.kind === 'set' && priorPhase !== undefined) {
+      for (const [encounterKey, offer] of Object.entries(priorPhase)) {
+        if (
+          legalKeys.has(encounterKey) &&
+          catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer?.giverKey ===
+            offer.giverKey
+        ) {
+          phaseOffers[encounterKey] = offer;
+        }
+      }
+    }
+    if (selected !== undefined && phaseOffers[selected] === undefined) {
+      const fallback = createDefaultEncounterTraitOffer(catalog, selected);
+      if (fallback !== undefined) phaseOffers[selected] = fallback;
+    }
+    if (Object.keys(phaseOffers).length > 0) traitOffersByPhase[binding.slotKey] = phaseOffers;
+  }
+  return Object.freeze({
+    encounterKeyByPhase: Object.freeze(selections),
+    ...(Object.keys(traitOffersByPhase).length === 0
+      ? {}
+      : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+  });
 }

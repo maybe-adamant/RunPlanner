@@ -68,7 +68,10 @@ function subjectForDestination(
 function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
   const keys = [
     room.marker.focusKey,
-    ...room.encounterPhases.map((phase) => phase.marker.focusKey),
+    ...room.encounterPhases.flatMap((phase) => [
+      phase.marker.focusKey,
+      ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker.focusKey]),
+    ]),
     ...room.localDetailMarkers.map((marker) => marker.focusKey),
     ...room.rewardControls.flatMap((control) => [
       control.marker.focusKey,
@@ -87,7 +90,10 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
           sideRooms.group.marker.focusKey,
           ...sideRooms.group.slots.flatMap((slot) => [
             slot.marker.focusKey,
-            ...slot.encounterPhases.map((phase) => phase.marker.focusKey),
+            ...slot.encounterPhases.flatMap((phase) => [
+              phase.marker.focusKey,
+              ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker.focusKey]),
+            ]),
             ...(slot.generation === 'generated'
               ? [
                   slot.rewardControl.marker.focusKey,

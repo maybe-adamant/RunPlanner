@@ -2,6 +2,7 @@ import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catal
 import type { EncounterPhaseAddress } from '../addresses';
 import type { ProjectDocument, RoomEncounterState, RoomOccurrence } from '../model';
 import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounters';
+import { createDefaultEncounterTraitOffer } from '../traits';
 import {
   failCommand,
   requireOccurrence,
@@ -43,11 +44,22 @@ function updatedSelections(
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
   }
   if (current.encounterKeyByPhase[phase.phaseKey] === encounterKey) return current;
+  const priorOffers = current.traitOffersByPhase ?? {};
+  const phaseOffers = { ...(priorOffers[phase.phaseKey] ?? {}) };
+  const defaultOffer = createDefaultEncounterTraitOffer(catalog, encounterKey);
+  if (defaultOffer !== undefined && phaseOffers[encounterKey] === undefined) {
+    phaseOffers[encounterKey] = defaultOffer;
+  }
+  const traitOffersByPhase =
+    Object.keys(phaseOffers).length === 0
+      ? undefined
+      : Object.freeze({ ...priorOffers, [phase.phaseKey]: Object.freeze(phaseOffers) });
   return Object.freeze({
     encounterKeyByPhase: Object.freeze({
       ...current.encounterKeyByPhase,
       [phase.phaseKey]: encounterKey,
     }),
+    ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
   });
 }
 

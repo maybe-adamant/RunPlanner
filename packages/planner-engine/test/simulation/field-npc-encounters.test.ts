@@ -5,6 +5,10 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
+  createLocalRewardAddress,
+  createTraitOfferAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   semanticAddressKey,
@@ -21,6 +25,7 @@ import type {
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
   type CanonicalAuthoredRoom,
@@ -50,10 +55,23 @@ import {
   oBiome,
 } from '@run-planner/test-fixtures';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
+import { createCompleteNProject } from '../authored-project/support/complete-n-project';
 
 function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Encounter') {
   return createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey);
 }
+
+const nCombatId = createOccurrenceId('round-trip-n-combat02');
+const nLocalPhase = createEncounterPhaseAddress(
+  nBiome,
+  { kind: 'localChild', occurrenceId: nCombatId, groupKey: 'sideRooms', slotKey: 'sideDoor1' },
+  'Encounter',
+);
+const nDormantLocalPhase = createEncounterPhaseAddress(
+  nBiome,
+  { kind: 'localChild', occurrenceId: nCombatId, groupKey: 'sideRooms', slotKey: 'sideDoor2' },
+  'Encounter',
+);
 
 function support(project: ProjectDocument, owner: ReturnType<typeof phase>) {
   return encounterPhaseCandidateSupportForProjectEvaluationAssembly(
@@ -323,6 +341,77 @@ function fixedTerminatingIntro(room: CanonicalAuthoredRoom): CanonicalAuthoredRo
   });
 }
 
+function sideRoomFieldNpcCatalog(): Catalog {
+  const definition = catalog.encounterDefinitions.byKey.ArtemisCombatN;
+  const set = catalog.encounterSets.byKey.NEncountersSubRoom;
+  if (definition === undefined || set === undefined) {
+    throw new Error('N side-room Artemis fixture is missing its declarations');
+  }
+  const definitionWithoutRequirements = { ...definition };
+  delete definitionWithoutRequirements.requirements;
+  const relaxedDefinition = Object.freeze(definitionWithoutRequirements);
+  const sideRoomSet = Object.freeze({
+    ...set,
+    encounterDefinitionKeys: Object.freeze([...set.encounterDefinitionKeys, definition.key]),
+  });
+  return Object.freeze({
+    ...catalog,
+    encounterDefinitions: replaceCollectionEntry(
+      catalog.encounterDefinitions,
+      relaxedDefinition,
+      ({ key }) => key,
+    ),
+    encounterSets: replaceCollectionEntry(catalog.encounterSets, sideRoomSet, ({ key }) => key),
+  });
+}
+
+function enteredNLocalProjectForArtemis(): ProjectDocument {
+  let project = createCompleteNProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-prehub')),
+      'source',
+    ),
+    value: {
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nCombatId),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSideRoomGeneration',
+    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSideRoomGeneration',
+    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    value: { rewardType: 'MaxHealthDropSmall' },
+  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
+      enteredSlotKeys: ['sideDoor1'],
+    }),
+  );
+}
+
 function predecessorWindow(preparation: HistoryStateView, count: number): HistoryStateView {
   const origins = Array.from({ length: count }, (_, index) =>
     createOccurrenceAddress(oBiome, createOccurrenceId(`npc-spacing-predecessor-${index + 1}`)),
@@ -401,6 +490,148 @@ describe('field NPC encounter requirements', () => {
         origin: gNpcPhase,
       }),
     );
+  });
+
+  it('authors Artemis offers by concrete encounter, retains dormant edits, and equips only when reached', () => {
+    let project = createCompleteFGProject();
+    project = select(project, fNpcPhase, 'ArtemisCombatF');
+    const selected = authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1));
+    const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatF;
+    expect(initialOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
+    expect(initialOffer?.options.map((option) => option.traitKey)).toEqual([
+      'SupportingFireBoon',
+      'CritBonusBoon',
+      'DashOmegaBuffBoon',
+    ]);
+
+    const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: traitAddress,
+      selectedOptionKey: 'option2',
+    });
+    expect(
+      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+    ).toBe('option2');
+
+    project = select(project, fNpcPhase, 'GeneratedF');
+    expect(
+      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+    ).toBe('option2');
+    project = select(project, fNpcPhase, 'ArtemisCombatF');
+    expect(
+      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+    ).toBe('option2');
+
+    const { result, biome } = evaluatedBiome(project, 'F');
+    expect(result.status).toBe('valid');
+    if (!('rewards' in biome)) throw new Error('F reward evaluation is missing');
+    const trace = biome.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(fNpcPhase),
+    );
+    expect(trace).toMatchObject({ acquisitionRole: 'selection' });
+    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.CritBonusBoon).toBeDefined();
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'traitOffer', trait: traitAddress, value: initialOffer! }),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: true } });
+  });
+
+  it('keeps an invalid Artemis selection authored at its exact phase trait owner', () => {
+    let project = select(createCompleteFGProject(), fNpcPhase, 'ArtemisCombatF');
+    const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: traitAddress,
+      value: {
+        giverKey: 'Artemis',
+        options: [
+          { traitKey: 'SupportingFireBoon', rarity: 'Common' },
+          { traitKey: 'CritBonusBoon', rarity: 'Common' },
+          { traitKey: 'SorceryCritBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option3',
+      },
+    });
+    const { result, biome } = evaluatedBiome(project, 'F');
+    expect(result.status).toBe('invalid');
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({ origin: traitAddress, code: 'missingPrerequisite' }),
+    );
+  });
+
+  it('acquires an entered N side-room Artemis offer at its local-child phase address', () => {
+    const sideCatalog = sideRoomFieldNpcCatalog();
+    const initial = enteredNLocalProjectForArtemis();
+    let project = applyProjectCommand(initial, sideCatalog, {
+      kind: 'SelectEncounter',
+      phase: nLocalPhase,
+      encounterKey: 'ArtemisCombatN',
+    });
+    project = applyProjectCommand(project, sideCatalog, {
+      kind: 'SelectEncounter',
+      phase: nDormantLocalPhase,
+      encounterKey: 'ArtemisCombatN',
+    });
+    const selected = authoredOccurrence(project, 'N', nCombatId);
+    if (selected.state.kind !== 'ephyraCombat') throw new Error('N side-room state is missing');
+    const sideOffer =
+      selected.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    expect(sideOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
+    const dormantOffer =
+      selected.state.sideRooms.sideDoor2?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    expect(dormantOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
+    project = applyProjectCommand(project, sideCatalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(nLocalPhase, 'selection'),
+      value: {
+        giverKey: 'Artemis',
+        options: [
+          { traitKey: 'SupportingFireBoon', rarity: 'Common' },
+          { traitKey: 'CritBonusBoon', rarity: 'Common' },
+          { traitKey: 'DashOmegaBuffBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option3',
+      },
+    });
+    project = applyProjectCommand(project, sideCatalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(nLocalPhase, 'selection'),
+      selectedOptionKey: 'option2',
+    });
+    const edited = authoredOccurrence(project, 'N', nCombatId);
+    if (edited.state.kind !== 'ephyraCombat') throw new Error('N side-room edit lost its state');
+    expect(
+      edited.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN
+        ?.selectedOptionKey,
+    ).toBe('option2');
+
+    const evaluation = simulateProject(sideCatalog, project);
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome?.authoring !== 'complete' || !('rewards' in biome)) {
+      throw new Error('N side-room Artemis did not produce a complete reward evaluation');
+    }
+    const traitAddress = createTraitOfferAddress(nLocalPhase, 'selection');
+    const trace = biome.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
+    );
+    expect(trace).toMatchObject({ acquisitionRole: 'selection' });
+    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.CritBonusBoon).toBeDefined();
+    expect(
+      biome.rewards.selectedTraitOffers.some(
+        (candidate) =>
+          candidate.address.owner.kind === 'encounterPhase' &&
+          candidate.address.owner.owner.kind === 'localChild' &&
+          candidate.address.owner.owner.slotKey === 'sideDoor2',
+      ),
+    ).toBe(false);
   });
 
   it('keeps Arachne non-counting, biome-scoped, and eligible again in G after its five-room gap', () => {

@@ -104,3 +104,28 @@ export function createDefaultTraitOffers(
   }
   return Object.freeze(result);
 }
+
+/** Creates the declaration-owned default for an encounter-local field-NPC offer. */
+export function createDefaultEncounterTraitOffer(
+  catalog: Catalog,
+  encounterKey: string,
+): AuthoredTraitOffer | undefined {
+  const encounter = catalog.encounterDefinitions.byKey[encounterKey];
+  const producer = encounter?.traitOfferProducer;
+  if (producer === undefined) return undefined;
+  const giver = catalog.traitGivers.byKey[producer.giverKey];
+  const defaults = giver?.defaultOffer;
+  if (giver === undefined || defaults === undefined) return undefined;
+  return Object.freeze({
+    giverKey: giver.key,
+    options: Object.freeze(
+      defaults.options.map((option) => Object.freeze({ ...option })),
+    ) as AuthoredTraitOffer['options'],
+    selectedOptionKey:
+      defaults.selectedOption === 0
+        ? 'option1'
+        : defaults.selectedOption === 1
+          ? 'option2'
+          : 'option3',
+  });
+}

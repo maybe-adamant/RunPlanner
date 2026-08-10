@@ -17,6 +17,7 @@ export const gEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     npcPresentationKey: 'Artemis',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     requirements: {
       kind: 'all',
       requirements: [

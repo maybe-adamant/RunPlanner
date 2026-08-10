@@ -508,7 +508,7 @@ function normalizeGivers(
     }
     const providerKind = closedValue(
       giver.providerKind,
-      ['olympian', 'hermes', 'hammer'] as const,
+      ['olympian', 'hermes', 'hammer', 'fieldNpc'] as const,
       `${path}.providerKind`,
     );
     const rarityPolicy = requireObject(
@@ -551,7 +551,7 @@ function normalizeGivers(
     if (providerKind !== 'hammer' && frozenRarityPolicy.kind !== 'selectable')
       fail(
         `${path}.rarityPolicy`,
-        'Olympian and Hermes givers require selectable rarity authorship',
+        'Olympian, Hermes, and field NPC givers require selectable rarity authorship',
       );
     if (providerKind === 'olympian') {
       if (priorityTraitKeys.length !== 5)

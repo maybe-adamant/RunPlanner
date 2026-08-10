@@ -472,6 +472,24 @@ function activeEncounterPhasesForOwner(
         `${semanticAddressKey(address)} has no selected encounter definition ${domain.selectedEncounterKey}`,
       );
     }
+    const producer = selectedDefinition.traitOfferProducer;
+    const authoredTraitOffer =
+      input.facts.detailsActive && producer !== undefined
+        ? encounters.traitOffersByPhase?.[domain.slotKey]?.[selectedDefinition.key]
+        : undefined;
+    const giver =
+      producer === undefined ? undefined : input.catalog.traitGivers.byKey[producer.giverKey];
+    const traitOffer =
+      authoredTraitOffer !== undefined && producer !== undefined && giver !== undefined
+        ? Object.freeze({
+            acquisitionRoleLabel: 'Selection',
+            address: createTraitOfferAddress(address, 'selection'),
+            giver,
+            marker: input.markerDestinations.marker(createTraitOfferAddress(address, 'selection')),
+            offer: authoredTraitOffer,
+            rewardOwner: address,
+          })
+        : undefined;
     phases.push(
       Object.freeze({
         address,
@@ -479,6 +497,7 @@ function activeEncounterPhasesForOwner(
         customizable: domain.declaredEncounterKeys.length > 1,
         label: domain.slotKey,
         marker: input.markerDestinations.marker(address),
+        ...(traitOffer === undefined ? {} : { traitOffer }),
         resettable: domain.selectedEncounterKey !== domain.defaultEncounterKey,
         selectedEncounter: Object.freeze({
           key: selectedDefinition.key,
@@ -929,7 +948,12 @@ function hasRoomLocalCustomization(
 ): boolean {
   if (!detailsActive) return false;
   if (additionalSpawnAvailable) return true;
-  if (encounterPhases.some((phase) => phase.customizable || phase.marker.findingCount > 0)) {
+  if (
+    encounterPhases.some(
+      (phase) =>
+        phase.customizable || phase.marker.findingCount > 0 || phase.traitOffer !== undefined,
+    )
+  ) {
     return true;
   }
   switch (roomLocal.kind) {
@@ -1162,13 +1186,19 @@ export function assembleWorkspaceOccurrence(
           });
         })();
   const localDetailMarkers = Object.freeze([
-    ...encounterPhases.map((phase) => phase.marker),
+    ...encounterPhases.flatMap((phase) => [
+      phase.marker,
+      ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+    ]),
     ...workspaceLocalDetailMarkers(roomLocal),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
   const customizationMarkers = Object.freeze([
-    ...encounterPhases.map((phase) => phase.marker),
+    ...encounterPhases.flatMap((phase) => [
+      phase.marker,
+      ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+    ]),
     ...workspaceCustomizationMarkers(roomLocal),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),

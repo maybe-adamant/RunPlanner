@@ -140,7 +140,11 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 }
 
 export type TraitOfferOwnerAddress =
-  IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress | ShopOfferAddress;
+  | IncomingRewardAddress
+  | LocalRewardAddress
+  | RewardWheelOfferAddress
+  | ShopOfferAddress
+  | EncounterPhaseAddress;
 
 export interface TraitOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'traitOffer';

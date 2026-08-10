@@ -55,6 +55,7 @@ import {
   type ReachedTraitOfferEvaluation,
   type TraitHistoryState,
 } from '../traits';
+import type { AuthoredTraitOffer } from '../../authored-project/traits';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -183,7 +184,7 @@ function applyTraitOfferForAcquisition(
   branch: RewardBranchState,
   reward: {
     readonly origin: SemanticAddress;
-    readonly offer: CanonicalResolvedIncomingReward['offer'];
+    readonly offer?: CanonicalResolvedIncomingReward['offer'];
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
@@ -204,7 +205,7 @@ function applyTraitOfferForAcquisition(
     before,
     {
       ...(reward.traitContext ?? {}),
-      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer.rewardType === 'Devotion',
+      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
       resolvedProviderKey: authored.giverKey,
     },
     branch.traitEvaluations?.length ?? 0,
@@ -285,9 +286,38 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'rewardWheelOffer':
     case 'shopOffer':
       return origin;
+    case 'encounterPhase':
+      return origin;
     default:
       return undefined;
   }
+}
+
+/** Evaluates one selected encounter-local trait offer at its completion point. */
+export function processEncounterTraitOffer(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  origin: SemanticAddress,
+  offer: AuthoredTraitOffer,
+  sequence: number,
+  lifecyclePoint: string,
+  findings?: Map<string, FindingRegionEntry>,
+  findingChronology?: FindingChronology,
+): RewardBranchState {
+  return applyTraitOfferForAcquisition(
+    catalog,
+    branch,
+    {
+      origin,
+      traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
+      traitContext: Object.freeze({}),
+    },
+    'selection',
+    lifecyclePoint,
+    sequence,
+    findings,
+    findingChronology,
+  );
 }
 
 function addTraitFinding(
