@@ -210,6 +210,11 @@ function decodeTraitOffers(
           `${rolePath}.options.${key}.rarity`,
           `unsupported authored rarity for ${traitKey}`,
         );
+      if (giver.rarityPolicy.kind === 'fixed' && rarity !== giver.rarityPolicy.rarity)
+        failProjectDocument(
+          `${rolePath}.options.${key}.rarity`,
+          `${traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`,
+        );
       const targetTraitKey =
         option.targetTraitKey === undefined
           ? undefined

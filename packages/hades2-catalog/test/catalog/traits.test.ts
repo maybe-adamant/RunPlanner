@@ -129,6 +129,17 @@ const expectedPriorityTraitKeys: Readonly<Record<string, readonly string[]>> = O
 
 const sourceKeys = (keys: string): readonly string[] => keys.trim().split(/\s+/).sort();
 
+const expectedHammersWithoutRankII = sourceKeys(`
+  StaffDashAttackTrait StaffTripleShotTrait StaffOneWayAttackTrait
+  StaffRaiseDeadDoubleTrait DaggerSpecialConsecutiveTrait DaggerDashAttackTripleTrait
+  AxeMassiveThirdStrikeTrait AxeFreeSpinTrait AxeArmorTrait AxeSecondStageTrait
+  AxeDashAttackTrait AxeRallyFrenzyTrait AxeRallyFirstStrikeTrait
+  TorchExSpecialCountTrait TorchSpecialSpeedTrait TorchSpecialLineTrait TorchSplitAttackTrait
+  TorchEnhancedAttackTrait TorchDiscountExAttackTrait LobRushArmorTrait LobSpreadShotTrait
+  LobInOutSpecialExTrait LobGunAttackDoublerTrait SuitArmorTrait SuitDashAttackTrait
+  SuitSpecialStartUpTrait SuitSpecialBlockTrait
+`);
+
 const expectedElementTraitKeys = {
   Aether: sourceKeys(`
     SprintEchoBoon CharmCrowdBoon AllCloseBoon MaxHealthDamageBoon ManaBurstCountBoon
@@ -513,6 +524,16 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'ManaSpearBoon',
     'OlympianSpellCountBoon',
   ],
+  Icarus: [
+    'FocusAttackDamageTrait',
+    'FocusSpecialDamageTrait',
+    'OmegaExplodeBoon',
+    'CastHazardBoon',
+    'BreakInvincibleArmorBoon',
+    'BreakExplosiveArmorBoon',
+    'SupplyDropBoon',
+    'UpgradeHammerBoon',
+  ],
   WeaponUpgrade: [
     'StaffDoubleAttackTrait',
     'StaffLongAttackTrait',
@@ -801,6 +822,8 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["HermesWeaponBoon","HermesSpecialBoon","HermesCastDiscountBoon","SprintShieldBoon","SorcerySpeedBoon","DodgeChanceBoon","SlowProjectileBoon","MoneyMultiplierBoon","TimedKillBuffBoon","RestockBoon","LuckyBoon"]}]',
   LobAmmoMagnetismTrait: '[{"kind":"notEquippedTrait","traitKeys":["LobPulseAmmoTrait"]}]',
   LobPulseAmmoTrait: '[{"kind":"notEquippedTrait","traitKeys":["LobAmmoMagnetismTrait"]}]',
+  FocusAttackDamageTrait: '[{"kind":"ordinaryBoonSlotOccupied","slot":"Melee"}]',
+  FocusSpecialDamageTrait: '[{"kind":"ordinaryBoonSlotOccupied","slot":"Secondary"}]',
 };
 
 describe('trait offer catalog closure', () => {
@@ -814,15 +837,16 @@ describe('trait offer catalog closure', () => {
     baseElements: catalog.traitBaseElements,
   };
 
-  it('declares the complete Gate-A provider surfaces', () => {
+  it('declares the complete field-NPC provider surfaces', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(285);
+    expect(traits?.traits.values).toHaveLength(293);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Artemis', 9],
       ['Athena', 8],
+      ['Icarus', 8],
       ['Apollo', 22],
       ['Ares', 22],
       ['Demeter', 22],
@@ -866,6 +890,17 @@ describe('trait offer catalog closure', () => {
     expect(traits?.givers.byKey.Aphrodite?.rarityPolicy).toEqual({
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],
+    });
+    expect(traits?.givers.byKey.Icarus?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
+    expect(traits?.traits.byKey.FocusAttackDamageTrait?.offerRequirements).toEqual([
+      { kind: 'ordinaryBoonSlotOccupied', slot: 'Melee' },
+    ]);
+    expect(traits?.traits.byKey.FocusSpecialDamageTrait?.offerRequirements).toEqual([
+      { kind: 'ordinaryBoonSlotOccupied', slot: 'Secondary' },
+    ]);
+    expect(traits?.traits.byKey.UpgradeHammerBoon?.targetedAcquisition).toEqual({
+      kind: 'upgradeHammerToRank2',
+      target: 'upgradableHammer',
     });
 
     const allElemental = traits?.traits.byKey.AllElementalBoon;
@@ -1035,6 +1070,18 @@ describe('trait offer catalog closure', () => {
       expect(traits.traits.byKey[traitKey]?.hammerCompatibility?.aspectKeys).toEqual(aspectKeys);
     }
     expect(traits.traits.values.filter((trait) => trait.hammerCompatibility)).toHaveLength(92);
+    expect(
+      traits.traits.values.filter((trait) => trait.hammerCompatibility?.supportsRankII),
+    ).toHaveLength(65);
+    expect(
+      traits.traits.values
+        .filter(
+          (trait) =>
+            trait.hammerCompatibility !== undefined && !trait.hammerCompatibility.supportsRankII,
+        )
+        .map((trait) => trait.key)
+        .sort(),
+    ).toEqual(expectedHammersWithoutRankII);
     expect(
       traits.traits.values.filter(
         (trait) => trait.hammerCompatibility && trait.hammerCompatibility.aspectKeys.length === 4,
@@ -1523,7 +1570,9 @@ describe('trait offer catalog closure', () => {
         ),
       },
     };
-    expect(() => createCatalog(unsupportedFixedPolicy)).toThrow(/unknown rarity policy kind fixed/);
+    expect(() => createCatalog(unsupportedFixedPolicy)).toThrow(
+      /Hammer givers require no rarity authorship/,
+    );
   });
 
   it('keeps compiler-local deferred operands out of the normalized catalog', () => {

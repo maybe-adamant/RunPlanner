@@ -28,6 +28,8 @@ export interface EquippedTrait {
   readonly giverKey: string;
   readonly providerKind: TraitProviderKind;
   readonly rarity?: TraitRarity;
+  /** Hammers are rarityless player-facing traits with an independent I/II rank. */
+  readonly hammerRank?: 'RankI' | 'RankII';
   readonly sourceRole: string;
 }
 

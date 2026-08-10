@@ -34,13 +34,22 @@ export interface TraitReplacementTransition {
   readonly requiredRarity: TraitRarity;
 }
 
-export interface TraitTargetedAcquisitionTransition {
-  readonly kind: 'promoteGodTraitToHeroic';
+interface TraitTargetedAcquisitionTransitionBase {
   readonly sourceTraitKey: string;
   readonly targetTraitKey: string;
-  readonly oldRarity: TraitRarity;
-  readonly newRarity: 'Heroic';
 }
+
+export type TraitTargetedAcquisitionTransition =
+  | (TraitTargetedAcquisitionTransitionBase & {
+      readonly kind: 'promoteGodTraitToHeroic';
+      readonly oldRarity: TraitRarity;
+      readonly newRarity: 'Heroic';
+    })
+  | (TraitTargetedAcquisitionTransitionBase & {
+      readonly kind: 'upgradeHammerToRank2';
+      readonly oldHammerRank: 'RankI';
+      readonly newHammerRank: 'RankII';
+    });
 
 export interface TraitTargetedAcquisitionAssessment {
   readonly applies: boolean;
@@ -189,16 +198,27 @@ export function foldTraitOfferEvents(
       giverKey: giver.key,
       providerKind: giver.providerKind,
       ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+      ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
       sourceRole: event.acquisitionRole,
     });
     const targeted = event.targetedAcquisitionTransition;
     if (targeted !== undefined) {
       const target = equipped[targeted.targetTraitKey];
       if (target !== undefined) {
-        equipped[targeted.targetTraitKey] = Object.freeze({
-          ...target,
-          rarity: targeted.newRarity,
-        });
+        switch (targeted.kind) {
+          case 'promoteGodTraitToHeroic':
+            equipped[targeted.targetTraitKey] = Object.freeze({
+              ...target,
+              rarity: targeted.newRarity,
+            });
+            break;
+          case 'upgradeHammerToRank2':
+            equipped[targeted.targetTraitKey] = Object.freeze({
+              ...target,
+              hammerRank: targeted.newHammerRank,
+            });
+            break;
+        }
       }
     }
     const afterAcquisition = deriveFacts(catalog, equipped);
@@ -563,6 +583,10 @@ function checkRequirement(
       })
         ? undefined
         : { code: 'rarifiableTarget' };
+    case 'ordinaryBoonSlotOccupied':
+      return history.ordinaryBoonSlots[requirement.slot] !== undefined
+        ? undefined
+        : { code: 'missingPrerequisite', detail: requirement.slot };
     case 'offerContext':
       // Context requirements are exact predicates, not one-way blockers: a
       // declaration may require the context to be active or explicitly absent.
@@ -605,6 +629,22 @@ function superchargeableGodTraitTargetKeys(
   );
 }
 
+function upgradableHammerTargetKeys(
+  catalog: Catalog,
+  history: TraitHistoryState,
+): readonly string[] {
+  return Object.freeze(
+    catalog.traits.values.flatMap((declaration) => {
+      const equipped = history.equippedTraits[declaration.key];
+      return equipped !== undefined &&
+        declaration.hammerCompatibility?.supportsRankII === true &&
+        equipped.hammerRank === 'RankI'
+        ? [declaration.key]
+        : [];
+    }),
+  );
+}
+
 /** Exact pre-acquisition target domain for one declaration-owned transition. */
 export function targetedAcquisitionTargetKeys(
   catalog: Catalog,
@@ -616,6 +656,8 @@ export function targetedAcquisitionTargetKeys(
   switch (acquisition.kind) {
     case 'promoteGodTraitToHeroic':
       return superchargeableGodTraitTargetKeys(catalog, history);
+    case 'upgradeHammerToRank2':
+      return upgradableHammerTargetKeys(catalog, history);
   }
 }
 
@@ -643,7 +685,7 @@ export function assessTraitOption(
     trait.targetedAcquisition !== undefined &&
     targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0
   ) {
-    findings.push({ code: 'superchargeableTarget', traitKey });
+    findings.push({ code: 'targetedAcquisitionNoEligibleTarget', traitKey });
   }
   if (context.devotionNoDuo && rarity === 'Duo')
     findings.push({ code: 'offerContext', traitKey, detail: 'devotionNoDuo' });
@@ -809,16 +851,30 @@ export function assessSelectedTargetedAcquisition(
     });
   }
   const target = history.equippedTraits[option.targetTraitKey];
-  if (target?.rarity === undefined) {
-    throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
+  if (target === undefined) {
+    throw new Error(`targeted acquisition target ${option.targetTraitKey} is not equipped`);
   }
-  const transition: TraitTargetedAcquisitionTransition = Object.freeze({
-    kind: acquisition.kind,
-    sourceTraitKey: option.traitKey,
-    targetTraitKey: option.targetTraitKey,
-    oldRarity: target.rarity,
-    newRarity: 'Heroic',
-  });
+  const transition: TraitTargetedAcquisitionTransition =
+    acquisition.kind === 'promoteGodTraitToHeroic'
+      ? (() => {
+          if (target.rarity === undefined) {
+            throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
+          }
+          return Object.freeze({
+            kind: 'promoteGodTraitToHeroic' as const,
+            sourceTraitKey: option.traitKey,
+            targetTraitKey: option.targetTraitKey,
+            oldRarity: target.rarity,
+            newRarity: 'Heroic' as const,
+          });
+        })()
+      : Object.freeze({
+          kind: 'upgradeHammerToRank2' as const,
+          sourceTraitKey: option.traitKey,
+          targetTraitKey: option.targetTraitKey,
+          oldHammerRank: 'RankI' as const,
+          newHammerRank: 'RankII' as const,
+        });
   return Object.freeze({
     applies: true,
     legal: true,

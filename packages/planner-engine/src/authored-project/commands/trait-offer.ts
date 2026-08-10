@@ -36,6 +36,9 @@ function validateOffer(
     ) {
       failCommand(command, `unsupported authored rarity for ${option.traitKey}`);
     }
+    if (giver.rarityPolicy.kind === 'fixed' && option.rarity !== giver.rarityPolicy.rarity) {
+      failCommand(command, `${option.traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`);
+    }
     if (option.targetTraitKey !== undefined) {
       if (trait.targetedAcquisition === undefined)
         failCommand(command, `${option.traitKey} does not target another trait on acquisition`);

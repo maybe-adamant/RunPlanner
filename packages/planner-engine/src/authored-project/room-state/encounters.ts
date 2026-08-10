@@ -212,6 +212,11 @@ function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.rarity`,
         `unsupported authored rarity for ${traitKey}`,
       );
+    if (giver.rarityPolicy.kind === 'fixed' && rarity !== giver.rarityPolicy.rarity)
+      failProjectDocument(
+        `${path}.options.${optionKey}.rarity`,
+        `${traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`,
+      );
     const targetTraitKey = hasTarget
       ? expectString(option.targetTraitKey, `${path}.options.${optionKey}.targetTraitKey`)
       : undefined;

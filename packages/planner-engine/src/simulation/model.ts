@@ -45,7 +45,7 @@ export type TraitFindingCode =
   | 'elementThreshold'
   | 'rarityCount'
   | 'rarifiableTarget'
-  | 'superchargeableTarget'
+  | 'targetedAcquisitionNoEligibleTarget'
   | 'targetedAcquisitionTargetMissing'
   | 'targetedAcquisitionTargetUnavailable'
   | 'occupiedBoonSlot'

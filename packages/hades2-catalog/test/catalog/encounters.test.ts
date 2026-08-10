@@ -186,6 +186,7 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterDefinitions.byKey.IcarusCombatP).toMatchObject({
       countsEncounterDepth: true,
       npcPresentationKey: 'Icarus',
+      traitOfferProducer: { kind: 'traitOffer', giverKey: 'Icarus' },
     });
     expect(catalog.encounterDefinitions.byKey.AthenaCombatP).toMatchObject({
       countsEncounterDepth: true,

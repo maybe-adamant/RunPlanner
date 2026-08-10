@@ -311,4 +311,79 @@ describe('trait offer editor', () => {
     );
     application.dispose();
   });
+
+  it('does not render a rarity picker for fixed-Common Icarus offers', () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()][0];
+    const icarus = application.catalog.traitGivers.byKey.Icarus;
+    if (base === undefined || icarus === undefined) {
+      throw new Error('Icarus trait editor fixtures are missing');
+    }
+    const value: AuthoredTraitOffer = Object.freeze({
+      giverKey: 'Icarus',
+      options: Object.freeze(
+        [
+          Object.freeze({ traitKey: 'FocusAttackDamageTrait', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'FocusSpecialDamageTrait', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'OmegaExplodeBoon', rarity: 'Common' as const }),
+        ],
+      ) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    const interaction = Object.freeze({
+      ...base,
+      choices: Object.freeze(
+        icarus.traitKeys.map((traitKey) =>
+          Object.freeze({
+            label: application.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+            value: traitKey,
+          }),
+        ),
+      ),
+      giver: icarus,
+      load: () =>
+        Object.freeze([
+          Object.freeze({
+            value,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: () =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+        }),
+      value,
+    }) satisfies WorkspaceTraitOfferInteraction;
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+      </Provider>,
+    );
+
+    expect(screen.getByLabelText('option1 trait')).toBeTruthy();
+    expect(screen.queryByLabelText('option1 rarity')).toBeNull();
+    application.dispose();
+  });
 });
