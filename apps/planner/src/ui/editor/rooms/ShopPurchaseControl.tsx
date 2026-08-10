@@ -90,7 +90,6 @@ export function ShopPurchaseControl({
             onPointerDown={projection.activate}
             type="checkbox"
           />
-          Purchased
         </label>
       </td>
       <td aria-busy={projection.pending || undefined} className="shop-purchase-order">
