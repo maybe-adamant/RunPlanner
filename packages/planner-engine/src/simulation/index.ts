@@ -37,6 +37,8 @@ export {
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
+  type ProjectCandidateSessionEvaluation,
+  type ProjectCandidateSessionQuery,
   type ProjectCandidateSessionOptions,
   type IncomingRewardCandidateQuery,
   type LocalRewardCandidateQuery,
@@ -62,8 +64,13 @@ export {
   type HubTerminalTakeoverCandidateQuery,
   type TakeoverPrebossBatchCandidateQuery,
   type EvaluatedTraitOfferCandidate,
+  type EvaluatedTraitOfferFocusedOptionCandidate,
+  type TraitOfferCandidateFinding,
   type TraitOfferCandidateFindingCode,
   type TraitOfferCandidateQuery,
+  type TraitOfferFocusedOptionCandidateEvaluation,
+  type TraitOfferFocusedOptionCandidateQuery,
+  type TraitOfferFocusedOptionEvidence,
 } from './candidates';
 export {
   executeRoomLifecycle,
