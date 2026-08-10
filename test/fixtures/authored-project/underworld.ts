@@ -643,19 +643,15 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
     [combat06, 'GeneratedI_GoalReward'],
     [combat09, 'GeneratedI_GoalReward'],
   ] as const) {
-    next = applyProjectCommand(
-      next,
-      catalog,
-      {
-        kind: 'SelectEncounter',
-        phase: createEncounterPhaseAddress(
-          goldenIBiome,
-          { kind: 'occurrence', occurrenceId },
-          'Encounter',
-        ),
-        encounterKey,
-      },
-    );
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenIBiome,
+        { kind: 'occurrence', occurrenceId },
+        'Encounter',
+      ),
+      encounterKey,
+    });
   }
   return next;
 }

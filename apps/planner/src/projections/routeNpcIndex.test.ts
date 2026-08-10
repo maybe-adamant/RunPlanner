@@ -48,11 +48,7 @@ function selectEncounter(
   phase: typeof fArtemisPhase,
   encounterKey: string,
 ): ProjectDocument {
-  return applyProjectCommand(
-    project,
-    catalog,
-    { kind: 'SelectEncounter', phase, encounterKey },
-  );
+  return applyProjectCommand(project, catalog, { kind: 'SelectEncounter', phase, encounterKey });
 }
 
 function underworldRoute(
