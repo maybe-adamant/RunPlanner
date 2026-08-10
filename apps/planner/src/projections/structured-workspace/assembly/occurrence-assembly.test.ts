@@ -431,6 +431,12 @@ describe('structured workspace occurrence assembly', () => {
         'cage1',
       ),
     );
+    expect(fields.node.room.localDetailMarkers).toContain(
+      fields.node.room.roomLocal.cages[0]?.control.marker,
+    );
+    expect(fields.node.room.customizationMarkers).not.toContain(
+      fields.node.room.roomLocal.cages[0]?.control.marker,
+    );
     expect(
       fields.node.room.roomLocal.cages.every(
         (cage) => Object.isFrozen(cage) && Object.isFrozen(cage.control),
@@ -452,11 +458,15 @@ describe('structured workspace occurrence assembly', () => {
         wheel.storeKey,
       ]),
     ).toEqual([
-      ['wheel1', 'Reward wheel 1', true, 1, 1, 'RunProgress'],
-      ['wheel2', 'Reward wheel 2', false, 1, 1, 'RunProgress'],
+      ['wheel1', 'Combat 1 reward', true, 1, 1, 'RunProgress'],
+      ['wheel2', 'Combat 2 reward', false, 1, 1, 'RunProgress'],
     ]);
     expect(ship.node.room.roomLocal.wheels[0]?.address).toEqual(
       createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+    );
+    expect(ship.node.room.localDetailMarkers).toContain(ship.node.room.roomLocal.wheels[0]?.marker);
+    expect(ship.node.room.customizationMarkers).not.toContain(
+      ship.node.room.roomLocal.wheels[0]?.marker,
     );
     expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),

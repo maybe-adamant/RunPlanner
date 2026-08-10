@@ -775,6 +775,8 @@ export type WorkspaceRoomLocal =
 
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
+  /** Exact semantic owners nested beneath the Customize disclosure. */
+  readonly customizationMarkers: readonly WorkspaceMarker[];
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
@@ -788,7 +790,7 @@ export interface WorkspaceRoomSummary {
   readonly hasRoomLocalCustomization: boolean;
   readonly kind: RoomDeclaration['kind'];
   readonly label: string;
-  /** Exact local-owner markers contained by the Customize disclosure. */
+  /** All room-local owners used for inspector and rail containment routing. */
   readonly localDetailMarkers: readonly WorkspaceMarker[];
   readonly marker: WorkspaceMarker;
   readonly occurrenceId: OccurrenceId;

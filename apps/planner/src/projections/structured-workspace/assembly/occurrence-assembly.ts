@@ -60,6 +60,7 @@ import {
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
+  workspaceCustomizationMarkers,
   workspaceLocalDetailMarkers,
   workspaceOccurrenceOwnedMarkers,
 } from '../navigation/marker-ownership';
@@ -760,7 +761,7 @@ function roomLocalForOccurrence(
           declaration.key,
         );
         const active = phaseIndex < state.encounterCount;
-        const label = `Reward wheel ${wheelOrdinal + 1}`;
+        const label = `Combat ${wheelOrdinal + 1} reward`;
         wheelOrdinal += 1;
         const offers = declaration.offerKeys.map((offerKey, offerIndex) => {
           const offerAddress = createRewardWheelOfferAddress(
@@ -935,9 +936,8 @@ function hasRoomLocalCustomization(
     case 'ephyra':
       return roomLocal.sideRooms.kind === 'published';
     case 'fields':
-      return roomLocal.cages.some((cage) => cage.active);
     case 'ship':
-      return true;
+      return false;
     case 'shop':
       return false;
     case 'none':
@@ -1167,8 +1167,15 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
+  const customizationMarkers = Object.freeze([
+    ...encounterPhases.map((phase) => phase.marker),
+    ...workspaceCustomizationMarkers(roomLocal),
+    ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
+    ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
+  ]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
+    customizationMarkers,
     detailsActive: input.facts.detailsActive,
     encounterPhases,
     entered,

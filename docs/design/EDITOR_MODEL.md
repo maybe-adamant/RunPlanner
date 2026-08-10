@@ -550,8 +550,11 @@ multi-cage count. Each combat occurrence renders its three room-owned cage
 values in its complete projection product; the batch projection marks only the
 derived active prefix as participating. The editor renders that active prefix
 only, while retaining a dormant third authored value so it reappears unchanged
-when a later Fields result activates it. A non-combat target renders no cage
-editor, and deferred
+when a later Fields result activates it. Active cage rewards are mandatory room
+structure and render directly on the room surface for picked and unpicked
+targets; they never move behind the picked-room `Customize` boundary. Concrete
+encounter identities remain optional customization. A non-combat target renders
+no cage editor, and deferred
 `FieldsOptionalRewards` render no controls.
 
 An O ShipCombat occurrence renders one encounter-count selector and both
@@ -559,6 +562,13 @@ declaration-bounded reward wheels in its complete projection product. The
 selected two- or three-phase value marks `wheel2` dormant or active without
 deleting its retained state. The editor renders active wheels only, so a
 dormant wheel reappears unchanged when the third encounter phase is restored.
+Encounter count and active reward wheels are mandatory room structure and
+render on the main room surface, alongside ordinary room rewards. They do not
+move behind `Customize` merely because their authored leaves are room-local.
+Only concrete encounter identities and other optional room features use the
+Customize disclosure. Semantic focus opens that disclosure only for an owner
+actually nested within it; reward-wheel findings continue to focus the same
+room inspector without opening unrelated optional details.
 Each rendered wheel owns its Run/Meta store, active offer count, ordered
 maximum-capacity offers, and one picked active offer. The editor renders only
 offers marked active by that complete projection product. Reducing the active
