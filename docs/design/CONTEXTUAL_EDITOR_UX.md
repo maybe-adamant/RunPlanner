@@ -103,10 +103,19 @@ anchored to the left edge of the editor workspace. On desktop it overlays the
 route and general-navigation side while leaving the active inspector in place;
 at narrow widths it becomes a full-width sheet rather than a compressed column.
 It uses the workspace visual language and is descriptive only: no Save, Cancel,
-Apply, or authored controls appear.
+Apply, or authored controls appear. Its sticky single-line header uses the
+compact `State before {title}` form and keeps the close control visible while
+the state content scrolls.
 
-The sheet presents the projected god pool, elements, equipped traits, current
-counters, and collapsed-by-default counted reward bags. Bag disclosures use the
+The sheet presents only the catalog-labeled gods already in the ordinary pool;
+it does not list possible future sources, expose internal `XxxUpgrade` keys, or
+repeat the four-source-cap state. Equipped traits use fixed Attack, Special,
+Cast, Sprint, and Magick rows sourced from the engine's ordinary-slot ledger,
+followed by all other equipped traits. This presentation uses catalog labels
+and optional rarity only; it does not expose trait, giver, or slot keys. The
+sheet also presents elements, followed by a `More Info` section with collapsed
+`Counters` and `Reward Bags` disclosures. Counters use one key/value row each;
+individual reward bags retain their nested disclosures. Bag disclosures use the
 projected `Eligible now` and `Ineligible now` groups; they do not claim which
 upcoming door can be selected. Opening moves focus to the sheet close control,
 Escape and that control close it, and close restores focus to the launcher.

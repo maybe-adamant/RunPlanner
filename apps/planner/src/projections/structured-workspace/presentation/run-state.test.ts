@@ -31,7 +31,15 @@ describe('Run State presentation', () => {
             traitKey: 'ApolloWeaponBoon',
           },
         },
-        ordinaryBoonSlots: {},
+        ordinaryBoonSlots: {
+          Melee: {
+            giverKey: 'Apollo',
+            providerKind: 'olympian',
+            rarity: 'Rare',
+            sourceRole: 'main',
+            traitKey: 'ApolloWeaponBoon',
+          },
+        },
         elementCounts: { Aether: 0, Air: 0, Earth: 0, Fire: 0, Water: 0 },
         godBoonRarityCounts: {},
         upgradableTraitCount: 1,
@@ -77,13 +85,22 @@ describe('Run State presentation', () => {
       explanation: 'Requires biomeDepthCache at least 2.',
     });
     expect(state.godPool).toMatchObject({
-      capNarrowed: true,
-      effective: [{ key: 'ApolloUpgrade', label: 'Apollo' }],
+      inPool: [{ key: 'ApolloUpgrade', label: 'Apollo' }],
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',
-      upgradableCount: 1,
-      equipped: [{ traitKey: 'ApolloWeaponBoon', giverKey: 'Apollo', rarity: 'Rare' }],
+      coreSlots: [
+        {
+          label: 'Attack',
+          slotKey: 'Melee',
+          trait: { label: 'Nova Strike', traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+        },
+        { label: 'Special', slotKey: 'Secondary' },
+        { label: 'Cast', slotKey: 'Ranged' },
+        { label: 'Sprint', slotKey: 'Rush' },
+        { label: 'Magick', slotKey: 'Mana' },
+      ],
+      other: [],
     });
   });
 });

@@ -71,17 +71,19 @@ describe('Run State product loop', () => {
 
     events.length = 0;
     await view.user.click(launcher);
-    const sheet = screen.getByRole('region', { name: /Run state — before Decision 1/ });
-    expect(within(sheet).getByRole('heading', { name: 'God pool' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: 'Counted reward bags' })).toBeTruthy();
+    const sheet = screen.getByRole('region', { name: /State before Decision 1/ });
+    expect(within(sheet).getByRole('heading', { name: 'Gods in pool' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();
+    expect(within(sheet).getByText('Counters')).toBeTruthy();
+    expect(within(sheet).getByText('Reward Bags')).toBeTruthy();
     await view.user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
     expectNoEvaluationWork(events, 'F Run State open/close');
 
     await view.user.click(launcher);
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expectNoEvaluationWork(events, 'F Run State route reconciliation');
     application.dispose();
   });
@@ -107,10 +109,10 @@ describe('Run State product loop', () => {
 
     events.length = 0;
     await view.user.click(launcher);
-    const sheet = screen.getByRole('region', { name: 'Run state — before Hub' });
+    const sheet = screen.getByRole('region', { name: 'State before Hub' });
     expect(within(sheet).getByText(/Major Reward \(RunProgress\)/)).toBeTruthy();
     await view.user.keyboard('{Escape}');
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
     expectNoEvaluationWork(events, 'N Hub Run State open/close');
 
@@ -120,9 +122,9 @@ describe('Run State product loop', () => {
     expect(prebossLauncher.closest('.biome-rail')).toBeNull();
     events.length = 0;
     await view.user.click(prebossLauncher);
-    expect(screen.getByRole('region', { name: 'Run state — before Preboss' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'State before Preboss' })).toBeTruthy();
     await view.user.keyboard('{Escape}');
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(prebossLauncher);
     expectNoEvaluationWork(events, 'N Preboss Run State open/close');
     application.dispose();
