@@ -1168,6 +1168,51 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
+  it('keeps a supported Ship phase count authorable when its dormant rewards need repair', async () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
+      value: { rewardType: 'SpellDrop' },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat07),
+    );
+    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+
+    await view.user.click(count);
+    await waitFor(() => {
+      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
+      expect(count.options[1]?.disabled).toBe(false);
+      expect(count.options[1]?.dataset.candidateSupport).toBe('possible');
+    });
+
+    await view.user.selectOptions(count, '3');
+    await waitFor(() => expect(screen.getByLabelText('Combat 2 reward')).toBeTruthy());
+    expect(
+      occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'O',
+        occurrence.occurrenceId,
+      ),
+    ).toMatchObject({ kind: 'shipCombat', encounterCount: 3 });
+  });
+
   it('hides dormant Ship wheel offers while retaining their authored reward', async () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const offer = createRewardWheelOfferAddress(
