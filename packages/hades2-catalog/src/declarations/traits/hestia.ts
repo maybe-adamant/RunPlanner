@@ -11,7 +11,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -26,7 +26,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -41,7 +41,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -56,7 +56,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -71,7 +71,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -91,7 +91,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -110,7 +110,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -124,7 +124,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -138,7 +138,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -157,7 +157,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -176,7 +176,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -190,7 +190,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -208,7 +208,7 @@ export const hestiaTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -240,7 +240,7 @@ export const hestiaTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -268,7 +268,7 @@ export const hestiaTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -303,7 +303,7 @@ export const hestiaTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,

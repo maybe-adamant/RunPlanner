@@ -327,6 +327,19 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it.each([
+    ['Hermes', 'HermesWeaponBoon'],
+    ['Artemis', 'SupportingFireBoon'],
+    ['Athena', 'InvulnerabilityDashBoon'],
+  ])('keeps rarity-bearing %s traits out of core-god upgrade predicates', (giverKey, traitKey) => {
+    const history = historyWith(giverKey, traitKey, 'Common');
+
+    expect(history.godBoonRarityCounts).toEqual({ Common: 1 });
+    expect(history.upgradableTraitCount).toBe(0);
+    expect(findingCode('BoonGrowthBoon', history)).toBe('rarifiableTarget');
+    expect(findingCode('BoonDecayBoon', history)).toBe('targetedAcquisitionNoEligibleTarget');
+  });
+
   it('rejects Heroic-only histories because no supported next rarity exists', () => {
     const history = historyWith('Demeter', 'DemeterWeaponBoon', 'Heroic');
     expect(findingCode('BoonGrowthBoon', history)).toBe('rarifiableTarget');
@@ -619,7 +632,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(history.equippedTraits.PoseidonWeaponBoon?.rarity).toBe('Rare');
   });
 
-  it('promotes eligible Olympian and Hermes Commons once, preserving all declaration identity', () => {
+  it('promotes every eligible boon-rarity Common independently of core-god status', () => {
     const history = historyFrom([
       ...elementPairs.map(([traitKey, giverKey]) => ({
         giverKey,
@@ -627,13 +640,17 @@ describe('Proper Upbringing rarity lifecycle', () => {
         rarity: 'Common' as const,
       })),
       { giverKey: 'Hermes', traitKey: 'HermesWeaponBoon', rarity: 'Common' as const },
+      { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Common' as const },
+      { giverKey: 'Athena', traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
       { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
     ]);
     expect(history.equippedTraits.HeraWeaponBoon?.rarity).toBe('Rare');
     expect(history.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.SupportingFireBoon?.rarity).toBe('Rare');
+    expect(history.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe('Rare');
     expect(history.equippedTraits.ElementalRarityUpgradeBoon?.rarity).toBe('Common');
     expect(history.godBoonRarityCounts.Common ?? 0).toBe(0);
-    expect(history.godBoonRarityCounts.Rare).toBe(9);
+    expect(history.godBoonRarityCounts.Rare).toBe(11);
     expect(history.equippedTraits.HeraWeaponBoon).not.toBe(
       historyFrom([{ giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const }])
         .equippedTraits.HeraWeaponBoon,

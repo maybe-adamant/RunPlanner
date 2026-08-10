@@ -703,8 +703,8 @@ six weapon declarations, their 24 aspect declarations, 293 included trait
 declarations, and 14 giver declarations: the nine Olympians, Hermes,
 `WeaponUpgrade`, Artemis, Athena, and Icarus. Trait declarations are
 giver-neutral facts: fresh and equipped rarity domains, exact offer
-requirements, ordinary boon slot, element contributions, persistent-god
-classification, stacking and in-run rarify flags, rarity-count exclusion,
+requirements, ordinary boon slot, element contributions, boon-rarity and
+core-god classification, stacking and in-run rarify flags, rarity-count exclusion,
 targeted acquisition, and Hammer weapon/aspect compatibility. Giver
 declarations own ordered pool membership, normalized `priorityTraitKeys`, one
 of the closed `selectable`/`fixed`/`none` rarity policies, and the complete

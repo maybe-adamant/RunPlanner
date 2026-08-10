@@ -170,11 +170,12 @@ the rest of the modeled route. Do not add remaining-use state in this gate.
 | `BankBoon`                | Personal Loan    |
 | `RandomBaseDamageBoon`    | Reckless Abandon |
 
-All eight are persistent god traits and contribute one Water. Tipsy Shot keeps
-its exact cast-shape exclusions. `RandomBaseDamageBoon` is commented as
-Legendary in the source pool but is not a Legendary-rarity trait; the supported
-fresh domain remains Common/Rare/Epic. Dionysus does not enter the ordinary god
-pool and does not receive first-Olympian or replacement composition.
+All eight use boon rarity, are not core god traits, and contribute one Water.
+Tipsy Shot keeps its exact cast-shape exclusions. `RandomBaseDamageBoon` is
+commented as Legendary in the source pool but is not a Legendary-rarity trait;
+the supported fresh domain remains Common/Rare/Epic. Dionysus does not enter
+the core god pool and does not receive Pom levels, first-Olympian, or
+replacement composition.
 
 ## Locked Product Contract
 

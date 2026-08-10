@@ -1345,8 +1345,10 @@ Hammers, then derives ordinary slot occupancy, element totals, highest
 base-element count, god-boon rarity counts, and `upgradableTraitCount`.
 
 `upgradableTraitCount` is no longer an ordinary-source increment and is never
-used as a shadow eligibility model. Boon Growth and Boon Decay evaluate their
-distinct next-rarity predicates from the same equipped ledger. Route evaluation
+used as a shadow eligibility model. It and the distinct Boon Growth and Boon
+Decay predicates use the core-god declaration fact, matching the game's plain
+god-trait query; Hermes and field-NPC traits retain their independent
+boon-rarity facts but do not satisfy these upgrade predicates. Route evaluation
 seeds the branch's trait ledger across every validated biome and resets only
 the reward records declared as biome-local; dormant/unpicked/unpurchased
 offers do not enter it. A selected active encounter definition with a declared
@@ -1396,7 +1398,7 @@ deferred.
 The same replay folds the normalized Proper Upbringing rarity floor. After
 each reached acquisition or replacement it derives the post-selection element
 ledger, detects each modeled effect's transition against the immediately prior
-replay state, promotes eligible Common persistent god traits once on
+replay state, promotes eligible Common boon-rarity traits once on
 activation, and publishes `minimumScalableGodTraitRarity` only while the
 effect remains active. Promotions are immutable replacement values and are
 recomputed into slots, elements, rarity counts, upgradeability, and all later

@@ -11,7 +11,7 @@ export const hermesTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -25,7 +25,7 @@ export const hermesTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -39,7 +39,7 @@ export const hermesTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -53,7 +53,7 @@ export const hermesTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -67,7 +67,7 @@ export const hermesTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -81,7 +81,7 @@ export const hermesTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -95,7 +95,7 @@ export const hermesTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -115,7 +115,7 @@ export const hermesTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -129,7 +129,7 @@ export const hermesTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -143,7 +143,7 @@ export const hermesTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -185,7 +185,7 @@ export const hermesTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -202,7 +202,7 @@ export const hermesTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -233,7 +233,7 @@ export const hermesTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,

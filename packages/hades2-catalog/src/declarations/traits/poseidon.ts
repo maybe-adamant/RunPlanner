@@ -11,7 +11,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -26,7 +26,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -41,7 +41,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -56,7 +56,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -71,7 +71,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -86,7 +86,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -106,7 +106,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -120,7 +120,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -134,7 +134,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -153,7 +153,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -182,7 +182,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -196,7 +196,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -214,7 +214,7 @@ export const poseidonTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -251,7 +251,7 @@ export const poseidonTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -286,7 +286,7 @@ export const poseidonTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,

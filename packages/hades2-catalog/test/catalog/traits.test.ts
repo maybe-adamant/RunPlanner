@@ -996,6 +996,11 @@ describe('trait offer catalog closure', () => {
     // The declaration set is the source expected map for the normalized
     // classification. Compare every included trait, including the 92
     // no-rarity Hammers, rather than sampling only the ten infusion traits.
+    const expectedCoreGodTraitKeys = new Set(
+      declarations.traitCatalog.givers
+        .filter((giver) => giver.providerKind === 'olympian')
+        .flatMap((giver) => giver.traitKeys),
+    );
     for (const expected of declarations.traitCatalog.traits) {
       const actual = traits.traits.byKey[expected.key];
       expect(actual).toBeDefined();
@@ -1007,7 +1012,8 @@ describe('trait offer catalog closure', () => {
         offerRequirements: actual.offerRequirements,
         ordinaryBoonSlot: actual.ordinaryBoonSlot,
         elementContributions: actual.elementContributions,
-        isPersistentGodTrait: actual.isPersistentGodTrait,
+        usesBoonRarity: actual.usesBoonRarity,
+        isCoreGodTrait: actual.isCoreGodTrait,
         blockStacking: actual.blockStacking,
         blockInRunRarify: actual.blockInRunRarify,
         excludeFromRarityCount: actual.excludeFromRarityCount,
@@ -1027,7 +1033,8 @@ describe('trait offer catalog closure', () => {
         offerRequirements: expected.offerRequirements,
         ordinaryBoonSlot: expected.ordinaryBoonSlot,
         elementContributions: expected.elementContributions,
-        isPersistentGodTrait: expected.isPersistentGodTrait,
+        usesBoonRarity: expected.usesBoonRarity,
+        isCoreGodTrait: expectedCoreGodTraitKeys.has(expected.key),
         blockStacking: expected.blockStacking,
         blockInRunRarify: expected.blockInRunRarify,
         excludeFromRarityCount: expected.excludeFromRarityCount,

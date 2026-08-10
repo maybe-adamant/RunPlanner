@@ -11,7 +11,7 @@ export const heraTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -26,7 +26,7 @@ export const heraTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -41,7 +41,7 @@ export const heraTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -56,7 +56,7 @@ export const heraTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -71,7 +71,7 @@ export const heraTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -86,7 +86,7 @@ export const heraTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -105,7 +105,7 @@ export const heraTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -119,7 +119,7 @@ export const heraTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -142,7 +142,7 @@ export const heraTraits = [
     elementContributions: {
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -171,7 +171,7 @@ export const heraTraits = [
     elementContributions: {
       Air: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -192,7 +192,7 @@ export const heraTraits = [
     elementContributions: {
       Fire: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: true,
@@ -206,7 +206,7 @@ export const heraTraits = [
     elementContributions: {
       Earth: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -244,7 +244,7 @@ export const heraTraits = [
       },
     ],
     elementContributions: {},
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
@@ -290,7 +290,7 @@ export const heraTraits = [
       Fire: 1,
       Water: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -324,7 +324,7 @@ export const heraTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -366,7 +366,7 @@ export const heraTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
@@ -400,7 +400,7 @@ export const heraTraits = [
     elementContributions: {
       Aether: 1,
     },
-    isPersistentGodTrait: true,
+    usesBoonRarity: true,
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
