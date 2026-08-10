@@ -22,9 +22,7 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import {
-  simulateProject,
-} from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -749,11 +747,7 @@ describe('OccurrenceWorkbench', () => {
       'Encounter',
     );
     const initial = createGoldenFGHIProject();
-    const reset = applyProjectCommand(
-      initial,
-      catalog,
-      { kind: 'ResetEncounter', phase },
-    );
+    const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
     const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
     const finding = simulateProject(catalog, reset).findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
