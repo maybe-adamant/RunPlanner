@@ -664,19 +664,30 @@ describe('field NPC encounter requirements', () => {
     const storyOffer = authoredOccurrence(project, 'N', storyId).encounters.traitOffersByPhase
       ?.Encounter?.Story_Medea_01;
     expect(storyOffer).toMatchObject({ giverKey: 'Medea', deathDefianceConditionMet: false });
+    const editedOffer = {
+      ...storyOffer!,
+      options: [
+        { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' as const },
+        { traitKey: 'MoneyOnDeathCurse', rarity: 'Common' as const },
+        { traitKey: 'ManaOverTimeCurse', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      deathDefianceConditionMet: true,
+    };
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'traitOffer',
+        trait: createTraitOfferAddress(storyPhase, 'selection'),
+        value: editedOffer,
+      }),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
     const edited = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(storyPhase, 'selection'),
-      value: {
-        ...storyOffer!,
-        options: [
-          { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' },
-          { traitKey: 'MoneyOnDeathCurse', rarity: 'Common' },
-          { traitKey: 'ManaOverTimeCurse', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-        deathDefianceConditionMet: true,
-      },
+      value: editedOffer,
     });
     const { biome } = evaluatedSurfaceBiome(edited, 'N');
     if (!('rewards' in biome)) throw new Error('N reward evaluation is missing');
