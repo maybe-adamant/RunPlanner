@@ -23,15 +23,18 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
   createRepresentativeNOProject,
+  createRepresentativeNProject,
   createRepresentativeNOPProject,
   createCompleteFGProject,
   authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
+  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -256,6 +259,58 @@ describe('authored encounter occurrence commands', () => {
       active: true,
       selectedEncounterKey: 'P_Combat03_PreCombat01',
       selectedPossible: true,
+    });
+  });
+
+  it('retains a fixed Medea Story offer while unpicked, then republishes it on repick', () => {
+    const storyId = nOccurrenceId('story');
+    const storyPhase = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: storyId },
+      'Encounter',
+    );
+    const visitSlotKeys = ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'];
+    let authored = createRepresentativeNProject({
+      openSlotKeys: [...visitSlotKeys, 'combat10', 'combat09', 'combat01'],
+      visitSlotKeys,
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      selectedOptionKey: 'option2',
+    });
+
+    expect(occurrence(authored, 'N', storyId).encounters.traitOffersByPhase).toMatchObject({
+      Encounter: { Story_Medea_01: { selectedOptionKey: 'option2' } },
+    });
+
+    const withoutStory = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: visitSlotKeys.filter((slotKey) => slotKey !== 'story'),
+    });
+    expect(
+      encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+        withAssembly(withoutStory),
+        storyPhase,
+      ),
+    ).toBeUndefined();
+    expect(occurrence(withoutStory, 'N', storyId).encounters.traitOffersByPhase).toMatchObject({
+      Encounter: { Story_Medea_01: { selectedOptionKey: 'option2' } },
+    });
+
+    const repicked = applyProjectCommand(withoutStory, catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: visitSlotKeys,
+    });
+    expect(occurrence(repicked, 'N', storyId).encounters.traitOffersByPhase).toMatchObject({
+      Encounter: { Story_Medea_01: { selectedOptionKey: 'option2' } },
+    });
+    expect(
+      encounterPhaseSequenceStatusForProjectEvaluationAssembly(withAssembly(repicked), storyPhase),
+    ).toEqual({
+      kind: 'active',
     });
   });
 

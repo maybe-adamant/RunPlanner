@@ -1,6 +1,6 @@
 import type { CatalogCollection } from '../normalized/collection';
 
-export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'fieldNpc';
+export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc';
 
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';

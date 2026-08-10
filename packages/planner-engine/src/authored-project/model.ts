@@ -60,7 +60,9 @@ export type SideRoomGeneration = 'generated' | 'notGenerated';
 
 /**
  * Concrete authored encounter selections belong to the room instance that
- * owns the envelope slots. Fixed and empty slots deliberately have no entry.
+ * owns the envelope slots. Fixed slots have no selection entry; a fixed
+ * encounter may still own an authored trait offer when its declaration
+ * publishes one.
  */
 export interface RoomEncounterState {
   readonly encounterKeyByPhase: Readonly<Record<string, string>>;

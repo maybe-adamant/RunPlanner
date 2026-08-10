@@ -178,6 +178,16 @@ describe('encounter envelope catalog', () => {
       countsEncounterDepth: false,
       npcPresentationKey: 'Arachne',
     });
+    expect(catalog.encounterDefinitions.byKey.Story_Arachne_01).toMatchObject({
+      countsEncounterDepth: false,
+      npcPresentationKey: 'Arachne',
+      traitOfferProducer: { kind: 'traitOffer', giverKey: 'Arachne' },
+    });
+    expect(catalog.encounterDefinitions.byKey.Story_Medea_01).toMatchObject({
+      countsEncounterDepth: false,
+      npcPresentationKey: 'Medea',
+      traitOfferProducer: { kind: 'traitOffer', giverKey: 'Medea' },
+    });
     expect(catalog.encounterDefinitions.byKey.HeraclesCombatP).toMatchObject({
       countsEncounterDepth: true,
       npcPresentationKey: 'Heracles',

@@ -128,7 +128,7 @@ export const artemisTraits = [
 export const artemisGiver = {
   key: 'Artemis',
   label: 'Artemis',
-  providerKind: 'fieldNpc',
+  providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: [
     'SupportingFireBoon',

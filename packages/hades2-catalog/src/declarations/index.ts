@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.22.0-death-defiance-condition',
+  version: '0.23.0-story-arachne-medea',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

@@ -110,6 +110,8 @@ export const fEncounterDefinitions = [
     label: 'Arachne story',
     kind: 'story',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Arachne',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Arachne' },
   },
   {
     key: 'MiniBossTreant',

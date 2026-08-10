@@ -62,7 +62,7 @@ export interface RawTraitOfferDefaults {
 export interface RawTraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
-  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'fieldNpc';
+  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc';
   readonly traitKeys: readonly string[];
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:

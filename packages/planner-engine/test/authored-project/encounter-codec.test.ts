@@ -2,13 +2,20 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createCompleteFGProject,
   createRepresentativeNOPProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
   nOccurrenceIds,
   oOccurrenceIds,
   pOccurrenceId,
@@ -59,6 +66,25 @@ function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): 
   return value;
 }
 
+function arachneStoryProject(): ProjectDocument {
+  const occurrenceId = goldenFOccurrenceId(7, 1);
+  const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+  const phase = createTraitOfferAddress(
+    createEncounterPhaseAddress(goldenFBiome, { kind: 'occurrence', occurrenceId }, 'Encounter'),
+    'selection',
+  );
+  const story = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence,
+    gameName: 'F_Story01',
+  });
+  return applyProjectCommand(story, catalog, {
+    kind: 'ReplaceTraitSelection',
+    trait: phase,
+    selectedOptionKey: 'option2',
+  });
+}
+
 describe('schema-18 occurrence-owned additional-exit persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
@@ -66,6 +92,37 @@ describe('schema-18 occurrence-owned additional-exit persistence', () => {
 
     expect(decoded).toEqual(project);
     expect(decoded.schemaVersion).toBe(18);
+  });
+
+  it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
+    const project = arachneStoryProject();
+    const decoded = decodeProjectDocument(encoded(project), catalog);
+    const fixed = decoded.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((plan) => plan.biomeKey === 'F')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(7, 1),
+      );
+
+    expect(fixed?.encounters.traitOffersByPhase?.Encounter?.Story_Arachne_01).toMatchObject({
+      giverKey: 'Arachne',
+      selectedOptionKey: 'option2',
+    });
+    expect(decoded).toEqual(project);
+  });
+
+  it('rejects a fixed Story offer moved to a different encounter owner', () => {
+    const document = encoded(arachneStoryProject());
+    const state = occurrence(document, 'F', goldenFOccurrenceId(7, 1));
+    const encounters = state.encounters as JsonRecord;
+    const offersByPhase = encounters.traitOffersByPhase as JsonRecord;
+    const encounterOffers = offersByPhase.Encounter as JsonRecord;
+    encounterOffers.Story_Medea_01 = encounterOffers.Story_Arachne_01;
+    delete encounterOffers.Story_Arachne_01;
+
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(
+      'is not available from this encounter set',
+    );
   });
 
   it('rejects schema 12 rather than inventing an encounter migration', () => {
