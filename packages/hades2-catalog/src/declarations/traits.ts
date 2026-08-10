@@ -25,7 +25,11 @@ export interface RawTraitDeclaration {
   readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
   readonly selfExclusion?: string;
-  readonly hammerCompatibility?: TraitDeclaration['hammerCompatibility'];
+  /** Raw Hammer declarations receive the source-closed Rank II matrix below. */
+  readonly hammerCompatibility?: Omit<
+    NonNullable<TraitDeclaration['hammerCompatibility']>,
+    'supportsRankII'
+  >;
 }
 
 export interface RawWeaponDeclaration {
@@ -63,6 +67,7 @@ export interface RawTraitGiverDeclaration {
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:
     | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
+    | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
   readonly defaultOffer?: RawTraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, RawTraitOfferDefaults>>;

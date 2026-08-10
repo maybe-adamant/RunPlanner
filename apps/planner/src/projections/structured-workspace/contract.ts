@@ -1053,6 +1053,7 @@ export interface WorkspaceRunStateSource {
 export interface WorkspaceRunStateTrait {
   readonly label: string;
   readonly rarity?: TraitRarity;
+  readonly hammerRank?: 'RankI' | 'RankII';
   readonly traitKey: string;
 }
 

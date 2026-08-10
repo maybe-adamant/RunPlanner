@@ -3,9 +3,9 @@
 ## Status
 
 **Active delivery plan.** Planning baseline: `3088b80`. Gate A (Artemis)
-landed in `36fcfa4`; Gate B (Athena) landed in `1fc84dc`. Gate C is the
-Bridal Glow exact-one targeted-acquisition correction. Icarus follows only
-after that shared contract is complete.
+landed in `36fcfa4`; Gate B (Athena) landed in `1fc84dc`; Gate C (Bridal Glow)
+landed in `3dcbf44`. Gate D (Icarus) is active on the completed shared
+exact-one targeted-acquisition contract.
 
 This is an isolated delivery document. Do not link it from the stable design or
 progress indexes while implementation is active. At closure, absorb durable

@@ -196,7 +196,7 @@ describe('BiomeWorkspace', () => {
     expect(within(traitSection).getByText('Nova Flourish · Common')).toBeTruthy();
     expect(within(traitSection).getByText('Solar Ring · Common')).toBeTruthy();
     expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
-    expect(within(traitSection).getByText('Wicked Thrasher')).toBeTruthy();
+    expect(within(traitSection).getByText('Wicked Thrasher · Rank I')).toBeTruthy();
     expect(within(traitSection).getAllByText('None')).toHaveLength(2);
     expect(traitSection.textContent).not.toContain('ApolloWeaponBoon');
     expect(traitSection.textContent).not.toContain('WeaponUpgrade');

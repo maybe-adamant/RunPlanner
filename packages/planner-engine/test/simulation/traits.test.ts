@@ -329,20 +329,22 @@ describe('Boon Growth and Boon Decay target predicates', () => {
   it('rejects Heroic-only histories because no supported next rarity exists', () => {
     const history = historyWith('Demeter', 'DemeterWeaponBoon', 'Heroic');
     expect(findingCode('BoonGrowthBoon', history)).toBe('rarifiableTarget');
-    expect(findingCode('BoonDecayBoon', history)).toBe('superchargeableTarget');
+    expect(findingCode('BoonDecayBoon', history)).toBe('targetedAcquisitionNoEligibleTarget');
   });
 
   it('rejects Hammer-only histories because Hammers are not ranked god traits', () => {
     const history = historyWith('WeaponUpgrade', 'StaffDoubleAttackTrait');
     expect(findingCode('BoonGrowthBoon', history)).toBe('rarifiableTarget');
-    expect(findingCode('BoonDecayBoon', history)).toBe('superchargeableTarget');
+    expect(findingCode('BoonDecayBoon', history)).toBe('targetedAcquisitionNoEligibleTarget');
   });
 
   it('rejects a BlockInRunRarify target for Growth and a BlockStacking target for Decay', () => {
     const rarifyBlocked = historyWith('Demeter', 'ElementalDamageCapBoon', 'Rare');
     const stackingBlocked = historyWith('Demeter', 'BoonGrowthBoon', 'Common');
     expect(findingCode('BoonGrowthBoon', rarifyBlocked)).toBe('rarifiableTarget');
-    expect(findingCode('BoonDecayBoon', stackingBlocked)).toBe('superchargeableTarget');
+    expect(findingCode('BoonDecayBoon', stackingBlocked)).toBe(
+      'targetedAcquisitionNoEligibleTarget',
+    );
   });
 
   it('accepts ordinary ranked god traits with a concrete next rarity', () => {
@@ -419,6 +421,76 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(recorded.history.equippedTraits.ApolloCastBoon?.rarity).toBe('Heroic');
     expect(recorded.history.equippedTraits.DemeterWeaponBoon?.rarity).toBe('Common');
     expect(recorded.history.equippedTraits.BoonDecayBoon?.rarity).toBe('Common');
+  });
+});
+
+describe('Latest Model Hammer Rank II target predicate', () => {
+  const latestModelOffer: AuthoredTraitOffer = Object.freeze({
+    giverKey: 'Icarus',
+    options: Object.freeze([
+      { traitKey: 'UpgradeHammerBoon', rarity: 'Common' },
+      { traitKey: 'OmegaExplodeBoon', rarity: 'Common' },
+      { traitKey: 'CastHazardBoon', rarity: 'Common' },
+    ]) as AuthoredTraitOffer['options'],
+    selectedOptionKey: 'option1',
+  });
+
+  it('uses only source-declared equipped Rank-I Hammers and folds exactly one to Rank II', () => {
+    const before = historyFrom([
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' },
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDashAttackTrait' },
+    ]);
+    expect(before.equippedTraits.StaffDoubleAttackTrait?.hammerRank).toBe('RankI');
+    expect(before.equippedTraits.StaffDashAttackTrait?.hammerRank).toBe('RankI');
+    expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', before)).toEqual([
+      'StaffDoubleAttackTrait',
+    ]);
+
+    const withTarget = Object.freeze({
+      ...latestModelOffer,
+      options: Object.freeze([
+        { ...latestModelOffer.options[0], targetTraitKey: 'StaffDoubleAttackTrait' },
+        latestModelOffer.options[1],
+        latestModelOffer.options[2],
+      ]) as AuthoredTraitOffer['options'],
+    });
+    const assessment = assessSelectedTargetedAcquisition(catalog, withTarget, before);
+    expect(assessment).toMatchObject({
+      applies: true,
+      legal: true,
+      transition: {
+        kind: 'upgradeHammerToRank2',
+        sourceTraitKey: 'UpgradeHammerBoon',
+        targetTraitKey: 'StaffDoubleAttackTrait',
+        oldHammerRank: 'RankI',
+        newHammerRank: 'RankII',
+      },
+    });
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'icarus-latest-model',
+      withTarget,
+      before,
+      Object.freeze({}),
+      before.events.length,
+    );
+    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+    expect(recorded.history.equippedTraits.StaffDoubleAttackTrait?.hammerRank).toBe('RankII');
+    expect(recorded.history.equippedTraits.StaffDashAttackTrait?.hammerRank).toBe('RankI');
+    expect(recorded.history.equippedTraits.UpgradeHammerBoon).toMatchObject({
+      giverKey: 'Icarus',
+      rarity: 'Common',
+    });
+    expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', recorded.history)).toEqual([]);
+  });
+
+  it('keeps Latest Model unavailable without an eligible Rank-I Hammer', () => {
+    const history = historyWith('WeaponUpgrade', 'StaffDashAttackTrait');
+    expect(assessTraitOption(catalog, 'UpgradeHammerBoon', history).findings).toContainEqual({
+      code: 'targetedAcquisitionNoEligibleTarget',
+      traitKey: 'UpgradeHammerBoon',
+    });
   });
 });
 

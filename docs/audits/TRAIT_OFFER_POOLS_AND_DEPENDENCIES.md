@@ -126,8 +126,9 @@ is the next in-run rarity after `Epic` and therefore belongs to equipped-trait
 state and rarity-derived eligibility. `WeaponUpgrade` declares
 `ForceCommon = true`, but the planner does not model that as a player rarity:
 Hammer options have no rarity domain and require no authored rarity choice.
-The source Hammer Legendary levels are deferred Icarus progression, outside
-the player rarity vocabulary.
+Their source Legendary levels are separately retained as the exact Rank-II
+capability used by Icarus's Latest Model; this remains Hammer state rather than
+player-facing boon rarity.
 
 ## Giver Pool Inventory
 
@@ -267,6 +268,48 @@ provider path.
 `FocusAttackDamageTrait`, `FocusSpecialDamageTrait`, `OmegaExplodeBoon`,
 `CastHazardBoon`, `BreakInvincibleArmorBoon`, `BreakExplosiveArmorBoon`,
 `SupplyDropBoon`, `UpgradeHammerBoon`.
+
+`NPCData_Icarus.lua` exposes these eight choices in that order. Its live
+benefit-choice entries set their offered rarity to Common, so the supported
+normal-run surface is fixed Common rather than a selectable field-NPC rarity
+roll. The individual `TraitData_Icarus.lua` declarations retain their wider
+Common/Rare/Epic/Heroic progression levels, but those do not make a fresh
+Icarus choice Rare or Epic. Heroic is not fresh here.
+
+| Trait                      | Player-facing label | Positive offer fact                 | Element / classification           |
+| -------------------------- | ------------------- | ----------------------------------- | ---------------------------------- |
+| `FocusAttackDamageTrait`   | Ingenious Strike    | occupied Attack (`Melee`) slot      | no element; retained non-god trait |
+| `FocusSpecialDamageTrait`  | Ingenious Flourish  | occupied Special (`Secondary`) slot | no element; retained non-god trait |
+| `OmegaExplodeBoon`         | Explosive Intent    | none                                | no element; retained non-god trait |
+| `CastHazardBoon`           | Hazard Boom         | none                                | no element; retained non-god trait |
+| `BreakInvincibleArmorBoon` | Protective Coating  | none                                | no element; retained non-god trait |
+| `BreakExplosiveArmorBoon`  | Volatile Coating    | none                                | no element; retained non-god trait |
+| `SupplyDropBoon`           | Supply Chain        | none                                | no element; retained non-god trait |
+| `UpgradeHammerBoon`        | Latest Model        | one eligible equipped Rank-I Hammer | no element; retained non-god trait |
+
+The source additionally excludes Ingenious Strike or Flourish when the matching
+Hephaestus trait's extracted `UnmodifiedCooldown` is not greater than 2.
+Cooldowns and levels are not a modeled input, so the supported predicate keeps
+only the exact occupied-slot fact. Both Coating traits can later be consumed by
+combat, Supply Chain has a delivery effect, and other Icarus combat effects
+remain outside the planner's trait-acquisition scope; selecting each source
+still leaves that source in the equipped trait ledger.
+
+`UpgradeHammerBoon` first equips its own source trait and then uses
+`UpgradeHammers` to select exactly one equipped Hammer with a source Legendary
+level and no remaining uses. Of the 92 declared Hammers, 65 have that Rank-II
+capability. The 27 without a Legendary level are: `StaffDashAttackTrait`,
+`StaffTripleShotTrait`, `StaffOneWayAttackTrait`, `StaffRaiseDeadDoubleTrait`,
+`DaggerSpecialConsecutiveTrait`, `DaggerDashAttackTripleTrait`,
+`AxeMassiveThirdStrikeTrait`, `AxeFreeSpinTrait`, `AxeArmorTrait`,
+`AxeSecondStageTrait`, `AxeDashAttackTrait`, `AxeRallyFrenzyTrait`,
+`AxeRallyFirstStrikeTrait`, `TorchExSpecialCountTrait`, `TorchSpecialSpeedTrait`,
+`TorchSpecialLineTrait`, `TorchSplitAttackTrait`, `TorchEnhancedAttackTrait`,
+`TorchDiscountExAttackTrait`, `LobRushArmorTrait`, `LobSpreadShotTrait`,
+`LobInOutSpecialExTrait`, `LobGunAttackDoublerTrait`, `SuitArmorTrait`,
+`SuitDashAttackTrait`, `SuitSpecialStartUpTrait`, and `SuitSpecialBlockTrait`.
+The persistent `RemainingUses` exception has no member in this supported
+Rank-II subset.
 
 #### Athena
 
@@ -828,8 +871,9 @@ the preceding rows come from `TraitRequirements`.
 2. Hermes is a separate 13-trait giver. Only `LuckyBoon` and
    `TimeStopLastStandBoon` have positive equipped-trait prerequisites.
 3. Artemis and Athena each add one direct spell-state dependency outside the
-   central `TraitRequirements` table. Icarus has no positive equipped-trait
-   prerequisite.
+   central `TraitRequirements` table. Icarus's Ingenious Strike and Ingenious
+   Flourish require the occupied Attack and Special slots respectively; Latest
+   Model requires one exact eligible Hammer target.
 4. The audited Story-room pools contain no positive equipped-trait
    prerequisites, but several entries are effect-backed choices rather than
    simple persistent inventory additions.
@@ -886,18 +930,18 @@ The first trait-offer slice consumes the following additional declaration
 facts from the installed scripts. These are normalized in the catalog without
 moving any lifecycle, authored-state, or simulation policy into declarations:
 
-| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                           |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                     |
-| fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer declarations use a `none` rarity domain (source `ForceCommon` is not player rarity, and source Hammer Legendary levels are deferred Icarus data) |
-| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                     |
-| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                               |
-| god-trait/rareness flags      | inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits are not persistent god traits                                                                                                                                  |
-| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                      |
-| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements               |
-| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`       |
-| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                          |
-| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                            |
+| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                                                               |
+| fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer declarations use a `none` rarity domain (source `ForceCommon` is not player rarity, while the exact 65-member source Legendary capability is normalized separately as Hammer Rank-II data) |
+| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                                                               |
+| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                                                                         |
+| god-trait/rareness flags      | inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits are not persistent god traits                                                                                                                                                                            |
+| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                                                                |
+| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                         |
+| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                 |
+| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                    |
+| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
 
 The Gate-A/Gate-B normalized inventory has six weapons, 24 weapon/aspect pairs,
 285 unique included trait declarations, 228 Olympian/Hermes/field-NPC

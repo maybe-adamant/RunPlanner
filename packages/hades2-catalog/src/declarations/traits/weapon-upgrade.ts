@@ -1,7 +1,7 @@
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
 
 /** Source-closed trait declarations. Giver membership remains separate below. */
-export const weaponUpgradeTraits = [
+const baseWeaponUpgradeTraits = [
   {
     key: 'StaffDoubleAttackTrait',
     label: 'Wicked Thrasher',
@@ -1496,6 +1496,88 @@ export const weaponUpgradeTraits = [
     },
   },
 ] as const satisfies readonly RawTraitDeclaration[];
+
+/**
+ * Exact source inventory with a Legendary level. These 65 of the 92 modeled
+ * Hammers are the only player-facing Rank II targets for Icarus' Latest Model.
+ */
+const rankIIHammerTraitKeys: ReadonlySet<string> = new Set([
+  'StaffDoubleAttackTrait',
+  'StaffLongAttackTrait',
+  'StaffJumpSpecialTrait',
+  'StaffExAoETrait',
+  'StaffAttackRecoveryTrait',
+  'StaffFastSpecialTrait',
+  'StaffExHealTrait',
+  'StaffSecondStageTrait',
+  'StaffPowershotTrait',
+  'StaffRaiseDeadBigTrait',
+  'StaffLoneShadeRespawnTrait',
+  'StaffLoneShadeRallyTrait',
+  'DaggerBlinkAoETrait',
+  'DaggerSpecialJumpTrait',
+  'DaggerSpecialLineTrait',
+  'DaggerRapidAttackTrait',
+  'DaggerBackstabTrait',
+  'DaggerSpecialReturnTrait',
+  'DaggerSpecialFanTrait',
+  'DaggerAttackFinisherTrait',
+  'DaggerFinalHitTrait',
+  'DaggerChargeStageSkipTrait',
+  'DaggerTripleBuffTrait',
+  'DaggerTripleRepeatWomboTrait',
+  'DaggerTripleHomingSpecialTrait',
+  'AxeSpinSpeedTrait',
+  'AxeChargedSpecialTrait',
+  'AxeAttackRecoveryTrait',
+  'AxeThirdStrikeTrait',
+  'AxeRangedWhirlwindTrait',
+  'AxeBlockEmpowerTrait',
+  'AxeSturdyTrait',
+  'TorchAttackSpeedTrait',
+  'TorchSpecialImpactTrait',
+  'TorchMoveSpeedTrait',
+  'TorchLongevityTrait',
+  'TorchOrbitPointTrait',
+  'TorchSpinAttackTrait',
+  'TorchAutofireSprintTrait',
+  'LobAmmoTrait',
+  'LobAmmoMagnetismTrait',
+  'LobSpecialSpeedTrait',
+  'LobSturdySpecialTrait',
+  'LobOneSideTrait',
+  'LobStraightShotTrait',
+  'LobPulseAmmoTrait',
+  'LobPulseAmmoCollectTrait',
+  'LobGrowthTrait',
+  'LobGunOverheatTrait',
+  'LobGunBounceTrait',
+  'LobGunSpecialBounceTrait',
+  'LobGunAttackRangeTrait',
+  'SuitAttackSpeedTrait',
+  'SuitAttackSizeTrait',
+  'SuitAttackRangeTrait',
+  'SuitFullChargeTrait',
+  'SuitSpecialJumpTrait',
+  'SuitSpecialAutoTrait',
+  'SuitSpecialDiscountTrait',
+  'SuitSpecialConsecutiveHitTrait',
+  'SuitComboForwardRocketTrait',
+  'SuitComboBlockBuffTrait',
+  'SuitComboDoubleSpecialTrait',
+  'SuitComboDashAttackTrait',
+  'SuitPowershotTrait',
+] as const);
+
+export const weaponUpgradeTraits = baseWeaponUpgradeTraits.map((trait) =>
+  Object.freeze({
+    ...trait,
+    hammerCompatibility: Object.freeze({
+      ...trait.hammerCompatibility,
+      supportsRankII: rankIIHammerTraitKeys.has(trait.key),
+    }),
+  }),
+) satisfies readonly RawTraitDeclaration[];
 
 export const weaponUpgradeGiver = {
   key: 'WeaponUpgrade',

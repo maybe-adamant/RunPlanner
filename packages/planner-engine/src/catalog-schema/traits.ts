@@ -37,7 +37,15 @@ export interface PromoteGodTraitToHeroicAcquisition {
   readonly target: 'superchargeableGodTrait';
 }
 
-export type TargetedTraitAcquisition = PromoteGodTraitToHeroicAcquisition;
+/** Player-facing Rank II progression for one eligible equipped Daedalus Hammer. */
+export interface UpgradeHammerToRank2Acquisition {
+  readonly kind: 'upgradeHammerToRank2';
+  readonly target: 'upgradableHammer';
+}
+
+export type TargetedTraitAcquisition =
+  | PromoteGodTraitToHeroicAcquisition
+  | UpgradeHammerToRank2Acquisition;
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
@@ -75,6 +83,11 @@ export type TraitRequirementExpression =
       readonly kind: 'rarifiableTrait';
     }
   | {
+      /** Requires an occupied ordinary boon slot without naming its possible traits. */
+      readonly kind: 'ordinaryBoonSlotOccupied';
+      readonly slot: TraitOrdinaryBoonSlot;
+    }
+  | {
       readonly kind: 'offerContext';
       readonly context: TraitOfferContextKey;
       readonly required: boolean;
@@ -96,6 +109,8 @@ export interface AspectDeclaration {
 export interface HammerCompatibility {
   readonly weaponKey: string;
   readonly aspectKeys: readonly string[];
+  /** Source-declared internal Legendary level, presented by the planner as Rank II. */
+  readonly supportsRankII: boolean;
 }
 
 export interface TraitDeclaration {
@@ -132,6 +147,7 @@ export interface TraitOfferDefaults {
 /** The rarity controls a giver exposes while authoring a fresh offer. */
 export type TraitGiverRarityPolicy =
   | { readonly kind: 'none' }
+  | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
   | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] };
 
 export interface TraitGiverDeclaration {

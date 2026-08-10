@@ -50,6 +50,7 @@ type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
   readonly traitKeys: readonly string[];
+  readonly slot: unknown;
   readonly element: unknown;
   readonly minimum: number;
   readonly maximum?: number;
@@ -134,6 +135,11 @@ function normalizeRequirement(
       });
     case 'rarifiableTrait':
       return Object.freeze({ kind: requirement.kind });
+    case 'ordinaryBoonSlotOccupied':
+      return Object.freeze({
+        kind: 'ordinaryBoonSlotOccupied',
+        slot: closedValue(requirement.slot, ORDINARY_SLOTS, `${path}.slot`),
+      });
     case 'offerContext':
       return Object.freeze({
         kind: 'offerContext',
@@ -315,7 +321,9 @@ function normalizeTraits(
       const hammerDeclaration = requireObject(
         trait.hammerCompatibility,
         `${path}.hammerCompatibility`,
-      ) as unknown as NonNullable<RawTraitDeclaration['hammerCompatibility']>;
+      ) as unknown as NonNullable<RawTraitDeclaration['hammerCompatibility']> & {
+        readonly supportsRankII?: unknown;
+      };
       const weaponKey = requireNonEmpty(
         hammerDeclaration.weaponKey,
         `${path}.hammerCompatibility.weaponKey`,
@@ -339,7 +347,14 @@ function normalizeTraits(
         if (aspect.weaponKey !== weaponKey)
           fail(`${path}.hammerCompatibility.aspectKeys`, `cross-weapon aspect ${aspectKey}`);
       }
-      hammerCompatibility = Object.freeze({ weaponKey, aspectKeys });
+      hammerCompatibility = Object.freeze({
+        weaponKey,
+        aspectKeys,
+        supportsRankII: requireBoolean(
+          hammerDeclaration.supportsRankII,
+          `${path}.hammerCompatibility.supportsRankII`,
+        ),
+      });
     }
     const offerRequirements = Object.freeze(
       (
@@ -416,15 +431,25 @@ function normalizeTraits(
       };
       const kind = closedValue(
         acquisition.kind,
-        ['promoteGodTraitToHeroic'] as const,
+        ['promoteGodTraitToHeroic', 'upgradeHammerToRank2'] as const,
         `${acquisitionPath}.kind`,
       );
-      const target = closedValue(
-        acquisition.target,
-        ['superchargeableGodTrait'] as const,
-        `${acquisitionPath}.target`,
-      );
-      targetedAcquisition = Object.freeze({ kind, target });
+      const target =
+        kind === 'promoteGodTraitToHeroic'
+          ? closedValue(
+              acquisition.target,
+              ['superchargeableGodTrait'] as const,
+              `${acquisitionPath}.target`,
+            )
+          : closedValue(
+              acquisition.target,
+              ['upgradableHammer'] as const,
+              `${acquisitionPath}.target`,
+            );
+      targetedAcquisition =
+        kind === 'promoteGodTraitToHeroic'
+          ? Object.freeze({ kind, target: target as 'superchargeableGodTrait' })
+          : Object.freeze({ kind, target: target as 'upgradableHammer' });
     }
     // Requirement operands are checked against the complete trait collection after it exists.
     const rarityDomain = Object.freeze(
@@ -543,6 +568,15 @@ function normalizeGivers(
     const normalizedRarityPolicy =
       rarityPolicy.kind === 'none'
         ? ({ kind: 'none' } as const)
+        : rarityPolicy.kind === 'fixed'
+          ? ({
+              kind: 'fixed' as const,
+              rarity: closedValue(
+                rarityPolicy.rarity,
+                ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const,
+                `${path}.rarityPolicy.rarity`,
+              ),
+            } as const)
         : rarityPolicy.kind === 'selectable'
           ? (() => {
               const rarities = freezeUniqueStrings(
@@ -570,10 +604,10 @@ function normalizeGivers(
     const frozenRarityPolicy = Object.freeze(normalizedRarityPolicy);
     if (providerKind === 'hammer' && frozenRarityPolicy.kind !== 'none')
       fail(`${path}.rarityPolicy`, 'Hammer givers require no rarity authorship');
-    if (providerKind !== 'hammer' && frozenRarityPolicy.kind !== 'selectable')
+    if (providerKind !== 'hammer' && frozenRarityPolicy.kind === 'none')
       fail(
         `${path}.rarityPolicy`,
-        'Olympian, Hermes, and field NPC givers require selectable rarity authorship',
+        'Olympian, Hermes, and field NPC givers require a rarity policy',
       );
     if (providerKind === 'olympian') {
       if (priorityTraitKeys.length !== 5)
@@ -620,6 +654,12 @@ function normalizeGivers(
           fail(
             `${defaultsPath}.options[${optionIndex}].rarity`,
             `${option.rarity} is outside the giver rarity domain`,
+          );
+        }
+        if (frozenRarityPolicy.kind === 'fixed' && option.rarity !== frozenRarityPolicy.rarity) {
+          fail(
+            `${defaultsPath}.options[${optionIndex}].rarity`,
+            `${option.rarity ?? 'missing'} is outside the fixed giver rarity`,
           );
         }
       });

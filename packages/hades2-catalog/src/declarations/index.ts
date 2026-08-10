@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.20.0-targeted-trait-acquisition',
+  version: '0.21.0-icarus-latest-model',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

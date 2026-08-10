@@ -55,6 +55,7 @@ export const oEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
     npcPresentationKey: 'Icarus',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Icarus' },
     requirements: {
       kind: 'all',
       requirements: [

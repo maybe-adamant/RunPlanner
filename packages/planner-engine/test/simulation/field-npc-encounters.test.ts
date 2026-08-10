@@ -4,6 +4,7 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createHubDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -28,6 +29,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
+  targetedAcquisitionTargetKeys,
   traitCandidates,
   type CanonicalAuthoredRoom,
   type EncounterHistoryEntry,
@@ -94,6 +96,49 @@ function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encou
     phase: owner,
     encounterKey,
   });
+}
+
+function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
+  const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
+  });
+  return authorLegalTraitOffers(project);
+}
+
+function reachedPOutdoorIcarusFixture(): {
+  readonly project: ProjectDocument;
+  readonly occurrenceId: OccurrenceId;
+  readonly encounter: ReturnType<typeof phase>;
+} {
+  const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
+  let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
+    gameName: 'P_Combat07',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(pBiome, occurrenceId),
+    gameName: 'P_Combat11',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat09', 5, 2)),
+    gameName: 'P_Combat13',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat13', 6, 2)),
+    gameName: 'P_Combat09',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(pBiome, occurrenceId),
+    value: { rewardType: 'TalentDrop' },
+  });
+  return Object.freeze({ project, occurrenceId, encounter: phase(pBiome, occurrenceId, 'Combat') });
 }
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
@@ -855,13 +900,21 @@ describe('field NPC encounter requirements', () => {
     expect(support(project, combat1)?.candidateEncounterKeys).toContain('IcarusCombatO');
 
     project = select(project, combat1, 'IcarusCombatO');
+    expect(
+      authoredOccurrence(project, 'O', occurrenceId).encounters.traitOffersByPhase?.Combat1
+        ?.IcarusCombatO,
+    ).toMatchObject({
+      giverKey: 'Icarus',
+      selectedOptionKey: 'option1',
+    });
     expect(support(project, combat2)?.candidateEncounterKeys).not.toContain('IcarusCombatO');
     expect(authoredOccurrence(project, 'O', occurrenceId).state).toEqual(originalState);
 
     const ordinary = evaluatedSurfaceBiome(withThreePhases, 'O').biome.history.rooms.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
     );
-    const selected = evaluatedSurfaceBiome(project, 'O').biome.history.rooms.find(
+    const selectedEvaluation = evaluatedSurfaceBiome(project, 'O').biome;
+    const selected = selectedEvaluation.history.rooms.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
     );
     if (
@@ -887,6 +940,18 @@ describe('field NPC encounter requirements', () => {
         ordinary.preparation.ledgers.counters.biomeEncounterDepth +
         1,
     );
+    if (!('rewards' in selectedEvaluation)) {
+      throw new Error('O Icarus fixture lost its reward evaluation');
+    }
+    const traitAddress = createTraitOfferAddress(combat1, 'selection');
+    expect(
+      selectedEvaluation.rewards.selectedTraitOffers.find(
+        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
+      ),
+    ).toMatchObject({ acquisitionRole: 'selection', reached: true });
+    expect(
+      selectedEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.FocusAttackDamageTrait,
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'fieldNpc', rarity: 'Common' });
   });
 
   it('uses declaration-owned P Indoor and Outdoor tags for Heracles, Icarus, and Athena', () => {
@@ -926,6 +991,108 @@ describe('field NPC encounter requirements', () => {
     });
 
     expect(support(outdoor, outdoorCombat)?.candidateEncounterKeys).toContain('IcarusCombatP');
+  });
+
+  it('retains a dormant P Icarus offer and acquires its selected trait when reached again', () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    let project = fixture.project;
+    expect(support(project, fixture.encounter)?.candidateEncounterKeys).toContain('IcarusCombatP');
+    project = select(project, fixture.encounter, 'IcarusCombatP');
+
+    const traitAddress = createTraitOfferAddress(fixture.encounter, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: traitAddress,
+      selectedOptionKey: 'option3',
+    });
+    project = select(project, fixture.encounter, 'GeneratedP');
+    expect(
+      authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
+        ?.IcarusCombatP?.selectedOptionKey,
+    ).toBe('option3');
+    project = select(project, fixture.encounter, 'IcarusCombatP');
+    expect(
+      authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
+        ?.IcarusCombatP?.selectedOptionKey,
+    ).toBe('option3');
+
+    const pEvaluation = evaluatedSurfaceBiome(project, 'P').biome;
+    if (!('rewards' in pEvaluation)) {
+      throw new Error('P Icarus fixture lost its reward evaluation');
+    }
+    expect(
+      pEvaluation.rewards.selectedTraitOffers.find(
+        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
+      ),
+    ).toMatchObject({ acquisitionRole: 'selection', reached: true });
+    expect(
+      pEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.OmegaExplodeBoon,
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'fieldNpc', rarity: 'Common' });
+  });
+
+  it('applies reached Latest Model through the encounter-owned offer and exhausts its exact Hammer target', () => {
+    const occurrenceId = oOccurrenceIds.combat01;
+    const icarusPhase = phase(oBiome, occurrenceId, 'Combat1');
+    const traitAddress = createTraitOfferAddress(icarusPhase, 'selection');
+    let project = surfaceProjectWithEnteredRankIHammer();
+
+    expect(support(project, icarusPhase)?.candidateEncounterKeys).toContain('IcarusCombatO');
+    project = select(project, icarusPhase, 'IcarusCombatO');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: traitAddress,
+      value: {
+        giverKey: 'Icarus',
+        options: [
+          {
+            traitKey: 'UpgradeHammerBoon',
+            rarity: 'Common',
+            targetTraitKey: 'StaffDoubleAttackTrait',
+          },
+          { traitKey: 'OmegaExplodeBoon', rarity: 'Common' },
+          { traitKey: 'CastHazardBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+
+    const evaluation = evaluatedSurfaceBiome(project, 'O').biome;
+    if (!('rewards' in evaluation) || evaluation.validity !== 'valid') {
+      throw new Error('O Latest Model fixture did not produce a valid reward evaluation');
+    }
+    const trace = evaluation.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
+    );
+    expect(trace?.branches[0]?.targetedAcquisition).toMatchObject({
+      applies: true,
+      legal: true,
+      sourceTraitKey: 'UpgradeHammerBoon',
+      targetTraitKey: 'StaffDoubleAttackTrait',
+      transition: {
+        kind: 'upgradeHammerToRank2',
+        sourceTraitKey: 'UpgradeHammerBoon',
+        targetTraitKey: 'StaffDoubleAttackTrait',
+        oldHammerRank: 'RankI',
+        newHammerRank: 'RankII',
+      },
+    });
+    const history = evaluation.rewards.branches[0]?.traitHistory;
+    if (history === undefined) throw new Error('O Latest Model trait history is missing');
+    expect(history.equippedTraits.UpgradeHammerBoon).toMatchObject({
+      giverKey: 'Icarus',
+      providerKind: 'fieldNpc',
+      rarity: 'Common',
+    });
+    expect(history.equippedTraits.StaffDoubleAttackTrait).toMatchObject({
+      giverKey: 'WeaponUpgrade',
+      hammerRank: 'RankII',
+    });
+    expect(
+      Object.values(history.equippedTraits)
+        .filter(({ traitKey }) => catalog.traits.byKey[traitKey]?.hammerCompatibility !== undefined)
+        .map(({ traitKey, hammerRank }) => [traitKey, hammerRank]),
+    ).toEqual([['StaffDoubleAttackTrait', 'RankII']]);
+    expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', history)).toEqual([]);
   });
 
   it('uses the shared encounter-owned trait path for Athena across P phase dormancy and completion', () => {

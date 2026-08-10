@@ -103,7 +103,7 @@ function TraitOfferOptionEditor({
   const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
   const rarityPicker = domain?.rarityPickerFor(option.traitKey) ?? emptyRarityPicker;
   const targetPicker = domain?.targetPicker ?? emptyTargetPicker;
-  const hasRarity = interaction.giver.providerKind !== 'hammer';
+  const hasRarity = interaction.giver.rarityPolicy.kind === 'selectable';
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
   const selectTrait = (traitKey: string): void => {
     const preferred = domain?.preferredOptionFor(traitKey);

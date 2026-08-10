@@ -109,6 +109,7 @@ function traitPresentation(
   return Object.freeze({
     label: trait?.label ?? equipped.traitKey,
     ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
+    ...(equipped.hammerRank === undefined ? {} : { hammerRank: equipped.hammerRank }),
     traitKey: equipped.traitKey,
   });
 }

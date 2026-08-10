@@ -30,6 +30,13 @@ describe('Run State presentation', () => {
             sourceRole: 'main',
             traitKey: 'ApolloWeaponBoon',
           },
+          StaffDoubleAttackTrait: {
+            giverKey: 'WeaponUpgrade',
+            hammerRank: 'RankII',
+            providerKind: 'hammer',
+            sourceRole: 'main',
+            traitKey: 'StaffDoubleAttackTrait',
+          },
         },
         ordinaryBoonSlots: {
           Melee: {
@@ -100,7 +107,13 @@ describe('Run State presentation', () => {
         { label: 'Sprint', slotKey: 'Rush' },
         { label: 'Magick', slotKey: 'Mana' },
       ],
-      other: [],
+      other: [
+        {
+          hammerRank: 'RankII',
+          label: 'Wicked Thrasher',
+          traitKey: 'StaffDoubleAttackTrait',
+        },
+      ],
     });
   });
 });

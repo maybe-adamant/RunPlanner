@@ -179,9 +179,9 @@ const findingCopy = {
     title: 'No rarifiable trait is equipped',
     description: 'This offer requires an equipped trait that can be rarified.',
   },
-  superchargeableTarget: {
-    title: 'No superchargeable trait is equipped',
-    description: 'This offer requires an equipped trait that can be supercharged.',
+  targetedAcquisitionNoEligibleTarget: {
+    title: 'No eligible acquisition target is equipped',
+    description: 'This offer requires an equipped trait that can receive its acquisition effect.',
   },
   targetedAcquisitionTargetMissing: {
     title: 'Acquisition target is missing',
