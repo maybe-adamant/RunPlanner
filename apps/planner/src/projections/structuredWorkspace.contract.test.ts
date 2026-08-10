@@ -107,6 +107,18 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
         return undefined;
       }
     },
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly: (
+      ...args: Parameters<typeof actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly>
+    ) => {
+      try {
+        return actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly(...args);
+      } catch {
+        // The forged overlay intentionally has no exact preparation status.
+        // Preserve the production provenance guard while this test-only seam
+        // lets the projection reject the malformed evaluator overlay first.
+        return undefined;
+      }
+    },
   };
 });
 

@@ -342,9 +342,13 @@ declaration-owned set is evaluated at the exact active phase address from the
 prepared checkpoint. A prior valid phase contributes its recorded exact
 definition to the same-room preparation view but no started counter effect;
 previous-room requirements still exclude the current room. A retained invalid
-selection remains an addressable correction target, while a structurally
-dormant slot has no candidate contact at all. React receives the bound result
-and does not inspect set membership or requirements.
+selection remains an addressable correction target. Later structurally active
+phases retain their authored controls but publish no candidate support or
+findings until that blocker is repaired, because no exact predecessor
+checkpoint exists for them. A valid suffix-terminating phase instead publishes
+the exact later slots as dormant, and those slots have no candidate contact at
+all. React receives the bound result and does not inspect set membership or
+requirements.
 
 These candidates replay the smallest declared semantic region that contains
 their effect. No current candidate family owns a full addressed-biome replay.

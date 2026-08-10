@@ -20,6 +20,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
   type CanonicalAuthoredRoom,
@@ -56,6 +57,13 @@ function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Enco
 
 function support(project: ProjectDocument, owner: ReturnType<typeof phase>) {
   return encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    owner,
+  );
+}
+
+function sequenceStatus(project: ProjectDocument, owner: ReturnType<typeof phase>) {
+  return encounterPhaseSequenceStatusForProjectEvaluationAssembly(
     simulateProjectAssembly(catalog, project),
     owner,
   );
@@ -114,15 +122,17 @@ function fieldsCages(project: ProjectDocument, occurrenceId: OccurrenceId) {
   return state.cages;
 }
 
-function replaceCollectionEntry<T extends { readonly key: string }>(
+function replaceCollectionEntry<T>(
   collection: CatalogCollection<T>,
   replacement: T,
+  keyFor: (entry: T) => string,
 ): CatalogCollection<T> {
+  const replacementKey = keyFor(replacement);
   return Object.freeze({
     values: Object.freeze(
-      collection.values.map((entry) => (entry.key === replacement.key ? replacement : entry)),
+      collection.values.map((entry) => (keyFor(entry) === replacementKey ? replacement : entry)),
     ),
-    byKey: Object.freeze({ ...collection.byKey, [replacement.key]: replacement }),
+    byKey: Object.freeze({ ...collection.byKey, [replacementKey]: replacement }),
   });
 }
 
@@ -171,6 +181,7 @@ function historyProbeCatalog(): Catalog {
   const encounterDefinitions = replaceCollectionEntry(
     catalog.encounterDefinitions,
     selfRecordGuard,
+    ({ key }) => key,
   );
   return Object.freeze({
     ...catalog,
@@ -181,7 +192,7 @@ function historyProbeCatalog(): Catalog {
         [previousRoomProbe.key]: previousRoomProbe,
       }),
     }),
-    encounterSets: replaceCollectionEntry(catalog.encounterSets, probeSet),
+    encounterSets: replaceCollectionEntry(catalog.encounterSets, probeSet, ({ key }) => key),
   });
 }
 
@@ -211,6 +222,105 @@ function oCombatPreparationFixture(): {
     throw new Error('O fixture lost its first combat preparation');
   }
   return Object.freeze({ preparation, room });
+}
+
+function pCombatPreparationFixture(): {
+  readonly preparation: HistoryStateView;
+  readonly room: CanonicalAuthoredRoom;
+} {
+  const result = simulateProject(catalog, createRepresentativeNOPQProject());
+  const biome = result.routes
+    .find((route) => route.routeKey === 'Surface')
+    ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+  if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+    throw new Error('P did not produce a complete history fixture');
+  }
+  const room = biome.snapshot.decisions
+    .filter(
+      (
+        decision,
+      ): decision is Extract<(typeof biome.snapshot.decisions)[number], { kind: 'batch' }> =>
+        decision.kind === 'batch',
+    )
+    .flatMap((decision) => decision.targets.map((target) => target.room))
+    .find((candidate) => candidate.gameName === 'P_Combat02');
+  if (room === undefined) throw new Error('P fixture lost Combat 02');
+  const preparation = biome.history.rooms.find(
+    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+  )?.preparation;
+  if (preparation === undefined) throw new Error('P fixture lost Combat 02 preparation');
+  return Object.freeze({ preparation, room });
+}
+
+function fixedTerminatorCatalog(room: CanonicalAuthoredRoom, failActivation: boolean): Catalog {
+  const declaration = catalog.rooms.byKey[room.gameName];
+  if (declaration === undefined) throw new Error(`${room.gameName} declaration is missing`);
+  const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
+  if (envelope === undefined) throw new Error(`${room.gameName} envelope is missing`);
+  const fixedDeclaration = Object.freeze({
+    ...declaration,
+    encounterSlotBindings: Object.freeze(
+      declaration.encounterSlotBindings.map((binding) =>
+        binding.slotKey === 'Intro'
+          ? Object.freeze({
+              encounterDefinitionKey: 'HeraclesCombatP',
+              kind: 'fixed' as const,
+              slotKey: binding.slotKey,
+            })
+          : binding,
+      ),
+    ),
+  });
+  const fixedEnvelope = Object.freeze({
+    ...envelope,
+    slots: Object.freeze(
+      envelope.slots.map((slot) =>
+        slot.key !== 'Intro' || !failActivation
+          ? slot
+          : Object.freeze({
+              ...slot,
+              activationRequirement: Object.freeze({
+                axis: 'biomeEncounterDepth' as const,
+                kind: 'counterRange' as const,
+                range: Object.freeze({ max: -1 }),
+              }),
+            }),
+      ),
+    ),
+  });
+  return Object.freeze({
+    ...catalog,
+    encounterEnvelopes: replaceCollectionEntry(
+      catalog.encounterEnvelopes,
+      fixedEnvelope,
+      ({ key }) => key,
+    ),
+    rooms: replaceCollectionEntry(catalog.rooms, fixedDeclaration, ({ gameName }) => gameName),
+  });
+}
+
+function fixedTerminatingIntro(room: CanonicalAuthoredRoom): CanonicalAuthoredRoom {
+  const definition = catalog.encounterDefinitions.byKey.HeraclesCombatP;
+  const intro = room.encounterPhases[0];
+  if (definition === undefined || intro === undefined) {
+    throw new Error('P fixed-terminator fixture is missing Heracles or Intro');
+  }
+  return Object.freeze({
+    ...room,
+    encounterPhases: Object.freeze([
+      Object.freeze({
+        ...intro,
+        countsEncounterDepth: definition.countsEncounterDepth,
+        encounterKey: definition.key,
+        kind: definition.kind,
+        label: definition.label,
+        ...(definition.sequenceEffect === undefined
+          ? {}
+          : { sequenceEffect: definition.sequenceEffect }),
+      }),
+      ...room.encounterPhases.slice(1),
+    ]),
+  });
 }
 
 function predecessorWindow(preparation: HistoryStateView, count: number): HistoryStateView {
@@ -586,11 +696,45 @@ describe('field NPC encounter requirements', () => {
     expect(support(outdoor, outdoorCombat)?.candidateEncounterKeys).toContain('IcarusCombatP');
   });
 
+  it('marks only a valid fixed terminating Intro as a dormant Combat suffix', () => {
+    const { preparation, room } = pCombatPreparationFixture();
+    const fixedRoom = fixedTerminatingIntro(room);
+
+    const valid = prepareRoomEncounterPhases(
+      fixedTerminatorCatalog(room, false),
+      fixedRoom,
+      preparation,
+    );
+    expect(valid.statuses.map(({ origin, status }) => [origin.phaseKey, status.kind])).toEqual([
+      ['Intro', 'active'],
+      ['Combat', 'dormantSuffix'],
+    ]);
+    expect(valid.candidates.find(({ origin }) => origin.phaseKey === 'Combat')).toBeUndefined();
+
+    const failed = prepareRoomEncounterPhases(
+      fixedTerminatorCatalog(room, true),
+      fixedRoom,
+      preparation,
+    );
+    expect(failed.statuses.map(({ origin, status }) => [origin.phaseKey, status.kind])).toEqual([
+      ['Intro', 'active'],
+      ['Combat', 'active'],
+    ]);
+    expect(failed.candidates.find(({ origin }) => origin.phaseKey === 'Combat')).toBeUndefined();
+    expect(failed.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'encounterSlotActivationUnavailable',
+        origin: expect.objectContaining({ phaseKey: 'Intro' }),
+      }),
+    );
+  });
+
   it('trims P Combat only for valid Heracles, retains its selection dormant, and restores it exactly', () => {
     const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
     const room = createOccurrenceAddress(pBiome, occurrenceId);
     const intro = phase(pBiome, occurrenceId, 'Intro');
     const combat = phase(pBiome, occurrenceId, 'Combat');
+    const unavailable = phase(pBiome, pOccurrenceId('P_Combat06', 2, 2), 'Combat');
     let project = createRepresentativeNOPQProject();
     const originalState = authoredOccurrence(project, 'P', occurrenceId).state;
     const retainedCombat = authoredOccurrence(project, 'P', occurrenceId).encounters
@@ -603,9 +747,13 @@ describe('field NPC encounter requirements', () => {
       selectedEncounterKey: 'GeneratedP',
       selectedPossible: true,
     });
+    expect(sequenceStatus(project, combat)).toEqual({ kind: 'active' });
+    expect(sequenceStatus(project, unavailable)).toBeUndefined();
 
     project = select(project, intro, 'HeraclesCombatP');
     expect(support(project, combat)).toBeUndefined();
+    expect(sequenceStatus(project, intro)).toEqual({ kind: 'active' });
+    expect(sequenceStatus(project, combat)).toEqual({ kind: 'dormantSuffix' });
     expect(authoredOccurrence(project, 'P', occurrenceId).state).toEqual(originalState);
     expect(
       authoredOccurrence(project, 'P', occurrenceId).encounters.encounterKeyByPhase,
@@ -639,11 +787,12 @@ describe('field NPC encounter requirements', () => {
       selectedEncounterKey: 'HeraclesCombatP',
       selectedPossible: false,
     });
-    expect(support(project, combat)).toMatchObject({
-      active: true,
-      selectedEncounterKey: retainedCombat,
-      selectedPossible: true,
-    });
+    expect(support(project, combat)).toBeUndefined();
+    expect(sequenceStatus(project, intro)).toEqual({ kind: 'active' });
+    expect(sequenceStatus(project, combat)).toEqual({ kind: 'active' });
+    expect(evaluatedSurfaceBiome(project, 'P').biome.findings).not.toContainEqual(
+      expect.objectContaining({ origin: combat }),
+    );
 
     project = select(project, intro, 'GeneratedP_PreCombat');
     expect(support(project, combat)).toMatchObject({

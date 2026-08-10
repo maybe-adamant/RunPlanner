@@ -221,8 +221,8 @@ describe('planner history interaction', () => {
     expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
     const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
     await waitFor(() => expect(customize.open).toBe(true));
-    const encounter = screen.getByLabelText('Encounter') as HTMLSelectElement;
-    expect(encounter.value).toBe('ArtemisCombatF');
+    const encounter = screen.getByRole('button', { name: 'Encounter' });
+    expect(encounter.textContent).toContain('Artemis combat');
     await waitFor(() => expect(document.activeElement).toBe(encounter));
   });
 

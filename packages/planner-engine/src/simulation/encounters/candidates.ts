@@ -16,6 +16,7 @@ import {
   prepareRoomEncounterPhases,
   type EncounterAuthoringRoom,
   type EncounterPhaseCandidateSupport,
+  type EncounterPhaseSequenceStatus,
   type PreparedEncounterPhases,
 } from './preparation';
 import type { ResolvedEncounterPhase } from './model';
@@ -24,6 +25,7 @@ import type { Catalog } from '../../catalog-schema';
 /** Private capability from the exact simulation assembly. */
 export interface EncounterCandidateArtifacts {
   readonly at: (origin: EncounterPhaseAddress) => EncounterPhaseCandidateSupport | undefined;
+  readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /**
    * A top-level room's exact preparation checkpoint, retained for structural
    * authoring candidates that materialize a different encounter envelope.
@@ -97,6 +99,7 @@ export function evaluateEncounterCandidatesInternal(
   boundary?: EncounterCandidateBoundary,
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
+  const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
@@ -127,6 +130,11 @@ export function evaluateEncounterCandidatesInternal(
       if (entries.has(key)) throw new Error(`duplicate encounter candidate ${key}`);
       entries.set(key, support);
     }
+    for (const entry of prepared.statuses) {
+      const key = semanticAddressKey(entry.origin);
+      if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
+      statuses.set(key, entry.status);
+    }
     findings.push(...prepared.findings);
     prepared.findings.forEach((finding) => {
       // Finding regions are produced here while the exact room-preparation
@@ -139,10 +147,12 @@ export function evaluateEncounterCandidatesInternal(
     });
   }
   const privateEntries = new Map(entries);
+  const privateStatuses = new Map(statuses);
   const privateRooms = new Map(roomsByOwner);
   return Object.freeze({
     artifacts: Object.freeze({
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
+      statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),

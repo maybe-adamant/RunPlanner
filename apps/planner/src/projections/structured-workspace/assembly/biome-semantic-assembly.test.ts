@@ -15,7 +15,11 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -38,10 +42,9 @@ function biomeSource(
   routeKey = 'Surface',
   biomeKey = 'N',
 ): WorkspaceBiomeSource {
-  const source = createWorkspaceProjectSourceIndex(
-    catalog,
-    project,
-    simulateProject(catalog, project),
+  const assembly = simulateProjectAssembly(catalog, project);
+  const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);

@@ -474,6 +474,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
+      encounterPhaseStatus: source.encounterPhaseStatus,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
       ...(request.fieldsBatchFacts === undefined
         ? {}

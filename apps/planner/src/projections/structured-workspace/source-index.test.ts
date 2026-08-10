@@ -15,7 +15,12 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  simulateProject,
+  simulateProjectAssembly,
+  type ProjectEvaluation,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -25,6 +30,7 @@ import {
   goldenFStartId,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
+import { noEncounterPhaseStatusCoverage } from '@planner-test/support/structured-workspace/encounter-phase-status';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
 function biomeSource(
@@ -37,6 +43,25 @@ function biomeSource(
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
+}
+
+function sourceIndexForExactProject(project: Parameters<typeof simulateProject>[1]) {
+  const assembly = simulateProjectAssembly(catalog, project);
+  return createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+  );
+}
+
+function sourceIndexForForgedEvaluation(
+  project: Parameters<typeof simulateProject>[1],
+  evaluation: ProjectEvaluation,
+) {
+  return createWorkspaceProjectSourceIndex(
+    catalog,
+    project,
+    evaluation,
+    noEncounterPhaseStatusCoverage,
+  );
 }
 
 function reversedFDecisionSerialization() {
@@ -115,7 +140,7 @@ describe('structured workspace source index', () => {
     expect(evaluatedBiome.materializedPrefix.frontier.additional).toHaveLength(1);
 
     const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, fixture.project, evaluation),
+      sourceIndexForExactProject(fixture.project),
       fixture.biome.routeKey,
       fixture.biome.biomeKey,
     );
@@ -160,9 +185,9 @@ describe('structured workspace source index', () => {
         ),
       ),
     });
-    expect(() =>
-      createWorkspaceProjectSourceIndex(catalog, fixture.project, malformedEvaluation),
-    ).toThrow(/evaluated additional continuations without an authored batch decision/);
+    expect(() => sourceIndexForForgedEvaluation(fixture.project, malformedEvaluation)).toThrow(
+      /evaluated additional continuations without an authored batch decision/,
+    );
   });
 
   it('keeps complete authored suffixes while limiting evaluator overlays to the assessed prefix', () => {
@@ -205,11 +230,7 @@ describe('structured workspace source index', () => {
     ) {
       throw new Error('source-index F fixture did not complete-block');
     }
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, project, evaluation),
-      'Underworld',
-      'F',
-    );
+    const source = biomeSource(sourceIndexForExactProject(project), 'Underworld', 'F');
     const later = source.exitDecisions
       .map((decision) => createExitDecisionAddress(goldenFBiome, decision.source))
       .find((owner) => !source.isAssessed(owner));
@@ -251,7 +272,7 @@ describe('structured workspace source index', () => {
         ),
       ),
     });
-    expect(() => createWorkspaceProjectSourceIndex(catalog, project, malformedEvaluation)).toThrow(
+    expect(() => sourceIndexForForgedEvaluation(project, malformedEvaluation)).toThrow(
       /assessment prefix extends beyond declared coverage/,
     );
   });
@@ -259,7 +280,7 @@ describe('structured workspace source index', () => {
   it('returns exact available and unavailable Run State products, and rejects an available owner without its snapshot', () => {
     const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
-    const indexed = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
+    const indexed = sourceIndexForExactProject(project);
     const source = biomeSource(indexed, 'Underworld', 'F');
     const owner = createExitDecisionAddress(goldenFBiome, source.exitDecisions[0]!.source);
     const published = source.runState(owner);
@@ -302,7 +323,7 @@ describe('structured workspace source index', () => {
       ),
     });
     const unavailable = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, project, unavailableEvaluation),
+      sourceIndexForForgedEvaluation(project, unavailableEvaluation),
       'Underworld',
       'F',
     ).runState(owner);
@@ -337,7 +358,7 @@ describe('structured workspace source index', () => {
     });
     expect(() =>
       biomeSource(
-        createWorkspaceProjectSourceIndex(catalog, project, malformedEvaluation),
+        sourceIndexForForgedEvaluation(project, malformedEvaluation),
         'Underworld',
         'F',
       ).runState(owner),
@@ -346,17 +367,9 @@ describe('structured workspace source index', () => {
 
   it('keeps authored source lookup and decision order independent of serialization order', () => {
     const project = createGoldenFGHIProject();
-    const indexed = createWorkspaceProjectSourceIndex(
-      catalog,
-      project,
-      simulateProject(catalog, project),
-    );
+    const indexed = sourceIndexForExactProject(project);
     const reversed = reversedFDecisionSerialization();
-    const reversedIndexed = createWorkspaceProjectSourceIndex(
-      catalog,
-      reversed,
-      simulateProject(catalog, reversed),
-    );
+    const reversedIndexed = sourceIndexForExactProject(reversed);
     const f = biomeSource(indexed, 'Underworld', 'F');
     const reversedF = biomeSource(reversedIndexed, 'Underworld', 'F');
     const startOwner = createExitDecisionAddress(goldenFBiome, {
@@ -441,12 +454,11 @@ describe('structured workspace source index', () => {
         ),
       }) as typeof base;
     const orderedSources = (project: typeof base) =>
-      biomeSource(
-        createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
-        'Underworld',
-        'F',
-      ).exitDecisions.map((decision) =>
-        decision.source.kind === 'occurrence' ? decision.source.occurrenceId : decision.source.kind,
+      biomeSource(sourceIndexForExactProject(project), 'Underworld', 'F').exitDecisions.map(
+        (decision) =>
+          decision.source.kind === 'occurrence'
+            ? decision.source.occurrenceId
+            : decision.source.kind,
       );
     const ordered = orderedSources(withSelectedSpine(false));
 
@@ -495,11 +507,7 @@ describe('structured workspace source index', () => {
             },
       ),
     };
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, incomplete, simulateProject(catalog, incomplete)),
-      'Underworld',
-      'F',
-    );
+    const source = biomeSource(sourceIndexForExactProject(incomplete), 'Underworld', 'F');
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
@@ -551,11 +559,7 @@ describe('structured workspace source index', () => {
       occurrenceId: goldenFStartId,
     });
     const target = createTargetAddress(goldenFBiome, decision.source, 'exit1');
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
-      'Underworld',
-      'F',
-    );
+    const source = biomeSource(sourceIndexForExactProject(project), 'Underworld', 'F');
     const targetOccurrence = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const targetReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
 
@@ -580,11 +584,7 @@ describe('structured workspace source index', () => {
 
   it('maps Hub board, visit, and local owners without treating dormant authored details as local coverage', () => {
     const project = createRepresentativeNOPQProject();
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
-      'Surface',
-      'N',
-    );
+    const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const visited = nOccurrenceId('combat05');
     const dormant = nOccurrenceId('combat10');
 
@@ -611,11 +611,7 @@ describe('structured workspace source index', () => {
       reward: createIncomingRewardAddress(nBiome, combat),
       value: { rewardType: 'WeaponUpgrade' },
     });
-    const source = biomeSource(
-      createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
-      'Surface',
-      'N',
-    );
+    const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const reward = createIncomingRewardAddress(nBiome, combat);
     const firstDecision = source.exitDecisions[0];
     if (firstDecision === undefined) throw new Error('N has no authored exit decision');

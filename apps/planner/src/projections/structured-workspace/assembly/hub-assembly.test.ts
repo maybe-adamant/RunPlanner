@@ -8,7 +8,10 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -29,10 +32,9 @@ import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/mark
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 
 function biomeSource(project: ProjectDocument): WorkspaceBiomeSource {
-  const source = createWorkspaceProjectSourceIndex(
-    catalog,
-    project,
-    simulateProject(catalog, project),
+  const assembly = simulateProjectAssembly(catalog, project);
+  const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
   )
     .routes.find((route) => route.routeKey === 'Surface')
     ?.biomes.find((biome) => biome.plan.biomeKey === 'N');
@@ -63,6 +65,7 @@ function hubKit(source: WorkspaceBiomeSource) {
     return assembleWorkspaceOccurrence({
       biome: source.biome,
       catalog,
+      encounterPhaseStatus: source.encounterPhaseStatus,
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
       ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: occurrenceFacts,

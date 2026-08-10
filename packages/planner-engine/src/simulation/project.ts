@@ -37,7 +37,10 @@ import {
 import { evaluateEncounterCandidatesInternal } from './encounters/candidates';
 import { structurallyActiveEncounterRooms } from './encounters/structural';
 import type { EncounterCandidateBoundary } from './encounters/candidates';
-import type { EncounterPhaseCandidateSupport } from './encounters/preparation';
+import type {
+  EncounterPhaseCandidateSupport,
+  EncounterPhaseSequenceStatus,
+} from './encounters/preparation';
 import type { SemanticFinding } from './model';
 import type { FindingRegionEntry } from './finding-regions';
 import {
@@ -326,6 +329,20 @@ export function encounterPhaseCandidateSupportForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
     ?.encounters.at(phase);
+}
+
+/**
+ * Supported exact-assembly query for one structurally declared encounter
+ * phase. Unlike candidate support, this preserves the distinction between an
+ * evaluated dormant suffix and an owner with no preparation coverage.
+ */
+export function encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+): EncounterPhaseSequenceStatus | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
+    ?.encounters.statusAt(phase);
 }
 
 /** Exact-assembly entry point for one synchronous counted-reward authoring domain. */

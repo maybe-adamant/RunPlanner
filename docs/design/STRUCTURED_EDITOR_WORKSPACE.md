@@ -184,17 +184,20 @@ occurrence or local-child inspector, one marker, one focus destination, and—if
 the declared set has meaningful choice cardinality—one bound selection
 interaction. The projector consumes the engine's context-free
 `EncounterPhaseAuthoringDomain`, whose activation comes from catalog,
-persisted selection, and template-controlled authored facts. Reached candidate
-support decorates that product; it does not decide whether the control exists.
-The projector never derives phase activity from a rendered ordinal or finding.
+persisted selection, and template-controlled authored facts. The engine's exact
+sequence status suppresses only a validly terminated dormant suffix. Reached
+candidate support decorates the remaining product; its absence leaves an active
+control unassessed and does not decide whether that control exists. The
+projector never derives phase activity from a rendered ordinal or finding.
 
 The workspace publishes active phases even behind an invalid evaluated prefix,
-so a retained invalid selection can be corrected. A dormant potential phase
-retains its persisted selection but has no live interaction, marker, finding,
-or route-NPC index entry. Singleton phases preserve their exact semantic
-destination without producing no-op controls. This gives finding navigation and
-closure the same phase identity regardless of whether the presentation has a
-visible picker.
+so their retained selections remain editable; only the blocking phase is
+assessed until repair restores an exact later checkpoint. A dormant potential
+phase retains its persisted selection but has no live interaction, marker,
+finding, or route-NPC index entry. Singleton phases preserve their exact
+semantic destination without producing no-op controls. This gives finding
+navigation and closure the same phase identity regardless of whether the
+presentation has a visible picker.
 
 ## Application Projection Boundary
 

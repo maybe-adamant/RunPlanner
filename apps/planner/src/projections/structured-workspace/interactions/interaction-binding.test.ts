@@ -24,10 +24,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createGoldenFGHIProject,
@@ -80,7 +81,9 @@ function bind(
 ) {
   const projectAssembly = simulateProjectAssembly(catalog, project);
   const evaluation = projectAssembly.evaluation;
-  const source = createWorkspaceProjectSourceIndex(catalog, project, evaluation)
+  const source = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
+    encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
+  )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
@@ -1150,8 +1153,20 @@ describe('structured workspace interaction binding', () => {
     );
   });
 
-  it('binds customizable encounter phases to their exact top-level and local-child commands', () => {
-    const topLevelInteractions = bind(createGoldenFGHIProject(), 'Underworld', 'I').interactions;
+  it('binds customizable encounter phases lazily to exact top-level and local-child commands', () => {
+    const project = createGoldenFGHIProject();
+    const candidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const encounterPhases = vi.fn(candidateSession.encounterPhases);
+    const observedSession = Object.freeze({ ...candidateSession, encounterPhases });
+    const topLevelInteractions = bind(
+      project,
+      'Underworld',
+      'I',
+      undefined,
+      observedSession,
+    ).interactions;
     const localInteractions = bind(createRepresentativeNOPQProject(), 'Surface', 'N').interactions;
     const topLevel = [...topLevelInteractions.encounterPhases.values()].find(
       (interaction) =>
@@ -1174,9 +1189,15 @@ describe('structured workspace interaction binding', () => {
       throw new Error('active top-level and local-child encounter interactions are missing');
     }
     const selected = topLevel.selected;
-    if (selected === undefined) throw new Error('top-level encounter has no selected definition');
 
-    expect(topLevel.choices).not.toHaveLength(0);
+    expect(encounterPhases).not.toHaveBeenCalled();
+    const model = topLevel.load();
+    expect(encounterPhases).toHaveBeenCalledOnce();
+    expect(topLevel.load()).toBe(model);
+    expect(model.selected?.value).toBe(selected);
+    expect(model.sections.flatMap((section) => section.items).map((item) => item.value)).toContain(
+      selected,
+    );
     expect(topLevel.intentFor(selected).command).toEqual({
       encounterKey: selected,
       kind: 'SelectEncounter',

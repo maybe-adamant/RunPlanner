@@ -34,6 +34,20 @@ export interface EncounterPhaseCandidateSupport {
 }
 
 /**
+ * Exact sequence reachability for one structurally active phase. The status
+ * is intentionally separate from candidate support: support is absent for a
+ * dormant suffix, while an absent status means this room has no exact
+ * preparation coverage at all.
+ */
+export type EncounterPhaseSequenceStatus =
+  { readonly kind: 'active' } | { readonly kind: 'dormantSuffix' };
+
+export interface EncounterPhaseSequenceStatusEntry {
+  readonly origin: EncounterPhaseAddress;
+  readonly status: EncounterPhaseSequenceStatus;
+}
+
+/**
  * One room-local preparation result. `validPrefix` is the exact ordered
  * record prefix that may enter canonical history when a later slot is
  * invalid; no start, reward, counter, or completion effect accompanies it.
@@ -44,6 +58,7 @@ export interface PreparedEncounterPhases {
   readonly valid: boolean;
   readonly validPrefix: readonly ResolvedEncounterPhase[];
   readonly candidates: readonly EncounterPhaseCandidateSupport[];
+  readonly statuses: readonly EncounterPhaseSequenceStatusEntry[];
   readonly findings: readonly SemanticFinding[];
   readonly blockedAt?: EncounterPhaseAddress;
 }
@@ -204,8 +219,8 @@ function slotActivationSatisfied(
  * Evaluates every active pool-backed phase against the exact predecessor
  * checkpoint. A valid preceding phase extends the local record prefix for
  * later phase requirements without advancing any encounter counter. Once a
- * selection is invalid, later phases remain candidate-addressable from that
- * last valid prefix but cannot extend it.
+ * phase is invalid, later structurally active phases remain status-addressable
+ * but unassessed: the blocker alone receives candidate support and findings.
  */
 export function prepareRoomEncounterPhases(
   catalog: Catalog,
@@ -224,6 +239,7 @@ export function prepareRoomEncounterPhases(
     ]),
   );
   const candidates: EncounterPhaseCandidateSupport[] = [];
+  const statuses: EncounterPhaseSequenceStatusEntry[] = [];
   const findings: SemanticFinding[] = [];
   const validPrefix: ResolvedEncounterPhase[] = [];
   let blockedAt: EncounterPhaseAddress | undefined;
@@ -232,8 +248,18 @@ export function prepareRoomEncounterPhases(
   // exactly as the composed lifecycle event stream does.
   let preparation = preparationCheckpoint;
   let prefixValid = true;
+  let suffixTerminated = false;
 
   for (const phase of room.encounterPhases) {
+    const origin = phaseAddress(room, phase.slotKey);
+    if (suffixTerminated) {
+      statuses.push(
+        Object.freeze({ origin, status: Object.freeze({ kind: 'dormantSuffix' as const }) }),
+      );
+      continue;
+    }
+    statuses.push(Object.freeze({ origin, status: Object.freeze({ kind: 'active' as const }) }));
+    if (!prefixValid) continue;
     const binding = bindings.get(phase.slotKey);
     if (binding === undefined) {
       throw new Error(`${room.gameName} lost binding ${phase.slotKey}`);
@@ -254,7 +280,6 @@ export function prepareRoomEncounterPhases(
         throw new Error(`${room.gameName}.${phase.slotKey} lost fixed encounter identity`);
       }
       if (!activationSatisfied) {
-        const origin = phaseAddress(room, phase.slotKey);
         findings.push(slotActivationFinding(origin, preparation.sequence, phase.slotKey));
         blockedAt ??= origin;
         prefixValid = false;
@@ -268,7 +293,7 @@ export function prepareRoomEncounterPhases(
           room.gameName,
           phase,
         );
-        if (phase.sequenceEffect?.kind === 'terminateSuffix') break;
+        if (phase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
       }
       continue;
     }
@@ -287,7 +312,6 @@ export function prepareRoomEncounterPhases(
         );
       }),
     );
-    const origin = phaseAddress(room, phase.slotKey);
     const support: EncounterPhaseCandidateSupport = Object.freeze({
       origin,
       selectedEncounterKey: phase.encounterKey,
@@ -317,7 +341,7 @@ export function prepareRoomEncounterPhases(
         room.gameName,
         phase,
       );
-      if (phase.sequenceEffect?.kind === 'terminateSuffix') break;
+      if (phase.sequenceEffect?.kind === 'terminateSuffix') suffixTerminated = true;
     }
   }
 
@@ -325,6 +349,7 @@ export function prepareRoomEncounterPhases(
     valid: blockedAt === undefined,
     validPrefix: Object.freeze(validPrefix),
     candidates: Object.freeze(candidates),
+    statuses: Object.freeze(statuses),
     findings: Object.freeze(findings),
     ...(blockedAt === undefined ? {} : { blockedAt }),
   });

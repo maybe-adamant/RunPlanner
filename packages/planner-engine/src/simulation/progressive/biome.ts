@@ -517,6 +517,7 @@ function retainBlockedRegionProducts(
       ? retainedArtifacts.encounters
       : Object.freeze({
           at: retainedArtifacts.encounters.at,
+          statusAt: retainedArtifacts.encounters.statusAt,
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)

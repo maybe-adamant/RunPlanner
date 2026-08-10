@@ -9,6 +9,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceCommandIntent,
+  type WorkspaceEncounterInteraction,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceEphyraSideRoomDescriptor,
@@ -25,6 +26,7 @@ import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
@@ -32,6 +34,9 @@ import { CandidateSelect } from './CandidateSelect';
 import { hubMainRewardPresentation } from './hubMainRewardPresentation';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
+
+const emptyEncounterPicker: import('@planner/projections/contextualPicker').ContextualPickerModel<string> =
+  Object.freeze({ sections: Object.freeze([]) });
 
 interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
@@ -139,6 +144,44 @@ function EphyraSideRoomEntryOrderSelect({
   );
 }
 
+function CustomizableEncounterPhaseControl({
+  idPrefix,
+  interaction,
+  phase,
+}: {
+  readonly idPrefix: string;
+  readonly interaction: WorkspaceEncounterInteraction;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const executeIntent = useCommandIntent();
+  const candidates = useWorkspaceInteraction(interaction);
+  return (
+    <>
+      <ContextualPicker
+        id={`${idPrefix}-${phase.address.phaseKey}`}
+        label="Encounter"
+        loading={candidates.pending}
+        model={candidates.result ?? emptyEncounterPicker}
+        onOpenChange={(open) => {
+          if (open) candidates.activate();
+        }}
+        onSelect={(encounterKey) => executeIntent(interaction.intentFor(encounterKey))}
+        placeholder="Choose an encounter"
+        triggerLabel={phase.selectedEncounter.label}
+      />
+      {phase.resettable ? (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => executeIntent(interaction.resetIntent)}
+          type="button"
+        >
+          Reset to default
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 function EncounterPhaseControl({
   idPrefix,
   interactions,
@@ -148,7 +191,6 @@ function EncounterPhaseControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phase: WorkspaceEncounterPhase;
 }) {
-  const executeIntent = useCommandIntent();
   if (!phase.customizable) {
     return (
       <section
@@ -178,23 +220,16 @@ function EncounterPhaseControl({
       id={semanticOwnerControlElementId(phase.address)}
     >
       <div className="local-reward-heading">
-        <h4>{phase.label}</h4>
+        <div className="owner-markers">
+          <h4>{phase.label}</h4>
+          <SemanticOwnerMarker address={phase.address} />
+        </div>
       </div>
-      <CandidateSelect
-        id={`${idPrefix}-${phase.address.phaseKey}`}
+      <CustomizableEncounterPhaseControl
+        idPrefix={idPrefix}
         interaction={interaction}
-        label="Encounter"
-        onReplace={(encounterKey) => executeIntent(interaction.intentFor(encounterKey))}
+        phase={phase}
       />
-      {phase.resettable ? (
-        <button
-          className="quiet-action action-compact"
-          onClick={() => executeIntent(interaction.resetIntent)}
-          type="button"
-        >
-          Reset to default
-        </button>
-      ) : null}
     </section>
   );
 }
