@@ -25,8 +25,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   simulateProjectAssembly,
-  type TraitAssessment,
-  type TraitReplacementTransition,
+  type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -55,14 +54,11 @@ import {
   qOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
-import type {
-  CandidateProjectionEvaluation,
-  CandidateProjectionSession,
-} from '@planner/projections/candidateProjection';
+import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
-import type { WorkspaceTraitOfferInteraction } from '../contract';
+import { createTraitDomainProjection } from '@planner/projections/traitDomainProjection';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 import { bindWorkspaceInteractions } from './interaction-binding';
@@ -72,6 +68,7 @@ const services = {
   candidateSessions: createCandidateSessionFactory(catalog),
   contextualPicker,
   rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
+  traitDomain: createTraitDomainProjection(catalog, contextualPicker),
 };
 
 function bind(
@@ -122,124 +119,87 @@ function bind(
   };
 }
 
-type TraitCandidateEvaluation = Extract<
-  CandidateProjectionEvaluation,
-  { readonly kind: 'traitOffer' }
->;
-type TraitCandidateBranch = TraitCandidateEvaluation['result']['branches'][number];
-
-function traitAssessment(replacementTransition?: TraitReplacementTransition): TraitAssessment {
-  return Object.freeze({
-    legal: true,
-    findings: Object.freeze([]),
-    ...(replacementTransition === undefined ? {} : { replacementTransition }),
-  });
-}
-
-function traitCandidateEvaluation(
-  branches: readonly TraitCandidateBranch[],
-): TraitCandidateEvaluation {
-  return Object.freeze({
-    kind: 'traitOffer' as const,
-    result: Object.freeze({
-      supported: true,
-      branches: Object.freeze(branches),
-      assessments: Object.freeze(branches.flatMap((branch) => branch.assessments)),
-      findings: Object.freeze([]),
-    }),
-  });
-}
-
-function traitBranch(replacementTransition?: TraitReplacementTransition): TraitCandidateBranch {
-  return Object.freeze({
-    assessments: Object.freeze([
-      traitAssessment(replacementTransition),
-      traitAssessment(),
-      traitAssessment(),
-    ]),
-    composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
-  });
-}
-
-function bindTraitWithCandidate(
-  evaluate: (value: AuthoredTraitOffer) => TraitCandidateEvaluation,
-): {
-  readonly interaction: WorkspaceTraitOfferInteraction;
-  readonly traitKey: string;
-} {
-  const project = createRepresentativeNOPQProject();
-  const projectAssembly = simulateProjectAssembly(catalog, project);
-  const baseSession = services.candidateSessions.bind(projectAssembly);
-  const candidateSession: CandidateProjectionSession = Object.freeze({
-    ...baseSession,
-    traitOffer: (
-      _owner: Parameters<CandidateProjectionSession['traitOffer']>[0],
-      value: Parameters<CandidateProjectionSession['traitOffer']>[1],
-    ): ReturnType<CandidateProjectionSession['traitOffer']> =>
-      Object.freeze([Object.freeze({ value, evaluation: evaluate(value) })]),
-  });
-  const { interactions } = bind(project, 'Surface', 'N', undefined, candidateSession);
-  const interaction = [...interactions.traitOffers.values()].find(
-    (candidate) => candidate.giver.providerKind === 'olympian',
-  );
-  if (interaction === undefined) throw new Error('an Olympian trait interaction is missing');
-  const traitKey = interaction.giver.priorityTraitKeys[0];
-  if (traitKey === undefined) throw new Error('the Olympian priority trait is missing');
-  return { interaction, traitKey };
-}
-
 describe('structured workspace interaction binding', () => {
-  it('keeps the normal repair rarity domain when replacement branches disagree', () => {
-    const { interaction, traitKey } = bindTraitWithCandidate((value) => {
-      const rarity = value.options[0]?.rarity;
-      const newTraitKey = value.options[0]?.traitKey;
-      if (newTraitKey === undefined) throw new Error('the candidate option is missing a trait key');
-      if (rarity !== 'Rare') return traitCandidateEvaluation([traitBranch(), traitBranch()]);
-      return traitCandidateEvaluation([
-        traitBranch({
-          slot: 'Melee',
-          replacedTraitKey: 'AphroditeSpecialBoon',
-          oldRarity: 'Common',
-          newTraitKey,
-          requiredRarity: 'Rare',
-        }),
-        traitBranch({
-          slot: 'Melee',
-          replacedTraitKey: 'AphroditeCastBoon',
-          oldRarity: 'Common',
-          newTraitKey,
-          requiredRarity: 'Rare',
-        }),
-      ]);
+  it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {
+    const events: CandidateEvaluationEvent[] = [];
+    const project = createGoldenFGHIProject();
+    const observedCandidates = createCandidateSessionFactory(catalog, {
+      observeCandidateEvaluation: (event) => events.push(event),
     });
+    const observedSession = observedCandidates.bind(simulateProjectAssembly(catalog, project));
+    const { interactions } = bind(project, 'Underworld', 'F', undefined, observedSession);
+    const options = [...interactions.traitOffers.values()].filter(
+      (interaction) => interaction.giver.providerKind !== 'hammer',
+    );
+    const interaction = options[0];
+    const sibling = options[1];
+    if (interaction === undefined || sibling === undefined) {
+      throw new Error('focused trait interaction fixtures are missing');
+    }
+    const prepared = services.traitDomain.prepare(interaction.giver, interaction.value, 'option1');
 
-    expect(interaction.rarityChoicesFor(traitKey, 0)).toEqual(['Common', 'Rare', 'Epic']);
+    const initial = interaction.optionDomain(interaction.value, 'option1');
+    expect(events).toEqual([]);
+    const first = await initial.load();
+    const firstBatch = events.filter((event) => event.kind === 'queryBatch');
+    expect(first.candidates).toHaveLength(prepared.variants.length);
+    expect(firstBatch).toEqual([expect.objectContaining({ queryCount: prepared.variants.length })]);
+
+    events.length = 0;
+    expect(interaction.optionDomain(interaction.value, 'option1')).toBe(initial);
+    expect(await initial.load()).toBe(first);
+    expect(events).toEqual([]);
+
+    const secondOption = interaction.value.options[1];
+    if (secondOption?.rarity === undefined) throw new Error('ranked sibling option is missing');
+    const changedDraft = Object.freeze({
+      ...interaction.value,
+      options: Object.freeze([
+        interaction.value.options[0],
+        Object.freeze({
+          ...secondOption,
+          rarity: secondOption.rarity === 'Common' ? 'Rare' : 'Common',
+        }),
+        interaction.value.options[2],
+      ]) as AuthoredTraitOffer['options'],
+    });
+    const changed = interaction.optionDomain(changedDraft, 'option1');
+    expect(changed).not.toBe(initial);
+    await changed.load();
+    expect(events).toEqual([expect.objectContaining({ queryCount: prepared.variants.length })]);
+
+    events.length = 0;
+    await sibling.optionDomain(sibling.value, 'option1').load();
+    expect(events).toEqual([expect.objectContaining({ queryCount: expect.any(Number) })]);
   });
 
-  it('promotes an option to the exact rarity only when every branch agrees', () => {
-    const transition: TraitReplacementTransition = {
-      slot: 'Melee',
-      replacedTraitKey: 'AphroditeSpecialBoon',
-      oldRarity: 'Common',
-      newTraitKey: 'AphroditeWeaponBoon',
-      requiredRarity: 'Rare',
-    };
-    const { interaction, traitKey } = bindTraitWithCandidate((value) => {
-      const rarity = value.options[0]?.rarity;
-      const newTraitKey = value.options[0]?.traitKey;
-      if (newTraitKey === undefined) throw new Error('the candidate option is missing a trait key');
-      return traitCandidateEvaluation(
-        rarity === 'Rare'
-          ? [
-              traitBranch({ ...transition, newTraitKey }),
-              traitBranch({ ...transition, newTraitKey }),
-            ]
-          : [traitBranch(), traitBranch()],
-      );
+  it('bounds the largest declared Hammer domain to one focused query batch', async () => {
+    const events: CandidateEvaluationEvent[] = [];
+    const project = createGoldenFGHIProject();
+    const observedCandidates = createCandidateSessionFactory(catalog, {
+      observeCandidateEvaluation: (event) => events.push(event),
     });
-    const expectedTransition = { ...transition, newTraitKey: traitKey };
+    const observedSession = observedCandidates.bind(simulateProjectAssembly(catalog, project));
+    const { interactions } = bind(project, 'Underworld', 'F', undefined, observedSession);
+    const hammer = [...interactions.traitOffers.values()].find(
+      (interaction) => interaction.giver.providerKind === 'hammer',
+    );
+    if (hammer === undefined) throw new Error('Hammer trait interaction fixture is missing');
+    const largestDeclaredHammer = Object.values(catalog.traitGivers.byKey)
+      .filter((giver) => giver.providerKind === 'hammer')
+      .sort((left, right) => right.traitKeys.length - left.traitKeys.length)[0];
+    if (largestDeclaredHammer === undefined) throw new Error('Hammer declaration is missing');
+    expect(hammer.giver.key).toBe(largestDeclaredHammer.key);
+    const prepared = services.traitDomain.prepare(hammer.giver, hammer.value, 'option1');
 
-    expect(interaction.rarityChoicesFor(traitKey, 0)).toEqual([expectedTransition.requiredRarity]);
+    expect(events).toEqual([]);
+    const domain = await hammer.optionDomain(hammer.value, 'option1').load();
+    expect(domain.candidates).toHaveLength(prepared.variants.length);
+    expect(events).toEqual([
+      expect.objectContaining({ queryCount: prepared.variants.length, kind: 'queryBatch' }),
+    ]);
+    await hammer.optionDomain(hammer.value, 'option1').load();
+    expect(events).toHaveLength(1);
   });
 
   it('binds one provisional Hub-slot identity per explicit opening attempt', () => {

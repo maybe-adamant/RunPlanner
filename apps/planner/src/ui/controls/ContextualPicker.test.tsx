@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -230,5 +230,33 @@ describe('ContextualPicker', () => {
     expect((screen.getByRole('combobox', { name: 'Room choices' }) as HTMLInputElement).value).toBe(
       '',
     );
+  });
+
+  it('focuses search once after an open async picker finishes loading', async () => {
+    const user = userEvent.setup();
+    const picker = (loading: boolean, currentModel = model) => (
+      <ContextualPicker
+        id="async-picker"
+        label="Room"
+        loading={loading}
+        model={currentModel}
+        onSelect={() => undefined}
+        open={true}
+        placeholder="Select a room"
+      />
+    );
+    const view = render(picker(true));
+
+    expect(screen.getByRole('status').textContent).toContain('Evaluating room choices');
+    view.rerender(picker(false));
+    const search = screen.getByRole('combobox', { name: 'Room choices' });
+    await waitFor(() => expect(document.activeElement).toBe(search));
+    await user.type(search, 'Story 01');
+    expect((search as HTMLInputElement).value).toBe('Story 01');
+
+    const trigger = screen.getByLabelText('Room');
+    trigger.focus();
+    view.rerender(picker(false, { ...model }));
+    expect(document.activeElement).toBe(trigger);
   });
 });

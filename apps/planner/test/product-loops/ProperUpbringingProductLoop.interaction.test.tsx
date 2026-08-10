@@ -224,7 +224,12 @@ describe('Proper Upbringing product loop', () => {
       ).toBeGreaterThan(0),
     );
     const rarity = within(dialog).getByLabelText('option1 rarity');
-    await view.user.selectOptions(rarity, 'Rare');
+    await view.user.click(rarity);
+    const rare = screen
+      .getAllByText('Rare')
+      .find((element) => element.closest('[cmdk-item]') !== null);
+    if (rare === undefined) throw new Error('Proper Upbringing rarity picker has no Rare choice');
+    await view.user.click(rare);
     await view.user.click(within(dialog).getByRole('button', { name: 'Save trait offer' }));
     await waitFor(() =>
       expect(

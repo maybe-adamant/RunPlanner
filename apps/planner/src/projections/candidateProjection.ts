@@ -6,11 +6,14 @@ import {
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
+  type ProjectCandidateSessionEvaluation,
+  type ProjectCandidateSessionQuery,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
+  type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type ExitDecisionAddress,
@@ -29,6 +32,7 @@ import {
   type ShopOfferAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
+  type TraitOptionKey,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
@@ -68,7 +72,7 @@ export interface EncounterCandidateProjectionEvaluation {
 }
 
 export type CandidateProjectionEvaluation =
-  ProjectCandidateEvaluation | EncounterCandidateProjectionEvaluation;
+  ProjectCandidateSessionEvaluation | EncounterCandidateProjectionEvaluation;
 
 export interface CandidateOptionProjection<
   T,
@@ -164,6 +168,16 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
+  /**
+   * Evaluates one declaration-compatible concrete domain at one focused offer
+   * position. Every query still carries the complete draft into Gate A.
+   */
+  readonly traitOfferFocusedOptions: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+    variants: readonly AuthoredTraitOption[],
+  ) => readonly CandidateOptionProjection<AuthoredTraitOption, CandidateProjectionEvaluation>[];
 }
 
 export interface CandidateSessionFactory {
@@ -181,6 +195,24 @@ function offerKey(value: ResolvedRewardOffer): string {
 
 function domainKey(values: readonly string[]): string {
   return JSON.stringify(values);
+}
+
+function traitOptionKey(option: AuthoredTraitOption): string {
+  return `${option.traitKey}:${option.rarity ?? ''}`;
+}
+
+function offerWithFocusedOption(
+  value: AuthoredTraitOffer,
+  optionKey: TraitOptionKey,
+  option: AuthoredTraitOption,
+): AuthoredTraitOffer {
+  const index = optionKey === 'option1' ? 0 : optionKey === 'option2' ? 1 : 2;
+  const options = [...value.options] as AuthoredTraitOption[];
+  options[index] = Object.freeze({ ...option });
+  return Object.freeze({
+    ...value,
+    options: Object.freeze(options) as AuthoredTraitOffer['options'],
+  });
 }
 
 function rewardQueries(
@@ -227,7 +259,7 @@ function projectOptions<T>(
   assembly: ProjectEvaluationAssembly,
   key: string,
   values: readonly T[],
-  queries: readonly ProjectCandidateQuery[],
+  queries: readonly ProjectCandidateSessionQuery[],
   catalog: Catalog,
   options: CandidateSessionFactoryOptions,
 ): readonly CandidateOptionProjection<T>[] {
@@ -245,7 +277,7 @@ function projectOptions<T>(
       }
       return Object.freeze({ value, evaluation });
     }),
-  );
+  ) as readonly CandidateOptionProjection<T>[];
   projectCache.options.set(key, projected);
   return projected;
 }
@@ -263,7 +295,7 @@ async function projectOptionsCooperatively<T>(
   assembly: ProjectEvaluationAssembly,
   key: string,
   values: readonly T[],
-  queries: readonly ProjectCandidateQuery[],
+  queries: readonly ProjectCandidateSessionQuery[],
   catalog: Catalog,
   options: CandidateSessionFactoryOptions,
   yieldToHost: () => Promise<void>,
@@ -278,7 +310,7 @@ async function projectOptionsCooperatively<T>(
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
   }
-  const projected: CandidateOptionProjection<T>[] = [];
+  const projected: CandidateOptionProjection<T, CandidateProjectionEvaluation>[] = [];
   for (const [index, query] of queries.entries()) {
     const evaluation = projectCache.evaluator.evaluate([query])[0];
     if (evaluation === undefined) {
@@ -289,7 +321,7 @@ async function projectOptionsCooperatively<T>(
       await yieldToHost();
     }
   }
-  const result = Object.freeze(projected);
+  const result = Object.freeze(projected) as readonly CandidateOptionProjection<T>[];
   projectCache.options.set(key, result);
   return result;
 }
@@ -625,6 +657,28 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      traitOfferFocusedOptions: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+        variants: readonly AuthoredTraitOption[],
+      ) =>
+        projectOptions(
+          cache,
+          assembly,
+          `trait-offer-focused:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${domainKey(
+            variants.map(traitOptionKey),
+          )}`,
+          variants,
+          variants.map((option) => ({
+            kind: 'traitOfferFocusedOption' as const,
+            optionKey,
+            trait: owner,
+            value: offerWithFocusedOption(value, optionKey, option),
+          })),
+          catalog,
+          options,
+        ),
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
@@ -679,6 +733,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       return evaluation.result.support !== 'impossible';
     case 'traitOffer':
       return evaluation.result.supported;
+    case 'traitOfferFocusedOption':
+      return evaluation.result.supported;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -730,6 +786,7 @@ function candidateForced(
     case 'hubTerminalTakeover':
       return evaluation.result.support === 'required';
     case 'traitOffer':
+    case 'traitOfferFocusedOption':
       return false;
   }
 }

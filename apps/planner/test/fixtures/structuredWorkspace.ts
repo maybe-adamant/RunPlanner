@@ -9,6 +9,7 @@ import {
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
+import { createTraitDomainProjection } from '@planner/projections/traitDomainProjection';
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
@@ -37,6 +38,7 @@ export function createStructuredWorkspaceTestServices(
     createContextualOptionResolver(catalog),
   );
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
+  const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
   return Object.freeze({
     candidateSessions,
     structuredWorkspace: createStructuredWorkspaceProjection(
@@ -45,6 +47,7 @@ export function createStructuredWorkspaceTestServices(
         candidateSessions,
         contextualPicker,
         rewardPicker,
+        traitDomain,
       },
       allocateOccurrenceId,
     ),

@@ -23,6 +23,7 @@ import {
   type ApplicationEvaluationEvent,
   type PlannerApplication,
 } from '@planner/composition/createApplication';
+import { prepareTraitOptionDomain } from '@planner/projections/traitDomainProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -582,7 +583,10 @@ describe('surface product loop', () => {
   });
 
   it('completes an Olympian replacement through the shared trait editor', async () => {
-    const application = createApplication();
+    const work: ApplicationEvaluationEvent[] = [];
+    const application = createApplication({
+      observeEvaluationWork: (event) => work.push(event),
+    });
     let authored = createRepresentativeNOPQProject();
     let target:
       | {
@@ -651,15 +655,34 @@ describe('surface product loop', () => {
     const replacedTraitLabel = application.catalog.traits.byKey[transition.replacedTraitKey]?.label;
     if (replacedTraitLabel === undefined) throw new Error('replacement trait label is missing');
     expect(screen.getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
-    const launcher = document.getElementById(
-      `trait-launcher-${semanticAddressKey(createTraitOfferAddress(target.address, target.trace.acquisitionRole))}`,
-    );
+    const traitAddress = createTraitOfferAddress(target.address, target.trace.acquisitionRole);
+    const launcher = document.getElementById(`trait-launcher-${semanticAddressKey(traitAddress)}`);
     if (launcher === null) {
       throw new Error('replacement trait launcher is missing');
     }
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(new RegExp(`Replaces ${replacedTraitLabel}`))).toBeTruthy();
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(traitAddress));
+    if (interaction === undefined) throw new Error('replacement trait interaction is missing');
+    const prepared = prepareTraitOptionDomain(
+      application.catalog,
+      interaction.giver,
+      interaction.value,
+      'option1',
+    );
+    work.length = 0;
+    await view.user.click(within(dialog).getByLabelText('option1 rarity'));
+    expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([
+      expect.objectContaining({ queryCount: prepared.variants.length }),
+    ]);
+    expect(
+      Array.from(document.querySelectorAll<HTMLElement>('[cmdk-item]')).map((item) =>
+        item.textContent?.replace(/^✓/, '').trim(),
+      ),
+    ).toEqual([transition.requiredRarity]);
     application.dispose();
   });
 
@@ -711,10 +734,12 @@ describe('surface product loop', () => {
     const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
     if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
     for (const [index, option] of corrected.options.entries()) {
-      await view.user.selectOptions(
-        within(dialog).getByLabelText(`option${index + 1} trait`),
-        option.traitKey,
-      );
+      await view.user.click(within(dialog).getByLabelText(`option${index + 1} trait`));
+      const choice = screen
+        .getAllByText(application.catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey)
+        .find((element) => element.closest('[cmdk-item]') !== null);
+      if (choice === undefined) throw new Error(`Hammer picker has no ${option.traitKey} choice`);
+      await view.user.click(choice);
     }
     const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
     await waitFor(() => expect(save).toHaveProperty('disabled', false));

@@ -10,6 +10,7 @@ import { createCandidateSessionFactory } from '../projections/candidateProjectio
 import { createContextualOptionResolver } from '../projections/contextualOptions';
 import { createContextualPickerProjection } from '../projections/contextualPicker';
 import { createRewardPickerProjection } from '../projections/rewardPicker';
+import { createTraitDomainProjection } from '../projections/traitDomainProjection';
 import { createStructuredWorkspaceProjection } from '../projections/structured-workspace';
 import {
   createAutosaveCoordinator,
@@ -74,12 +75,14 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualOptions = createContextualOptionResolver(catalog);
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
+  const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
   const structuredWorkspace = createStructuredWorkspaceProjection(
     catalog,
     {
       candidateSessions,
       contextualPicker,
       rewardPicker,
+      traitDomain,
     },
     options.allocateOccurrenceId ?? allocateOccurrenceId,
   );

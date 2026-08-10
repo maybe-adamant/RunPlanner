@@ -72,6 +72,7 @@ import type { CandidateProjectionSession, CandidateSessionFactory } from './cand
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
+import { createTraitDomainProjection } from './traitDomainProjection';
 import { StructuredWorkspaceProjectionContractError } from './structured-workspace/contract';
 import {
   createStructuredWorkspaceProjection,
@@ -146,15 +147,16 @@ const inertCandidateSessions: CandidateSessionFactory = Object.freeze({
 function projection(
   candidateSessions: CandidateSessionFactory = createCandidateSessionFactory(catalog),
 ) {
+  const contextualPicker = createContextualPickerProjection(
+    createContextualOptionResolver(catalog),
+  );
   return createStructuredWorkspaceProjection(
     catalog,
     {
       candidateSessions,
-      contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
-      rewardPicker: createRewardPickerProjection(
-        catalog,
-        createContextualPickerProjection(createContextualOptionResolver(catalog)),
-      ),
+      contextualPicker,
+      rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
+      traitDomain: createTraitDomainProjection(catalog, contextualPicker),
     },
     () => createOccurrenceId('structured-workspace-contract-start'),
   );

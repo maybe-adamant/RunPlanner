@@ -4,7 +4,10 @@ import type {
   ContextualOptionState,
   ContextualOptionPresentation,
 } from './contextualOptions';
-import type { CandidateOptionProjection } from './candidateProjection';
+import type {
+  CandidateOptionProjection,
+  CandidateProjectionEvaluation,
+} from './candidateProjection';
 
 export type ContextualPickerSectionKind =
   'required' | 'selectedInvalid' | 'category' | 'unassessed' | 'unavailable';
@@ -35,8 +38,10 @@ export interface ContextualPickerModel<T> {
 
 export interface ContextualPickerProjectionService {
   readonly project: <T>(
-    options: readonly CandidateOptionProjection<T>[],
-    presentationFor: (option: CandidateOptionProjection<T>) => ContextualOptionPresentation,
+    options: readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],
+    presentationFor: (
+      option: CandidateOptionProjection<T, CandidateProjectionEvaluation>,
+    ) => ContextualOptionPresentation,
     keyFor: (value: T) => string,
   ) => ContextualPickerModel<T>;
 }
@@ -188,8 +193,10 @@ export function createContextualPickerProjection(
   >();
   return Object.freeze({
     project<T>(
-      options: readonly CandidateOptionProjection<T>[],
-      presentationFor: (option: CandidateOptionProjection<T>) => ContextualOptionPresentation,
+      options: readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],
+      presentationFor: (
+        option: CandidateOptionProjection<T, CandidateProjectionEvaluation>,
+      ) => ContextualOptionPresentation,
       keyFor: (value: T) => string,
     ): ContextualPickerModel<T> {
       const contextual = resolver.resolve(options, presentationFor);
