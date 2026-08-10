@@ -777,10 +777,10 @@ Trait offers are projected from reached engine evaluations, never recomputed
 in React. A room/reward summary, the chronological route Traits panel, and a
 finding destination all reference the same `TraitOfferAddress` and bound
 interaction. The shared modal renders three stable option rows, the selected
-option, and a rarity control only for ranked Olympian/Hermes options;
-Hammer rows intentionally expose no rarity field. Giver labels, selected
-trait labels, and contextual findings are presentation products derived from
-catalog and engine outputs.
+option, and contextual trait pickers. Ranked Olympian/Hermes options also
+receive contextual rarity pickers; Hammer rows intentionally expose no rarity
+field. Giver labels, selected trait labels, contextual support, and findings
+are presentation products derived from catalog and engine outputs.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:
@@ -797,9 +797,20 @@ eligibility. Structurally supported but context-invalid rarities remain visible
 for repair, while Heroic is offered only when the engine exposes an
 Epic-to-Heroic replacement.
 
+Picker activation evaluates one focused option domain with the other two draft
+options held fixed. Sibling findings therefore remain visible in the complete
+feedback panel without falsely disabling unrelated focused repairs. Trait and
+rarity selection changes only the local complete draft; Save still dispatches
+one `ReplaceTraitOffer` command and creates one authored undo entry. An
+unassessed option remains selectable, an impossible alternative remains
+inspectable but disabled, and a selected impossible value remains pinned until
+the user repairs it.
+
 Trait dialog visibility and focus handoff are UI-session state. Opening from a
 room, Shop, route Traits row, or semantic finding does not enter authored
-history or undo/redo. The route projection groups branch evidence by semantic
+history or undo/redo. Escape first dismisses an open nested picker and restores
+its trigger; a later Escape may dismiss the dialog and restore its launcher.
+The route projection groups branch evidence by semantic
 owner while preserving engine chronology; it does not create a route-wide
 trait model. Dormant descendants remain withheld until their parent lifecycle
 reaches the role, and invalid reached offers stay editable with their exact

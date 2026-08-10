@@ -558,6 +558,33 @@ distinct legal ordinary-key count, the maximum replacement count, and an
 offer-level excess finding. Option assessments and composition must succeed in
 one branch; evidence from separate branch histories is never combined.
 
+Trait editing uses two projections of that one assessment authority:
+
+- a complete-offer query evaluates all three authored options and remains the
+  authority for consolidated feedback and whether the complete draft is
+  supported for Save; selected simulation remains the acquisition and history
+  authority;
+- a focused-option query receives the same complete proposal plus one
+  `TraitOptionKey` and asks whether the concrete value in that position is
+  supported while the two siblings remain fixed.
+
+Focused support attributes option-local findings to their exact position.
+Unrelated sibling prerequisite, rarity, context, loadout, and priority
+failures do not disable the focused repair. A duplicate blocks every position
+containing that trait; missing Attack/Special blocks a focused proposal that
+still leaves the complete first offer without either core slot; replacement
+composition blocks a focused replacement participant but does not poison an
+ordinary focused option solely because siblings exceed the replacement limit.
+One retained branch satisfying every focused requirement is sufficient, and
+all required evidence must succeed in that same branch.
+
+An unreached offer normally returns unavailable contextual coverage. Closed
+authored invariants do not disappear with that coverage: duplicate sibling
+traits remain an evaluated focused impossibility, using the same duplicate
+authority as complete-offer evaluation. The candidate-session result type
+therefore retains the explicit unavailable variant for unique unreached
+proposals rather than claiming that every focused query was assessed.
+
 The established boundary provides:
 
 - one project/evaluation-bound candidate session;

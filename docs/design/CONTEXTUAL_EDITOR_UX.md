@@ -486,6 +486,49 @@ ordered picker model containing required, semantic-category, unassessed, and
 unavailable sections. This preserves one presentation-policy authority while
 allowing room and reward controls to share one accessible component.
 
+### Trait offer domains
+
+Each of the three trait-option cards uses that same contextual-picker
+vocabulary for its trait and, for ranked Olympian or Hermes traits, rarity.
+The application prepares declaration- and schema-compatible concrete
+`{ traitKey, rarity }` variants and evaluates them lazily through the exact
+trait-offer interaction. React passes the complete local three-option draft and
+focused option key to the bound interaction; it never constructs engine
+queries or evaluates trait rules.
+
+The trait picker aggregates concrete variants by trait. A trait is available
+when at least one visible rarity is supported, unassessed when exact lifecycle
+coverage is unavailable, and unavailable only when every visible concrete
+variant is impossible. The selected invalid value remains pinned for repair.
+Changing traits retains the current rarity when that concrete variant is
+supported, otherwise selects the first supported declaration-ordered repair.
+When the domain is unassessed, the exact current concrete value remains the
+first choice when applicable, followed by the first declaration-ordered
+unassessed variant. The rarity picker reuses the already evaluated concrete
+batch. Hammers expose no rarity control; Heroic remains hidden as a fresh
+technical probe and appears only for a retained authored value or an
+engine-supported Epic-to-Heroic replacement.
+
+Opening one picker is the deliberate evaluation boundary. Static workspace and
+dialog rendering perform no focused trait queries. Results are cached by the
+immutable evaluation assembly, exact `TraitOfferAddress`, complete local draft,
+focused option key, and concrete domain. Reopening an unchanged picker or
+opening its rarity view reuses the same batch; a sibling edit creates a new
+draft identity, and stale asynchronous results cannot replace it.
+
+A cache miss for one unique focused domain emits at most one focused query
+batch whose query count equals the unique prepared concrete-variant count. This
+bound applies to ordinary ranked givers, replacement contexts, and the largest
+declaration-owned Hammer domain; work never scales with rendered control count.
+Cache hits, including reopening an unchanged picker and switching from its
+trait view to its rarity view, emit no additional batch.
+
+Trait and rarity changes remain local modal edits. The complete-offer candidate
+continues to own the consolidated feedback and Save support, and Save dispatches
+one complete semantic replacement command. Escape dismisses an open nested
+picker before it dismisses the containing trait dialog, preserving the local
+draft and restoring focus at each boundary.
+
 This is application/UI vocabulary. It must not replace the richer typed
 simulation assessment or enter persisted state.
 

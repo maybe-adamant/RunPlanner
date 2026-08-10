@@ -668,6 +668,14 @@ thresholds, loadout compatibility, or chronology. The route Traits panel is a
 second reference to those controls, not a persisted route-wide model. Dialog
 target and focus restoration remain transient editor-session state.
 
+Each trait leaf binds one lazy focused-option domain factory. Its inputs are the
+complete local offer draft and exact option key; its output is an
+application-projected trait and rarity picker model. Workspace projection does
+not traverse selected assessments to enrich replacement rarities and does not
+evaluate candidate alternatives. One activated domain evaluates its complete
+declaration-owned concrete variant batch through the project-bound candidate
+session and caches it for the immutable workspace interaction identity.
+
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the
 engine derives empty ordinary-boon slots from equipped state, and dormant,
@@ -678,8 +686,9 @@ Olympian replacement carries its exact engine transition and promoted rarity
 into the option annotation and selected chronological summary. The workspace
 does not add a replacement editor or checkbox, and React never reconstructs
 slot occupancy, promotion, shortage limits, or branch legality. Heroic appears
-only when the bound engine candidate is an Epic-to-Heroic replacement; findings
-leave all trait and rarity controls available for repair.
+only when the bound engine candidate is an Epic-to-Heroic replacement or is the
+retained authored value under repair. Context-invalid selected values remain
+visible, while unavailable alternatives stay inspectable but disabled.
 
 The structured workspace is complete when:
 
