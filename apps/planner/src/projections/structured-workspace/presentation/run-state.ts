@@ -14,6 +14,14 @@ import type {
 } from '../contract';
 import { workspaceRewardStoreLabel } from '../assembly/reward-labels';
 
+const coreTraitSlots = Object.freeze([
+  Object.freeze({ label: 'Attack', slotKey: 'Melee' }),
+  Object.freeze({ label: 'Special', slotKey: 'Secondary' }),
+  Object.freeze({ label: 'Cast', slotKey: 'Ranged' }),
+  Object.freeze({ label: 'Sprint', slotKey: 'Rush' }),
+  Object.freeze({ label: 'Magick', slotKey: 'Mana' }),
+] as const);
+
 function count(value: DecisionRewardBagCount): string {
   return value.kind === 'exact' ? `x${value.count}` : `x${value.min}–${value.max}`;
 }
@@ -93,6 +101,18 @@ function sourcePresentation(catalog: Catalog, sourceKey: string): WorkspaceRunSt
   return Object.freeze({ key: sourceKey, label: source?.label ?? sourceKey });
 }
 
+function traitPresentation(
+  catalog: Catalog,
+  equipped: DecisionRunStateSnapshot['traits']['equippedTraits'][string],
+) {
+  const trait = catalog.traits.byKey[equipped.traitKey];
+  return Object.freeze({
+    label: trait?.label ?? equipped.traitKey,
+    ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
+    traitKey: equipped.traitKey,
+  });
+}
+
 function bagSection(
   catalog: Catalog,
   entries: DecisionRunStateSnapshot['bags'][number]['entries'],
@@ -129,6 +149,9 @@ export function presentRunState(
   catalog: Catalog,
   snapshot: DecisionRunStateSnapshot,
 ): WorkspaceRunStatePresentation {
+  const coreTraitKeys = new Set(
+    Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),
+  );
   return Object.freeze({
     bags: Object.freeze(
       snapshot.bags.map((bag) =>
@@ -152,35 +175,29 @@ export function presentRunState(
       ),
     ),
     godPool: Object.freeze({
-      acquired: Object.freeze(
+      inPool: Object.freeze(
         snapshot.godPool.acquiredSourceKeys.map((key) => sourcePresentation(catalog, key)),
-      ),
-      capNarrowed: snapshot.godPool.capNarrowed,
-      effective: Object.freeze(
-        snapshot.godPool.effectiveSourceKeys.map((key) => sourcePresentation(catalog, key)),
       ),
     }),
     traits: Object.freeze({
       ...(snapshot.traits.minimumScalableGodTraitRarity === undefined
         ? {}
         : { activeMinimumScalableRarity: snapshot.traits.minimumScalableGodTraitRarity }),
-      equipped: Object.freeze(
-        Object.values(snapshot.traits.equippedTraits).map((equipped) => {
-          const trait = catalog.traits.byKey[equipped.traitKey];
-          const giver = catalog.traitGivers.byKey[equipped.giverKey];
+      coreSlots: Object.freeze(
+        coreTraitSlots.map(({ label, slotKey }) => {
+          const equipped = snapshot.traits.ordinaryBoonSlots[slotKey];
           return Object.freeze({
-            giverKey: equipped.giverKey,
-            giverLabel: giver?.label ?? equipped.giverKey,
-            label: trait?.label ?? equipped.traitKey,
-            ...(trait?.ordinaryBoonSlot === undefined
-              ? {}
-              : { ordinarySlot: trait.ordinaryBoonSlot }),
-            ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
-            traitKey: equipped.traitKey,
+            label,
+            slotKey,
+            ...(equipped === undefined ? {} : { trait: traitPresentation(catalog, equipped) }),
           });
         }),
       ),
-      upgradableCount: snapshot.traits.upgradableTraitCount,
+      other: Object.freeze(
+        Object.values(snapshot.traits.equippedTraits)
+          .filter(({ traitKey }) => !coreTraitKeys.has(traitKey))
+          .map((equipped) => traitPresentation(catalog, equipped)),
+      ),
     }),
   });
 }

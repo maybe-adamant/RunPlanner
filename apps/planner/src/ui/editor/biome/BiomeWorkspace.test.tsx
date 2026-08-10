@@ -182,12 +182,38 @@ describe('BiomeWorkspace', () => {
     const beforeEvaluationEvents = [...evaluationEvents];
 
     await user.click(launcher);
-    const sheet = screen.getByRole('region', { name: /Run state — before/ });
-    expect(within(sheet).getByRole('heading', { name: 'God pool' })).toBeTruthy();
+    const sheet = screen.getByRole('region', { name: /State before/ });
+    const godHeading = within(sheet).getByRole('heading', { name: 'Gods in pool' });
+    const godSection = godHeading.closest('section');
+    if (godSection === null) throw new Error('Gods in pool section is missing');
+    expect(within(godSection).getByText('Apollo')).toBeTruthy();
+    expect(godSection.textContent).not.toContain('ApolloUpgrade');
     expect(within(sheet).getByRole('heading', { name: 'Elements' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: 'Equipped traits' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: 'Counters' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: 'Counted reward bags' })).toBeTruthy();
+    const traitHeading = within(sheet).getByRole('heading', { name: 'Equipped traits' });
+    const traitSection = traitHeading.closest('section');
+    if (traitSection === null) throw new Error('Equipped traits section is missing');
+    expect(within(traitSection).getByText('Nova Strike · Common')).toBeTruthy();
+    expect(within(traitSection).getByText('Nova Flourish · Common')).toBeTruthy();
+    expect(within(traitSection).getByText('Solar Ring · Common')).toBeTruthy();
+    expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
+    expect(within(traitSection).getByText('Wicked Thrasher')).toBeTruthy();
+    expect(within(traitSection).getAllByText('None')).toHaveLength(2);
+    expect(traitSection.textContent).not.toContain('ApolloWeaponBoon');
+    expect(traitSection.textContent).not.toContain('WeaponUpgrade');
+    expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();
+    const counterSummary = within(sheet).getByText('Counters');
+    const counterDisclosure = counterSummary.closest('details');
+    if (counterDisclosure === null) throw new Error('Counters disclosure is missing');
+    expect(counterDisclosure.open).toBe(false);
+    await user.click(counterSummary);
+    expect(counterDisclosure.open).toBe(true);
+    expect(within(counterDisclosure).getByText('biomeDepthCache')).toBeTruthy();
+    const rewardBagsSummary = within(sheet).getByText('Reward Bags');
+    const rewardBagsDisclosure = rewardBagsSummary.closest('details');
+    if (rewardBagsDisclosure === null) throw new Error('Reward Bags disclosure is missing');
+    expect(rewardBagsDisclosure.open).toBe(false);
+    await user.click(rewardBagsSummary);
+    expect(rewardBagsDisclosure.open).toBe(true);
     const bagSummary = within(sheet).getByText(/Major Reward \(RunProgress\)/);
     expect(bagSummary.textContent).toMatch(/x4.*Eligible now x2.*Ineligible now x2/);
     await user.click(bagSummary);
@@ -203,13 +229,13 @@ describe('BiomeWorkspace', () => {
     );
 
     await user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
     expect(evaluationEvents).toEqual(beforeEvaluationEvents);
 
     await user.click(launcher);
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
   });
 
@@ -227,7 +253,7 @@ describe('BiomeWorkspace', () => {
       'Run State is unavailable because this decision has not been reached.',
     );
     await user.click(launcher);
-    expect(screen.queryByRole('region', { name: /Run state — before/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
   });
 
   it('keeps the fixed N start room in the rail next step', () => {

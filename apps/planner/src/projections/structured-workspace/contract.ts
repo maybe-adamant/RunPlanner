@@ -1032,14 +1032,12 @@ export interface WorkspaceRunStatePresentation {
   readonly counters: readonly { readonly key: string; readonly value: number }[];
   readonly elements: readonly { readonly key: string; readonly value: number }[];
   readonly godPool: {
-    readonly acquired: readonly WorkspaceRunStateSource[];
-    readonly capNarrowed: boolean;
-    readonly effective: readonly WorkspaceRunStateSource[];
+    readonly inPool: readonly WorkspaceRunStateSource[];
   };
   readonly traits: {
     readonly activeMinimumScalableRarity?: TraitRarity;
-    readonly equipped: readonly WorkspaceRunStateTrait[];
-    readonly upgradableCount: number;
+    readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
+    readonly other: readonly WorkspaceRunStateTrait[];
   };
 }
 
@@ -1049,12 +1047,15 @@ export interface WorkspaceRunStateSource {
 }
 
 export interface WorkspaceRunStateTrait {
-  readonly giverKey: string;
-  readonly giverLabel: string;
   readonly label: string;
-  readonly ordinarySlot?: string;
   readonly rarity?: TraitRarity;
   readonly traitKey: string;
+}
+
+export interface WorkspaceRunStateCoreTraitSlot {
+  readonly label: string;
+  readonly slotKey: string;
+  readonly trait?: WorkspaceRunStateTrait;
 }
 
 export interface WorkspaceRunStateBagPresentation {

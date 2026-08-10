@@ -92,29 +92,16 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
   if (launcher.availability !== 'available') return null;
   const { state } = launcher;
   return (
-    <aside
-      aria-label={`Run state — before ${launcher.title}`}
-      className="run-state-sheet"
-      role="region"
-    >
+    <aside aria-label={`State before ${launcher.title}`} className="run-state-sheet" role="region">
       <header>
-        <h2>Run state — before {launcher.title}</h2>
+        <h2>State before {launcher.title}</h2>
         <button aria-label="Close Run State" onClick={close} ref={closeButton} type="button">
           ×
         </button>
       </header>
       <section>
-        <h3>God pool</h3>
-        <p>
-          Acquired:{' '}
-          {state.godPool.acquired.map(({ label, key }) => `${label} (${key})`).join(', ') || 'None'}
-        </p>
-        <p>
-          Effective:{' '}
-          {state.godPool.effective.map(({ label, key }) => `${label} (${key})`).join(', ') ||
-            'None'}
-        </p>
-        <p>Four-source cap: {state.godPool.capNarrowed ? 'narrowed' : 'not narrowed'}</p>
+        <h3>Gods in pool</h3>
+        <p>{state.godPool.inPool.map(({ label }) => label).join(' · ') || 'None yet'}</p>
       </section>
       <section>
         <h3>Elements</h3>
@@ -122,40 +109,61 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
       </section>
       <section>
         <h3>Equipped traits</h3>
-        {state.traits.equipped.length === 0 ? (
+        <dl className="run-state-core-traits">
+          {state.traits.coreSlots.map((slot) => (
+            <div key={slot.slotKey}>
+              <dt>{slot.label}:</dt>
+              <dd>
+                {slot.trait === undefined
+                  ? 'None'
+                  : `${slot.trait.label}${slot.trait.rarity === undefined ? '' : ` · ${slot.trait.rarity}`}`}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <h4>All other traits</h4>
+        {state.traits.other.length === 0 ? (
           <p>None</p>
         ) : (
           <ul>
-            {state.traits.equipped.map((trait) => (
+            {state.traits.other.map((trait) => (
               <li key={trait.traitKey}>
-                {trait.label} ({trait.traitKey}) · {trait.giverLabel} ({trait.giverKey})
+                {trait.label}
                 {trait.rarity === undefined ? '' : ` · ${trait.rarity}`}
-                {trait.ordinarySlot === undefined ? '' : ` · ${trait.ordinarySlot}`}
               </li>
             ))}
           </ul>
         )}
-        <p>Upgradable traits: {state.traits.upgradableCount}</p>
         {state.traits.activeMinimumScalableRarity === undefined ? null : (
           <p>Active minimum scalable rarity: {state.traits.activeMinimumScalableRarity}</p>
         )}
       </section>
       <section>
-        <h3>Counters</h3>
-        <p>{state.counters.map(({ key, value }) => `${key} ${value}`).join(' · ')}</p>
-      </section>
-      <section>
-        <h3>Counted reward bags</h3>
-        {state.bags.map((bag) => (
-          <details key={bag.technicalKey}>
-            <summary>
-              {bag.label} ({bag.technicalKey}) · {bag.remaining} · Eligible now {bag.eligible.total}{' '}
-              · Ineligible now {bag.ineligible.total}
-            </summary>
-            <BagSection label="Eligible now" section={bag.eligible} />
-            <BagSection label="Ineligible now" section={bag.ineligible} />
-          </details>
-        ))}
+        <h3>More Info</h3>
+        <details>
+          <summary>Counters</summary>
+          <dl className="run-state-counter-list">
+            {state.counters.map(({ key, value }) => (
+              <div key={key}>
+                <dt>{key}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+        <details>
+          <summary>Reward Bags</summary>
+          {state.bags.map((bag) => (
+            <details key={bag.technicalKey}>
+              <summary>
+                {bag.label} ({bag.technicalKey}) · {bag.remaining} · Eligible now{' '}
+                {bag.eligible.total} · Ineligible now {bag.ineligible.total}
+              </summary>
+              <BagSection label="Eligible now" section={bag.eligible} />
+              <BagSection label="Ineligible now" section={bag.ineligible} />
+            </details>
+          ))}
+        </details>
       </section>
     </aside>
   );
