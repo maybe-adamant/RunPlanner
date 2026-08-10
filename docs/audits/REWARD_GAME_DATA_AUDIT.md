@@ -331,9 +331,13 @@ probabilities. The normalized policy is `ordinaryBoonPeer`, resolved at offer
 generation.
 
 Ephyra makes the fallback observable in an ordinary door batch. `HubRewards`
-contains five duplicate-capable Boon entries, while the ordinary source cap is
-four. A five-Boon Hub board may therefore repeat a source such as Zeus on its
-fifth Boon even though all five offers are materialized simultaneously.
+contains five duplicate-capable Boon entries, and the miniboss door can add a
+sixth Boon from `RunProgress`; all participate in the same peer list while the
+board is materialized. With two sources acquired before the Hub, the board can
+first represent those sources and two new sources, then use the unrestricted
+retry for two further globally eligible sources. Visiting all six Boon rooms
+can therefore leave Ephyra with six distinct acquired ordinary sources even
+though the ordinary source cap is four.
 
 #### Shop RandomLoot and Blind Box
 

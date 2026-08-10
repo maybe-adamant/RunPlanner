@@ -35,6 +35,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  nOpenSlotKeys,
   authorLegalTraitOffers,
 } from '@run-planner/test-fixtures';
 
@@ -423,6 +424,50 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).toHaveLength(2);
   });
 
+  it('permits six distinct acquired god sources after visiting every Ephyra Boon offer', () => {
+    const hubSources = {
+      combat01: 'DemeterUpgrade',
+      combat02: 'ZeusUpgrade',
+      combat10: 'ApolloUpgrade',
+      combat11: 'HeraUpgrade',
+      combat23: 'AresUpgrade',
+      miniBoss01: 'PoseidonUpgrade',
+    } as const;
+    let project = createRepresentativeNProject({ visitSlotKeys: Object.keys(hubSources) });
+    for (const [occurrenceId, source] of [
+      [nOccurrenceIds.opening, 'ApolloUpgrade'],
+      [nOccurrenceIds.preHub, 'HeraUpgrade'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, occurrenceId),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+      });
+    }
+    for (const [slotKey, source] of Object.entries(hubSources)) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+      });
+    }
+
+    const { biome } = validN(authorLegalTraitOffers(project));
+    const acquiredSources = new Set(
+      biome.rewards.branches[0]?.events.flatMap((event) =>
+        event.kind === 'concreteAcquisition' &&
+        Object.values(hubSources).includes(
+          event.acquisition.acquisition.gameName as (typeof hubSources)[keyof typeof hubSources],
+        )
+          ? [event.acquisition.acquisition.gameName]
+          : [],
+      ),
+    );
+
+    expect(acquiredSources).toEqual(new Set(Object.values(hubSources)));
+    expect(biome.rewards.validity).toBe('valid');
+  });
+
   it('treats Hub board generation independently from its six-room acquisition order', () => {
     let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'OpenHubSlot',
@@ -505,6 +550,46 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
     ).toHaveLength(3);
     expect(biome.rewards.validity).toBe('valid');
+  });
+
+  it('keeps one changed Hub reward authorable while sibling defaults still block the board', () => {
+    let project = createRepresentativeNProject();
+    const repeatedDefault = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'AphroditeUpgrade' },
+    };
+    for (const slotKey of nOpenSlotKeys) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId(slotKey)),
+        value: repeatedDefault,
+      });
+    }
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat01'));
+
+    expect(
+      session.evaluate({ kind: 'incomingReward', reward, value: repeatedDefault }),
+    ).toMatchObject({
+      kind: 'incomingReward',
+      result: {
+        supported: false,
+        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
+      },
+    });
+    expect(
+      session.evaluate({
+        kind: 'incomingReward',
+        reward,
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'AresUpgrade' },
+        },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
   });
 
   it('still rejects a repeated Hub source when no hidden generation order reaches the cap', () => {

@@ -112,6 +112,23 @@ interface IncomingOfferCandidateContext {
   readonly acquisitionSequence?: number;
 }
 
+function sameResolvedOffer(
+  left: CanonicalResolvedIncomingReward['offer'],
+  right: CanonicalResolvedIncomingReward['offer'],
+): boolean {
+  if (left.rewardType !== right.rewardType) return false;
+  if (left.payload === undefined || right.payload === undefined) {
+    return left.payload === right.payload;
+  }
+  if (left.payload.kind !== right.payload.kind) return false;
+  return left.payload.kind === 'BoonSource' && right.payload.kind === 'BoonSource'
+    ? left.payload.source === right.payload.source
+    : left.payload.kind === 'DevotionPair' && right.payload.kind === 'DevotionPair'
+      ? left.payload.chosenSource === right.payload.chosenSource &&
+        left.payload.spurnedSource === right.payload.spurnedSource
+      : false;
+}
+
 type RewardRoomOwner = {
   readonly kind: string;
   readonly routeKey: string;
@@ -1168,7 +1185,35 @@ export function evaluateBiomeRewardsAssemblyInternal(
         candidateFindings,
         { ordering: 'sourceOffers' },
       );
-      return completeIncomingOfferCandidate(selected, offer, candidateBranches, candidateFindings);
+      if (
+        candidateBranches.length > 0 ||
+        selectedBoardBranches.length > 0 ||
+        sameResolvedOffer(offer, selected.incoming.offer)
+      ) {
+        return completeIncomingOfferCandidate(
+          selected,
+          offer,
+          candidateBranches,
+          candidateFindings,
+        );
+      }
+
+      // A newly opened Hub board starts from complete declaration defaults,
+      // which can leave several sibling offers invalid at once. A changed
+      // focused value must remain authorable when it is valid from the board's
+      // pre-generation frontier; the selected board still owns complete
+      // atomic validation and remains blocked until every sibling is repaired.
+      const focusedFindings = new Map<string, FindingRegionEntry>();
+      const focusedBranches = processRewardOffer(
+        pending.frontierBranches,
+        {
+          ...selected.context,
+          peers: Object.freeze([]),
+          reward: Object.freeze({ ...selected.incoming, offer }),
+        },
+        focusedFindings,
+      );
+      return completeIncomingOfferCandidate(selected, offer, focusedBranches, focusedFindings);
     };
     for (const entry of pending.offers) {
       indexRewardProducerFrontier(

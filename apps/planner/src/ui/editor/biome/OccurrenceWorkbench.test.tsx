@@ -652,6 +652,7 @@ describe('OccurrenceWorkbench', () => {
       return row;
     };
     expect(within(sideRow()).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(sideRow().querySelector('.encounter-phase-control')).toBeNull();
 
     act(() =>
       view.application.store.dispatch(
