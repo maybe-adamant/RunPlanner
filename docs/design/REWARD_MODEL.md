@@ -956,11 +956,14 @@ complete replacement values. Simulation validates:
 
 Trait authoring is additive to reward identity. Every in-scope acquisition role
 may own one `AuthoredTraitOffer` child with three distinct options and one
-selected option. The reward kernel resolves the provider from the concrete
-acquisition role (including payload-source, fixed, Devotion chosen/spurned,
-and purchased Shop roles); it never switches on a room, Shop, or rendered
-trait name. An unpicked room, dormant local child, unselected wheel result, or
-unpurchased Shop option owns no reached trait event.
+selected option. An exact encounter phase may own the same child when its
+selected Encounter Definition declares a `traitOfferProducer`. The reward
+kernel resolves reward providers from the concrete acquisition role (including
+payload-source, fixed, Devotion chosen/spurned, and purchased Shop roles);
+encounter providers resolve from their declaration. Neither path switches on a
+room, Shop, component, or rendered trait name. An unpicked room, dormant local
+child, unselected encounter definition or wheel result, or unpurchased Shop
+option owns no reached trait event.
 
 At the role's declared lifecycle point, the kernel first applies the existing
 exact loot/use projection and then evaluates all three alternatives against
@@ -994,11 +997,9 @@ target and Boon Decay's superchargeable target are distinct predicates over
 that ledger and are not aliases or persisted shadow counters. The old
 ordinary-source increment approximation is retired. NPC/Story effect-backed
 choices remain outside this persistent trait lifecycle unless their declaration
-owns one of the engine's closed acquisition transitions. Bridal Glow is the
-first such transition: the source remains equipped and one authored eligible
-god trait is promoted to Heroic at acquisition. Its added levels/stacks and the
-Hephaestus cooldown exception remain deferred, as do other undeclared rarity
-mutations and providers.
+owns one of the engine's closed acquisition transitions. Added levels/stacks,
+the Bridal Glow Hephaestus cooldown exception, and other undeclared mutations
+and providers remain deferred.
 
 Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
 normalized declaration supplies a `Common`-to-`Rare` floor that activates when
@@ -1014,6 +1015,23 @@ state.
 
 The empty-slot test is always derived from this ledger at the reached offer
 boundary; no persisted first-offer marker or replacement counter exists.
+
+Encounter-owned offers use the selected active encounter phase as their exact
+owner and fold at `encounterCompleted`, before any encounter-local reward at
+that same completion point. Their alternative-definition offers persist
+sparsely and remain dormant until selected. Provider rarity authorship remains
+catalog-owned: Artemis and Athena expose selectable ranked rarity, Icarus is
+fixed at `Common` without a rarity control, and Hammers omit rarity entirely.
+
+Targeted acquisitions form a closed transition set. Bridal Glow equips its
+source and promotes one exact eligible equipped god trait to `Heroic`. Latest
+Model equips its fixed-Common source and upgrades one exact eligible equipped,
+source-capable Rank-I Hammer to Rank II. The exact outcome is authored as the
+selected option's `targetTraitKey`; unselected or dormant options may retain an
+incomplete target, while a selected targeted option must pass the same engine
+predicate used to enumerate its target domain. Hammer rank is independent of
+rarity. No generic trait-effect interpreter, provider switch, or second NPC
+acquisition ledger is introduced.
 
 Spell/Talent and Surface Shop delivery flags remain on their existing explicit
 deferred boundary; they are not inferred from trait state.

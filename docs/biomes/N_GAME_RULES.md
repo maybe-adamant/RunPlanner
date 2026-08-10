@@ -208,12 +208,17 @@ The retained authored selection reappears if that side room is entered again,
 without promoting it to global topology. Artemis and Heracles requirements use
 exact definition history, not a Hub-specific NPC ledger.
 
+When `ArtemisCombatN` is the selected active main-room definition, its exact
+phase owns Artemis's three-choice trait offer and folds the selected trait at
+encounter completion. Heracles and the Ephyra side-room definitions do not
+declare a trait provider; this does not create a Hub-wide trait surface.
+
 ### Canonical baseline and exclusions
 
 N preserves the progressed-save, neutral-boss board behavior,
 including the opening and PreHub producers, fixed Hub slots, full-board reward
 lookup, pylon rules, side-room pressure, and WorldShop lifecycle. It excludes
-the commented midshop assignment, NPC random/interaction or Shop/Bridge
+the commented midshop assignment, other NPC random/interaction or Shop/Bridge
 behavior, save/profile force predicates, optional actions, and
 automatic boss-drop state until they have modeled inputs and owners.
 

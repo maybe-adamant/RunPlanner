@@ -698,18 +698,34 @@ and port-verification history.
 
 ## Trait Offer Catalog
 
-The normalized catalog owns the first concrete trait-offer provider slice. It
-contains six weapon declarations, their 24 aspect declarations, 268 included
-trait declarations, and 11 giver declarations (the nine Olympians, Hermes, and
-`WeaponUpgrade`). Trait declarations are giver-neutral facts: fresh and
-equipped rarity domains, exact offer requirements, ordinary boon slot,
-element contributions, persistent-god classification, stacking and in-run
-rarify flags, rarity-count exclusion, and Hammer weapon/aspect compatibility.
-Giver declarations own ordered pool membership, normalized `priorityTraitKeys`,
-rarity authorship, and the complete default triple (one provider default for Olympian/Hermes and one per
-weapon/aspect loadout for Hammers). Hammer traits deliberately use a `none`
-rarity domain; `Heroic` remains in the normalized equipped rarity order but is
-never a fresh authored choice.
+The normalized catalog owns the supported trait-offer providers. It contains
+six weapon declarations, their 24 aspect declarations, 293 included trait
+declarations, and 14 giver declarations: the nine Olympians, Hermes,
+`WeaponUpgrade`, Artemis, Athena, and Icarus. Trait declarations are
+giver-neutral facts: fresh and equipped rarity domains, exact offer
+requirements, ordinary boon slot, element contributions, persistent-god
+classification, stacking and in-run rarify flags, rarity-count exclusion,
+targeted acquisition, and Hammer weapon/aspect compatibility. Giver
+declarations own ordered pool membership, normalized `priorityTraitKeys`, one
+of the closed `selectable`/`fixed`/`none` rarity policies, and the complete
+default triple (one provider default for Olympian, Hermes, and field-NPC givers
+and one per weapon/aspect loadout for Hammers). Icarus is fixed at `Common`.
+Hammer traits deliberately use a `none` rarity domain; `Heroic` remains in the
+normalized equipped rarity order but is never a fresh authored choice.
+
+Targeted acquisition is likewise a closed catalog fact, not a general effect
+registry. Bridal Glow declares promotion of one eligible equipped god trait to
+`Heroic`; Latest Model declares promotion of one eligible equipped Hammer from
+Rank I to Rank II. Hammer compatibility records the source-backed Rank-II
+capability independently of player-facing rarity; 65 of the 92 Hammer
+declarations support it. Icarus Attack and Special traits express their
+occupied-slot prerequisites through the ordinary slot vocabulary instead of
+naming other providers' traits.
+
+Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
+not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
+participate in the first-Olympian composition rule, ordinary-slot replacement
+composition, god-pool source history, or reward-source support.
 
 `ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
 product. Its activation minimums are the four base elements at `2`, and its
@@ -718,8 +734,9 @@ compiler. This declaration is the catalog fact consumed by the engine's
 chronological rarity lifecycle; it is not a generic trait-effect registry or
 an authored-state field.
 
-The nine Olympian priority sets each cover the five ordinary slots; Hermes and
-Hammer normalize an explicitly empty set. Catalog construction rejects unknown,
+The nine Olympian priority sets each cover the five ordinary slots; Hermes,
+Hammer, and field-NPC givers normalize an explicitly empty set. Catalog
+construction rejects unknown,
 duplicate, out-of-pool, cross-slot, or malformed priority sets and rejects
 Olympian defaults that leave the set or lack both Melee and Secondary; at least one of
 Melee or Secondary is required. The empty-slot
@@ -727,8 +744,9 @@ predicate and first-offer timing remain simulation-owned, not catalog state.
 
 Catalog construction is the source-to-catalog closure boundary. It rejects
 unknown requirement operands, duplicate or cross-provider pool members,
-invalid rarity domains, incompatible defaults, unknown contexts, missing
-loadout defaults, and malformed Hammer compatibility. Requirement operands
+invalid rarity policies or domains, incompatible defaults, unknown contexts,
+missing loadout defaults, malformed targeted acquisitions, and malformed
+Hammer compatibility. Requirement operands
 that name deferred NPC, Story, Spell, or Talent providers remain exact keys in
 the declaration but do not create placeholder offerable traits. The closed
 context vocabulary is `devotionNoDuo` and the room-owned `BlockGiftBoons`

@@ -112,8 +112,8 @@ it does not list possible future sources, expose internal `XxxUpgrade` keys, or
 repeat the four-source-cap state. Equipped traits use fixed Attack, Special,
 Cast, Sprint, and Magick rows sourced from the engine's ordinary-slot ledger,
 followed by all other equipped traits. This presentation uses catalog labels
-and optional rarity only; it does not expose trait, giver, or slot keys. The
-sheet also presents elements, followed by a `More Info` section with collapsed
+plus optional rarity or Hammer rank; it does not expose trait, giver, or slot
+keys. The sheet also presents elements, followed by a `More Info` section with collapsed
 `Counters` and `Reward Bags` disclosures. Counters use one key/value row each;
 individual reward bags retain their nested disclosures. Bag disclosures use the
 projected `Eligible now` and `Ineligible now` groups; they do not claim which
@@ -498,7 +498,8 @@ allowing room and reward controls to share one accessible component.
 ### Trait offer domains
 
 Each of the three trait-option cards uses that same contextual-picker
-vocabulary for its trait and, for ranked Olympian or Hermes traits, rarity.
+vocabulary for its trait and, when the giver's catalog policy is selectable,
+rarity.
 The application prepares declaration- and schema-compatible concrete
 `{ traitKey, rarity }` variants and evaluates them lazily through the exact
 trait-offer interaction. React passes the complete local three-option draft and
@@ -514,9 +515,17 @@ supported, otherwise selects the first supported declaration-ordered repair.
 When the domain is unassessed, the exact current concrete value remains the
 first choice when applicable, followed by the first declaration-ordered
 unassessed variant. The rarity picker reuses the already evaluated concrete
-batch. Hammers expose no rarity control; Heroic remains hidden as a fresh
+batch. Fixed-rarity givers such as Icarus retain their authored rarity without
+a picker; Hammers expose no rarity control. Heroic remains hidden as a fresh
 technical probe and appears only for a retained authored value or an
 engine-supported Epic-to-Heroic replacement.
+
+A declaration-owned targeted option adds one target picker backed by the exact
+trait-offer capability. It uses the same lazy boundary and catalog labels as
+the trait picker; it does not inspect equipped history in the application or
+switch on giver and trait names. A missing or stale selected target remains
+pinned for repair, and the complete draft cannot be saved until the engine
+supports that exact target.
 
 Opening one picker is the deliberate evaluation boundary. Static workspace and
 dialog rendering perform no focused trait queries. Results are cached by the

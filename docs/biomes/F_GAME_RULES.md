@@ -99,8 +99,11 @@ The three NPC combat definitions use the same exact-key requirements and
 history machinery as ordinary definitions. Their raw source multiplicity,
 external progression predicates, and deferred random/event behavior remain in
 [`ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md`](../audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md).
-The normalized F surface deliberately excludes NPC interactions, reward
-outcomes, random events, Shop appearances, and enemy-wave authoring.
+When `ArtemisCombatF` is the selected active definition, its exact phase owns
+Artemis's three-choice trait offer and folds the selected trait at encounter
+completion. The normalized F surface deliberately excludes Arachne and Nemesis
+interactions and reward outcomes, other NPC random events, Shop appearances,
+and enemy-wave authoring.
 
 ## Physical Exits
 

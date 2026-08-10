@@ -1340,20 +1340,31 @@ state. All three alternatives must be legal against the same state; an invalid
 reached offer remains repairable in the trace but emits no equipped event.
 Only the selected option of a valid role folds, immediately after that role's
 exact loot/use projection. The ledger carries concrete ranked rarity (including
-equipped `Heroic`) and no rarity for Hammers, then derives ordinary slot
-occupancy, element totals, highest base-element count, god-boon rarity counts,
-and `upgradableTraitCount`.
+equipped `Heroic`) and an independent Rank I/II value instead of rarity for
+Hammers, then derives ordinary slot occupancy, element totals, highest
+base-element count, god-boon rarity counts, and `upgradableTraitCount`.
 
 `upgradableTraitCount` is no longer an ordinary-source increment and is never
 used as a shadow eligibility model. Boon Growth and Boon Decay evaluate their
 distinct next-rarity predicates from the same equipped ledger. Route evaluation
 seeds the branch's trait ledger across every validated biome and resets only
 the reward records declared as biome-local; dormant/unpicked/unpurchased
-offers do not enter it. A declaration-owned targeted acquisition may add the
-source and then mutate one exact authored eligible target in the same event;
-Bridal Glow currently promotes that target to Heroic. NPC/Story effect-backed
-choices without such a declaration, levels/stacks, and other rarity mutations
-remain outside this persistent slice.
+offers do not enter it. A selected active encounter definition with a declared
+trait provider enters the same fold at `encounterCompleted`, before an
+encounter-local reward at that completion point. Alternative-definition,
+dormant, unpicked, and unentered encounter offers do not enter the ledger and
+there is no parallel NPC history.
+
+A declaration-owned targeted acquisition adds the source and then mutates one
+exact authored eligible target in the same event. Bridal Glow promotes one
+eligible god trait to `Heroic`; Latest Model upgrades one equipped,
+source-capable Rank-I Hammer to Rank II. Both target domains and selected-target
+validation derive from the same pre-offer ledger predicate. A Rank-II Hammer is
+therefore no longer targetable. Icarus offers retain their catalog-fixed
+`Common` rarity and their Attack/Special choices consume the ordinary-slot
+occupancy derived from that ledger. NPC/Story effects without a closed
+declaration, levels/stacks, and other mutations remain outside this persistent
+slice.
 
 Before folding a reached Olympian role, simulation derives whether the
 pre-offer ledger has empty ordinary boon slots. If so, it evaluates the whole

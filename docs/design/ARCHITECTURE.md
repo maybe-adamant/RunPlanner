@@ -633,20 +633,22 @@ recreating draw-path restrictions from the game module.
 
 ## Trait Offer Ownership
 
-Trait declarations and giver pools belong to `hades2-catalog`; normalized
-requirements, route loadout, authored reward children, semantic commands,
-trait history, lifecycle folding, candidates, and findings belong to
-`planner-engine`. The planner application owns only composition, persistence,
-workspace closure, interaction binding, route projections, and React
-presentation. The engine consumes the catalog contract without importing the
-catalog implementation, and the UI never evaluates trait legality or
-reconstructs lifecycle chronology.
+Trait declarations, giver pools and rarity policies, encounter-owned provider
+declarations, targeted-transition descriptors, and Hammer Rank-II capability
+belong to `hades2-catalog`; normalized requirements, route loadout, authored
+reward and encounter children, semantic commands, trait history, lifecycle
+folding, candidates, and findings belong to `planner-engine`. The planner
+application owns only composition, persistence, workspace closure, interaction
+binding, route projections, and React presentation. The engine consumes the
+catalog contract without importing the catalog implementation, and the UI
+never evaluates trait legality or reconstructs lifecycle chronology.
 
 The equipped-trait ledger is replaceable simulation output beside exact loot
 and use ledgers. It is carried through validated route branches, not persisted
-as a second authored model. Stable trait offer owners are reward-owner plus
-acquisition-role addresses; option keys are evidence within that offer's
-assessment and never semantic owners or finding addresses.
+as a second authored model. Stable trait offer owners are either a reward owner
+plus acquisition role or an exact encounter phase plus the `selection` role;
+option keys are evidence within that offer's assessment and never semantic
+owners or finding addresses.
 
 Reached selected-offer assessments are biome-level, data-only reward products.
 The exact assembly separately retains opaque address-indexed alternative
@@ -654,6 +656,11 @@ capabilities backed by private branch-local pre-offer history and context.
 Reward branches carry downstream trait state, not diagnostic assessment traces
 or candidate capabilities; the application may present selected assessment but
 cannot use it to evaluate a replacement.
+
+Target selection follows the same boundary. The engine exposes an opaque
+exact-address capability derived from branch-local pre-offer history; the
+application adapts it into a picker, and React never traverses the equipped
+ledger or switches on a provider or trait name.
 
 No room, Shop, or component may switch on Hammer trait names.
 
