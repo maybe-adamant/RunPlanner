@@ -7,11 +7,13 @@ import {
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -236,6 +238,36 @@ describe('structured workspace occurrence assembly', () => {
       },
     });
     expect(encounter?.traitOffer?.address.owner).toEqual(phase);
+  });
+
+  it('exposes a picked Arachne Story offer through the fixed-phase Customize surface', () => {
+    const occurrenceId = goldenFOccurrenceId(7, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
+      gameName: 'F_Story01',
+    });
+    const assembly = assemble(project, 'Underworld', 'F', occurrenceId).assembly;
+    const encounter = assembly.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Encounter',
+    );
+
+    expect(encounter).toMatchObject({
+      customizable: false,
+      selectedEncounter: { key: 'Story_Arachne_01' },
+      traitOffer: {
+        address: createTraitOfferAddress(phase, 'selection'),
+        acquisitionRoleLabel: 'Selection',
+        giver: { key: 'Arachne' },
+      },
+    });
+    expect(assembly.node.room.hasRoomLocalCustomization).toBe(true);
+    expect(assembly.node.room.customizationMarkers).toContain(encounter?.traitOffer?.marker);
   });
 
   it('publishes active Ephyra side details but withholds dormant side details without hiding incoming rewards', () => {

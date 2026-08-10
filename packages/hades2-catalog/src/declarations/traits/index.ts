@@ -1,5 +1,6 @@
 import type { RawTraitCatalogInput } from '../traits';
 import { aphroditeGiver, aphroditeTraits } from './aphrodite';
+import { arachneGiver, arachneTraits } from './arachne';
 import { apolloGiver, apolloTraits } from './apollo';
 import { aresGiver, aresTraits } from './ares';
 import { artemisGiver, artemisTraits } from './artemis';
@@ -12,6 +13,7 @@ import { hestiaGiver, hestiaTraits } from './hestia';
 import { poseidonGiver, poseidonTraits } from './poseidon';
 import { zeusGiver, zeusTraits } from './zeus';
 import { hermesGiver, hermesTraits } from './hermes';
+import { medeaGiver, medeaTraits } from './medea';
 import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
 
 const weapons = [
@@ -100,6 +102,7 @@ const aspects = [
 ] as const;
 const traits = [
   ...aphroditeTraits,
+  ...arachneTraits,
   ...artemisTraits,
   ...athenaTraits,
   ...icarusTraits,
@@ -112,11 +115,13 @@ const traits = [
   ...poseidonTraits,
   ...zeusTraits,
   ...hermesTraits,
+  ...medeaTraits,
   ...weaponUpgradeTraits,
 ] as const;
 
 const givers = [
   aphroditeGiver,
+  arachneGiver,
   artemisGiver,
   athenaGiver,
   icarusGiver,
@@ -129,6 +134,7 @@ const givers = [
   poseidonGiver,
   zeusGiver,
   hermesGiver,
+  medeaGiver,
   weaponUpgradeGiver,
 ] as const;
 

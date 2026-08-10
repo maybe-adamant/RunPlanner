@@ -12,10 +12,11 @@ import {
 } from '../../authored-project/room-state/encounters';
 
 /**
- * The authored encounter surface for one active, set-backed room phase.
- * Candidate eligibility is deliberately absent: this is the declaration and
- * persisted-selection domain used to keep controls present while evaluation
- * is unavailable.
+ * The authored encounter surface for one active room phase. Set-backed phases
+ * expose their declaration choices; fixed phases appear only when their
+ * declaration owns an encounter trait offer. Candidate eligibility is
+ * deliberately absent: this is the declaration and persisted-selection
+ * domain used to keep controls present while evaluation is unavailable.
  */
 export interface EncounterPhaseAuthoringDomain {
   readonly origin: EncounterPhaseAddress;
@@ -89,17 +90,28 @@ export function encounterPhaseAuthoringDomainForRoom(
   );
   const domains: EncounterPhaseAuthoringDomain[] = [];
   for (const binding of bindings.values()) {
-    if (binding.kind !== 'set') continue;
+    if (
+      binding.kind === 'fixed' &&
+      catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.traitOfferProducer ===
+        undefined
+    )
+      continue;
     const slot = slots.get(binding.slotKey);
     if (slot === undefined || !templateSlotActive(room, slot, options)) continue;
-    const set = encounterSetForBinding(catalog, binding, room.gameName);
-    const selectedEncounterKey = encounters.encounterKeyByPhase[binding.slotKey];
+    const selectedEncounterKey =
+      binding.kind === 'fixed'
+        ? binding.encounterDefinitionKey
+        : encounters.encounterKeyByPhase[binding.slotKey];
     if (selectedEncounterKey === undefined) {
       throw new Error(`${room.gameName}.${binding.slotKey} has no authored encounter selection`);
     }
-    if (!set.encounterDefinitionKeys.includes(selectedEncounterKey)) {
+    const declaredEncounterKeys =
+      binding.kind === 'fixed'
+        ? [binding.encounterDefinitionKey]
+        : encounterSetForBinding(catalog, binding, room.gameName).encounterDefinitionKeys;
+    if (!declaredEncounterKeys.includes(selectedEncounterKey)) {
       throw new Error(
-        `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside ${set.key}`,
+        `${room.gameName}.${binding.slotKey} selected ${selectedEncounterKey} outside its declaration`,
       );
     }
     domains.push(
@@ -107,8 +119,11 @@ export function encounterPhaseAuthoringDomainForRoom(
         origin: createEncounterPhaseAddress(biome, owner, binding.slotKey),
         slotKey: binding.slotKey,
         selectedEncounterKey,
-        declaredEncounterKeys: Object.freeze([...set.encounterDefinitionKeys]),
-        defaultEncounterKey: set.defaultEncounterDefinitionKey,
+        declaredEncounterKeys: Object.freeze([...declaredEncounterKeys]),
+        defaultEncounterKey:
+          binding.kind === 'fixed'
+            ? binding.encounterDefinitionKey
+            : encounterSetForBinding(catalog, binding, room.gameName).defaultEncounterDefinitionKey,
       }),
     );
   }

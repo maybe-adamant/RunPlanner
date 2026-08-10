@@ -121,6 +121,8 @@ export const nEncounterDefinitions = [
     label: 'Medea story',
     kind: 'story',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Medea',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Medea' },
   },
   {
     key: 'BossPolyphemus01',

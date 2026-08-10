@@ -124,7 +124,7 @@ export const athenaTraits = [
 export const athenaGiver = {
   key: 'Athena',
   label: 'Athena',
-  providerKind: 'fieldNpc',
+  providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: [
     'InvulnerabilityDashBoon',

@@ -296,6 +296,16 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'SlamManaBurstBoon',
     'BloodManaBurstBoon',
   ],
+  Arachne: [
+    'AgilityCostume',
+    'ManaCostume',
+    'VitalityCostume',
+    'HighArmorCostume',
+    'CastDamageCostume',
+    'IncomeCostume',
+    'SpellCostume',
+    'EscalatingCostume',
+  ],
   Apollo: [
     'ApolloWeaponBoon',
     'ApolloSpecialBoon',
@@ -503,6 +513,16 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'ElementalUnifiedBoon',
     'TimeStopLastStandBoon',
   ],
+  Medea: [
+    'HealingOnDeathCurse',
+    'MoneyOnDeathCurse',
+    'ManaOverTimeCurse',
+    'SpawnDamageCurse',
+    'ArmorPenaltyCurse',
+    'SlowProjectileCurse',
+    'DeathDefianceRetaliateCurse',
+    'NewStatusDamage',
+  ],
   Artemis: [
     'SupportingFireBoon',
     'CritBonusBoon',
@@ -651,6 +671,8 @@ const expectedDeferredTraitKeys = [
 
 const expectedOfferRequirements: Readonly<Record<string, string>> = {
   DeathDefianceRefillBoon:
+    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
+  DeathDefianceRetaliateCurse:
     '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DoorHealToFullBoon: '[{"kind":"anyEquippedTrait","traitKeys":["HighHealthOffenseBoon"]}]',
   WeakPotencyBoon:
@@ -843,9 +865,10 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(293);
+    expect(traits?.traits.values).toHaveLength(309);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
+      ['Arachne', 8],
       ['Artemis', 9],
       ['Athena', 8],
       ['Icarus', 8],
@@ -858,6 +881,7 @@ describe('trait offer catalog closure', () => {
       ['Poseidon', 22],
       ['Zeus', 22],
       ['Hermes', 13],
+      ['Medea', 8],
       ['WeaponUpgrade', 92],
     ]);
     expect(

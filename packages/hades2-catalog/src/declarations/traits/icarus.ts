@@ -107,7 +107,7 @@ export const icarusTraits = [
 export const icarusGiver = {
   key: 'Icarus',
   label: 'Icarus',
-  providerKind: 'fieldNpc',
+  providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: [
     'FocusAttackDamageTrait',

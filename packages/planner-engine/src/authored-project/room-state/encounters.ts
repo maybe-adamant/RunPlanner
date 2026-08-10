@@ -129,8 +129,9 @@ export function createDefaultRoomEncounterState(
   room: RoomDeclaration,
   path = `rooms.${room.gameName}.encounters`,
 ): RoomEncounterState {
+  const bindings = encounterBindingsBySlot(catalog, room, path);
   const values: Record<string, string> = {};
-  for (const binding of encounterBindingsBySlot(catalog, room, path).values()) {
+  for (const binding of bindings.values()) {
     if (binding.kind === 'fixed') {
       encounterDefinitionForKey(
         catalog,
@@ -154,9 +155,12 @@ export function createDefaultRoomEncounterState(
     values[binding.slotKey] = set.defaultEncounterDefinitionKey;
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
-  for (const [phaseKey, encounterKey] of Object.entries(values)) {
+  for (const binding of bindings.values()) {
+    const encounterKey =
+      binding.kind === 'fixed' ? binding.encounterDefinitionKey : values[binding.slotKey];
+    if (encounterKey === undefined) continue;
     const offer = createDefaultEncounterTraitOffer(catalog, encounterKey);
-    if (offer !== undefined) traitOffersByPhase[phaseKey] = { [encounterKey]: offer };
+    if (offer !== undefined) traitOffersByPhase[binding.slotKey] = { [encounterKey]: offer };
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(values),
@@ -333,11 +337,18 @@ export function decodeRoomEncounterState(
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   if (state.traitOffersByPhase !== undefined) {
     const rawByPhase = expectRecord(state.traitOffersByPhase, `${path}.traitOffersByPhase`);
+    // Fixed phases are persistable only when their declaration owns a trait
+    // offer; selectable phases retain the established sparse offer surface.
     const legalPhaseKeys = [...bindings.values()]
-      .filter(
-        (binding): binding is Extract<EncounterSlotBinding, { readonly kind: 'set' }> =>
-          binding.kind === 'set',
-      )
+      .filter((binding) => {
+        if (binding.kind === 'fixed') {
+          return (
+            catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]
+              ?.traitOfferProducer !== undefined
+          );
+        }
+        return true;
+      })
       .map((binding) => binding.slotKey);
     for (const phaseKey of Object.keys(rawByPhase)) {
       if (!legalPhaseKeys.includes(phaseKey))
@@ -349,7 +360,10 @@ export function decodeRoomEncounterState(
         rawByPhase[phaseKey],
         `${path}.traitOffersByPhase.${phaseKey}`,
       );
-      const legalEncounterKeys = legalTraitOfferEncounterKeys(catalog, binding);
+      const legalEncounterKeys =
+        binding.kind === 'fixed'
+          ? [binding.encounterDefinitionKey]
+          : legalTraitOfferEncounterKeys(catalog, binding);
       if (Object.keys(rawByEncounter).length === 0)
         failProjectDocument(`${path}.traitOffersByPhase.${phaseKey}`, 'must not be empty');
       const phaseOffers: Record<string, AuthoredTraitOffer> = {};
@@ -431,18 +445,20 @@ export function reconcileRoomEncounterState(
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   for (const binding of replacementBindings.values()) {
-    if (binding.kind !== 'set') continue;
-    const selected = selections[binding.slotKey];
+    const selected =
+      binding.kind === 'fixed' ? binding.encounterDefinitionKey : selections[binding.slotKey];
     const legalKeys = new Set(
-      encounterSetForBinding(
-        catalog,
-        binding,
-        `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
-      ).encounterDefinitionKeys,
+      binding.kind === 'fixed'
+        ? [binding.encounterDefinitionKey]
+        : encounterSetForBinding(
+            catalog,
+            binding,
+            `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
+          ).encounterDefinitionKeys,
     );
     const priorPhase = previous.traitOffersByPhase?.[binding.slotKey];
     const phaseOffers: Record<string, AuthoredTraitOffer> = {};
-    if (previousBindings.get(binding.slotKey)?.kind === 'set' && priorPhase !== undefined) {
+    if (priorPhase !== undefined) {
       for (const [encounterKey, offer] of Object.entries(priorPhase)) {
         if (
           legalKeys.has(encounterKey) &&

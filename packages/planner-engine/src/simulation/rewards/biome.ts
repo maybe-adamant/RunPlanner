@@ -13,7 +13,10 @@ import {
   type TargetAddress,
 } from '../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
-import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
+import {
+  encounterEnvelopeSlots,
+  selectedEncounterDefinitionKey,
+} from '../../authored-project/room-state/encounters';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
@@ -2137,7 +2140,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
-        const selectedEncounterKey = room.encounters.encounterKeyByPhase[event.phaseKey];
+        const selectedEncounterKey = selectedEncounterDefinitionKey(
+          catalog,
+          declaration,
+          room.encounters,
+          event.phaseKey,
+          semanticAddressKey(event.origin),
+        );
         const authoredEncounterOffer =
           selectedEncounterKey === undefined
             ? undefined

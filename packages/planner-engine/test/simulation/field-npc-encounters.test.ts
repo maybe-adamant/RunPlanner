@@ -31,6 +31,7 @@ import {
   simulateProjectAssembly,
   targetedAcquisitionTargetKeys,
   traitCandidates,
+  createTraitHistoryState,
   type CanonicalAuthoredRoom,
   type EncounterHistoryEntry,
   type HistoryStateView,
@@ -53,6 +54,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
+  createRepresentativeNProject,
   createRepresentativeNOPQProject,
   authorLegalTraitOffers,
   oBiome,
@@ -588,6 +590,109 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ kind: 'traitOffer', result: { supported: true } });
   });
 
+  it('reuses the encounter-owned offer path for fixed Arachne Story choices', () => {
+    const occurrenceId = goldenFOccurrenceId(7, 1);
+    const storyPhase = phase(goldenFBiome, occurrenceId);
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
+      gameName: 'F_Story01',
+    });
+    const selected = authoredOccurrence(project, 'F', occurrenceId);
+    const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.Story_Arachne_01;
+    expect(initialOffer).toMatchObject({
+      giverKey: 'Arachne',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'AgilityCostume', rarity: 'Common' },
+        { traitKey: 'ManaCostume', rarity: 'Common' },
+        { traitKey: 'VitalityCostume', rarity: 'Common' },
+      ],
+    });
+    const traitAddress = createTraitOfferAddress(storyPhase, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: traitAddress,
+      selectedOptionKey: 'option2',
+    });
+    const result = simulateProject(catalog, project);
+    const biome = result.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (biome?.authoring !== 'complete') throw new Error(JSON.stringify(biome?.findings));
+    if (!('rewards' in biome)) throw new Error('F reward evaluation is missing');
+    expect(biome.rewards.selectedTraitOffers).toContainEqual(
+      expect.objectContaining({ address: expect.objectContaining({ owner: storyPhase }) }),
+    );
+    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.ManaCostume).toMatchObject({
+      giverKey: 'Arachne',
+      providerKind: 'npc',
+      rarity: 'Common',
+    });
+    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.VitalityCostume).toBeUndefined();
+  });
+
+  it('gates Medea Death Defiance curse candidates and acquires the selected Story curse chronologically', () => {
+    const project = createRepresentativeNProject({
+      openSlotKeys: [
+        'combat11',
+        'combat10',
+        'combat09',
+        'combat05',
+        'story',
+        'combat02',
+        'combat01',
+        'miniBoss01',
+        'combat23',
+      ],
+      visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
+    });
+    const history = createTraitHistoryState();
+    expect(
+      traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: false }).find(
+        (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
+      ),
+    ).toMatchObject({ available: false });
+    expect(
+      traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: true }).find(
+        (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
+      ),
+    ).toMatchObject({ available: true, rarity: 'Common' });
+
+    const storyId = nOccurrenceId('story');
+    const storyPhase = phase(nBiome, storyId);
+    const storyOffer = authoredOccurrence(project, 'N', storyId).encounters.traitOffersByPhase
+      ?.Encounter?.Story_Medea_01;
+    expect(storyOffer).toMatchObject({ giverKey: 'Medea', deathDefianceConditionMet: false });
+    const edited = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      value: {
+        ...storyOffer!,
+        options: [
+          { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' },
+          { traitKey: 'MoneyOnDeathCurse', rarity: 'Common' },
+          { traitKey: 'ManaOverTimeCurse', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: true,
+      },
+    });
+    const { biome } = evaluatedSurfaceBiome(edited, 'N');
+    if (!('rewards' in biome)) throw new Error('N reward evaluation is missing');
+    const branch = biome.rewards.branches[0];
+    expect(branch?.traitHistory?.equippedTraits.DeathDefianceRetaliateCurse).toMatchObject({
+      giverKey: 'Medea',
+      providerKind: 'npc',
+      rarity: 'Common',
+    });
+    expect(
+      biome.rewards.selectedTraitOffers.find(
+        (trace) => semanticAddressKey(trace.address.owner) === semanticAddressKey(storyPhase),
+      ),
+    ).toMatchObject({ acquisitionRole: 'selection', chronologicalIndex: expect.any(Number) });
+  });
+
   it('keeps an invalid Artemis selection authored at its exact phase trait owner', () => {
     let project = select(createCompleteFGProject(), fNpcPhase, 'ArtemisCombatF');
     const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
@@ -951,7 +1056,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
       selectedEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.FocusAttackDamageTrait,
-    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'fieldNpc', rarity: 'Common' });
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc', rarity: 'Common' });
   });
 
   it('uses declaration-owned P Indoor and Outdoor tags for Heracles, Icarus, and Athena', () => {
@@ -1027,7 +1132,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
       pEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.OmegaExplodeBoon,
-    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'fieldNpc', rarity: 'Common' });
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc', rarity: 'Common' });
   });
 
   it('applies reached Latest Model through the encounter-owned offer and exhausts its exact Hammer target', () => {
@@ -1080,7 +1185,7 @@ describe('field NPC encounter requirements', () => {
     if (history === undefined) throw new Error('O Latest Model trait history is missing');
     expect(history.equippedTraits.UpgradeHammerBoon).toMatchObject({
       giverKey: 'Icarus',
-      providerKind: 'fieldNpc',
+      providerKind: 'npc',
       rarity: 'Common',
     });
     expect(history.equippedTraits.StaffDoubleAttackTrait).toMatchObject({
@@ -1132,7 +1237,7 @@ describe('field NPC encounter requirements', () => {
     if (traitHistory === undefined) throw new Error('P Athena trait history is missing');
     expect(traitHistory?.equippedTraits.InvulnerabilityDashBoon).toMatchObject({
       giverKey: 'Athena',
-      providerKind: 'fieldNpc',
+      providerKind: 'npc',
     });
     expect(traitHistory?.elementCounts.Fire).toBeGreaterThan(0);
     expect(

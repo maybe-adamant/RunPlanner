@@ -5,6 +5,7 @@ import {
   type AuthoredTraitOffer,
 } from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
+import { selectedEncounterDefinitionKey } from '../room-state/encounters';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
@@ -313,6 +314,7 @@ export function applyTraitOfferCommand(
   if (owner.kind === 'encounterPhase') {
     const encounterOwner = owner.owner;
     let currentEncounters = occurrence.encounters;
+    let encounterRoom = catalog.rooms.byKey[occurrence.gameName];
     let localSide:
       | Extract<RoomOccurrence['state'], { readonly kind: 'ephyraCombat' }>['sideRooms'][string]
       | undefined;
@@ -327,15 +329,23 @@ export function applyTraitOfferCommand(
       if (localSide === undefined)
         failCommand(command, `missing side-room ${encounterOwner.slotKey}`);
       currentEncounters = localSide.encounters;
+      const sideRoom = group.slots.find((slot) => slot.slotKey === encounterOwner.slotKey);
+      encounterRoom =
+        sideRoom === undefined ? undefined : catalog.rooms.byKey[sideRoom.roomGameName];
     }
+    if (encounterRoom === undefined)
+      failCommand(command, `unknown encounter room for ${owner.phaseKey}`);
     const phaseOffersValue = currentEncounters.traitOffersByPhase?.[owner.phaseKey];
     if (phaseOffersValue === undefined)
       failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
     const phaseOffers = phaseOffersValue;
-    const encounterKeyValue = currentEncounters.encounterKeyByPhase[owner.phaseKey];
-    if (encounterKeyValue === undefined)
-      failCommand(command, `no selected encounter at phase ${owner.phaseKey}`);
-    const encounterKey = encounterKeyValue;
+    const encounterKey = selectedEncounterDefinitionKey(
+      catalog,
+      encounterRoom,
+      currentEncounters,
+      owner.phaseKey,
+      occurrence.gameName,
+    );
     const existing = phaseOffers[encounterKey];
     if (existing === undefined) failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
     const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
