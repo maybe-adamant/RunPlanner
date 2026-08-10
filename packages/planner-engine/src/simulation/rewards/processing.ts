@@ -230,6 +230,7 @@ function applyTraitOfferForAcquisition(
             finding.code,
             finding.traitKey,
             finding.detail,
+            finding.requirementTraitKeys,
             findingChronology,
           );
         }),
@@ -244,6 +245,7 @@ function applyTraitOfferForAcquisition(
           finding.code,
           finding.traitKey,
           undefined,
+          undefined,
           findingChronology,
         );
       });
@@ -257,6 +259,7 @@ function applyTraitOfferForAcquisition(
           finding.code,
           undefined,
           finding.detail,
+          undefined,
           findingChronology,
         );
       });
@@ -296,6 +299,7 @@ function addTraitFinding(
   code: TraitFindingCode,
   traitKey: string | undefined,
   detail?: string,
+  requirementTraitKeys?: readonly string[],
   findingChronology?: FindingChronology,
 ): void {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
@@ -309,6 +313,7 @@ function addTraitFinding(
       lifecyclePoint,
       ...(traitKey === undefined ? {} : { traitKey }),
       ...(detail === undefined ? {} : { detail }),
+      ...(requirementTraitKeys === undefined ? {} : { requirementTraitKeys }),
     }),
   });
   addRewardFinding(

@@ -59,6 +59,37 @@ function unavailableMessage(evaluation: CandidateContextUnavailable): string {
   }
 }
 
+function formatAlternativeLabels(labels: readonly string[]): string {
+  if (labels.length === 0) return '';
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')}, or ${labels.at(-1)}`;
+}
+
+function presentTraitCandidateReason(
+  finding: {
+    readonly code: Parameters<typeof presentTraitCandidateFinding>[0];
+    readonly detail?: string;
+    readonly requirementTraitKeys?: readonly string[];
+  },
+  traitLabel: (traitKey: string) => string,
+): string {
+  const copy = presentTraitCandidateFinding(finding.code);
+  const requirementLabels = finding.requirementTraitKeys?.map(traitLabel);
+  if (requirementLabels !== undefined && requirementLabels.length > 0) {
+    const alternatives = formatAlternativeLabels(requirementLabels);
+    if (finding.code === 'missingPrerequisite') {
+      return `${copy.title}: Requires one of ${alternatives}.`;
+    }
+    if (finding.code === 'negativePrerequisite') {
+      return `${copy.title}: Cannot be equipped alongside ${alternatives}.`;
+    }
+  }
+  return finding.detail === undefined
+    ? `${copy.title}: ${copy.description}`
+    : `${copy.title}: ${copy.description} (${finding.detail})`;
+}
+
 /**
  * Adapt the engine's candidate artifact into option-level editor feedback.
  * The adapter only groups returned findings; it does not assess eligibility.
@@ -86,11 +117,7 @@ export function projectTraitOfferFeedback(
   const findingsByTrait = new Map<string, string[]>();
   const contextMessages = new Set<string>();
   for (const finding of evaluation.result.findings) {
-    const copy = presentTraitCandidateFinding(finding.code);
-    const reason =
-      finding.detail === undefined
-        ? `${copy.title}: ${copy.description}`
-        : `${copy.title}: ${copy.description} (${finding.detail})`;
+    const reason = presentTraitCandidateReason(finding, traitLabel);
     if (finding.traitKey === undefined) {
       contextMessages.add(reason);
       continue;
@@ -179,8 +206,9 @@ function findingKey(finding: {
   readonly code: string;
   readonly traitKey?: string;
   readonly detail?: string;
+  readonly requirementTraitKeys?: readonly string[];
 }): string {
-  return `${finding.code}|${finding.traitKey}|${finding.detail ?? ''}`;
+  return `${finding.code}|${finding.traitKey}|${finding.detail ?? ''}|${finding.requirementTraitKeys?.join(',') ?? ''}`;
 }
 
 function aggregateTraceEvidence(traces: readonly AggregatedTraitTrace[]): {

@@ -300,4 +300,46 @@ describe('route trait projection', () => {
     expect(feedback.options[1]?.reasons).toEqual([]);
     expect(feedback.options[2]?.reasons).toEqual([]);
   });
+
+  it('presents prerequisite evidence with player-facing trait labels', () => {
+    const offer = {
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'SlowExAttackBoon', rarity: 'Common' as const },
+        { traitKey: 'DemeterSpecialBoon', rarity: 'Common' as const },
+        { traitKey: 'DemeterCastBoon', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const feedback = projectTraitOfferFeedback(
+      offer,
+      {
+        value: offer,
+        evaluation: {
+          kind: 'traitOffer',
+          result: {
+            supported: false,
+            branches: [],
+            assessments: [],
+            findings: [
+              {
+                code: 'missingPrerequisite' as const,
+                traitKey: 'SlowExAttackBoon',
+                requirementTraitKeys: ['AphroditeWeaponBoon', 'ApolloWeaponBoon'],
+              },
+            ],
+          },
+        },
+      },
+      (traitKey) =>
+        ({
+          AphroditeWeaponBoon: 'Flutter Strike',
+          ApolloWeaponBoon: 'Nova Strike',
+        })[traitKey] ?? traitKey,
+    );
+    expect(feedback.options[0]?.reasons).toEqual([
+      'Trait prerequisite is missing: Requires one of Flutter Strike or Nova Strike.',
+    ]);
+    expect(feedback.options[0]?.reasons.join(' ')).not.toContain('WeaponBoon');
+  });
 });
