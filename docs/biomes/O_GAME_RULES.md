@@ -56,7 +56,10 @@ The selected concrete definition owns whether a slot counts. The optional third
 phase is prepared from the pre-room encounter-depth history. The authored
 encounter count is therefore a real room-local value: two means Intro plus
 Combat1; three includes Combat2. It may be context-invalid and produce a
-finding, but it is not silently coerced by the UI.
+finding, but it is not silently coerced by the UI. A structurally supported
+count remains authorable when activating Combat2 exposes an invalid retained
+encounter or reward default; those leaf findings are retained so the newly
+reachable controls can repair them.
 
 Each active wheel owns one RunProgress or MetaProgress store, one or two
 complete resolved offers, and one picked offer index. Unpicked wheel options

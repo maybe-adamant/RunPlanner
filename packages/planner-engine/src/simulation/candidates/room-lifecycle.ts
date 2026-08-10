@@ -253,10 +253,10 @@ export function evaluateShipEncounterCountCandidate(
     result: Object.freeze({
       encounterCount: query.encounterCount,
       supportEncounterCounts,
-      selectedPossible:
-        supportEncounterCounts.includes(query.encounterCount) &&
-        (lifecycle?.supported ?? true) &&
-        findings.length === 0,
+      // The count owns Ship phase topology. Activating a retained encounter or
+      // reward leaf may expose findings, but those leaves must remain reachable
+      // for repair rather than making their owning topology value unauthorable.
+      selectedPossible: supportEncounterCounts.includes(query.encounterCount),
       findings,
     }),
   });

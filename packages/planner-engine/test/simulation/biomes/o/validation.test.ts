@@ -631,7 +631,7 @@ describe('selected O validation', () => {
       result: {
         encounterCount: 3,
         supportEncounterCounts: [2, 3],
-        selectedPossible: false,
+        selectedPossible: true,
         findings: [
           expect.objectContaining({
             code: 'rewardBagEntryUnavailable',
@@ -658,6 +658,44 @@ describe('selected O validation', () => {
     ).toMatchObject({
       kind: 'rewardWheelOfferCount',
       result: { offerCount: 1, selectedPossible: true, findings: [] },
+    });
+  });
+
+  it('keeps Combat2 authorable after earlier Ship offers exhaust the default Boon entries', () => {
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
+    expect(simulateProject(catalog, project).status).toBe('valid');
+
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'shipEncounterCount', occurrence, encounterCount: 3 }),
+    ).toMatchObject({
+      kind: 'shipEncounterCount',
+      result: {
+        encounterCount: 3,
+        supportEncounterCounts: [2, 3],
+        selectedPossible: true,
+        findings: [
+          expect.objectContaining({
+            code: 'rewardBagEntryUnavailable',
+            origin: expect.objectContaining({
+              kind: 'rewardWheelOffer',
+              occurrenceId: oOccurrenceIds.combat07,
+              wheelKey: 'wheel2',
+            }),
+          }),
+        ],
+      },
     });
   });
 
