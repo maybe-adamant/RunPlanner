@@ -645,7 +645,7 @@ function roomLocalForOccurrence(
             slot.slotKey,
           );
           const encounterPhases =
-            side.generation === 'generated'
+            side.enteredOrdinal !== null
               ? activeEncounterPhasesForOwner(
                   input,
                   sideRoom,

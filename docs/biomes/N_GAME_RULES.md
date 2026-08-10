@@ -156,6 +156,20 @@ order. It must not substitute the six-room visit list for that hidden ordering:
 all board offers exist before the first visit, while only visited targets add
 their acquisitions in authored visit order.
 
+The board may contain five `HubRewards` Boons plus the miniboss's forced
+`RunProgress` Boon. Because source fallback is resolved while offers are
+generated rather than when they are acquired, all six can carry distinct
+ordinary sources and all six can subsequently be acquired through the visit
+order. The ordinary four-source limit is therefore not a hard Ephyra-board or
+post-Ephyra history cap.
+
+Complete selected validation remains atomic across that board. For incremental
+authoring, however, one changed reward is assessed from the board's
+pre-generation frontier when other retained defaults still make the complete
+ordering invalid. The current selected value retains its complete-board
+finding, and visits remain withheld until the authored board as a whole admits
+a supported hidden ordering.
+
 All open Hub offers contribute to the Hub reward lookup before the final shop
 is validated. This includes unvisited targets, because the game creates the
 full board as one reward region. The Preboss Shop's lookup therefore cannot be
@@ -188,9 +202,11 @@ or empty and are not NPC candidate surfaces.
 Ephyra side rooms retain parent-local encounter selections on their exact
 `LocalChildAddress`. Their SubRoom/Light sets and heavy fixed binding contain
 only their normalized ordinary or `Empty` identities; entering a generated
-side room activates its room-local encounter selection without promoting it to
-global topology. Artemis and Heracles requirements use exact definition
-history, not a Hub-specific NPC ledger.
+side room activates its room-local encounter selection and editor control;
+generation alone exposes its reward but not an unassessed encounter picker.
+The retained authored selection reappears if that side room is entered again,
+without promoting it to global topology. Artemis and Heracles requirements use
+exact definition history, not a Hub-specific NPC ledger.
 
 ### Canonical baseline and exclusions
 

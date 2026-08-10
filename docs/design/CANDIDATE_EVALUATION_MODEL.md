@@ -400,6 +400,14 @@ and invokes the existing reward authorities:
 - selected-invalid candidates retain exact bag, peer, source, payload,
   acquisition, or shop findings.
 
+The large N Hub board has one focused-repair refinement. Selected simulation
+and the selected candidate still validate the complete atomic board. When that
+board has no supported ordering because several retained declaration defaults
+are invalid together, a changed focused reward may be supported from the
+board's pre-generation frontier without requiring unrelated siblings to become
+valid in the same edit. This authorizes one repair step; it does not publish a
+valid board, consume the remaining offers, or expose Hub visit candidates.
+
 The application may aggregate complete offer results into reward-type,
 Boon-source, and Devotion-source steps. It does not implement reward support.
 
