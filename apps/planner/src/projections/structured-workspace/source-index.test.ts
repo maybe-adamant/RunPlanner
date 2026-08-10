@@ -120,7 +120,71 @@ function selectedContractWithoutNormalTargets() {
   return { additional, biome, owner, project };
 }
 
+function selectedAdditionalExitWithDownstream(kind: 'naturalChaos' | 'zagreusContract') {
+  const base = createGoldenFGHIProject();
+  const located = base.routes.flatMap((route) =>
+    route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === kind)
+          ? [{ occurrence, plan, route }]
+          : [];
+      }),
+    ),
+  )[0];
+  if (located === undefined) throw new Error(`source-index ${kind} source is missing`);
+  const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+  const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+  const owner = createExitDecisionAddress(biome, source);
+  const additional = createAdditionalExitAddress(biome, source.occurrenceId, kind);
+  const continuationId = createOccurrenceId(`zz-source-index-selected-${kind}`);
+  let project = applyProjectCommand(base, catalog, { kind: 'RemoveExitDecision', decision: owner });
+  project = applyProjectCommand(
+    project,
+    catalog,
+    kind === 'naturalChaos'
+      ? { kind: 'AddNaturalChaos', additional, occurrenceId: continuationId }
+      : { kind: 'AddZagreusContract', additional, occurrenceId: continuationId },
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, source),
+    value: { kind: 'additional', additionalExitKey: kind },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: continuationId,
+    }),
+  });
+  return { biome, continuationId, owner, project };
+}
+
 describe('structured workspace source index', () => {
+  it.each(['naturalChaos', 'zagreusContract'] as const)(
+    'orders a selected %s continuation before retained unpicked topology',
+    (kind) => {
+      const fixture = selectedAdditionalExitWithDownstream(kind);
+      const source = biomeSource(
+        sourceIndexForExactProject(fixture.project),
+        fixture.biome.routeKey,
+        fixture.biome.biomeKey,
+      );
+      const sourceIndex = source.exitDecisions.findIndex(
+        (decision) =>
+          semanticAddressKey(createExitDecisionAddress(fixture.biome, decision.source)) ===
+          semanticAddressKey(fixture.owner),
+      );
+
+      expect(sourceIndex).toBeGreaterThanOrEqual(0);
+      expect(source.exitDecisions[sourceIndex + 1]?.source).toEqual({
+        kind: 'occurrence',
+        occurrenceId: fixture.continuationId,
+      });
+    },
+  );
+
   it('indexes an evaluated selected continuation without manufacturing a partial normal batch, and rejects an orphan continuation owner', () => {
     const fixture = selectedContractWithoutNormalTargets();
     const evaluation = simulateProject(catalog, fixture.project);
