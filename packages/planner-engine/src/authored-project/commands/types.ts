@@ -226,6 +226,11 @@ export type ShopOccurrenceCommand =
       readonly kind: 'ReplaceShopPurchaseOrder';
       readonly shop: OccurrenceAddress;
       readonly offerKeys: readonly string[];
+    }
+  | {
+      readonly kind: 'ReplaceShopDeathDefianceCondition';
+      readonly shop: OccurrenceAddress;
+      readonly value: boolean;
     };
 
 export type EncounterOccurrenceCommand =

@@ -204,9 +204,11 @@ always owns the complete boolean with a false default; an inapplicable source
 omits it, and the codec and commands reject it if supplied. Do not replace these
 two narrow fields with an open string-keyed condition bag.
 
-Changing the checkbox is a semantic command, participates in undo/redo, and
-retains every authored trait option, selected option, Shop reward, and purchase
-order. It changes only candidate support and evaluation.
+Changing the checkbox is persisted through a semantic command, participates in
+undo/redo, and retains every authored trait option, selected option, Shop
+reward, and purchase order. The trait dialog includes it in the existing
+atomic `ReplaceTraitOffer` save; the inline Shop control uses its own bound
+command. It changes only candidate support and evaluation.
 
 ### Declaration ownership
 
@@ -275,9 +277,9 @@ repair control.
 ### Persistence
 
 Adding authored condition state changes the persisted project contract. Bump
-schema 17 once in the Death Defiance gate and follow the repository's current
-exact-version policy. Do not introduce a migration registry, compatibility
-reader, or production forwarding model.
+the baseline schema exactly once, from 17 to 18, in the Death Defiance gate and
+follow the repository's current exact-version policy. Do not introduce a
+migration registry, compatibility reader, or production forwarding model.
 
 Every gate that changes normalized catalog declarations updates the catalog
 version according to the existing exact-match policy. Encoded condition state

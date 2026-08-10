@@ -1,5 +1,6 @@
 import {
   chaosHammerLegal,
+  deathDefianceConditionMet,
   hammerEarly,
   hammerLate,
   routeTalentLegal,
@@ -219,6 +220,8 @@ export const shops = [
           option({
             key: 'LastStandDrop',
             rewardType: 'LastStandDrop',
+            requirement: deathDefianceConditionMet,
+            purchaseRequirement: deathDefianceConditionMet,
           }),
         ],
       },
@@ -362,6 +365,8 @@ export const shops = [
           option({
             key: 'LastStandDrop',
             rewardType: 'LastStandDrop',
+            requirement: deathDefianceConditionMet,
+            purchaseRequirement: deathDefianceConditionMet,
           }),
         ],
       },

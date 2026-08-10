@@ -10,6 +10,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTraitOfferAddress,
+  traitGiverUsesOfferContext,
   semanticAddressKey,
   type BiomeAddress,
   type EncounterPhaseAddress,
@@ -53,6 +54,7 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
+  type WorkspaceShopConditionControl,
   type WorkspaceTraitOfferControl,
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
@@ -157,6 +159,9 @@ function traitOfferControls(
         marker: input.markerDestinations.marker(address),
         offer,
         rewardOwner: owner.address,
+        ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
+          ? { deathDefianceCondition: { value: offer.deathDefianceConditionMet ?? false } }
+          : {}),
       }),
     );
   }
@@ -488,6 +493,13 @@ function activeEncounterPhasesForOwner(
             marker: input.markerDestinations.marker(createTraitOfferAddress(address, 'selection')),
             offer: authoredTraitOffer,
             rewardOwner: address,
+            ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
+              ? {
+                  deathDefianceCondition: {
+                    value: authoredTraitOffer.deathDefianceConditionMet ?? false,
+                  },
+                }
+              : {}),
           })
         : undefined;
     phases.push(
@@ -906,6 +918,13 @@ function roomLocalForOccurrence(
       return Object.freeze({
         kind: 'shop' as const,
         materialized: true,
+        ...(shop.deathDefianceConditionMet === undefined
+          ? {}
+          : {
+              deathDefianceCondition: Object.freeze({
+                value: shop.deathDefianceConditionMet,
+              }) as WorkspaceShopConditionControl,
+            }),
         offers: Object.freeze(offers),
         purchaseOrder,
       });
@@ -1098,6 +1117,15 @@ function occurrenceInteractionRequirements(
           ),
         }),
       );
+      if (shop.deathDefianceCondition !== undefined) {
+        requirements.push(
+          Object.freeze({
+            kind: 'shopDeathDefianceCondition' as const,
+            owner: room.address,
+            value: shop.deathDefianceCondition.value,
+          }),
+        );
+      }
       return Object.freeze(requirements);
     }
   }

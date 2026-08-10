@@ -597,6 +597,88 @@ describe('ordered shop transitions', () => {
     ).toEqual([]);
   });
 
+  it.each([
+    {
+      profileKey: 'I_WorldShop',
+      authored: [
+        {
+          offer: {
+            rewardType: 'RandomLoot',
+            payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+          },
+        },
+        { offer: { rewardType: 'MaxHealthDrop' } },
+        { offer: { rewardType: 'LastStandDrop' } },
+        { offer: { rewardType: 'MaxHealthDropBig' } },
+        { offer: { rewardType: 'WeaponPointsRareDrop' } },
+      ],
+      lastStandSlot: 2,
+    },
+    {
+      profileKey: 'Q_WorldShop',
+      authored: [
+        {
+          offer: {
+            rewardType: 'RandomLoot',
+            payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+          },
+        },
+        {
+          offer: {
+            rewardType: 'RandomLoot',
+            payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+          },
+        },
+        { offer: { rewardType: 'HealBigDrop' } },
+        { offer: { rewardType: 'LastStandDrop' } },
+        { offer: { rewardType: 'MaxHealthDropBig' } },
+        { offer: { rewardType: 'WeaponPointsRareDrop' } },
+      ],
+      lastStandSlot: 3,
+    },
+  ] as const)(
+    'gates $profileKey LastStand generation and ordered purchase on one authored fact',
+    ({ profileKey, authored, lastStandSlot }) => {
+      const profile = rewardKernelCatalog.shops.byKey[profileKey];
+      if (profile === undefined) throw new Error(`missing ${profileKey}`);
+      const falseFacts = facts([], { authoredConditions: { deathDefianceConditionMet: false } });
+      const trueFacts = facts([], { authoredConditions: { deathDefianceConditionMet: true } });
+
+      expect(
+        evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, falseFacts),
+      ).toMatchObject({ unsupportedSlotIndexes: [lastStandSlot], witnesses: [] });
+      const witness = findShopGenerationWitnesses(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        trueFacts,
+      )[0];
+      if (witness === undefined) throw new Error(`${profileKey} true-condition witness is missing`);
+      expect(
+        simulateShopPurchases(
+          rewardKernelCatalog,
+          profile,
+          authored,
+          witness,
+          [lastStandSlot],
+          createRewardHistoryState(),
+          falseFacts,
+        ),
+      ).toEqual([]);
+      expect(
+        simulateShopPurchases(
+          rewardKernelCatalog,
+          profile,
+          authored,
+          witness,
+          [lastStandSlot],
+          createRewardHistoryState(),
+          trueFacts,
+        ),
+      ).toHaveLength(1);
+    },
+  );
+
   it('rejects a generation witness that does not support the authored shop offers', () => {
     const profile = rewardKernelCatalog.shops.byKey.WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [

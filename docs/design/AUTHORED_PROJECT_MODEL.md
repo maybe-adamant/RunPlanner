@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 17 Boundary
+## Schema 18 Boundary
 
-Schema 17 is the sole persisted authored-project contract. The codec rejects
+Schema 18 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -424,7 +424,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 17;
+  schemaVersion: 18;
   projectId: string;
   name: string;
   catalogVersion: string;

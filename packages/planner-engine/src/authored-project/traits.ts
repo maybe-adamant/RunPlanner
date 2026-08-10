@@ -13,6 +13,8 @@ export interface AuthoredTraitOffer {
   readonly giverKey: string;
   readonly options: readonly [AuthoredTraitOption, AuthoredTraitOption, AuthoredTraitOption];
   readonly selectedOptionKey: 'option1' | 'option2' | 'option3';
+  /** Present only when this giver's normalized offer requirements consume it. */
+  readonly deathDefianceConditionMet?: boolean;
 }
 
 export type TraitOptionKey = AuthoredTraitOffer['selectedOptionKey'];
@@ -40,6 +42,36 @@ export interface TraitOfferDefaultsContext {
 
 export function optionIndex(key: TraitOptionKey): 0 | 1 | 2 {
   return key === 'option1' ? 0 : key === 'option2' ? 1 : 2;
+}
+
+function requirementUsesContext(
+  requirement: import('../catalog-schema').TraitRequirementExpression,
+  context: import('../catalog-schema').TraitOfferContextKey,
+): boolean {
+  switch (requirement.kind) {
+    case 'all':
+      return requirement.requirements.some((child) => requirementUsesContext(child, context));
+    case 'offerContext':
+      return requirement.context === context;
+    default:
+      return false;
+  }
+}
+
+/** Engine-owned authoring query for a declaration's source-local condition. */
+export function traitGiverUsesOfferContext(
+  catalog: Catalog,
+  giverKey: string,
+  context: import('../catalog-schema').TraitOfferContextKey,
+): boolean {
+  const giver = catalog.traitGivers.byKey[giverKey];
+  return (
+    giver?.traitKeys.some((traitKey) =>
+      catalog.traits.byKey[traitKey]?.offerRequirements.some((requirement) =>
+        requirementUsesContext(requirement, context),
+      ),
+    ) ?? false
+  );
 }
 
 function giverForAcquisition(catalog: Catalog, gameName: string) {
@@ -104,6 +136,9 @@ export function createDefaultTraitOffers(
           : defaults.selectedOption === 1
             ? 'option2'
             : 'option3',
+      ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
+        ? { deathDefianceConditionMet: false }
+        : {}),
     });
   }
   return Object.freeze(result);
@@ -131,5 +166,8 @@ export function createDefaultEncounterTraitOffer(
         : defaults.selectedOption === 1
           ? 'option2'
           : 'option3',
+    ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
+      ? { deathDefianceConditionMet: false }
+      : {}),
   });
 }

@@ -41,7 +41,8 @@ import {
 } from './declaration';
 import { decodeRoomEncounterState } from './encounters';
 import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
-import { TRAIT_OPTION_KEYS } from '../traits';
+import { TRAIT_OPTION_KEYS, traitGiverUsesOfferContext } from '../traits';
+import { shopProfileUsesDeathDefianceCondition } from '../shop';
 
 function decodePayload(
   value: unknown,
@@ -155,7 +156,21 @@ function decodeTraitOffers(
   for (const [roleKey, giverKey] of Object.entries(expected)) {
     const rolePath = `${path}.${roleKey}`;
     const record = expectRecord(raw[roleKey], rolePath);
-    expectExactKeys(record, ['giverKey', 'options', 'selectedOptionKey'], rolePath);
+    const conditionApplicable = traitGiverUsesOfferContext(
+      catalog,
+      giverKey,
+      'deathDefianceConditionMet',
+    );
+    expectExactKeys(
+      record,
+      [
+        'giverKey',
+        'options',
+        'selectedOptionKey',
+        ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
+      ],
+      rolePath,
+    );
     if (expectString(record.giverKey, `${rolePath}.giverKey`) !== giverKey)
       failProjectDocument(`${rolePath}.giverKey`, `expected ${giverKey}`);
     const giver = catalog.traitGivers.byKey[giverKey];
@@ -249,6 +264,14 @@ function decodeTraitOffers(
       giverKey,
       options: Object.freeze(options) as AuthoredTraitOffer['options'],
       selectedOptionKey: selected as AuthoredTraitOffer['selectedOptionKey'],
+      ...(conditionApplicable
+        ? {
+            deathDefianceConditionMet: expectBoolean(
+              record.deathDefianceConditionMet,
+              `${rolePath}.deathDefianceConditionMet`,
+            ),
+          }
+        : {}),
     });
   }
   return Object.freeze(result);
@@ -455,16 +478,36 @@ function decodeShopState(
   path: string,
 ): ShopState {
   const shop = expectRecord(value, path);
-  expectExactKeys(shop, ['profileKey', 'offers', 'purchaseOrder'], path);
   const profileKey = expectString(shop.profileKey, `${path}.profileKey`);
-  if (profileKey !== binding.shopProfileKey) {
-    failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
-  }
   const profile = catalog.rewards.shops.byKey[profileKey];
   if (profile === undefined) {
     failProjectDocument(`${path}.profileKey`, `unknown shop profile ${profileKey}`);
   }
-  return decodeShopOffers(shop.offers, shop.purchaseOrder, catalog, profile, path);
+  const conditionApplicable = shopProfileUsesDeathDefianceCondition(catalog, profileKey);
+  expectExactKeys(
+    shop,
+    [
+      'profileKey',
+      'offers',
+      'purchaseOrder',
+      ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
+    ],
+    path,
+  );
+  if (profileKey !== binding.shopProfileKey) {
+    failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
+  }
+  return Object.freeze({
+    ...decodeShopOffers(shop.offers, shop.purchaseOrder, catalog, profile, path),
+    ...(conditionApplicable
+      ? {
+          deathDefianceConditionMet: expectBoolean(
+            shop.deathDefianceConditionMet,
+            `${path}.deathDefianceConditionMet`,
+          ),
+        }
+      : {}),
+  });
 }
 
 function decodeShopOffers(

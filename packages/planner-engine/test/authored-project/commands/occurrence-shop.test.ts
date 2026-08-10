@@ -3,17 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
+  createProjectHistory,
   createTargetAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  redoProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { gBiome, gProject, nBiome } from '../support/configured-projects';
+import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures';
 
 describe('authored-project Shop occurrence commands', () => {
   it('preserves customized Shop trait children when the parent offer is unchanged', () => {
@@ -176,5 +183,63 @@ describe('authored-project Shop occurrence commands', () => {
         detail: 'G_PreBoss01 has no materialized shop inventory',
       }),
     );
+  });
+
+  it('toggles the applicable Shop condition as one preserved, undoable edit', () => {
+    const project = createGoldenFGHIProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.gameName === 'I_PreBoss02');
+    if (occurrence === undefined) throw new Error('missing I shop fixture');
+    const shop = createOccurrenceAddress(goldenIBiome, occurrence.occurrenceId);
+    const initial = createProjectHistory(project);
+    const changed = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceShopDeathDefianceCondition',
+      shop,
+      value: true,
+    });
+    expect(changed.past).toHaveLength(1);
+    expect(changed.present).not.toBe(initial.present);
+    expect(changed.present).toMatchObject({
+      routes: expect.arrayContaining([
+        expect.objectContaining({
+          biomes: expect.arrayContaining([
+            expect.objectContaining({
+              topology: expect.objectContaining({
+                occurrences: expect.arrayContaining([
+                  expect.objectContaining({
+                    occurrenceId: occurrence.occurrenceId,
+                    state: expect.objectContaining({
+                      shop: expect.objectContaining({ deathDefianceConditionMet: true }),
+                    }),
+                  }),
+                ]),
+              }),
+            }),
+          ]),
+        }),
+      ]),
+    });
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(changed.present)), catalog),
+    ).toEqual(changed.present);
+    expect(
+      applyProjectHistoryCommand(changed, catalog, {
+        kind: 'ReplaceShopDeathDefianceCondition',
+        shop,
+        value: true,
+      }),
+    ).toBe(changed);
+    const undone = undoProjectHistory(changed);
+    expect(undone.present).toBe(initial.present);
+    expect(redoProjectHistory(undone).present).toBe(changed.present);
+    expect(() =>
+      applyProjectHistoryCommand(initial, catalog, {
+        kind: 'ReplaceShopDeathDefianceCondition',
+        shop: createOccurrenceAddress(nBiome, createOccurrenceId('round-trip-n-preboss')),
+        value: true,
+      }),
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceShopDeathDefianceCondition' }));
   });
 });

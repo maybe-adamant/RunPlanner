@@ -27,6 +27,7 @@ import {
 } from './declaration';
 import { createDefaultRoomEncounterState } from './encounters';
 import { createDefaultTraitOffers, type TraitOfferDefaultsContext } from '../traits';
+import { shopProfileUsesDeathDefianceCondition } from '../shop';
 
 function defaultCountedOffer(
   binding: CountedRewardBinding,
@@ -76,6 +77,9 @@ function defaultShopState(
   }
   return Object.freeze({
     profileKey: profile.key,
+    ...(shopProfileUsesDeathDefianceCondition(catalog, profile.key)
+      ? { deathDefianceConditionMet: false }
+      : {}),
     offers: Object.freeze(offers),
     purchaseOrder: Object.freeze([]),
   });

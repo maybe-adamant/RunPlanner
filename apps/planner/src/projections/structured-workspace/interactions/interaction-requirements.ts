@@ -84,6 +84,11 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly proposalOfferKeys: readonly (readonly string[])[];
         readonly selectedOfferKeys: readonly string[];
       }[];
+    }
+  | {
+      readonly kind: 'shopDeathDefianceCondition';
+      readonly owner: OccurrenceAddress;
+      readonly value: boolean;
     };
 
 /**

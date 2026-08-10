@@ -12,6 +12,7 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   assessTraitOption,
+  assessTraitOffer,
   assessSelectedTargetedAcquisition,
   assessTraitOfferComposition,
   createTraitHistoryState,
@@ -482,7 +483,9 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       giverKey: 'Icarus',
       rarity: 'Common',
     });
-    expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', recorded.history)).toEqual([]);
+    expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', recorded.history)).toEqual(
+      [],
+    );
   });
 
   it('keeps Latest Model unavailable without an eligible Rank-I Hammer', () => {
@@ -1315,6 +1318,52 @@ describe('reached trait offer chronology', () => {
       code: 'nonPriorityTrait',
       traitKey: 'ApolloRetaliateBoon',
     });
+  });
+
+  it('gates Athena Death Defiance candidates while retaining an invalid authored option', () => {
+    const history = createTraitHistoryState();
+    const falseCandidate = traitCandidates(catalog, 'Athena', history, {
+      deathDefianceConditionMet: false,
+    }).find((candidate) => candidate.traitKey === 'DeathDefianceRefillBoon');
+    const trueCandidate = traitCandidates(catalog, 'Athena', history, {
+      deathDefianceConditionMet: true,
+    }).find((candidate) => candidate.traitKey === 'DeathDefianceRefillBoon');
+    expect(falseCandidate?.available).toBe(false);
+    expect(falseCandidate?.assessment.findings).toContainEqual({
+      code: 'offerContext',
+      traitKey: 'DeathDefianceRefillBoon',
+      detail: 'deathDefianceConditionMet',
+    });
+    expect(trueCandidate?.available).toBe(true);
+
+    const retained = Object.freeze({
+      giverKey: 'Athena',
+      options: Object.freeze([
+        { traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' as const },
+        { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
+        { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1' as const,
+      deathDefianceConditionMet: false,
+    });
+    expect(
+      assessTraitOffer(catalog, retained, history, {
+        deathDefianceConditionMet: retained.deathDefianceConditionMet,
+      }),
+    ).toMatchObject([
+      {
+        legal: false,
+        findings: [
+          {
+            code: 'offerContext',
+            traitKey: 'DeathDefianceRefillBoon',
+            detail: 'deathDefianceConditionMet',
+          },
+        ],
+      },
+      { legal: true },
+      { legal: true },
+    ]);
   });
 
   it('records only the valid trait acquisition when an invalid offer emits no equipped event', () => {

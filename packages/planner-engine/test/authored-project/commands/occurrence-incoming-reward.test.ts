@@ -40,9 +40,46 @@ describe('authored-project incoming reward commands', () => {
       selectedOptionKey: 'option2',
     });
 
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
+    const existing =
+      occurrence?.state.kind === 'counted'
+        ? occurrence.state.reward?.traitOffersByAcquisitionRole?.source
+        : undefined;
+    if (existing === undefined) throw new Error('customized trait offer is missing');
+    expect(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'source'),
+        value: existing,
+      }),
+    ).toBe(project);
+
     expect(
       applyProjectCommand(project, catalog, { kind: 'ReplaceIncomingReward', reward, value }),
     ).toBe(project);
+  });
+
+  it('rejects a persisted Death Defiance field on an unsupported trait owner', () => {
+    const document = JSON.parse(encodeProjectDocument(createGoldenFGHProject())) as {
+      routes: Array<{
+        biomes: Array<{ topology?: { occurrences: Array<Record<string, unknown>> } }>;
+      }>;
+    };
+    const occurrence = document.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(6, 2));
+    if (occurrence === undefined) throw new Error('missing encoded trait owner');
+    const state = occurrence.state as {
+      reward?: { traitOffersByAcquisitionRole?: Record<string, Record<string, unknown>> };
+    };
+    const offer = state.reward?.traitOffersByAcquisitionRole?.source;
+    if (offer === undefined) throw new Error('missing encoded trait offer');
+    offer.deathDefianceConditionMet = true;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(/deathDefianceConditionMet/);
   });
 
   it('accepts a declaration-owned target and rejects targets on ordinary traits', () => {

@@ -206,6 +206,9 @@ function applyTraitOfferForAcquisition(
     {
       ...(reward.traitContext ?? {}),
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+      ...(authored.deathDefianceConditionMet === undefined
+        ? {}
+        : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
       resolvedProviderKey: authored.giverKey,
     },
     branch.traitEvaluations?.length ?? 0,

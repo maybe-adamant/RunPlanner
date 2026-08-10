@@ -42,7 +42,7 @@ const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
-const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons'] as const;
+const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'deathDefianceConditionMet'] as const;
 /** Deferred operands are compiler facts, never normalized catalog products. */
 const COMPILER_LOCAL_DEFERRED_TRAIT_KEYS = ['HadesCastProjectileBoon', 'CastLobBoon'] as const;
 
@@ -577,30 +577,30 @@ function normalizeGivers(
                 `${path}.rarityPolicy.rarity`,
               ),
             } as const)
-        : rarityPolicy.kind === 'selectable'
-          ? (() => {
-              const rarities = freezeUniqueStrings(
-                requireArray(
-                  rarityPolicy.rarities,
+          : rarityPolicy.kind === 'selectable'
+            ? (() => {
+                const rarities = freezeUniqueStrings(
+                  requireArray(
+                    rarityPolicy.rarities,
+                    `${path}.rarityPolicy.rarities`,
+                  ) as readonly string[],
                   `${path}.rarityPolicy.rarities`,
-                ) as readonly string[],
-                `${path}.rarityPolicy.rarities`,
-              ).map((rarity, rarityIndex) =>
-                closedValue(
-                  rarity,
-                  ['Common', 'Rare', 'Epic'] as const,
-                  `${path}.rarityPolicy.rarities[${rarityIndex}]`,
-                ),
+                ).map((rarity, rarityIndex) =>
+                  closedValue(
+                    rarity,
+                    ['Common', 'Rare', 'Epic'] as const,
+                    `${path}.rarityPolicy.rarities[${rarityIndex}]`,
+                  ),
+                );
+                if (rarities.length === 0) {
+                  fail(`${path}.rarityPolicy.rarities`, 'must not be empty');
+                }
+                return { kind: 'selectable' as const, rarities: Object.freeze(rarities) };
+              })()
+            : fail(
+                `${path}.rarityPolicy.kind`,
+                `unknown rarity policy kind ${String(rarityPolicyDeclaration.kind)}`,
               );
-              if (rarities.length === 0) {
-                fail(`${path}.rarityPolicy.rarities`, 'must not be empty');
-              }
-              return { kind: 'selectable' as const, rarities: Object.freeze(rarities) };
-            })()
-          : fail(
-              `${path}.rarityPolicy.kind`,
-              `unknown rarity policy kind ${String(rarityPolicyDeclaration.kind)}`,
-            );
     const frozenRarityPolicy = Object.freeze(normalizedRarityPolicy);
     if (providerKind === 'hammer' && frozenRarityPolicy.kind !== 'none')
       fail(`${path}.rarityPolicy`, 'Hammer givers require no rarity authorship');
@@ -761,6 +761,12 @@ function normalizeContexts(
       (context.kind !== 'roomFlag' || context.roomFlag !== 'BlockGiftBoons')
     )
       fail(path, 'must reference BlockGiftBoons');
+    if (
+      key === 'deathDefianceConditionMet' &&
+      (context.kind !== 'authoredCondition' ||
+        context.authoredCondition !== 'deathDefianceConditionMet')
+    )
+      fail(path, 'must be an authored condition context');
     return Object.freeze({
       key,
       kind: context.kind,
@@ -768,6 +774,9 @@ function normalizeContexts(
         ? {}
         : { blockedRarity: closedValue(context.blockedRarity, RARITIES, `${path}.blockedRarity`) }),
       ...(context.roomFlag === undefined ? {} : { roomFlag: context.roomFlag }),
+      ...(context.authoredCondition === undefined
+        ? {}
+        : { authoredCondition: context.authoredCondition }),
     });
   });
   const collection = createCollection(values, 'offerContexts', (context) => context.key);

@@ -98,6 +98,7 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'ReplaceShopOffer':
       return command.offer;
     case 'ReplaceShopPurchaseOrder':
+    case 'ReplaceShopDeathDefianceCondition':
       return command.shop;
     case 'SelectEncounter':
     case 'ResetEncounter':

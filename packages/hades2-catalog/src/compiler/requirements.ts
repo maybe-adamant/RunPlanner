@@ -191,6 +191,21 @@ export function normalizeRequirement(
         flag: requirement.flag,
         value: requirement.value,
       });
+    case 'authoredCondition':
+      return Object.freeze({
+        kind: 'authoredCondition',
+        condition:
+          requirement.condition === 'deathDefianceConditionMet'
+            ? requirement.condition
+            : fail(
+                `${path}.condition`,
+                `unknown authored condition ${String(requirement.condition)}`,
+              ),
+        value:
+          typeof requirement.value === 'boolean'
+            ? requirement.value
+            : fail(`${path}.value`, 'must be boolean'),
+      });
   }
 }
 
@@ -242,6 +257,7 @@ export function validateRequirementReferences(
     case 'currentBatchRoomCount':
     case 'currentBatchTargetCount':
     case 'flagEquals':
+    case 'authoredCondition':
     case 'minExits':
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':

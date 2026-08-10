@@ -132,6 +132,12 @@ export const chaosHammerLegal: RequirementExpression = {
   range: { min: 1 },
 };
 
+export const deathDefianceConditionMet: RequirementExpression = {
+  kind: 'authoredCondition',
+  condition: 'deathDefianceConditionMet',
+  value: true,
+};
+
 export const smallEnteredBiomes: RequirementExpression = {
   kind: 'counterRange',
   axis: 'enteredBiomes',
