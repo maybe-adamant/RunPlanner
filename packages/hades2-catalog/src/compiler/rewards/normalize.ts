@@ -427,6 +427,7 @@ function validateRequirementRewardReferences(
     case 'currentBatchRoomCount':
     case 'currentBatchTargetCount':
     case 'flagEquals':
+    case 'authoredCondition':
     case 'minExits':
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':

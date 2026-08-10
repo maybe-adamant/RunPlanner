@@ -6,6 +6,7 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createDefaultTraitOffers } from '../traits';
+import { shopProfileUsesDeathDefianceCondition } from '../shop';
 
 export function applyShopOccurrenceCommand(
   document: ProjectDocument,
@@ -21,6 +22,30 @@ export function applyShopOccurrenceCommand(
   );
   if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
+  }
+  if (command.kind === 'ReplaceShopDeathDefianceCondition') {
+    if (!shopProfileUsesDeathDefianceCondition(catalog, occurrence.state.shop.profileKey)) {
+      failCommand(command, 'Shop does not own Death Defiance condition');
+    }
+    if (typeof command.value !== 'boolean') failCommand(command, 'condition must be boolean');
+    if (occurrence.state.shop.deathDefianceConditionMet === command.value) return document;
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        current,
+        Object.freeze({
+          ...occurrence,
+          state: Object.freeze({
+            ...occurrence.state,
+            shop: Object.freeze({
+              ...occurrence.state.shop,
+              deathDefianceConditionMet: command.value,
+            }),
+          }),
+        }),
+      ),
+    );
   }
   if (command.kind === 'ReplaceShopPurchaseOrder') {
     if (

@@ -7,10 +7,15 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
-import { TRAIT_OPTION_KEYS, createDefaultEncounterTraitOffer } from '../traits';
+import {
+  TRAIT_OPTION_KEYS,
+  createDefaultEncounterTraitOffer,
+  traitGiverUsesOfferContext,
+} from '../traits';
 import type { RoomEncounterState } from '../model';
 import {
   expectArray,
+  expectBoolean,
   expectExactKeys,
   expectRecord,
   expectString,
@@ -168,7 +173,21 @@ function decodeEncounterTraitOffer(
   path: string,
 ): AuthoredTraitOffer {
   const record = expectRecord(value, path);
-  expectExactKeys(record, ['giverKey', 'options', 'selectedOptionKey'], path);
+  const conditionApplicable = traitGiverUsesOfferContext(
+    catalog,
+    giverKey,
+    'deathDefianceConditionMet',
+  );
+  expectExactKeys(
+    record,
+    [
+      'giverKey',
+      'options',
+      'selectedOptionKey',
+      ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
+    ],
+    path,
+  );
   if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
     failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
   }
@@ -249,6 +268,14 @@ function decodeEncounterTraitOffer(
     giverKey,
     options: Object.freeze(options) as AuthoredTraitOffer['options'],
     selectedOptionKey: selectedOptionKey as AuthoredTraitOffer['selectedOptionKey'],
+    ...(conditionApplicable
+      ? {
+          deathDefianceConditionMet: expectBoolean(
+            record.deathDefianceConditionMet,
+            `${path}.deathDefianceConditionMet`,
+          ),
+        }
+      : {}),
   });
 }
 

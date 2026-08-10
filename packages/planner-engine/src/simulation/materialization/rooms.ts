@@ -477,6 +477,9 @@ function materializeShopEntry(
   return Object.freeze({
     kind: 'shop',
     profileKey: profile.key,
+    ...(shop.deathDefianceConditionMet === undefined
+      ? {}
+      : { deathDefianceConditionMet: shop.deathDefianceConditionMet }),
     offers: Object.freeze(
       profile.slots.values.map((slot) => {
         const authored = shop.offers[slot.key];

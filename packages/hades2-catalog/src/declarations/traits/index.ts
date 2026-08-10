@@ -140,6 +140,11 @@ export const traitCatalogInput: RawTraitCatalogInput = {
   offerContexts: [
     { key: 'devotionNoDuo', kind: 'rewardRarityBlock', blockedRarity: 'Duo' },
     { key: 'blockGiftBoons', kind: 'roomFlag', roomFlag: 'BlockGiftBoons' },
+    {
+      key: 'deathDefianceConditionMet',
+      kind: 'authoredCondition',
+      authoredCondition: 'deathDefianceConditionMet',
+    },
   ],
   deferredTraitKeys: [
     'LaserApolloTalent',

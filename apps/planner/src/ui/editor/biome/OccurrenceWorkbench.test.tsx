@@ -1267,6 +1267,29 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Customize')).toBeNull();
   });
 
+  it('renders and binds the applicable Shop Death Defiance repair control', async () => {
+    const project = createGoldenFGHIProject();
+    const shop = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.gameName === 'I_PreBoss02');
+    if (shop === undefined) throw new Error('missing I Shop fixture');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'I',
+      occurrenceById(shop.occurrenceId),
+    );
+    const control = screen.getByLabelText('Death Defiance condition met') as HTMLInputElement;
+    expect(control.checked).toBe(false);
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(control);
+    expect(control.checked).toBe(true);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
+    );
+  });
+
   it('authors Shop membership and ordinal as one complete purchase order per row action', async () => {
     const view = renderOccurrenceWorkbench(
       createRepresentativeNOPQProject(),

@@ -10,6 +10,7 @@ export {
   type RequirementKind,
 } from './evaluator';
 export type {
+  AuthoredConditionKey,
   CounterAxis,
   CurrentRunFlag,
   HistoryRecord,

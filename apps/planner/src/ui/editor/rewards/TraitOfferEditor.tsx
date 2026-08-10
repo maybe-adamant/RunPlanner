@@ -62,6 +62,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
       .map((option) => `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`)
       .join(','),
     interaction.value.selectedOptionKey,
+    interaction.value.deathDefianceConditionMet === true ? 'dd' : 'no-dd',
   ].join('|');
 }
 
@@ -240,6 +241,7 @@ export function TraitOfferEditor({
   const hasOptionFeedback = feedback.options.some(
     (option) => option.reasons.length > 0 || option.replacement !== undefined,
   );
+  const deathDefianceCondition = interaction.deathDefianceCondition;
   const authoritativeInteractionRef = useRef(interaction);
   useEffect(() => {
     if (authoritativeInteractionRef.current === interaction) return;
@@ -262,6 +264,23 @@ export function TraitOfferEditor({
   };
   return (
     <div className="trait-offer-editor">
+      {deathDefianceCondition === undefined ? null : (
+        <label className="trait-offer-condition">
+          <input
+            checked={value.deathDefianceConditionMet === true}
+            onChange={(event) =>
+              updateValue(
+                Object.freeze({
+                  ...value,
+                  deathDefianceConditionMet: event.target.checked,
+                }),
+              )
+            }
+            type="checkbox"
+          />
+          Death Defiance condition met
+        </label>
+      )}
       <div className="trait-offer-options">
         {OPTION_KEYS.map((optionKey, index) => {
           const optionFeedback = feedback.options[index];

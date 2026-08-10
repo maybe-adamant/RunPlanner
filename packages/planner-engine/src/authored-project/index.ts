@@ -74,11 +74,13 @@ export {
   TRAIT_OPTION_KEYS,
   optionIndex,
   traitGiverForAcquisitionRole,
+  traitGiverUsesOfferContext,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
   type EquippedTrait,
   type TraitOptionKey,
 } from './traits';
+export { shopProfileUsesDeathDefianceCondition } from './shop';
 export {
   applyProjectCommand,
   projectCommandAddress,

@@ -178,6 +178,9 @@ export interface WorkspaceTraitOfferControl {
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
   readonly rewardOwner: SemanticAddress;
+  readonly deathDefianceCondition?: {
+    readonly value: boolean;
+  };
 }
 
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
@@ -209,6 +212,9 @@ export interface WorkspaceTraitOfferInteraction {
     selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;
   readonly value: AuthoredTraitOffer;
+  readonly deathDefianceCondition?: {
+    readonly value: boolean;
+  };
 }
 
 interface WorkspaceRoomInteractionBase {
@@ -459,6 +465,10 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceCandidateInteraction<readonly string[]>
   >;
+  readonly shopDeathDefianceConditions: ReadonlyMap<
+    string,
+    WorkspaceShopDeathDefianceConditionInteraction
+  >;
   readonly sideRoomEntryOrders: ReadonlyMap<
     string,
     WorkspaceCandidateInteraction<readonly string[]>
@@ -471,6 +481,17 @@ export interface WorkspaceInteractionCatalog {
   readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
+}
+
+export interface WorkspaceShopDeathDefianceConditionInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly value: boolean;
+  readonly intentFor: (
+    value: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceShopDeathDefianceCondition' }>
+  >;
 }
 
 /** The Midshop workbench presents the declared additional door without making it a normal target. */
@@ -658,6 +679,10 @@ export interface WorkspaceShopOfferDescriptor {
   readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 
+export interface WorkspaceShopConditionControl {
+  readonly value: boolean;
+}
+
 export interface WorkspaceEphyraSideRoomEntryOption {
   readonly key: string;
   readonly label: string;
@@ -773,6 +798,7 @@ export type WorkspaceRoomLocal =
       readonly kind: 'shop';
       readonly materialized: boolean;
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
+      readonly deathDefianceCondition?: WorkspaceShopConditionControl;
       /** One occurrence-owned authored order, separate from inventory rows. */
       readonly purchaseOrder: readonly string[];
     };

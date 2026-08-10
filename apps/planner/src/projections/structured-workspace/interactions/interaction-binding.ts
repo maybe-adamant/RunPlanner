@@ -47,6 +47,7 @@ import type {
   WorkspaceRewardInteraction,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
+  WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
@@ -161,6 +162,10 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceCandidateInteraction<readonly string[]>
   >;
+  readonly shopDeathDefianceConditions: ReadonlyMap<
+    string,
+    WorkspaceShopDeathDefianceConditionInteraction
+  >;
   readonly sideRoomEntryOrders: ReadonlyMap<
     string,
     WorkspaceCandidateInteraction<readonly string[]>
@@ -185,6 +190,10 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
   const shopPurchaseOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
+  const shopDeathDefianceConditions = new Map<
+    string,
+    WorkspaceShopDeathDefianceConditionInteraction
+  >();
   const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
@@ -414,6 +423,31 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
+      case 'shopDeathDefianceCondition': {
+        const key = semanticAddressKey(requirement.owner);
+        if (shopDeathDefianceConditions.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple Shop Death Defiance condition interactions`,
+          );
+        }
+        shopDeathDefianceConditions.set(
+          key,
+          Object.freeze({
+            key,
+            owner: requirement.owner,
+            value: requirement.value,
+            intentFor: (value: boolean) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceShopDeathDefianceCondition' as const,
+                  shop: requirement.owner,
+                  value,
+                }),
+              }),
+          }),
+        );
+        break;
+      }
     }
   }
   return Object.freeze({
@@ -423,6 +457,7 @@ function bindOccurrenceLocalInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopPurchaseOrders,
+    shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,
     zagreusSpawns,
@@ -1187,6 +1222,7 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopPurchaseOrders,
+    shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,
     zagreusSpawns,
@@ -1582,6 +1618,13 @@ export function bindWorkspaceInteractions(
             }),
           }),
         value: control.offer,
+        ...(control.deathDefianceCondition === undefined
+          ? {}
+          : {
+              deathDefianceCondition: {
+                value: control.deathDefianceCondition.value,
+              },
+            }),
       }),
     );
   }
@@ -1605,6 +1648,7 @@ export function bindWorkspaceInteractions(
     rooms,
     shipCombatPhaseCounts,
     shopPurchaseOrders,
+    shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,
     zagreusContracts,

@@ -153,6 +153,14 @@ export function createRewardFacts({
         }
       : undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
+    authoredConditions:
+      currentRoom?.kind === 'authored' &&
+      currentRoom.entryState?.kind === 'shop' &&
+      currentRoom.entryState.deathDefianceConditionMet !== undefined
+        ? Object.freeze({
+            deathDefianceConditionMet: currentRoom.entryState.deathDefianceConditionMet,
+          })
+        : Object.freeze({}),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }

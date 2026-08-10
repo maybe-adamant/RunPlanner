@@ -42,6 +42,9 @@ export function prepareShopPurchaseCandidateContext({
         entryState: Object.freeze({
           kind: 'shop',
           profileKey: state.profileKey,
+          ...(entryState.deathDefianceConditionMet === undefined
+            ? {}
+            : { deathDefianceConditionMet: entryState.deathDefianceConditionMet }),
           offers: Object.freeze(
             entryState.offers.map((offer) => {
               const candidate = state.offers[offer.offerKey];

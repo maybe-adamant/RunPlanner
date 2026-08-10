@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 17 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 18 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -27,6 +27,8 @@ export interface RouteLoadout {
 
 export interface ShopState {
   readonly profileKey: string;
+  /** Present only when the normalized Shop profile owns this condition. */
+  readonly deathDefianceConditionMet?: boolean;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
   /**
    * The exact authored sequence in which Shop slots are purchased. Inventory

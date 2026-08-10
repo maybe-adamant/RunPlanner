@@ -46,6 +46,44 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
+  it('renders a capability-provided Death Defiance control in the atomic offer draft', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (base === undefined) throw new Error('trait offer interaction is missing');
+    const interaction = Object.freeze({
+      ...base,
+      deathDefianceCondition: Object.freeze({ value: false }),
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    const onCommit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={onCommit}
+        />
+      </Provider>,
+    );
+
+    const checkbox = screen.getByLabelText('Death Defiance condition met');
+    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    await user.click(checkbox);
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ deathDefianceConditionMet: true }),
+    );
+    application.dispose();
+  });
+
   it('loads one focused option domain only when its contextual picker opens', async () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({
@@ -323,13 +361,11 @@ describe('trait offer editor', () => {
     }
     const value: AuthoredTraitOffer = Object.freeze({
       giverKey: 'Icarus',
-      options: Object.freeze(
-        [
-          Object.freeze({ traitKey: 'FocusAttackDamageTrait', rarity: 'Common' as const }),
-          Object.freeze({ traitKey: 'FocusSpecialDamageTrait', rarity: 'Common' as const }),
-          Object.freeze({ traitKey: 'OmegaExplodeBoon', rarity: 'Common' as const }),
-        ],
-      ) as AuthoredTraitOffer['options'],
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'FocusAttackDamageTrait', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'FocusSpecialDamageTrait', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'OmegaExplodeBoon', rarity: 'Common' as const }),
+      ]) as AuthoredTraitOffer['options'],
       selectedOptionKey: 'option1' as const,
     });
     const interaction = Object.freeze({

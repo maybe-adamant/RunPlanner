@@ -14,6 +14,9 @@ export type HistoryRecord = 'biomeUseRecord' | 'lootTypeHistory' | 'roomsEntered
 
 export type CurrentRunFlag = 'allSpellInvested' | 'pendingSpellDrop';
 
+/** Source-local authored predicates consumed by declaration-owned requirements. */
+export type AuthoredConditionKey = 'deathDefianceConditionMet';
+
 /** Static room topology facts usable by declaration-owned requirements. */
 export type RoomStructuralTag = 'Indoor' | 'Outdoor';
 
@@ -118,5 +121,10 @@ export type RequirementExpression =
   | {
       readonly kind: 'flagEquals';
       readonly flag: CurrentRunFlag;
+      readonly value: boolean;
+    }
+  | {
+      readonly kind: 'authoredCondition';
+      readonly condition: AuthoredConditionKey;
       readonly value: boolean;
     };

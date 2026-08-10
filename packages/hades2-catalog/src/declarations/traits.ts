@@ -75,9 +75,10 @@ export interface RawTraitGiverDeclaration {
 
 export interface RawTraitOfferContextDeclaration {
   readonly key: string;
-  readonly kind: 'rewardRarityBlock' | 'roomFlag';
+  readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
   readonly blockedRarity?: TraitRarity;
   readonly roomFlag?: 'BlockGiftBoons';
+  readonly authoredCondition?: 'deathDefianceConditionMet';
 }
 
 export interface RawTraitCatalogInput {

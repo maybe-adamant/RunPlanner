@@ -29,6 +29,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenHBiome,
+  goldenIBiome,
 } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
@@ -641,6 +642,30 @@ describe('structured workspace occurrence assembly', () => {
       createIncomingRewardAddress(pBiome, pOccurrenceId('P_Story01', 7, 1)),
     );
     expect(story.roomLocal.control).toBeUndefined();
+  });
+
+  it('projects the applicable Shop condition as one repairable occurrence capability', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.gameName === 'I_PreBoss02');
+    if (shopOccurrence === undefined) throw new Error('missing I shop fixture');
+    const assembled = assemble(
+      project,
+      'Underworld',
+      goldenIBiome.biomeKey,
+      shopOccurrence.occurrenceId,
+    ).assembly;
+    expect(assembled.node.room.roomLocal).toMatchObject({
+      kind: 'shop',
+      deathDefianceCondition: { value: false },
+    });
+    expect(assembled.occurrenceInteractionRequirements).toContainEqual({
+      kind: 'shopDeathDefianceCondition',
+      owner: expect.objectContaining({ occurrenceId: shopOccurrence.occurrenceId }),
+      value: false,
+    });
   });
 
   it('does not need evaluation entry to preserve authored room-local controls', () => {

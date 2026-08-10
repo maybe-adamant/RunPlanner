@@ -44,12 +44,11 @@ export interface UpgradeHammerToRank2Acquisition {
 }
 
 export type TargetedTraitAcquisition =
-  | PromoteGodTraitToHeroicAcquisition
-  | UpgradeHammerToRank2Acquisition;
+  PromoteGodTraitToHeroicAcquisition | UpgradeHammerToRank2Acquisition;
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
-export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons';
+export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'deathDefianceConditionMet';
 
 export type TraitRequirementExpression =
   | {
@@ -164,9 +163,10 @@ export interface TraitGiverDeclaration {
 
 export interface TraitOfferContextDeclaration {
   readonly key: TraitOfferContextKey;
-  readonly kind: 'rewardRarityBlock' | 'roomFlag';
+  readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
   readonly blockedRarity?: TraitRarity;
   readonly roomFlag?: 'BlockGiftBoons';
+  readonly authoredCondition?: 'deathDefianceConditionMet';
 }
 
 export interface TraitCatalog {

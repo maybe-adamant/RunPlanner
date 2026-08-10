@@ -1,5 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
-import { traitGiverForAcquisitionRole, type AuthoredTraitOffer } from '../traits';
+import {
+  traitGiverForAcquisitionRole,
+  traitGiverUsesOfferContext,
+  type AuthoredTraitOffer,
+} from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
@@ -46,12 +50,22 @@ function validateOffer(
         failCommand(command, `unknown target trait ${option.targetTraitKey}`);
     }
   }
+  const conditionApplicable = traitGiverUsesOfferContext(
+    catalog,
+    value.giverKey,
+    'deathDefianceConditionMet',
+  );
+  if (conditionApplicable && typeof value.deathDefianceConditionMet !== 'boolean')
+    failCommand(command, 'Death Defiance condition is required for this trait giver');
+  if (!conditionApplicable && value.deathDefianceConditionMet !== undefined)
+    failCommand(command, 'Death Defiance condition is not supported by this trait giver');
   return Object.freeze({
     giverKey: value.giverKey,
     options: Object.freeze(
       value.options.map((option) => Object.freeze({ ...option })),
     ) as AuthoredTraitOffer['options'],
     selectedOptionKey: value.selectedOptionKey,
+    ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),
   });
 }
 

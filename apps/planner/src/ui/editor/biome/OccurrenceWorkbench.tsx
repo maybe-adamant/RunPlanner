@@ -542,9 +542,25 @@ function ShopWorkbench({
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
+  const conditionInteraction = interactions.shopDeathDefianceConditions.get(
+    workspaceInteractionKey(occurrence),
+  );
   if (!room.materialized) return null;
   return (
     <div className="shop-editor">
+      {conditionInteraction === undefined ? null : (
+        <label className="shop-condition-control">
+          <input
+            checked={conditionInteraction.value}
+            onChange={(event) =>
+              executeIntent(conditionInteraction.intentFor(event.target.checked))
+            }
+            type="checkbox"
+          />
+          Death Defiance condition met
+        </label>
+      )}
       <div className="shop-table-scroll">
         <table className="shop-offer-table">
           <thead>

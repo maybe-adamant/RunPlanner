@@ -266,6 +266,7 @@ export interface TraitOfferContext {
   readonly aspectKey?: string;
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
+  readonly deathDefianceConditionMet?: boolean;
   /** The declaration-resolved provider for the addressed acquisition role. */
   readonly resolvedProviderKey?: string;
 }
@@ -595,7 +596,9 @@ function checkRequirement(
       if (
         (requirement.context === 'devotionNoDuo'
           ? context.devotionNoDuo
-          : context.blockGiftBoons) === requirement.required
+          : requirement.context === 'blockGiftBoons'
+            ? context.blockGiftBoons
+            : context.deathDefianceConditionMet) === requirement.required
       )
         return undefined;
       return { code: 'offerContext', detail: requirement.context };

@@ -4,6 +4,7 @@ import type {
   HistoryRecord,
   NumericRange,
   RequirementExpression,
+  AuthoredConditionKey,
   RoomStructuralTag,
 } from './model';
 
@@ -39,6 +40,7 @@ export interface RequirementEvaluationContext {
   readonly currentBatchRoomGameNames: readonly string[];
   readonly clockwork: ClockworkRequirementFacts | undefined;
   readonly flags: Readonly<Record<CurrentRunFlag, boolean>>;
+  readonly authoredConditions?: Readonly<Partial<Record<AuthoredConditionKey, boolean>>>;
 }
 
 type RequirementOfKind<Kind extends RequirementKind> = Extract<
@@ -166,6 +168,8 @@ export const requirementEvaluatorRegistry = Object.freeze({
     return clockwork.nonGoalRewardsAcquired < clockwork.maxNonGoalRewards - requirement.reserve;
   },
   flagEquals: (requirement, context) => context.flags[requirement.flag] === requirement.value,
+  authoredCondition: (requirement, context) =>
+    context.authoredConditions?.[requirement.condition] === requirement.value,
 } satisfies RequirementEvaluatorRegistry);
 
 export function hasRequirementEvaluator(kind: string): kind is RequirementKind {
@@ -217,5 +221,7 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.clockworkNonGoalCapacity(requirement, context);
     case 'flagEquals':
       return requirementEvaluatorRegistry.flagEquals(requirement, context);
+    case 'authoredCondition':
+      return requirementEvaluatorRegistry.authoredCondition(requirement, context);
   }
 }

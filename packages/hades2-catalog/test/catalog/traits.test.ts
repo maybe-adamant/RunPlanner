@@ -650,6 +650,8 @@ const expectedDeferredTraitKeys = [
 ] as const;
 
 const expectedOfferRequirements: Readonly<Record<string, string>> = {
+  DeathDefianceRefillBoon:
+    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DoorHealToFullBoon: '[{"kind":"anyEquippedTrait","traitKeys":["HighHealthOffenseBoon"]}]',
   WeakPotencyBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","AphroditeSprintBoon","AphroditeManaBoon"]}]',
@@ -887,6 +889,11 @@ describe('trait offer catalog closure', () => {
     expect(traits?.baseElements).toEqual(['Earth', 'Air', 'Fire', 'Water']);
     expect(traits?.offerContexts.byKey.devotionNoDuo?.blockedRarity).toBe('Duo');
     expect(traits?.offerContexts.byKey.blockGiftBoons?.roomFlag).toBe('BlockGiftBoons');
+    expect(traits?.offerContexts.byKey.deathDefianceConditionMet).toEqual({
+      key: 'deathDefianceConditionMet',
+      kind: 'authoredCondition',
+      authoredCondition: 'deathDefianceConditionMet',
+    });
     expect(traits?.givers.byKey.Aphrodite?.rarityPolicy).toEqual({
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],

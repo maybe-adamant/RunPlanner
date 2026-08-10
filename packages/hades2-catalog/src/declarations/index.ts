@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.21.0-icarus-latest-model',
+  version: '0.22.0-death-defiance-condition',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

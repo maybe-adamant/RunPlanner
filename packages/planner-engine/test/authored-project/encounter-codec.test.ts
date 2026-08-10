@@ -59,20 +59,20 @@ function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): 
   return value;
 }
 
-describe('schema-17 occurrence-owned additional-exit persistence', () => {
+describe('schema-18 occurrence-owned additional-exit persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(17);
+    expect(decoded.schemaVersion).toBe(18);
   });
 
   it('rejects schema 12 rather than inventing an encounter migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 12;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 17, received 12');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 18, received 12');
   });
 
   it.each([

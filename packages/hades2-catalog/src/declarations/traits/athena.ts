@@ -43,7 +43,13 @@ export const athenaTraits = [
     label: 'Renewed Faith',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [],
+    offerRequirements: [
+      {
+        kind: 'offerContext',
+        context: 'deathDefianceConditionMet',
+        required: true,
+      },
+    ],
     elementContributions: { Fire: 1 },
     isPersistentGodTrait: true,
     blockStacking: false,
