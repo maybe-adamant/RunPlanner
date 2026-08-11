@@ -102,7 +102,7 @@ export interface AcquisitionSettlementEntry {
   readonly source: SemanticAddress;
   /** One atomic entry may apply several declaration-owned roles in sequence. */
   readonly acquisitionRoles: readonly AcquisitionSettlementRole[];
-  readonly participation: 'mandatory';
+  readonly participation: 'mandatory' | 'optional' | 'dormant';
 }
 
 export interface AcquisitionSettlementRole {
@@ -1215,11 +1215,12 @@ export function processShopInventory(
   return Object.freeze(next);
 }
 
-export function processShopPurchases(
+/** Settles optional Shop offer entries at the exact post-outgoing roomExit site. */
+export function settleShopAcquisitionSite(
   branches: readonly RewardBranchState[],
   context: ShopProcessingContext,
   findings: Map<string, FindingRegionEntry>,
-): readonly RewardBranchState[] {
+): AcquisitionSettlementProduct {
   const { catalog, room, declaration, historySequence, fail } = context;
   const entry = room.entryState;
   if (entry?.kind !== 'shop') {
@@ -1233,27 +1234,70 @@ export function processShopPurchases(
   const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
     offer: offer.offer,
   }));
-  const purchaseOrder = entry.purchaseOrder.map((offerKey) => {
+  const order = entry.order.map((offerKey) => {
     const index = entry.offers.findIndex((offer) => offer.offerKey === offerKey);
-    if (index < 0) return fail(`${room.gameName} purchase order has unknown offer ${offerKey}`);
+    if (index < 0) return fail(`${room.gameName} acquisition order has unknown entry ${offerKey}`);
     return index;
   });
-  if (new Set(purchaseOrder).size !== purchaseOrder.length) {
-    return fail(`${room.gameName} purchase order contains a duplicate offer`);
+  if (new Set(order).size !== order.length) {
+    return fail(`${room.gameName} acquisition order contains a duplicate entry`);
   }
   const next: RewardBranchState[] = [];
   const failures: ShopPurchaseFailure[] = [];
+  const rolesByOfferKey = new Map<
+    string,
+    readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[]
+  >();
+  const recordRoles = (
+    offerKey: string,
+    roles: readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[],
+  ) => {
+    const existing = rolesByOfferKey.get(offerKey) ?? [];
+    const seen = new Set(existing.map((role) => `${role.role}:${role.lifecyclePoint}`));
+    rolesByOfferKey.set(
+      offerKey,
+      Object.freeze([
+        ...existing,
+        ...roles.filter((role) => {
+          const key = `${role.role}:${role.lifecyclePoint}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }),
+      ]),
+    );
+  };
   for (const branch of branches) {
     const pending = branch.pendingShops[semanticAddressKey(room.origin)];
     if (pending?.profileKey !== profile.key) {
       return fail(`${room.gameName} lost its shop witness`);
+    }
+    // The exact selected Shop option owns the entry's role shape even if a
+    // proposed authored offer is presently unsupported and no branch survives.
+    for (const offerKey of entry.order) {
+      const slotIndex = entry.offers.findIndex((offer) => offer.offerKey === offerKey);
+      const slot = slotIndex < 0 ? undefined : profile.slots.values[slotIndex];
+      const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
+      const optionKey = slotIndex < 0 ? undefined : pending.witness.optionKeys[slotIndex];
+      const option = optionKey === undefined ? undefined : group?.options.byKey[optionKey];
+      if (option !== undefined) {
+        recordRoles(
+          offerKey,
+          option.acquisitionLifecycle.map((binding) =>
+            Object.freeze({
+              role: binding.role,
+              lifecyclePoint: binding.lifecyclePoint,
+            }),
+          ),
+        );
+      }
     }
     const simulation = evaluateShopPurchases(
       catalog.rewards,
       profile,
       authored,
       pending.witness,
-      purchaseOrder,
+      order,
       branch.history,
       context.facts(branch.history, new Set()),
       requirements,
@@ -1266,6 +1310,12 @@ export function processShopPurchases(
         if (offer === undefined) {
           return fail('shop acquisition has no semantic slot');
         }
+        recordRoles(offer.offerKey, [
+          Object.freeze({
+            role: acquisition.event.role,
+            lifecyclePoint: acquisition.event.lifecyclePoint,
+          }),
+        ]);
         candidate = applyTraitOfferForAcquisition(
           catalog,
           candidate,
@@ -1290,26 +1340,26 @@ export function processShopPurchases(
         );
         candidate = appendRewardEvent(candidate, historySequence, {
           kind: 'concreteAcquisition',
-          origin: offer.purchaseOrigin,
+          origin: offer.offerOrigin,
           acquisition: acquisition.event,
+          settlement: Object.freeze({
+            site: createAcquisitionSiteAddress(room.origin, 'roomExit'),
+            entry: createAcquisitionEntryAddress(
+              createAcquisitionSiteAddress(room.origin, 'roomExit'),
+              offer.offerKey,
+            ),
+          }),
         });
       }
-      candidate = appendRewardEvent(candidate, historySequence, {
-        kind: 'shopPurchasesSupported',
-        origin: room.origin,
-        profileKey: profile.key,
-        purchaseOrder: Object.freeze(
-          result.purchaseOrder.map((slotIndex) => entry.offers[slotIndex]!.offerKey),
-        ),
-      });
       const { [semanticAddressKey(room.origin)]: completed, ...remainingShops } =
         candidate.pendingShops;
       void completed;
       next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
     }
   }
+  const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
   if (next.length === 0) {
-    const failedIndexes = purchaseOrder.filter(
+    const failedIndexes = order.filter(
       (index) =>
         failures.length > 0 && failures.every((failure) => failure.failedSlotIndex === index),
     );
@@ -1317,7 +1367,11 @@ export function processShopPurchases(
       const offer = entry.offers[index]!;
       addRewardFinding(
         findings,
-        rewardFinding('shopPurchaseUnavailable', offer.purchaseOrigin, offerEvidence(offer.offer)),
+        rewardFinding(
+          'shopPurchaseUnavailable',
+          createAcquisitionEntryAddress(site, offer.offerKey),
+          offerEvidence(offer.offer),
+        ),
         ownerRegion(room.origin),
         context.findingChronology ?? historyChronology(historySequence),
       );
@@ -1325,16 +1379,33 @@ export function processShopPurchases(
     if (failedIndexes.length === 0) {
       addRewardFinding(
         findings,
-        rewardFinding('shopPurchaseUnavailable', room.origin, {
+        rewardFinding('shopPurchaseUnavailable', site, {
           kind: 'jointPurchaseOrder',
-          offerKeys: entry.purchaseOrder,
+          offerKeys: entry.order,
         }),
         ownerRegion(room.origin),
         context.findingChronology ?? historyChronology(historySequence),
       );
     }
   }
-  return mergeEquivalentRewardBranches(next);
+  return Object.freeze({
+    site,
+    entries: Object.freeze(
+      entry.order.map((offerKey) => {
+        const offer = entry.offers.find((candidate) => candidate.offerKey === offerKey);
+        if (offer === undefined)
+          return fail(`${room.gameName} acquisition order has unknown entry ${offerKey}`);
+        const acquisitionRoles = rolesByOfferKey.get(offer.offerKey) ?? [];
+        return Object.freeze({
+          address: createAcquisitionEntryAddress(site, offer.offerKey),
+          source: offer.offerOrigin,
+          acquisitionRoles,
+          participation: 'optional' as const,
+        });
+      }),
+    ),
+    branches: mergeEquivalentRewardBranches(next),
+  });
 }
 
 export function settleProducerAcquisitionSite(

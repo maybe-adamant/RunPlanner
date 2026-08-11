@@ -155,6 +155,44 @@ describe('room lifecycle catalog', () => {
     );
   });
 
+  it('rejects duplicate explicit acquisition-point settlement', () => {
+    const shopProfile = declarations.roomLifecycleProfiles.find(
+      (profile) => profile.key === 'WorldShopRoom',
+    );
+    if (shopProfile === undefined) {
+      throw new Error('World Shop lifecycle declaration is missing');
+    }
+    const profileIndex = declarations.roomLifecycleProfiles.indexOf(shopProfile);
+    const settlementIndex = shopProfile.operations.findIndex(
+      (operation) => operation.kind === 'settleAcquisitionPoint',
+    );
+    if (settlementIndex < 0) {
+      throw new Error('World Shop lifecycle declaration has no acquisition-point settlement');
+    }
+    const settlement = shopProfile.operations[settlementIndex];
+    if (settlement?.kind !== 'settleAcquisitionPoint') {
+      throw new Error('World Shop lifecycle settlement is malformed');
+    }
+    const operations = [...shopProfile.operations];
+    operations.splice(settlementIndex + 1, 0, settlement);
+
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
+            profile.key === shopProfile.key ? { ...profile, operations } : profile,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `roomLifecycleProfiles[${profileIndex}].operations[${settlementIndex + 1}].point`,
+        'duplicates acquisition point roomExit',
+      ),
+    );
+  });
+
   it('rejects reward encounter sequences without a reward-wheel slot', () => {
     const shipProfile = declarations.roomLifecycleProfiles.find(
       (profile) => profile.key === 'ShipCombatRoom',

@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 19 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 20 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -32,12 +32,15 @@ export interface ShopState {
   /** Present only when the normalized Shop profile owns this condition. */
   readonly deathDefianceConditionMet?: boolean;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
-  /**
-   * The exact authored sequence in which Shop slots are purchased. Inventory
-   * remains declaration ordered in `offers`; membership and ordinals derive
-   * only from this occurrence-owned list.
-   */
-  readonly purchaseOrder: readonly string[];
+}
+
+/**
+ * Occurrence-owned authoring for one exact acquisition point.  Its one order
+ * is both optional-entry membership and chronology; producer state never
+ * carries a second purchase order.
+ */
+export interface AuthoredAcquisitionSiteState {
+  readonly order: readonly string[];
 }
 
 export interface FieldsCombatState {
@@ -134,6 +137,8 @@ export interface RoomOccurrence {
    */
   readonly anomalyReplacement?: AnomalyReplacementProvenance;
   readonly state: AuthoredRoomState;
+  /** Sparse because ordinary mandatory singleton points need no authored state. */
+  readonly acquisitionSites?: Readonly<Record<string, AuthoredAcquisitionSiteState>>;
   readonly encounters: RoomEncounterState;
   /** Source-owned closed sibling continuations emitted by this occurrence. */
   readonly additionalExits: readonly AuthoredAdditionalExit[];

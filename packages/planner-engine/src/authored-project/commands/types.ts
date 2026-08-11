@@ -1,5 +1,6 @@
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
+  AcquisitionSiteAddress,
   AdditionalExitAddress,
   BatchRewardStoreAddress,
   BiomeAddress,
@@ -224,15 +225,16 @@ export type ShopOccurrenceCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      readonly kind: 'ReplaceShopPurchaseOrder';
-      readonly shop: OccurrenceAddress;
-      readonly offerKeys: readonly string[];
-    }
-  | {
       readonly kind: 'ReplaceShopDeathDefianceCondition';
       readonly shop: OccurrenceAddress;
       readonly value: boolean;
     };
+
+export type AcquisitionSiteCommand = {
+  readonly kind: 'ReplaceAcquisitionOrder';
+  readonly site: AcquisitionSiteAddress;
+  readonly entryKeys: readonly string[];
+};
 
 export type EncounterOccurrenceCommand =
   | {
@@ -277,6 +279,7 @@ export type ProjectCommand =
   | RoomReplacementCommand
   | RouteDetourCommand
   | OccurrenceLeafCommand
+  | AcquisitionSiteCommand
   | TraitOfferCommand
   | LevelResolutionCommand;
 

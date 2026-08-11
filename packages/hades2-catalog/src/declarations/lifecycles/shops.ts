@@ -14,11 +14,7 @@ export const shopsRoomLifecycleProfiles = [
       },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
-      {
-        kind: 'applyShopPurchases',
-        offerPoint: 'shopInventory',
-        effects: ['recordShopPurchases'],
-      },
+      { kind: 'settleAcquisitionPoint', point: 'roomExit', effects: ['recordAcquisitionPoint'] },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],

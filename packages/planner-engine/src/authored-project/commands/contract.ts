@@ -1,5 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { SemanticAddress } from '../addresses';
+import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
 import { createProjectAddress, semanticAddressKey } from '../addresses';
 import type {
   AuthoredBiomePlan,
@@ -18,7 +18,7 @@ export class ProjectCommandContractError extends Error {
 
   constructor(
     commandKind: ProjectCommand['kind'],
-    address: SemanticAddress,
+    address: SemanticAddress | AcquisitionSiteAddress,
     detail: string,
     options?: ErrorOptions,
   ) {
@@ -31,7 +31,9 @@ export class ProjectCommandContractError extends Error {
   }
 }
 
-export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
+export function projectCommandAddress(
+  command: ProjectCommand,
+): SemanticAddress | AcquisitionSiteAddress {
   switch (command.kind) {
     case 'RenameProject':
       return createProjectAddress();
@@ -97,9 +99,10 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.offer;
     case 'ReplaceShopOffer':
       return command.offer;
-    case 'ReplaceShopPurchaseOrder':
     case 'ReplaceShopDeathDefianceCondition':
       return command.shop;
+    case 'ReplaceAcquisitionOrder':
+      return command.site;
     case 'SelectEncounter':
     case 'ResetEncounter':
       return command.phase;

@@ -3,8 +3,9 @@
 ## Status and scope
 
 **Complete for the game facts needed to canonicalize currently modeled reward
-acquisitions, correct Shop-backed settlement, and implement the supported
-Narcissus pickup slice.** Shrine delivery, Well behavior, composite-room
+acquisitions and correct Shop-backed settlement.** The archived Narcissus
+prototype remains useful evidence for the next consumer of this boundary, not
+current planner behavior. Shrine delivery, Well behavior, composite-room
 delivery additions, and other dropped-item families remain explicitly scoped
 future audits rather than blockers for the accompanying implementation plan.
 
@@ -411,14 +412,13 @@ move a pre-outgoing room reward or due delivery behind a post-outgoing Shop
 purchase or Narcissus pickup. The room settlement product composes the outputs
 of its checkpoint orders in declared lifecycle order.
 
-Under the planner's current sufficient-resource, no-restock baseline, a Shop's
-private purchase order and its acquisition order describe the same supported
-actions. Once mixed-source settlement is introduced, the Shop keeps its
-existing purchased state as the authoring source for immediate offers, but the
-shared settlement product normalizes that state into the same acquired/not-
-acquired participation used by other concrete items. The Shop-private order
-should cease to be the chronological authority in the same vertical slice;
-retaining both would create two disagreeing histories.
+Under the planner's current sufficient-resource, no-restock baseline, a Shop
+keeps its purchased state as the authoring source for immediate offers. Its
+occurrence-owned acquisition-site order is the sole chronological authority:
+membership records participation and the order folds participating entries.
+That first-class settlement product normalizes Shop participation into the
+same acquired/not-acquired fact later mixed-source sites can use. No
+Shop-private acquisition order or replay remains alongside it.
 
 Future Well or Shop behavior that changes inventory, prices, or other
 non-acquisition state may still require a source-action order. That is a
@@ -579,61 +579,56 @@ trait/level child, and emits the acquisition event. A delivery model should
 feed this authority rather than duplicate reward, trait, Pom, or history
 semantics.
 
-The structural Shop lifecycle also preserves the correct two snapshots:
+The structural Shop lifecycle preserves the correct two snapshots:
 
 - pre-purchase history owns current outgoing generation; and
 - post-purchase history owns continuation into later rooms.
 
-Its current authored purchase order is the only chronological owner because
-the planner has no other room-local acquisition participants yet. That remains
-correct for the current feature set, but it is not the long-term owner once a
-room settlement order can interleave purchased offers with delivered or
-spawned pickups.
+Its occurrence-owned `roomExit` settlement order is the chronological owner
+for current Shop purchases. The same first-class settlement product can later
+interleave purchased offers with delivered or spawned pickups without restoring
+a Shop-private execution path.
 
-### Active incomplete Midshop bridge
+### First-class incomplete Midshop settlement
 
 When a Midshop's next decision is incomplete, canonical simulation stops at
-the already-generated outgoing frontier before `applyShopPurchases`. The
-editor still needs to assess and repair currently available purchased leaves.
+the already-generated outgoing frontier, then reaches the declared `roomExit`
+settlement point through the normal prefix lifecycle. Its public frontier
+branches therefore retain the concrete purchases and post-settlement history
+needed to assess and repair purchased leaves, without rewriting the already
+generated outgoing offers. This is the same settlement product used once a
+continuation is selected; no Shop-private or discarded replay exists.
 
-The current implementation therefore replays the purchase order into a
-discarded room-local branch. It publishes purchase findings and trait/Pom
-capabilities without advancing canonical route history or rewriting outgoing
-offers.
+### Historical Narcissus prototype: timing and ownership defect
 
-This preserves timing, but the discarded replay exists because room-local
-post-generation work is not itself a first-class published product. It is a
-focused bridge, not reusable delivery or settlement state.
-
-### Current Narcissus coupling
-
-The in-progress Narcissus implementation stores `outcomeResolution` directly
-on an `AuthoredTraitOption`. Its closed cases contain either:
+The discarded, stashed Narcissus prototype stored `outcomeResolution` directly
+on an `AuthoredTraitOption`. Its closed cases contained either:
 
 - a random level resolution; or
 - a `BlindBoxLoot` resolved reward plus its nested trait offer.
 
-`processEncounterTraitOffer` then dispatches `processNarcissusOutcome`, which
-constructs synthetic `NarcissusOutcome` reward owners and immediately invokes
-reward acquisition processing. The implementation correctly reuses core
-reward/trait history, but it couples three separate facts into one
+`processEncounterTraitOffer` then dispatched `processNarcissusOutcome`, which
+constructed synthetic `NarcissusOutcome` reward owners and immediately invoked
+reward acquisition processing. That prototype reuse of core reward/trait
+history was useful evidence, but it coupled three separate facts into one
 trait-option-specific path:
 
 1. the selected Narcissus descriptor;
 2. the declaration-owned pickups that descriptor creates; and
 3. the authored resolution owned by a produced pickup.
 
-This is why Mixed Blessings currently needs a nested reward and nested trait
-offer inside the outer trait editor. It also creates a Narcissus-specific
-reward dispatcher even though the produced `BlindBoxLoot`, Pom, Max Health,
-Max Magick, and Last Stand pickups already have reward identities.
+This is why the prototype required a nested reward and nested trait offer
+inside the outer trait editor. It also created a Narcissus-specific reward
+dispatcher even though the produced `BlindBoxLoot`, Pom, Max Health, Max
+Magick, and Last Stand pickups already have reward identities.
 
-The dispatcher also executes from the planner's `encounterCompleted` event,
-which precedes its outgoing-generation checkpoint. That lets an immediately
-processed Narcissus outcome influence the current outgoing batch. The verified
+The dispatcher executed from the planner's `encounterCompleted` event, which
+precedes its outgoing-generation checkpoint. That let an immediately processed
+Narcissus outcome influence the current outgoing batch. The verified
 `G_Story01` lifecycle does not wait for its optional drops before unlocking
-those exits, so the settlement migration must correct this timing rather than
-preserve it as current behavior.
+those exits, so Gate D must correct this prototype's timing rather than restore
+it. None of `outcomeResolution`, `processNarcissusOutcome`, or
+`NarcissusOutcome` is live production behavior.
 
 ### Missing delayed-delivery state
 
@@ -660,7 +655,12 @@ the closed output of each producer, and each authored producer family still
 owns its own selection, inventory, purchase, or condition state. The shared
 product carries acquisition work; it does not replace producer policy.
 
-A later implementation plan should test the following candidate separation:
+The following was the pre-Gate-C implementation direction. Gate C delivered
+the Shop-specific part: `roomExit` is an occurrence-owned acquisition site,
+its order is first-class, and incomplete Midshop publication reaches that site
+through the bounded lifecycle prefix without a private replay. The remaining
+Narcissus, delivery, Well, and composite-room work should preserve the same
+separation:
 
 - a Narcissus declaration says which pickups a selected descriptor produces;
 - pickup-owned details such as a random Pom target or Mystery Boon offer live
@@ -685,10 +685,10 @@ A later implementation plan should test the following candidate separation:
 - encounter completion advances pending-delivery counters and turns expired
   deliveries into due pickups at the declared room.
 
-The product must be ordered. The current Shop purchase order is semantic, but
-future delivered or dropped items can interleave with purchases at the same
-checkpoint. A set, unordered sidecar, or one order per producer is
-insufficient.
+The product must be ordered. The current Shop `roomExit` acquisition-site order
+is semantic, and future delivered or dropped items can interleave with Shop
+entries at the same checkpoint. A set, unordered sidecar, or one order per
+producer is insufficient.
 
 Pending state must retain the payload and timing required to materialize the
 item. After materialization, eligibility, findings, undo/redo, and UI repair
@@ -698,12 +698,13 @@ delivery room and without retaining an invented permanent parent link to its
 producer.
 
 The earlier Shop/Well audit deliberately postponed a shared interaction
-frontier until a second concrete consumer existed. Narcissus is now that second
-consumer for **acquisition settlement**, but not for Well inventory, spawn, or
-purchase policy. It justifies extracting the narrower ordered-settlement seam
-before Wells; the Well-specific interaction frontier remains part of the first
-Well implementation. If the narrower seam replaces the active Midshop replay,
-the later Well work should extend it rather than introduce a parallel path.
+frontier until a second concrete consumer existed. Gate C has now extracted
+the narrower ordered-settlement seam for Shops, including bounded incomplete
+Midshop publication. Narcissus is the next consumer for **acquisition
+settlement**, but not for Well inventory, spawn, or purchase policy. The
+Well-specific interaction frontier remains part of the first Well
+implementation, which should extend the existing seam rather than introduce a
+parallel path.
 
 ## Required invariants for a future implementation plan
 
@@ -745,10 +746,10 @@ the later Well work should extend it rather than introduce a parallel path.
     source support, trait acquisition children, and Pom effects.
 15. React renders producer and pickup controls from supported projections; it
     does not decide which descriptors drop which items or when they settle.
-16. The active Midshop repair surface is replaced, not duplicated, if a
-    first-class room-local settlement product supersedes its discarded replay.
-17. The Shop-private purchase order is removed when the shared settlement order
-    becomes authoritative; the two are never retained as parallel chronology.
+16. The active Midshop repair surface is the first-class room-local settlement
+    product; no discarded replay duplicates it.
+17. The Shop-private purchase order is absent. The shared settlement order is
+    authoritative, and no parallel chronology may be introduced.
 18. The implementation does not replace room/reward selection or duplicate the
     reward kernel. It adapts the existing reward acquisition into the shared
     checkpoint order where chronology is observable and removes the superseded
@@ -768,11 +769,12 @@ probe:
   completion rooms;
 - ordering when several pending Shrine items expire together;
 - temporary Well traits and their own use/expiry ledgers;
-- dropped-item families outside the current Narcissus slice.
+- dropped-item families outside the planned Narcissus slice.
 
 These gaps do not weaken the core conclusion: producer selection and concrete
-acquisition are already separate in the game, and a first-class ordered
-delivery/settlement seam is the narrow boundary that can replace the current
-Narcissus nesting and Midshop replay while enabling faithful Shrine delivery
-later. The seam must preserve multiple lifecycle checkpoints; it must not move
-every acquisition to one universal end-of-room phase.
+acquisition are already separate in the game. Gate C established the
+first-class ordered settlement seam for Shop `roomExit` acquisition. Extending
+that seam can replace the historical Narcissus prototype's nesting and enable
+faithful Shrine delivery later. It must preserve multiple lifecycle
+checkpoints; it must not move every acquisition to one universal end-of-room
+phase.

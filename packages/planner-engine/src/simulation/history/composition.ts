@@ -101,6 +101,8 @@ export interface RoomLifecycleCompositionOptions {
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly outgoing?: (writer: HistorySegmentWriter, parent: CanonicalLifecycleRoom) => void;
   readonly stopAfterOutgoing?: boolean;
+  /** Continue only through this real post-outgoing lifecycle point, then stop traversal. */
+  readonly continueThroughAcquisitionPoint?: string;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -235,9 +237,16 @@ export function appendRoomLifecycle(
       }
       options.outgoing?.(writer, room);
       projectedOutgoing = options.outgoing !== undefined;
-      if (options.stopAfterOutgoing) {
+      if (options.stopAfterOutgoing && options.continueThroughAcquisitionPoint === undefined) {
         return;
       }
+    }
+    if (
+      options.stopAfterOutgoing &&
+      event.kind === 'acquisitionPointReached' &&
+      event.point === options.continueThroughAcquisitionPoint
+    ) {
+      return;
     }
   }
   if (options.stopAfterOutgoing && !reachedOutgoing) {

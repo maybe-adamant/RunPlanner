@@ -53,6 +53,16 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   for (const control of room.rewardControls) appendRewardControlMarkers(markers, control);
   appendMarker(markers, room.zagreusSpawn?.marker);
   appendMarker(markers, room.naturalChaosSpawn?.marker);
+  if (room.acquisitions?.placement === 'afterProducer') {
+    appendMarker(markers, room.acquisitions.marker);
+    for (const entry of room.acquisitions.entries) {
+      for (const trait of entry.rewardControl.traitOffers ?? [])
+        appendMarker(markers, trait.marker);
+      for (const resolution of entry.rewardControl.levelResolutions ?? []) {
+        appendMarker(markers, resolution.marker);
+      }
+    }
+  }
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':

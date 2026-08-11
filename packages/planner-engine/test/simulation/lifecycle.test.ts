@@ -310,13 +310,16 @@ describe('single-room lifecycle execution', () => {
       'offerPointMaterialized',
       'roomEntered',
       'outgoingGenerationCheckpoint',
-      'shopPurchasesApplied',
+      'acquisitionPointReached',
       'roomCommitted',
       'roomCountersAdvanced',
       'roomExited',
     ]);
     expect(fragment.events[2]).toMatchObject({ offerPoint: 'shopInventory' });
-    expect(fragment.events[5]).toMatchObject({ offerPoint: 'shopInventory' });
+    expect(fragment.events[5]).toMatchObject({
+      kind: 'acquisitionPointReached',
+      point: 'roomExit',
+    });
   });
 
   it('records entered-store provenance as a commit-time effect', () => {

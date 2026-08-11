@@ -18,7 +18,6 @@ import type {
   RewardWheelAddress,
   RewardWheelOfferAddress,
   ShopOfferAddress,
-  ShopPurchaseAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
@@ -49,7 +48,6 @@ export interface CanonicalResolvedIncomingReward {
 export interface CanonicalShopOffer {
   readonly offerKey: string;
   readonly offerOrigin: ShopOfferAddress;
-  readonly purchaseOrigin: ShopPurchaseAddress;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
@@ -62,7 +60,8 @@ export interface CanonicalShopEntryState {
   readonly profileKey: string;
   readonly deathDefianceConditionMet?: boolean;
   readonly offers: readonly CanonicalShopOffer[];
-  readonly purchaseOrder: readonly string[];
+  /** Exact room-exit membership and chronology, owned by the occurrence site. */
+  readonly order: readonly string[];
 }
 
 export interface CanonicalLocalReward {

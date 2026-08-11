@@ -179,10 +179,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  readonly shopPurchaseOrders: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<readonly string[]>
-  >;
+  readonly acquisitionOrders: ReadonlyMap<string, WorkspaceCandidateInteraction<readonly string[]>>;
   readonly shopDeathDefianceConditions: ReadonlyMap<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
@@ -210,7 +207,7 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
-  const shopPurchaseOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
+  const acquisitionOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const shopDeathDefianceConditions = new Map<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
@@ -418,30 +415,28 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'shopPurchaseOrders': {
-        for (const purchase of requirement.purchases) {
-          const key = semanticAddressKey(purchase.owner);
-          const choices = Object.freeze(
-            purchase.proposalOfferKeys.map((offerKeys) =>
-              Object.freeze({
-                label: offerKeys.length === 0 ? 'No purchases' : offerKeys.join(' → '),
-                value: offerKeys,
-              }),
-            ),
-          );
-          set(
-            shopPurchaseOrders,
+      case 'acquisitionOrder': {
+        const key = semanticAddressKey(requirement.owner);
+        const choices = Object.freeze(
+          requirement.proposalEntryKeys.map((offerKeys) =>
+            Object.freeze({
+              label: offerKeys.length === 0 ? 'No purchases' : offerKeys.join(' → '),
+              value: offerKeys,
+            }),
+          ),
+        );
+        set(
+          acquisitionOrders,
+          key,
+          candidateInteraction(
+            requirement.owner,
+            choices,
+            requirement.selectedEntryKeys,
+            () => candidates.acquisitionOrders(requirement.owner, requirement.proposalEntryKeys),
             key,
-            candidateInteraction(
-              requirement.owner,
-              choices,
-              purchase.selectedOfferKeys,
-              () => candidates.shopPurchaseOrders(requirement.owner, purchase.proposalOfferKeys),
-              key,
-            ),
-            'Shop purchase-order',
-          );
-        }
+          ),
+          'acquisition order',
+        );
         break;
       }
       case 'shopDeathDefianceCondition': {
@@ -477,7 +472,7 @@ function bindOccurrenceLocalInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    shopPurchaseOrders,
+    acquisitionOrders,
     shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,
@@ -1243,7 +1238,7 @@ export function bindWorkspaceInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    shopPurchaseOrders,
+    acquisitionOrders,
     shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,
@@ -1688,7 +1683,7 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     rooms,
     shipCombatPhaseCounts,
-    shopPurchaseOrders,
+    acquisitionOrders,
     shopDeathDefianceConditions,
     sideRoomEntryOrders,
     sideRoomGenerations,

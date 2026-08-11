@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   semanticAddressKey,
+  type AcquisitionSiteAddress,
   type OccurrenceAddress,
   type RewardWheelAddress,
 } from '../../authored-project/addresses';
@@ -52,10 +53,10 @@ export interface RewardWheelPickedCandidateQuery {
   readonly pickedOfferIndex: number;
 }
 
-export interface ShopPurchaseOrderCandidateQuery {
-  readonly kind: 'shopPurchaseOrder';
-  readonly shop: OccurrenceAddress;
-  readonly offerKeys: readonly string[];
+export interface AcquisitionOrderCandidateQuery {
+  readonly kind: 'acquisitionOrder';
+  readonly site: AcquisitionSiteAddress;
+  readonly entryKeys: readonly string[];
 }
 
 export type RoomLifecycleCandidateQuery =
@@ -63,7 +64,7 @@ export type RoomLifecycleCandidateQuery =
   | RewardWheelOfferCountCandidateQuery
   | RewardWheelStoreCandidateQuery
   | RewardWheelPickedCandidateQuery
-  | ShopPurchaseOrderCandidateQuery;
+  | AcquisitionOrderCandidateQuery;
 
 export interface ShipEncounterCountCandidateSupport {
   readonly encounterCount: 2 | 3;
@@ -104,8 +105,8 @@ export interface EvaluatedRewardWheelPickedCandidate {
   readonly result: RewardWheelLifecycleCandidateSupport & { readonly pickedOfferIndex: number };
 }
 
-export interface EvaluatedShopPurchaseOrderCandidate {
-  readonly kind: 'shopPurchaseOrder';
+export interface EvaluatedAcquisitionOrderCandidate {
+  readonly kind: 'acquisitionOrder';
   readonly result: RoomLifecycleCandidateResult;
 }
 
@@ -115,7 +116,7 @@ export type RoomLifecycleCandidateEvaluation =
   | EvaluatedRewardWheelOfferCountCandidate
   | EvaluatedRewardWheelStoreCandidate
   | EvaluatedRewardWheelPickedCandidate
-  | EvaluatedShopPurchaseOrderCandidate;
+  | EvaluatedAcquisitionOrderCandidate;
 
 type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress;
 
@@ -357,60 +358,59 @@ export function evaluateRewardWheelLifecycleCandidate(
   }
 }
 
-export function evaluateShopPurchaseOrderCandidate(
+export function evaluateAcquisitionOrderCandidate(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
-  query: ShopPurchaseOrderCandidateQuery,
+  query: AcquisitionOrderCandidateQuery,
 ): RoomLifecycleCandidateEvaluation {
-  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, query.shop);
+  if (query.site.owner.kind !== 'occurrence' || query.site.pointKey !== 'roomExit') {
+    throw new CandidateEvaluationContractError('unsupported acquisition site');
+  }
+  const shop = query.site.owner;
+  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, shop);
   if (source === undefined) {
     return unavailableForBiome(
       evaluation,
-      query.shop.routeKey,
-      query.shop.biomeKey,
-      query.shop,
+      shop.routeKey,
+      shop.biomeKey,
+      shop,
       'afterRoomLifecycle',
     );
   }
-  const plan = planFor(project, query.shop.routeKey, query.shop.biomeKey);
+  const plan = planFor(project, shop.routeKey, shop.biomeKey);
   const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === query.shop.occurrenceId,
+    (candidate) => candidate.occurrenceId === shop.occurrenceId,
   );
   if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     throw new CandidateEvaluationContractError(
-      'shop purchase-order owner has no materialized shop state',
+      'Shop acquisition-site owner has no materialized Shop state',
     );
   }
-  if (!Array.isArray(query.offerKeys) || !query.offerKeys.every((key) => typeof key === 'string')) {
-    throw new CandidateEvaluationContractError('shop purchase order must contain offer keys');
+  if (!Array.isArray(query.entryKeys) || !query.entryKeys.every((key) => typeof key === 'string')) {
+    throw new CandidateEvaluationContractError('acquisition order must contain entry keys');
   }
   const seen = new Set<string>();
-  for (const offerKey of query.offerKeys) {
+  for (const offerKey of query.entryKeys) {
     if (occurrence.state.shop.offers[offerKey] === undefined) {
       throw new CandidateEvaluationContractError(
-        `shop purchase order has no declared offer ${offerKey}`,
+        `acquisition order has no declared entry ${offerKey}`,
       );
     }
     if (seen.has(offerKey)) {
-      throw new CandidateEvaluationContractError(`shop purchase order duplicates ${offerKey}`);
+      throw new CandidateEvaluationContractError(`acquisition order duplicates ${offerKey}`);
     }
     seen.add(offerKey);
   }
-  const context = source.artifacts?.shopAt(query.shop);
+  const context = source.artifacts?.acquisitionOrderAt(shop);
   if (context === undefined) {
     return source.evaluation.coverage.kind === 'prefix'
-      ? coverageUnavailable(evaluation, query.shop, 'afterRoomLifecycle')
-      : producerUnavailable(query.shop);
+      ? coverageUnavailable(evaluation, shop, 'afterRoomLifecycle')
+      : producerUnavailable(shop);
   }
   return Object.freeze({
-    kind: 'shopPurchaseOrder',
-    result: context.evaluateState(
-      Object.freeze({
-        ...occurrence.state.shop,
-        purchaseOrder: Object.freeze([...query.offerKeys]),
-      }),
-    ),
+    kind: 'acquisitionOrder',
+    result: context.evaluateOrder(Object.freeze([...query.entryKeys])),
   });
 }

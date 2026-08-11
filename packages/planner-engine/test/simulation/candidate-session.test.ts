@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import * as simulationPublic from '@run-planner/engine/simulation';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -210,9 +211,12 @@ describe('candidate session', () => {
         value: offer.reward.offer,
       },
       {
-        kind: 'shopPurchaseOrder',
-        shop: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
-        offerKeys: occurrence.state.shop.purchaseOrder,
+        kind: 'acquisitionOrder',
+        site: createAcquisitionSiteAddress(
+          createOccurrenceAddress(fBiome, occurrence.occurrenceId),
+          'roomExit',
+        ),
+        entryKeys: occurrence.acquisitionSites?.roomExit?.order ?? [],
       },
     ]);
 

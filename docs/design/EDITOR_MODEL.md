@@ -378,14 +378,16 @@ Chaos publishes its downstream continuation as the ordinary next-step frontier.
 React supplies no source, spacing, depth, map, reward, or return policy.
 
 A materialized Shop preserves declaration order for inventory rows while
-deriving `Purchased` membership and a `Purchase order` ordinal from its one
-occurrence-owned `purchaseOrder` list. Each row exposes a membership toggle and
-direct ordinal select, but either interaction publishes one complete replacement
-order. Candidate support is evaluated for those complete row-scoped proposals;
-impossible positions remain visible with their evidence, and a selected invalid
-order remains editable for repair. Per-offer Shop-purchase markers and finding
-destinations remain stable even though the candidate owner is the Shop
-occurrence.
+deriving `Purchased` membership from its one occurrence-owned
+`acquisitionSites.roomExit.order` list. Each inventory row exposes only that
+membership toggle; the containing Acquisitions workbench owns ordered move
+controls and publishes one complete replacement order. Candidate support is
+evaluated for those complete proposals; impossible positions remain visible
+with their evidence, and a selected invalid order remains editable for repair.
+Per-offer Shop-purchase markers and finding destinations remain stable even
+though the aggregate acquisition-order candidate and order finding are owned by
+the exact `roomExit` AcquisitionSiteAddress. An individual purchase failure
+remains AcquisitionEntryAddress-owned when that is the semantic repair context.
 
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.

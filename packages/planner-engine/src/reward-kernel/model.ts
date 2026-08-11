@@ -217,7 +217,7 @@ export interface ShopGenerationSupport {
 
 export interface ShopPurchaseResult {
   readonly history: RewardHistoryState;
-  readonly purchaseOrder: readonly number[];
+  readonly entryOrder: readonly number[];
   readonly acquisitions: readonly ShopPurchaseAcquisition[];
 }
 
@@ -228,7 +228,7 @@ export interface ShopPurchaseAcquisition {
 }
 
 export interface ShopPurchaseFailure {
-  readonly purchaseOrder: readonly number[];
+  readonly entryOrder: readonly number[];
   readonly failedSlotIndex?: number;
 }
 

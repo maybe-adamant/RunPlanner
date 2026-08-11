@@ -82,7 +82,7 @@ import {
   type RoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateResult,
   type ShipLifecycleCandidateContext,
-  type ShopPurchaseCandidateContext,
+  type AcquisitionOrderCandidateContext,
 } from './lifecycle-artifacts';
 import {
   createRewardProducerCandidateArtifacts,
@@ -103,14 +103,14 @@ import {
   processEncounterTraitOffer,
   processRewardOffer,
   processShopInventory,
-  processShopPurchases,
+  settleShopAcquisitionSite,
   publicRewardBranch,
   rewardFinding,
   type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
-import { prepareShopPurchaseCandidateContext } from './shop-candidates';
+import { prepareAcquisitionOrderCandidateContext } from './shop-candidates';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
@@ -1125,7 +1125,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
-  const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
+  const acquisitionOrderContexts = new Map<string, AcquisitionOrderCandidateContext>();
   const runStateSnapshotsByOwner = new Map<string, DecisionRunStateSnapshot>();
   const hubDecisionsBySource = new Map(
     snapshot.decisions
@@ -1236,7 +1236,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
 
-  function processAuthoredShopPurchases(
+  function settleAuthoredAcquisitionSite(
     room: CanonicalAuthoredRoom,
     declaration: RoomDeclaration,
     roomView: ProgressiveRoomHistoryViews,
@@ -1245,10 +1245,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     targetFindings: Map<string, FindingRegionEntry>,
   ): readonly RewardBranchState[] {
     const roomKey = semanticAddressKey(room.origin);
-    if (!shopPurchaseContexts.has(roomKey)) {
-      shopPurchaseContexts.set(
+    if (!acquisitionOrderContexts.has(roomKey)) {
+      acquisitionOrderContexts.set(
         roomKey,
-        prepareShopPurchaseCandidateContext({
+        prepareAcquisitionOrderCandidateContext({
           catalog,
           room,
           declaration,
@@ -1272,7 +1272,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }),
       );
     }
-    return processShopPurchases(
+    return settleShopAcquisitionSite(
       sourceBranches,
       {
         catalog,
@@ -1302,7 +1302,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         fail,
       },
       targetFindings,
-    );
+    ).branches;
   }
 
   function completeIncomingOfferCandidate(
@@ -2497,7 +2497,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         ).branches;
         break;
       }
-      case 'shopPurchasesApplied': {
+      case 'acquisitionPointReached': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const declaration = room && catalog.rooms.byKey[room.gameName];
         const roomView = views.get(semanticAddressKey(event.origin));
@@ -2509,7 +2509,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         ) {
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
         }
-        branches = processAuthoredShopPurchases(
+        branches = settleAuthoredAcquisitionSite(
           room,
           declaration,
           roomView,
@@ -2522,39 +2522,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
       default:
         branches = advanceRewardBranches(branches, event.sequence);
         break;
-    }
-  }
-
-  // A Midshop's unresolved outgoing decision stops canonical history before
-  // purchases. Replay its authored order only into a discarded interaction
-  // branch so active purchase leaves remain assessable without changing the
-  // pre-purchase branches that own outgoing-door generation.
-  let frontierShopPurchaseBranches: readonly RewardBranchState[] = Object.freeze([]);
-  if (
-    snapshot.kind === 'biomePrefix' &&
-    snapshot.frontier?.kind === 'exitDecision' &&
-    snapshot.frontier.parent.origin.kind === 'occurrence' &&
-    branches.length > 0
-  ) {
-    const source = rooms.get(semanticAddressKey(snapshot.frontier.parent.origin));
-    const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-    const roomView =
-      source === undefined ? undefined : views.get(semanticAddressKey(source.origin));
-    if (
-      source?.kind === 'authored' &&
-      source.entryState?.kind === 'shop' &&
-      declaration !== undefined &&
-      roomView !== undefined
-    ) {
-      const historySequence = (history.events.at(-1)?.sequence ?? 0) + 1;
-      frontierShopPurchaseBranches = processAuthoredShopPurchases(
-        source,
-        declaration,
-        roomView,
-        branches,
-        historySequence,
-        findings,
-      );
     }
   }
 
@@ -2574,7 +2541,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const immutableFindingRegions = Object.freeze([...findings.values()]);
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
-    Object.freeze([...branches, ...frontierShopPurchaseBranches]),
+    branches,
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
@@ -2601,7 +2568,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     producerArtifacts: createRewardProducerCandidateArtifacts(producerFrontiers),
     lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
       shipLifecycleContexts,
-      shopPurchaseContexts,
+      acquisitionOrderContexts,
     ),
     traitOfferArtifacts: createTraitOfferCandidateArtifacts(
       catalog,

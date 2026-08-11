@@ -16,6 +16,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
+  type AcquisitionSiteAddress,
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type BiomeAddress,
@@ -181,8 +182,8 @@ export interface CandidateProjectionSession {
     group: LocalChildGroupAddress,
     values: readonly (readonly string[])[],
   ) => readonly CandidateOptionProjection<readonly string[]>[];
-  readonly shopPurchaseOrders: (
-    shop: OccurrenceAddress,
+  readonly acquisitionOrders: (
+    site: AcquisitionSiteAddress,
     values: readonly (readonly string[])[],
   ) => readonly CandidateOptionProjection<readonly string[]>[];
   readonly traitOffer: (
@@ -719,15 +720,19 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      shopPurchaseOrders: (shop: OccurrenceAddress, values: readonly (readonly string[])[]) =>
+      acquisitionOrders: (site: AcquisitionSiteAddress, values: readonly (readonly string[])[]) =>
         projectOptions(
           cache,
           assembly,
-          `shop-purchase-order:${semanticAddressKey(shop)}:${domainKey(
+          `acquisition-order:${semanticAddressKey(site)}:${domainKey(
             values.map((value) => JSON.stringify(value)),
           )}`,
           values,
-          values.map((offerKeys) => ({ kind: 'shopPurchaseOrder', shop, offerKeys })),
+          values.map((entryKeys) => ({
+            kind: 'acquisitionOrder',
+            site,
+            entryKeys,
+          })),
           catalog,
           options,
         ),
@@ -882,7 +887,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
-    case 'shopPurchaseOrder':
+    case 'acquisitionOrder':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
       return evaluation.result.support !== 'impossible';
@@ -937,7 +942,7 @@ function candidateForced(
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
-    case 'shopPurchaseOrder':
+    case 'acquisitionOrder':
       return false;
     case 'takeoverPrebossBatch':
       return evaluation.result.support === 'required';

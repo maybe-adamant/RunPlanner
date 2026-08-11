@@ -186,15 +186,23 @@ function defaultOccurrence(
   resolvedStoreKey: string | undefined,
   loadout: { readonly weaponKey: string; readonly aspectKey: string },
 ): RoomOccurrence {
+  const state = createDefaultRoomState(catalog, room, {
+    role,
+    entryActive,
+    ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
+    loadout,
+  });
   return Object.freeze({
     occurrenceId,
     gameName: room.gameName,
-    state: createDefaultRoomState(catalog, room, {
-      role,
-      entryActive,
-      ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
-      loadout,
-    }),
+    state,
+    ...(state.kind === 'shop' && state.shop !== undefined
+      ? {
+          acquisitionSites: Object.freeze({
+            roomExit: Object.freeze({ order: Object.freeze([]) }),
+          }),
+        }
+      : {}),
     encounters: createDefaultRoomEncounterState(
       catalog,
       room,

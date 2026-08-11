@@ -387,8 +387,29 @@ function appendHubDecision(
 interface ClockworkAwareLifecycleOptions {
   readonly outgoing?: (writer: HistorySegmentWriter) => void;
   readonly stopAfterOutgoing?: boolean;
+  readonly continueThroughAcquisitionPoint?: string;
   readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
+}
+
+function postOutgoingAcquisitionPoint(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+): string | undefined {
+  const profile = catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey];
+  if (profile === undefined)
+    fail(`${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`);
+  let outgoingSeen = false;
+  for (const operation of profile.operations) {
+    if (operation.kind === 'generateOutgoingBatch') outgoingSeen = true;
+    if (outgoingSeen && operation.kind === 'settleAcquisitionPoint') return operation.point;
+  }
+  return undefined;
+}
+
+function postOutgoingAcquisitionOption(catalog: Catalog, room: CanonicalAuthoredRoom) {
+  const point = postOutgoingAcquisitionPoint(catalog, room);
+  return point === undefined ? {} : { continueThroughAcquisitionPoint: point };
 }
 
 /**
@@ -418,6 +439,9 @@ function appendClockworkAwareRoomLifecycle(
     ...(options.stopAfterOutgoing === undefined
       ? {}
       : { stopAfterOutgoing: options.stopAfterOutgoing }),
+    ...(options.continueThroughAcquisitionPoint === undefined
+      ? {}
+      : { continueThroughAcquisitionPoint: options.continueThroughAcquisitionPoint }),
     beforeEvent(beforeWriter, event) {
       options.beforeEvent?.(beforeWriter, event);
       if (
@@ -716,6 +740,7 @@ function composeBiomeHistoryPrefixResult(
                 }
               },
               stopAfterOutgoing: true,
+              ...postOutgoingAcquisitionOption(catalog, current),
             });
           }
         } else {
@@ -735,6 +760,7 @@ function composeBiomeHistoryPrefixResult(
               appendGeneratedTargets(outgoingWriter, current.origin, frontier.targets);
             },
             stopAfterOutgoing: true,
+            ...postOutgoingAcquisitionOption(catalog, current),
           });
         }
       } else if (snapshot.frontier?.kind === 'hubBoard') {

@@ -319,17 +319,25 @@ export function applyRoomReplacementCommand(
     replacementRoom,
     asRoomStateContext(context, located.loadout),
   );
+  const replacementState = reconcileReplacementRoomState(
+    catalog,
+    requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+    occurrence.state,
+    replacementRoom,
+    replacementDefault,
+    located.loadout,
+  );
   const replacement: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
-    state: reconcileReplacementRoomState(
-      catalog,
-      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
-      occurrence.state,
-      replacementRoom,
-      replacementDefault,
-      located.loadout,
-    ),
+    state: replacementState,
+    ...(replacementState.kind === 'shop' && replacementState.shop !== undefined
+      ? {
+          acquisitionSites: Object.freeze({
+            roomExit: Object.freeze({ order: Object.freeze([]) }),
+          }),
+        }
+      : {}),
     encounters: reconcileRoomEncounterState(
       catalog,
       requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),

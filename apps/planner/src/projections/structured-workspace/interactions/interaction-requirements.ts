@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AdditionalExitAddress,
+  type AcquisitionSiteAddress,
   type BiomeAddress,
   type EncounterPhaseAddress,
   type ExitDecisionAddress,
@@ -14,7 +15,6 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type RewardWheelAddress,
-  type ShopPurchaseAddress,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
 
@@ -77,13 +77,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      readonly kind: 'shopPurchaseOrders';
-      readonly owner: OccurrenceAddress;
-      readonly purchases: readonly {
-        readonly owner: ShopPurchaseAddress;
-        readonly proposalOfferKeys: readonly (readonly string[])[];
-        readonly selectedOfferKeys: readonly string[];
-      }[];
+      readonly kind: 'acquisitionOrder';
+      readonly owner: AcquisitionSiteAddress;
+      readonly proposalEntryKeys: readonly (readonly string[])[];
+      readonly selectedEntryKeys: readonly string[];
     }
   | {
       readonly kind: 'shopDeathDefianceCondition';

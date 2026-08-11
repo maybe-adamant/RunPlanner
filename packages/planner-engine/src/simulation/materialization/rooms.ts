@@ -5,7 +5,6 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -497,11 +496,6 @@ function materializeShopEntry(
             context.occurrence.occurrenceId,
             slot.key,
           ),
-          purchaseOrigin: createShopPurchaseAddress(
-            context.biome,
-            context.occurrence.occurrenceId,
-            slot.key,
-          ),
           offer: authored.reward.offer,
           traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: authored.reward.levelResolutionsByAcquisitionRole,
@@ -509,7 +503,7 @@ function materializeShopEntry(
         });
       }),
     ),
-    purchaseOrder: shop.purchaseOrder,
+    order: context.occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]),
   });
 }
 

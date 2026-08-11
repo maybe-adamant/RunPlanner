@@ -79,10 +79,7 @@ export type RoomLifecycleEvent =
       readonly lifecyclePoint: ProducerLifecyclePointKey;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'outgoingGenerationCheckpoint' })
-  | (RoomLifecycleEventBase & {
-      readonly kind: 'shopPurchasesApplied';
-      readonly offerPoint: string;
-    })
+  | (RoomLifecycleEventBase & { readonly kind: 'acquisitionPointReached'; readonly point: string })
   | (RoomLifecycleEventBase & { readonly kind: 'roomCommitted' })
   | (RoomLifecycleEventBase & {
       readonly kind: 'roomCountersAdvanced';

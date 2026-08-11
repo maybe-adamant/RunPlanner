@@ -56,11 +56,7 @@ export const prebossCompletionRoomLifecycleProfiles = [
         effects: ['recordOfferPoint'],
       },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'applyShopPurchases',
-        offerPoint: 'shopInventory',
-        effects: ['recordShopPurchases'],
-      },
+      { kind: 'settleAcquisitionPoint', point: 'roomExit', effects: ['recordAcquisitionPoint'] },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],

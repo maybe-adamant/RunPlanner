@@ -1,5 +1,6 @@
 import {
   semanticAddressKey,
+  type AcquisitionSiteAddress,
   type AuthoredTraitOffer,
   type AuthoredLevelResolution,
   type AuthoredBatchState,
@@ -21,7 +22,7 @@ import {
   type RewardWheelAddress,
   type SemanticAddress,
   type SideRoomGeneration,
-  type ShopPurchaseAddress,
+  type AcquisitionEntryAddress,
   type TargetAddress,
   type TraitOfferAddress,
   type LevelResolutionAddress,
@@ -489,15 +490,7 @@ export interface WorkspaceInteractionCatalog {
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  /**
-   * Each row keeps a stable ShopPurchaseAddress key, while the interaction
-   * itself is owned by the containing Shop occurrence and proposes one whole
-   * authored order.
-   */
-  readonly shopPurchaseOrders: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<readonly string[]>
-  >;
+  readonly acquisitionOrders: ReadonlyMap<string, WorkspaceCandidateInteraction<readonly string[]>>;
   readonly shopDeathDefianceConditions: ReadonlyMap<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
@@ -686,22 +679,12 @@ export interface WorkspaceRewardWheelDescriptor {
   readonly storeKey: string;
 }
 
-export interface WorkspaceShopPurchaseOrderOption {
-  readonly label: string;
-  readonly offerKeys: readonly string[];
-  readonly position: number;
-}
-
 export interface WorkspaceShopPurchaseDescriptor {
-  readonly address: ShopPurchaseAddress;
+  readonly address: AcquisitionEntryAddress;
   readonly marker: WorkspaceMarker;
   readonly purchased: boolean;
-  /** Selected ordinal in the authored order, or null when not purchased. */
-  readonly position: number | null;
   /** Full order produced by toggling this row's purchase membership. */
   readonly toggleOfferKeys: readonly string[];
-  /** Full-order proposals for the direct ordinal select. */
-  readonly positionOptions: readonly WorkspaceShopPurchaseOrderOption[];
   /** One deduplicated candidate domain shared by the row's two controls. */
   readonly proposalOfferKeys: readonly (readonly string[])[];
 }
@@ -715,6 +698,21 @@ export interface WorkspaceShopOfferDescriptor {
 
 export interface WorkspaceShopConditionControl {
   readonly value: boolean;
+}
+
+/** One canonical post-outgoing settlement surface for an orderable room site. */
+export interface WorkspaceAcquisitionsWorkbench {
+  readonly site: AcquisitionSiteAddress;
+  readonly marker: WorkspaceMarker;
+  /** The lifecycle point determines the containing inspector, never React. */
+  readonly placement: 'afterProducer' | 'postOutgoing';
+  readonly entries: readonly WorkspaceAcquisitionEntryDescriptor[];
+}
+export interface WorkspaceAcquisitionEntryDescriptor {
+  readonly key: string;
+  readonly label: string;
+  /** The producer-owned offer control with only acquisition-time children shown. */
+  readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 
 export interface WorkspaceEphyraSideRoomEntryOption {
@@ -834,7 +832,7 @@ export type WorkspaceRoomLocal =
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
       readonly deathDefianceCondition?: WorkspaceShopConditionControl;
       /** One occurrence-owned authored order, separate from inventory rows. */
-      readonly purchaseOrder: readonly string[];
+      readonly acquisitionOrder: readonly string[];
     };
 
 export interface WorkspaceRoomSummary {
@@ -857,6 +855,7 @@ export interface WorkspaceRoomSummary {
   /** All room-local owners used for inspector and rail containment routing. */
   readonly localDetailMarkers: readonly WorkspaceMarker[];
   readonly marker: WorkspaceMarker;
+  readonly acquisitions?: WorkspaceAcquisitionsWorkbench;
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
   /**
@@ -989,6 +988,8 @@ interface WorkspaceBatchNodeBase {
   readonly rewardStore?: WorkspaceMarker;
   readonly selection: WorkspaceMarker;
   readonly source: ExitDecisionSourceAddress;
+  /** Cached source-room settlement product projected at its post-outgoing point. */
+  readonly acquisitions?: WorkspaceAcquisitionsWorkbench;
   readonly targets: readonly WorkspacePhysicalTarget[];
   readonly topologyState: 'complete' | 'partial' | 'retained';
   readonly runState?: WorkspaceRunStateLauncher;

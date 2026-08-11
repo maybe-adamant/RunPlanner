@@ -1,4 +1,5 @@
 import {
+  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -8,7 +9,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
+  createAcquisitionEntryAddress,
   createTraitOfferAddress,
   createLevelResolutionAddress,
   traitGiverUsesOfferContext,
@@ -80,6 +81,7 @@ import { workspaceRewardStoreLabel } from './reward-labels';
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
+  readonly postOutgoingSettlement: boolean;
 }
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
@@ -587,23 +589,32 @@ function ordinalLabel(position: number): string {
   }
 }
 
-/**
- * Shop-specific complete-order proposals stay in the occurrence projection so
- * React only selects one already-authored transition. This is deliberately not
- * a generic ordering abstraction: Shop membership and order are one fact.
- */
-function uniqueShopPurchaseOrders(
-  orders: readonly (readonly string[])[],
+/** Complete semantic proposals for the one authorable site order. */
+function acquisitionOrderProposals(
+  order: readonly string[],
+  offerKeys: readonly string[],
 ): readonly (readonly string[])[] {
-  const seen = new Set<string>();
-  const unique: (readonly string[])[] = [];
-  for (const order of orders) {
-    const key = JSON.stringify(order);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(Object.freeze([...order]));
+  const proposals: string[][] = [[...order]];
+  for (const offerKey of offerKeys) {
+    const index = order.indexOf(offerKey);
+    proposals.push(index < 0 ? [...order, offerKey] : order.filter((key) => key !== offerKey));
   }
-  return Object.freeze(unique);
+  for (let index = 0; index < order.length - 1; index += 1) {
+    const swapped = [...order];
+    const next = swapped[index + 1];
+    swapped[index + 1] = swapped[index]!;
+    swapped[index] = next!;
+    proposals.push(swapped);
+  }
+  const seen = new Set<string>();
+  return Object.freeze(
+    proposals.flatMap((proposal) => {
+      const key = JSON.stringify(proposal);
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [Object.freeze(proposal)];
+    }),
+  );
 }
 
 function ephyraSideRoomEntryOrderControl(
@@ -887,7 +898,7 @@ function roomLocalForOccurrence(
           kind: 'shop' as const,
           materialized: false,
           offers: Object.freeze([]),
-          purchaseOrder: Object.freeze([]),
+          acquisitionOrder: Object.freeze([]),
         });
       }
       const profile = input.catalog.rewards.shops.byKey[shop.profileKey];
@@ -896,17 +907,19 @@ function roomLocalForOccurrence(
           `${room.gameName} shop profile ${shop.profileKey} is missing`,
         );
       }
-      const purchaseOrder = Object.freeze([...shop.purchaseOrder]);
+      const acquisitionOrder = Object.freeze([
+        ...(occurrence.acquisitionSites?.roomExit?.order ?? []),
+      ]);
       const purchasedKeys = new Set<string>();
-      for (const offerKey of purchaseOrder) {
+      for (const offerKey of acquisitionOrder) {
         if (shop.offers[offerKey] === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Shop purchase order has unknown offer ${offerKey}`,
+            `${room.gameName} acquisition order has unknown entry ${offerKey}`,
           );
         }
         if (purchasedKeys.has(offerKey)) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Shop purchase order duplicates ${offerKey}`,
+            `${room.gameName} acquisition order duplicates ${offerKey}`,
           );
         }
         purchasedKeys.add(offerKey);
@@ -918,35 +931,20 @@ function roomLocalForOccurrence(
           );
         }
         const offerAddress = createShopOfferAddress(input.biome, occurrence.occurrenceId, slot.key);
-        const purchaseAddress = createShopPurchaseAddress(
-          input.biome,
-          occurrence.occurrenceId,
+        const purchaseAddress = createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(
+            createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+            'roomExit',
+          ),
           slot.key,
         );
-        const purchaseIndex = purchaseOrder.indexOf(slot.key);
+        const purchaseIndex = acquisitionOrder.indexOf(slot.key);
         const withoutSlot = Object.freeze(
-          purchaseOrder.filter((offerKey) => offerKey !== slot.key),
+          acquisitionOrder.filter((offerKey) => offerKey !== slot.key),
         );
         const toggleOfferKeys = Object.freeze(
-          purchaseIndex < 0 ? [...purchaseOrder, slot.key] : [...withoutSlot],
+          purchaseIndex < 0 ? [...acquisitionOrder, slot.key] : [...withoutSlot],
         );
-        const positionOptions =
-          purchaseIndex < 0
-            ? Object.freeze([])
-            : Object.freeze(
-                Array.from({ length: withoutSlot.length + 1 }, (_, insertionIndex) => {
-                  const position = insertionIndex + 1;
-                  return Object.freeze({
-                    label: ordinalLabel(position),
-                    offerKeys: Object.freeze([
-                      ...withoutSlot.slice(0, insertionIndex),
-                      slot.key,
-                      ...withoutSlot.slice(insertionIndex),
-                    ]),
-                    position,
-                  });
-                }),
-              );
         return Object.freeze({
           key: slot.key,
           label: slot.label,
@@ -954,14 +952,8 @@ function roomLocalForOccurrence(
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
             purchased: purchaseIndex >= 0,
-            position: purchaseIndex < 0 ? null : purchaseIndex + 1,
             toggleOfferKeys,
-            positionOptions,
-            proposalOfferKeys: uniqueShopPurchaseOrders([
-              purchaseOrder,
-              toggleOfferKeys,
-              ...positionOptions.map((option) => option.offerKeys),
-            ]),
+            proposalOfferKeys: Object.freeze([acquisitionOrder, toggleOfferKeys]),
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
@@ -977,7 +969,7 @@ function roomLocalForOccurrence(
               }) as WorkspaceShopConditionControl,
             }),
         offers: Object.freeze(offers),
-        purchaseOrder,
+        acquisitionOrder,
       });
     }
   }
@@ -1155,17 +1147,13 @@ function occurrenceInteractionRequirements(
       }
       requirements.push(
         Object.freeze({
-          kind: 'shopPurchaseOrders' as const,
-          owner: room.address,
-          purchases: Object.freeze(
-            shop.offers.map((offer) =>
-              Object.freeze({
-                owner: offer.purchase.address,
-                proposalOfferKeys: offer.purchase.proposalOfferKeys,
-                selectedOfferKeys: shop.purchaseOrder,
-              }),
-            ),
+          kind: 'acquisitionOrder' as const,
+          owner: room.acquisitions?.site ?? createAcquisitionSiteAddress(room.address, 'roomExit'),
+          proposalEntryKeys: acquisitionOrderProposals(
+            shop.acquisitionOrder,
+            shop.offers.map((offer) => offer.key),
           ),
+          selectedEntryKeys: shop.acquisitionOrder,
         }),
       );
       if (shop.deathDefianceCondition !== undefined) {
@@ -1299,6 +1287,34 @@ export function assembleWorkspaceOccurrence(
     label: room.label,
     localDetailMarkers,
     marker: input.markerDestinations.marker(address),
+    ...(roomLocal.kind === 'shop' && roomLocal.materialized
+      ? {
+          acquisitions: Object.freeze({
+            site: createAcquisitionSiteAddress(address, 'roomExit'),
+            marker: input.markerDestinations.marker(
+              createAcquisitionSiteAddress(address, 'roomExit'),
+            ),
+            placement:
+              room.kind === 'Preboss' || !input.facts.postOutgoingSettlement
+                ? ('afterProducer' as const)
+                : ('postOutgoing' as const),
+            entries: Object.freeze(
+              roomLocal.acquisitionOrder.flatMap((entryKey) => {
+                const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
+                return offer === undefined
+                  ? []
+                  : [
+                      Object.freeze({
+                        key: offer.key,
+                        label: offer.label,
+                        rewardControl: offer.rewardControl,
+                      }),
+                    ];
+              }),
+            ),
+          }),
+        }
+      : {}),
     occurrenceId: occurrence.occurrenceId,
     ...(occurrence.state.kind !== 'anomaly'
       ? {}

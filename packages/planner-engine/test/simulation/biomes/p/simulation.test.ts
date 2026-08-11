@@ -1,12 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -199,7 +200,13 @@ describe('P core loop', () => {
   });
 
   it('retains the exact completion-tail Shop purchase block and lifecycle artifact', () => {
-    const purchase = createShopPurchaseAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
+    const purchase = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+        'roomExit',
+      ),
+      'Boon',
+    );
     let project = createRepresentativeNOPProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
@@ -210,9 +217,12 @@ describe('P core loop', () => {
       },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-      offerKeys: ['Boon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+        'roomExit',
+      ),
+      entryKeys: ['Boon'],
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluation = assembly.evaluation;
@@ -241,18 +251,20 @@ describe('P core loop', () => {
     const shopOwner = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
     expect(progressive).not.toBeNull();
     expect(progressive?.evaluation.blockedAt).toEqual(purchase);
-    expect(progressive?.candidateArtifacts.roomLifecycles.shopAt(shopOwner)).toBeDefined();
+    expect(
+      progressive?.candidateArtifacts.roomLifecycles.acquisitionOrderAt(shopOwner),
+    ).toBeDefined();
     expect(
       candidateArtifactsForProjectEvaluationAssembly(assembly)
         .biomeAt(pBiome)
-        ?.roomLifecycles.shopAt(shopOwner),
+        ?.roomLifecycles.acquisitionOrderAt(shopOwner),
     ).toBeDefined();
     expect(
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-        kind: 'shopPurchaseOrder',
-        shop: shopOwner,
-        offerKeys: [],
+        kind: 'acquisitionOrder',
+        site: createAcquisitionSiteAddress(shopOwner, 'roomExit'),
+        entryKeys: [],
       }),
-    ).toEqual({ kind: 'shopPurchaseOrder', result: { supported: true, findings: [] } });
+    ).toEqual({ kind: 'acquisitionOrder', result: { supported: true, findings: [] } });
   });
 });

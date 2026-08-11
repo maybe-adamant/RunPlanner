@@ -1,9 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createShopOfferAddress,
-  createShopPurchaseAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createLevelResolutionAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -20,7 +21,7 @@ import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/ca
 import {
   initializeRewardBranches,
   processShopInventory,
-  processShopPurchases,
+  settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
 import {
   attachTraitHistory,
@@ -36,6 +37,12 @@ import {
 
 const biome = createBiomeAddress('Underworld', 'F');
 const shopId = createOccurrenceId('stale-purchased-hammer-shop');
+
+const settleShop = (
+  branches: Parameters<typeof settleShopAcquisitionSite>[0],
+  context: Parameters<typeof settleShopAcquisitionSite>[1],
+  findings: Parameters<typeof settleShopAcquisitionSite>[2],
+) => settleShopAcquisitionSite(branches, context, findings).branches;
 
 function baseFacts(): RewardKernelFacts {
   return {
@@ -124,6 +131,7 @@ describe('Shop trait acquisition processing', () => {
       occurrenceId: shopId,
       gameName: room.gameName,
       state: pomState,
+      acquisitionSites: Object.freeze({ roomExit: Object.freeze({ order: Object.freeze([]) }) }),
       encounters: createDefaultRoomEncounterState(catalog, room, 'pom-shop.encounters'),
       additionalExits: Object.freeze([]),
     });
@@ -171,7 +179,7 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    const unpurchased = processShopPurchases(
+    const unpurchased = settleShop(
       inventory,
       {
         catalog,
@@ -197,7 +205,10 @@ describe('Shop trait acquisition processing', () => {
         ...occurrence,
         state: Object.freeze({
           ...pomState,
-          shop: Object.freeze({ ...pomState.shop!, purchaseOrder: Object.freeze(['Minor']) }),
+          shop: pomState.shop,
+        }),
+        acquisitionSites: Object.freeze({
+          roomExit: Object.freeze({ order: Object.freeze(['Minor']) }),
         }),
       }),
       role: 'ordinary',
@@ -219,7 +230,7 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    const purchased = processShopPurchases(
+    const purchased = settleShop(
       purchasedInventory,
       {
         catalog,
@@ -245,7 +256,6 @@ describe('Shop trait acquisition processing', () => {
           ...pomState,
           shop: Object.freeze({
             ...pomState.shop!,
-            purchaseOrder: Object.freeze(['MajorNonBoon']),
             offers: Object.freeze({
               ...pomState.shop!.offers,
               MajorNonBoon: Object.freeze({
@@ -257,13 +267,16 @@ describe('Shop trait acquisition processing', () => {
             }),
           }),
         }),
+        acquisitionSites: Object.freeze({
+          roomExit: Object.freeze({ order: Object.freeze(['MajorNonBoon']) }),
+        }),
       }),
       role: 'ordinary',
       entered: true,
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const giftPurchased = processShopPurchases(
+    const giftPurchased = settleShop(
       processShopInventory(
         seeded,
         {
@@ -321,7 +334,6 @@ describe('Shop trait acquisition processing', () => {
       ...active,
       shop: Object.freeze({
         ...active.shop,
-        purchaseOrder: Object.freeze(['Minor']),
         offers: Object.freeze({
           ...active.shop.offers,
           Minor: Object.freeze({
@@ -343,6 +355,9 @@ describe('Shop trait acquisition processing', () => {
         occurrenceId,
         gameName: room.gameName,
         state,
+        acquisitionSites: Object.freeze({
+          roomExit: Object.freeze({ order: Object.freeze(['Minor']) }),
+        }),
         encounters: createDefaultRoomEncounterState(catalog, room, 'missing-pom.encounters'),
         additionalExits: Object.freeze([]),
       }),
@@ -386,7 +401,7 @@ describe('Shop trait acquisition processing', () => {
       new Map(),
     );
     const findings = new Map();
-    const purchased = processShopPurchases(
+    const purchased = settleShop(
       inventory,
       {
         catalog,
@@ -444,8 +459,8 @@ describe('Shop trait acquisition processing', () => {
     ['Pom then replacement', ['Minor', 'Boon'], 'ApolloWeaponBoon', 'ZeusWeaponBoon', 2],
     ['replacement then Pom', ['Boon', 'Minor'], 'ZeusWeaponBoon', 'ZeusWeaponBoon', 2],
   ] as const)(
-    'folds Shop Pom and Olympian replacement in authored purchase order: %s',
-    (_label, purchaseOrder, pomTarget, expectedTraitKey, expectedLevel) => {
+    'folds Shop Pom and Olympian replacement in authored acquisition order: %s',
+    (_label, entryOrder, pomTarget, expectedTraitKey, expectedLevel) => {
       const room = catalog.rooms.byKey.F_Shop01;
       if (room === undefined) throw new Error('missing F Shop declaration');
       const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
@@ -463,7 +478,6 @@ describe('Shop trait acquisition processing', () => {
         ...active,
         shop: Object.freeze({
           ...active.shop,
-          purchaseOrder: Object.freeze([...purchaseOrder]),
           offers: Object.freeze({
             ...active.shop.offers,
             Minor: Object.freeze({
@@ -506,9 +520,12 @@ describe('Shop trait acquisition processing', () => {
         biome,
         room,
         occurrence: Object.freeze({
-          occurrenceId: createOccurrenceId(`pom-replacement-${purchaseOrder.join('-')}`),
+          occurrenceId: createOccurrenceId(`pom-replacement-${entryOrder.join('-')}`),
           gameName: room.gameName,
           state,
+          acquisitionSites: Object.freeze({
+            roomExit: Object.freeze({ order: Object.freeze([...entryOrder]) }),
+          }),
           encounters: createDefaultRoomEncounterState(catalog, room, 'pom-replacement.encounters'),
           additionalExits: Object.freeze([]),
         }),
@@ -551,7 +568,7 @@ describe('Shop trait acquisition processing', () => {
         },
         new Map(),
       );
-      const purchased = processShopPurchases(
+      const purchased = settleShop(
         inventory,
         {
           catalog,
@@ -610,19 +627,20 @@ describe('Shop trait acquisition processing', () => {
       sourceRole: 'weaponUpgrade',
     });
 
-    const shopPurchase = createShopPurchaseAddress(
-      pBiome,
-      pOccurrenceIds.prebossShop,
-      'MajorNonBoon',
-    );
     const purchase = branch.events.find(
       (candidate) =>
         candidate.kind === 'concreteAcquisition' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(shopPurchase),
+        semanticAddressKey(candidate.origin) === semanticAddressKey(shopOffer),
     );
     expect(purchase).toBeDefined();
     if (purchase?.kind === 'concreteAcquisition') {
       expect(purchase.acquisition.lifecyclePoint).toBe('purchase');
+      expect(purchase.settlement?.site).toEqual(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+          'roomExit',
+        ),
+      );
     }
   }, 10_000);
 
@@ -657,7 +675,10 @@ describe('Shop trait acquisition processing', () => {
       gameName: room.gameName,
       state: Object.freeze({
         ...state,
-        shop: Object.freeze({ ...state.shop, purchaseOrder: Object.freeze(['MajorNonBoon']) }),
+        shop: state.shop,
+      }),
+      acquisitionSites: Object.freeze({
+        roomExit: Object.freeze({ order: Object.freeze(['MajorNonBoon']) }),
       }),
       encounters: createDefaultRoomEncounterState(catalog, room, 'stale-shop.encounters'),
       additionalExits: Object.freeze([]),
@@ -697,7 +718,7 @@ describe('Shop trait acquisition processing', () => {
     expect(inventory).not.toHaveLength(0);
 
     const purchaseFindings = new Map();
-    const purchased = processShopPurchases(
+    const purchased = settleShop(
       inventory,
       {
         catalog,

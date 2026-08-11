@@ -34,7 +34,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
-import { RoomOfferEditor } from './OccurrenceWorkbench';
+import { AcquisitionsWorkbench, RoomOfferEditor } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -759,6 +759,9 @@ export function BatchWorkbench({
               />
             )}
           </div>
+          {node.acquisitions === undefined ? null : (
+            <AcquisitionsWorkbench acquisitions={node.acquisitions} interactions={interactions} />
+          )}
         </>
       ) : (
         <HubTakeoverAction interaction={hubTakeover} />

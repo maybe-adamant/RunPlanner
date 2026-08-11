@@ -10,6 +10,7 @@ import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
+import { applyAcquisitionSiteCommand } from './acquisition-site';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -78,9 +79,15 @@ function applyUnchecked(
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
     case 'ReplaceShopOffer':
-    case 'ReplaceShopPurchaseOrder':
     case 'ReplaceShopDeathDefianceCondition':
       return applyOccurrenceCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceAcquisitionOrder':
+      return applyAcquisitionSiteCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

@@ -213,6 +213,13 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
 
 function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
+  // A room-exit settlement finding is addressed to its atomic entry, whose
+  // occurrence owner is intentionally one layer further out through its
+  // exact site. Keep that ancestry when a settlement itself is the first
+  // blocking region so the already-prepared pre-settlement candidate context
+  // remains available for repairing the authored order.
+  if (address.kind === 'acquisitionEntry') return occurrenceOwnerAddress(address.site);
+  if (address.kind === 'acquisitionSite') return occurrenceOwnerAddress(address.owner);
   if (address.kind === 'traitOffer' || address.kind === 'levelResolution')
     return occurrenceOwnerAddress(address.owner);
   if (address.kind === 'encounterPhase' && address.owner.kind === 'occurrence') {
@@ -399,6 +406,7 @@ function retainBlockedRegionProducts(
   blockedAt: SemanticAddress,
   blockedRegionKey: string,
   selectedFindingRegions: readonly FindingRegionEntry[],
+  frontierSettlementOwner: OccurrenceAddress | undefined,
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer' ? blockedAt : undefined;
@@ -462,6 +470,29 @@ function retainBlockedRegionProducts(
       return true;
     }),
   ]);
+  // A room-exit acquisition child is assessed after the source room's outgoing
+  // checkpoint. When that child is the progressive blocker, the clamped
+  // execution prefix intentionally stops at the outgoing frontier, but the
+  // selected attempt has already produced the bounded settlement result. Keep
+  // that exact post-settlement branch product visible at the frontier; it is
+  // the current room's state, not a replay of later topology.
+  const settledCurrentSiteBranches =
+    ancestors.occurrenceOwner === undefined ||
+    frontierSettlementOwner === undefined ||
+    semanticAddressKey(ancestors.occurrenceOwner) !== semanticAddressKey(frontierSettlementOwner) ||
+    blockedAt.kind !== 'levelResolution'
+      ? undefined
+      : selectedRewards.branches.some((branch) =>
+            branch.events.some(
+              (event) =>
+                event.kind === 'concreteAcquisition' &&
+                event.settlement !== undefined &&
+                semanticAddressKey(event.settlement.site.owner) ===
+                  semanticAddressKey(ancestors.occurrenceOwner!),
+            ),
+          )
+        ? selectedRewards.branches
+        : undefined;
   const blockedCapability =
     blockedTraitAt === undefined
       ? undefined
@@ -505,11 +536,11 @@ function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.roomLifecycles.shipAt(occurrenceOwner) ??
         blockedArtifacts.roomLifecycles.shipAt(occurrenceOwner));
-  const shopCapability =
+  const acquisitionOrderCapability =
     occurrenceOwner === undefined
       ? undefined
-      : (selectedArtifacts.roomLifecycles.shopAt(occurrenceOwner) ??
-        blockedArtifacts.roomLifecycles.shopAt(occurrenceOwner));
+      : (selectedArtifacts.roomLifecycles.acquisitionOrderAt(occurrenceOwner) ??
+        blockedArtifacts.roomLifecycles.acquisitionOrderAt(occurrenceOwner));
   const encounterCapability =
     occurrenceOwner === undefined
       ? undefined
@@ -542,7 +573,7 @@ function retainBlockedRegionProducts(
               : retainedArtifacts.rewardProducers.at(owner),
         });
   const roomLifecycles =
-    shipCapability === undefined && shopCapability === undefined
+    shipCapability === undefined && acquisitionOrderCapability === undefined
       ? retainedArtifacts.roomLifecycles
       : Object.freeze({
           shipAt: (owner: OccurrenceAddress) =>
@@ -551,12 +582,12 @@ function retainBlockedRegionProducts(
             shipCapability !== undefined
               ? shipCapability
               : retainedArtifacts.roomLifecycles.shipAt(owner),
-          shopAt: (owner: OccurrenceAddress) =>
+          acquisitionOrderAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner) &&
-            shopCapability !== undefined
-              ? shopCapability
-              : retainedArtifacts.roomLifecycles.shopAt(owner),
+            acquisitionOrderCapability !== undefined
+              ? acquisitionOrderCapability
+              : retainedArtifacts.roomLifecycles.acquisitionOrderAt(owner),
         });
   const encounters: EncounterCandidateArtifacts =
     encounterCapability === undefined
@@ -583,10 +614,14 @@ function retainBlockedRegionProducts(
     rewards:
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
       selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
-      rewardFindings.length === retainedRewards.findings.length
+      rewardFindings.length === retainedRewards.findings.length &&
+      settledCurrentSiteBranches === undefined
         ? retainedRewards
         : Object.freeze({
             ...retainedRewards,
+            ...(settledCurrentSiteBranches === undefined
+              ? {}
+              : { branches: settledCurrentSiteBranches }),
             validity: rewardFindings.length === 0 ? retainedRewards.validity : 'invalid',
             findings: rewardFindings,
             selectedTraitOffers,
@@ -666,13 +701,37 @@ function mergedFindings(
 
 function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   let origin = finding.origin;
-  while (origin.kind === 'traitOffer' || origin.kind === 'levelResolution') origin = origin.owner;
+  while (
+    origin.kind === 'traitOffer' ||
+    origin.kind === 'levelResolution' ||
+    origin.kind === 'acquisitionEntry' ||
+    origin.kind === 'acquisitionSite'
+  ) {
+    origin =
+      origin.kind === 'acquisitionEntry'
+        ? origin.site
+        : origin.kind === 'acquisitionSite'
+          ? origin.owner
+          : origin.owner;
+  }
   return origin;
 }
 
 function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
-  if (origin.kind === 'traitOffer' || origin.kind === 'levelResolution')
-    return ownsOccurrence(origin.owner, occurrenceId);
+  if (
+    origin.kind === 'traitOffer' ||
+    origin.kind === 'levelResolution' ||
+    origin.kind === 'acquisitionEntry' ||
+    origin.kind === 'acquisitionSite'
+  )
+    return ownsOccurrence(
+      origin.kind === 'acquisitionEntry'
+        ? origin.site
+        : origin.kind === 'acquisitionSite'
+          ? origin.owner
+          : origin.owner,
+      occurrenceId,
+    );
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;
   return origin.kind === 'encounterPhase' && origin.owner.occurrenceId === occurrenceId;
 }
@@ -1548,6 +1607,10 @@ function clampSelectedProducts(
     unsupported.finding.origin,
     unsupported.regionKey,
     selectedProducts.findingRegions,
+    authoredPrefix.frontier?.kind === 'exitDecision' &&
+      authoredPrefix.frontier.parent.origin.kind === 'occurrence'
+      ? authoredPrefix.frontier.parent.origin
+      : undefined,
   );
   const retainedRewards = blockedProducts.rewards;
   const retainedInteractions = blockedProducts.artifacts;

@@ -184,7 +184,7 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
   });
 
-  it('requires an exact, distinct Shop purchase order over materialized offer keys', () => {
+  it('rejects the superseded Shop-local acquisition chronology field', () => {
     const declaration = room('F_Shop01');
     const raw = mutable(
       createDefaultRoomState(catalog, declaration, {
@@ -194,17 +194,12 @@ describe('persisted authored room-state codec', () => {
     );
     const shop = raw.shop as Record<string, unknown>;
 
-    shop.purchaseOrder = ['Unknown'];
+    shop.legacyOrder = ['Unknown'];
     expect(() =>
       decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
-    ).toThrow('$.room.state.shop.purchaseOrder: Unknown is not a Shop offer');
+    ).toThrow('$.room.state.shop.legacyOrder: is not a project document field');
 
-    shop.purchaseOrder = ['Boon', 'Boon'];
-    expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
-    ).toThrow('$.room.state.shop.purchaseOrder: Boon is duplicated');
-
-    shop.purchaseOrder = [];
+    delete shop.legacyOrder;
     const offers = shop.offers as Record<string, Record<string, unknown>>;
     (offers.Boon!.reward as Record<string, unknown>).purchased = false;
     expect(() =>

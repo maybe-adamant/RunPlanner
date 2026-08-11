@@ -121,18 +121,18 @@ pre-decision state must remain available so the user can evaluate replacements,
 whether the authored biome was otherwise complete or still an incomplete
 prefix. Owners after the first blocking invalid state remain unassessed unless
 the layout defines an atomic decision region that must be evaluated as one unit.
-This includes lifecycle-owned values such as a selected Shop purchase order:
-its room-lifecycle context remains available to evaluate a complete replacement
-order that removes or reorders an exact purchase. A reward-wheel lifecycle control likewise owns the
-diagnostics of offers within that same wheel, but never a sibling wheel or
-another room's offers.
+This includes lifecycle-owned values such as an exact acquisition-site order:
+the declared `roomExit` lifecycle point remains available to evaluate a complete
+replacement order that removes, adds, or reorders exact entries. A reward-wheel
+lifecycle control likewise owns the diagnostics of offers within that same wheel,
+but never a sibling wheel or another room's offers.
 
 When an entered Shop owns the active ordinary exit frontier, its outgoing batch
-still precedes purchases in canonical history. The exact selected evaluation
-nevertheless retains a discarded Shop-local purchase branch and capability for
-authoring contact. Purchased trait and Pom leaves are therefore assessable
-without a downstream room; the retained branch cannot advance route history or
-retroactively affect outgoing-target candidates.
+still precedes the declared `roomExit` acquisition point in canonical history.
+The lifecycle publishes that bounded first-class point before the unresolved
+continuation, so its exact order, entry children, findings, and candidates remain
+assessable without a downstream room. That bounded product cannot advance route
+history or retroactively affect outgoing-target candidates.
 
 N's open Hub board and any jointly unordered reward producer are such atomic
 regions. They do not acquire a false slot- or sibling-order coverage prefix.
@@ -340,7 +340,7 @@ Some changes alter more than one local support calculation:
 
 - O encounter count and reward-wheel settings alter a room-local lifecycle;
 - a shop offer participates in one joint inventory;
-- a Shop purchase order participates in ordered purchase application;
+- a Shop acquisition-site order participates in ordered settlement; and
 - N membership, visits, and side-room state alter joint-board, visit, or
   parent-local regions.
 
@@ -432,7 +432,7 @@ Each candidate family has an explicit semantic horizon:
 | Sequential sibling reward     | Earlier sibling generation plus the addressed offer         |
 | Joint unordered rewards       | Complete atomic sibling generation region                   |
 | Shop offer                    | Complete joint inventory generation                         |
-| Shop purchase order           | Ordered purchase application                                |
+| Shop acquisition-site order   | Ordered acquisition-site settlement                         |
 | Fields Min/Max                | Pre-outcome support ledger                                  |
 | Encounter phase               | Active phase preparation checkpoint and valid record prefix |
 | O encounter or wheel setting  | Addressed occurrence lifecycle region                       |
@@ -495,10 +495,10 @@ React may render declaration-owned choices and the currently authored value,
 but it does not walk topology to discover candidate owners, rebuild candidate
 grouping, choose a replay horizon, or construct candidate queries. Room and
 reward interactions follow the same contract as batch stores, Fields outcomes,
-O wheels, Hub controls, side rooms, and Shop purchase orders. I's bounded non-goal
-limit is a direct declaration-owned authored field rather than a contextual
-candidate interaction. Room-target candidates consume its selected value from
-their prepared generation context.
+O wheels, Hub controls, side rooms, and Shop acquisition-site orders. I's
+bounded non-goal limit is a direct declaration-owned authored field rather
+than a contextual candidate interaction. Room-target candidates consume its
+selected value from their prepared generation context.
 
 There is no separate candidate-evaluation harness for tests. Engine candidate
 tests bind the production session factory to a real assembly. Workspace tests

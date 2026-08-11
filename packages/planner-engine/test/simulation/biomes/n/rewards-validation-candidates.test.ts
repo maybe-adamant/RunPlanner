@@ -13,7 +13,6 @@ import {
   createOccurrenceAddress,
   createProjectDocument,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -919,18 +918,28 @@ describe('N Hub rewards, validation, and candidates', () => {
     );
 
     const purchasedProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
-      offerKeys: ['Minor'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+        'roomExit',
+      ),
+      entryKeys: ['Minor'],
     });
     expect(
       completeN(purchasedProject).biome.rewards.branches.some((branch) =>
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
-            semanticAddressKey(event.origin) ===
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) ===
               semanticAddressKey(
-                createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'Minor'),
+                createAcquisitionEntryAddress(
+                  createAcquisitionSiteAddress(
+                    createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+                    'roomExit',
+                  ),
+                  'Minor',
+                ),
               ),
         ),
       ),

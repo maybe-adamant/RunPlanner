@@ -2,12 +2,18 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 import {
   createBiomeAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createBatchRewardStoreAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -15,6 +21,7 @@ import {
   attachTraitHistory,
   recordReachedLevelResolution,
   levelResolutionCandidateForProjectEvaluationAssembly,
+  createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
@@ -463,9 +470,12 @@ describe('Pom level resolutions', () => {
 
   it('publishes a purchased Midshop Pom at the unresolved outgoing frontier', () => {
     const project = applyProjectCommand(createFMidshopPomFrontierProject(), catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-      offerKeys: ['Minor'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+        'roomExit',
+      ),
+      entryKeys: ['Minor'],
     });
     const address = createLevelResolutionAddress(
       createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
@@ -494,8 +504,8 @@ describe('Pom level resolutions', () => {
     expect(
       f.rewards.branches
         .flatMap((branch) => branch.events)
-        .some((event) => event.kind === 'shopPurchasesSupported'),
-    ).toBe(false);
+        .some((event) => event.kind === 'concreteAcquisition'),
+    ).toBe(true);
 
     const targetTraitKey = capability?.branches[0]?.eligibleTargetTraitKeys[0];
     if (targetTraitKey === undefined) throw new Error('frontier Pom has no eligible target');
@@ -522,6 +532,126 @@ describe('Pom level resolutions', () => {
     expect(
       levelResolutionCandidateForProjectEvaluationAssembly(repairedAssembly, address),
     ).toBeDefined();
+  });
+
+  it('keeps the selected Midshop room-exit settlement product identical before and after its outgoing continuation', () => {
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      'roomExit',
+    );
+    const level = createLevelResolutionAddress(
+      createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
+      'self',
+    );
+    const frontier = applyProjectCommand(createFMidshopPomFrontierProject(), catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['Minor'],
+    });
+    const decision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: fMidshopPomShopId,
+    });
+    let continued = applyProjectCommand(frontier, catalog, { kind: 'CreateBatch', decision });
+    continued = applyProjectCommand(continued, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+    continued = applyProjectCommand(continued, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, decision.source, 'exit1'),
+      occurrenceId: createOccurrenceId('midshop-pom-continuation'),
+      gameName: 'F_Story01',
+    });
+    continued = applyProjectCommand(continued, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, decision.source, 'exit2'),
+      occurrenceId: createOccurrenceId('midshop-pom-alternate'),
+      gameName: 'F_Story01',
+    });
+    continued = applyProjectCommand(continued, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, decision.source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+
+    const frontierAssembly = simulateProjectAssembly(catalog, frontier);
+    const continuedAssembly = simulateProjectAssembly(catalog, continued);
+    const rewardProduct = (assembly: ReturnType<typeof simulateProjectAssembly>) => {
+      const evaluated = assembly.evaluation.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F');
+      if (evaluated === undefined || !('rewards' in evaluated)) {
+        throw new Error('Midshop fixture did not publish F rewards');
+      }
+      return evaluated.rewards;
+    };
+    expect(
+      rewardProduct(continuedAssembly).findings.some(
+        (finding) =>
+          finding.code === 'continuationMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(decision),
+      ),
+    ).toBe(false);
+    const entry = createAcquisitionEntryAddress(site, 'Minor');
+    const settled = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
+      rewardProduct(assembly).branches.flatMap((branch) =>
+        branch.events.filter(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.settlement?.site ?? event.origin) === semanticAddressKey(site),
+        ),
+      );
+    const siteFindings = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
+      rewardProduct(assembly).findings.filter((finding) =>
+        [semanticAddressKey(site), semanticAddressKey(entry), semanticAddressKey(level)].includes(
+          semanticAddressKey(finding.origin),
+        ),
+      );
+
+    expect(settled(frontierAssembly)).toEqual(settled(continuedAssembly));
+    expect(siteFindings(frontierAssembly)).toEqual(siteFindings(continuedAssembly));
+    expect(
+      rewardProduct(frontierAssembly).selectedLevelResolutions.filter(
+        (item) => semanticAddressKey(item.address) === semanticAddressKey(level),
+      ),
+    ).toEqual(
+      rewardProduct(continuedAssembly).selectedLevelResolutions.filter(
+        (item) => semanticAddressKey(item.address) === semanticAddressKey(level),
+      ),
+    );
+    const capabilityState = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
+      levelResolutionCandidateForProjectEvaluationAssembly(assembly, level)?.branches.map(
+        (branch) =>
+          Object.freeze({
+            eligibleTargetTraitKeys: branch.eligibleTargetTraitKeys,
+            emptyTargetAllowed: branch.emptyTargetAllowed,
+            levelCount: branch.levelCount,
+          }),
+      );
+    expect(capabilityState(frontierAssembly)).toEqual(capabilityState(continuedAssembly));
+    expect(
+      createPreparedProjectCandidateSession(catalog, frontierAssembly).evaluate({
+        kind: 'acquisitionOrder',
+        site,
+        entryKeys: ['Minor'],
+      }),
+    ).toEqual(
+      createPreparedProjectCandidateSession(catalog, continuedAssembly).evaluate({
+        kind: 'acquisitionOrder',
+        site,
+        entryKeys: ['Minor'],
+      }),
+    );
+    expect(
+      rewardProduct(frontierAssembly).branches.map((branch) => branch.history.lootTypeHistory),
+    ).toEqual(
+      rewardProduct(continuedAssembly).branches.map((branch) => branch.history.lootTypeHistory),
+    );
+    expect(rewardProduct(frontierAssembly).branches.map((branch) => branch.traitHistory)).toEqual(
+      rewardProduct(continuedAssembly).branches.map((branch) => branch.traitHistory),
+    );
   });
 
   it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {

@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -464,15 +465,21 @@ describe('authored-project commands and topology', () => {
       )?.encounters,
     ).toEqual(prebossShopEncounters);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
-      offerKeys: ['Boon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
+        'roomExit',
+      ),
+      entryKeys: ['Boon'],
     });
     expect(
       fTopology(project).occurrences.find(
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
-      )?.state,
-    ).toMatchObject({ kind: 'shop', shop: { purchaseOrder: ['Boon'] } });
+      ),
+    ).toMatchObject({
+      state: { kind: 'shop' },
+      acquisitionSites: { roomExit: { order: ['Boon'] } },
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(fBiome, combatDecision.source),

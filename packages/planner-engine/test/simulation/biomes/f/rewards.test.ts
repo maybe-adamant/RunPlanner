@@ -1,5 +1,6 @@
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
@@ -10,7 +11,7 @@ import {
   createOccurrenceAddress,
   createProjectDocument,
   createShopOfferAddress,
-  createShopPurchaseAddress,
+  createAcquisitionEntryAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -395,9 +396,9 @@ function shopTimingProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopPurchaseOrder',
-    shop: createOccurrenceAddress(biome, shop),
-    offerKeys: ['Boon'],
+    kind: 'ReplaceAcquisitionOrder',
+    site: createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    entryKeys: ['Boon'],
   });
   project = addBatch(project, shop, 'RunProgress', [
     {
@@ -534,9 +535,9 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopPurchaseOrder',
-    shop: createOccurrenceAddress(biome, shop),
-    offerKeys: ['Boon'],
+    kind: 'ReplaceAcquisitionOrder',
+    site: createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    entryKeys: ['Boon'],
   });
   project = addTakeover(project, shop, [
     createOccurrenceId('blind-preboss-shop'),
@@ -842,7 +843,7 @@ describe('F reward-history simulation', () => {
   it('keeps outgoing door sources pre-purchase in the fourth-shop/fifth-door trace', () => {
     const result = evaluate(shopTimingProject()).rewards;
     const branch = firstBranch(result);
-    const shopPurchase = createShopPurchaseAddress(
+    const shopPurchase = createShopOfferAddress(
       biome,
       createOccurrenceId('shop-trace-shop'),
       'Boon',
@@ -868,9 +869,87 @@ describe('F reward-history simulation', () => {
       AresUpgrade: 1,
       ZeusUpgrade: 1,
     });
-    expect(branch.events.find((event) => event.kind === 'shopPurchasesSupported')).toMatchObject({
-      purchaseOrder: ['Boon'],
+    expect(purchaseEvent?.origin).toEqual(shopPurchase);
+  });
+
+  it('keeps the World Shop outgoing batch byte-identical across acquisition edits while later history includes the purchase', () => {
+    const shop = createOccurrenceId('shop-trace-shop');
+    const site = createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit');
+    const outgoingBytes = (project: ProjectDocument) => {
+      const batch = evaluate(project).snapshot.decisions.find(
+        (decision) =>
+          decision.kind === 'batch' &&
+          semanticAddressKey(decision.parent.origin) ===
+            semanticAddressKey(createOccurrenceAddress(biome, shop)),
+      );
+      if (batch === undefined) throw new Error('Shop outgoing batch is missing');
+      return JSON.stringify(batch);
+    };
+    const base = shopTimingProject();
+    const empty = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: [],
     });
+    const reordered = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['MajorNonBoon', 'Boon'],
+    });
+    const traitEdited = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'source'),
+      value: {
+        giverKey: 'Ares',
+        options: [
+          { traitKey: 'AresSprintBoon', rarity: 'Common' },
+          { traitKey: 'AresManaBoon', rarity: 'Common' },
+          { traitKey: 'AresExCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+    });
+    let pomEdited = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, shop, 'Minor'),
+      value: { rewardType: 'StoreRewardRandomStack' },
+    });
+    pomEdited = applyProjectCommand(pomEdited, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['Minor'],
+    });
+    pomEdited = applyProjectCommand(pomEdited, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(
+        createShopOfferAddress(biome, shop, 'Minor'),
+        'self',
+      ),
+      value: { kind: 'random', targetTraitKey: 'PoseidonWeaponBoon' },
+    });
+
+    const baseline = outgoingBytes(empty);
+    expect(outgoingBytes(base)).toBe(baseline);
+    expect(outgoingBytes(reordered)).toBe(baseline);
+    expect(outgoingBytes(traitEdited)).toBe(baseline);
+    expect(outgoingBytes(pomEdited)).toBe(baseline);
+
+    const purchased = firstBranch(evaluate(base).rewards);
+    const fifthOffer = createIncomingRewardAddress(biome, createOccurrenceId('shop-trace-fifth'));
+    const purchase = purchased.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) ===
+          semanticAddressKey(createShopOfferAddress(biome, shop, 'Boon')),
+    );
+    const laterRoom = purchased.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(fifthOffer),
+    );
+    expect(purchase).toBeDefined();
+    expect(laterRoom?.historySequence).toBeGreaterThan(purchase!.historySequence);
+    expect(purchased.history.lootTypeHistory.AresUpgrade).toBe(1);
   });
 
   it('classifies counted-bag and source-support failures at their incoming reward owners', () => {
@@ -905,9 +984,12 @@ describe('F reward-history simulation', () => {
     const offerResult = evaluate(invalidShopOfferProject()).rewards;
     let purchaseProject = invalidBlindBoxPurchaseProject();
     purchaseProject = applyProjectCommand(purchaseProject, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(biome, createOccurrenceId('blind-shop')),
-      offerKeys: ['Boon', 'MajorNonBoon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(biome, createOccurrenceId('blind-shop')),
+        'roomExit',
+      ),
+      entryKeys: ['Boon', 'MajorNonBoon'],
     });
     const purchaseResult = evaluate(purchaseProject).rewards;
     const offerFindings = offerResult.findings.filter(
@@ -928,12 +1010,18 @@ describe('F reward-history simulation', () => {
     ]);
     expect(purchaseFindings).toEqual([
       expect.objectContaining({
-        origin: createShopPurchaseAddress(biome, createOccurrenceId('blind-shop'), 'Boon'),
+        origin: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(
+            createOccurrenceAddress(biome, createOccurrenceId('blind-shop')),
+            'roomExit',
+          ),
+          'Boon',
+        ),
       }),
     ]);
   });
 
-  it('retains the blocked Shop purchase-order artifact while withholding its suffix', () => {
+  it('retains the blocked Shop acquisition-order repair while withholding its suffix', () => {
     const batches = [
       { targets: ['F_Combat02'], pickedExitIndex: 1 },
       {
@@ -968,7 +1056,8 @@ describe('F reward-history simulation', () => {
       },
       {
         targets: ['F_MiniBoss01', 'F_MiniBoss02'],
-        pickedExitIndex: 1,
+        // Keep the Shop's outgoing decision partially authored: generated
+        // targets exist, but no target is selected.
         offers: [
           { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
           { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
@@ -987,9 +1076,9 @@ describe('F reward-history simulation', () => {
       },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop,
-      offerKeys: ['Boon', 'MajorNonBoon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(shop, 'roomExit'),
+      entryKeys: ['Boon', 'MajorNonBoon'],
     });
     const preShopOffers = [
       {
@@ -1053,19 +1142,19 @@ describe('F reward-history simulation', () => {
     if (evaluated?.authoring !== 'incomplete' || evaluated.validity !== 'invalid') {
       throw new Error('invalid Shop purchase fixture did not produce a blocked evaluation');
     }
-    const blockedPurchase = createShopPurchaseAddress(biome, shopId, 'Boon');
+    const blockedPurchase = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shop, 'roomExit'),
+      'Boon',
+    );
     expect(evaluated.coverage).toMatchObject({ kind: 'prefix', blockedAt: blockedPurchase });
     const session = createPreparedProjectCandidateSession(catalog, assembly);
     expect(
       session.evaluate({
-        kind: 'shopPurchaseOrder',
-        shop,
-        offerKeys: ['MajorNonBoon'],
+        kind: 'acquisitionOrder',
+        site: createAcquisitionSiteAddress(shop, 'roomExit'),
+        entryKeys: ['MajorNonBoon'],
       }),
-    ).toMatchObject({
-      kind: 'shopPurchaseOrder',
-      result: { supported: true, findings: [] },
-    });
+    ).toEqual({ kind: 'acquisitionOrder', result: { supported: true, findings: [] } });
     expect(
       session.evaluate({
         kind: 'incomingReward',

@@ -60,7 +60,19 @@ export function reconcileNormalTargetEntryStates(
     if (defaultState.kind !== 'shop') {
       failCommand(command, `${room.gameName} has no entry-activated Shop state`);
     }
-    return Object.freeze({ ...occurrence, state: defaultState });
+    const withoutAcquisitionSites = { ...occurrence };
+    delete withoutAcquisitionSites.acquisitionSites;
+    return Object.freeze({
+      ...withoutAcquisitionSites,
+      state: defaultState,
+      ...(defaultState.shop === undefined
+        ? {}
+        : {
+            acquisitionSites: Object.freeze({
+              roomExit: Object.freeze({ order: Object.freeze([]) }),
+            }),
+          }),
+    });
   });
   return Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });
 }

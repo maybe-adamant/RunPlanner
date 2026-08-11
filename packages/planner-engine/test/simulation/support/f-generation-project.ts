@@ -18,7 +18,8 @@ export const fGenerationStartId = createOccurrenceId('possibility-start');
 
 export interface FGenerationBatchSpec {
   readonly targets: readonly string[];
-  readonly pickedExitIndex: number;
+  /** Omit only on the terminal fixture batch to retain a partial decision frontier. */
+  readonly pickedExitIndex?: number;
   readonly storeKey?: 'MetaProgress' | 'RunProgress';
   /** Optional counted-offer replacements, aligned with the physical exits. */
   readonly offers?: readonly (ResolvedRewardOffer | undefined)[];
@@ -54,6 +55,10 @@ function sourceOccurrenceId(
   const previous = batches[batchIndex - 2];
   if (previous === undefined)
     throw new Error(`F generation fixture has no batch ${batchIndex - 1}`);
+  if (previous.pickedExitIndex === undefined)
+    throw new Error(
+      `F generation fixture cannot continue after unresolved batch ${batchIndex - 1}`,
+    );
   return fGenerationOccurrenceId(batchIndex - 1, previous.pickedExitIndex);
 }
 
@@ -123,7 +128,7 @@ export function createFGenerationProject(
         });
       }
     }
-    if (batch.targets.length > 1) {
+    if (batch.targets.length > 1 && batch.pickedExitIndex !== undefined) {
       project = applyProjectCommand(project, catalog, {
         kind: 'SetExitSelection',
         selection: createExitSelectionAddress(fGenerationBiome, source),
@@ -140,6 +145,9 @@ export function createFGenerationProject(
     kind: 'occurrence' as const,
     occurrenceId: sourceOccurrenceId(batches, batches.length + 1),
   };
+  if (finalBatch.pickedExitIndex === undefined) {
+    throw new Error('F generation fixture cannot add a takeover after an unresolved final batch');
+  }
   const finalRoom = catalog.rooms.byKey[finalBatch.targets[finalBatch.pickedExitIndex - 1] ?? ''];
   if (finalRoom === undefined) throw new Error('F generation fixture has no final source room');
   const targetOccurrenceIds = Object.fromEntries(

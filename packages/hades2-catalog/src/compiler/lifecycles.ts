@@ -33,7 +33,7 @@ const effectKinds = {
   recordProducerPoint: true,
   recordRequiredObjectCompletions: true,
   recordRequiredObjectSpawns: true,
-  recordShopPurchases: true,
+  recordAcquisitionPoint: true,
 } as const satisfies Readonly<Record<RoomLifecycleEffectKind, true>>;
 
 const producerLifecyclePoints = {
@@ -66,7 +66,7 @@ const expectedEffects = {
   ],
   advanceProducer: ['recordProducerPoint'],
   generateOutgoingBatch: ['recordOutgoingGeneration'],
-  applyShopPurchases: ['recordShopPurchases'],
+  settleAcquisitionPoint: ['recordAcquisitionPoint'],
   commitRoom: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
   exitRoom: ['recordExit'],
 } as const satisfies Readonly<
@@ -127,10 +127,15 @@ function normalizeOperation(raw: RoomLifecycleOperation, path: string): RoomLife
         effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
       });
     case 'materializeOfferPoint':
-    case 'applyShopPurchases':
       return Object.freeze({
         kind: raw.kind,
         offerPoint: requireNonEmpty(raw.offerPoint, `${path}.offerPoint`),
+        effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
+      });
+    case 'settleAcquisitionPoint':
+      return Object.freeze({
+        kind: raw.kind,
+        point: requireNonEmpty(raw.point, `${path}.point`),
         effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
       });
     case 'startEncounter':
@@ -213,7 +218,7 @@ function validateOperationSequence(
   }
 
   const materializedOfferPoints = new Map<string, number>();
-  const appliedOfferPoints = new Set<string>();
+  const settledAcquisitionPoints = new Set<string>();
   let encounterActive = false;
   let encounterCompleted = false;
   let requiredObjectsSpawned = false;
@@ -236,18 +241,11 @@ function validateOperationSequence(
         fail(`${path}[${index}].offerPoint`, `duplicates offer point ${operation.offerPoint}`);
       }
       materializedOfferPoints.set(operation.offerPoint, index);
-    } else if (operation.kind === 'applyShopPurchases') {
-      const materializedAt = materializedOfferPoints.get(operation.offerPoint);
-      if (materializedAt === undefined || materializedAt >= index) {
-        fail(`${path}[${index}].offerPoint`, `${operation.offerPoint} is not materialized earlier`);
+    } else if (operation.kind === 'settleAcquisitionPoint') {
+      if (settledAcquisitionPoints.has(operation.point)) {
+        fail(`${path}[${index}].point`, `duplicates acquisition point ${operation.point}`);
       }
-      if (appliedOfferPoints.has(operation.offerPoint)) {
-        fail(
-          `${path}[${index}].offerPoint`,
-          `duplicates purchase application ${operation.offerPoint}`,
-        );
-      }
-      appliedOfferPoints.add(operation.offerPoint);
+      settledAcquisitionPoints.add(operation.point);
     } else if (operation.kind === 'advanceProducer' && producer.kind === 'none') {
       fail(`${path}[${index}].kind`, 'producer advancement requires a producer policy');
     } else if (operation.kind === 'startEncounter') {

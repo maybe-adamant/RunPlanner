@@ -1973,18 +1973,9 @@ select {
   width: 78px;
 }
 
-.shop-purchase-order {
-  width: 96px;
-}
-
 .shop-purchase-membership .purchase-control {
   justify-content: center;
   gap: 4px;
-}
-
-.shop-purchase-order select {
-  width: 100%;
-  min-width: 0;
 }
 
 .shop-offer-reward > td {

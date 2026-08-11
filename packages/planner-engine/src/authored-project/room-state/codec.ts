@@ -612,19 +612,14 @@ function decodeShopState(
   const conditionApplicable = shopProfileUsesDeathDefianceCondition(catalog, profileKey);
   expectExactKeys(
     shop,
-    [
-      'profileKey',
-      'offers',
-      'purchaseOrder',
-      ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
-    ],
+    ['profileKey', 'offers', ...(conditionApplicable ? ['deathDefianceConditionMet'] : [])],
     path,
   );
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
   }
   return Object.freeze({
-    ...decodeShopOffers(shop.offers, shop.purchaseOrder, catalog, profile, path),
+    ...decodeShopOffers(shop.offers, catalog, profile, path),
     ...(conditionApplicable
       ? {
           deathDefianceConditionMet: expectBoolean(
@@ -638,7 +633,6 @@ function decodeShopState(
 
 function decodeShopOffers(
   value: unknown,
-  rawPurchaseOrder: unknown,
   catalog: Catalog,
   profile: ShopProfileDeclaration,
   path: string,
@@ -673,26 +667,9 @@ function decodeShopOffers(
     }
     offers[slot.key] = Object.freeze({ reward });
   }
-  if (!Array.isArray(rawPurchaseOrder)) {
-    failProjectDocument(`${path}.purchaseOrder`, 'must be an array');
-  }
-  const purchaseKeys = rawPurchaseOrder.map((value, index) =>
-    expectString(value, `${path}.purchaseOrder[${index}]`),
-  );
-  const seen = new Set<string>();
-  for (const key of purchaseKeys) {
-    if (offers[key] === undefined) {
-      failProjectDocument(`${path}.purchaseOrder`, `${key} is not a Shop offer`);
-    }
-    if (seen.has(key)) {
-      failProjectDocument(`${path}.purchaseOrder`, `${key} is duplicated`);
-    }
-    seen.add(key);
-  }
   return Object.freeze({
     profileKey: profile.key,
     offers: Object.freeze(offers),
-    purchaseOrder: Object.freeze(purchaseKeys),
   });
 }
 

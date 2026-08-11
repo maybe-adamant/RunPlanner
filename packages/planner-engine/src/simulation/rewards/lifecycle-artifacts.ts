@@ -1,5 +1,5 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
-import type { ShipCombatState, ShopState } from '../../authored-project/model';
+import type { ShipCombatState } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
 
 export interface RoomLifecycleCandidateResult {
@@ -13,9 +13,9 @@ export interface ShipLifecycleCandidateContext {
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
 }
 
-export interface ShopPurchaseCandidateContext {
+export interface AcquisitionOrderCandidateContext {
   readonly origin: OccurrenceAddress;
-  readonly evaluateState: (state: ShopState) => RoomLifecycleCandidateResult;
+  readonly evaluateOrder: (order: readonly string[]) => RoomLifecycleCandidateResult;
 }
 
 export interface ShipLifecycleCandidateCapability {
@@ -23,8 +23,8 @@ export interface ShipLifecycleCandidateCapability {
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
 }
 
-export interface ShopPurchaseCandidateCapability {
-  readonly evaluateState: (state: ShopState) => RoomLifecycleCandidateResult;
+export interface AcquisitionOrderCandidateCapability {
+  readonly evaluateOrder: (order: readonly string[]) => RoomLifecycleCandidateResult;
 }
 
 /**
@@ -35,12 +35,14 @@ export interface ShopPurchaseCandidateCapability {
  */
 export interface RoomLifecycleCandidateArtifacts {
   readonly shipAt: (owner: OccurrenceAddress) => ShipLifecycleCandidateCapability | undefined;
-  readonly shopAt: (owner: OccurrenceAddress) => ShopPurchaseCandidateCapability | undefined;
+  readonly acquisitionOrderAt: (
+    owner: OccurrenceAddress,
+  ) => AcquisitionOrderCandidateCapability | undefined;
 }
 
 export function createRoomLifecycleCandidateArtifacts(
   shipsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>,
-  shopsByOwner: ReadonlyMap<string, ShopPurchaseCandidateContext>,
+  shopsByOwner: ReadonlyMap<string, AcquisitionOrderCandidateContext>,
 ): RoomLifecycleCandidateArtifacts {
   const ships = new Map<string, ShipLifecycleCandidateCapability>();
   for (const [key, context] of shipsByOwner) {
@@ -52,13 +54,13 @@ export function createRoomLifecycleCandidateArtifacts(
       }),
     );
   }
-  const shops = new Map<string, ShopPurchaseCandidateCapability>();
+  const shops = new Map<string, AcquisitionOrderCandidateCapability>();
   for (const [key, context] of shopsByOwner) {
-    shops.set(key, Object.freeze({ evaluateState: context.evaluateState }));
+    shops.set(key, Object.freeze({ evaluateOrder: context.evaluateOrder }));
   }
   return Object.freeze({
     shipAt: (owner: OccurrenceAddress) => ships.get(semanticAddressKey(owner)),
-    shopAt: (owner: OccurrenceAddress) => shops.get(semanticAddressKey(owner)),
+    acquisitionOrderAt: (owner: OccurrenceAddress) => shops.get(semanticAddressKey(owner)),
   });
 }
 

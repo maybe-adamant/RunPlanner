@@ -835,7 +835,7 @@ describe('ordered shop transitions', () => {
       baseFacts,
     );
     expect(results).toHaveLength(1);
-    expect(results[0]?.purchaseOrder).toEqual([0, 1]);
+    expect(results[0]?.entryOrder).toEqual([0, 1]);
     expect(results[0]?.acquisitions).toEqual([
       expect.objectContaining({
         slotIndex: 0,
@@ -905,7 +905,7 @@ describe('ordered shop transitions', () => {
     );
     expect(rejectedOrder).toEqual([]);
     expect(results).toHaveLength(1);
-    expect(results[0]?.purchaseOrder).toEqual([1, 0]);
+    expect(results[0]?.entryOrder).toEqual([1, 0]);
     expect(results[0]?.acquisitions.map((acquisition) => acquisition.event.role)).toEqual([
       'box',
       'hiddenSource',

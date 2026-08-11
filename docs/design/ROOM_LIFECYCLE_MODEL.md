@@ -190,7 +190,7 @@ type RoomLifecycleOperation =
   | { kind: 'runRewardEncounterSequence' }
   | { kind: 'advanceProducer'; point: ProducerLifecyclePointKey }
   | { kind: 'generateOutgoingBatch' }
-  | { kind: 'applyShopPurchases'; offerPoint: string }
+  | { kind: 'settleAcquisitionPoint'; point: string }
   | { kind: 'commitRoom' }
   | { kind: 'exitRoom' };
 ```
@@ -323,20 +323,20 @@ kind is a catalog or construction error rather than a silent no-op.
 
 ## Operation Timing Matrix
 
-| Operation                 | State it observes                                      | Typical effects and emitted facts                                                                                          |
-| ------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `prepareRoom`             | Post-predecessor-commit history                        | Resolve encounter sequence, optional phase support, and other entry materialization                                        |
-| `materializeOfferPoint`   | The operation's current state                          | Resolve room-owned shop or wheel offers, consume bags, and apply offer projections                                         |
-| `enterRoom`               | Prepared room state                                    | Emit semantic appearance/current-room facts and activate the entered occurrence                                            |
-| `spawnRequiredObjects`    | Entered-room state                                     | Emit declaration-owned required-object spawns and activate their exit blockers                                             |
-| `startEncounter`          | State before the declared encounter phase              | Emit encounter occurrence/start and increment declared room, biome, and route encounter-depth axes                         |
-| `completeEncounter`       | State after the phase's combat or noncombat work       | Emit completion facts and release phase-local blockers                                                                     |
-| `completeRequiredObjects` | State after the declared required-object work          | Emit paired completion facts and release the corresponding required-object blockers                                        |
-| `advanceProducer`         | State at the producer's named point                    | Resolve acquisition roles, project loot/use history, and update acquisition-driven counters                                |
-| `generateOutgoingBatch`   | Current state before this room commits                 | Create targets sequentially, resolve incoming offers, consume counted bags, and apply offer projections                    |
-| `applyShopPurchases`      | Already-generated outgoing batch plus active inventory | Execute the authored purchase order, remove purchased options, and apply purchase acquisitions without rewriting the batch |
-| `commitRoom`              | State after supported room-local work                  | Append declared room history, recompute depth caches, advance route ordinal, and record entered-store policy               |
-| `exitRoom`                | Committed source state plus selected generated target  | Close the fragment and transfer control to the selected target's preparation                                               |
+| Operation                 | State it observes                                      | Typical effects and emitted facts                                                                            |
+| ------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `prepareRoom`             | Post-predecessor-commit history                        | Resolve encounter sequence, optional phase support, and other entry materialization                          |
+| `materializeOfferPoint`   | The operation's current state                          | Resolve room-owned shop or wheel offers, consume bags, and apply offer projections                           |
+| `enterRoom`               | Prepared room state                                    | Emit semantic appearance/current-room facts and activate the entered occurrence                              |
+| `spawnRequiredObjects`    | Entered-room state                                     | Emit declaration-owned required-object spawns and activate their exit blockers                               |
+| `startEncounter`          | State before the declared encounter phase              | Emit encounter occurrence/start and increment declared room, biome, and route encounter-depth axes           |
+| `completeEncounter`       | State after the phase's combat or noncombat work       | Emit completion facts and release phase-local blockers                                                       |
+| `completeRequiredObjects` | State after the declared required-object work          | Emit paired completion facts and release the corresponding required-object blockers                          |
+| `advanceProducer`         | State at the producer's named point                    | Resolve acquisition roles, project loot/use history, and update acquisition-driven counters                  |
+| `generateOutgoingBatch`   | Current state before this room commits                 | Create targets sequentially, resolve incoming offers, consume counted bags, and apply offer projections      |
+| `settleAcquisitionPoint`  | Already-generated outgoing batch plus active inventory | Settle the exact occurrence-owned acquisition-site order without rewriting the batch                         |
+| `commitRoom`              | State after supported room-local work                  | Append declared room history, recompute depth caches, advance route ordinal, and record entered-store policy |
+| `exitRoom`                | Committed source state plus selected generated target  | Close the fragment and transfer control to the selected target's preparation                                 |
 
 The table describes semantic visibility, not elapsed time or presentation
 callbacks. An effect belongs at the earliest operation after which a supported
@@ -428,7 +428,7 @@ prepareRoom
 materializeOfferPoint(shopInventory)
 enterRoom
 generateOutgoingBatch
-applyShopPurchases(shopInventory)
+settleAcquisitionPoint(roomExit)
 commitRoom
 exitRoom
 ```
@@ -652,8 +652,9 @@ pre/post generation views.
 
 An operation may branch when several outcomes have positive support, including
 counted-bag explanations, generated-store outcomes, or reward-source outcomes
-within one authored shop purchase order. Each branch still has one total event order. Equivalent
-post-operation states may be merged while retaining at least one witness.
+within one authored acquisition-site settlement order. Each branch still has
+one total event order. Equivalent post-operation states may be merged while
+retaining at least one witness.
 
 Validation occurs at contact points in that order:
 
@@ -793,7 +794,8 @@ commit predecessor
   -> validate/materialize shop inventory from preparation history
   -> enter shop
   -> generate outgoing batch from the same pre-purchase history
-  -> execute the authored purchase order and derive exit history
+  -> settle the occurrence-owned `roomExit` acquisition-site order and derive
+     exit history
   -> commit and exit the shop
   -> prepare and enter the already-generated picked target
 ```
