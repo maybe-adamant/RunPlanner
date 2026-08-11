@@ -26,11 +26,13 @@ Primary evidence comes from the installed game scripts:
   `NPCData_Hades.lua`, `NPCData_Medea.lua`, `NPCData_Circe.lua`, and
   `NPCData_Dionysus.lua` for Story-room choice pools;
 - `LootData.lua` for the Daedalus `WeaponUpgrade` pool;
-- `LootData.lua`, `ConsumableData.lua`, `UpgradeChoiceData.lua`,
-  `UpgradeChoiceLogic.lua`, `TraitLogic.lua`, `HeroData.lua`, and `RunLogic.lua`
-  for the shared three-choice surface, Pom and random-Stack behavior, provider
-  rarity behavior, equipped rarity/level state, replacement transfer, and
-  element folding;
+- `LootData.lua`, `ConsumableData.lua`, `WorldUpgradeData.lua`,
+  `RewardLogic.lua`, `StoreLogic.lua`, `InteractLogic.lua`, `EventLogic.lua`,
+  `UpgradeChoiceData.lua`, `UpgradeChoiceLogic.lua`, `TraitLogic.lua`,
+  `HeroData.lua`, and `RunLogic.lua` for the shared three-choice surface, Pom
+  and random-Stack behavior, source-sensitive Nectar upgrades, provider rarity
+  behavior, equipped rarity/level state, replacement transfer, Story-choice
+  effects, and element folding;
 - `TraitData.lua` for `LinkedTraitData` and `TraitRequirements`; and
 - the individual `TraitData_*.lua` files for direct equipped-trait conditions
   declared on a trait rather than in `TraitRequirements`;
@@ -383,6 +385,56 @@ production state.
 `EchoDoubleLevelBoon`, `DiminishingDodgeBoon`,
 `DiminishingHealthAndManaBoon`, `EchoDoubleShop`,
 `EchoRepeatKeepsakeBoon`.
+
+#### Narcissus effect inventory
+
+Narcissus's nine fixed-Common menu entries are choice keys whose acquisition
+functions create benefits. They are not nine persistent equipped traits.
+External tool, dialogue, lifetime-resource, and unlock predicates collapse
+under the progressed baseline; the current-run predicates and outputs below do
+not.
+
+| Choice       | Label                 | Current-run eligibility                            | Exact source output and supported consequence                                                                                                                    |
+| ------------ | --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NarcissusA` | Verdure Sampler       | `StackUpgradeLegal`                                | Moly, Nightshade, and one `StoreRewardRandomStack`; the latter records its exact acquisition and applies one random `+1` Pom mutation                            |
+| `NarcissusB` | Heartfelt Condolences | none                                               | Ashes and one major heal; numeric healing and resource quantity have no downstream planner effect                                                                |
+| `NarcissusC` | Precious Metals       | none                                               | Silver and money; affordability and resource quantity remain outside the planner                                                                                 |
+| `NarcissusD` | Mystic Secrets        | none                                               | Psyche and one `MaxManaDrop`; preserve the supported concrete acquisition/history while numeric Magick is outside the planner                                    |
+| `NarcissusE` | Ancestral Offering    | none                                               | Bones and one `MaxHealthDrop`; preserve the supported concrete acquisition/history while numeric Life is outside the planner                                     |
+| `NarcissusF` | Fates' Trimmings      | `RerollAvailable`                                  | Fabric and two rerolls; reroll inventory and use remain deferred, so the option is a declared no-op for downstream supported state                               |
+| `NarcissusG` | Heavenly Splendor     | none after progressed-story collapse               | one Stardust and two `ElementalBoost` pickups; each pickup adds one hidden `ElementalEssence` carrying Air, Earth, Fire, and Water                               |
+| `NarcissusH` | Life Savings          | missing Death Defiance plus collapsed Lotus unlock | one `LastStandDrop` and Lotus; reuse the source-local Death Defiance condition and preserve the concrete pickup history without simulating Death Defiance counts |
+| `NarcissusI` | Mixed Blessings       | collapsed persistent Blind Box unlocks             | one `BlindBoxLoot` and one Mystery Seed; the box requires an authored hidden source and that source's ordinary trait offer at unwrap time                        |
+
+Every `GiveRandomConsumables` call in these declarations passes
+`RunProgressUpgradeEligible = true`. That is a producer fact, not permission to
+invent effects for outputs that do not declare a `RunProgress` overlay.
+`NarcissusA` already produces the intrinsically random-Pom consumable; it does
+not produce `GiftDrop`.
+
+#### Echo effect inventory
+
+Echo's live menu is also fixed Common. Its entries mix one-shot effects,
+temporary lifecycle state, and persistent traits, so the selected key alone is
+not a sufficient acquisition model.
+
+| Choice                         | Label                   | Eligibility                                                       | Exact source effect and baseline disposition                                                                                                                                                                                                                                                     |
+| ------------------------------ | ----------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EchoLastReward`               | Reward Reward Reward    | a prior effective `LastRewardEligible` pickup exists              | recreate that exact reward source; a loot source opens a fresh offer, while a consumable repeats its pickup. Recreated consumables receive `RunProgressUpgradeEligible = true`, including replayed Nectar                                                                                        |
+| `EchoLastRunBoon`              | Boon Boon Boon          | eligible prior-run trait payload and no previous Shrine encounter | excluded until prior-run state is an authored input; no placeholder option under the neutral baseline                                                                                                                                                                                            |
+| `EchoDeathDefianceRefill`      | Survive Survive Survive | missing Death Defiance                                            | reuse the source-local Death Defiance condition; restoration count and healing remain outside the planner                                                                                                                                                                                        |
+| `EchoDoubleLevelBoon`          | Pom Pom Pom             | no offer-time requirement                                         | among Pom-eligible equipped traits at the greatest current level, choose one random tied target and add that same level, thereby doubling it; with no eligible target the game performs no mutation                                                                                              |
+| `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                              | persistent equipped Echo trait; retain identity while numeric dodge and per-dodge decay remain outside the planner                                                                                                                                                                               |
+| `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                              | persistent equipped Echo trait; retain identity while numeric Life/Magick and room decay remain outside the planner                                                                                                                                                                              |
+| `EchoDoubleShop`               | Gold Gold Gold          | none                                                              | retain one pending use; the next purchased World Shop item other than `SpellDrop` is recreated for free, then the use is consumed. Loot recreations open a fresh trait offer; consumables use the Shop-duplicate creation path, which does not opt `GiftDrop` into its run-progress level effect |
+| `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | supported previous-keepsake payload plus progression              | excluded with keepsake and prior-run state; no placeholder option under the neutral baseline                                                                                                                                                                                                     |
+
+`CurrentRun.LastReward` is not simply the latest reward-history event. Loot
+inherits `LastRewardEligible = true`; consumables/resources declare or inherit
+their own effective value, and the last assignment in a Lua table wins. In
+particular, `GiftDrop` first writes `false` and later writes `true`, so Nectar
+is replayable. Echo's replay must retain the exact resolved reward source and
+must not synthesize a generic Boon, Pom, or consumable alias.
 
 #### Hades
 
@@ -764,12 +816,13 @@ rarity does not remove an otherwise valid Pom target, including Heroic.
 
 The acquisition surfaces remain distinct:
 
-| Source acquisition       | Game surface                                                      | Level mutation           |
-| ------------------------ | ----------------------------------------------------------------- | ------------------------ |
-| `StackUpgrade`           | up to three distinct eligible equipped traits; player selects one | selected target `+1`     |
-| `StackUpgradeBig`        | the same bounded choice surface                                   | selected target `+2`     |
-| `StackUpgradeTriple`     | the same bounded choice surface                                   | selected target `+3`     |
-| `StoreRewardRandomStack` | no choice menu; one eligible target is chosen randomly            | exact random target `+1` |
+| Source acquisition         | Game surface                                                       | Level mutation                                                               |
+| -------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `StackUpgrade`             | up to three distinct eligible equipped traits; player selects one  | selected target `+1`                                                         |
+| `StackUpgradeBig`          | the same bounded choice surface                                    | selected target `+2`                                                         |
+| `StackUpgradeTriple`       | the same bounded choice surface                                    | selected target `+3`                                                         |
+| `StoreRewardRandomStack`   | no choice menu; one eligible target is chosen randomly             | exact random target `+1`                                                     |
+| source-eligible `GiftDrop` | no choice menu; the Nectar pickup remains the concrete acquisition | exact random target `+1` when available; valid no-op for an empty target set |
 
 When fewer than three eligible traits exist, a visible Pom presents every
 eligible trait. With three or more, it presents exactly three. No Pom target
@@ -777,10 +830,17 @@ exists when the eligible set is empty. The Fated/Arcana level bonuses,
 probability, rerolls, and numeric tooltip values remain outside the progressed
 neutral route baseline.
 
-`NarcissusA` includes one `StoreRewardRandomStack` and is guarded by
-`StackUpgradeLegal`; its later implementation therefore uses the same random
-target and `+1` mutation. This audit records that source fact without bringing
-the Narcissus provider into the trait-level delivery.
+`GiftDrop` receives the row above only when its producer constructs it with
+`RunProgressUpgradeEligible = true` and the progressed baseline's
+`WorldUpgradeGiftDropRunProgress` is active. Ordinary room rewards and Echo's
+consumable replay opt in; Shop inventory does not. The exact reward history
+still records `GiftDrop`, never a synthetic `StoreRewardRandomStack`.
+Nectar has no `StackUpgradeLegal` requirement, so its empty Pom-target domain is
+a valid no-op rather than an ineligible pickup or missing-target finding.
+
+`NarcissusA` includes one real `StoreRewardRandomStack` and is guarded by
+`StackUpgradeLegal`; its implementation therefore uses the same random target
+and `+1` mutation while preserving the wrapper acquisition identity.
 
 On acquisition, `AddTraitData` first retains Bridal Glow itself, then
 `HeraSuperchargeBoon` calls `AddRarityToTraits` with `NumTraits = 1`,
@@ -1026,14 +1086,19 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                                                                            |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
 
-The normalized inventory has six weapons, 24 weapon/aspect pairs, 293 unique
-included trait declarations, 236 Olympian/Hermes/field-NPC memberships across
-13 non-Hammer givers, 92 Hammer memberships under the fourteenth giver, and one
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 325
+unique included trait declarations, 268 memberships across 17 non-Hammer
+givers, 92 Hammer memberships under the eighteenth giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
 spell/talent operands remain exact keys
-only; Artemis, Athena, and Icarus are the modeled field-NPC providers, while
-other NPC, Story, Spell, or Talent providers remain outside the persistent
-trait catalog. Other source
+only. Artemis, Athena, and Icarus are the modeled field-NPC providers;
+Arachne, Medea, Hades, and Dionysus are the modeled persistent Story providers.
+Narcissus's nine choices are audited above as the active effect-backed
+follow-up and are not counted as current persistent-trait inventory. All eight
+Echo choices remain audited future evidence; the complete Echo provider stays
+outside production until its replay, prior-run, pending-Shop, and keepsake
+authorities are deliberately added. Circe, Spell, and Talent providers also
+remain outside the production trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline and mechanical-effect deferrals. Newly discovered
 predicates are explicitly listed above rather than covered by a no-unlisted
