@@ -236,9 +236,13 @@ describe('surface product loop', () => {
     const event = branch.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
     );
-    expect(event).toMatchObject({ owner: shopOffer, acquisitionPoint: 'purchase' });
+    expect(event).toMatchObject({
+      kind: 'traitOffer',
+      owner: shopOffer,
+      acquisitionPoint: 'purchase',
+    });
     const selected =
-      event === undefined
+      event?.kind !== 'traitOffer'
         ? undefined
         : event.options[
             event.selectedOptionKey === 'option1'

@@ -741,6 +741,13 @@ the field is materialized; an absent `StackNum` is also treated as level 1.
 rarity at the old level plus the granted stack count. Level is therefore an
 equipped-trait fact folded chronologically, not an independent reward counter.
 
+Normal replacement separately carries the displaced trait's `StackNum` into
+the replacement before adding `ExchangeLevelBonus`. That transfer is not
+guarded by the replacement trait's `BlockStacking` value. A non-stackable
+priority trait such as `HephaestusManaBoon` can therefore inherit a displayed
+level from a level-bearing occupied Mana slot while remaining ineligible for
+later Poms. Fresh non-Pom acquisitions still need no level fact.
+
 `GetAllUpgradeableGodTraits(stackNum)` supplies the shared target domain for
 visible Poms and random Pom consumables. A target must be:
 

@@ -64,8 +64,11 @@ the equipped trait and changed only by chronological semantic events. It is not
 persisted as a mutable final-ledger snapshot and is not reconstructed from the
 number of Pom loot-history entries.
 
-Traits outside the modeled Pom domain omit the level field. Hammer Rank I/II
-remains independent and must not be encoded as a trait level.
+Fresh acquisitions outside the modeled Pom domain omit the level field. Normal
+replacement is the one source-backed exception: when a level-bearing occupied
+slot is replaced by a non-Pom-eligible trait, the replacement retains that
+inherited level even though it cannot be targeted by later Poms. Hammer Rank
+I/II remains independent and must not be encoded as a trait level.
 
 ### 2. One Pom-eligibility authority
 
@@ -183,9 +186,12 @@ the selected replacement preserves the exact old level. The replacement
 transition remains derived and does not gain an authored transfer field.
 
 The old trait is removed, the new trait is equipped at the existing promoted
-rarity and transferred level, and all derived facts are recomputed. A future
-modeled source for `ExchangeLevelBonus` would extend the derived transition;
-this plan does not introduce that route input.
+rarity and transferred level, and all derived facts are recomputed. Transfer is
+not conditioned on the new trait's Pom eligibility: for example, a
+level-bearing Mana boon replaced by `HephaestusManaBoon` keeps its level while
+remaining unavailable to later Poms. A future modeled source for
+`ExchangeLevelBonus` would extend the derived transition; this plan does not
+introduce that route input.
 
 ### 8. Bridal Glow is one closed targeted lifecycle
 
@@ -314,9 +320,10 @@ Deliver:
 
 Primary witnesses:
 
-- ordinary acquisition starts at level 1 while Hermes, NPC, and Hammer traits
-  omit level;
-- a replacement preserves levels and recomputes the ledger;
+- ordinary Pom-eligible acquisition starts at level 1 while fresh Hermes, NPC,
+  Hammer, and non-Pom-eligible core traits omit level;
+- a replacement preserves levels and recomputes the ledger, including transfer
+  into a non-Pom-eligible priority trait without making it Pom-eligible;
 - Bridal Glow applies Heroic plus the correct level count for each source
   rarity;
 - every Hephaestus boundary passes at its maximum level and fails one level

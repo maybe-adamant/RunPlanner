@@ -30,6 +30,8 @@ export interface EquippedTrait {
   readonly giverKey: string;
   readonly providerKind: TraitProviderKind;
   readonly rarity?: TraitRarity;
+  /** Fresh Pom-eligible traits start at 1; replacement may inherit it elsewhere. */
+  readonly level?: number;
   /** Hammers are rarityless player-facing traits with an independent I/II rank. */
   readonly hammerRank?: 'RankI' | 'RankII';
   readonly sourceRole: string;

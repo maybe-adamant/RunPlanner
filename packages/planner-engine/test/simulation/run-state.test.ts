@@ -26,7 +26,7 @@ import { initializeRewardBranches } from '../../src/simulation/rewards/processin
 import { aggregateDecisionRewardBag, createRunState } from '../../src/simulation/rewards/run-state';
 import {
   attachTraitHistory,
-  foldTraitOfferEvents,
+  foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
 
@@ -427,6 +427,7 @@ describe('decision run-state snapshots', () => {
       rewardFacts: () => {
         const facts = requirementFacts(0);
         return {
+          kind: 'traitOffer',
           requirements: {
             ...facts.requirements,
             records: { ...facts.requirements.records, lootTypeHistory: history.lootTypeHistory },
@@ -457,11 +458,12 @@ describe('decision run-state snapshots', () => {
       ['Demeter', 'DemeterManaBoon'],
       ['Hera', 'ElementalRarityUpgradeBoon'],
     ];
-    const traits = foldTraitOfferEvents(
+    const traits = foldTraitHistoryEvents(
       catalog,
       entries.map(([giverKey, traitKey], index) => {
         const giver = catalog.traitGivers.byKey[giverKey]!;
         return {
+          kind: 'traitOffer',
           owner,
           acquisitionRole: `trait-${index + 1}`,
           sequence: index + 1,

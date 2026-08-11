@@ -17,7 +17,8 @@ import {
   assessTraitOfferComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
-  foldTraitOfferEvents,
+  foldTraitHistoryEvents,
+  isPomEligibleTrait,
   recordReachedTraitOffer,
   traitCandidates,
   targetedAcquisitionTargetKeys,
@@ -25,6 +26,7 @@ import {
   type SelectedTraitOfferAssessment,
   type TraitHistoryState,
   type TraitOfferEvent,
+  type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -53,6 +55,24 @@ import {
 } from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
+
+function levelMutation(
+  sequence: number,
+  targetTraitKey: string,
+  oldLevel: number,
+  newLevel: number,
+): TraitLevelMutationEvent {
+  return {
+    kind: 'levelMutation',
+    owner,
+    acquisitionRole: 'test',
+    sequence,
+    acquisitionPoint: 'test',
+    targetTraitKey,
+    oldLevel,
+    newLevel,
+  };
+}
 
 function reachedTraitOffers(
   evaluation: ProjectEvaluation,
@@ -294,7 +314,7 @@ function historyFrom(
     readonly rarity?: TraitOfferEvent['options'][number]['rarity'];
   }[],
 ) {
-  return foldTraitOfferEvents(
+  return foldTraitHistoryEvents(
     catalog,
     entries.map(({ giverKey, traitKey, rarity }, index) => {
       const giver = catalog.traitGivers.byKey[giverKey];
@@ -310,6 +330,7 @@ function historyFrom(
       ];
       options[0] = { traitKey, ...(rarity === undefined ? {} : { rarity }) };
       return {
+        kind: 'traitOffer' as const,
         owner,
         acquisitionRole: `test${index + 1}`,
         sequence: index + 1,
@@ -327,6 +348,135 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it('starts only eligible core-god traits at level 1 and uses one eligibility authority', () => {
+    const god = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
+    const hermes = historyWith('Hermes', 'HermesWeaponBoon', 'Common');
+    const npc = historyWith('Artemis', 'SupportingFireBoon', 'Common');
+    const hammer = historyWith('WeaponUpgrade', 'StaffDoubleAttackTrait');
+
+    expect(isPomEligibleTrait(catalog, 'DemeterWeaponBoon')).toBe(true);
+    expect(isPomEligibleTrait(catalog, 'BoonGrowthBoon')).toBe(false);
+    expect(god.equippedTraits.DemeterWeaponBoon?.level).toBe(1);
+    expect(god.upgradableTraitCount).toBe(1);
+    expect(hermes.equippedTraits.HermesWeaponBoon?.level).toBeUndefined();
+    expect(npc.equippedTraits.SupportingFireBoon?.level).toBeUndefined();
+    expect(hammer.equippedTraits.StaffDoubleAttackTrait?.level).toBeUndefined();
+  });
+
+  it('preserves an eligible trait level through Olympian replacement', () => {
+    const seeded = historyWith('Demeter', 'DemeterWeaponBoon', 'Rare');
+    const before = foldTraitHistoryEvents(catalog, [
+      seeded.events[0]!,
+      levelMutation(1, 'DemeterWeaponBoon', 1, 4),
+    ]);
+    const event: TraitOfferEvent = {
+      kind: 'traitOffer',
+      owner,
+      acquisitionRole: 'replacement',
+      sequence: 2,
+      giverKey: 'Apollo',
+      options: Object.freeze([
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Epic' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ]),
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'test',
+      replacementTransition: {
+        slot: 'Melee',
+        replacedTraitKey: 'DemeterWeaponBoon',
+        oldRarity: 'Rare',
+        newTraitKey: 'ApolloWeaponBoon',
+        requiredRarity: 'Epic',
+      },
+    };
+    const replaced = foldTraitHistoryEvents(catalog, [...before.events, event]);
+    expect(replaced.equippedTraits.DemeterWeaponBoon).toBeUndefined();
+    expect(replaced.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Epic', level: 4 });
+  });
+
+  it('transfers a displaced level to a BlockStacking Olympian replacement without making it Pom-eligible', () => {
+    const seeded = historyWith('Demeter', 'DemeterManaBoon', 'Rare');
+    const before = foldTraitHistoryEvents(catalog, [
+      seeded.events[0]!,
+      levelMutation(1, 'DemeterManaBoon', 1, 5),
+    ]);
+    const replacement: TraitOfferEvent = {
+      kind: 'traitOffer',
+      owner,
+      acquisitionRole: 'hephaestus-replacement',
+      sequence: 2,
+      giverKey: 'Hephaestus',
+      options: Object.freeze([
+        { traitKey: 'HephaestusManaBoon', rarity: 'Epic' },
+        { traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HephaestusSpecialBoon', rarity: 'Common' },
+      ]),
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'test',
+      replacementTransition: {
+        slot: 'Mana',
+        replacedTraitKey: 'DemeterManaBoon',
+        oldRarity: 'Rare',
+        newTraitKey: 'HephaestusManaBoon',
+        requiredRarity: 'Epic',
+      },
+    };
+    const result = foldTraitHistoryEvents(catalog, [...before.events, replacement]);
+    expect(result.equippedTraits.HephaestusManaBoon?.level).toBe(5);
+    expect(isPomEligibleTrait(catalog, 'HephaestusManaBoon')).toBe(false);
+    expect(result.upgradableTraitCount).toBe(0);
+  });
+
+  it.each([
+    ['HephaestusWeaponBoon', 'Hephaestus', 9, 7, 5],
+    ['HephaestusSpecialBoon', 'Hephaestus', 11, 9, 7],
+    ['HephaestusSprintBoon', 'Hephaestus', 8, 7, 6],
+  ] as const)(
+    'enforces Bridal Glow level caps for %s at every rarity boundary',
+    (traitKey, giverKey, commonLimit, rareLimit, epicLimit) => {
+      for (const [rarity, limit] of [
+        ['Common', commonLimit],
+        ['Rare', rareLimit],
+        ['Epic', epicLimit],
+      ] as const) {
+        const atLimit = foldTraitHistoryEvents(catalog, [
+          {
+            kind: 'traitOffer',
+            owner,
+            acquisitionRole: 'seed',
+            sequence: 1,
+            giverKey,
+            options: Object.freeze([
+              { traitKey, rarity },
+              { traitKey: 'MassiveDamageBoon', rarity: 'Common' },
+              { traitKey: 'AntiArmorBoon', rarity: 'Common' },
+            ]),
+            selectedOptionKey: 'option1',
+            acquisitionPoint: 'test',
+          },
+          levelMutation(1, traitKey, 1, limit),
+        ]);
+        expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', atLimit)).toContain(
+          traitKey,
+        );
+        const aboveLimit = foldTraitHistoryEvents(catalog, [
+          atLimit.events.find((event) => event.kind === 'traitOffer')!,
+          levelMutation(1, traitKey, 1, limit + 1),
+        ]);
+        expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', aboveLimit)).not.toContain(
+          traitKey,
+        );
+      }
+      expect(
+        targetedAcquisitionTargetKeys(
+          catalog,
+          'BoonDecayBoon',
+          historyWith(giverKey, traitKey, 'Heroic'),
+        ),
+      ).not.toContain(traitKey);
+    },
+  );
   it.each([
     ['Hermes', 'HermesWeaponBoon'],
     ['Artemis', 'SupportingFireBoon'],
@@ -435,6 +585,47 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(recorded.history.equippedTraits.ApolloCastBoon?.rarity).toBe('Heroic');
     expect(recorded.history.equippedTraits.DemeterWeaponBoon?.rarity).toBe('Common');
     expect(recorded.history.equippedTraits.BoonDecayBoon?.rarity).toBe('Common');
+  });
+
+  it.each([
+    ['Common', 1],
+    ['Rare', 2],
+    ['Epic', 3],
+    ['Heroic', 4],
+  ] as const)('records Bridal Glow %s rarity as a %i-level target mutation', (rarity, added) => {
+    const before = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
+    const offer: AuthoredTraitOffer = {
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity, targetTraitKey: 'DemeterWeaponBoon' },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        { traitKey: 'HeraCastBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1',
+    };
+    const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
+    expect(assessment.transition).toMatchObject({ oldLevel: 1, newLevel: 1 + added });
+    if (rarity === 'Heroic') return;
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'bridal-glow',
+      offer,
+      before,
+      {},
+      before.events.length,
+    );
+    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+    expect(recorded.history.events.at(-1)).toMatchObject({
+      kind: 'levelMutation',
+      targetTraitKey: 'DemeterWeaponBoon',
+      oldLevel: 1,
+      newLevel: 1 + added,
+    });
+    expect(recorded.history.equippedTraits.DemeterWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 1 + added,
+    });
   });
 });
 
@@ -602,6 +793,89 @@ describe('Proper Upbringing rarity lifecycle', () => {
     return acquireLegalTrait(twoEachHistory(), 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
   }
 
+  it('applies Bridal Glow before same-boundary Proper Upbringing credit', () => {
+    let before = createTraitHistoryState();
+    for (const [giverKey, traitKey] of [
+      ['Apollo', 'ApolloWeaponBoon'],
+      ['Hermes', 'HermesWeaponBoon'],
+      ['Hermes', 'HermesSpecialBoon'],
+      ['Hermes', 'DodgeChanceBoon'],
+      ['Hermes', 'SprintShieldBoon'],
+      ['Hermes', 'RestockBoon'],
+      ['Poseidon', 'DoubleRewardBoon'],
+    ] as const) {
+      before = acquireLegalTrait(before, giverKey, traitKey, 'Common');
+    }
+    const proper = acquireLegalTrait(before, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
+    expect(proper.minimumScalableGodTraitRarity).toBeUndefined();
+    const offer: AuthoredTraitOffer = {
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'ApolloWeaponBoon' },
+        { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+        { traitKey: 'HeraCastBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1',
+    };
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'same-boundary-bridal',
+      offer,
+      proper,
+      {},
+      proper.events.length,
+    );
+    const recorded = recordReachedTraitOffer(catalog, evaluation, proper.events.length + 1, 'test');
+    expect(recorded.history.equippedTraits.BoonDecayBoon?.rarity).toBe('Rare');
+    expect(recorded.history.equippedTraits.ApolloWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 3,
+    });
+    expect(foldTraitHistoryEvents(catalog, recorded.history.events)).toEqual(recorded.history);
+  });
+
+  it('credits Bridal Glow one missing target level when Proper Upbringing promotes it', () => {
+    const inactive = twoEachHistory();
+    const bridal: TraitOfferEvent = {
+      kind: 'traitOffer',
+      owner,
+      acquisitionRole: 'bridal',
+      sequence: inactive.events.length + 1,
+      giverKey: 'Hera',
+      options: Object.freeze([
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+        { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
+      ]),
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'test',
+      targetedAcquisitionTransition: {
+        kind: 'promoteGodTraitToHeroic',
+        sourceTraitKey: 'BoonDecayBoon',
+        targetTraitKey: 'ApolloWeaponBoon',
+        oldRarity: 'Common',
+        newRarity: 'Heroic',
+        oldLevel: 1,
+        newLevel: 2,
+      },
+    };
+    const beforeActivation = foldTraitHistoryEvents(catalog, [
+      ...inactive.events,
+      bridal,
+      levelMutation(bridal.sequence, 'ApolloWeaponBoon', 1, 2),
+    ]);
+    const active = acquireLegalTrait(
+      beforeActivation,
+      'Hera',
+      'ElementalRarityUpgradeBoon',
+      'Common',
+    );
+    expect(active.equippedTraits.BoonDecayBoon?.rarity).toBe('Rare');
+    expect(active.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 3 });
+    expect(foldTraitHistoryEvents(catalog, active.events)).toEqual(active);
+  });
+
   it('offers at one of each base element while inactive and activates at two of each', () => {
     const oneEach = historyFrom([
       { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const },
@@ -655,7 +929,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       historyFrom([{ giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' as const }])
         .equippedTraits.HeraWeaponBoon,
     );
-    expect(foldTraitOfferEvents(catalog, history.events)).toEqual(history);
+    expect(foldTraitHistoryEvents(catalog, history.events)).toEqual(history);
   });
 
   it('does not promote fixed or excluded domains', () => {
@@ -696,17 +970,17 @@ describe('Proper Upbringing rarity lifecycle', () => {
   it('reactivates for a Common acquired while inactive and replays independently', () => {
     const inactive = twoEachHistory();
     const events = [...inactive.events];
-    const withoutSource = foldTraitOfferEvents(catalog, [
+    const withoutSource = foldTraitHistoryEvents(catalog, [
       ...events,
       ...historyFrom([
         { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
       ]).events,
     ]);
     expect(withoutSource.minimumScalableGodTraitRarity).toBe('Rare');
-    const replay = foldTraitOfferEvents(catalog, events);
+    const replay = foldTraitHistoryEvents(catalog, events);
     expect(replay.minimumScalableGodTraitRarity).toBeUndefined();
     expect(replay.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
-    expect(foldTraitOfferEvents(catalog, withoutSource.events)).toEqual(withoutSource);
+    expect(foldTraitHistoryEvents(catalog, withoutSource.events)).toEqual(withoutSource);
   });
 
   it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
@@ -759,7 +1033,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const source = historyFrom([
       { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
     ]).events[0]!;
-    const dormant = foldTraitOfferEvents(catalog, initial.events);
+    const dormant = foldTraitHistoryEvents(catalog, initial.events);
     expect(dormant.minimumScalableGodTraitRarity).toBeUndefined();
     const invalidOffer = evaluateReachedTraitOffer(
       catalog,
@@ -779,11 +1053,14 @@ describe('Proper Upbringing rarity lifecycle', () => {
       9,
     );
     expect(recordReachedTraitOffer(catalog, invalidOffer, 9, 'test').event).toBeUndefined();
-    const branchA = foldTraitOfferEvents(catalog, [...initial.events, { ...source, sequence: 9 }]);
-    const branchB = foldTraitOfferEvents(catalog, initial.events);
+    const branchA = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      { ...source, sequence: 9 },
+    ]);
+    const branchB = foldTraitHistoryEvents(catalog, initial.events);
     expect(branchA.minimumScalableGodTraitRarity).toBe('Rare');
     expect(branchB.minimumScalableGodTraitRarity).toBeUndefined();
-    expect(foldTraitOfferEvents(catalog, [...branchA.events])).toEqual(branchA);
+    expect(foldTraitHistoryEvents(catalog, [...branchA.events])).toEqual(branchA);
   });
 });
 
@@ -1006,12 +1283,16 @@ describe('trait legality and derived facts', () => {
       expect(events.length).toBeGreaterThan(0);
       expect(
         events.some(
-          (event) => catalog.traitGivers.byKey[event.giverKey]?.providerKind === 'hammer',
+          (event) =>
+            event.kind === 'traitOffer' &&
+            catalog.traitGivers.byKey[event.giverKey]?.providerKind === 'hammer',
         ),
       ).toBe(true);
       expect(
         events.some(
-          (event) => catalog.traitGivers.byKey[event.giverKey]?.providerKind === 'hermes',
+          (event) =>
+            event.kind === 'traitOffer' &&
+            catalog.traitGivers.byKey[event.giverKey]?.providerKind === 'hermes',
         ),
       ).toBe(true);
       if (routeKey === 'Surface') {
@@ -1077,8 +1358,9 @@ describe('reached trait offer chronology', () => {
   });
 
   it('does not apply first-offer composition after a slot is occupied or to Hermes/Hammer', () => {
-    const occupied = foldTraitOfferEvents(catalog, [
+    const occupied = foldTraitHistoryEvents(catalog, [
       {
+        kind: 'traitOffer',
         owner,
         acquisitionRole: 'seed',
         sequence: 1,
@@ -1227,8 +1509,9 @@ describe('reached trait offer chronology', () => {
       ]) as AuthoredTraitOffer['options'],
       selectedOptionKey: 'option1',
     });
-    const occupiedBefore = foldTraitOfferEvents(catalog, [
+    const occupiedBefore = foldTraitHistoryEvents(catalog, [
       {
+        kind: 'traitOffer',
         owner,
         acquisitionRole: 'seed',
         sequence: 0,
