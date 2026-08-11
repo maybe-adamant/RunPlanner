@@ -1,5 +1,7 @@
 import type { RewardBagState, RewardHistoryState } from '../../reward-kernel/model';
 import type {
+  AcquisitionEntryAddress,
+  AcquisitionSiteAddress,
   BatchRewardStoreAddress,
   SemanticAddress,
   TargetAddress,
@@ -28,6 +30,11 @@ export type RewardEvent =
   | (RewardEventBase & {
       readonly kind: 'concreteAcquisition';
       readonly acquisition: ConcreteAcquisitionEvent;
+      /** Present when the acquisition was applied by a canonical settlement site. */
+      readonly settlement?: {
+        readonly site: AcquisitionSiteAddress;
+        readonly entry: AcquisitionEntryAddress;
+      };
     })
   | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';

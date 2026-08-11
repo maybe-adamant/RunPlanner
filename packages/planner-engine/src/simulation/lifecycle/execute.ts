@@ -196,10 +196,11 @@ const lifecycleEffectRegistry = Object.freeze({
         `${context.profile.key} advanced a missing producer`,
       );
     }
-    if (producer.acquisitionEnabled === false) {
-      return state;
-    }
-    let next = state;
+    let next = appendEvent(state, context, {
+      kind: 'producerPointReached',
+      point: operation.point,
+    });
+    if (producer.acquisitionEnabled === false) return next;
     for (const binding of lifecycle.acquisitionLifecycle) {
       if (binding.lifecyclePoint === operation.point) {
         next = appendEvent(next, context, {

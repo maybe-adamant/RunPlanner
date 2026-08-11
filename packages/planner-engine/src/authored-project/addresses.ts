@@ -139,6 +139,21 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly offerKey: string;
 }
 
+/** One exact reached acquisition checkpoint. The source remains the offer owner. */
+export type AcquisitionSiteOwnerAddress =
+  OccurrenceAddress | CompletionRoomAddress | LocalChildAddress;
+export interface AcquisitionSiteAddress extends BiomeOwnedAddress {
+  readonly kind: 'acquisitionSite';
+  readonly owner: AcquisitionSiteOwnerAddress;
+  readonly pointKey: string;
+}
+/** One atomic, chronologically addressable acquisition at a settlement site. */
+export interface AcquisitionEntryAddress extends BiomeOwnedAddress {
+  readonly kind: 'acquisitionEntry';
+  readonly site: AcquisitionSiteAddress;
+  readonly entryKey: string;
+}
+
 export type TraitOfferOwnerAddress =
   | IncomingRewardAddress
   | LocalRewardAddress
@@ -458,6 +473,32 @@ export function createShopOfferAddress(
   });
 }
 
+export function createAcquisitionSiteAddress(
+  ownerAddress: AcquisitionSiteOwnerAddress,
+  pointKey: string,
+): AcquisitionSiteAddress {
+  return Object.freeze({
+    kind: 'acquisitionSite',
+    routeKey: ownerAddress.routeKey,
+    biomeKey: ownerAddress.biomeKey,
+    owner: ownerAddress,
+    pointKey: nonBlank(pointKey, 'pointKey'),
+  });
+}
+
+export function createAcquisitionEntryAddress(
+  site: AcquisitionSiteAddress,
+  entryKey: string,
+): AcquisitionEntryAddress {
+  return Object.freeze({
+    kind: 'acquisitionEntry',
+    routeKey: site.routeKey,
+    biomeKey: site.biomeKey,
+    site,
+    entryKey: nonBlank(entryKey, 'entryKey'),
+  });
+}
+
 export function createTraitOfferAddress(
   ownerAddress: TraitOfferOwnerAddress,
   acquisitionRole: string,
@@ -483,7 +524,9 @@ export function createLevelResolutionAddress(
   });
 }
 
-export function semanticAddressKey(address: SemanticAddress): string {
+export function semanticAddressKey(
+  address: SemanticAddress | AcquisitionSiteAddress | AcquisitionEntryAddress,
+): string {
   const base = [
     address.kind,
     'routeKey' in address ? address.routeKey : undefined,
@@ -534,6 +577,10 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'shopOffer':
     case 'shopPurchase':
       return JSON.stringify([...base, address.occurrenceId, address.offerKey]);
+    case 'acquisitionSite':
+      return JSON.stringify([...base, semanticAddressKey(address.owner), address.pointKey]);
+    case 'acquisitionEntry':
+      return JSON.stringify([...base, semanticAddressKey(address.site), address.entryKey]);
     case 'traitOffer':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
     case 'levelResolution':

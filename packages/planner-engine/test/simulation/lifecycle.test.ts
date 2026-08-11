@@ -17,6 +17,25 @@ const origin = createOccurrenceAddress(
   createOccurrenceId('f-lifecycle-fixture'),
 );
 
+it('declares the Gate A ordinary producer-point mapping without a room-flat fallback', () => {
+  const points = (profileKey: string) =>
+    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.flatMap((operation) =>
+      operation.kind === 'advanceProducer' ? [operation.point] : [],
+    );
+
+  expect({
+    standard: points('StandardRewardRoom'),
+    ephyraOpeningAndPreHub: points('EphyraOpeningRoom'),
+    devotion: points('DevotionRoom'),
+    prebossFree: points('PrebossFreeRewardRoom'),
+  }).toEqual({
+    standard: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    ephyraOpeningAndPreHub: ['roomRewardPickup'],
+    devotion: ['beforeCombat', 'afterCombat'],
+    prebossFree: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+  });
+});
+
 function phases(
   encounterEnvelopeKey: string,
   encounterKeys: readonly string[],
@@ -118,28 +137,31 @@ describe('single-room lifecycle execution', () => {
       'roomPrepared',
       'encounterRecorded',
       'roomEntered',
+      'producerPointReached',
       'encounterStarted',
       'encounterDepthAdvanced',
       'encounterCompleted',
+      'producerPointReached',
+      'producerPointReached',
       'producerRoleAdvanced',
       'outgoingGenerationCheckpoint',
       'roomCommitted',
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[6]).toMatchObject({
+    expect(fragment.events[9]).toMatchObject({
       kind: 'producerRoleAdvanced',
       rewardType: 'Boon',
       role: 'source',
       lifecyclePoint: 'roomRewardPickup',
     });
-    expect(fragment.events[9]).toMatchObject({
+    expect(fragment.events[12]).toMatchObject({
       kind: 'roomCountersAdvanced',
       biomeDepthCacheDelta: 1,
       roomHistoryOrdinalDelta: 1,
     });
     expect(fragment.events.map((event) => event.sequence)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     ]);
     expect(fragment.events.every((event) => event.origin === origin)).toBe(true);
     expect(Object.isFrozen(fragment)).toBe(true);
@@ -205,6 +227,7 @@ describe('single-room lifecycle execution', () => {
       'roomPrepared',
       'encounterRecorded',
       'roomEntered',
+      'producerPointReached',
       'producerRoleAdvanced',
       'encounterStarted',
       'encounterDepthAdvanced',
@@ -214,7 +237,7 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[3]).toMatchObject({
+    expect(fragment.events[4]).toMatchObject({
       kind: 'producerRoleAdvanced',
       lifecyclePoint: 'roomRewardPickup',
     });
@@ -246,10 +269,13 @@ describe('single-room lifecycle execution', () => {
       'encounterRecorded',
       'roomEntered',
       'requiredObjectSpawned',
+      'producerPointReached',
       'encounterStarted',
       'encounterDepthAdvanced',
       'encounterCompleted',
       'requiredObjectCompleted',
+      'producerPointReached',
+      'producerPointReached',
       'producerRoleAdvanced',
       'outgoingGenerationCheckpoint',
       'roomCommitted',
@@ -261,7 +287,7 @@ describe('single-room lifecycle execution', () => {
       objectKey: 'SoulPylon',
       completionRequirement: 'destroyBeforeExit',
     });
-    expect(fragment.events[7]).toMatchObject({
+    expect(fragment.events[8]).toMatchObject({
       kind: 'requiredObjectCompleted',
       objectKey: 'SoulPylon',
     });

@@ -37,6 +37,7 @@ import {
   createFGenerationProject,
   fGenerationOccurrenceId,
 } from '../../support/f-generation-project';
+import { createCompleteFTakeoverProject } from '../../support/f-takeover-project';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -826,6 +827,12 @@ describe('F reward-history simulation', () => {
     );
 
     expect(result.validity).toBe('valid');
+    expect(boonAcquisition).toMatchObject({
+      settlement: {
+        site: { kind: 'acquisitionSite', pointKey: 'roomRewardPickup' },
+        entry: { kind: 'acquisitionEntry', entryKey: 'source' },
+      },
+    });
     expect(boonAcquisition?.historySequence).toBeLessThan(stackOffer!.historySequence);
     expect(branch.history.lootTypeHistory.StackUpgrade).toBe(1);
     expect(branch.history.currentRoomUseRecord).toEqual({});
@@ -1086,12 +1093,20 @@ describe('F reward-history simulation', () => {
           lifecyclePoint: 'beforeCombat',
           acquisition: { kind: 'loot', gameName: 'ApolloUpgrade' },
         }),
+        settlement: expect.objectContaining({
+          site: expect.objectContaining({ pointKey: 'beforeCombat' }),
+          entry: expect.objectContaining({ entryKey: 'chosenSource' }),
+        }),
       }),
       expect.objectContaining({
         acquisition: expect.objectContaining({
           role: 'spurnedSource',
           lifecyclePoint: 'afterCombat',
           acquisition: { kind: 'loot', gameName: 'PoseidonUpgrade' },
+        }),
+        settlement: expect.objectContaining({
+          site: expect.objectContaining({ pointKey: 'afterCombat' }),
+          entry: expect.objectContaining({ entryKey: 'spurnedSource' }),
         }),
       }),
     ]);
@@ -1105,6 +1120,27 @@ describe('F reward-history simulation', () => {
       throw new Error('Devotion fixture lost its trait-role traces');
     }
     expect(chosen.chronologicalIndex).toBeLessThan(spurned.chronologicalIndex);
+  });
+
+  it('settles the selected fixed/free Preboss reward through its declared singleton site', () => {
+    const result = evaluate(createCompleteFTakeoverProject('exit2')).rewards;
+    const origin = createIncomingRewardAddress(
+      biome,
+      createOccurrenceId('f-takeover-preboss-free'),
+    );
+    const acquisitions = firstBranch(result).events.filter(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(origin),
+    );
+    expect(acquisitions).toEqual([
+      expect.objectContaining({
+        settlement: {
+          site: expect.objectContaining({ pointKey: 'roomRewardPickup' }),
+          entry: expect.objectContaining({ entryKey: 'source' }),
+        },
+      }),
+    ]);
   });
 
   it('rejects a canonical snapshot whose room identity is newer than its history', () => {

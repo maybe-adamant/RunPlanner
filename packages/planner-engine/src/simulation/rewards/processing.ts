@@ -1,8 +1,12 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createTraitOfferAddress,
   createLevelResolutionAddress,
   semanticAddressKey,
+  type AcquisitionEntryAddress,
+  type AcquisitionSiteAddress,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
@@ -78,6 +82,25 @@ export interface RewardBranchState {
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
   readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
+}
+
+/**
+ * The complete result of one reached mandatory producer acquisition site.
+ * Participation and order are derived; optional entries can extend the same
+ * history fold without changing its chronology authority.
+ */
+export interface AcquisitionSettlementProduct {
+  readonly site: AcquisitionSiteAddress;
+  readonly entries: readonly AcquisitionSettlementEntry[];
+  readonly branches: readonly RewardBranchState[];
+}
+
+export interface AcquisitionSettlementEntry {
+  readonly address: AcquisitionEntryAddress;
+  readonly source: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly lifecyclePoint: string;
+  readonly participation: 'mandatory';
 }
 
 export type RewardFactsFactory = (
@@ -1288,6 +1311,55 @@ export function processShopPurchases(
   return mergeEquivalentRewardBranches(next);
 }
 
+export function settleProducerAcquisitionSite(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  room: CanonicalRewardRoom,
+  event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
+  facts: RewardFactsFactory,
+  findings: Map<string, FindingRegionEntry>,
+  fail: (detail: string) => never,
+  atomicRegion?: string,
+  findingChronology?: FindingChronology,
+): AcquisitionSettlementProduct {
+  const incoming = room.incomingReward;
+  if (
+    incoming === undefined ||
+    incoming.offer.rewardType !== event.rewardType ||
+    incoming.producerLifecycleKey !== event.producerLifecycleKey
+  ) {
+    return fail(`${room.gameName} producer event does not match its offer`);
+  }
+  if (event.origin.kind === 'hubRoom') {
+    return fail('Hub room cannot own an ordinary producer acquisition site');
+  }
+  const site = createAcquisitionSiteAddress(event.origin, event.lifecyclePoint);
+  const entry = Object.freeze({
+    address: createAcquisitionEntryAddress(site, event.role),
+    source: incoming.origin,
+    acquisitionRole: event.role,
+    lifecyclePoint: event.lifecyclePoint,
+    participation: 'mandatory' as const,
+  });
+  const settled = applyProducerRoleHistory(
+    catalog,
+    branches,
+    incoming,
+    event,
+    facts,
+    findings,
+    atomicRegion,
+    findingChronology,
+    Object.freeze({ site, entry: entry.address }),
+  );
+  return Object.freeze({
+    site,
+    entries: Object.freeze([entry]),
+    branches: settled,
+  });
+}
+
+/** The retained direct history fold for Hub-owned producer families. */
 export function processProducerRole(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
@@ -1307,6 +1379,29 @@ export function processProducerRole(
   ) {
     return fail(`${room.gameName} producer event does not match its offer`);
   }
+  return applyProducerRoleHistory(
+    catalog,
+    branches,
+    incoming,
+    event,
+    facts,
+    findings,
+    atomicRegion,
+    findingChronology,
+  );
+}
+
+function applyProducerRoleHistory(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  incoming: CanonicalResolvedIncomingReward,
+  event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
+  facts: RewardFactsFactory,
+  findings: Map<string, FindingRegionEntry>,
+  atomicRegion: string | undefined,
+  findingChronology: FindingChronology | undefined,
+  settlement?: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
+): readonly RewardBranchState[] {
   const next: RewardBranchState[] = [];
   for (const branch of branches) {
     const branchFacts = facts(branch.history);
@@ -1343,6 +1438,7 @@ export function processProducerRole(
         kind: 'concreteAcquisition',
         origin: incoming.origin,
         acquisition,
+        ...(settlement === undefined ? {} : { settlement }),
       }),
     );
   }

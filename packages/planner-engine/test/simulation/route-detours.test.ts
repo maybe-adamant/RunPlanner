@@ -768,7 +768,14 @@ describe('route-detour simulation', () => {
 
   it('records the Chaos offer at source entry, then enters Chaos and generates a fresh host target', () => {
     const { project, opening, chaos, returned, additional } = buildNaturalChaosProject();
-    const { history } = prefix(project, fBiome);
+    const { snapshot, history } = prefix(project, fBiome);
+    const rewards = evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project, fBiome),
+    );
     expect(
       history.events.find(
         (event) =>
@@ -796,6 +803,18 @@ describe('route-detour simulation', () => {
           event.rewardType === 'TrialUpgrade',
       ),
     ).toBe(true);
+    const returnedOrigin = createIncomingRewardAddress(fBiome, returned);
+    for (const branch of rewards.branches) {
+      const acquisitions = branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(returnedOrigin),
+      );
+      expect(acquisitions).toHaveLength(1);
+      expect(acquisitions[0]).toMatchObject({
+        settlement: { site: { pointKey: 'roomRewardPickup' } },
+      });
+    }
   });
 
   it.each([true, false])(
@@ -824,6 +843,24 @@ describe('route-detour simulation', () => {
       });
       expect(branchHasEvent(rewards.branches, 'rewardOffered', incoming)).toBe(true);
       expect(branchHasEvent(rewards.branches, 'concreteAcquisition', incoming)).toBe(success);
+      const anomalyAcquisitions = rewards.branches.flatMap((branch) =>
+        branch.events.filter(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(incoming),
+        ),
+      );
+      expect(anomalyAcquisitions.length > 0).toBe(success);
+      if (success) {
+        for (const acquisition of anomalyAcquisitions) {
+          expect(acquisition).toMatchObject({
+            settlement: {
+              site: { kind: 'acquisitionSite', pointKey: 'roomRewardPickup' },
+              entry: { kind: 'acquisitionEntry', entryKey: 'self' },
+            },
+          });
+        }
+      }
       expect(
         branchHasEvent(
           rewards.branches,
@@ -1243,6 +1280,18 @@ describe('route-detour simulation', () => {
         createIncomingRewardAddress(fBiome, normal1),
       ),
     ).toBe(true);
+    const returnedOrigin = createIncomingRewardAddress(fBiome, returned);
+    for (const branch of rewards.branches) {
+      const acquisitions = branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(returnedOrigin),
+      );
+      expect(acquisitions).toHaveLength(1);
+      expect(acquisitions[0]).toMatchObject({
+        settlement: { site: { pointKey: 'roomRewardPickup' } },
+      });
+    }
     expect(
       branchHasEvent(
         rewards.branches,
