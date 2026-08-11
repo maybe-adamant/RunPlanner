@@ -6,6 +6,7 @@ import {
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
+  type AcquisitionSiteOwnerAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
   type TraitOfferAddress,
@@ -96,10 +97,9 @@ import {
   beginRewardRoom,
   countedBinding,
   initializeRewardBranches,
-  processProducerRole,
   settleProducerAcquisitionSite,
+  settleOwnedAcquisitionSite,
   processOfferGenerationCohort,
-  processOwnedRewardAcquisition as processOwnedRewardAcquisitionState,
   processEncounterTraitOffer,
   processRewardOffer,
   processShopInventory,
@@ -352,19 +352,27 @@ function hubVisitFrontier(snapshot: BiomeRewardSnapshot): MaterializedHubVisitFr
   return hasHubVisitDetails(frontier) ? frontier : undefined;
 }
 
-/** Structural ownership, deliberately independent of finding chronology. */
-function isHubOwnedRewardRoom(snapshot: BiomeRewardSnapshot, room: CanonicalRewardRoom): boolean {
-  if (room.kind === 'localChild') return true;
+/**
+ * A Hub board is persistent, but acquisitions belong to one entered visit (or
+ * one entered side room), never to the restored Hub container.
+ */
+function acquisitionSiteOwner(
+  snapshot: BiomeRewardSnapshot,
+  room: CanonicalRewardRoom,
+): AcquisitionSiteOwnerAddress {
+  if (room.kind === 'localChild') return room.origin;
   for (const decision of snapshot.decisions) {
     if (decision.kind !== 'hub') continue;
-    if (
-      decision.visits.some((visit) => sameRewardRoomOwner(visit.target.room.origin, room.origin))
-    ) {
-      return true;
-    }
+    const visit = decision.visits.find((candidate) =>
+      sameRewardRoomOwner(candidate.target.room.origin, room.origin),
+    );
+    if (visit !== undefined) return visit.origin;
   }
   const frontier = hubVisitFrontier(snapshot);
-  return frontier !== undefined && sameRewardRoomOwner(frontier.target.room.origin, room.origin);
+  if (frontier !== undefined && sameRewardRoomOwner(frontier.target.room.origin, room.origin)) {
+    return frontier.origin;
+  }
+  return room.origin;
 }
 
 function hubFrontierRooms(snapshot: BiomeRewardSnapshot): readonly CanonicalRewardSource[] {
@@ -630,39 +638,6 @@ function rewardWheelBinding(
   return descriptor.reward;
 }
 
-function processOwnedRewardAcquisition(
-  catalog: Catalog,
-  branches: readonly RewardBranchState[],
-  room: CanonicalRewardRoom,
-  declaration: RoomDeclaration,
-  reward: {
-    readonly offer: CanonicalResolvedIncomingReward['offer'];
-    readonly origin: SemanticAddress;
-    readonly producerLifecycleKey: string;
-    readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
-    readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
-    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
-  },
-  view: HistoryStateView,
-  historySequence: number,
-  findings: Map<string, FindingRegionEntry>,
-  enteredBiomeCount: number,
-  atomicRegion?: string,
-  findingChronology?: FindingChronology,
-): readonly RewardBranchState[] {
-  return processOwnedRewardAcquisitionState(
-    catalog,
-    branches,
-    reward,
-    historySequence,
-    (history) => rewardFacts(catalog, room, room, declaration, view, history, enteredBiomeCount),
-    findings,
-    fail,
-    atomicRegion,
-    findingChronology,
-  );
-}
-
 function candidateResult(
   findings: Map<string, FindingRegionEntry>,
   branches: readonly RewardBranchState[],
@@ -839,18 +814,32 @@ function prepareShipLifecycleCandidateContext(
           return fail(`${room.gameName}.${wheel.wheelKey} has no picked offer`);
         }
         if (candidateBranches.length > 0) {
-          candidateBranches = processOwnedRewardAcquisition(
+          candidateBranches = settleOwnedAcquisitionSite(
             catalog,
             candidateBranches,
-            candidateRoom,
-            declaration,
-            Object.freeze({ ...picked, producerLifecycleKey: wheel.producerLifecycleKey }),
-            lifecycleView.acquisition,
-            lifecycleView.acquisitionSequence,
+            {
+              siteOwner: wheel.origin,
+              pointKey: wheel.wheelKey,
+              entryKey: 'picked',
+              source: Object.freeze({
+                ...picked,
+                producerLifecycleKey: wheel.producerLifecycleKey,
+              }),
+              historySequence: lifecycleView.acquisitionSequence,
+            },
+            (branchHistory) =>
+              rewardFacts(
+                catalog,
+                candidateRoom,
+                candidateRoom,
+                declaration,
+                lifecycleView.acquisition,
+                branchHistory,
+                enteredBiomeCount,
+              ),
             candidateFindings,
-            enteredBiomeCount,
             ownerRegion(wheel.origin),
-          );
+          ).branches;
         }
       }
       return lifecycleCandidateResult(candidateFindings, candidateBranches);
@@ -1328,30 +1317,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       entry.incoming.acquisitionEnabled !== false &&
       entry.acquisitionView !== undefined
     ) {
-      const hubOwnedProducer = isHubOwnedRewardRoom(snapshot, entry.room);
-      if (hubOwnedProducer) {
-        const acquisitionSequence = entry.acquisitionSequence;
-        if (acquisitionSequence !== undefined && producerPoints.length > 0) {
-          candidateBranches = processOwnedRewardAcquisition(
-            catalog,
-            candidateBranches,
-            entry.room,
-            entry.declaration,
-            Object.freeze({ ...entry.incoming, offer }),
-            entry.acquisitionView,
-            acquisitionSequence,
-            candidateFindings,
-            enteredBiomeCount,
-            ownerRegion(entry.incoming.origin),
-            rewardFindingChronologyForRoom(
-              snapshot,
-              entry.room.origin,
-              acquisitionSequence,
-              'localRoomLifecycle',
-            ),
-          );
-        }
-      } else {
+      {
         const candidateRoom = Object.freeze({
           ...entry.room,
           incomingReward: Object.freeze({ ...entry.incoming, offer }),
@@ -1407,6 +1373,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               acquisitionEvent.sequence,
               'localRoomLifecycle',
             ),
+            acquisitionSiteOwner(snapshot, entry.room),
           );
           candidateBranches = settlement.branches;
         }
@@ -1903,16 +1870,27 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   acquisitionEvent?.kind === 'encounterCompleted' &&
                   acquisitionView !== undefined
                 ) {
-                  candidateBranches = processOwnedRewardAcquisition(
+                  candidateBranches = settleOwnedAcquisitionSite(
                     catalog,
                     candidateBranches,
-                    room,
-                    declaration,
-                    Object.freeze({ ...localReward, offer }),
-                    acquisitionView,
-                    acquisitionEvent.sequence,
+                    {
+                      siteOwner: localReward.origin,
+                      pointKey: localReward.encounterPhaseKey,
+                      entryKey: localReward.slotKey,
+                      source: Object.freeze({ ...localReward, offer }),
+                      historySequence: acquisitionEvent.sequence,
+                    },
+                    (branchHistory) =>
+                      rewardFacts(
+                        catalog,
+                        room,
+                        room,
+                        declaration,
+                        acquisitionView,
+                        branchHistory,
+                        enteredBiomeCount,
+                      ),
                     candidateFindings,
-                    enteredBiomeCount,
                     ownerRegion(localReward.origin),
                     rewardFindingChronologyForRoom(
                       snapshot,
@@ -1920,7 +1898,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       acquisitionEvent.sequence,
                       'localRoomLifecycle',
                     ),
-                  );
+                  ).branches;
                 }
                 return candidateResult(candidateFindings, candidateBranches);
               },
@@ -2288,22 +2266,34 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 acquisitionView !== undefined &&
                 acquisitionEvent?.kind === 'offerPointAcquired'
               ) {
-                candidateBranches = processOwnedRewardAcquisition(
+                const source = Object.freeze({
+                  ...selectedOffer,
+                  offer,
+                  producerLifecycleKey: wheel.producerLifecycleKey,
+                });
+                candidateBranches = settleOwnedAcquisitionSite(
                   catalog,
                   candidateBranches,
-                  room,
-                  declaration,
-                  Object.freeze({
-                    ...selectedOffer,
-                    offer,
-                    producerLifecycleKey: wheel.producerLifecycleKey,
-                  }),
-                  acquisitionView,
-                  acquisitionEvent.sequence,
+                  {
+                    siteOwner: wheel.origin,
+                    pointKey: wheel.wheelKey,
+                    entryKey: 'picked',
+                    source,
+                    historySequence: acquisitionEvent.sequence,
+                  },
+                  (branchHistory) =>
+                    rewardFacts(
+                      catalog,
+                      room,
+                      room,
+                      declaration,
+                      acquisitionView,
+                      branchHistory,
+                      enteredBiomeCount,
+                    ),
                   candidateFindings,
-                  enteredBiomeCount,
                   ownerRegion(wheel.origin),
-                );
+                ).branches;
               }
               return candidateResult(candidateFindings, candidateBranches);
             },
@@ -2341,18 +2331,24 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName} has no canonical ${event.offerPoint} acquisition`,
           );
         }
-        branches = processOwnedRewardAcquisition(
+        branches = settleOwnedAcquisitionSite(
           catalog,
           branches,
-          room,
-          declaration,
-          { ...picked, producerLifecycleKey: wheel.producerLifecycleKey },
-          view,
-          event.sequence,
+          {
+            siteOwner: wheel.origin,
+            pointKey: wheel.wheelKey,
+            entryKey: 'picked',
+            source: Object.freeze({
+              ...picked,
+              producerLifecycleKey: wheel.producerLifecycleKey,
+            }),
+            historySequence: event.sequence,
+          },
+          (branchHistory) =>
+            rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
           findings,
-          enteredBiomeCount,
           ownerRegion(wheel.origin),
-        );
+        ).branches;
         break;
       }
       case 'producerRoleAdvanced': {
@@ -2382,30 +2378,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
           event.sequence,
           'localRoomLifecycle',
         );
-        const hubOwnedProducer = isHubOwnedRewardRoom(snapshot, room);
-        branches = hubOwnedProducer
-          ? processProducerRole(
-              catalog,
-              branches,
-              room,
-              event,
-              producerFacts,
-              findings,
-              fail,
-              producerRegion,
-              producerChronology,
-            )
-          : settleProducerAcquisitionSite(
-              catalog,
-              branches,
-              room,
-              event,
-              producerFacts,
-              findings,
-              fail,
-              producerRegion,
-              producerChronology,
-            ).branches;
+        branches = settleProducerAcquisitionSite(
+          catalog,
+          branches,
+          room,
+          event,
+          producerFacts,
+          findings,
+          fail,
+          producerRegion,
+          producerChronology,
+          acquisitionSiteOwner(snapshot, room),
+        ).branches;
         break;
       }
       case 'encounterCompleted': {
@@ -2480,16 +2464,29 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
           );
         }
-        branches = processOwnedRewardAcquisition(
+        branches = settleOwnedAcquisitionSite(
           catalog,
           branches,
-          room,
-          declaration,
-          matchingRewards[0],
-          roomView.preOutgoing ?? roomView.entry,
-          event.sequence,
+          {
+            siteOwner: matchingRewards[0].origin,
+            pointKey: event.phaseKey,
+            entryKey: matchingRewards[0].slotKey,
+            source: Object.freeze({
+              ...matchingRewards[0],
+            }),
+            historySequence: event.sequence,
+          },
+          (branchHistory) =>
+            rewardFacts(
+              catalog,
+              room,
+              room,
+              declaration,
+              roomView.preOutgoing ?? roomView.entry,
+              branchHistory,
+              enteredBiomeCount,
+            ),
           findings,
-          enteredBiomeCount,
           undefined,
           rewardFindingChronologyForRoom(
             snapshot,
@@ -2497,7 +2494,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             event.sequence,
             'localRoomLifecycle',
           ),
-        );
+        ).branches;
         break;
       }
       case 'shopPurchasesApplied': {

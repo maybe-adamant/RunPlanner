@@ -1,5 +1,7 @@
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -19,6 +21,7 @@ import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schem
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
+  simulateProject,
   evaluateBiomeCompleteness,
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
@@ -276,6 +279,49 @@ describe('H Fields materialization', () => {
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'max' } },
       { kind: 'localReward', result: { supported: true, findings: [] } },
     ]);
+  });
+
+  it('settles only active cage slots at their exact local reward sites', () => {
+    const evaluation = simulateProject(catalog, createGoldenFGHProject());
+    const h = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (h?.authoring !== 'complete' || h.validity !== 'valid') {
+      throw new Error('fixture did not complete valid H');
+    }
+    const minRoom = h.snapshot.decisions
+      .filter((decision) => decision.kind === 'batch')
+      .flatMap((decision) => decision.targets)
+      .map((target) => target.room)
+      .find((room) => room.localRewards?.length === 2);
+    if (minRoom?.origin.kind !== 'occurrence' || minRoom.localRewards === undefined) {
+      throw new Error('fixture lost a two-cage Fields room');
+    }
+    const events = h.rewards.branches[0]?.events ?? [];
+    for (const reward of minRoom.localRewards) {
+      const site = createAcquisitionSiteAddress(reward.origin, reward.encounterPhaseKey);
+      expect(
+        events.find(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(reward.origin),
+        ),
+      ).toMatchObject({
+        settlement: {
+          site,
+          entry: createAcquisitionEntryAddress(site, reward.slotKey),
+        },
+      });
+    }
+    const dormant = createLocalRewardAddress(biome, minRoom.origin.occurrenceId, 'cages', 'cage3');
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          event.settlement !== undefined &&
+          semanticAddressKey(event.settlement.site.owner) === semanticAddressKey(dormant),
+      ),
+    ).toBe(false);
   });
 
   it('does not assess a later Fields decision after an earlier cage reward is invalid', () => {

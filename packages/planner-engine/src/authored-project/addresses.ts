@@ -141,7 +141,12 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 
 /** One exact reached acquisition checkpoint. The source remains the offer owner. */
 export type AcquisitionSiteOwnerAddress =
-  OccurrenceAddress | CompletionRoomAddress | LocalChildAddress;
+  | OccurrenceAddress
+  | CompletionRoomAddress
+  | LocalChildAddress
+  | LocalRewardAddress
+  | RewardWheelAddress
+  | HubVisitAddress;
 export interface AcquisitionSiteAddress extends BiomeOwnedAddress {
   readonly kind: 'acquisitionSite';
   readonly owner: AcquisitionSiteOwnerAddress;

@@ -27,7 +27,7 @@ import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/ca
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
   initializeRewardBranches,
-  processOwnedRewardAcquisition,
+  settleOwnedAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import {
@@ -49,6 +49,32 @@ const levelAddress = createLevelResolutionAddress(
   ),
   'self',
 );
+const pomTestSiteOwner = createOccurrenceAddress(
+  createBiomeAddress('Underworld', 'F'),
+  createOccurrenceId('pom-test'),
+);
+
+function settleTestRoomReward(
+  branches: Parameters<typeof settleOwnedAcquisitionSite>[1],
+  source: Parameters<typeof settleOwnedAcquisitionSite>[2]['source'],
+  sequence: number,
+  facts: Parameters<typeof settleOwnedAcquisitionSite>[3],
+  findings: Parameters<typeof settleOwnedAcquisitionSite>[4],
+) {
+  return settleOwnedAcquisitionSite(
+    catalog,
+    branches,
+    {
+      siteOwner: pomTestSiteOwner,
+      pointKey: 'roomRewardPickup',
+      entryKey: 'self',
+      source,
+      historySequence: sequence,
+    },
+    facts,
+    findings,
+  ).branches;
+}
 
 function equippedHistory() {
   const event: TraitOfferEvent = {
@@ -157,8 +183,7 @@ describe('Pom level resolutions', () => {
     ).toEqual({ kind: 'randomTarget', levelCount: 1 });
 
     const noTargetFindings = new Map();
-    const empty = processOwnedRewardAcquisition(
-      catalog,
+    const empty = settleTestRoomReward(
       initializeRewardBranches(),
       {
         origin: levelAddress.owner,
@@ -169,16 +194,12 @@ describe('Pom level resolutions', () => {
       1,
       (history) => factsWithHistory(rewardFacts(), history, new Set()),
       noTargetFindings,
-      (detail) => {
-        throw new Error(detail);
-      },
     );
     expect(empty[0]?.history.consumableRecord.GiftDrop).toBe(1);
     expect(empty[0]?.traitHistory?.events).toEqual([]);
     expect([...noTargetFindings.values()]).toEqual([]);
 
-    const withTarget = processOwnedRewardAcquisition(
-      catalog,
+    const withTarget = settleTestRoomReward(
       [Object.freeze({ ...initializeRewardBranches()[0]!, traitHistory: equippedHistory() })],
       {
         origin: levelAddress.owner,
@@ -191,9 +212,6 @@ describe('Pom level resolutions', () => {
       1,
       (history) => factsWithHistory(rewardFacts(), history, new Set()),
       new Map(),
-      (detail) => {
-        throw new Error(detail);
-      },
     );
     expect(withTarget[0]?.history.consumableRecord.GiftDrop).toBe(1);
     expect(withTarget[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
@@ -551,8 +569,7 @@ describe('Pom level resolutions', () => {
       ),
     );
     const findings = new Map();
-    processOwnedRewardAcquisition(
-      catalog,
+    settleTestRoomReward(
       branches,
       {
         origin: levelAddress.owner,
@@ -565,9 +582,6 @@ describe('Pom level resolutions', () => {
       1,
       (history) => factsWithHistory(rewardFacts(), history, new Set()),
       findings,
-      (detail) => {
-        throw new Error(detail);
-      },
     );
     const retained = [...findings.values()].find(
       (entry) => entry.finding.code === 'missingPomTarget',

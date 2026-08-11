@@ -1,7 +1,12 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
 
 import { createRepresentativeNOProject } from '@run-planner/test-fixtures';
 
@@ -138,5 +143,74 @@ describe('O canonical materialization and lifecycle', () => {
         ),
       ).toBe(offer.picked);
     }
+
+    for (const wheel of firstCombat.targets[0]!.room.rewardWheels!) {
+      const picked = wheel.offers.find((offer) => offer.picked);
+      if (picked === undefined) throw new Error('fixture lost wheel selection');
+      const site = createAcquisitionSiteAddress(wheel.origin, wheel.wheelKey);
+      expect(
+        o.rewards.branches[0]!.events.find(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(picked.origin),
+        ),
+      ).toMatchObject({
+        settlement: {
+          site,
+          entry: createAcquisitionEntryAddress(site, 'picked'),
+        },
+      });
+    }
+  });
+
+  it('keeps Devotion wheel roles inside one atomic settlement entry', () => {
+    const { snapshot } = fixture();
+    const firstCombat = snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' && decision.targets[0]?.room.gameName === 'O_Combat04',
+    );
+    if (firstCombat?.kind !== 'batch') throw new Error('fixture lost first O combat');
+    const wheel = firstCombat.targets[0]!.room.rewardWheels?.[0];
+    const source = wheel?.offers[0];
+    if (wheel === undefined || source === undefined) throw new Error('fixture lost first O wheel');
+    const lifecycle =
+      catalog.rewards.producerLifecycles.byKey[wheel.producerLifecycleKey]?.rewardTypes.byKey
+        .Devotion;
+    if (lifecycle === undefined) throw new Error('O wheel lifecycle lost Devotion');
+    const site = createAcquisitionSiteAddress(wheel.origin, wheel.wheelKey);
+    const settled = settleOwnedAcquisitionSite(
+      catalog,
+      Object.freeze([]),
+      {
+        siteOwner: wheel.origin,
+        pointKey: wheel.wheelKey,
+        entryKey: 'picked',
+        source: {
+          ...source,
+          offer: {
+            rewardType: 'Devotion',
+            payload: {
+              kind: 'DevotionPair',
+              chosenSource: 'ApolloUpgrade',
+              spurnedSource: 'ZeusUpgrade',
+            },
+          },
+          producerLifecycleKey: wheel.producerLifecycleKey,
+        },
+        historySequence: 1,
+      },
+      () => {
+        throw new Error('empty settlement branches do not need reward facts');
+      },
+      new Map(),
+    );
+
+    expect(settled.entries).toEqual([
+      expect.objectContaining({
+        address: createAcquisitionEntryAddress(site, 'picked'),
+        acquisitionRoles: lifecycle.acquisitionLifecycle,
+      }),
+    ]);
+    expect(settled.entries).toHaveLength(1);
   });
 });
