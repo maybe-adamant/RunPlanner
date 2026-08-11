@@ -26,9 +26,11 @@ Primary evidence comes from the installed game scripts:
   `NPCData_Hades.lua`, `NPCData_Medea.lua`, `NPCData_Circe.lua`, and
   `NPCData_Dionysus.lua` for Story-room choice pools;
 - `LootData.lua` for the Daedalus `WeaponUpgrade` pool;
-- `UpgradeChoiceData.lua`, `TraitLogic.lua`, `HeroData.lua`, and `RunLogic.lua`
-  for the shared three-choice surface, provider rarity behavior, equipped
-  rarity caches, and element folding;
+- `LootData.lua`, `ConsumableData.lua`, `UpgradeChoiceData.lua`,
+  `UpgradeChoiceLogic.lua`, `TraitLogic.lua`, `HeroData.lua`, and `RunLogic.lua`
+  for the shared three-choice surface, Pom and random-Stack behavior, provider
+  rarity behavior, equipped rarity/level state, replacement transfer, and
+  element folding;
 - `TraitData.lua` for `LinkedTraitData` and `TraitRequirements`; and
 - the individual `TraitData_*.lua` files for direct equipped-trait conditions
   declared on a trait rather than in `TraitRequirements`;
@@ -731,6 +733,48 @@ Hades trait declares `BlockInRunRarify`. Icarus choices
 also explicitly author Common in normal runs; the dream-run rarity rewrite is
 outside the supported route baseline.
 
+### Trait levels and Pom acquisition
+
+The game represents a freshly acquired scalable trait at `StackNum = 1` when
+the field is materialized; an absent `StackNum` is also treated as level 1.
+`IncreaseTraitLevel` replaces the equipped instance with the same trait and
+rarity at the old level plus the granted stack count. Level is therefore an
+equipped-trait fact folded chronologically, not an independent reward counter.
+
+`GetAllUpgradeableGodTraits(stackNum)` supplies the shared target domain for
+visible Poms and random Pom consumables. A target must be:
+
+- a persistent trait from the plain core-god `IsGodTrait` domain;
+- not `BlockStacking`; and
+- observably changed after applying the requested stack count.
+
+The current normalized trait inventory does not carry every numeric tooltip
+curve. For the supported possibility model, the last check collapses to the
+source-closed core-god plus non-`BlockStacking` declaration predicate already
+used by `upgradableTraitCount`. Hermes, Artemis, Athena, Dionysus, Hades,
+Story traits, and Hammers remain outside the Pom target domain. Concrete
+rarity does not remove an otherwise valid Pom target, including Heroic.
+
+The acquisition surfaces remain distinct:
+
+| Source acquisition       | Game surface                                                      | Level mutation           |
+| ------------------------ | ----------------------------------------------------------------- | ------------------------ |
+| `StackUpgrade`           | up to three distinct eligible equipped traits; player selects one | selected target `+1`     |
+| `StackUpgradeBig`        | the same bounded choice surface                                   | selected target `+2`     |
+| `StackUpgradeTriple`     | the same bounded choice surface                                   | selected target `+3`     |
+| `StoreRewardRandomStack` | no choice menu; one eligible target is chosen randomly            | exact random target `+1` |
+
+When fewer than three eligible traits exist, a visible Pom presents every
+eligible trait. With three or more, it presents exactly three. No Pom target
+exists when the eligible set is empty. The Fated/Arcana level bonuses,
+probability, rerolls, and numeric tooltip values remain outside the progressed
+neutral route baseline.
+
+`NarcissusA` includes one `StoreRewardRandomStack` and is guarded by
+`StackUpgradeLegal`; its later implementation therefore uses the same random
+target and `+1` mutation. This audit records that source fact without bringing
+the Narcissus provider into the trait-level delivery.
+
 On acquisition, `AddTraitData` first retains Bridal Glow itself, then
 `HeraSuperchargeBoon` calls `AddRarityToTraits` with `NumTraits = 1`,
 `TargetRarity = 4`, `MaxRarity = 3`, and `StackEligibleOnly = true`. The game
@@ -738,25 +782,38 @@ therefore chooses exactly one eligible equipped target and promotes it to
 Heroic. It records that target on Bridal Glow as `UpgradedTraitName`; the
 source boon remains equipped with its own rarity and Water element.
 
-Trait levels and stacks are outside the current model, so the Hephaestus
-rarity/cooldown exception cannot yet be represented. The supported lifecycle
-therefore applies the generic non-`BlockStacking`, next-rarity rule to Hephaestus Weapon,
-Special, and Sprint boons as well. This is an explicit temporary collapse, not
-an implicit claim that every source cooldown state passes the game check. The
-planner models the exact chosen target and its Heroic promotion; the additional
-level/stack grant and later `CreditMissingStacks` adjustment remain deferred.
+Bridal Glow also grants the chosen target levels according to its own rarity:
+Common `+1`, Rare `+2`, Epic `+3`, and Heroic `+4`. If Bridal Glow is later
+rarified, `CreditMissingStacks` grants its retained target only the difference
+between the old and new rarity grants, provided that target remains equipped.
+
+For Hephaestus Weapon, Special, and Sprint, `HasSuperchargeableBoon` additionally
+requires the target's current `UnmodifiedCooldown` to be strictly greater than
+`2`. The source cooldown curves reduce to these exact pre-acquisition level
+limits:
+
+| Target                                       |   Common |    Rare |    Epic |
+| -------------------------------------------- | -------: | ------: | ------: |
+| Hephaestus Attack — `HephaestusWeaponBoon`   |  level 9 | level 7 | level 5 |
+| Hephaestus Special — `HephaestusSpecialBoon` | level 11 | level 9 | level 7 |
+| Hephaestus Sprint — `HephaestusSprintBoon`   |  level 8 | level 7 | level 6 |
+
+Each cell is the highest still-eligible level at that rarity. Heroic is always
+ineligible because the generic next-rarity requirement fails before the
+cooldown branch. These limits are a narrow offer-legality mapping; they do not
+require the planner to simulate combat cooldown values.
 
 ### Other direct condition dispositions
 
-| Source condition                                   | Normalized disposition                                                                                              |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| already equipped                                   | modeled from exact equipped keys                                                                                    |
-| `BlockOfferIfPreviouslyPicked`                     | equivalent to already equipped under the slice's no-sale/no-replacement lifecycle                                   |
-| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled                       |
-| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                                                |
-| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                                             |
-| mechanical activation/effect requirements          | deferred because this slice models offer legality, not trait effects                                                |
-| Hephaestus cooldown/level exception in Boon Decay  | deferred until equipped trait levels/stacks exist; the generic non-stacking, next-rarity rule applies in this slice |
+| Source condition                                   | Normalized disposition                                                                        |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| already equipped                                   | modeled from exact equipped keys                                                              |
+| `BlockOfferIfPreviouslyPicked`                     | equivalent to already equipped under the slice's no-sale/no-replacement lifecycle             |
+| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled |
+| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                          |
+| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                       |
+| mechanical activation/effect requirements          | deferred because this slice models offer legality, not trait effects                          |
+| Hephaestus cooldown/level exception in Boon Decay  | exact rarity/level limits above; no general combat-cooldown simulation is implied             |
 
 ## Positive Equipped-Trait Dependency Graph
 
@@ -908,8 +965,7 @@ the preceding rows come from `TraitRequirements`.
    create a second authority.
 8. `Heroic` is excluded from fresh ordinary offer authorship but retained in
    the equipped rarity universe so next-rarity eligibility has a truthful
-   boundary. Boon Decay's effect and its Hephaestus level/cooldown exception
-   remain deferred until levels and rarity mutation are modeled.
+   boundary. It remains Pom-levelable but cannot be selected by Bridal Glow.
 9. Loot/use history remains independently meaningful. This inventory supports
    an additive trait event ledger and folded equipped-trait state; it does not
    justify replacing the existing exact loot ledgers.
@@ -931,10 +987,13 @@ Replacement identity is therefore a derived transition from the pre-offer
 equipped ledger and authored option rarity, not a persisted offer field.
 
 The game seeds at most one normal replacement and fills additional positions
-with replacements only after the ordinary pool is exhausted. The planner
-retains the possibility boundary without the source's 10 percent roll,
-progression gates, force flags, counters, level/stack transfer, or
-`ExchangeLevelBonus`. For an exact pre-offer branch, ordinary availability is
+with replacements only after the ordinary pool is exhausted. A selected
+replacement transfers the displaced trait's exact level to the new trait and
+then adds the derived `ExchangeLevelBonus`. The supported neutral route has no
+modeled source for that bonus, so its value is zero and replacement preserves
+the old level exactly. The planner retains the possibility boundary without
+the source's 10 percent roll, progression gates, force flags, counters, or an
+authored level-transfer field. For an exact pre-offer branch, ordinary availability is
 the count of distinct legal trait keys with at least one legal fresh rarity;
 the maximum replacement count is `ordinaryCandidateCount >= 2 ? 1 : 3 -
 ordinaryCandidateCount`. Replacement alternatives remain independent against
@@ -957,6 +1016,7 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                         |
 | element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                 |
 | rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                    |
+| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                                                                            |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
 
 The normalized inventory has six weapons, 24 weapon/aspect pairs, 293 unique
@@ -968,6 +1028,6 @@ only; Artemis, Athena, and Icarus are the modeled field-NPC providers, while
 other NPC, Story, Spell, or Talent providers remain outside the persistent
 trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
-progressed-baseline, mechanical-effect, and Hephaestus level/cooldown
-deferrals. Newly discovered predicates are explicitly listed above rather than
-covered by a no-unlisted claim.
+progressed-baseline and mechanical-effect deferrals. Newly discovered
+predicates are explicitly listed above rather than covered by a no-unlisted
+claim.
