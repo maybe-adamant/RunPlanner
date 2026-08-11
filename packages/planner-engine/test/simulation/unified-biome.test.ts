@@ -9,6 +9,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
@@ -148,11 +149,19 @@ function incompleteFPrefixProject() {
     rewardStore: createBatchRewardStoreAddress(biome, opening.source),
     storeKey: 'MetaProgress',
   });
-  return applyProjectCommand(project, catalog, {
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(biome, opening.source, 'exit1'),
     occurrenceId: createOccurrenceId('f-prefix-combat'),
     gameName: 'F_Combat02',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
+      'self',
+    ),
+    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
   });
 }
 

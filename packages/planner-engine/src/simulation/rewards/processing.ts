@@ -60,6 +60,7 @@ import {
   type TraitHistoryState,
 } from '../traits';
 import type { AuthoredTraitOffer } from '../../authored-project/traits';
+import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -219,6 +220,8 @@ function applyTraitOfferForAcquisition(
   reward: {
     readonly origin: SemanticAddress;
     readonly offer?: CanonicalResolvedIncomingReward['offer'];
+    readonly producerLifecycleKey?: string;
+    readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
     readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
@@ -233,23 +236,18 @@ function applyTraitOfferForAcquisition(
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.traitHistory ?? createTraitHistoryState();
   {
-    let acquisition: import('../../reward-kernel/model').ConcreteAcquisitionDeclaration | undefined;
-    try {
-      acquisition =
-        reward.offer === undefined
-          ? undefined
-          : catalog.rewards.acquisitions.byKey[
-              resolveAcquisitionRole(
-                catalog.rewards,
-                reward.offer,
-                role,
-                lifecyclePoint as import('../../reward-kernel/model').ProducerLifecyclePointKey,
-              ).acquisition.gameName
-            ];
-    } catch {
-      acquisition = undefined;
-    }
-    const effect = acquisition?.levelResolutionEffect;
+    const effect =
+      reward.offer === undefined || reward.producerLifecycleKey === undefined
+        ? undefined
+        : levelResolutionEffectFor(
+            catalog.rewards,
+            reward.offer,
+            {
+              kind: reward.producerKind === 'shop' ? 'shopProfile' : 'producerLifecycle',
+              key: reward.producerLifecycleKey,
+            },
+            role,
+          );
     if (effect !== undefined) {
       const owner = traitOwnerAddress(reward.origin);
       if (owner === undefined) return branch;
@@ -269,6 +267,7 @@ function applyTraitOfferForAcquisition(
         before,
         branch.levelResolutionEvaluations?.length ?? 0,
         effect.kind === 'visibleChoice' ? 'choice' : 'random',
+        effect.kind === 'randomTargetIfAvailable',
       );
       const applied = recordReachedLevelResolution(
         catalog,
@@ -279,6 +278,7 @@ function applyTraitOfferForAcquisition(
         sequence,
         lifecyclePoint,
         effect.kind === 'visibleChoice' ? 'choice' : 'random',
+        effect.kind === 'randomTargetIfAvailable',
       );
       if (findings !== undefined && evaluation.findings.length > 0) {
         const codeByFinding = {

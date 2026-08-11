@@ -650,10 +650,12 @@ export function recordReachedLevelResolution(
   sequence: number,
   acquisitionPoint: string,
   effectKind: 'choice' | 'random' = value.kind,
+  emptyTargetAllowed = false,
 ): { readonly history: TraitHistoryState; readonly event?: TraitLevelMutationEvent } {
   const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const required = Math.min(3, before.upgradableTraitCount);
+  const noEligibleTarget = before.upgradableTraitCount === 0;
   const complete =
     value.kind !== effectKind
       ? false
@@ -667,7 +669,10 @@ export function recordReachedLevelResolution(
               isPomEligibleTrait(catalog, traitKey) &&
               before.equippedTraits[traitKey] !== undefined,
           )
-        : target !== null;
+        : target !== null || (emptyTargetAllowed && noEligibleTarget);
+  if (emptyTargetAllowed && noEligibleTarget && value.kind === 'random' && target === null) {
+    return Object.freeze({ history: before });
+  }
   if (
     !complete ||
     target === null ||
@@ -706,6 +711,7 @@ export interface ReachedLevelResolutionEvaluation {
   readonly before: TraitHistoryState;
   readonly levelCount: number;
   readonly effectKind: 'choice' | 'random';
+  readonly emptyTargetAllowed: boolean;
   readonly findings: readonly LevelResolutionFindingCode[];
   readonly reached: true;
   readonly chronologicalIndex: number;
@@ -714,7 +720,10 @@ export interface ReachedLevelResolutionEvaluation {
 export interface SelectedLevelResolutionAssessment {
   readonly address: LevelResolutionAddress;
   readonly value: AuthoredLevelResolution;
-  readonly branches: readonly Pick<ReachedLevelResolutionEvaluation, 'findings' | 'levelCount'>[];
+  readonly branches: readonly (Pick<
+    ReachedLevelResolutionEvaluation,
+    'findings' | 'levelCount' | 'emptyTargetAllowed'
+  > & { readonly eligibleTargetCount: number })[];
   readonly reached: true;
   readonly chronologicalIndex: number;
 }
@@ -735,11 +744,13 @@ export function evaluateReachedLevelResolution(
   before: TraitHistoryState,
   chronologicalIndex: number,
   effectKind: 'choice' | 'random' = value.kind,
+  emptyTargetAllowed = false,
 ): ReachedLevelResolutionEvaluation {
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const findings: LevelResolutionFindingCode[] = [];
   if (value.kind !== effectKind) findings.push('kindMismatch');
-  if (target === null) findings.push('missingTarget');
+  if (target === null && !(emptyTargetAllowed && before.upgradableTraitCount === 0))
+    findings.push('missingTarget');
   if (value.kind === 'choice') {
     if (value.offeredTraitKeys.length !== Math.min(3, before.upgradableTraitCount))
       findings.push('wrongOfferCount');
@@ -767,6 +778,7 @@ export function evaluateReachedLevelResolution(
     before,
     levelCount,
     effectKind,
+    emptyTargetAllowed,
     findings: Object.freeze(findings),
     reached: true,
     chronologicalIndex,

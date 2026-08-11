@@ -1040,6 +1040,7 @@ describe('F reward-history simulation', () => {
         selectedOptionKey: 'option2',
       },
     });
+    project = authorLegalTraitOffers(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluated = assembly.evaluation.routes[0]?.biomes[0];
     if (evaluated?.authoring !== 'incomplete' || evaluated.validity !== 'invalid') {

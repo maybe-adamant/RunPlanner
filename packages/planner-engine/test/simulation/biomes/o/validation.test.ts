@@ -426,7 +426,13 @@ describe('selected O validation', () => {
         offer,
         value: { rewardType: 'GiftDrop' },
       }),
-    ).toMatchObject({ kind: 'rewardWheelOffer', result: { supported: true, findings: [] } });
+    ).toMatchObject({
+      kind: 'rewardWheelOffer',
+      result: {
+        supported: true,
+        findings: [expect.objectContaining({ code: 'missingPomTarget' })],
+      },
+    });
     expect(
       session.evaluate({
         kind: 'shipEncounterCount',

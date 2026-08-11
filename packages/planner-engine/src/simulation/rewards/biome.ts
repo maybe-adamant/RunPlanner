@@ -873,6 +873,7 @@ export function selectedTraitOfferProducts(
       readonly before: import('../traits').TraitHistoryState;
       readonly levelCount: number;
       readonly effectKind: 'choice' | 'random';
+      readonly emptyTargetAllowed?: boolean;
     }[]
   >;
 } {
@@ -994,7 +995,12 @@ export function selectedTraitOfferProducts(
           value: entry.value,
           branches: Object.freeze(
             entry.branches.map((trace) =>
-              Object.freeze({ findings: trace.findings, levelCount: trace.levelCount }),
+              Object.freeze({
+                findings: trace.findings,
+                levelCount: trace.levelCount,
+                emptyTargetAllowed: trace.emptyTargetAllowed,
+                eligibleTargetCount: trace.before.upgradableTraitCount,
+              }),
             ),
           ),
           reached: true as const,
@@ -1009,6 +1015,7 @@ export function selectedTraitOfferProducts(
       readonly before: import('../traits').TraitHistoryState;
       readonly levelCount: number;
       readonly effectKind: 'choice' | 'random';
+      readonly emptyTargetAllowed?: boolean;
     }[]
   >();
   for (const [key, entry] of levels) {
@@ -1021,6 +1028,7 @@ export function selectedTraitOfferProducts(
             before: trace.before,
             levelCount: trace.levelCount,
             effectKind: trace.effectKind,
+            ...(trace.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
           }),
         ),
       ),

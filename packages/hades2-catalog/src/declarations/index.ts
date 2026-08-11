@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.24.0-story-hades-dionysus',
+  version: '0.25.0-producer-sensitive-nectar',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

@@ -50,6 +50,11 @@ const PRODUCER_LIFECYCLE_POINTS = [
   'purchase',
   'roomRewardPickup',
 ] as const;
+const LEVEL_RESOLUTION_EFFECT_KINDS = [
+  'visibleChoice',
+  'randomTarget',
+  'randomTargetIfAvailable',
+] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -557,7 +562,7 @@ function normalizeAcquisitionLifecycle(
   defaultLifecyclePoint: ProducerLifecyclePointKey,
   path: string,
 ): readonly AcquisitionLifecycleBinding[] {
-  const rawLifecycle =
+  const rawLifecycle: readonly AcquisitionLifecycleBinding[] =
     raw ??
     rewardType.acquisitionRoles.values.map((role) => ({
       role: role.key,
@@ -574,6 +579,20 @@ function normalizeAcquisitionLifecycle(
       fail(`${bindingPath}.role`, `unknown acquisition role ${binding.role}`);
     }
     seenRoles.add(binding.role);
+    const effect = binding.levelResolutionEffect;
+    if (effect !== undefined) {
+      requireClosedValue(
+        effect.kind,
+        LEVEL_RESOLUTION_EFFECT_KINDS,
+        `${bindingPath}.levelResolutionEffect.kind`,
+      );
+      if (effect.levelCount !== 1 && effect.levelCount !== 2 && effect.levelCount !== 3) {
+        fail(`${bindingPath}.levelResolutionEffect.levelCount`, 'must be 1, 2, or 3');
+      }
+      if (effect.kind !== 'visibleChoice' && effect.levelCount !== 1) {
+        fail(`${bindingPath}.levelResolutionEffect.levelCount`, 'random level effects require 1');
+      }
+    }
     return Object.freeze({
       role: binding.role,
       lifecyclePoint: requireClosedValue(
@@ -581,6 +600,7 @@ function normalizeAcquisitionLifecycle(
         PRODUCER_LIFECYCLE_POINTS,
         `${bindingPath}.lifecyclePoint`,
       ),
+      ...(effect === undefined ? {} : { levelResolutionEffect: Object.freeze({ ...effect }) }),
     });
   });
   if (seenRoles.size !== rewardType.acquisitionRoles.values.length) {

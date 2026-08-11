@@ -221,6 +221,7 @@ export interface LevelResolutionCandidateProjection {
 
 export interface LevelResolutionCandidateSurface {
   readonly effectKind: 'choice' | 'random';
+  readonly emptyTargetAllowed?: boolean;
   readonly levelCount: number;
   readonly requiredOfferCount?: number;
   readonly eligibleTargetTraitKeys: readonly string[];
@@ -811,6 +812,7 @@ export function createCandidateSessionFactory(
         for (const [branchIndex, surface] of capability.branches.entries()) {
           const key = JSON.stringify([
             surface.effectKind,
+            surface.emptyTargetAllowed ?? false,
             surface.levelCount,
             surface.requiredOfferCount,
             surface.eligibleTargetTraitKeys,

@@ -18,7 +18,11 @@ import {
   simulateProjectAssembly,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
-import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
+import {
+  factsWithHistory,
+  levelResolutionEffectFor,
+  type RewardKernelFacts,
+} from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
@@ -126,6 +130,75 @@ function rewardFacts(): RewardKernelFacts {
 }
 
 describe('Pom level resolutions', () => {
+  it("keeps Nectar's random +1 on the exact RoomReward binding only", () => {
+    expect(
+      levelResolutionEffectFor(
+        catalog.rewards,
+        { rewardType: 'GiftDrop' },
+        { kind: 'producerLifecycle', key: 'RoomReward' },
+        'self',
+      ),
+    ).toEqual({ kind: 'randomTargetIfAvailable', levelCount: 1 });
+    expect(
+      levelResolutionEffectFor(
+        catalog.rewards,
+        { rewardType: 'GiftDrop' },
+        { kind: 'shopProfile', key: 'I_WorldShop' },
+        'self',
+      ),
+    ).toBeUndefined();
+    expect(
+      levelResolutionEffectFor(
+        catalog.rewards,
+        { rewardType: 'StoreRewardRandomStack' },
+        { kind: 'shopProfile', key: 'WorldShop' },
+        'self',
+      ),
+    ).toEqual({ kind: 'randomTarget', levelCount: 1 });
+
+    const noTargetFindings = new Map();
+    const empty = processOwnedRewardAcquisition(
+      catalog,
+      initializeRewardBranches(),
+      {
+        origin: levelAddress.owner,
+        offer: { rewardType: 'GiftDrop' },
+        producerLifecycleKey: 'RoomReward',
+        levelResolutionsByAcquisitionRole: { self: { kind: 'random', targetTraitKey: null } },
+      },
+      1,
+      (history) => factsWithHistory(rewardFacts(), history, new Set()),
+      noTargetFindings,
+      (detail) => {
+        throw new Error(detail);
+      },
+    );
+    expect(empty[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(empty[0]?.traitHistory?.events).toEqual([]);
+    expect([...noTargetFindings.values()]).toEqual([]);
+
+    const withTarget = processOwnedRewardAcquisition(
+      catalog,
+      [Object.freeze({ ...initializeRewardBranches()[0]!, traitHistory: equippedHistory() })],
+      {
+        origin: levelAddress.owner,
+        offer: { rewardType: 'GiftDrop' },
+        producerLifecycleKey: 'RoomReward',
+        levelResolutionsByAcquisitionRole: {
+          self: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+        },
+      },
+      1,
+      (history) => factsWithHistory(rewardFacts(), history, new Set()),
+      new Map(),
+      (detail) => {
+        throw new Error(detail);
+      },
+    );
+    expect(withTarget[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(withTarget[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+  });
+
   it('requires exact visible cardinality, membership, and eligible equipped targets', () => {
     const before = equippedHistory();
     const invalid = recordReachedLevelResolution(

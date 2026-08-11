@@ -12,7 +12,11 @@ import {
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShipOccurrenceCommand } from './types';
-import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import {
+  createDefaultLevelResolutions,
+  createDefaultTraitOffers,
+  producerLevelEffectSource,
+} from '../traits';
 
 function requireWheel(
   catalog: Catalog,
@@ -134,12 +138,17 @@ export function applyShipOccurrenceCommand(
                 command.value,
                 located.loadout,
               ),
-              ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+              ...(createDefaultLevelResolutions(
+                catalog,
+                command.value,
+                producerLevelEffectSource(descriptor.reward),
+              ) === undefined
                 ? {}
                 : {
                     levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                       catalog,
                       command.value,
+                      producerLevelEffectSource(descriptor.reward),
                     ),
                   }),
             }),

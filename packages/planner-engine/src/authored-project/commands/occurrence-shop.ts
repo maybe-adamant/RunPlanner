@@ -93,12 +93,16 @@ export function applyShopOccurrenceCommand(
         command.value,
         located.loadout,
       ),
-      ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+      ...(createDefaultLevelResolutions(catalog, command.value, {
+        kind: 'shopProfile',
+        key: occurrence.state.shop.profileKey,
+      }) === undefined
         ? {}
         : {
             levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
               catalog,
               command.value,
+              { kind: 'shopProfile', key: occurrence.state.shop.profileKey },
             ),
           }),
     }),

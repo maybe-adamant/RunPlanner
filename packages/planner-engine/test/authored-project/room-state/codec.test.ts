@@ -212,6 +212,27 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('$.room.state.shop.offers.Boon.reward: unexpected key purchased');
   });
 
+  it('rejects a Pom child on the Shop GiftDrop producer', () => {
+    const declaration = room('F_Shop01');
+    const raw = mutable(
+      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+    );
+    const shop = raw.shop as Record<string, unknown>;
+    const offers = shop.offers as Record<string, Record<string, unknown>>;
+    const major = offers.MajorNonBoon;
+    if (major === undefined) throw new Error('missing MajorNonBoon shop offer');
+    const reward = major.reward as Record<string, unknown>;
+    reward.offer = { rewardType: 'GiftDrop' };
+    reward.traitOffersByAcquisitionRole = {};
+    reward.levelResolutionsByAcquisitionRole = {
+      self: { kind: 'random', targetTraitKey: null },
+    };
+
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
+  });
+
   it('preserves valid Ephyra side-room ownership and rejects an entered dormant side room', () => {
     const declaration = room('N_Combat02');
     const raw = mutable(

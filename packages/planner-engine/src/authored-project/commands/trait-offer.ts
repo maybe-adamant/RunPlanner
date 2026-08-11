@@ -7,11 +7,19 @@ import {
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
 import { selectedEncounterDefinitionKey } from '../room-state/encounters';
+import { requireShipCombatWheels } from '../room-state/declaration';
+import { incomingLevelEffectSource } from '../room-state/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
+import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
+
+export interface LocatedTraitReward {
+  readonly reward: AuthoredRewardState;
+  readonly levelEffectSource: LevelResolutionEffectSource;
+}
 
 function validateOffer(
   catalog: Catalog,
@@ -105,17 +113,33 @@ export function locateTraitReward(
   occurrence: RoomOccurrence,
   state: RoomOccurrence['state'],
   command: TraitOfferCommand,
-): AuthoredRewardState | undefined {
+): LocatedTraitReward | undefined {
   const owner = command.trait.owner;
   switch (owner.kind) {
     case 'incomingReward':
       switch (state.kind) {
         case 'counted':
         case 'fixed':
+        case 'ephyraCombat': {
+          const room = catalog.rooms.byKey[occurrence.gameName];
+          const binding = room?.incomingReward;
+          if (binding === undefined || binding.kind === 'none')
+            failCommand(command, `${occurrence.gameName} has no incoming reward binding`);
+          return Object.freeze({
+            reward: state.reward,
+            levelEffectSource: {
+              kind: 'producerLifecycle',
+              key: binding.producerLifecycleKey,
+            } as const,
+          });
+        }
         case 'anomaly':
-        case 'ephyraCombat':
-        case 'freeReward':
-          return state.reward;
+        case 'freeReward': {
+          const levelEffectSource = incomingLevelEffectSource(catalog, occurrence);
+          if (levelEffectSource === undefined)
+            failCommand(command, `${occurrence.gameName} has no declared incoming reward binding`);
+          return Object.freeze({ reward: state.reward, levelEffectSource });
+        }
         case 'none':
         case 'fieldsCombat':
         case 'shipCombat':
@@ -138,7 +162,13 @@ export function locateTraitReward(
         }
         const reward = state.cages[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
-        return reward;
+        return Object.freeze({
+          reward,
+          levelEffectSource: {
+            kind: 'producerLifecycle',
+            key: group.reward.producerLifecycleKey,
+          } as const,
+        });
       }
       if (state.kind === 'ephyraCombat') {
         const { state: ephyraState, group } = requireEphyraSideGroup(
@@ -153,7 +183,19 @@ export function locateTraitReward(
         }
         const sideRoom = ephyraState.sideRooms[owner.slotKey];
         if (sideRoom === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
-        return sideRoom.reward;
+        const slot = group.slots.find((candidate) => candidate.slotKey === owner.slotKey);
+        const sideDeclaration =
+          slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
+        const binding = sideDeclaration?.incomingReward;
+        if (binding === undefined || binding.kind === 'none')
+          failCommand(command, `side room has no incoming reward binding`);
+        return Object.freeze({
+          reward: sideRoom.reward,
+          levelEffectSource: {
+            kind: 'producerLifecycle',
+            key: binding.producerLifecycleKey,
+          } as const,
+        });
       }
       return failCommand(
         command,
@@ -169,7 +211,20 @@ export function locateTraitReward(
         if (wheel === undefined || reward === undefined) {
           failCommand(command, `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`);
         }
-        return reward;
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
+        const descriptor = requireShipCombatWheels(catalog, room, occurrence.gameName).find(
+          (candidate) => candidate.key === owner.wheelKey,
+        );
+        if (descriptor === undefined)
+          failCommand(command, `unknown reward wheel ${owner.wheelKey}`);
+        return Object.freeze({
+          reward,
+          levelEffectSource: {
+            kind: 'producerLifecycle',
+            key: descriptor.reward.producerLifecycleKey,
+          } as const,
+        });
       }
     case 'shopOffer':
       if (state.kind !== 'shop' || state.shop === undefined) {
@@ -178,7 +233,10 @@ export function locateTraitReward(
       {
         const reward = state.shop.offers[owner.offerKey]?.reward;
         if (reward === undefined) failCommand(command, `missing Shop offer ${owner.offerKey}`);
-        return reward;
+        return Object.freeze({
+          reward,
+          levelEffectSource: { kind: 'shopProfile', key: state.shop.profileKey } as const,
+        });
       }
   }
 }
@@ -429,12 +487,12 @@ export function applyTraitOfferCommand(
   const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
   if (reward === undefined)
     failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
-  const existing = reward.traitOffersByAcquisitionRole[command.trait.acquisitionRole];
+  const existing = reward.reward.traitOffersByAcquisitionRole[command.trait.acquisitionRole];
   if (existing === undefined)
     failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
   const expectedGiver = traitGiverForAcquisitionRole(
     catalog,
-    reward.offer,
+    reward.reward.offer,
     command.trait.acquisitionRole,
   );
   if (expectedGiver === undefined) {

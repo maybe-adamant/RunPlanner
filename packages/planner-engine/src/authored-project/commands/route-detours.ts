@@ -16,7 +16,12 @@ import type {
 } from '../model';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
-import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import { requireCountedBinding } from '../room-state/declaration';
+import {
+  createDefaultLevelResolutions,
+  createDefaultTraitOffers,
+  producerLevelEffectSource,
+} from '../traits';
 import {
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
@@ -266,6 +271,7 @@ function switchTargetToAnomaly(
   if (!descriptor.replaceableTargetRoomGameNames.includes(rememberedRoom.gameName)) {
     failCommand(command, `${rememberedRoom.gameName} is not an Anomaly-replaceable target`);
   }
+  const rememberedBinding = requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
   const replacementRoom = requireAnomalyRoom(
     catalog,
     descriptor.defaultReplacementRoomGameName,
@@ -285,12 +291,17 @@ function switchTargetToAnomaly(
           occurrence.state.reward.offer,
           located.loadout,
         ),
-        ...(createDefaultLevelResolutions(catalog, occurrence.state.reward.offer) === undefined
+        ...(createDefaultLevelResolutions(
+          catalog,
+          occurrence.state.reward.offer,
+          producerLevelEffectSource(rememberedBinding),
+        ) === undefined
           ? {}
           : {
               levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                 catalog,
                 occurrence.state.reward.offer,
+                producerLevelEffectSource(rememberedBinding),
               ),
             }),
       }),
@@ -386,6 +397,7 @@ function revertAnomaly(
     command.occurrence.occurrenceId,
     command,
   );
+  const rememberedBinding = requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
   const withoutOutgoing = removeOutgoingDecision(topology, occurrence.occurrenceId);
   return updateTopology(
     document,
@@ -404,12 +416,17 @@ function revertAnomaly(
               occurrence.state.reward.offer,
               located.loadout,
             ),
-            ...(createDefaultLevelResolutions(catalog, occurrence.state.reward.offer) === undefined
+            ...(createDefaultLevelResolutions(
+              catalog,
+              occurrence.state.reward.offer,
+              producerLevelEffectSource(rememberedBinding),
+            ) === undefined
               ? {}
               : {
                   levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                     catalog,
                     occurrence.state.reward.offer,
+                    producerLevelEffectSource(rememberedBinding),
                   ),
                 }),
           }),

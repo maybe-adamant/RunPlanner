@@ -193,6 +193,7 @@ export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
   readonly address: LevelResolutionAddress;
   readonly levelCount: number;
+  readonly settledEmptyNoOp: boolean;
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
   readonly value: AuthoredLevelResolution;

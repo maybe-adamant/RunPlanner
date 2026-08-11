@@ -4,6 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
+import {
+  createDefaultLevelResolutions,
+  producerLevelEffectSource,
+} from '../../../src/authored-project/traits';
 
 function room(gameName: string): RoomDeclaration {
   const declaration = catalog.rooms.byKey[gameName];
@@ -12,6 +16,31 @@ function room(gameName: string): RoomDeclaration {
 }
 
 describe('authored room-state defaults', () => {
+  it('creates a random level child only for the RoomReward GiftDrop producer', () => {
+    const standard = room('F_Combat04');
+    if (standard.incomingReward.kind === 'none') throw new Error('expected reward producer');
+    expect(
+      createDefaultLevelResolutions(
+        catalog,
+        { rewardType: 'GiftDrop' },
+        producerLevelEffectSource(standard.incomingReward),
+      ),
+    ).toEqual({ self: { kind: 'random', targetTraitKey: null } });
+
+    const shop = room('F_Shop01');
+    if (shop.incomingReward.kind !== 'shop') throw new Error('expected shop producer');
+    expect(
+      createDefaultLevelResolutions(
+        catalog,
+        { rewardType: 'GiftDrop' },
+        {
+          kind: 'shopProfile',
+          key: shop.incomingReward.shopProfileKey,
+        },
+      ),
+    ).toBeUndefined();
+  });
+
   it('constructs complete declaration-owned complex defaults', () => {
     expect(
       createDefaultRoomState(catalog, room('H_Combat02'), {

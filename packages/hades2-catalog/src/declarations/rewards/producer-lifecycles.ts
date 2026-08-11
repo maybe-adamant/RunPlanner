@@ -47,6 +47,16 @@ export const producerLifecycles = [
           { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
         ],
       },
+      {
+        rewardType: 'GiftDrop',
+        acquisitionLifecycle: [
+          {
+            role: 'self',
+            lifecyclePoint: 'roomRewardPickup',
+            levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+          },
+        ],
+      },
     ],
   },
 ] as const satisfies RawRewardKernelInput['producerLifecycles'];

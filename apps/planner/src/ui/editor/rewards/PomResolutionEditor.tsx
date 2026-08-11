@@ -137,6 +137,7 @@ export function PomResolutionLauncher({
   );
   const target = selectedTarget(control.value);
   const prefix = control.value.kind === 'random' ? 'Edit Random Pom' : 'Edit Pom';
+  const emptyNoOp = control.settledEmptyNoOp;
   return (
     <button
       className="trait-offer-launcher quiet-action action-compact"
@@ -144,8 +145,13 @@ export function PomResolutionLauncher({
       onClick={() => dispatch(levelResolutionDialogOpened(control.address))}
       type="button"
     >
-      {prefix}: {target === null ? 'Choose target' : interaction.traitLabel(target)}
-      {levelCountLabel(interaction)}
+      {prefix}:{' '}
+      {emptyNoOp
+        ? 'No eligible traits'
+        : target === null
+          ? 'Choose target'
+          : interaction.traitLabel(target)}
+      {emptyNoOp ? '' : levelCountLabel(interaction)}
     </button>
   );
 }
@@ -231,6 +237,11 @@ export function PomResolutionEditor({
   const findings = activeGroup?.evaluations.flatMap((entry) => entry.findings) ?? [];
   const supported = activeGroup?.evaluations.some((entry) => entry.supported) ?? false;
   const requiredCount = activeGroup?.surface.requiredOfferCount;
+  const emptyNoOp =
+    activeGroup?.surface.emptyTargetAllowed === true &&
+    activeGroup.surface.eligibleTargetTraitKeys.length === 0 &&
+    randomTarget === null &&
+    supported;
   const count = interaction.value.kind === 'choice' ? (requiredCount ?? choiceSlots.length) : 1;
   const rows = Array.from({ length: count }, (_, index) => index);
   const domKey = pomDomKey(interaction.owner);
@@ -331,6 +342,26 @@ export function PomResolutionEditor({
               </fieldset>
             );
           })}
+        </div>
+      ) : emptyNoOp ? (
+        <p className="trait-offer-feedback-empty">No eligible traits; no level is gained.</p>
+      ) : interaction.value.kind === 'random' &&
+        activeGroup?.surface.emptyTargetAllowed === true &&
+        activeGroup.surface.eligibleTargetTraitKeys.length === 0 ? (
+        <div className="trait-offer-feedback">
+          <p className="trait-offer-feedback-empty">
+            No eligible traits; clear the recorded target.
+          </p>
+          <button
+            className="quiet-action"
+            onClick={() => {
+              setRandomTarget(null);
+              evaluateDraft(Object.freeze({ kind: 'random', targetTraitKey: null }));
+            }}
+            type="button"
+          >
+            Clear recorded target
+          </button>
         </div>
       ) : (
         <ContextualPicker
