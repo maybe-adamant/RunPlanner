@@ -1198,6 +1198,28 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(preHub.room.incomingReward?.origin).toEqual(
       createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
     );
+    for (const incoming of [
+      createIncomingRewardAddress(nBiome, nOccurrenceIds.opening),
+      createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
+    ]) {
+      const acquisitions = biome.rewards.branches.flatMap((branch) =>
+        branch.events.filter(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(incoming),
+        ),
+      );
+      expect(acquisitions.length).toBeGreaterThan(0);
+      expect(acquisitions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            settlement: expect.objectContaining({
+              site: expect.objectContaining({ pointKey: 'roomRewardPickup' }),
+            }),
+          }),
+        ]),
+      );
+    }
     expect(
       biome.findings.filter(
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(opening.origin),

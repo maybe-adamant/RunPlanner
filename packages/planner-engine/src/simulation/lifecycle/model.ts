@@ -68,6 +68,10 @@ export type RoomLifecycleEvent =
       readonly objectKey: RequiredRoomObjectDescriptor['key'];
     })
   | (RoomLifecycleEventBase & {
+      readonly kind: 'producerPointReached';
+      readonly point: ProducerLifecyclePointKey;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'producerRoleAdvanced';
       readonly producerLifecycleKey: string;
       readonly rewardType: string;

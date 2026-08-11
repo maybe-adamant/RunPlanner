@@ -23,6 +23,7 @@ import type {
   EncounterHistoryEntry,
   BiomeHistoryPrefix,
   CanonicalBiomeHistory,
+  HistoryEvent,
   HistoryStateView,
   ProgressiveRoomHistoryViews,
   RoomCreationSource,
@@ -96,6 +97,7 @@ import {
   countedBinding,
   initializeRewardBranches,
   processProducerRole,
+  settleProducerAcquisitionSite,
   processOfferGenerationCohort,
   processOwnedRewardAcquisition as processOwnedRewardAcquisitionState,
   processEncounterTraitOffer,
@@ -120,6 +122,11 @@ interface IncomingOfferCandidateContext {
   readonly incoming: CanonicalResolvedIncomingReward;
   readonly acquisitionView?: HistoryStateView;
   readonly acquisitionSequence?: number;
+  /** Exact reached lifecycle points, independent of the selected offer's roles. */
+  readonly producerPoints?: readonly Extract<
+    HistoryEvent,
+    { readonly kind: 'producerPointReached' }
+  >[];
 }
 
 function sameResolvedOffer(
@@ -343,6 +350,21 @@ function hasHubVisitDetails(
 function hubVisitFrontier(snapshot: BiomeRewardSnapshot): MaterializedHubVisitFrontier | undefined {
   const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
   return hasHubVisitDetails(frontier) ? frontier : undefined;
+}
+
+/** Structural ownership, deliberately independent of finding chronology. */
+function isHubOwnedRewardRoom(snapshot: BiomeRewardSnapshot, room: CanonicalRewardRoom): boolean {
+  if (room.kind === 'localChild') return true;
+  for (const decision of snapshot.decisions) {
+    if (decision.kind !== 'hub') continue;
+    if (
+      decision.visits.some((visit) => sameRewardRoomOwner(visit.target.room.origin, room.origin))
+    ) {
+      return true;
+    }
+  }
+  const frontier = hubVisitFrontier(snapshot);
+  return frontier !== undefined && sameRewardRoomOwner(frontier.target.room.origin, room.origin);
 }
 
 function hubFrontierRooms(snapshot: BiomeRewardSnapshot): readonly CanonicalRewardSource[] {
@@ -1300,29 +1322,95 @@ export function evaluateBiomeRewardsAssemblyInternal(
     candidateBranches: readonly RewardBranchState[],
     candidateFindings: Map<string, FindingRegionEntry>,
   ): RewardProducerCandidateResult {
+    const producerPoints = entry.producerPoints ?? Object.freeze([]);
     if (
       candidateBranches.length > 0 &&
-      entry.acquisitionView !== undefined &&
-      entry.acquisitionSequence !== undefined
+      entry.incoming.acquisitionEnabled !== false &&
+      entry.acquisitionView !== undefined
     ) {
-      candidateBranches = processOwnedRewardAcquisition(
-        catalog,
-        candidateBranches,
-        entry.room,
-        entry.declaration,
-        Object.freeze({ ...entry.incoming, offer }),
-        entry.acquisitionView,
-        entry.acquisitionSequence,
-        candidateFindings,
-        enteredBiomeCount,
-        ownerRegion(entry.incoming.origin),
-        rewardFindingChronologyForRoom(
-          snapshot,
-          entry.room.origin,
-          entry.acquisitionSequence,
-          'localRoomLifecycle',
-        ),
-      );
+      const hubOwnedProducer = isHubOwnedRewardRoom(snapshot, entry.room);
+      if (hubOwnedProducer) {
+        const acquisitionSequence = entry.acquisitionSequence;
+        if (acquisitionSequence !== undefined && producerPoints.length > 0) {
+          candidateBranches = processOwnedRewardAcquisition(
+            catalog,
+            candidateBranches,
+            entry.room,
+            entry.declaration,
+            Object.freeze({ ...entry.incoming, offer }),
+            entry.acquisitionView,
+            acquisitionSequence,
+            candidateFindings,
+            enteredBiomeCount,
+            ownerRegion(entry.incoming.origin),
+            rewardFindingChronologyForRoom(
+              snapshot,
+              entry.room.origin,
+              acquisitionSequence,
+              'localRoomLifecycle',
+            ),
+          );
+        }
+      } else {
+        const candidateRoom = Object.freeze({
+          ...entry.room,
+          incomingReward: Object.freeze({ ...entry.incoming, offer }),
+        });
+        const candidateLifecycle =
+          catalog.rewards.producerLifecycles.byKey[entry.incoming.producerLifecycleKey]?.rewardTypes
+            .byKey[offer.rewardType];
+        const candidateAcquisitionEvents =
+          candidateLifecycle === undefined
+            ? Object.freeze([])
+            : Object.freeze(
+                candidateLifecycle.acquisitionLifecycle.flatMap((binding) => {
+                  const reached = producerPoints.find(
+                    (event) => event.point === binding.lifecyclePoint,
+                  );
+                  return reached === undefined
+                    ? []
+                    : [
+                        Object.freeze({
+                          ...reached,
+                          rewardType: offer.rewardType,
+                          role: binding.role,
+                          lifecyclePoint: binding.lifecyclePoint,
+                          producerLifecycleKey: entry.incoming.producerLifecycleKey,
+                          kind: 'producerRoleAdvanced' as const,
+                        }),
+                      ];
+                }),
+              );
+        for (const acquisitionEvent of candidateAcquisitionEvents) {
+          if (candidateBranches.length === 0) break;
+          const settlement = settleProducerAcquisitionSite(
+            catalog,
+            candidateBranches,
+            candidateRoom,
+            acquisitionEvent,
+            (branchHistory) =>
+              rewardFacts(
+                catalog,
+                candidateRoom,
+                candidateRoom,
+                entry.declaration,
+                entry.acquisitionView!,
+                branchHistory,
+                enteredBiomeCount,
+              ),
+            candidateFindings,
+            fail,
+            ownerRegion(entry.incoming.origin),
+            rewardFindingChronologyForRoom(
+              snapshot,
+              entry.room.origin,
+              acquisitionEvent.sequence,
+              'localRoomLifecycle',
+            ),
+          );
+          candidateBranches = settlement.branches;
+        }
+      }
     }
     return candidateResult(candidateFindings, candidateBranches);
   }
@@ -1658,9 +1746,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ),
           };
           const incomingOwnerKey = semanticAddressKey(incoming.origin);
-          const acquisitionEvents = history.events.filter(
-            (candidate) =>
-              candidate.kind === 'producerRoleAdvanced' &&
+          const producerPoints = history.events.filter(
+            (
+              candidate,
+            ): candidate is Extract<HistoryEvent, { readonly kind: 'producerPointReached' }> =>
+              candidate.kind === 'producerPointReached' &&
               semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
           );
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
@@ -1675,7 +1765,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           const acquisitionSequence =
             incoming.acquisitionEnabled === false
               ? undefined
-              : (acquisitionEvents.at(-1)?.sequence ?? acquisitionView?.sequence);
+              : (producerPoints.at(-1)?.sequence ?? acquisitionView?.sequence);
           const candidateContext: IncomingOfferCandidateContext = Object.freeze({
             context: offerContext,
             room,
@@ -1683,6 +1773,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             incoming,
             ...(acquisitionView === undefined ? {} : { acquisitionView }),
             ...(acquisitionSequence === undefined ? {} : { acquisitionSequence }),
+            ...(producerPoints.length === 0 ? {} : { producerPoints }),
           });
           if (event.source === 'hubTarget') {
             if (pendingHubBoard === undefined) {
@@ -2274,31 +2365,47 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (room.kind === 'hub') {
           throw new BiomeRewardSimulationContractError('Hub room cannot advance a reward producer');
         }
-        branches = processProducerRole(
-          catalog,
-          branches,
-          room,
-          event,
-          (branchHistory) =>
-            rewardFacts(
-              catalog,
-              room,
-              room,
-              declaration,
-              roomView.preOutgoing ?? roomView.entry,
-              branchHistory,
-              enteredBiomeCount,
-            ),
-          findings,
-          fail,
-          ownerRegion(room.incomingReward?.origin ?? room.origin),
-          rewardFindingChronologyForRoom(
-            snapshot,
-            room.origin,
-            event.sequence,
-            'localRoomLifecycle',
-          ),
+        const producerFacts = (branchHistory: RewardHistoryState) =>
+          rewardFacts(
+            catalog,
+            room,
+            room,
+            declaration,
+            roomView.preOutgoing ?? roomView.entry,
+            branchHistory,
+            enteredBiomeCount,
+          );
+        const producerRegion = ownerRegion(room.incomingReward?.origin ?? room.origin);
+        const producerChronology = rewardFindingChronologyForRoom(
+          snapshot,
+          room.origin,
+          event.sequence,
+          'localRoomLifecycle',
         );
+        const hubOwnedProducer = isHubOwnedRewardRoom(snapshot, room);
+        branches = hubOwnedProducer
+          ? processProducerRole(
+              catalog,
+              branches,
+              room,
+              event,
+              producerFacts,
+              findings,
+              fail,
+              producerRegion,
+              producerChronology,
+            )
+          : settleProducerAcquisitionSite(
+              catalog,
+              branches,
+              room,
+              event,
+              producerFacts,
+              findings,
+              fail,
+              producerRegion,
+              producerChronology,
+            ).branches;
         break;
       }
       case 'encounterCompleted': {
