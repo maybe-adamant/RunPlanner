@@ -2,6 +2,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
@@ -25,7 +27,7 @@ import { createDefaultTraitOffers } from '../../../../src/authored-project/trait
 import { materializeHubDecision } from '../../../../src/simulation/materialization';
 import {
   initializeRewardBranches,
-  processOwnedRewardAcquisition,
+  settleOwnedAcquisitionSite,
 } from '../../../../src/simulation/rewards/processing';
 import { describe, expect, it } from 'vitest';
 
@@ -142,6 +144,16 @@ describe('N Hub rewards, validation, and candidates', () => {
           .map((event) => semanticAddressKey(event.origin)),
       ),
     );
+    for (const visit of hub.visits) {
+      const incoming = visit.target.room.incomingReward;
+      if (incoming === undefined) throw new Error('fixture lost visited target reward');
+      const site = createAcquisitionSiteAddress(visit.origin, 'roomRewardPickup');
+      const acquisition = acquired.find(
+        (event) => semanticAddressKey(event.origin) === semanticAddressKey(incoming.origin),
+      );
+      expect(acquisition).toMatchObject({ settlement: { site } });
+      expect(acquisition?.settlement?.entry.site).toEqual(site);
+    }
     const unvisitedHammer = hub.board.targets.find((target) => target.hubSlotKey === 'combat03');
     if (unvisitedHammer?.room.incomingReward === undefined) {
       throw new Error('fixture lost the unvisited N hammer reward');
@@ -665,6 +677,23 @@ describe('N Hub rewards, validation, and candidates', () => {
         )
         .map((event) => semanticAddressKey(event.origin)),
     ).toEqual(enteredOrigins);
+    for (const local of entered) {
+      const incoming = local.incomingReward;
+      if (incoming === undefined) throw new Error('entered local room lost its reward');
+      const site = createAcquisitionSiteAddress(local.origin, 'roomRewardPickup');
+      expect(
+        branch.events.find(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(incoming.origin),
+        ),
+      ).toMatchObject({
+        settlement: {
+          site,
+          entry: createAcquisitionEntryAddress(site, 'self'),
+        },
+      });
+    }
   });
 
   it('propagates and acquires a trait-bearing active Ephyra local reward', () => {
@@ -756,17 +785,19 @@ describe('N Hub rewards, validation, and candidates', () => {
         flags: { allSpellInvested: false, pendingSpellDrop: false },
       },
     };
-    const branches = processOwnedRewardAcquisition(
+    const branches = settleOwnedAcquisitionSite(
       catalog,
       initializeRewardBranches(),
-      incoming,
-      1,
+      {
+        siteOwner: local!.origin,
+        pointKey: 'roomRewardPickup',
+        entryKey: 'self',
+        source: incoming,
+        historySequence: 1,
+      },
       (history) => factsWithHistory(baseFacts, history, new Set()),
       findings,
-      (detail) => {
-        throw new Error(detail);
-      },
-    );
+    ).branches;
     const branch = branches[0];
     const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];
     if (branch === undefined || expectedOffer === undefined) {

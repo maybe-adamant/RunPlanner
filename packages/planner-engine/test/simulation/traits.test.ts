@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -42,7 +43,7 @@ import { createDefaultTraitOffers } from '../../src/authored-project/traits';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import {
   initializeRewardBranches,
-  processOwnedRewardAcquisition,
+  settleOwnedAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
 import {
   evaluateTraitOfferCandidate,
@@ -55,6 +56,30 @@ import {
 } from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
+
+function settleTestRoomReward(
+  biome: ReturnType<typeof createBiomeAddress>,
+  occurrenceId: ReturnType<typeof createOccurrenceId>,
+  branches: Parameters<typeof settleOwnedAcquisitionSite>[1],
+  source: Parameters<typeof settleOwnedAcquisitionSite>[2]['source'],
+  sequence: number,
+  facts: Parameters<typeof settleOwnedAcquisitionSite>[3],
+  findings: Parameters<typeof settleOwnedAcquisitionSite>[4],
+) {
+  return settleOwnedAcquisitionSite(
+    catalog,
+    branches,
+    {
+      siteOwner: createOccurrenceAddress(biome, occurrenceId),
+      pointKey: 'roomRewardPickup',
+      entryKey: 'self',
+      source,
+      historySequence: sequence,
+    },
+    facts,
+    findings,
+  ).branches;
+}
 
 function levelMutation(
   sequence: number,
@@ -1688,8 +1713,9 @@ describe('reached trait offer chronology', () => {
       factsWithHistory(baseFacts(), history, new Set());
     const findings = new Map();
     const hammer = { rewardType: 'WeaponUpgrade' as const };
-    let branches = processOwnedRewardAcquisition(
-      catalog,
+    let branches = settleTestRoomReward(
+      biome,
+      createOccurrenceId('invalid-hammer-trace'),
       initializeRewardBranches(),
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('invalid-hammer-trace')),
@@ -1701,16 +1727,14 @@ describe('reached trait offer chronology', () => {
       1,
       facts,
       findings,
-      (detail) => {
-        throw new Error(detail);
-      },
     );
     const boon = {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
-    branches = processOwnedRewardAcquisition(
-      catalog,
+    branches = settleTestRoomReward(
+      biome,
+      createOccurrenceId('valid-boon-trace'),
       branches,
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('valid-boon-trace')),
@@ -1722,9 +1746,6 @@ describe('reached trait offer chronology', () => {
       2,
       facts,
       findings,
-      (detail) => {
-        throw new Error(detail);
-      },
     );
 
     const branch = branches[0];

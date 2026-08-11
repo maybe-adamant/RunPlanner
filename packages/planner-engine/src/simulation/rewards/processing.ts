@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
+  type AcquisitionSiteOwnerAddress,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
@@ -30,6 +31,7 @@ import {
   type ShopGenerationSupport,
   type ShopGenerationWitness,
   type ShopPurchaseFailure,
+  type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { HistoryEvent } from '../history';
@@ -98,9 +100,33 @@ export interface AcquisitionSettlementProduct {
 export interface AcquisitionSettlementEntry {
   readonly address: AcquisitionEntryAddress;
   readonly source: SemanticAddress;
-  readonly acquisitionRole: string;
-  readonly lifecyclePoint: string;
+  /** One atomic entry may apply several declaration-owned roles in sequence. */
+  readonly acquisitionRoles: readonly AcquisitionSettlementRole[];
   readonly participation: 'mandatory';
+}
+
+export interface AcquisitionSettlementRole {
+  readonly role: string;
+  readonly lifecyclePoint: ProducerLifecyclePointKey;
+}
+
+export interface OwnedAcquisitionSettlementRequest {
+  readonly siteOwner: AcquisitionSiteOwnerAddress;
+  readonly pointKey: string;
+  readonly entryKey: string;
+  readonly source: AcquisitionSource;
+  readonly historySequence: number;
+}
+export interface AcquisitionRoleResolution extends AcquisitionSettlementRole {
+  readonly historySequence: number;
+}
+export interface AcquisitionSource {
+  readonly origin: TraitOfferOwnerAddress;
+  readonly offer: CanonicalResolvedIncomingReward['offer'];
+  readonly producerLifecycleKey: string;
+  readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+  readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
+  readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
 }
 
 export type RewardFactsFactory = (
@@ -1321,6 +1347,7 @@ export function settleProducerAcquisitionSite(
   fail: (detail: string) => never,
   atomicRegion?: string,
   findingChronology?: FindingChronology,
+  siteOwner?: AcquisitionSiteOwnerAddress,
 ): AcquisitionSettlementProduct {
   const incoming = room.incomingReward;
   if (
@@ -1333,19 +1360,20 @@ export function settleProducerAcquisitionSite(
   if (event.origin.kind === 'hubRoom') {
     return fail('Hub room cannot own an ordinary producer acquisition site');
   }
-  const site = createAcquisitionSiteAddress(event.origin, event.lifecyclePoint);
+  const site = createAcquisitionSiteAddress(siteOwner ?? event.origin, event.lifecyclePoint);
   const entry = Object.freeze({
     address: createAcquisitionEntryAddress(site, event.role),
     source: incoming.origin,
-    acquisitionRole: event.role,
-    lifecyclePoint: event.lifecyclePoint,
+    acquisitionRoles: Object.freeze([
+      Object.freeze({ role: event.role, lifecyclePoint: event.lifecyclePoint }),
+    ]),
     participation: 'mandatory' as const,
   });
   const settled = applyProducerRoleHistory(
     catalog,
     branches,
     incoming,
-    event,
+    { role: event.role, lifecyclePoint: event.lifecyclePoint, historySequence: event.sequence },
     facts,
     findings,
     atomicRegion,
@@ -1359,55 +1387,79 @@ export function settleProducerAcquisitionSite(
   });
 }
 
-/** The retained direct history fold for Hub-owned producer families. */
-export function processProducerRole(
+/** Settles one exact composite-owned acquisition entry at its structural site. */
+export function settleOwnedAcquisitionSite(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
-  room: CanonicalRewardRoom,
-  event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
+  request: OwnedAcquisitionSettlementRequest,
   facts: RewardFactsFactory,
   findings: Map<string, FindingRegionEntry>,
-  fail: (detail: string) => never,
   atomicRegion?: string,
   findingChronology?: FindingChronology,
-): readonly RewardBranchState[] {
-  const incoming = room.incomingReward;
-  if (
-    incoming === undefined ||
-    incoming.offer.rewardType !== event.rewardType ||
-    incoming.producerLifecycleKey !== event.producerLifecycleKey
-  ) {
-    return fail(`${room.gameName} producer event does not match its offer`);
+): AcquisitionSettlementProduct {
+  const site = createAcquisitionSiteAddress(request.siteOwner, request.pointKey);
+  const producer = catalog.rewards.producerLifecycles.byKey[request.source.producerLifecycleKey];
+  const lifecycle = producer?.rewardTypes.byKey[request.source.offer.rewardType];
+  if (lifecycle === undefined) {
+    throw new Error(
+      `${request.source.producerLifecycleKey} does not support ${request.source.offer.rewardType}`,
+    );
   }
-  return applyProducerRoleHistory(
-    catalog,
-    branches,
-    incoming,
-    event,
-    facts,
-    findings,
-    atomicRegion,
-    findingChronology,
+  const roleBindings: readonly AcquisitionRoleResolution[] = Object.freeze(
+    lifecycle.acquisitionLifecycle.map((binding) =>
+      Object.freeze({ ...binding, historySequence: request.historySequence }),
+    ),
   );
+  if (roleBindings.length === 0)
+    throw new Error('owned acquisition settlement has no lifecycle roles');
+  const entry = Object.freeze({
+    address: createAcquisitionEntryAddress(site, request.entryKey),
+    source: request.source.origin,
+    acquisitionRoles: Object.freeze(
+      roleBindings.map((binding) =>
+        Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
+      ),
+    ),
+    participation: 'mandatory' as const,
+  });
+  return Object.freeze({
+    site,
+    entries: Object.freeze([entry]),
+    branches: roleBindings.reduce(
+      (current, binding) =>
+        applyProducerRoleHistory(
+          catalog,
+          current,
+          request.source,
+          binding,
+          facts,
+          findings,
+          atomicRegion,
+          findingChronology,
+          Object.freeze({ site, entry: entry.address }),
+        ),
+      branches,
+    ),
+  });
 }
 
 function applyProducerRoleHistory(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
-  incoming: CanonicalResolvedIncomingReward,
-  event: Extract<HistoryEvent, { readonly kind: 'producerRoleAdvanced' }>,
+  incoming: AcquisitionSource,
+  resolution: AcquisitionRoleResolution,
   facts: RewardFactsFactory,
   findings: Map<string, FindingRegionEntry>,
   atomicRegion: string | undefined,
   findingChronology: FindingChronology | undefined,
-  settlement?: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
+  settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
 ): readonly RewardBranchState[] {
   const next: RewardBranchState[] = [];
   for (const branch of branches) {
     const branchFacts = facts(branch.history);
     if (
       !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, branchFacts, {
-        acquisitionRole: event.role,
+        acquisitionRole: resolution.role,
       })
     ) {
       continue;
@@ -1415,8 +1467,8 @@ function applyProducerRoleHistory(
     const acquisition = resolveAcquisitionRole(
       catalog.rewards,
       incoming.offer,
-      event.role,
-      event.lifecyclePoint,
+      resolution.role,
+      resolution.lifecyclePoint,
     );
     const history = applyConcreteAcquisition(
       catalog.rewards,
@@ -1427,18 +1479,18 @@ function applyProducerRoleHistory(
       catalog,
       Object.freeze({ ...branch, history }),
       incoming,
-      event.role,
-      event.lifecyclePoint,
-      event.sequence,
+      resolution.role,
+      resolution.lifecyclePoint,
+      resolution.historySequence,
       findings,
       findingChronology,
     );
     next.push(
-      appendRewardEvent(withTrait, event.sequence, {
+      appendRewardEvent(withTrait, resolution.historySequence, {
         kind: 'concreteAcquisition',
         origin: incoming.origin,
         acquisition,
-        ...(settlement === undefined ? {} : { settlement }),
+        settlement,
       }),
     );
   }
@@ -1447,96 +1499,14 @@ function applyProducerRoleHistory(
       findings,
       rewardFinding('rewardAcquisitionUnavailable', incoming.origin, {
         ...offerEvidence(incoming.offer),
-        role: event.role,
-        lifecyclePoint: event.lifecyclePoint,
+        role: resolution.role,
+        lifecyclePoint: resolution.lifecyclePoint,
       }),
       atomicRegion,
-      findingChronology ?? historyChronology(event.sequence),
+      findingChronology ?? historyChronology(resolution.historySequence),
     );
   }
   return Object.freeze(next);
-}
-
-export function processOwnedRewardAcquisition(
-  catalog: Catalog,
-  branches: readonly RewardBranchState[],
-  reward: {
-    readonly offer: CanonicalResolvedIncomingReward['offer'];
-    readonly origin: SemanticAddress;
-    readonly producerLifecycleKey: string;
-    readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
-    readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
-    readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
-  },
-  historySequence: number,
-  facts: RewardFactsFactory,
-  findings: Map<string, FindingRegionEntry>,
-  fail: (detail: string) => never,
-  atomicRegion?: string,
-  findingChronology?: FindingChronology,
-): readonly RewardBranchState[] {
-  const producer = catalog.rewards.producerLifecycles.byKey[reward.producerLifecycleKey];
-  const lifecycle = producer?.rewardTypes.byKey[reward.offer.rewardType];
-  if (lifecycle === undefined) {
-    return fail(`${reward.producerLifecycleKey} does not support ${reward.offer.rewardType}`);
-  }
-  let current = branches;
-  for (const binding of lifecycle.acquisitionLifecycle) {
-    const next: RewardBranchState[] = [];
-    for (const branch of current) {
-      const branchFacts = facts(branch.history);
-      if (
-        !isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, branchFacts, {
-          acquisitionRole: binding.role,
-        })
-      ) {
-        continue;
-      }
-      const acquisition = resolveAcquisitionRole(
-        catalog.rewards,
-        reward.offer,
-        binding.role,
-        binding.lifecyclePoint,
-      );
-      const history = applyConcreteAcquisition(
-        catalog.rewards,
-        branch.history,
-        acquisition.acquisition,
-      );
-      const withTrait = applyTraitOfferForAcquisition(
-        catalog,
-        Object.freeze({ ...branch, history }),
-        reward as CanonicalResolvedIncomingReward,
-        binding.role,
-        binding.lifecyclePoint,
-        historySequence,
-        findings,
-        findingChronology,
-      );
-      next.push(
-        appendRewardEvent(withTrait, historySequence, {
-          kind: 'concreteAcquisition',
-          origin: reward.origin,
-          acquisition,
-        }),
-      );
-    }
-    if (next.length === 0) {
-      addRewardFinding(
-        findings,
-        rewardFinding('rewardAcquisitionUnavailable', reward.origin, {
-          ...offerEvidence(reward.offer),
-          role: binding.role,
-          lifecyclePoint: binding.lifecyclePoint,
-        }),
-        atomicRegion,
-        findingChronology ?? historyChronology(historySequence),
-      );
-      return Object.freeze([]);
-    }
-    current = Object.freeze(next);
-  }
-  return Object.freeze(current.map((branch) => advanceRewardBranch(branch, historySequence)));
 }
 
 export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
