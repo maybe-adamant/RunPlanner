@@ -284,6 +284,7 @@ function applyTraitOfferForAcquisition(
         const codeByFinding = {
           missingTarget: 'missingPomTarget',
           wrongOfferCount: 'pomWrongOfferCount',
+          duplicateTargets: 'pomWrongOfferCount',
           selectedTargetNotOffered: 'pomSelectedTargetNotOffered',
           targetUnavailable: 'pomTargetUnavailable',
           kindMismatch: 'pomTargetUnavailable',
@@ -304,6 +305,7 @@ function applyTraitOfferForAcquisition(
             }),
             ownerRegion(evaluation.address),
             findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+            evaluation,
           );
         }
       }
@@ -578,8 +580,39 @@ export function addRewardFinding(
   value: SemanticFinding,
   atomicRegion = ownerRegion(value.origin),
   chronology?: FindingChronology,
+  levelResolutionEvaluation?: ReachedLevelResolutionEvaluation,
 ): void {
-  findings.set(findingKey(value), findingRegion(value, atomicRegion, chronology, 'reward'));
+  const key = findingKey(value);
+  const existing = findings.get(key);
+  const region = findingRegion(value, atomicRegion, chronology, 'reward');
+  const evaluations = [
+    ...(existing?.levelResolutionEvaluations ?? []),
+    ...(levelResolutionEvaluation === undefined ? [] : [levelResolutionEvaluation]),
+  ].filter(
+    (evaluation, index, all) =>
+      all.findIndex(
+        (candidate) =>
+          semanticAddressKey(candidate.address) === semanticAddressKey(evaluation.address) &&
+          JSON.stringify([
+            candidate.before,
+            candidate.value,
+            candidate.effectKind,
+            candidate.levelCount,
+          ]) ===
+            JSON.stringify([
+              evaluation.before,
+              evaluation.value,
+              evaluation.effectKind,
+              evaluation.levelCount,
+            ]),
+      ) === index,
+  );
+  findings.set(
+    key,
+    evaluations.length === 0
+      ? region
+      : Object.freeze({ ...region, levelResolutionEvaluations: Object.freeze(evaluations) }),
+  );
 }
 
 function historyChronology(sequence: number): FindingChronology {

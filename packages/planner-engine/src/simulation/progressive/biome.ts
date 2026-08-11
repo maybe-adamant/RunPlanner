@@ -421,13 +421,24 @@ function retainBlockedRegionProducts(
       (offer) => !retainedOfferKeys.has(semanticAddressKey(offer.address)),
     ),
   ]);
-  const selectedLevelResolutionPrefix =
-    blockedLevelAt === undefined
-      ? []
-      : selectedRewards.selectedLevelResolutions.filter(
-          (resolution) =>
-            semanticAddressKey(resolution.address) === semanticAddressKey(blockedLevelAt),
-        );
+  const blockedRewardFindings = Object.freeze(
+    selectedFindingRegions
+      .filter((entry) => entry.atomicRegion === blockedRegionKey && entry.aggregate === 'reward')
+      .map((entry) => entry.finding),
+  );
+  const retainedLevelFindingKeys = new Set(
+    [...retainedRewards.findings, ...blockedRewardFindings]
+      .filter((finding) => finding.origin.kind === 'levelResolution')
+      .map((finding) => semanticAddressKey(finding.origin)),
+  );
+  const blockedLevelKey =
+    blockedLevelAt === undefined ? undefined : semanticAddressKey(blockedLevelAt);
+  const selectedLevelResolutionPrefix = selectedRewards.selectedLevelResolutions.filter(
+    (resolution) => {
+      const key = semanticAddressKey(resolution.address);
+      return key === blockedLevelKey || retainedLevelFindingKeys.has(key);
+    },
+  );
   const retainedLevelKeys = new Set(
     retainedRewards.selectedLevelResolutions.map((resolution) =>
       semanticAddressKey(resolution.address),
@@ -439,11 +450,6 @@ function retainBlockedRegionProducts(
       (resolution) => !retainedLevelKeys.has(semanticAddressKey(resolution.address)),
     ),
   ]);
-  const blockedRewardFindings = Object.freeze(
-    selectedFindingRegions
-      .filter((entry) => entry.atomicRegion === blockedRegionKey && entry.aggregate === 'reward')
-      .map((entry) => entry.finding),
-  );
   const retainedFindingKeys = new Set(
     retainedRewards.findings.map((finding) => findingIdentityKey(finding)),
   );
@@ -473,18 +479,19 @@ function retainBlockedRegionProducts(
         : retainedArtifacts.traitOffers.at(address);
     },
   });
-  const levelCapability =
-    blockedLevelAt === undefined
-      ? undefined
-      : (selectedArtifacts.levelResolutions.at(blockedLevelAt) ??
-        blockedArtifacts.levelResolutions.at(blockedLevelAt));
+  const selectedLevelKeys = new Set(
+    selectedLevelResolutionPrefix.map((resolution) => semanticAddressKey(resolution.address)),
+  );
   const levelResolutions = Object.freeze({
-    at: (address: LevelResolutionAddress) =>
-      blockedLevelAt !== undefined &&
-      semanticAddressKey(address) === semanticAddressKey(blockedLevelAt) &&
-      levelCapability !== undefined
-        ? levelCapability
-        : retainedArtifacts.levelResolutions.at(address),
+    at: (address: LevelResolutionAddress) => {
+      const key = semanticAddressKey(address);
+      if (!selectedLevelKeys.has(key)) return retainedArtifacts.levelResolutions.at(address);
+      return (
+        selectedArtifacts.levelResolutions.at(address) ??
+        blockedArtifacts.levelResolutions.at(address) ??
+        retainedArtifacts.levelResolutions.at(address)
+      );
+    },
   });
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =

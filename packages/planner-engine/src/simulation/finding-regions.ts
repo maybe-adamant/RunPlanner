@@ -1,5 +1,6 @@
 import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type { SemanticFinding } from './model';
+import type { ReachedLevelResolutionEvaluation } from './traits';
 
 /** Internal evaluator product; never exported through the public simulation API. */
 export interface FindingRegionEntry {
@@ -8,6 +9,8 @@ export interface FindingRegionEntry {
   /** Evaluator-owned chronology for non-linear structures. */
   readonly chronology?: FindingChronology;
   readonly aggregate?: FindingAggregate;
+  /** Exact reached Pom contexts retained if later policy eliminates their branches. */
+  readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
 }
 
 export type FindingAggregate = 'generation' | 'reward' | 'encounter';
