@@ -2,8 +2,12 @@
 
 ## Status
 
-**Active follow-up delivery plan.** Gates A-C are delivered. Follow-up planning
-baseline: `fb3e7cf`.
+**Delivered through Gate D; Gates E-F superseded.** The committed source
+baseline is `dcee2d4`. The attempted Narcissus Gate E implementation exposed a
+producer-versus-acquisition ownership defect and remains only as an uncommitted
+prototype. `ACQUISITION_SETTLEMENT_IMPLEMENTATION.md` now owns the replacement
+delivery contract. Sections below that describe Narcissus option-local outcome
+state are historical rejected planning, not implementation authority.
 
 This is an isolated delivery document. Do not link it from stable design,
 biome, audit, or progress indexes while implementation is active. At closure,
