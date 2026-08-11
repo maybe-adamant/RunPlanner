@@ -431,6 +431,7 @@ function normalizeTraits(
       const acquisition = requireObject(trait.targetedAcquisition, acquisitionPath) as unknown as {
         readonly kind?: unknown;
         readonly target?: unknown;
+        readonly maximumEligibleLevelByTraitAndRarity?: unknown;
       };
       const kind = closedValue(
         acquisition.kind,
@@ -449,10 +450,82 @@ function normalizeTraits(
               ['upgradableHammer'] as const,
               `${acquisitionPath}.target`,
             );
-      targetedAcquisition =
-        kind === 'promoteGodTraitToHeroic'
-          ? Object.freeze({ kind, target: target as 'superchargeableGodTrait' })
-          : Object.freeze({ kind, target: target as 'upgradableHammer' });
+      if (kind === 'promoteGodTraitToHeroic') {
+        const rawLimits = acquisition.maximumEligibleLevelByTraitAndRarity;
+        let maximumEligibleLevelByTraitAndRarity:
+          Readonly<Record<string, Readonly<Partial<Record<TraitRarity, number>>>>> | undefined;
+        if (rawLimits !== undefined) {
+          const limits = requireObject(
+            rawLimits,
+            `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity`,
+          );
+          const normalized: Record<string, Readonly<Partial<Record<TraitRarity, number>>>> = {};
+          for (const [targetTraitKey, rawByRarity] of Object.entries(limits)) {
+            const targetTrait = declarations.find((candidate) => candidate.key === targetTraitKey);
+            if (targetTrait === undefined)
+              fail(
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
+                'unknown trait',
+              );
+            if (!coreGodTraitKeys.has(targetTraitKey) || targetTrait.blockStacking) {
+              fail(
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
+                'must be a Pom-eligible core god trait',
+              );
+            }
+            const byRarity = requireObject(
+              rawByRarity,
+              `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
+            );
+            const normalizedByRarity: Partial<Record<TraitRarity, number>> = {};
+            for (const [rarity, maximum] of Object.entries(byRarity)) {
+              const normalizedRarity = closedValue(
+                rarity,
+                IN_RUN_RARITIES,
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
+              );
+              if (!targetTrait.equippedRarities?.includes(normalizedRarity)) {
+                fail(
+                  `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
+                  'must be an equipped rarity of the target trait',
+                );
+              }
+              normalizedByRarity[normalizedRarity] = requirePositiveInteger(
+                maximum as number,
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
+              );
+            }
+            if (Object.keys(normalizedByRarity).length === 0)
+              fail(
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
+                'must not be empty',
+              );
+            const freshRarities = targetTrait.freshOfferRarities ?? [];
+            if (
+              Object.keys(normalizedByRarity).length !== freshRarities.length ||
+              freshRarities.some((rarity) => normalizedByRarity[rarity] === undefined)
+            ) {
+              fail(
+                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
+                'must cover exactly the target fresh ranked rarities',
+              );
+            }
+            normalized[targetTraitKey] = Object.freeze(normalizedByRarity);
+          }
+          if (Object.keys(normalized).length === 0)
+            fail(`${acquisitionPath}.maximumEligibleLevelByTraitAndRarity`, 'must not be empty');
+          maximumEligibleLevelByTraitAndRarity = Object.freeze(normalized);
+        }
+        targetedAcquisition = Object.freeze({
+          kind,
+          target: target as 'superchargeableGodTrait',
+          ...(maximumEligibleLevelByTraitAndRarity === undefined
+            ? {}
+            : { maximumEligibleLevelByTraitAndRarity }),
+        });
+      } else {
+        targetedAcquisition = Object.freeze({ kind, target: target as 'upgradableHammer' });
+      }
     }
     // Requirement operands are checked against the complete trait collection after it exists.
     const rarityDomain = Object.freeze(

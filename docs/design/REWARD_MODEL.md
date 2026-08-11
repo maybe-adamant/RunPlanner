@@ -987,8 +987,9 @@ availability counts distinct legal fresh trait keys from the same pre-offer
 branch. The maximum replacement count is one when at least two ordinary keys
 remain, otherwise `3 - ordinaryCandidateCount`. Replacement waives only
 occupied-slot failure; all other requirements remain authoritative. The 10
-percent roll, force flags, progression gates, counters, level/stack transfer,
-and `ExchangeLevelBonus` remain deferred.
+percent roll, force flags, progression gates, counters, and
+`ExchangeLevelBonus` remain deferred. Replacement transfers the displaced
+trait's folded level, including into a non-Pom-eligible replacement.
 
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,
@@ -1000,9 +1001,9 @@ and field-NPC traits while leaving their independent boon-rarity facts intact.
 The old ordinary-source increment approximation is retired. NPC/Story
 effect-backed choices remain outside this persistent trait lifecycle unless
 their declaration owns one of the engine's closed acquisition transitions.
-Added levels/stacks,
-the Bridal Glow Hephaestus cooldown exception, and other undeclared mutations
-and providers remain deferred.
+Unmodeled numeric combat-value curves and other undeclared mutations and
+providers remain deferred. Pom eligibility, level mutations, and the narrow
+Bridal Glow Hephaestus cooldown limits are explicit normalized products.
 
 Proper Upbringing is the declaration-owned rarity-floor lifecycle. Its
 normalized declaration supplies a `Common`-to-`Rare` floor that activates when

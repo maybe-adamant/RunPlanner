@@ -84,7 +84,8 @@ describe('Shop trait acquisition processing', () => {
     const event = branch.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
     );
-    if (event === undefined) throw new Error('purchased Shop Hammer fold event is missing');
+    if (event?.kind !== 'traitOffer')
+      throw new Error('purchased Shop Hammer fold event is missing');
     expect(event).toMatchObject({
       owner: shopOffer,
       acquisitionRole: 'weaponUpgrade',

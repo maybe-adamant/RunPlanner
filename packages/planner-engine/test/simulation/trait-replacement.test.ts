@@ -3,7 +3,7 @@ import {
   assessTraitOption,
   assessTraitReplacementComposition,
   createTraitHistoryState,
-  foldTraitOfferEvents,
+  foldTraitHistoryEvents,
   traitCandidates,
   recordReachedTraitOffer,
   evaluateReachedTraitOffer,
@@ -15,11 +15,12 @@ import { describe, expect, it } from 'vitest';
 const owner = { kind: 'project' } as const;
 
 function history(entries: readonly [string, string, string][]) {
-  return foldTraitOfferEvents(
+  return foldTraitHistoryEvents(
     catalog,
     entries.map(([giverKey, traitKey, rarity], index) => {
       const giver = catalog.traitGivers.byKey[giverKey]!;
       return {
+        kind: 'traitOffer' as const,
         owner,
         acquisitionRole: `seed${index}`,
         sequence: index,
@@ -64,11 +65,12 @@ function narrowApolloCatalog() {
 }
 
 function historyFor(testCatalog: typeof catalog, entries: readonly [string, string, string][]) {
-  return foldTraitOfferEvents(
+  return foldTraitHistoryEvents(
     testCatalog,
     entries.map(([giverKey, traitKey, rarity], index) => {
       const giver = testCatalog.traitGivers.byKey[giverKey]!;
       return {
+        kind: 'traitOffer' as const,
         owner,
         acquisitionRole: `seed${index}`,
         sequence: index,

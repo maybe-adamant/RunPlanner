@@ -13,6 +13,7 @@ export type { TraitFindingCode } from './model';
 import { optionIndex } from '../authored-project/traits';
 
 export interface TraitOfferEvent {
+  readonly kind: 'traitOffer';
   readonly owner: SemanticAddress;
   readonly acquisitionRole: string;
   readonly sequence: number;
@@ -25,6 +26,26 @@ export interface TraitOfferEvent {
   /** Exact declaration-owned acquisition mutation derived from pre-offer state. */
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
 }
+
+/** A closed derived mutation of an already-equipped Pom-eligible trait. */
+export interface TraitLevelMutationEvent {
+  readonly kind: 'levelMutation';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly sourceTraitKey?: string;
+  readonly targetTraitKey: string;
+  readonly oldLevel: number;
+  readonly newLevel: number;
+  readonly giverKey?: never;
+  readonly options?: never;
+  readonly selectedOptionKey?: never;
+  readonly replacementTransition?: never;
+  readonly targetedAcquisitionTransition?: never;
+}
+
+export type TraitHistoryEvent = TraitOfferEvent | TraitLevelMutationEvent;
 
 export interface TraitReplacementTransition {
   readonly slot: string;
@@ -44,6 +65,8 @@ export type TraitTargetedAcquisitionTransition =
       readonly kind: 'promoteGodTraitToHeroic';
       readonly oldRarity: TraitRarity;
       readonly newRarity: 'Heroic';
+      readonly oldLevel: number;
+      readonly newLevel: number;
     })
   | (TraitTargetedAcquisitionTransitionBase & {
       readonly kind: 'upgradeHammerToRank2';
@@ -61,7 +84,7 @@ export interface TraitTargetedAcquisitionAssessment {
 }
 
 export interface TraitHistoryState {
-  readonly events: readonly TraitOfferEvent[];
+  readonly events: readonly TraitHistoryEvent[];
   readonly equippedTraits: Readonly<Record<string, EquippedTrait>>;
   readonly ordinaryBoonSlots: Readonly<Record<string, EquippedTrait>>;
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
@@ -70,6 +93,12 @@ export interface TraitHistoryState {
   readonly upgradableTraitCount: number;
   /** Derived floor for fresh scalable god-trait offers. */
   readonly minimumScalableGodTraitRarity?: 'Rare';
+}
+
+/** The sole supported Pom target predicate. */
+export function isPomEligibleTrait(catalog: Catalog, traitKey: string): boolean {
+  const declaration = catalog.traits.byKey[traitKey];
+  return declaration?.isCoreGodTrait === true && !declaration.blockStacking;
 }
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
@@ -105,12 +134,7 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     ) {
       rarityCounts[equipped.rarity] = (rarityCounts[equipped.rarity] ?? 0) + 1;
     }
-    if (
-      declaration.isCoreGodTrait &&
-      !declaration.blockStacking &&
-      declaration.selfExclusion !== equipped.traitKey
-    )
-      upgradable += 1;
+    if (isPomEligibleTrait(catalog, equipped.traitKey)) upgradable += 1;
   }
   const highestBaseElementCount = Math.max(
     elements.Earth,
@@ -149,6 +173,7 @@ function promoteActiveFloorTargets(
   catalog: Catalog,
   equippedTraits: Record<string, EquippedTrait>,
   activeSources: ReadonlySet<string>,
+  events: readonly TraitOfferEvent[],
 ): void {
   if (activeSources.size === 0) return;
   const effects = [...activeSources].flatMap((sourceKey) => {
@@ -158,6 +183,7 @@ function promoteActiveFloorTargets(
       : [{ sourceKey, effect: declaration.rarityFloorEffect }];
   });
   if (effects.length === 0) return;
+  const promotedKeys: string[] = [];
   for (const [traitKey, equipped] of Object.entries(equippedTraits)) {
     const declaration = catalog.traits.byKey[traitKey];
     if (
@@ -174,50 +200,100 @@ function promoteActiveFloorTargets(
     )
       continue;
     equippedTraits[traitKey] = Object.freeze({ ...equipped, rarity: 'Rare' });
+    promotedKeys.push(traitKey);
+  }
+  for (const event of events) {
+    const transition = event.targetedAcquisitionTransition;
+    if (
+      transition?.kind !== 'promoteGodTraitToHeroic' ||
+      !promotedKeys.includes(transition.sourceTraitKey)
+    )
+      continue;
+    const target = equippedTraits[transition.targetTraitKey];
+    if (target?.level === undefined) continue;
+    equippedTraits[transition.targetTraitKey] = Object.freeze({
+      ...target,
+      level: target.level + 1,
+    });
   }
 }
 
-export function foldTraitOfferEvents(
+export function foldTraitHistoryEvents(
   catalog: Catalog,
-  events: readonly TraitOfferEvent[],
+  events: readonly TraitHistoryEvent[],
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
   let activeSources: ReadonlySet<string> = new Set();
-  const ordered = [...events].sort((left, right) => left.sequence - right.sequence);
-  for (const event of ordered) {
-    const option = event.options[optionIndex(event.selectedOptionKey)];
-    if (option === undefined || equipped[option.traitKey] !== undefined) continue;
-    const giver = catalog.traitGivers.byKey[event.giverKey];
-    const declaration = catalog.traits.byKey[option.traitKey];
-    if (giver === undefined || declaration === undefined) continue;
-    if (event.replacementTransition !== undefined) {
-      delete equipped[event.replacementTransition.replacedTraitKey];
-    }
-    equipped[option.traitKey] = Object.freeze({
-      traitKey: option.traitKey,
-      giverKey: giver.key,
-      providerKind: giver.providerKind,
-      ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-      ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
-      sourceRole: event.acquisitionRole,
-    });
-    const targeted = event.targetedAcquisitionTransition;
-    if (targeted !== undefined) {
-      const target = equipped[targeted.targetTraitKey];
-      if (target !== undefined) {
-        switch (targeted.kind) {
-          case 'promoteGodTraitToHeroic':
-            equipped[targeted.targetTraitKey] = Object.freeze({
-              ...target,
-              rarity: targeted.newRarity,
-            });
-            break;
-          case 'upgradeHammerToRank2':
-            equipped[targeted.targetTraitKey] = Object.freeze({
-              ...target,
-              hammerRank: targeted.newHammerRank,
-            });
-            break;
+  const ordered = [...events].sort(
+    (left, right) =>
+      left.sequence - right.sequence ||
+      (left.kind === 'traitOffer' ? 0 : 1) - (right.kind === 'traitOffer' ? 0 : 1),
+  );
+  for (let index = 0; index < ordered.length;) {
+    const sequence = ordered[index]!.sequence;
+    const group: TraitHistoryEvent[] = [];
+    while (ordered[index]?.sequence === sequence) group.push(ordered[index++]!);
+    for (const event of group) {
+      if (event.kind === 'levelMutation') {
+        const target = equipped[event.targetTraitKey];
+        if (
+          target !== undefined &&
+          target.level === event.oldLevel &&
+          event.newLevel > event.oldLevel &&
+          isPomEligibleTrait(catalog, event.targetTraitKey)
+        ) {
+          equipped[event.targetTraitKey] = Object.freeze({ ...target, level: event.newLevel });
+        }
+        continue;
+      }
+      const option = event.options[optionIndex(event.selectedOptionKey)];
+      if (option === undefined || equipped[option.traitKey] !== undefined) continue;
+      const giver = catalog.traitGivers.byKey[event.giverKey];
+      const declaration = catalog.traits.byKey[option.traitKey];
+      if (giver === undefined || declaration === undefined) continue;
+      const replacementLevel =
+        event.replacementTransition === undefined
+          ? undefined
+          : equipped[event.replacementTransition.replacedTraitKey]?.level;
+      if (event.replacementTransition !== undefined) {
+        delete equipped[event.replacementTransition.replacedTraitKey];
+      }
+      equipped[option.traitKey] = Object.freeze({
+        traitKey: option.traitKey,
+        giverKey: giver.key,
+        providerKind: giver.providerKind,
+        ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+        ...(isPomEligibleTrait(catalog, option.traitKey) ? { level: 1 } : {}),
+        ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
+        sourceRole: event.acquisitionRole,
+      });
+      const targeted = event.targetedAcquisitionTransition;
+      if (targeted !== undefined) {
+        const target = equipped[targeted.targetTraitKey];
+        if (target !== undefined) {
+          switch (targeted.kind) {
+            case 'promoteGodTraitToHeroic':
+              equipped[targeted.targetTraitKey] = Object.freeze({
+                ...target,
+                rarity: targeted.newRarity,
+              });
+              break;
+            case 'upgradeHammerToRank2':
+              equipped[targeted.targetTraitKey] = Object.freeze({
+                ...target,
+                hammerRank: targeted.newHammerRank,
+              });
+              break;
+          }
+        }
+      }
+      if (event.replacementTransition !== undefined) {
+        const replacement = equipped[event.replacementTransition.newTraitKey];
+        if (replacement !== undefined && replacementLevel !== undefined) {
+          equipped[event.replacementTransition.newTraitKey] = Object.freeze({
+            ...replacement,
+            level: replacementLevel,
+          });
         }
       }
     }
@@ -230,7 +306,14 @@ export function foldTraitOfferEvents(
     const newlyActive = new Set(
       [...nextActiveSources].filter((sourceKey) => !activeSources.has(sourceKey)),
     );
-    promoteActiveFloorTargets(catalog, equipped, newlyActive);
+    promoteActiveFloorTargets(
+      catalog,
+      equipped,
+      newlyActive,
+      ordered
+        .slice(0, index)
+        .filter((event): event is TraitOfferEvent => event.kind === 'traitOffer'),
+    );
     activeSources = nextActiveSources;
   }
   const derived = deriveFacts(catalog, equipped);
@@ -511,6 +594,7 @@ export function recordReachedTraitOffer(
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
   const event: TraitOfferEvent = Object.freeze({
+    kind: 'traitOffer',
     owner: evaluation.address,
     acquisitionRole: evaluation.acquisitionRole,
     sequence,
@@ -525,7 +609,26 @@ export function recordReachedTraitOffer(
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
   });
-  const history = foldTraitOfferEvents(catalog, [...evaluation.before.events, event]);
+  const transition = evaluation.targetedAcquisition.transition;
+  const mutation: TraitLevelMutationEvent | undefined =
+    transition?.kind === 'promoteGodTraitToHeroic'
+      ? Object.freeze({
+          kind: 'levelMutation',
+          owner: evaluation.address,
+          acquisitionRole: evaluation.acquisitionRole,
+          sequence,
+          acquisitionPoint,
+          sourceTraitKey: transition.sourceTraitKey,
+          targetTraitKey: transition.targetTraitKey,
+          oldLevel: transition.oldLevel,
+          newLevel: transition.newLevel,
+        })
+      : undefined;
+  const history = foldTraitHistoryEvents(catalog, [
+    ...evaluation.before.events,
+    event,
+    ...(mutation === undefined ? [] : [mutation]),
+  ]);
   return Object.freeze({ history, event });
 }
 
@@ -614,22 +717,55 @@ function traitFor(catalog: Catalog, key: string) {
 
 function superchargeableGodTraitTargetKeys(
   catalog: Catalog,
+  sourceTraitKey: string,
   history: TraitHistoryState,
 ): readonly string[] {
   return Object.freeze(
     catalog.traits.values.flatMap((declaration) => {
       const equipped = history.equippedTraits[declaration.key];
       return equipped !== undefined &&
-        declaration.isCoreGodTrait &&
+        isPomEligibleTrait(catalog, declaration.key) &&
         declaration.rarityDomain.kind === 'ranked' &&
         equipped.rarity !== undefined &&
         nextRarity(catalog, declaration.key, equipped.rarity) !== undefined &&
         !declaration.blockInRunRarify &&
-        !declaration.blockStacking
+        withinTargetLevelLimit(catalog, sourceTraitKey, declaration.key, equipped)
         ? [declaration.key]
         : [];
     }),
   );
+}
+
+function withinTargetLevelLimit(
+  catalog: Catalog,
+  sourceTraitKey: string,
+  targetTraitKey: string,
+  target: EquippedTrait,
+): boolean {
+  const acquisition = catalog.traits.byKey[sourceTraitKey]?.targetedAcquisition;
+  if (acquisition?.kind !== 'promoteGodTraitToHeroic') return true;
+  const maximum =
+    target.rarity === undefined
+      ? undefined
+      : acquisition.maximumEligibleLevelByTraitAndRarity?.[targetTraitKey]?.[target.rarity];
+  return maximum === undefined || target.level === undefined || target.level <= maximum;
+}
+
+function bridalGlowAddedLevels(rarity: TraitRarity | undefined): number {
+  switch (rarity) {
+    case 'Common':
+      return 1;
+    case 'Rare':
+      return 2;
+    case 'Epic':
+      return 3;
+    case 'Heroic':
+      return 4;
+    default:
+      throw new Error(
+        `Bridal Glow requires a ranked source rarity, received ${rarity ?? 'missing'}`,
+      );
+  }
 }
 
 function upgradableHammerTargetKeys(
@@ -658,7 +794,7 @@ export function targetedAcquisitionTargetKeys(
   if (acquisition === undefined) return Object.freeze([]);
   switch (acquisition.kind) {
     case 'promoteGodTraitToHeroic':
-      return superchargeableGodTraitTargetKeys(catalog, history);
+      return superchargeableGodTraitTargetKeys(catalog, sourceTraitKey, history);
     case 'upgradeHammerToRank2':
       return upgradableHammerTargetKeys(catalog, history);
   }
@@ -869,6 +1005,8 @@ export function assessSelectedTargetedAcquisition(
             targetTraitKey: option.targetTraitKey,
             oldRarity: target.rarity,
             newRarity: 'Heroic' as const,
+            oldLevel: target.level ?? 0,
+            newLevel: (target.level ?? 0) + bridalGlowAddedLevels(option.rarity),
           });
         })()
       : Object.freeze({

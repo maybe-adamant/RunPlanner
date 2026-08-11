@@ -1365,8 +1365,10 @@ validation derive from the same pre-offer ledger predicate. A Rank-II Hammer is
 therefore no longer targetable. Icarus offers retain their catalog-fixed
 `Common` rarity and their Attack/Special choices consume the ordinary-slot
 occupancy derived from that ledger. NPC/Story effects without a closed
-declaration, levels/stacks, and other mutations remain outside this persistent
-slice.
+declaration and other undeclared mutations remain outside this persistent
+slice. Standalone chronological level mutations fold at the same acquisition
+boundary; Bridal Glow grants levels by source rarity before Proper Upbringing
+can credit one further level only while its recorded target remains equipped.
 
 Before folding a reached Olympian role, simulation derives whether the
 pre-offer ledger has empty ordinary boon slots. If so, it evaluates the whole
@@ -1389,11 +1391,12 @@ All alternatives remain against one immutable pre-offer state, and branch
 support never combines evidence from different histories.
 
 The selected replacement event removes the exact prior occupant, equips the
-new trait at its promoted rarity, retains earlier acquisition events, and
-recomputes every ledger-derived fact. Unselected alternatives do not mutate
-state. Replacement identity is derived and absent from authored JSON; source
-probability, force/progression gates, counters, and level/stack transfer stay
-deferred.
+new trait at its promoted rarity, transfers the displaced trait's exact folded
+level (even when the replacement is otherwise ineligible for future Poms),
+retains earlier acquisition events, and recomputes every ledger-derived fact.
+Unselected alternatives do not mutate state. Replacement identity is derived
+and absent from authored JSON; source probability, force/progression gates,
+counters, and `ExchangeLevelBonus` stay deferred.
 
 The same replay folds the normalized Proper Upbringing rarity floor. After
 each reached acquisition or replacement it derives the post-selection element

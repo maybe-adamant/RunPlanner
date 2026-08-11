@@ -35,6 +35,14 @@ export interface ScalableGodTraitRarityFloorEffect {
 export interface PromoteGodTraitToHeroicAcquisition {
   readonly kind: 'promoteGodTraitToHeroic';
   readonly target: 'superchargeableGodTrait';
+  /**
+   * Source-declared cooldown caps for the small set of Heroic promotions
+   * whose current Pom level constrains the transition. This remains a
+   * targeted-acquisition fact, not a general combat-value model.
+   */
+  readonly maximumEligibleLevelByTraitAndRarity?: Readonly<
+    Record<string, Readonly<Partial<Record<TraitRarity, number>>>>
+  >;
 }
 
 /** Player-facing Rank II progression for one eligible equipped Daedalus Hammer. */

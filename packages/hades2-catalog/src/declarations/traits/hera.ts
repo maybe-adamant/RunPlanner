@@ -126,6 +126,11 @@ export const heraTraits = [
     targetedAcquisition: {
       kind: 'promoteGodTraitToHeroic',
       target: 'superchargeableGodTrait',
+      maximumEligibleLevelByTraitAndRarity: {
+        HephaestusWeaponBoon: { Common: 9, Rare: 7, Epic: 5 },
+        HephaestusSpecialBoon: { Common: 11, Rare: 9, Epic: 7 },
+        HephaestusSprintBoon: { Common: 8, Rare: 7, Epic: 6 },
+      },
     },
   },
   {

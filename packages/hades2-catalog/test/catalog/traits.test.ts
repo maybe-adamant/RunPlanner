@@ -1024,6 +1024,11 @@ describe('trait offer catalog closure', () => {
     expect(traits?.traits.byKey.BoonDecayBoon?.targetedAcquisition).toEqual({
       kind: 'promoteGodTraitToHeroic',
       target: 'superchargeableGodTrait',
+      maximumEligibleLevelByTraitAndRarity: {
+        HephaestusWeaponBoon: { Common: 9, Rare: 7, Epic: 5 },
+        HephaestusSpecialBoon: { Common: 11, Rare: 9, Epic: 7 },
+        HephaestusSprintBoon: { Common: 8, Rare: 7, Epic: 6 },
+      },
     });
     expect(traits?.traits.byKey.ElementalUnifiedBoon?.offerRequirements).toContainEqual({
       kind: 'highestBaseElementCount',
@@ -1692,5 +1697,37 @@ describe('trait offer catalog closure', () => {
     expect(normalized.traits.byKey.CastAnywhereBoon).toBeDefined();
     expect(normalized.traits.byKey.SelfCastBoon).toBeDefined();
     expect('deferredTraitKeys' in normalized).toBe(false);
+  });
+
+  it.each([
+    ['unknown target', { MissingTrait: { Common: 1, Rare: 1, Epic: 1 } }, /unknown trait/],
+    ['non-Pom target', { HephaestusManaBoon: { Common: 1, Rare: 1, Epic: 1 } }, /Pom-eligible/],
+    ['partial rarities', { HephaestusWeaponBoon: { Common: 1, Rare: 1 } }, /cover exactly/],
+    [
+      'Heroic rarity',
+      { HephaestusWeaponBoon: { Common: 1, Rare: 1, Epic: 1, Heroic: 1 } },
+      /cover exactly|fresh/,
+    ],
+    ['zero cap', { HephaestusWeaponBoon: { Common: 0, Rare: 1, Epic: 1 } }, /positive integer/],
+  ] as const)('rejects malformed Bridal Glow caps: %s', (_name, caps, message) => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'BoonDecayBoon'
+            ? {
+                ...trait,
+                targetedAcquisition: {
+                  kind: 'promoteGodTraitToHeroic',
+                  target: 'superchargeableGodTrait',
+                  maximumEligibleLevelByTraitAndRarity: caps,
+                } as never,
+              }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(message);
   });
 });

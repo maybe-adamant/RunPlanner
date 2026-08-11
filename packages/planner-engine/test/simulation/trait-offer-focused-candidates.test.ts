@@ -10,7 +10,7 @@ import {
 import {
   createPreparedProjectCandidateSession,
   createTraitHistoryState,
-  foldTraitOfferEvents,
+  foldTraitHistoryEvents,
   simulateProject,
   simulateProjectAssembly,
   type TraitOfferEvent,
@@ -41,8 +41,9 @@ function offer(giverKey: string, options: AuthoredTraitOffer['options']): Author
 function historyWith(giverKey: string, traitKey: string, rarity: string) {
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver === undefined) throw new Error(`missing giver ${giverKey}`);
-  return foldTraitOfferEvents(catalog, [
+  return foldTraitHistoryEvents(catalog, [
     {
+      kind: 'traitOffer',
       owner: historyOwner,
       acquisitionRole: 'seed',
       sequence: 0,
@@ -361,8 +362,9 @@ describe('focused trait offer candidates', () => {
   });
 
   it('blocks a focused replacement excess without poisoning an ordinary sibling', () => {
-    const before = foldTraitOfferEvents(catalog, [
+    const before = foldTraitHistoryEvents(catalog, [
       {
+        kind: 'traitOffer',
         owner: historyOwner,
         acquisitionRole: 'seed1',
         sequence: 0,
@@ -376,6 +378,7 @@ describe('focused trait offer candidates', () => {
         acquisitionPoint: 'test',
       },
       {
+        kind: 'traitOffer',
         owner: historyOwner,
         acquisitionRole: 'seed2',
         sequence: 1,
@@ -389,6 +392,7 @@ describe('focused trait offer candidates', () => {
         acquisitionPoint: 'test',
       },
       {
+        kind: 'traitOffer',
         owner: historyOwner,
         acquisitionRole: 'seed3',
         sequence: 2,
