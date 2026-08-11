@@ -197,6 +197,8 @@ export const pEncounterDefinitions = [
     label: 'Dionysus story',
     kind: 'story',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Dionysus',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Dionysus' },
   },
   {
     key: 'MiniBossTalos',

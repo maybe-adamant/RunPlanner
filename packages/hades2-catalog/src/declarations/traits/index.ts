@@ -7,6 +7,8 @@ import { artemisGiver, artemisTraits } from './artemis';
 import { athenaGiver, athenaTraits } from './athena';
 import { icarusGiver, icarusTraits } from './icarus';
 import { demeterGiver, demeterTraits } from './demeter';
+import { dionysusGiver, dionysusTraits } from './dionysus';
+import { hadesGiver, hadesTraits } from './hades';
 import { hephaestusGiver, hephaestusTraits } from './hephaestus';
 import { heraGiver, heraTraits } from './hera';
 import { hestiaGiver, hestiaTraits } from './hestia';
@@ -109,6 +111,8 @@ const traits = [
   ...apolloTraits,
   ...aresTraits,
   ...demeterTraits,
+  ...dionysusTraits,
+  ...hadesTraits,
   ...hephaestusTraits,
   ...heraTraits,
   ...hestiaTraits,
@@ -128,6 +132,8 @@ const givers = [
   apolloGiver,
   aresGiver,
   demeterGiver,
+  dionysusGiver,
+  hadesGiver,
   hephaestusGiver,
   heraGiver,
   hestiaGiver,

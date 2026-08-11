@@ -26,17 +26,17 @@ describe('canonical authored-project fixtures', () => {
     [
       'Underworld F/G default',
       () => createCompleteFGProject(),
-      '413c209d6c9f48f1ee7a1db84049570fa4efcaaa8b466d1f5127330cd3fa53e6',
+      '888435a6f4c19a73b5baf22c877d8c882534d454c6ab419900ce13d05fecf3e0',
     ],
     [
       'Underworld F/G alternate miniboss',
       () => createCompleteFGProject({ pickedMiniboss: 'G_MiniBoss02' }),
-      'd3c14d653ce91c7ef56b1fabf6ec24da512f1eac311aaea319c95675287065c8',
+      '45b796eac6c195ea1b75307f40b7cb6adfd1857fa26df3f3c7315a96206f7343',
     ],
     [
       'Underworld F/G alternate Preboss source',
       () => createCompleteFGProject({ prebossSource: 'G_Combat14' }),
-      '4cac2f259e1cd2066bff96a14dc4418429e8b9e2840c7d26808970e1e94e7f26',
+      '4ac3e8ede999ae74e18df65d553723f0ae405188688a601086d30881c04a48f7',
     ],
     [
       'Underworld F/G combined alternates',
@@ -45,22 +45,22 @@ describe('canonical authored-project fixtures', () => {
           pickedMiniboss: 'G_MiniBoss02',
           prebossSource: 'G_Combat14',
         }),
-      'f2f20ebdd1386ea0ac05051c47e74bc82f1492d13bbb7c1bcb2f15c39dcc4256',
+      '9df4446ac77854dd3d8d580c5d52ef8a24bd19b24e51a552b04acc708270c735',
     ],
     [
       'Underworld F/G/H',
       () => createGoldenFGHProject(),
-      'e049b4681d07aef6613c0f9d8c853abdfd76aa7101909bb2a501173e43ed29d0',
+      '03ba06c7e05139310df3d0de0d27ecd557b77134ffdfaf84f7f4103af9cb8b6a',
     ],
     [
       'Underworld F/G/H/I',
       () => createGoldenFGHIProject(),
-      '2fbce6051281a8937c7bd12e077bf33e1a1492f2f69a9dd5d9fd756b3a47ac38',
+      '658101997735268c274b04ccb9a81c15fa894cfa1d90be44bd54110c1c576303',
     ],
     [
       'Surface N',
       () => createRepresentativeNProject(),
-      '2d434638901d05ab8d2779020a70ae3773ab889f6ba628c146d7a1b638f9cbb4',
+      'fb32f8e1a7b4cefb6d76030b9366d53654a323553b9cb552cbddd33d02642aa9',
     ],
     [
       'Surface N partial Hub handoff',
@@ -69,7 +69,7 @@ describe('canonical authored-project fixtures', () => {
           includePreboss: false,
           visitSlotKeys: nVisitSlotKeys.slice(0, 3),
         }),
-      '1654152fb0b01bd4d5fca8c223952c67099223f4d0db6ab3f9f682011149644f',
+      'e39230d2473a2556f07513ea3a19349b9b3d1766bcd3122ad61b634a3f6bf112',
     ],
     [
       'Surface N alternate open Hub slot',
@@ -88,22 +88,22 @@ describe('canonical authored-project fixtures', () => {
           ],
           visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
         }),
-      '6013f94afb30f5e4e5484a451a08086e61f849b31fea2abeb9e5f5efed38a248',
+      '55271285f3487678c46dd66eff31a55e542fd14d4b5f3eab62f5eb2d56c87628',
     ],
     [
       'Surface N/O',
       () => createRepresentativeNOProject(),
-      '6cc57d54dc5ea5ff13800a5262398bf6ae63018e259374988d867c1451f764ad',
+      '4f57827416a614ebe8489f64477fdeac7cffe091115622c2560ad13ee7fdc621',
     ],
     [
       'Surface N/O/P',
       () => createRepresentativeNOPProject(),
-      '62b817c0ae790e26845ba1c3437143ae1e92dbe1a008918c80957a2524762869',
+      '8c5e39e884c7bf07e55f094728868c8b7d78d89c02c486401bbd3109559d128f',
     ],
     [
       'Surface N/O/P/Q',
       () => createRepresentativeNOPQProject(),
-      '3367b03c79d79410e733699bc1347fdfcf4b9995775b6404b15c18160a557e2a',
+      '992822e846565c42855d24db478e66c4003a8d83a3a3698782d754d97a6c844b',
     ],
   ])('preserves the characterized %s document', (_name, createProject, digest) => {
     expect(authoredDocumentDigest(createProject())).toBe(digest);

@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.23.0-story-arachne-medea',
+  version: '0.24.0-story-hades-dionysus',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

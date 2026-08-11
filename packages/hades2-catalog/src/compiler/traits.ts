@@ -43,9 +43,6 @@ const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'deathDefianceConditionMet'] as const;
-/** Deferred operands are compiler facts, never normalized catalog products. */
-const COMPILER_LOCAL_DEFERRED_TRAIT_KEYS = ['HadesCastProjectileBoon', 'CastLobBoon'] as const;
-
 type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
@@ -811,7 +808,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     requireArray(input.deferredTraitKeys, 'deferredTraitKeys') as readonly string[],
     'deferredTraitKeys',
   );
-  const deferred = new Set([...declaredDeferred, ...COMPILER_LOCAL_DEFERRED_TRAIT_KEYS]);
+  const deferred = new Set(declaredDeferred);
   const weapons = normalizeWeapons(input.weapons);
   const aspects = normalizeAspects(input.aspects, weapons);
   const coreGodTraitKeys = collectCoreGodTraitKeys(input.givers);

@@ -196,7 +196,9 @@ const expectedElementTraitKeys = {
     PoseidonSpecialBoon PoseidonCastBoon PoseidonSprintBoon PoseidonManaBoon
     EncounterStartOffenseBuffBoon RoomRewardBonusBoon FocusDamageShaveBoon
     DoubleRewardBoon PoseidonStatusBoon PoseidonExCastBoon OmegaPoseidonProjectileBoon
-    AmplifyConeBoon LuckyBoon
+    AmplifyConeBoon LuckyBoon CastLobBoon HiddenMaxHealthBoon FirstHangoverBoon
+    CombatEncounterHealBoon PowerDrinkBoon FogDamageBonusBoon BankBoon
+    RandomBaseDamageBoon
   `),
 } as const;
 
@@ -377,6 +379,26 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'BurnConsumeBoon',
     'ClearRootBoon',
     'SelfCastBoon',
+  ],
+  Dionysus: [
+    'CastLobBoon',
+    'HiddenMaxHealthBoon',
+    'FirstHangoverBoon',
+    'CombatEncounterHealBoon',
+    'PowerDrinkBoon',
+    'FogDamageBonusBoon',
+    'BankBoon',
+    'RandomBaseDamageBoon',
+  ],
+  Hades: [
+    'HadesLifestealBoon',
+    'HadesCastProjectileBoon',
+    'HadesPreDamageBoon',
+    'HadesChronosDebuffBoon',
+    'HadesDashSweepBoon',
+    'HadesDeathDefianceDamageBoon',
+    'HadesManaUrnBoon',
+    'HadesInvisibilityRetaliateBoon',
   ],
   Hephaestus: [
     'HephaestusWeaponBoon',
@@ -674,6 +696,12 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRetaliateCurse:
     '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
+  HadesCastProjectileBoon:
+    '[{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","CastLobBoon","SelfCastBoon"]}]',
+  HadesDeathDefianceDamageBoon:
+    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
+  CastLobBoon:
+    '[{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","HadesCastProjectileBoon","SelfCastBoon"]}]',
   DoorHealToFullBoon: '[{"kind":"anyEquippedTrait","traitKeys":["HighHealthOffenseBoon"]}]',
   WeakPotencyBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","AphroditeSprintBoon","AphroditeManaBoon"]}]',
@@ -865,7 +893,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(309);
+    expect(traits?.traits.values).toHaveLength(325);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -875,6 +903,8 @@ describe('trait offer catalog closure', () => {
       ['Apollo', 22],
       ['Ares', 22],
       ['Demeter', 22],
+      ['Dionysus', 8],
+      ['Hades', 8],
       ['Hephaestus', 22],
       ['Hera', 22],
       ['Hestia', 22],
@@ -923,6 +953,46 @@ describe('trait offer catalog closure', () => {
       rarities: ['Common', 'Rare', 'Epic'],
     });
     expect(traits?.givers.byKey.Icarus?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
+    expect(traits?.givers.byKey.Hades?.rarityPolicy).toEqual({
+      kind: 'fixed',
+      rarity: 'Common',
+    });
+    expect(traits?.givers.byKey.Dionysus?.rarityPolicy).toEqual({
+      kind: 'selectable',
+      rarities: ['Common', 'Rare', 'Epic'],
+    });
+    for (const traitKey of expectedGiverPools.Hades ?? []) {
+      expect(traits.traits.byKey[traitKey]).toMatchObject({
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        },
+        elementContributions: {},
+        usesBoonRarity: true,
+        isCoreGodTrait: false,
+        blockStacking: false,
+        blockInRunRarify: true,
+        excludeFromRarityCount: false,
+      });
+      expect(traits.traits.byKey[traitKey]?.ordinaryBoonSlot).toBeUndefined();
+    }
+    for (const traitKey of expectedGiverPools.Dionysus ?? []) {
+      expect(traits.traits.byKey[traitKey]).toMatchObject({
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common', 'Rare', 'Epic'],
+          equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
+        },
+        elementContributions: { Water: 1 },
+        usesBoonRarity: true,
+        isCoreGodTrait: false,
+        blockStacking: false,
+        blockInRunRarify: false,
+        excludeFromRarityCount: false,
+      });
+      expect(traits.traits.byKey[traitKey]?.ordinaryBoonSlot).toBeUndefined();
+    }
     expect(traits?.traits.byKey.FocusAttackDamageTrait?.offerRequirements).toEqual([
       { kind: 'ordinaryBoonSlotOccupied', slot: 'Melee' },
     ]);
@@ -1073,11 +1143,7 @@ describe('trait offer catalog closure', () => {
     );
     expect(actualOfferRequirements).toEqual(expectedOfferRequirements);
 
-    const deferred = new Set([
-      ...declarations.traitCatalog.deferredTraitKeys,
-      'HadesCastProjectileBoon',
-      'CastLobBoon',
-    ]);
+    const deferred = new Set(declarations.traitCatalog.deferredTraitKeys);
     const walk = (
       requirement: (typeof traits.traits.values)[number]['offerRequirements'][number],
     ): readonly string[] => {
