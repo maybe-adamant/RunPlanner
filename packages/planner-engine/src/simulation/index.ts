@@ -295,6 +295,7 @@ export {
   type TraitHistoryEvent,
   type TraitLevelMutationEvent,
   type ReachedLevelResolutionEvaluation,
+  type SelectedLevelResolutionAssessment,
   type LevelResolutionFindingCode,
   type TraitCandidateAssessment,
 } from './traits';

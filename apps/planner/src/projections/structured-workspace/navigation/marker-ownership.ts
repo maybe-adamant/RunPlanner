@@ -14,10 +14,12 @@ export type WorkspaceDecisionBatchNode =
 function rewardControlMarkers(control: {
   readonly marker: WorkspaceMarker;
   readonly traitOffers?: readonly { readonly marker: WorkspaceMarker }[];
+  readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
   return Object.freeze([
     control.marker,
     ...(control.traitOffers ?? []).map((trait) => trait.marker),
+    ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
 }
 
@@ -96,6 +98,7 @@ export function workspaceOccurrenceOwnedMarkers(
     ...room.rewardControls.flatMap((control) => [
       control.marker,
       ...(control.traitOffers ?? []).map((trait) => trait.marker),
+      ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
@@ -142,6 +145,7 @@ export function workspaceHubMainRewardMarkers(
       return Object.freeze([
         room.roomLocal.marker,
         ...(room.roomLocal.control?.traitOffers ?? []).map((trait) => trait.marker),
+        ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'incomingReward':
       return Object.freeze(rewardControlMarkers(room.roomLocal.control));

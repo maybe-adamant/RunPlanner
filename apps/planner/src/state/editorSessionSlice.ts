@@ -4,6 +4,7 @@ import type {
   HubDecisionAddress,
   SemanticAddress,
   TraitOfferAddress,
+  LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
@@ -17,6 +18,7 @@ export interface EditorSessionReconciliation {
   readonly clearFocusedSemanticOwner: boolean;
   readonly clearSelectedFinding: boolean;
   readonly clearTraitDialogTarget?: boolean;
+  readonly clearLevelResolutionDialogTarget?: boolean;
   readonly clearRunStateTarget?: boolean;
 }
 
@@ -39,6 +41,8 @@ export interface EditorSessionState {
   readonly selectedFinding: FindingSelection | null;
   /** Exact transient trait dialog target; never part of authored history. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
+  /** Exact transient Pom dialog target; never part of authored history. */
+  readonly levelResolutionDialogTarget?: LevelResolutionAddress | null;
   /** Exact outer decision whose read-only Run State sheet is open. */
   readonly runStateTarget?: ExitDecisionAddress | HubDecisionAddress | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
@@ -76,12 +80,14 @@ const editorSessionSlice = createSlice({
       state.activeRouteKey = action.payload;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     settingsSelected(state) {
       state.activeRouteKey = null;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
@@ -89,12 +95,14 @@ const editorSessionSlice = createSlice({
       state.activePanelByRoute[action.payload.routeKey] = action.payload.panel;
       state.focusedSemanticOwner = null;
       state.traitDialogTarget = null;
+      state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.traitDialogTarget = null;
+      state.levelResolutionDialogTarget = null;
       state.runStateTarget = null;
     },
     semanticOwnerNavigated(state, action: PayloadAction<SemanticAddress>) {
@@ -102,6 +110,8 @@ const editorSessionSlice = createSlice({
       state.selectedFinding = null;
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget = action.payload.kind === 'traitOffer' ? action.payload : null;
+      state.levelResolutionDialogTarget =
+        action.payload.kind === 'levelResolution' ? action.payload : null;
       state.runStateTarget = null;
       const route = routeKey(action.payload);
       if (route === null) {
@@ -116,6 +126,8 @@ const editorSessionSlice = createSlice({
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget =
         action.payload.origin.kind === 'traitOffer' ? action.payload.origin : null;
+      state.levelResolutionDialogTarget =
+        action.payload.origin.kind === 'levelResolution' ? action.payload.origin : null;
       state.runStateTarget = null;
       const route = routeKey(action.payload.origin);
       if (route === null) {
@@ -134,6 +146,9 @@ const editorSessionSlice = createSlice({
       if (action.payload.clearTraitDialogTarget) {
         state.traitDialogTarget = null;
       }
+      if (action.payload.clearLevelResolutionDialogTarget) {
+        state.levelResolutionDialogTarget = null;
+      }
       if (action.payload.clearRunStateTarget) state.runStateTarget = null;
     },
     traitOfferDialogOpened(state, action: PayloadAction<TraitOfferAddress>) {
@@ -141,6 +156,12 @@ const editorSessionSlice = createSlice({
     },
     traitOfferDialogClosed(state) {
       state.traitDialogTarget = null;
+    },
+    levelResolutionDialogOpened(state, action: PayloadAction<LevelResolutionAddress>) {
+      state.levelResolutionDialogTarget = action.payload;
+    },
+    levelResolutionDialogClosed(state) {
+      state.levelResolutionDialogTarget = null;
     },
     runStateOpened(state, action: PayloadAction<ExitDecisionAddress | HubDecisionAddress>) {
       state.runStateTarget = action.payload;
@@ -161,6 +182,8 @@ export const {
   settingsSelected,
   traitOfferDialogClosed,
   traitOfferDialogOpened,
+  levelResolutionDialogClosed,
+  levelResolutionDialogOpened,
   runStateClosed,
   runStateOpened,
 } = editorSessionSlice.actions;

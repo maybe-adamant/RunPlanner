@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
+  type AuthoredLevelResolution,
   type AuthoredBatchState,
   type AdditionalExitAddress,
   type BiomeAddress,
@@ -23,6 +24,7 @@ import {
   type ShopPurchaseAddress,
   type TargetAddress,
   type TraitOfferAddress,
+  type LevelResolutionAddress,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -33,6 +35,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import type { LevelResolutionCandidateProjection } from '../candidateProjection';
 
 import type {
   CandidateOptionProjection,
@@ -83,6 +86,8 @@ export interface WorkspaceInspectorDestination {
   readonly focusKey: string;
   /** Present for trait owners that must open the transient shared dialog. */
   readonly traitDialogTarget?: TraitOfferAddress;
+  /** Present for exact Pom owners that must open the transient Pom dialog. */
+  readonly levelResolutionDialogTarget?: LevelResolutionAddress;
   /**
    * Final presentation binding for an exact semantic owner. Omitted only when
    * the owning workspace has no renderable inspector subject.
@@ -183,6 +188,16 @@ export interface WorkspaceTraitOfferControl {
   };
 }
 
+/** One exact declaration-owned Pom child beneath an active reward owner. */
+export interface WorkspaceLevelResolutionControl {
+  readonly acquisitionRoleLabel: string;
+  readonly address: LevelResolutionAddress;
+  readonly levelCount: number;
+  readonly marker: WorkspaceMarker;
+  readonly rewardOwner: SemanticAddress;
+  readonly value: AuthoredLevelResolution;
+}
+
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
 export interface WorkspaceTraitOptionDomainInteraction {
   /** Whether this exact selected option owns a downstream acquisition-target step. */
@@ -215,6 +230,22 @@ export interface WorkspaceTraitOfferInteraction {
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
+}
+
+export interface WorkspaceLevelResolutionInteraction {
+  readonly acquisitionRoleLabel: string;
+  readonly intentFor: (
+    value: AuthoredLevelResolution,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>>;
+  readonly key: string;
+  /** Declaration-owned increment displayed beside the exact Pom control. */
+  readonly levelCount?: number;
+  readonly load: (
+    value?: AuthoredLevelResolution,
+  ) => LevelResolutionCandidateProjection | undefined;
+  readonly owner: LevelResolutionAddress;
+  readonly traitLabel: (traitKey: string) => string;
+  readonly value: AuthoredLevelResolution;
 }
 
 interface WorkspaceRoomInteractionBase {
@@ -450,6 +481,7 @@ export interface WorkspaceInteractionCatalog {
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
+  readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -611,6 +643,7 @@ interface WorkspaceRewardControlBase {
   readonly offer: ResolvedRewardOffer;
   readonly owner: RewardCandidateOwner;
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
+  readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
@@ -1079,6 +1112,7 @@ export interface WorkspaceRunStateSource {
 export interface WorkspaceRunStateTrait {
   readonly label: string;
   readonly rarity?: TraitRarity;
+  readonly level?: number;
   readonly hammerRank?: 'RankI' | 'RankII';
   readonly traitKey: string;
 }

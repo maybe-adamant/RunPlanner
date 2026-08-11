@@ -76,6 +76,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
     ...room.rewardControls.flatMap((control) => [
       control.marker.focusKey,
       ...(control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+      ...(control.levelResolutions ?? []).map((resolution) => resolution.marker.focusKey),
     ]),
   ];
   switch (room.roomLocal.kind) {
@@ -98,6 +99,9 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
               ? [
                   slot.rewardControl.marker.focusKey,
                   ...(slot.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+                  ...(slot.rewardControl.levelResolutions ?? []).map(
+                    (resolution) => resolution.marker.focusKey,
+                  ),
                 ]
               : []),
           ]),
@@ -115,6 +119,9 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
           ...wheel.offers.flatMap((offer) => [
             offer.control.marker.focusKey,
             ...(offer.control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+            ...(offer.control.levelResolutions ?? []).map(
+              (resolution) => resolution.marker.focusKey,
+            ),
           ]),
         ]),
       );
@@ -125,6 +132,9 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
           offer.purchase.marker.focusKey,
           offer.rewardControl.marker.focusKey,
           ...(offer.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+          ...(offer.rewardControl.levelResolutions ?? []).map(
+            (resolution) => resolution.marker.focusKey,
+          ),
         ]),
       );
       break;

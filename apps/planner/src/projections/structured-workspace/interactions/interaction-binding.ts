@@ -7,8 +7,13 @@ import {
   type SideRoomGeneration,
   type TargetAddress,
   type TraitOfferAddress,
+  type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
-import type { AuthoredTraitOffer, TraitOptionKey } from '@run-planner/engine/authored-project';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+  TraitOptionKey,
+} from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
@@ -46,6 +51,8 @@ import type {
   WorkspaceRewardControl,
   WorkspaceRewardInteraction,
   WorkspaceTraitOfferControl,
+  WorkspaceLevelResolutionControl,
+  WorkspaceLevelResolutionInteraction,
   WorkspaceTraitOfferInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceRoomInteraction,
@@ -103,6 +110,19 @@ function traitOfferIntentFor(
   });
 }
 
+function levelResolutionIntentFor(
+  owner: LevelResolutionAddress,
+  value: AuthoredLevelResolution,
+): ReturnType<WorkspaceLevelResolutionInteraction['intentFor']> {
+  return Object.freeze({
+    command: Object.freeze({
+      kind: 'ReplaceLevelResolution' as const,
+      levelResolution: owner,
+      value,
+    }),
+  });
+}
+
 export interface WorkspaceInteractionBindingInput {
   readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly assembly: ProjectEvaluationAssembly;
@@ -123,6 +143,7 @@ export interface WorkspaceInteractionBindingInput {
   >;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
+  readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
@@ -1207,6 +1228,7 @@ export function bindWorkspaceInteractions(
     occurrenceInteractionRequirements,
     rewardControls,
     traitControls,
+    levelResolutionControls,
     roomControls,
     services,
     startInteractionRequirements,
@@ -1629,6 +1651,24 @@ export function bindWorkspaceInteractions(
     );
   }
 
+  const levelResolutions = new Map<string, WorkspaceLevelResolutionInteraction>();
+  for (const [key, control] of levelResolutionControls ?? []) {
+    levelResolutions.set(
+      key,
+      Object.freeze({
+        acquisitionRoleLabel: control.acquisitionRoleLabel,
+        intentFor: (value: AuthoredLevelResolution) =>
+          levelResolutionIntentFor(control.address, value),
+        key,
+        levelCount: control.levelCount,
+        load: (value = control.value) => candidates.levelResolution(control.address, value),
+        owner: control.address,
+        traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+        value: control.value,
+      }),
+    );
+  }
+
   return Object.freeze({
     batchRewardStores,
     encounterPhases,
@@ -1642,6 +1682,7 @@ export function bindWorkspaceInteractions(
     hubVisitOrders,
     rewards,
     traitOffers,
+    levelResolutions,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,

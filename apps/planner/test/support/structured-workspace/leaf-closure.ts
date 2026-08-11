@@ -40,6 +40,8 @@ function leafInteraction(
       return observed.interactions.sideRoomEntryOrders.get(key);
     case 'sideRoomGeneration':
       return observed.interactions.sideRoomGenerations.get(key);
+    case 'levelResolution':
+      return observed.interactions.levelResolutions.get(key);
     case 'traitOffer':
       return observed.interactions.traitOffers.get(key);
   }
@@ -55,6 +57,8 @@ function leafInteractionLabel(kind: ExpectedWorkspaceLeafInteractionKind): strin
       return 'Ship combat-phase count';
     case 'traitOffer':
       return 'trait offer';
+    case 'levelResolution':
+      return 'level resolution';
     default:
       return kind;
   }

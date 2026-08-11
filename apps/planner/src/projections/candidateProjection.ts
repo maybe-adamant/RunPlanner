@@ -12,6 +12,7 @@ import {
   type ProjectCandidateSessionQuery,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
+  levelResolutionCandidateForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
@@ -34,10 +35,14 @@ import {
   type ShopOfferAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
+  type LevelResolutionAddress,
   type TraitOptionKey,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
-import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+} from '@run-planner/engine/authored-project';
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
@@ -200,6 +205,36 @@ export interface CandidateProjectionSession {
     optionKey: TraitOptionKey,
     retainedTargetTraitKey?: string,
   ) => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+  /**
+   * Exact declaration-owned Pom capability. The engine retains the correlated
+   * branch histories; application presentation only adapts its returned data.
+   */
+  readonly levelResolution: (
+    owner: LevelResolutionAddress,
+    value: AuthoredLevelResolution,
+  ) => LevelResolutionCandidateProjection | undefined;
+}
+
+export interface LevelResolutionCandidateProjection {
+  readonly groups: readonly LevelResolutionCandidateGroup[];
+}
+
+export interface LevelResolutionCandidateSurface {
+  readonly effectKind: 'choice' | 'random';
+  readonly levelCount: number;
+  readonly requiredOfferCount?: number;
+  readonly eligibleTargetTraitKeys: readonly string[];
+}
+
+export interface LevelResolutionCandidateGroup {
+  readonly key: string;
+  readonly branchIndices: readonly number[];
+  readonly surface: LevelResolutionCandidateSurface;
+  readonly evaluations: readonly {
+    readonly branchIndex: number;
+    readonly supported: boolean;
+    readonly findings: readonly string[];
+  }[];
 }
 
 export interface CandidateSessionFactory {
@@ -760,6 +795,44 @@ export function createCandidateSessionFactory(
         );
         projectCache.options.set(key, projected);
         return projected;
+      },
+      levelResolution: (owner: LevelResolutionAddress, value: AuthoredLevelResolution) => {
+        const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, owner);
+        if (capability === undefined) return undefined;
+        const evaluations = capability.evaluate(value);
+        const groups = new Map<
+          string,
+          {
+            surface: LevelResolutionCandidateSurface;
+            branchIndices: number[];
+            evaluations: (typeof evaluations)[number][];
+          }
+        >();
+        for (const [branchIndex, surface] of capability.branches.entries()) {
+          const key = JSON.stringify([
+            surface.effectKind,
+            surface.levelCount,
+            surface.requiredOfferCount,
+            surface.eligibleTargetTraitKeys,
+          ]);
+          const entry = groups.get(key) ?? { surface, branchIndices: [], evaluations: [] };
+          entry.branchIndices.push(branchIndex);
+          const evaluation = evaluations.find((candidate) => candidate.branchIndex === branchIndex);
+          if (evaluation !== undefined) entry.evaluations.push(evaluation);
+          groups.set(key, entry);
+        }
+        return Object.freeze({
+          groups: Object.freeze(
+            [...groups.entries()].map(([key, group]) =>
+              Object.freeze({
+                key,
+                surface: group.surface,
+                branchIndices: Object.freeze(group.branchIndices),
+                evaluations: Object.freeze(group.evaluations),
+              }),
+            ),
+          ),
+        });
       },
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(

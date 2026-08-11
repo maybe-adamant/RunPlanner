@@ -158,7 +158,7 @@ export function supportedTraitOffer(
 export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 32; pass += 1) {
-    const assembly = simulateProjectAssembly(catalog, current);
+    const assembly = preparedCandidateProjectFor(current).assembly;
     const evaluation = assembly.evaluation;
     const session = createPreparedProjectCandidateSession(catalog, assembly);
     const invalids = evaluation.routes.flatMap((route) =>
@@ -264,4 +264,39 @@ function normalizePomResolutions(
     }
   }
   return current;
+}
+
+/**
+ * Re-author only reached Pom children after a fixture deliberately changes an
+ * upstream equipped-trait history. This keeps focused product witnesses from
+ * rebuilding unrelated trait offers.
+ */
+export function authorLegalPomResolutions(project: ProjectDocument): ProjectDocument {
+  return prepareLegalPomTraitOffers(project).project;
+}
+
+/** One exact fixture preparation product for consumers that also need the reached offers. */
+export function prepareLegalPomTraitOffers(project: ProjectDocument): {
+  readonly project: ProjectDocument;
+  readonly offers: readonly SelectedTraitOfferAssessment[];
+} {
+  let current = project;
+  for (let pass = 0; pass < 32; pass += 1) {
+    const assembly = preparedCandidateProjectFor(current).assembly;
+    const normalized = normalizePomResolutions(current, assembly);
+    if (normalized === current) {
+      return Object.freeze({
+        project: current,
+        offers: Object.freeze(
+          assembly.evaluation.routes.flatMap((route) =>
+            route.biomes.flatMap((biome) =>
+              'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
+            ),
+          ),
+        ),
+      });
+    }
+    current = normalized;
+  }
+  throw new Error('Pom fixture normalization exceeded its bounded edit budget');
 }

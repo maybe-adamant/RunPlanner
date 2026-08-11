@@ -101,6 +101,7 @@ function assemble(
     encounterPhaseStatus: source.encounterPhaseStatus,
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
+    levelResolutionAssessment: source.levelResolutionAssessment,
     markerDestinations: markers.emitter,
     occurrence,
   });

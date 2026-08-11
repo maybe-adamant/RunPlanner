@@ -1,6 +1,8 @@
 import {
   createBiomeAddress,
   createExitDecisionAddress,
+  createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createOccurrenceId,
   semanticAddressKey,
   type SemanticAddress,
@@ -45,6 +47,7 @@ function destinations(
 
 function session(options: {
   readonly focusedSemanticOwner?: SemanticAddress | null;
+  readonly levelResolutionDialogTarget?: EditorSessionState['levelResolutionDialogTarget'];
   readonly selectedFinding?: FindingSelection | null;
   readonly runStateTarget?: EditorSessionState['runStateTarget'];
 }): EditorSessionState {
@@ -54,11 +57,32 @@ function session(options: {
     semanticNavigationRevision: 1,
     focusedSemanticOwner: options.focusedSemanticOwner ?? null,
     selectedFinding: options.selectedFinding ?? null,
+    ...(options.levelResolutionDialogTarget === undefined
+      ? {}
+      : { levelResolutionDialogTarget: options.levelResolutionDialogTarget }),
     ...(options.runStateTarget === undefined ? {} : { runStateTarget: options.runStateTarget }),
   };
 }
 
 describe('editor-session reconciliation', () => {
+  it('clears a Pom dialog target when its exact reached owner disappears', () => {
+    const target = createLevelResolutionAddress(
+      createIncomingRewardAddress(owner, createOccurrenceId('stale-pom')),
+      'selected',
+    );
+    expect(
+      deriveEditorSessionReconciliation({
+        findings: [],
+        focusByOwner: destinations(),
+        session: session({ levelResolutionDialogTarget: target }),
+      }),
+    ).toEqual({
+      clearFocusedSemanticOwner: false,
+      clearLevelResolutionDialogTarget: true,
+      clearSelectedFinding: false,
+    });
+  });
+
   it('clears a stale Run State target when its exact published launcher disappears', () => {
     const target = createExitDecisionAddress(owner, {
       kind: 'occurrence',

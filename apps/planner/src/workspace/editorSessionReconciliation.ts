@@ -74,6 +74,10 @@ export function deriveEditorSessionReconciliation(
   const clearTraitDialogTarget =
     traitDialogTarget !== null &&
     !hasExactDestination(focusByOwner, semanticAddressKey(traitDialogTarget));
+  const levelResolutionDialogTarget = session.levelResolutionDialogTarget ?? null;
+  const clearLevelResolutionDialogTarget =
+    levelResolutionDialogTarget !== null &&
+    !hasExactDestination(focusByOwner, semanticAddressKey(levelResolutionDialogTarget));
   const runStateTarget = session.runStateTarget ?? null;
   const clearRunStateTarget =
     runStateTarget !== null &&
@@ -84,6 +88,7 @@ export function deriveEditorSessionReconciliation(
     !clearFocusedSemanticOwner &&
     !clearSelectedFinding &&
     !clearTraitDialogTarget &&
+    !clearLevelResolutionDialogTarget &&
     !clearRunStateTarget
   ) {
     return null;
@@ -92,6 +97,7 @@ export function deriveEditorSessionReconciliation(
     clearFocusedSemanticOwner,
     clearSelectedFinding,
     ...(traitDialogTarget === null ? {} : { clearTraitDialogTarget }),
+    ...(levelResolutionDialogTarget === null ? {} : { clearLevelResolutionDialogTarget }),
     ...(runStateTarget === null ? {} : { clearRunStateTarget }),
   });
 }
@@ -111,6 +117,7 @@ export function createEditorSessionReconciliationCoordinator(options: {
       state.editorSession.focusedSemanticOwner === null &&
       state.editorSession.selectedFinding === null &&
       (state.editorSession.traitDialogTarget ?? null) === null &&
+      (state.editorSession.levelResolutionDialogTarget ?? null) === null &&
       (state.editorSession.runStateTarget ?? null) === null
     ) {
       return;

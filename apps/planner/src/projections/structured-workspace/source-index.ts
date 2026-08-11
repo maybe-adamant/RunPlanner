@@ -21,6 +21,7 @@ import {
   type ProjectDocument,
   type RoomOccurrence,
   type SemanticAddress,
+  type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -43,6 +44,7 @@ import type {
   SemanticFinding,
   DecisionRunStateAvailability,
   DecisionRunStateSnapshot,
+  SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
@@ -81,6 +83,9 @@ export interface WorkspaceBiomeSource {
   readonly findingsFor: (owner: SemanticAddress) => readonly SemanticFinding[];
   readonly hubDecision: (hubKey: string) => HubDecision | undefined;
   readonly isAssessed: (owner: SemanticAddress) => boolean;
+  readonly levelResolutionAssessment: (
+    owner: LevelResolutionAddress,
+  ) => SelectedLevelResolutionAssessment | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
     | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }
@@ -651,6 +656,12 @@ function createWorkspaceBiomeSource(
       : []
     ).map((item) => [semanticAddressKey(item.owner), item] as const),
   );
+  const levelResolutionAssessments = new Map<string, SelectedLevelResolutionAssessment>(
+    (evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.selectedLevelResolutions
+      : []
+    ).map((assessment) => [semanticAddressKey(assessment.address), assessment] as const),
+  );
   return Object.freeze({
     biome,
     completeness,
@@ -670,6 +681,8 @@ function createWorkspaceBiomeSource(
     hubDecision: (hubKey: string) =>
       hubDecisionsByKey.get(semanticAddressKey(createHubDecisionAddress(biome, hubKey))),
     isAssessed: coverage.isAssessed,
+    levelResolutionAssessment: (owner: LevelResolutionAddress) =>
+      levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     plan,
