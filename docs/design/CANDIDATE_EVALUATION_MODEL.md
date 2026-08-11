@@ -127,6 +127,13 @@ order that removes or reorders an exact purchase. A reward-wheel lifecycle contr
 diagnostics of offers within that same wheel, but never a sibling wheel or
 another room's offers.
 
+When an entered Shop owns the active ordinary exit frontier, its outgoing batch
+still precedes purchases in canonical history. The exact selected evaluation
+nevertheless retains a discarded Shop-local purchase branch and capability for
+authoring contact. Purchased trait and Pom leaves are therefore assessable
+without a downstream room; the retained branch cannot advance route history or
+retroactively affect outgoing-target candidates.
+
 N's open Hub board and any jointly unordered reward producer are such atomic
 regions. They do not acquire a false slot- or sibling-order coverage prefix.
 Their declaration-ordered physical creations and reward lookup still remain

@@ -10,7 +10,14 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { createRepresentativeNOPProject, pBiome, pOccurrenceIds } from '@run-planner/test-fixtures';
+import {
+  createFMidshopPomFrontierProject,
+  createRepresentativeNOPProject,
+  fMidshopPomShopId,
+  goldenFBiome,
+  pBiome,
+  pOccurrenceIds,
+} from '@run-planner/test-fixtures';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -19,6 +26,36 @@ import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEdi
 afterEach(cleanup);
 
 describe('Pom resolution product loop', () => {
+  it('publishes the purchased Midshop Pom before its next decision is authored', () => {
+    const application = createApplication();
+    const unpurchased = createFMidshopPomFrontierProject();
+    const offer = createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor');
+    application.store.dispatch(authoredProjectReplaced(unpurchased));
+    expect(
+      [
+        ...application
+          .selectStructuredWorkspace(application.store.getState())
+          .interactions.levelResolutions.values(),
+      ].some(
+        (interaction) => semanticAddressKey(interaction.owner.owner) === semanticAddressKey(offer),
+      ),
+    ).toBe(false);
+
+    const purchased = applyProjectCommand(unpurchased, application.catalog, {
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      offerKeys: ['Minor'],
+    });
+    application.store.dispatch(authoredProjectReplaced(purchased));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    expect(
+      [...workspace.interactions.levelResolutions.values()].find(
+        (interaction) => semanticAddressKey(interaction.owner.owner) === semanticAddressKey(offer),
+      ),
+    ).toMatchObject({ value: { kind: 'random', targetTraitKey: null } });
+    application.dispose();
+  });
+
   it('publishes and saves a purchased random Shop Pom only at its exact offer', async () => {
     const application = createApplication();
     let project = createRepresentativeNOPProject();

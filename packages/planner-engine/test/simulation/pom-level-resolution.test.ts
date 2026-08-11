@@ -4,8 +4,10 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelOfferAddress,
+  createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -26,7 +28,10 @@ import {
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHIProject,
+  createFMidshopPomFrontierProject,
   createRepresentativeNOPQProject,
+  fMidshopPomShopId,
+  goldenFBiome,
   oBiome,
   oOccurrenceIds,
   targetOccurrenceId,
@@ -363,6 +368,69 @@ describe('Pom level resolutions', () => {
       expect.objectContaining({ address, branches: expect.any(Array) }),
     );
     expect(levelResolutionCandidateForProjectEvaluationAssembly(assembly, address)).toBeDefined();
+  });
+
+  it('publishes a purchased Midshop Pom at the unresolved outgoing frontier', () => {
+    const project = applyProjectCommand(createFMidshopPomFrontierProject(), catalog, {
+      kind: 'ReplaceShopPurchaseOrder',
+      shop: createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      offerKeys: ['Minor'],
+    });
+    const address = createLevelResolutionAddress(
+      createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
+      'self',
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f === undefined || !('rewards' in f) || !('materializedPrefix' in f)) {
+      throw new Error('missing progressive F rewards');
+    }
+
+    expect(f.materializedPrefix.frontier).toMatchObject({
+      kind: 'exitDecision',
+      parent: { origin: createOccurrenceAddress(goldenFBiome, fMidshopPomShopId) },
+    });
+    expect(f.rewards.findings).toContainEqual(
+      expect.objectContaining({ code: 'missingPomTarget', origin: address }),
+    );
+    expect(f.rewards.selectedLevelResolutions).toContainEqual(
+      expect.objectContaining({ address, reached: true }),
+    );
+    const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, address);
+    expect(capability).toBeDefined();
+    expect(
+      f.rewards.branches
+        .flatMap((branch) => branch.events)
+        .some((event) => event.kind === 'shopPurchasesSupported'),
+    ).toBe(false);
+
+    const targetTraitKey = capability?.branches[0]?.eligibleTargetTraitKeys[0];
+    if (targetTraitKey === undefined) throw new Error('frontier Pom has no eligible target');
+    const repaired = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: address,
+      value: { kind: 'random', targetTraitKey },
+    });
+    const repairedAssembly = simulateProjectAssembly(catalog, repaired);
+    const repairedF = repairedAssembly.evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (repairedF === undefined || !('rewards' in repairedF)) {
+      throw new Error('missing repaired progressive F rewards');
+    }
+    expect(
+      repairedF.rewards.findings.some(
+        (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(address),
+      ),
+    ).toBe(false);
+    expect(repairedF.rewards.selectedLevelResolutions).toContainEqual(
+      expect.objectContaining({ address, value: { kind: 'random', targetTraitKey } }),
+    );
+    expect(
+      levelResolutionCandidateForProjectEvaluationAssembly(repairedAssembly, address),
+    ).toBeDefined();
   });
 
   it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {

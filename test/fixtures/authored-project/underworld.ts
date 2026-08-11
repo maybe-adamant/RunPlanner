@@ -26,6 +26,7 @@ export const goldenGBiome = createBiomeAddress('Underworld', 'G');
 export const goldenHBiome = createBiomeAddress('Underworld', 'H');
 export const goldenIBiome = createBiomeAddress('Underworld', 'I');
 export const goldenFStartId = createOccurrenceId('golden-f-start');
+export const fMidshopPomShopId = createOccurrenceId('midshop-pom-b5-e1');
 export const goldenGStartId = createOccurrenceId('golden-g-intro');
 export const goldenHStartId = createOccurrenceId('golden-h-intro');
 export const goldenIStartId = createOccurrenceId('golden-i-intro');
@@ -230,6 +231,54 @@ function createCompleteFProject(): ProjectDocument {
       'MajorNonBoon',
     ),
     value: { rewardType: 'RoomRewardHealDrop' },
+  });
+}
+
+/** Selected F Midshop with a purchased-Pom-ready inventory and no outgoing decision yet. */
+export function createFMidshopPomFrontierProject(): ProjectDocument {
+  const start = createOccurrenceId('midshop-pom-start');
+  const batches: readonly BatchSpec[] = Object.freeze([
+    ...fBatches.slice(0, 4),
+    {
+      storeKey: 'MetaProgress',
+      targets: [
+        { gameName: 'F_Shop01' },
+        { gameName: 'F_Combat11', offer: { rewardType: 'MetaCurrencyDrop' } },
+      ],
+    },
+  ]);
+  let project = createProjectDocument(catalog, {
+    projectId: 'midshop-pom-frontier',
+    name: 'Midshop Pom frontier',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenFBiome,
+    occurrenceId: start,
+    gameName: 'F_Opening01',
+  });
+  let parent = start;
+  for (const [offset, batch] of batches.entries()) {
+    const batchIndex = offset + 1;
+    project = applyBatch(
+      project,
+      goldenFBiome,
+      parent,
+      (exitIndex) =>
+        batchIndex === 5 && exitIndex === 1
+          ? fMidshopPomShopId
+          : createOccurrenceId(`midshop-pom-b${batchIndex}-e${exitIndex}`),
+      batch,
+    );
+    parent =
+      batchIndex === 5 ? fMidshopPomShopId : createOccurrenceId(`midshop-pom-b${batchIndex}-e1`);
+  }
+  project = authorLegalTraitOffers(project);
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
+    value: { rewardType: 'StoreRewardRandomStack' },
   });
 }
 

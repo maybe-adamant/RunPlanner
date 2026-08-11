@@ -1020,6 +1020,17 @@ resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,
 while Blind Box uses the same policy only when its authored-source acquisition
 role runs after purchase.
 
+An entered Shop may itself be the source of the active incomplete exit
+decision. The progressive evaluator keeps canonical reward history at that
+Shop's outgoing-generation checkpoint, but it also evaluates the exact authored
+purchase order as a discarded room-local interaction branch. This retained
+product publishes purchase findings and purchased trait or level-resolution
+capabilities immediately; it never advances the public reward branches, changes
+the already-generated door offers, or supplies post-purchase history to later
+rooms. Unpurchased offer children remain dormant. Consequently a purchased Pom
+can be repaired before the next room is authored without moving Shop purchases
+earlier in the game lifecycle.
+
 For each generated batch:
 
 1. derive the possible base stores from the biome ratio policy and current
