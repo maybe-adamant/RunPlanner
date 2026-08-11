@@ -136,6 +136,7 @@ copied elsewhere.
   [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md).
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
+  [Shop and Well interaction lifecycle](docs/audits/SHOP_AND_WELL_INTERACTION_LIFECYCLE.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
   [encounter selection and composition findings](docs/audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md),
   [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md),
