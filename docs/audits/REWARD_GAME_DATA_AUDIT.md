@@ -15,8 +15,9 @@ Primary evidence comes from the current game scripts:
 - `RoomLogic.lua` for generated-door store resolution, O wheels, H cages, and N
   hub offers;
 - `StoreData.lua` and `StoreLogic.lua` for shop groups and entry-time generation;
-- `InteractLogic.lua`, `ConsumableData.lua`, and loot creation paths for
-  acquisition history.
+- `InteractLogic.lua`, `ConsumableData.lua`, `WorldUpgradeData.lua`, and loot
+  creation paths for acquisition history and source-sensitive consumable
+  upgrades.
 
 ## Disposition Vocabulary
 
@@ -58,8 +59,9 @@ The baseline assumes:
 - no keepsake or trait forcing a reward or Boon source;
 - the declared route order;
 - external save/profile progression predicates removed from production data;
-- natural Chaos, Anomaly, NPC gift internals, store rerolls, and reward
-  duplication effects suppressed or absent as documented elsewhere.
+- store rerolls suppressed; NPC gift internals and reward-duplication effects
+  use the explicit dispositions in the trait audit. The active Story-NPC plan
+  scopes implementation to source-sensitive Nectar and Narcissus.
 
 Removing external predicates is not automatically equivalent to selecting one
 concrete fully progressed save. When raw data contains mutually exclusive save
@@ -68,21 +70,22 @@ rather than unioning every externally gated entry.
 
 ## Global Reward Mechanics
 
-| Mechanic                   | Game behavior                                                                                                                                                           | Disposition                   | Phase 2.6 consequence                                                                         |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| Counted-store lifetime     | Every store is deep-copied into one run-local mutable bag at run start                                                                                                  | Exact                         | Scratch bag state is route-scoped, not room-scoped                                            |
-| Offer-time depletion       | Every generated counted offer removes one exact bag entry, including unpicked doors, wheels, cages, and side rooms                                                      | Exact                         | Offer materialization mutates bags before entry/acquisition                                   |
-| Offer-time fact projection | Devotion setup records `LastDevotionDepth` when the offer is materialized, including for an unpicked target                                                             | Exact                         | Add a reward-type `devotionSpacing` offer projection; never infer it from acquisition         |
-| Same-batch duplicates      | Entry-level `AllowDuplicates`; otherwise an earlier peer with the same duplicate key blocks the later peer                                                              | Exact                         | Normalize `allowDuplicates`, default false                                                    |
-| Entry selection            | The game randomly removes one eligible concrete entry                                                                                                                   | Exact support, not RNG replay | Retain exact states internally; diagnostics aggregate only proven-equivalent semantic states. |
-| Refill                     | When no entry in the whole bag is eligible, append a complete base set while retaining leftovers; repeat once more; after two refills fall back to `RoomRewardHealDrop` | Exact raw picker behavior     | Supported planner consumers require at most one refill; see the reachability proof below      |
-| Reward priority queue      | Keepsakes can prioritize an otherwise eligible reward                                                                                                                   | Excluded                      | Neutral equipment baseline contains no priority queue                                         |
-| Bounty overrides           | Active bounties can replace store declarations and forced rewards                                                                                                       | Excluded                      | No bounty predicates or alternate bags                                                        |
-| Generated base-store ratio | Entered-room store history influences RunProgress versus MetaProgress support                                                                                           | Simplified                    | Preserve possible/forced support, not probability or RNG state                                |
-| Generated target stores    | Physical target scan may let a later forced store become the shared store used by an earlier ordinary target                                                            | Exact                         | Preserve the verified two-pass, physical-order algorithm                                      |
-| Store history              | Entered rooms can record resolved store provenance even when their visible producer did not consume that bag                                                            | Exact                         | Keep store-history policy separate from reward producer                                       |
-| Rerolls                    | Rerolls regenerate doors or shop inventory and perturb RNG                                                                                                              | Deferred                      | Canonical trace performs no rerolls                                                           |
-| Duplicate/bonus traits     | Traits may add extra rewards or duplicate pickups                                                                                                                       | Deferred                      | Canonical lifecycle emits only the authored producer's concrete acquisitions                  |
+| Mechanic                    | Game behavior                                                                                                                                                               | Disposition                   | Phase 2.6 consequence                                                                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Counted-store lifetime      | Every store is deep-copied into one run-local mutable bag at run start                                                                                                      | Exact                         | Scratch bag state is route-scoped, not room-scoped                                                                                                                              |
+| Offer-time depletion        | Every generated counted offer removes one exact bag entry, including unpicked doors, wheels, cages, and side rooms                                                          | Exact                         | Offer materialization mutates bags before entry/acquisition                                                                                                                     |
+| Offer-time fact projection  | Devotion setup records `LastDevotionDepth` when the offer is materialized, including for an unpicked target                                                                 | Exact                         | Add a reward-type `devotionSpacing` offer projection; never infer it from acquisition                                                                                           |
+| Same-batch duplicates       | Entry-level `AllowDuplicates`; otherwise an earlier peer with the same duplicate key blocks the later peer                                                                  | Exact                         | Normalize `allowDuplicates`, default false                                                                                                                                      |
+| Entry selection             | The game randomly removes one eligible concrete entry                                                                                                                       | Exact support, not RNG replay | Retain exact states internally; diagnostics aggregate only proven-equivalent semantic states.                                                                                   |
+| Refill                      | When no entry in the whole bag is eligible, append a complete base set while retaining leftovers; repeat once more; after two refills fall back to `RoomRewardHealDrop`     | Exact raw picker behavior     | Supported planner consumers require at most one refill; see the reachability proof below                                                                                        |
+| Reward priority queue       | Keepsakes can prioritize an otherwise eligible reward                                                                                                                       | Excluded                      | Neutral equipment baseline contains no priority queue                                                                                                                           |
+| Bounty overrides            | Active bounties can replace store declarations and forced rewards                                                                                                           | Excluded                      | No bounty predicates or alternate bags                                                                                                                                          |
+| Generated base-store ratio  | Entered-room store history influences RunProgress versus MetaProgress support                                                                                               | Simplified                    | Preserve possible/forced support, not probability or RNG state                                                                                                                  |
+| Generated target stores     | Physical target scan may let a later forced store become the shared store used by an earlier ordinary target                                                                | Exact                         | Preserve the verified two-pass, physical-order algorithm                                                                                                                        |
+| Store history               | Entered rooms can record resolved store provenance even when their visible producer did not consume that bag                                                                | Exact                         | Keep store-history policy separate from reward producer                                                                                                                         |
+| Rerolls                     | Rerolls regenerate doors or shop inventory and perturb RNG                                                                                                                  | Deferred                      | Canonical trace performs no rerolls                                                                                                                                             |
+| Duplicate/bonus traits      | Traits may add extra rewards or duplicate pickups                                                                                                                           | Deferred                      | Canonical lifecycle emits only the authored producer's concrete acquisitions                                                                                                    |
+| Nectar run-progress upgrade | With `WorldUpgradeGiftDropRunProgress`, a `GiftDrop` instance created with `RunProgressUpgradeEligible` keeps its Nectar pickup and also attempts one random `+1` Pom level | Exact supported source split  | Ordinary room rewards opt in; Shop inventory does not. An empty target set is a valid no-op; the effect belongs to the producer/acquisition binding, not globally to `GiftDrop` |
 
 ### Offer-time side effects
 
@@ -201,6 +204,40 @@ This is `Exact` within the declared fully progressed baseline. If save
 progression later becomes a project input, it should select another coherent
 store projection rather than adding external GameState predicates to the
 generic current-run requirement DSL.
+
+### Nectar run-progress upgrade
+
+The fully progressed baseline includes
+`WorldUpgradeGiftDropRunProgress`. Its effect is not an unconditional property
+of the `GiftDrop` acquisition identity:
+
+- `ConsumableData.GiftDrop.RunProgress` replaces the pickup use function with
+  `UseStoreRewardRandomStack` only when the constructed item also receives
+  `RunProgressUpgradeEligible = true`;
+- ordinary room-reward spawning in `RewardLogic.lua` passes that flag, so a
+  room-acquired Nectar records the exact `GiftDrop` resource/use acquisition
+  and then raises one random Pom-eligible equipped trait by one level when at
+  least one exists;
+- World Shop spawning in `StoreLogic.lua` does not pass the flag, so purchased
+  Nectar records `GiftDrop` but grants no trait level; and
+- Echo's `EchoLastReward` recreation path explicitly passes the flag for a
+  replayed consumable. `GiftDrop`'s effective `LastRewardEligible` value is
+  `true` because the later of its two raw assignments wins, so replayed Nectar
+  receives the random `+1` effect as well.
+
+Unlike normal `StoreRewardRandomStack` sources, Nectar is not gated by
+`StackUpgradeLegal`. `AddStackToTraits` accepts an empty eligible set and simply
+performs no mutation. Source-eligible Nectar therefore needs a legal
+empty-target outcome; a non-empty target domain still resolves exactly one
+target.
+
+The supported model must therefore keep `GiftDrop` as the one concrete
+acquisition in reward history and attach the random level mutation at an exact
+producer/lifecycle binding. It must not globally add a level effect to the
+`GiftDrop` declaration, synthesize a `StoreRewardRandomStack` acquisition, or
+infer the effect from whether the UI happens to call an offer a room reward.
+Any later producer must declare whether its game creation path supplies the
+flag.
 
 ### Later-store contents
 
@@ -407,19 +444,20 @@ records:
 
 The complete role-resolution families are:
 
-| Producer                       | Store/option identity | Resolved offer                                  | Concrete acquisition timing and identity                                             | Disposition                                                                 |
-| ------------------------------ | --------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| Ordinary `Boon`                | `Boon`                | `Boon` plus visible source                      | acquire the concrete source, such as `ApolloUpgrade`, on room-reward pickup          | Exact                                                                       |
-| `Devotion`                     | `Devotion`            | chosen and spurned source roles                 | acquire chosen source before combat, then spurned source after combat                | Exact roles and concrete trait lifecycle                                    |
-| `Story`                        | fixed `Story`         | structural Story offer                          | no concrete acquisition                                                              | Exact                                                                       |
-| Structural `Shop`              | fixed `Shop`          | structural Shop offer                           | no incoming acquisition; entered shop creates option offers                          | Exact                                                                       |
-| `ClockworkGoal`                | fixed goal marker     | structural Clockwork Goal                       | decrement goal counter on entered spawn; no ordinary concrete acquisition            | Exact                                                                       |
-| `WeaponUpgradeDrop` shop offer | wrapper option        | `WeaponUpgradeDrop`                             | acquire concrete `WeaponUpgrade` on purchase                                         | Exact                                                                       |
-| `ShopHermesUpgrade`            | wrapper option        | `ShopHermesUpgrade`                             | acquire concrete `HermesUpgrade` on purchase                                         | Exact; wrapper identity remains relevant to active shop-option requirements |
-| `RandomLoot` / boosted variant | distinct option entry | `RandomLoot` plus source resolved at generation | acquire that concrete source on purchase                                             | Exact support; rarity detail deferred                                       |
-| `BlindBoxLoot`                 | `BlindBoxLoot`        | `BlindBoxLoot` plus authored hidden source      | record the box, then validate/acquire that source after purchase                     | Exact target; source support is acquisition-time                            |
-| Big/Triple/resource variants   | concrete variant      | same exact visible variant                      | acquire and preserve that variant's exact game-history identity                      | Exact                                                                       |
-| `StoreRewardRandomStack`       | wrapper option        | visible random-Stack wrapper                    | preserve concrete wrapper acquisition/history; semantic Stack effect may be separate | Exact history, trait effect deferred                                        |
+| Producer                       | Store/option identity | Resolved offer                                  | Concrete acquisition timing and identity                                                                                                            | Disposition                                                                 |
+| ------------------------------ | --------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Ordinary `Boon`                | `Boon`                | `Boon` plus visible source                      | acquire the concrete source, such as `ApolloUpgrade`, on room-reward pickup                                                                         | Exact                                                                       |
+| `Devotion`                     | `Devotion`            | chosen and spurned source roles                 | acquire chosen source before combat, then spurned source after combat                                                                               | Exact roles and concrete trait lifecycle                                    |
+| `Story`                        | fixed `Story`         | structural Story offer                          | no concrete acquisition                                                                                                                             | Exact                                                                       |
+| Structural `Shop`              | fixed `Shop`          | structural Shop offer                           | no incoming acquisition; entered shop creates option offers                                                                                         | Exact                                                                       |
+| `ClockworkGoal`                | fixed goal marker     | structural Clockwork Goal                       | decrement goal counter on entered spawn; no ordinary concrete acquisition                                                                           | Exact                                                                       |
+| `WeaponUpgradeDrop` shop offer | wrapper option        | `WeaponUpgradeDrop`                             | acquire concrete `WeaponUpgrade` on purchase                                                                                                        | Exact                                                                       |
+| `ShopHermesUpgrade`            | wrapper option        | `ShopHermesUpgrade`                             | acquire concrete `HermesUpgrade` on purchase                                                                                                        | Exact; wrapper identity remains relevant to active shop-option requirements |
+| `RandomLoot` / boosted variant | distinct option entry | `RandomLoot` plus source resolved at generation | acquire that concrete source on purchase                                                                                                            | Exact support; rarity detail deferred                                       |
+| `BlindBoxLoot`                 | `BlindBoxLoot`        | `BlindBoxLoot` plus authored hidden source      | record the box, then validate/acquire that source after purchase                                                                                    | Exact target; source support is acquisition-time                            |
+| Big/Triple/resource variants   | concrete variant      | same exact visible variant                      | acquire and preserve that variant's exact game-history identity                                                                                     | Exact                                                                       |
+| `StoreRewardRandomStack`       | wrapper option        | visible random-Stack wrapper                    | preserve concrete wrapper acquisition/history and apply one random `+1` Pom mutation                                                                | Exact                                                                       |
+| source-eligible `GiftDrop`     | exact Nectar identity | same `GiftDrop`; no wrapper alias               | preserve `GiftDrop` acquisition/history and attempt one random `+1` Pom mutation only at opted-in producer bindings; empty support is a valid no-op | Exact within the progressed baseline                                        |
 
 An optional semantic-effect alias may later help trait/resource simulation, but
 it must not replace the concrete acquisition identity used by requirements.
@@ -468,7 +506,9 @@ The role registry composes those concrete identities as follows:
 - `ClockworkGoal` has no concrete acquisition role and decrements the goal
   counter through its entered-spawn structural lifecycle;
 - `StoreRewardRandomStack`, Big/Triple drops, and every resource variant remain
-  exact self identities. They never project a related base name.
+  exact self identities. They never project a related base name. A
+  source-eligible `GiftDrop` still writes only `GiftDrop`; its separate level
+  mutation does not alias that acquisition to `StoreRewardRandomStack`.
 
 Ordinary god-source loot updates the acquired-source set and reaches its
 authored concrete trait offer at the declared acquisition role. Hermes remains

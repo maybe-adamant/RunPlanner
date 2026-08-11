@@ -1,8 +1,9 @@
-# Story Traits and Death Defiance
+# Story Traits, Source Effects, and Death Defiance
 
 ## Status
 
-**Implementation-ready delivery plan.** Planning baseline: `d7a034d`.
+**Active follow-up delivery plan.** Gates A-C are delivered. Follow-up planning
+baseline: `fb3e7cf`.
 
 This is an isolated delivery document. Do not link it from stable design,
 biome, audit, or progress indexes while implementation is active. At closure,
@@ -11,16 +12,20 @@ delivery in `IMPLEMENTATION_PROGRESS.md`, and retire this file.
 
 ## Objective
 
-Deliver one narrow authored approximation for Death Defiance-dependent offer
-conditions, use it to correct Athena and Shop eligibility, and add complete
-three-choice trait offers for four fixed Story encounters:
+The delivered baseline added one narrow authored approximation for Death
+Defiance-dependent offer conditions, corrected Athena and Shop eligibility,
+and added complete three-choice trait offers for four fixed Story encounters.
+The active extension now closes the producer-sensitive Nectar level effect and
+uses the established reward, trait, level, and condition machinery for one
+effect-backed Story encounter:
 
-| Biome | Room        | Encounter           | Giver    |
-| ----- | ----------- | ------------------- | -------- |
-| F     | `F_Story01` | `Story_Arachne_01`  | Arachne  |
-| N     | `N_Story01` | `Story_Medea_01`    | Medea    |
-| I     | `I_Story01` | `Story_Hades_01`    | Hades    |
-| P     | `P_Story01` | `Story_Dionysus_01` | Dionysus |
+| Biome | Room        | Encounter            | Giver     |
+| ----- | ----------- | -------------------- | --------- |
+| F     | `F_Story01` | `Story_Arachne_01`   | Arachne   |
+| N     | `N_Story01` | `Story_Medea_01`     | Medea     |
+| I     | `I_Story01` | `Story_Hades_01`     | Hades     |
+| P     | `P_Story01` | `Story_Dionysus_01`  | Dionysus  |
+| G     | `G_Story01` | `Story_Narcissus_01` | Narcissus |
 
 The planner authors whether the relevant Death Defiance predicate passed at a
 specific source. It does not simulate Death Defiance capacity, consumption,
@@ -28,7 +33,10 @@ restoration, or combat outcomes.
 
 This plan extends the existing encounter-owned trait-offer lifecycle. It does
 not turn the structural incoming `Story` reward into a concrete acquisition and
-does not introduce a second Story-choice model.
+does not introduce a second Story-choice model. Narcissus reuses the same
+three-option authoring surface, but declaration-owned selected outcomes decide
+whether a choice equips a persistent trait, emits concrete acquisitions, or
+applies one of the closed mutations required by its source-backed benefits.
 
 ## Source Authorities
 
@@ -40,8 +48,11 @@ does not introduce a second Story-choice model.
 - The installed `NPCData.lua`, `NPCData_Hades.lua`,
   `NPCData_Dionysus.lua`, `TraitData_Athena.lua`, `TraitData_Arachne.lua`,
   `TraitData_Medea.lua`, `TraitData_Hades.lua`, `TraitData_Dionysus.lua`,
-  `ConsumableData.lua`, `RequirementsData.lua`, `RequirementsLogic.lua`, and
-  English `TraitText.en.sjson` are the primary game sources for this delivery.
+  `TraitData_Narcissus.lua`, `ConsumableData.lua`,
+  `WorldUpgradeData.lua`, `RewardLogic.lua`, `StoreLogic.lua`,
+  `InteractLogic.lua`, `EventLogic.lua`, `RequirementsData.lua`,
+  `RequirementsLogic.lua`, and English `TraitText.en.sjson` are the primary
+  game sources for this delivery.
 
 The progressed-save baseline continues to collapse profile, dialogue, lifetime
 resource, and first-meeting gates. Current-run predicates named in this plan do
@@ -55,8 +66,12 @@ not disappear under that baseline.
 - Athena's `DeathDefianceRefillBoon` requirement;
 - `LastStandDrop` eligibility in the `I_WorldShop` and `Q_WorldShop` Survival
   pools;
-- the four fixed Story encounter producers above;
-- 32 source-backed trait declarations and four giver declarations;
+- the five fixed Story encounter producers above;
+- 41 source-backed production choice declarations and five giver declarations;
+- source-sensitive Nectar random-level behavior for ordinary room pickup and
+  Shop purchase;
+- the nine fixed-Common Narcissus benefit choices and their supported concrete
+  acquisitions, random Pom, element, Death Defiance, and Mystery Boon effects;
 - fixed and selectable rarity policies already supported by the trait editor;
 - progressive candidates, findings, chronological acquisition, run-state
   projection, undo/redo, persistence, and focused product-loop coverage.
@@ -64,10 +79,14 @@ not disappear under that baseline.
 ### Explicitly deferred
 
 - Circe and her active Fear, Familiar, Arcana, and Hex predicates;
-- Narcissus, including Mystery Boon, random Pom targeting, elements, rerolls,
-  and his Death Defiance benefit;
-- Echo, trait levels, previous-run boons, previous rewards, Shop duplication,
-  keepsakes, and Death Defiance restoration;
+- the entire Echo provider. Four of its eight source choices require distinct
+  missing capabilities: exact last-reward replay, prior-run trait state, a
+  pending later-Shop duplication lifecycle, and prior-run keepsake state. The
+  other four choices must not be published as an artificially restricted Echo
+  pool;
+- Narcissus reroll inventory/use and the numeric resource, money, healing,
+  Life, and Magick quantities attached to his choices; their supported
+  acquisition identities and route-observable effects remain included;
 - Death Defiance counts, maximum capacity, current availability, spent uses,
   restoration effects, Arcana configuration, or room-local consumption;
 - Arachne armor amount, combat damage, armor depletion, or costume removal;
@@ -77,13 +96,14 @@ not disappear under that baseline.
 - reroll probability, offer weighting, and priority probability;
 - a generic Story-benefit interpreter or arbitrary trait-effect language.
 
-Circe, Narcissus, and Echo must remain absent from production giver and
-encounter-producer declarations in this delivery. Their audited keys remain
-source evidence only.
+Circe and Echo remain absent from production giver and encounter-producer
+declarations. Narcissus is complete only against the declared current-run
+planner baseline; deferred numeric combat/resource effects are not described
+as exact simulation.
 
 ## Audited Provider Baseline
 
-All four providers offer three distinct choices. Arachne and Medea use their
+The four delivered providers offer three distinct choices. Arachne and Medea use their
 manual fixed-Common choice screens. Hades is effectively Common-only in the
 supported normal-run state. Dionysus uses the ordinary Common/Rare/Epic fresh
 rarity support. None participates in ordinary Olympian first-offer composition,
@@ -177,6 +197,46 @@ the supported fresh domain remains Common/Rare/Epic. Dionysus does not enter
 the core god pool and does not receive Pom levels, first-Olympian, or
 replacement composition.
 
+### Narcissus — fixed Common, effect-backed
+
+The exact nine-choice pool, labels, requirements, and outputs are owned by the
+trait audit. The author still records three distinct offered choices and one
+selection through `Story_Narcissus_01`. The selected `NarcissusA..I` key is a
+benefit descriptor, not a persistent equipped trait.
+
+The current-run observable outcomes are closed:
+
+- `NarcissusA` emits the real `StoreRewardRandomStack` acquisition and one
+  random `+1` level resolution;
+- `NarcissusD`, `NarcissusE`, and `NarcissusH` emit their exact supported
+  consumable acquisitions; H reuses the source-local Death Defiance fact;
+- `NarcissusG` emits two `ElementalBoost` effects, folding two Air, Earth,
+  Fire, and Water contributions into downstream trait facts;
+- `NarcissusI` emits `BlindBoxLoot`, owns one authored hidden ordinary-god
+  source, and owns that source's fresh trait offer at unwrap time; and
+- the remaining resource, money, healing, and reroll outputs retain their
+  explicit simplified/deferred dispositions and do not manufacture shadow
+  counters.
+
+The provider uses the existing progressive three-choice surface. Nested
+Mystery Boon and random-Pom controls are option-local resolutions and remain
+dormant unless their option is selected. Switching the selected benefit must
+retain those authored children so switching back restores the work.
+
+### Echo — audited and deferred as one provider
+
+The trait audit records all eight fixed-Common Echo choices and their exact
+source behavior. This plan deliberately publishes none of them. Reward Reward
+Reward, Boon Boon Boon, Gold Gold Gold, and Gift Gift Gift each require a
+different missing lifecycle or input. Publishing only the other four choices
+would distort Echo's actual offer composition and would prematurely make a
+partial provider look complete.
+
+After Narcissus lands, use its delivered outcome shape to reassess Echo and
+write a dedicated plan for the remaining replay, prior-run, pending-Shop, and
+keepsake authorities. Do not add dormant Echo declarations or placeholder
+outcomes in the current delivery.
+
 ## Locked Product Contract
 
 ### One authored predicate outcome, not a Death Defiance simulator
@@ -188,7 +248,7 @@ The user-facing control is one checkbox labeled:
 The fact means only that the declaration-owned Death Defiance predicate for
 this exact source passed. Its source interpretation is intentionally local:
 
-- Athena, and later Narcissus/Echo: at least one Death Defiance is missing;
+- Athena and Narcissus: at least one Death Defiance is missing;
 - Medea: at least one Death Defiance is currently available;
 - Hades: the run has had Death Defiance capability;
 - Shop `LastStandDrop`: the missing-Death-Defiance offer and purchase condition
@@ -232,6 +292,56 @@ ordinary Olympian and Hammer policy; field and Story providers have identical
 offer-composition behavior. Do not add a `storyNpc` kind solely to describe
 room topology. Encounter definitions already own the field/story distinction.
 
+### Source-sensitive acquisition effects
+
+Concrete acquisition identity and an acquisition's source-local semantic
+effect are separate facts. Keep the existing declaration-owned universal Pom
+effects on `StackUpgrade`, `StackUpgradeBig`, `StackUpgradeTriple`, and
+`StoreRewardRandomStack`. Add a narrow producer/lifecycle override for effects
+that exist only when that producer creates the same acquisition in a special
+mode.
+
+For progressed-baseline Nectar:
+
+- `RoomReward + GiftDrop + roomRewardPickup` owns one random `+1` effect;
+- ordinary Shop purchase of `GiftDrop` owns no level effect.
+
+The producer-local Nectar effect is `randomTargetIfAvailable`: a non-empty
+Pom-eligible domain requires exactly one authored target, while an empty domain
+is complete and performs no mutation. Do not weaken the existing strict
+`randomTarget` contract used by `StoreRewardRandomStack`, whose supported
+producers are guarded by `StackUpgradeLegal`.
+
+Resolve the effective effect from the exact producer profile, offer, role, and
+lifecycle binding before creating defaults, decoding authored children,
+evaluating candidates, or applying history. Do not add the effect globally to
+`GiftDrop`, infer it from an address kind, or make React distinguish room and
+Shop Nectar. The reward history writes one `GiftDrop`; the trait history writes
+one separate level mutation only after a valid target resolution.
+
+### Closed selected-outcome classification
+
+The existing ordinary path implicitly equips every valid selected option. Make
+that result declaration-owned without introducing an open effect language.
+Every trait choice normalizes to one member of a closed selected-outcome union:
+
+- equip the selected trait, which remains the default for existing providers;
+- emit declaration-owned concrete acquisition roles;
+- apply one of the exact closed trait/element mutations required by Narcissus.
+
+The union belongs to the catalog schema and is exhaustively compiled and
+dispatched by the engine. It is not a string function name, callback registry,
+generic property-change interpreter, or application-side switch. A selected
+effect-backed key still appears in the trait-offer evaluation trace, but only
+the `equip` outcome enters the persistent equipped-trait ledger.
+
+When an outcome needs authored detail, retain it on its exact offered option:
+the random Pom target or Mystery Boon hidden source and fresh offer. Inactive
+option children are dormant, preserved, and restored when reselected. Commands
+and codecs reject children on outcome kinds that cannot consume them. Use the
+existing trait, level-resolution, and resolved-reward value types inside this
+closed owner; do not copy their validation into an NPC-specific model.
+
 ### Trait-offer ownership and chronology
 
 Each fixed Story Encounter Definition declares its giver through the existing
@@ -243,11 +353,13 @@ simulation event, workspace projection, interaction binding, and trait dialog
 remain the sole path. Do not add Story-specific authored room state or a second
 trait editor.
 
-Only a reached picked Story occurrence publishes and acquires its selected
-trait. Retained state on an unpicked or replaced occurrence remains dormant and
-is restored if the occurrence becomes active again. Acquisition occurs at that
-fixed encounter's existing `encounterCompleted` event and folds into the one
-chronological equipped-trait ledger.
+Only a reached picked Story occurrence publishes and applies its selected
+outcome. Retained state on an unpicked or replaced occurrence remains dormant
+and is restored if the occurrence becomes active again. The outcome occurs at
+that fixed encounter's existing `encounterCompleted` event. Persistent
+selections fold into the one chronological equipped-trait ledger; effect-backed
+selections emit their exact reward, level, or element events at the same
+chronology without equipping the descriptor key.
 
 The structural incoming `Story` producer continues to resolve no concrete
 acquisition. The encounter choice is a sibling encounter-local event, not a
@@ -277,10 +389,13 @@ repair control.
 
 ### Persistence
 
-Adding authored condition state changes the persisted project contract. Bump
-the baseline schema exactly once, from 17 to 18, in the Death Defiance gate and
-follow the repository's current exact-version policy. Do not introduce a
-migration registry, compatibility reader, or production forwarding model.
+Gate A already bumped the persisted contract for authored condition state. The
+current baseline schema is 19 after the later trait-level delivery. Gate D's
+Nectar correction reuses the existing level-resolution value shape and needs
+only a catalog-version change. Gate E bumps the schema exactly once, from 19 to
+20, when option-local selected-outcome resolutions first enter authored state.
+Do not introduce a migration registry, compatibility reader, or production
+forwarding model.
 
 Every gate that changes normalized catalog declarations updates the catalog
 version according to the existing exact-match policy. Encoded condition state
@@ -305,9 +420,21 @@ the checkbox is false. A retained invalid value remains present as the current
 selection with its finding, following the established contextual-picker
 contract.
 
+Effect-backed Story providers use the same dialog and three-card picker. The
+selected option's nested resolution appears in the stable detail region below
+the offer; it must not expand one card unevenly or hide the other choices.
+Reuse the existing contextual picker and level-resolution dialog products for
+Mystery Boon and Pom targets. Findings stay in the dialog's fixed finding
+region and never replace the control needed to repair them.
+
+The run-state panel shows only state that exists before its decision. It may
+therefore expose Narcissus results only at later decisions: exact reward
+history, element counts, and changed levels. It must not list `NarcissusA..I`
+as equipped traits.
+
 ## Delivery Gates
 
-### Gate A — Death Defiance condition and existing corrections
+### Gate A — Death Defiance condition and existing corrections (delivered)
 
 Deliver one vertical slice across catalog, authored state, commands, codec,
 materialization, candidate evaluation, simulation validation, workspace
@@ -325,14 +452,14 @@ projection, interaction binding, and React:
 Gate A must land with no Story giver enabled. This isolates the model
 correction from provider expansion and proves both trait and reward consumers.
 
-### Gate B — First Story reuse proof: Arachne and Medea
+### Gate B — First Story reuse proof: Arachne and Medea (delivered)
 
 Add the eight source-backed costume declarations and Arachne giver, bind only
 `Story_Arachne_01`, and prove fixed Common three-choice authoring through the
 existing encounter lifecycle. Generalize `fieldNpc` to the behavior-based
 `npc` provider kind in this first provider-expansion gate, including the three
 existing field providers. Keep the armor-depletion collapse in this isolated
-plan through Gate D's documentation absorption; add no armor state.
+plan through Gate F's documentation absorption; add no armor state.
 
 Add the eight source-backed curse declarations and Medea giver, bind
 `Story_Medea_01`, and use Gate A's authored condition only for
@@ -346,7 +473,7 @@ combined in Gate C. Split Gate C only if the delivered code exposes a concrete
 new lifecycle or product seam; provider identity alone is not a reason to add a
 gate.
 
-### Gate C — Remaining provider expansion: Hades and Dionysus
+### Gate C — Remaining provider expansion: Hades and Dionysus (delivered)
 
 Add the eight source-backed Hades declarations and giver, bind
 `Story_Hades_01`, retain Howling Soul's exact exclusions, and use Gate A's
@@ -358,23 +485,77 @@ Add the eight source-backed Dionysus declarations and giver, bind
 and Tipsy Shot exclusions, and prove that the provider does not activate
 ordinary Olympian first-offer or replacement composition.
 
-### Gate D — Closure and absorption
+### Gate D — Producer-sensitive Nectar level effect
 
-Run the complete repository gate, audit the final diff for parallel paths and
-deferred-provider leakage, absorb the durable rules into the owning design,
-biome, and audit documents, update `IMPLEMENTATION_PROGRESS.md`, and retire
-this plan.
+Deliver the smallest cross-lane correction before adding another provider:
+
+1. normalize a narrow producer/lifecycle level-effect override without moving
+   universal Stack/Pom effects or changing acquisition identity;
+2. opt ordinary `RoomReward` `GiftDrop` pickup into random `+1` under the
+   progressed baseline while leaving every Shop `GiftDrop` purchase untouched;
+3. make defaults, codecs, commands, candidate evaluation, simulation,
+   findings, structured workspace, and the existing level-resolution UI
+   consume the resolved effective binding;
+4. prove that room Nectar records `GiftDrop` plus one valid level mutation when
+   a target exists, records only `GiftDrop` as a legal no-op when none exists,
+   Shop Nectar always records only `GiftDrop`, and a missing target in a
+   non-empty domain stays repairable; and
+5. bump only the catalog version and run the focused catalog, engine, planner,
+   and UI lanes.
+
+Gate D must not add Narcissus, Echo, last-reward state, or a generic semantic
+effect bag. It establishes the source-sensitive seam those providers can reuse.
+
+### Gate E — Narcissus effect-backed Story choices
+
+Add the closed selected-outcome classification and the nine Narcissus
+declarations in one vertical slice:
+
+1. keep ordinary providers on the default persistent-equipped outcome;
+2. add option-local authored outcome resolutions, schema 20 persistence,
+   semantic replacement commands, dormant-state retention, and exact ownership
+   validation;
+3. bind only `Story_Narcissus_01` to the new giver and preserve its fixed-Common
+   three-choice offer;
+4. apply selected effect outcomes at encounter completion without equipping
+   `NarcissusA..I`;
+5. reuse the existing random-Pom path for A, add exact supported acquisition
+   roles for D/E/H, fold G's two all-element contributions, and reuse the
+   existing Blind Box payload/unwrap/trait-offer path for I;
+6. reuse the Death Defiance condition only for H and retain the audited
+   simplified dispositions for rerolls and numeric resource/stat effects; and
+7. project selected-option detail through the existing dialog, findings,
+   navigation, undo/redo, and run-state products.
+
+Do not build a generic consumable-drop interpreter or add one authored field
+per Narcissus choice. Echo remains outside this gate and must not influence the
+closed outcome surface beyond capabilities Narcissus genuinely requires.
+
+### Gate F — Post-Narcissus reassessment and closure
+
+Run the complete repository gate and audit the final diff for parallel paths,
+descriptor keys incorrectly entering equipped state, and deferred-provider
+leakage. Reassess Echo against the delivered Narcissus shape, but do not add an
+Echo giver or placeholder declarations in this gate. Record any remaining Echo
+work in a fresh dedicated plan only after identifying the exact missing
+authorities for replay, prior-run state, later-Shop duplication, and keepsakes.
+
+Absorb the durable Nectar and Narcissus rules into the owning design, biome,
+and audit documents, update `IMPLEMENTATION_PROGRESS.md`, and retire this plan.
 
 ## Primary Test Ownership
 
 ### Catalog
 
-- exact four provider pools, labels, order, rarity policy, elements, slots,
-  exclusions, and defaults;
+- exact five implemented provider pools, labels, order, rarity policy, elements,
+  slots, selected-outcome classification, and defaults;
 - exact encounter-to-giver bindings;
 - Athena and both Shop `LastStandDrop` requirements;
 - unsupported condition ownership rejected at compilation;
-- no Circe, Narcissus, or Echo production giver.
+- exact universal versus producer-local level-effect ownership for Stack/Pom,
+  room Nectar, and Shop Nectar;
+- exact Narcissus effect roles;
+- no Circe or Echo production giver or choice.
 
 ### Authored project and commands
 
@@ -382,7 +563,9 @@ this plan.
 - semantic toggle, no-op behavior, undo/redo, JSON round trip, and malformed
   ownership rejection;
 - selected values and dormant encounter state survive condition changes;
-- schema-version contact behavior.
+- option-local effect resolutions survive selection changes and reject
+  incompatible outcome children;
+- schema-version contact behavior, including the one 19-to-20 bump.
 
 ### Simulation and candidates
 
@@ -390,12 +573,18 @@ this plan.
 - I and Q Shop `LastStandDrop` unavailable/available under false/true;
 - ordered purchase validation consumes the same Shop-local fact;
 - each fixed Story provider emits exactly one reached encounter offer and one
-  selected chronological acquisition;
+  selected chronological outcome;
 - Arachne/Medea/Hades fixed rarity, Dionysus selectable rarity;
 - Medea and Hades condition checks remain provider-local despite sharing one
   authored boolean shape;
 - Dionysus Water and supported god-trait derived facts appear downstream;
-- unpicked Story alternatives do not alter trait history.
+- unpicked Story alternatives do not alter trait history;
+- room versus Shop Nectar preserves exact source-sensitive random-level
+  behavior, including Nectar's legal empty-target no-op, without acquisition
+  aliases;
+- Narcissus descriptor keys never enter equipped state; A, G, H, and I retain
+  representative random-level, element, condition, and nested Mystery Boon
+  witnesses.
 
 ### Planner and UI
 
@@ -404,12 +593,14 @@ this plan.
 - contextual pickers retain invalid current values and filter unsupported
   alternatives;
 - fixed Story rooms reuse the existing trait dialog and Customize navigation;
-- one representative Story product-loop witness plus focused projection/UI
-  tests; do not duplicate all catalog and engine matrices in React.
+- option-local outcome details reuse existing trait/level contextual controls
+  and fixed finding regions;
+- one representative Narcissus product-loop witness plus focused projection/UI
+  tests; do not duplicate catalog and engine matrices in React.
 
 Use `npm run test:catalog`, `npm run test:engine`, `npm run test:planner`, and
 `npm run test:ui` according to each gate's owning lane. Use
-`npm run test:changed` during focused iteration. Gate D runs `npm run check`.
+`npm run test:changed` during focused iteration. Gate F runs `npm run check`.
 
 ## Closure Audit
 
@@ -420,17 +611,24 @@ Before retiring this plan, verify all of the following:
 - no generic string-keyed authored-condition bag or effect interpreter exists;
 - Athena and both Shop profiles consume declaration-owned requirements;
 - purchase-order validation does not bypass the Shop condition;
-- exactly the four scoped Story encounters publish Story trait offers;
+- exactly the five scoped Story encounters publish Story trait offers;
 - Arachne combat encounters remain non-producers;
 - the structural `Story` reward still resolves no acquisition;
-- one selected Story choice reaches the existing equipped-trait ledger at the
-  fixed encounter-completion point;
+- every selected Story outcome is applied at the fixed encounter-completion
+  point, while only declaration-owned persistent outcomes reach the equipped
+  ledger;
 - `fieldNpc` was generalized once to behavior-based `npc`; no redundant
   `storyNpc` kind was added and encounter-specific field-NPC terminology was
   otherwise left intact;
 - React contains no provider, trait-key, encounter-key, or Shop-profile policy
   switches;
-- Circe, Narcissus, and Echo remain deferred without placeholders;
+- room Nectar attempts its exact random level mutation with a legal no-op on
+  empty support, Shop Nectar does not, and both record only `GiftDrop`
+  acquisition identity;
+- `NarcissusA..I` never appear as equipped traits;
+- Mystery Boon reuses the existing resolved-reward and trait-offer authorities
+  rather than a parallel NPC offer model;
+- Circe and the complete Echo provider remain deferred without placeholders;
 - no complete game-fact matrix was duplicated outside its primary catalog or
   engine test owner;
 - production growth corresponds to declarations, commands, and supported
@@ -438,9 +636,9 @@ Before retiring this plan, verify all of the following:
 
 ## Expected Commit Shape
 
-The default sequence is four focused commits: Gate A, the Arachne/Medea reuse
-proof, the Hades/Dionysus expansion, and Gate D documentation closure. The
-post-Gate-B audit may split the remaining expansion only when it identifies a
-real semantic seam or independently reviewable behavior correction. Circe,
-Narcissus, and Echo receive their own later plans or focused provider documents
-after this plan closes.
+Gates A-C are already delivered. The follow-up default is three focused
+commits: producer-sensitive Nectar, Narcissus and its closed outcome owner, and
+post-Narcissus reassessment/documentation closure. Gate E must not be split
+into one commit per benefit key. Circe and the complete Echo provider remain
+later work; Echo receives a fresh plan only after this delivery reveals the
+right ownership shape for its four missing capabilities.
