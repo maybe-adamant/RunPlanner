@@ -1217,6 +1217,75 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
 
+  function processAuthoredShopPurchases(
+    room: CanonicalAuthoredRoom,
+    declaration: RoomDeclaration,
+    roomView: ProgressiveRoomHistoryViews,
+    sourceBranches: readonly RewardBranchState[],
+    historySequence: number,
+    targetFindings: Map<string, FindingRegionEntry>,
+  ): readonly RewardBranchState[] {
+    const roomKey = semanticAddressKey(room.origin);
+    if (!shopPurchaseContexts.has(roomKey)) {
+      shopPurchaseContexts.set(
+        roomKey,
+        prepareShopPurchaseCandidateContext({
+          catalog,
+          room,
+          declaration,
+          branchesBeforePurchases: sourceBranches,
+          historySequence,
+          facts: (candidateRoom, branchHistory, shopNames) =>
+            rewardFacts(
+              catalog,
+              candidateRoom,
+              candidateRoom,
+              declaration,
+              roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+              branchHistory,
+              enteredBiomeCount,
+              shopNames,
+              undefined,
+              undefined,
+              rewardLookup.internal,
+            ),
+          fail,
+        }),
+      );
+    }
+    return processShopPurchases(
+      sourceBranches,
+      {
+        catalog,
+        room,
+        declaration,
+        historySequence,
+        findingChronology: rewardFindingChronologyForRoom(
+          snapshot,
+          room.origin,
+          historySequence,
+          'localRoomLifecycle',
+        ),
+        facts: (branchHistory, shopNames = new Set()) =>
+          rewardFacts(
+            catalog,
+            room,
+            room,
+            declaration,
+            roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+            branchHistory,
+            enteredBiomeCount,
+            shopNames,
+            undefined,
+            undefined,
+            rewardLookup.internal,
+          ),
+        fail,
+      },
+      targetFindings,
+    );
+  }
+
   function completeIncomingOfferCandidate(
     entry: IncomingOfferCandidateContext,
     offer: CanonicalResolvedIncomingReward['offer'],
@@ -2328,63 +2397,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
         ) {
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
         }
-        const roomKey = semanticAddressKey(room.origin);
-        if (!shopPurchaseContexts.has(roomKey)) {
-          shopPurchaseContexts.set(
-            roomKey,
-            prepareShopPurchaseCandidateContext({
-              catalog,
-              room,
-              declaration,
-              branchesBeforePurchases: branches,
-              historySequence: event.sequence,
-              facts: (candidateRoom, branchHistory, shopNames) =>
-                rewardFacts(
-                  catalog,
-                  candidateRoom,
-                  candidateRoom,
-                  declaration,
-                  roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-                  branchHistory,
-                  enteredBiomeCount,
-                  shopNames,
-                  undefined,
-                  undefined,
-                  rewardLookup.internal,
-                ),
-              fail,
-            }),
-          );
-        }
-        branches = processShopPurchases(
+        branches = processAuthoredShopPurchases(
+          room,
+          declaration,
+          roomView,
           branches,
-          {
-            catalog,
-            room,
-            declaration,
-            historySequence: event.sequence,
-            findingChronology: rewardFindingChronologyForRoom(
-              snapshot,
-              room.origin,
-              event.sequence,
-              'localRoomLifecycle',
-            ),
-            facts: (branchHistory, shopNames = new Set()) =>
-              rewardFacts(
-                catalog,
-                room,
-                room,
-                declaration,
-                roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-                branchHistory,
-                enteredBiomeCount,
-                shopNames,
-                undefined,
-                undefined,
-                rewardLookup.internal,
-              ),
-            fail,
-          },
+          event.sequence,
           findings,
         );
         break;
@@ -2392,6 +2410,39 @@ export function evaluateBiomeRewardsAssemblyInternal(
       default:
         branches = advanceRewardBranches(branches, event.sequence);
         break;
+    }
+  }
+
+  // A Midshop's unresolved outgoing decision stops canonical history before
+  // purchases. Replay its authored order only into a discarded interaction
+  // branch so active purchase leaves remain assessable without changing the
+  // pre-purchase branches that own outgoing-door generation.
+  let frontierShopPurchaseBranches: readonly RewardBranchState[] = Object.freeze([]);
+  if (
+    snapshot.kind === 'biomePrefix' &&
+    snapshot.frontier?.kind === 'exitDecision' &&
+    snapshot.frontier.parent.origin.kind === 'occurrence' &&
+    branches.length > 0
+  ) {
+    const source = rooms.get(semanticAddressKey(snapshot.frontier.parent.origin));
+    const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+    const roomView =
+      source === undefined ? undefined : views.get(semanticAddressKey(source.origin));
+    if (
+      source?.kind === 'authored' &&
+      source.entryState?.kind === 'shop' &&
+      declaration !== undefined &&
+      roomView !== undefined
+    ) {
+      const historySequence = (history.events.at(-1)?.sequence ?? 0) + 1;
+      frontierShopPurchaseBranches = processAuthoredShopPurchases(
+        source,
+        declaration,
+        roomView,
+        branches,
+        historySequence,
+        findings,
+      );
     }
   }
 
@@ -2411,7 +2462,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const immutableFindingRegions = Object.freeze([...findings.values()]);
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
-    branches,
+    Object.freeze([...branches, ...frontierShopPurchaseBranches]),
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
