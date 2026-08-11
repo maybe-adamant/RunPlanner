@@ -12,7 +12,7 @@ import {
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShipOccurrenceCommand } from './types';
-import { createDefaultTraitOffers } from '../traits';
+import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 
 function requireWheel(
   catalog: Catalog,
@@ -134,6 +134,14 @@ export function applyShipOccurrenceCommand(
                 command.value,
                 located.loadout,
               ),
+              ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+                ? {}
+                : {
+                    levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                      catalog,
+                      command.value,
+                    ),
+                  }),
             }),
           }),
         });

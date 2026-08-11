@@ -1,5 +1,6 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
+import { resolveAcquisitionRole } from '../reward-kernel/history';
 
 export interface AuthoredTraitOption {
   readonly traitKey: string;
@@ -35,6 +36,39 @@ export interface EquippedTrait {
   /** Hammers are rarityless player-facing traits with an independent I/II rank. */
   readonly hammerRank?: 'RankI' | 'RankII';
   readonly sourceRole: string;
+}
+
+/** Exact authored outcome for one declaration-owned Pom acquisition role. */
+export type AuthoredLevelResolution =
+  | {
+      readonly kind: 'choice';
+      readonly offeredTraitKeys: readonly string[];
+      readonly selectedTraitKey: string | null;
+    }
+  | { readonly kind: 'random'; readonly targetTraitKey: string | null };
+
+/** The declaration-owned Pom child is deliberately incomplete by default. */
+export function createDefaultLevelResolutions(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): Readonly<Record<string, AuthoredLevelResolution>> | undefined {
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
+  const result: Record<string, AuthoredLevelResolution> = {};
+  for (const role of declaration.acquisitionRoles.values) {
+    const acquisition =
+      catalog.rewards.acquisitions.byKey[
+        resolveAcquisitionRole(catalog.rewards, offer, role.key, 'roomRewardPickup').acquisition
+          .gameName
+      ];
+    if (acquisition?.levelResolutionEffect === undefined) continue;
+    result[role.key] = Object.freeze(
+      acquisition.levelResolutionEffect.kind === 'visibleChoice'
+        ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
+        : { kind: 'random' as const, targetTraitKey: null },
+    );
+  }
+  return Object.keys(result).length === 0 ? undefined : Object.freeze(result);
 }
 
 export interface TraitOfferDefaultsContext {

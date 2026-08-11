@@ -268,9 +268,11 @@ display data.
 
 The first blocking Pom leaf retains its selected assessment and candidate
 capability through the existing progressive frontier. Missing, stale,
-duplicate, wrong-count, or unselected targets block at that exact semantic
-owner. A valid resolution advances the same validated prefix used by run state
-and later trait candidates.
+wrong-count, or unselected targets block at that exact semantic owner. Duplicate
+choice keys are structurally malformed and are rejected by commands and the
+codec; simulation may assess a directly constructed duplicate defensively, but
+it is not a persistable authored state. A valid resolution advances the same
+validated prefix used by run state and later trait candidates.
 
 ## Application and UI Contract
 
@@ -353,8 +355,9 @@ Primary witnesses:
 - offered keys are distinct, eligible, and contain the selected key;
 - Big and Triple Poms add two and three levels respectively;
 - random Pom records one eligible exact target and never exposes three options;
-- no-target, missing, duplicate, stale, and wrong-cardinality values remain
-  authored but block without mutating levels;
+- no-target, missing, stale, and wrong-cardinality values remain authored but
+  block without mutating levels, while duplicate choice keys are rejected at
+  the structural command/codec boundary;
 - an upstream acquisition can make a later Pom valid, while an upstream
   replacement can make a retained target stale;
 - purchased Shop Poms fold in purchase order and unpurchased Poms do not; and

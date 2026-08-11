@@ -1,0 +1,107 @@
+import type { Catalog } from '../../catalog-schema';
+import type { ProjectDocument } from '../model';
+import type { AuthoredLevelResolution } from '../traits';
+import { resolveAcquisitionRole } from '../../reward-kernel/history';
+import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
+import {
+  locateTraitReward,
+  updateLevelResolutionReward,
+  updateTraitRewardState,
+} from './trait-offer';
+import type { LevelResolutionCommand, TraitOfferCommand } from './types';
+import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+
+function effectFor(
+  catalog: Catalog,
+  offer: import('../../reward-kernel/model').ResolvedRewardOffer,
+  role: string,
+) {
+  try {
+    const acquisition = resolveAcquisitionRole(catalog.rewards, offer, role, 'roomRewardPickup');
+    return catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
+      ?.levelResolutionEffect;
+  } catch {
+    return undefined;
+  }
+}
+
+function validate(
+  catalog: Catalog,
+  effect: NonNullable<ReturnType<typeof effectFor>>,
+  value: AuthoredLevelResolution,
+  command: LevelResolutionCommand,
+): AuthoredLevelResolution {
+  if (effect.kind === 'visibleChoice') {
+    if (value.kind !== 'choice') failCommand(command, 'Pom acquisition requires a visible choice');
+    if (new Set(value.offeredTraitKeys).size !== value.offeredTraitKeys.length)
+      failCommand(command, 'Pom offered trait keys must be distinct');
+    for (const key of value.offeredTraitKeys)
+      if (catalog.traits.byKey[key] === undefined) failCommand(command, `unknown trait ${key}`);
+    if (
+      value.selectedTraitKey !== null &&
+      catalog.traits.byKey[value.selectedTraitKey] === undefined
+    )
+      failCommand(command, `unknown trait ${value.selectedTraitKey}`);
+    if (value.selectedTraitKey !== null && !value.offeredTraitKeys.includes(value.selectedTraitKey))
+      failCommand(command, 'Pom selected trait must be one of the offered traits');
+    return Object.freeze({
+      kind: 'choice',
+      offeredTraitKeys: Object.freeze([...value.offeredTraitKeys]),
+      selectedTraitKey: value.selectedTraitKey,
+    });
+  }
+  if (value.kind !== 'random')
+    failCommand(command, 'random Pom acquisition requires one exact target');
+  if (value.targetTraitKey !== null && catalog.traits.byKey[value.targetTraitKey] === undefined)
+    failCommand(command, `unknown trait ${value.targetTraitKey}`);
+  return Object.freeze({ kind: 'random', targetTraitKey: value.targetTraitKey });
+}
+
+export function applyLevelResolutionCommand(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: LevelResolutionCommand,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const owner = command.levelResolution.owner;
+  if (
+    owner.routeKey !== command.levelResolution.routeKey ||
+    owner.biomeKey !== command.levelResolution.biomeKey
+  )
+    failCommand(command, 'level-resolution owner is outside its addressed biome');
+  if (owner.kind === 'encounterPhase')
+    failCommand(command, 'encounter phases do not own Pom level resolutions');
+  const occurrence = requireOccurrence(located.plan, owner.occurrenceId, command);
+  const shim = {
+    kind: 'ReplaceTraitOffer',
+    trait: { ...command.levelResolution, kind: 'traitOffer' },
+  } as unknown as TraitOfferCommand;
+  const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, shim);
+  if (reward === undefined)
+    failCommand(command, `no reward at role ${command.levelResolution.acquisitionRole}`);
+  const effect = effectFor(catalog, reward.offer, command.levelResolution.acquisitionRole);
+  if (effect === undefined)
+    failCommand(
+      command,
+      `no Pom level-resolution effect at role ${command.levelResolution.acquisitionRole}`,
+    );
+  const value = validate(catalog, effect, command.value, command);
+  const existing =
+    reward.levelResolutionsByAcquisitionRole?.[command.levelResolution.acquisitionRole];
+  if (JSON.stringify(existing) === JSON.stringify(value)) return document;
+  const state = updateTraitRewardState(
+    catalog,
+    located,
+    occurrence,
+    occurrence.state,
+    shim,
+    value as never,
+    updateLevelResolutionReward as never,
+  );
+  return updateOccurrenceTopology(
+    document,
+    located,
+    replaceOccurrence(topology, Object.freeze({ ...occurrence, state })),
+  );
+}

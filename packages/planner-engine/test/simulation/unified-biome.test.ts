@@ -44,30 +44,11 @@ function traitContext(project: ReturnType<typeof createProjectDocument>, routeKe
 
 function legalHFieldsProject() {
   const biome = createBiomeAddress('Underworld', 'H');
-  let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(
-      biome,
-      createOccurrenceId('golden-h-combat03'),
-      'cages',
-      'cage1',
-    ),
-    value: { rewardType: 'RoomMoneyDrop' },
-  });
+  let project = createGoldenFGHProject();
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, createOccurrenceId('golden-h-miniboss01')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(
-      biome,
-      createOccurrenceId('golden-h-combat05'),
-      'cages',
-      'cage2',
-    ),
-    value: { rewardType: 'StackUpgrade' },
   });
   return authorLegalTraitOffers(project);
 }
@@ -92,6 +73,14 @@ function legalIProject() {
   project = withIEncounterSelection(project, 'i-combat06', 'GeneratedI');
   project = withIEncounterSelection(project, 'i-combat11', 'GeneratedI_GoalReward');
   project = withIEncounterSelection(project, 'i-combat12-entered', 'GeneratedI_GoalReward');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      createBiomeAddress('Underworld', 'I'),
+      createOccurrenceId('i-miniboss'),
+    ),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(
@@ -478,12 +467,10 @@ describe('unified biome simulation', () => {
 
   it('runs the Fields chain and no-store takeover through the same evaluator', () => {
     const project = legalHFieldsProject();
-    const plan = project.routes[0]?.biomes.find((candidate) => candidate.biomeKey === 'H');
-    if (plan === undefined) throw new Error('missing H plan');
-    const biome = evaluateBiome(catalog, 'Underworld', plan, {
-      enteredBiomeCount: 3,
-      loadout: traitContext(project, 'Underworld'),
-    });
+    const biome = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (biome === undefined) throw new Error('missing H evaluation');
     expect(biome.authoring).toBe('complete');
     if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('H should be complete-valid');
@@ -562,11 +549,15 @@ describe('unified biome simulation', () => {
       enteredBiomeCount: 4,
       loadout: traitContext(project, 'Underworld'),
     });
-    if (biome.authoring !== 'complete' || biome.validity !== 'valid') {
-      throw new Error(`I should be complete-valid: ${JSON.stringify(biome.findings)}`);
+    if (biome.authoring !== 'complete') throw new Error('I should remain structurally complete');
+    expect(biome.validity).toBe('invalid');
+    expect(biome.findings).toContainEqual(expect.objectContaining({ code: 'missingPomTarget' }));
+    if (!('materializedPrefix' in biome)) {
+      throw new Error('I should retain a blocked materialized prefix');
     }
+    const prefix = biome.materializedPrefix;
     expect(
-      biome.snapshot.decisions
+      prefix.decisions
         .filter((decision) => decision.kind === 'batch')
         .map((decision) => decision.batchState.kind),
     ).toEqual([

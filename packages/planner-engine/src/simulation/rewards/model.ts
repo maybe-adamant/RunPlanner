@@ -6,7 +6,11 @@ import type {
 } from '../../authored-project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SemanticFinding } from '../model';
-import type { SelectedTraitOfferAssessment, TraitHistoryState } from '../traits';
+import type {
+  SelectedLevelResolutionAssessment,
+  SelectedTraitOfferAssessment,
+  TraitHistoryState,
+} from '../traits';
 import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './run-state';
 
 interface RewardEventBase {
@@ -79,6 +83,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly runStateSnapshots: readonly DecisionRunStateSnapshot[];
   readonly runStateAvailability: readonly DecisionRunStateAvailability[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
+  readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
 }
 
 export type RewardSimulation = BiomeRewardSimulation;

@@ -4,6 +4,7 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type EncounterPhaseAddress,
+  type LevelResolutionAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
 import type { CountedRewardBinding } from '../reward-kernel';
@@ -63,6 +64,7 @@ import {
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
 import type { TraitOfferCandidateArtifacts } from './candidate-artifacts';
+import type { LevelResolutionCandidateArtifacts } from './candidate-artifacts';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -317,6 +319,16 @@ export function candidateArtifactsForProjectEvaluationAssembly(
   return candidateArtifacts(requireExactProjectEvaluationAssembly(assembly));
 }
 
+/** Narrow supported candidate capability for one reached Pom owner. */
+export function levelResolutionCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  address: LevelResolutionAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
+    ?.levelResolutions.at(address);
+}
+
 /**
  * Supported exact-assembly query for one encounter phase. Application
  * composition may ask whether a particular declared phase has an evaluated
@@ -423,6 +435,7 @@ function generation(
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: TraitOfferCandidateArtifacts,
+  levelResolutions: LevelResolutionCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -463,6 +476,7 @@ function generation(
       roomLifecycles,
       encounters.artifacts,
       traitOffers,
+      levelResolutions,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -657,6 +671,7 @@ function evaluateBiomeAssembly(
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
+    rewards.levelResolutionArtifacts,
   );
   const findings = Object.freeze([
     ...roomGeneration.validation.findings,

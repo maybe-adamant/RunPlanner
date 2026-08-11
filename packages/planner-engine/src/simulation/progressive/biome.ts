@@ -7,6 +7,7 @@ import {
   type OccurrenceAddress,
   type SemanticAddress,
   type TargetAddress,
+  type LevelResolutionAddress,
   type TraitOfferAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
@@ -122,6 +123,7 @@ function generation(
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: import('../candidate-artifacts').TraitOfferCandidateArtifacts,
+  levelResolutions: import('../candidate-artifacts').LevelResolutionCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -166,6 +168,7 @@ function generation(
       roomLifecycles,
       encounters.artifacts,
       traitOffers,
+      levelResolutions,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -201,6 +204,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'shopOffer':
       return address;
     case 'traitOffer':
+    case 'levelResolution':
       return rewardOwnerAddress(address.owner);
     default:
       return undefined;
@@ -209,7 +213,8 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
 
 function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
-  if (address.kind === 'traitOffer') return occurrenceOwnerAddress(address.owner);
+  if (address.kind === 'traitOffer' || address.kind === 'levelResolution')
+    return occurrenceOwnerAddress(address.owner);
   if (address.kind === 'encounterPhase' && address.owner.kind === 'occurrence') {
     return createOccurrenceAddress(
       createBiomeAddress(address.routeKey, address.biomeKey),
@@ -358,6 +363,7 @@ function products(
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
+    rewards.levelResolutionArtifacts,
     encounterBoundary,
   );
   return Object.freeze({
@@ -396,6 +402,8 @@ function retainBlockedRegionProducts(
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer' ? blockedAt : undefined;
+  const blockedLevelAt: LevelResolutionAddress | undefined =
+    blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
@@ -411,6 +419,24 @@ function retainBlockedRegionProducts(
     ...retainedRewards.selectedTraitOffers,
     ...selectedOfferPrefix.filter(
       (offer) => !retainedOfferKeys.has(semanticAddressKey(offer.address)),
+    ),
+  ]);
+  const selectedLevelResolutionPrefix =
+    blockedLevelAt === undefined
+      ? []
+      : selectedRewards.selectedLevelResolutions.filter(
+          (resolution) =>
+            semanticAddressKey(resolution.address) === semanticAddressKey(blockedLevelAt),
+        );
+  const retainedLevelKeys = new Set(
+    retainedRewards.selectedLevelResolutions.map((resolution) =>
+      semanticAddressKey(resolution.address),
+    ),
+  );
+  const selectedLevelResolutions = Object.freeze([
+    ...retainedRewards.selectedLevelResolutions,
+    ...selectedLevelResolutionPrefix.filter(
+      (resolution) => !retainedLevelKeys.has(semanticAddressKey(resolution.address)),
     ),
   ]);
   const blockedRewardFindings = Object.freeze(
@@ -446,6 +472,19 @@ function retainBlockedRegionProducts(
         ? blockedCapability
         : retainedArtifacts.traitOffers.at(address);
     },
+  });
+  const levelCapability =
+    blockedLevelAt === undefined
+      ? undefined
+      : (selectedArtifacts.levelResolutions.at(blockedLevelAt) ??
+        blockedArtifacts.levelResolutions.at(blockedLevelAt));
+  const levelResolutions = Object.freeze({
+    at: (address: LevelResolutionAddress) =>
+      blockedLevelAt !== undefined &&
+      semanticAddressKey(address) === semanticAddressKey(blockedLevelAt) &&
+      levelCapability !== undefined
+        ? levelCapability
+        : retainedArtifacts.levelResolutions.at(address),
   });
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
@@ -531,10 +570,12 @@ function retainBlockedRegionProducts(
     roomLifecycles,
     encounters,
     traitOffers,
+    levelResolutions,
   );
   return Object.freeze({
     rewards:
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
+      selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
       rewardFindings.length === retainedRewards.findings.length
         ? retainedRewards
         : Object.freeze({
@@ -542,6 +583,7 @@ function retainBlockedRegionProducts(
             validity: rewardFindings.length === 0 ? retainedRewards.validity : 'invalid',
             findings: rewardFindings,
             selectedTraitOffers,
+            selectedLevelResolutions,
           }),
     artifacts,
   });
@@ -617,12 +659,13 @@ function mergedFindings(
 
 function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   let origin = finding.origin;
-  while (origin.kind === 'traitOffer') origin = origin.owner;
+  while (origin.kind === 'traitOffer' || origin.kind === 'levelResolution') origin = origin.owner;
   return origin;
 }
 
 function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
-  if (origin.kind === 'traitOffer') return ownsOccurrence(origin.owner, occurrenceId);
+  if (origin.kind === 'traitOffer' || origin.kind === 'levelResolution')
+    return ownsOccurrence(origin.owner, occurrenceId);
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;
   return origin.kind === 'encounterPhase' && origin.owner.occurrenceId === occurrenceId;
 }
@@ -1411,6 +1454,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.roomLifecycles,
       evaluated.candidateArtifacts.encounters,
       evaluated.candidateArtifacts.traitOffers,
+      evaluated.candidateArtifacts.levelResolutions,
     ),
   });
 }
@@ -1517,6 +1561,7 @@ function clampSelectedProducts(
       retainedInteractions.roomLifecycles,
       retainedInteractions.encounters,
       retainedInteractions.traitOffers,
+      retainedInteractions.levelResolutions,
     ),
   });
 }

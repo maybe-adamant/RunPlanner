@@ -5,8 +5,17 @@ import type {
   TraitRarity,
   TraitRequirementExpression,
 } from '../catalog-schema';
-import type { SemanticAddress, TraitOfferAddress } from '../authored-project/addresses';
-import type { AuthoredTraitOffer, EquippedTrait, TraitOptionKey } from '../authored-project/traits';
+import type {
+  LevelResolutionAddress,
+  SemanticAddress,
+  TraitOfferAddress,
+} from '../authored-project/addresses';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+  EquippedTrait,
+  TraitOptionKey,
+} from '../authored-project/traits';
 import type { RewardHistoryState } from '../reward-kernel/model';
 import type { TraitFindingCode } from './model';
 export type { TraitFindingCode } from './model';
@@ -224,11 +233,10 @@ export function foldTraitHistoryEvents(
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
   let activeSources: ReadonlySet<string> = new Set();
-  const ordered = [...events].sort(
-    (left, right) =>
-      left.sequence - right.sequence ||
-      (left.kind === 'traitOffer' ? 0 : 1) - (right.kind === 'traitOffer' ? 0 : 1),
-  );
+  // Stable ordering retains the producer/purchase chronology already encoded
+  // by construction. A targeted acquisition appends its mutation immediately
+  // after its own offer, so no global same-sequence reordering is required.
+  const ordered = [...events].sort((left, right) => left.sequence - right.sequence);
   for (let index = 0; index < ordered.length;) {
     const sequence = ordered[index]!.sequence;
     const group: TraitHistoryEvent[] = [];
@@ -630,6 +638,136 @@ export function recordReachedTraitOffer(
     ...(mutation === undefined ? [] : [mutation]),
   ]);
   return Object.freeze({ history, event });
+}
+
+/** Validates and records the closed declaration-owned Pom mutation against its pre-effect ledger. */
+export function recordReachedLevelResolution(
+  catalog: Catalog,
+  address: LevelResolutionAddress,
+  value: AuthoredLevelResolution,
+  levelCount: number,
+  before: TraitHistoryState,
+  sequence: number,
+  acquisitionPoint: string,
+  effectKind: 'choice' | 'random' = value.kind,
+): { readonly history: TraitHistoryState; readonly event?: TraitLevelMutationEvent } {
+  const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
+  const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
+  const required = Math.min(3, before.upgradableTraitCount);
+  const complete =
+    value.kind !== effectKind
+      ? false
+      : value.kind === 'choice'
+        ? offered.length === required &&
+          new Set(offered).size === offered.length &&
+          target !== null &&
+          offered.includes(target) &&
+          offered.every(
+            (traitKey) =>
+              isPomEligibleTrait(catalog, traitKey) &&
+              before.equippedTraits[traitKey] !== undefined,
+          )
+        : target !== null;
+  if (
+    !complete ||
+    target === null ||
+    !isPomEligibleTrait(catalog, target) ||
+    before.equippedTraits[target] === undefined
+  )
+    return Object.freeze({ history: before });
+  const equipped = before.equippedTraits[target];
+  if (equipped?.level === undefined) return Object.freeze({ history: before });
+  const event: TraitLevelMutationEvent = Object.freeze({
+    kind: 'levelMutation',
+    owner: address,
+    acquisitionRole: address.acquisitionRole,
+    sequence,
+    acquisitionPoint,
+    targetTraitKey: target,
+    oldLevel: equipped.level,
+    newLevel: equipped.level + levelCount,
+  });
+  return Object.freeze({
+    event,
+    history: foldTraitHistoryEvents(catalog, [...before.events, event]),
+  });
+}
+
+export type LevelResolutionFindingCode =
+  | 'missingTarget'
+  | 'wrongOfferCount'
+  | 'selectedTargetNotOffered'
+  | 'targetUnavailable'
+  | 'kindMismatch';
+export interface ReachedLevelResolutionEvaluation {
+  readonly address: LevelResolutionAddress;
+  readonly value: AuthoredLevelResolution;
+  readonly before: TraitHistoryState;
+  readonly levelCount: number;
+  readonly effectKind: 'choice' | 'random';
+  readonly findings: readonly LevelResolutionFindingCode[];
+  readonly reached: true;
+  readonly chronologicalIndex: number;
+}
+
+export interface SelectedLevelResolutionAssessment {
+  readonly address: LevelResolutionAddress;
+  readonly value: AuthoredLevelResolution;
+  readonly branches: readonly Pick<ReachedLevelResolutionEvaluation, 'findings' | 'levelCount'>[];
+  readonly reached: true;
+  readonly chronologicalIndex: number;
+}
+
+export function pomEligibleTargetKeys(
+  catalog: Catalog,
+  history: TraitHistoryState,
+): readonly string[] {
+  return Object.freeze(
+    Object.keys(history.equippedTraits).filter((traitKey) => isPomEligibleTrait(catalog, traitKey)),
+  );
+}
+export function evaluateReachedLevelResolution(
+  catalog: Catalog,
+  address: LevelResolutionAddress,
+  value: AuthoredLevelResolution,
+  levelCount: number,
+  before: TraitHistoryState,
+  chronologicalIndex: number,
+  effectKind: 'choice' | 'random' = value.kind,
+): ReachedLevelResolutionEvaluation {
+  const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
+  const findings: LevelResolutionFindingCode[] = [];
+  if (value.kind !== effectKind) findings.push('kindMismatch');
+  if (target === null) findings.push('missingTarget');
+  if (value.kind === 'choice') {
+    if (value.offeredTraitKeys.length !== Math.min(3, before.upgradableTraitCount))
+      findings.push('wrongOfferCount');
+    if (target !== null && !value.offeredTraitKeys.includes(target))
+      findings.push('selectedTargetNotOffered');
+    if (
+      value.offeredTraitKeys.some(
+        (traitKey) =>
+          !isPomEligibleTrait(catalog, traitKey) || before.equippedTraits[traitKey] === undefined,
+      )
+    )
+      findings.push('targetUnavailable');
+  }
+  if (
+    target !== null &&
+    (!isPomEligibleTrait(catalog, target) || before.equippedTraits[target] === undefined) &&
+    !findings.includes('targetUnavailable')
+  )
+    findings.push('targetUnavailable');
+  return Object.freeze({
+    address,
+    value,
+    before,
+    levelCount,
+    effectKind,
+    findings: Object.freeze(findings),
+    reached: true,
+    chronologicalIndex,
+  });
 }
 
 function checkRequirement(

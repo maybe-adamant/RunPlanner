@@ -151,6 +151,11 @@ export interface TraitOfferAddress extends BiomeOwnedAddress {
   readonly owner: TraitOfferOwnerAddress;
   readonly acquisitionRole: string;
 }
+export interface LevelResolutionAddress extends BiomeOwnedAddress {
+  readonly kind: 'levelResolution';
+  readonly owner: TraitOfferOwnerAddress;
+  readonly acquisitionRole: string;
+}
 
 export type SemanticAddress =
   | ProjectAddress
@@ -178,7 +183,8 @@ export type SemanticAddress =
   | HubVisitAddress
   | ShopPurchaseAddress
   | ShopOfferAddress
-  | TraitOfferAddress;
+  | TraitOfferAddress
+  | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
   constructor(
@@ -464,6 +470,18 @@ export function createTraitOfferAddress(
     acquisitionRole: nonBlank(acquisitionRole, 'acquisitionRole'),
   });
 }
+export function createLevelResolutionAddress(
+  ownerAddress: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+): LevelResolutionAddress {
+  return Object.freeze({
+    kind: 'levelResolution',
+    routeKey: ownerAddress.routeKey,
+    biomeKey: ownerAddress.biomeKey,
+    owner: ownerAddress,
+    acquisitionRole: nonBlank(acquisitionRole, 'acquisitionRole'),
+  });
+}
 
 export function semanticAddressKey(address: SemanticAddress): string {
   const base = [
@@ -517,6 +535,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'shopPurchase':
       return JSON.stringify([...base, address.occurrenceId, address.offerKey]);
     case 'traitOffer':
+      return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
+    case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
   }
 }

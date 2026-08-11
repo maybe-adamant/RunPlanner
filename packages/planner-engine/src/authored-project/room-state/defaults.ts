@@ -26,7 +26,11 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { createDefaultRoomEncounterState } from './encounters';
-import { createDefaultTraitOffers, type TraitOfferDefaultsContext } from '../traits';
+import {
+  createDefaultLevelResolutions,
+  createDefaultTraitOffers,
+  type TraitOfferDefaultsContext,
+} from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
 
 function defaultCountedOffer(
@@ -72,6 +76,14 @@ function defaultShopState(
       reward: Object.freeze({
         offer: slot.defaultOffer,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, slot.defaultOffer, loadout),
+        ...(createDefaultLevelResolutions(catalog, slot.defaultOffer) === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                catalog,
+                slot.defaultOffer,
+              ),
+            }),
       }),
     });
   }
@@ -118,6 +130,11 @@ function defaultRewardWheel(
           Object.freeze({
             offer,
             traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+            ...(createDefaultLevelResolutions(catalog, offer) === undefined
+              ? {}
+              : {
+                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer),
+                }),
           }),
         ]),
       ),
@@ -175,6 +192,25 @@ function defaultEphyraCombatState(
           ),
           loadout,
         ),
+        ...(createDefaultLevelResolutions(
+          catalog,
+          defaultCountedOffer(
+            requireCountedBinding(sideRoom, path),
+            sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
+            `${path}.sideRooms.${slot.slotKey}.offer`,
+          ),
+        ) === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                catalog,
+                defaultCountedOffer(
+                  requireCountedBinding(sideRoom, path),
+                  sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
+                  `${path}.sideRooms.${slot.slotKey}.offer`,
+                ),
+              ),
+            }),
       }),
       encounters: createDefaultRoomEncounterState(
         catalog,
@@ -193,6 +229,9 @@ function defaultEphyraCombatState(
     reward: Object.freeze({
       offer,
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+      ...(createDefaultLevelResolutions(catalog, offer) === undefined
+        ? {}
+        : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
     }),
     sideRooms: Object.freeze(sideRooms),
   });
@@ -210,6 +249,9 @@ export function createDefaultRoomState(
     reward: Object.freeze({
       offer,
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
+      ...(createDefaultLevelResolutions(catalog, offer) === undefined
+        ? {}
+        : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
     }),
   });
 
@@ -235,6 +277,14 @@ export function createDefaultRoomState(
                     offer,
                     defaultLoadout,
                   ),
+                  ...(createDefaultLevelResolutions(catalog, offer) === undefined
+                    ? {}
+                    : {
+                        levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                          catalog,
+                          offer,
+                        ),
+                      }),
                 }),
               ]),
             ),
@@ -301,6 +351,9 @@ export function createDefaultRoomState(
         reward: Object.freeze({
           offer,
           traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
+          ...(createDefaultLevelResolutions(catalog, offer) === undefined
+            ? {}
+            : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
         }),
       });
     }

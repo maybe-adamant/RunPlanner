@@ -130,6 +130,8 @@ function resolvedIncomingReward(
       ? {
           traitOffersByAcquisitionRole:
             context.occurrence.state.reward.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole:
+            context.occurrence.state.reward.levelResolutionsByAcquisitionRole,
         }
       : {}),
     traitContext: traitContextForOffer(context, offer),
@@ -332,6 +334,7 @@ function materializeFieldsCombat(
       producerLifecycleKey: descriptor.reward.producerLifecycleKey,
       offer: reward.offer,
       traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+      levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
       traitContext: traitContextForOffer(context, reward.offer),
       resolvedStoreKey: storeKey,
     });
@@ -418,6 +421,7 @@ export function materializeShipCombatState(
         offerKey,
         offer: reward.offer,
         traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+        levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
         traitContext: Object.freeze({
           ...loadout,
           blockGiftBoons: room.blockGiftBoons,
@@ -500,6 +504,7 @@ function materializeShopEntry(
           ),
           offer: authored.reward.offer,
           traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: authored.reward.levelResolutionsByAcquisitionRole,
           traitContext: traitContextForOffer(context, authored.reward.offer),
         });
       }),

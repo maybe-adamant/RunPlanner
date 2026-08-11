@@ -3,6 +3,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createOccurrenceId,
@@ -306,10 +307,39 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     { id: boon, gameName: 'F_Combat03' },
     { id: createOccurrenceId('same-room-peer-1'), gameName: 'F_Story01' },
   ]);
+  project = replaceIncoming(project, boon, {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, boon), 'source'),
+    value: {
+      giverKey: 'Hestia',
+      options: [
+        { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        { traitKey: 'HestiaManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   project = addBatch(project, boon, 'RunProgress', [
     { id: stack, gameName: 'F_Combat04', offer: { rewardType: 'StackUpgrade' } },
     { id: createOccurrenceId('same-room-peer-2'), gameName: 'F_Story01' },
   ]);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(biome, stack),
+      'self',
+    ),
+    value: {
+      kind: 'choice',
+      offeredTraitKeys: ['HestiaWeaponBoon'],
+      selectedTraitKey: 'HestiaWeaponBoon',
+    },
+  });
   project = addTakeover(
     project,
     stack,

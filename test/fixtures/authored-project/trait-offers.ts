@@ -3,10 +3,12 @@ import {
   applyProjectCommand,
   type ProjectDocument,
   type AuthoredTraitOffer,
+  type AuthoredLevelResolution,
 } from '@run-planner/engine/authored-project';
 import {
   simulateProjectAssembly,
   createPreparedProjectCandidateSession,
+  levelResolutionCandidateForProjectEvaluationAssembly,
   type TraitAssessment,
   type SelectedTraitOfferAssessment,
 } from '@run-planner/engine/simulation';
@@ -170,7 +172,6 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
           : [],
       ),
     );
-    if (invalids.length === 0) return current;
     let changed = false;
     for (const invalid of invalids) {
       const giver = catalog.traitGivers.byKey[invalid.offer.giverKey];
@@ -207,7 +208,60 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
       });
       changed = true;
     }
-    if (!changed) return current;
+    // Once an offer changes, its later Pom context must be rebuilt on the
+    // next pass. Otherwise the same immutable assembly is also the exact
+    // source for every reached Pom capability below.
+    if (changed) continue;
+    const normalizedPoms = normalizePomResolutions(current, assembly);
+    if (normalizedPoms === current) return current;
+    current = normalizedPoms;
   }
   throw new Error('trait fixture normalization exceeded its bounded edit budget');
+}
+
+/**
+ * Fixtures enumerate only the opaque engine-owned Pom capability. They never
+ * duplicate the target predicate or choice-cardinality rule.
+ */
+function normalizePomResolutions(
+  project: ProjectDocument,
+  assembly: ReturnType<typeof simulateProjectAssembly>,
+): ProjectDocument {
+  const resolutions = assembly.evaluation.routes.flatMap((route) =>
+    route.biomes.flatMap((biome) =>
+      'rewards' in biome ? biome.rewards.selectedLevelResolutions : [],
+    ),
+  );
+  let current = project;
+  for (const resolution of resolutions) {
+    if (!resolution.branches.some((branch) => branch.findings.length > 0)) continue;
+    const capability = levelResolutionCandidateForProjectEvaluationAssembly(
+      assembly,
+      resolution.address,
+    );
+    if (capability === undefined) continue;
+    for (const [branchIndex, branch] of capability.branches.entries()) {
+      const targetKeys = branch.eligibleTargetTraitKeys;
+      const offeredTraitKeys = targetKeys.slice(0, branch.requiredOfferCount);
+      for (const targetTraitKey of branch.effectKind === 'choice' ? offeredTraitKeys : targetKeys) {
+        const value: AuthoredLevelResolution =
+          branch.effectKind === 'random'
+            ? Object.freeze({ kind: 'random', targetTraitKey })
+            : Object.freeze({
+                kind: 'choice',
+                offeredTraitKeys: Object.freeze(offeredTraitKeys),
+                selectedTraitKey: targetTraitKey,
+              });
+        if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
+        current = applyProjectCommand(current, catalog, {
+          kind: 'ReplaceLevelResolution',
+          levelResolution: resolution.address,
+          value,
+        });
+        break;
+      }
+      if (current !== project) break;
+    }
+  }
+  return current;
 }

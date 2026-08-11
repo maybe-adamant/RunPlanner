@@ -326,6 +326,14 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'trait',
         message: 'The first Olympian offer must include an Attack or Special trait.',
       };
+    case 'missingPomTarget':
+      return { kind: 'trait', message: 'Choose a trait to receive this Pom.' };
+    case 'pomWrongOfferCount':
+      return { kind: 'trait', message: 'The Pom must show the required number of targets.' };
+    case 'pomSelectedTargetNotOffered':
+      return { kind: 'trait', message: 'Choose one of the offered Pom targets.' };
+    case 'pomTargetUnavailable':
+      return { kind: 'trait', message: 'This trait cannot receive the Pom at this point.' };
     case 'batchRewardStoreMissing':
     case 'batchStateMissing':
     case 'biomeFieldMissing':

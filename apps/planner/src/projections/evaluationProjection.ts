@@ -231,6 +231,22 @@ const findingCopy = {
     title: 'First Olympian offer needs Attack or Special',
     description: 'The first Olympian offer must include an Attack or Special trait.',
   },
+  missingPomTarget: {
+    title: 'Choose a Pom target',
+    description: 'Record the trait that receives this Pom.',
+  },
+  pomWrongOfferCount: {
+    title: 'Pom target count is incorrect',
+    description: 'Use the complete target list available at this point.',
+  },
+  pomSelectedTargetNotOffered: {
+    title: 'Pom target was not offered',
+    description: 'Choose one of this Pom’s recorded targets.',
+  },
+  pomTargetUnavailable: {
+    title: 'Pom target is unavailable',
+    description: 'This trait cannot receive the Pom at this point in the route.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -501,6 +517,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Shop purchase`;
     case 'traitOffer':
       return `${biomeLabel} · Trait offer`;
+    case 'levelResolution':
+      return `${biomeLabel} · Pom`;
     case 'completionRoom':
       return `${biomeLabel} · ${origin.role === 'boss' ? 'Boss' : 'Postboss'}`;
   }

@@ -19,10 +19,11 @@ import type {
   RouteAddress,
   ShopOfferAddress,
   TraitOfferAddress,
+  LevelResolutionAddress,
   TargetAddress,
 } from '../addresses';
 import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
-import type { AuthoredTraitOffer, TraitOptionKey } from '../traits';
+import type { AuthoredLevelResolution, AuthoredTraitOffer, TraitOptionKey } from '../traits';
 
 export type ProjectStateCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
@@ -256,6 +257,12 @@ export type TraitOfferCommand =
       readonly selectedOptionKey: TraitOptionKey;
     };
 
+export type LevelResolutionCommand = {
+  readonly kind: 'ReplaceLevelResolution';
+  readonly levelResolution: LevelResolutionAddress;
+  readonly value: AuthoredLevelResolution;
+};
+
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
@@ -270,7 +277,8 @@ export type ProjectCommand =
   | RoomReplacementCommand
   | RouteDetourCommand
   | OccurrenceLeafCommand
-  | TraitOfferCommand;
+  | TraitOfferCommand
+  | LevelResolutionCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

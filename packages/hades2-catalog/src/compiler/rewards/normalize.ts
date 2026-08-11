@@ -186,6 +186,9 @@ function normalizeAcquisitions(
           HISTORY_PROJECTIONS,
           `acquisitions[${index}].historyProjection`,
         ),
+        ...(acquisition.levelResolutionEffect === undefined
+          ? {}
+          : { levelResolutionEffect: Object.freeze(acquisition.levelResolutionEffect) }),
       }),
     ),
     'acquisitions',
