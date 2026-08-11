@@ -168,7 +168,6 @@ describe('authored room-state replacement', () => {
       kind: 'shop' as const,
       shop: Object.freeze({
         ...shopDefault.shop,
-        purchaseOrder: Object.freeze(['Boon']),
       }),
     });
     expect(

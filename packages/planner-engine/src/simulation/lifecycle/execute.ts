@@ -216,11 +216,11 @@ const lifecycleEffectRegistry = Object.freeze({
   },
   recordOutgoingGeneration: (context, state) =>
     appendEvent(state, context, { kind: 'outgoingGenerationCheckpoint' }),
-  recordShopPurchases: (context, state) => {
-    const operation = requireOperation(context, 'applyShopPurchases');
+  recordAcquisitionPoint: (context, state) => {
+    const operation = requireOperation(context, 'settleAcquisitionPoint');
     return appendEvent(state, context, {
-      kind: 'shopPurchasesApplied',
-      offerPoint: operation.offerPoint,
+      kind: 'acquisitionPointReached',
+      point: operation.point,
     });
   },
   recordCommit: (context, state) => appendEvent(state, context, { kind: 'roomCommitted' }),
@@ -309,7 +309,7 @@ const operationDispatchRegistry = Object.freeze({
   runRewardEncounterSequence: encounterSequenceOperationHandler,
   advanceProducer: defaultOperationHandler,
   generateOutgoingBatch: defaultOperationHandler,
-  applyShopPurchases: defaultOperationHandler,
+  settleAcquisitionPoint: defaultOperationHandler,
   commitRoom: defaultOperationHandler,
   exitRoom: defaultOperationHandler,
 }) satisfies Readonly<Record<RoomLifecycleOperationKind, OperationHandler>>;

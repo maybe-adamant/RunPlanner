@@ -513,8 +513,10 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Room`;
     case 'shopOffer':
       return `${biomeLabel} · Shop offer`;
-    case 'shopPurchase':
-      return `${biomeLabel} · Shop purchase`;
+    case 'acquisitionSite':
+      return `${biomeLabel} · Acquisitions`;
+    case 'acquisitionEntry':
+      return `${biomeLabel} · Acquisition`;
     case 'traitOffer':
       return `${biomeLabel} · Trait offer`;
     case 'levelResolution':

@@ -154,7 +154,6 @@ function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom
   }
   for (const offer of room.entryState?.offers ?? []) {
     appendOwner(keys, offer.offerOrigin);
-    appendOwner(keys, offer.purchaseOrigin);
   }
 }
 

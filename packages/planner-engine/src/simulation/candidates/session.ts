@@ -45,17 +45,17 @@ import {
 import {
   evaluateRewardWheelLifecycleCandidate,
   evaluateShipEncounterCountCandidate,
-  evaluateShopPurchaseOrderCandidate,
+  evaluateAcquisitionOrderCandidate,
   type EvaluatedRewardWheelOfferCountCandidate,
   type EvaluatedRewardWheelPickedCandidate,
   type EvaluatedRewardWheelStoreCandidate,
   type EvaluatedShipEncounterCountCandidate,
-  type EvaluatedShopPurchaseOrderCandidate,
+  type EvaluatedAcquisitionOrderCandidate,
   type RewardWheelOfferCountCandidateQuery,
   type RewardWheelPickedCandidateQuery,
   type RewardWheelStoreCandidateQuery,
   type ShipEncounterCountCandidateQuery,
-  type ShopPurchaseOrderCandidateQuery,
+  type AcquisitionOrderCandidateQuery,
 } from './room-lifecycle';
 import {
   evaluateRoomTargetCandidate,
@@ -106,7 +106,7 @@ export type ProjectCandidateQuery =
   | RoomTargetCandidateQuery
   | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
-  | ShopPurchaseOrderCandidateQuery
+  | AcquisitionOrderCandidateQuery
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery
@@ -133,7 +133,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedRoomTargetCandidate
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
-  | EvaluatedShopPurchaseOrderCandidate
+  | EvaluatedAcquisitionOrderCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
@@ -292,12 +292,12 @@ function evaluateCandidateQuery(
           ?.roomLifecycles,
         query,
       );
-    case 'shopPurchaseOrder':
-      return evaluateShopPurchaseOrderCandidate(
+    case 'acquisitionOrder':
+      return evaluateAcquisitionOrderCandidate(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(query.shop.routeKey, query.shop.biomeKey))
+        candidateArtifacts.biomeAt(createBiomeAddress(query.site.routeKey, query.site.biomeKey))
           ?.roomLifecycles,
         query,
       );

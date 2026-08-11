@@ -34,6 +34,7 @@ import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
   type WorkspaceBatchRepairIntent,
+  type WorkspaceAcquisitionsWorkbench,
   type WorkspaceEffectiveRewardStore,
   type WorkspaceFieldsBatchContext,
   type WorkspaceMissingPhysicalTarget,
@@ -77,6 +78,10 @@ type WorkspaceMissingTargetSetupPrerequisite = Extract<
  * occurrence assembler's inputs or marker registration state.
  */
 interface WorkspaceDecisionAssemblyBaseInput {
+  /** Cached source occurrence settlement product, if its lifecycle reaches a post-outgoing site. */
+  readonly acquisitionsForSource?: (
+    occurrenceId: OccurrenceId,
+  ) => WorkspaceAcquisitionsWorkbench | undefined;
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
   /** A separately assembled terminal-Hub requirement for this exact decision. */
@@ -946,7 +951,15 @@ function assembleBatchDecision(
             kind: 'ordinaryBatch' as const,
             targetInteraction: 'replaceable' as const,
           });
-  redirectDecisionFocus(input.markerDestinations, batch);
+  const sourceAcquisitions =
+    decision.source.kind !== 'occurrence'
+      ? undefined
+      : input.acquisitionsForSource?.(decision.source.occurrenceId);
+  const batchWithAcquisitions =
+    sourceAcquisitions?.placement === 'postOutgoing'
+      ? Object.freeze({ ...batch, acquisitions: sourceAcquisitions })
+      : batch;
+  redirectDecisionFocus(input.markerDestinations, batchWithAcquisitions);
   if (sourceDecisionRemoval !== undefined) {
     const workbench = projectedTargets[0]?.node;
     if (workbench === undefined) {
@@ -954,11 +967,18 @@ function assembleBatchDecision(
         `${semanticAddressKey(owner)} Hub handoff has no authored target workbench`,
       );
     }
-    input.markerDestinations.redirect(workspaceDecisionOwnedMarkers(batch), workbench.key);
+    input.markerDestinations.redirect(
+      workspaceDecisionOwnedMarkers(batchWithAcquisitions),
+      workbench.key,
+    );
   }
   return Object.freeze({
-    batch,
-    batchInteractionRequirements: batchInteractionRequirements(input, decision, batch),
+    batch: batchWithAcquisitions,
+    batchInteractionRequirements: batchInteractionRequirements(
+      input,
+      decision,
+      batchWithAcquisitions,
+    ),
     kind: 'batch' as const,
     occurrenceInteractionRequirements: Object.freeze([
       ...projectedTargets.flatMap((target) => target.occurrenceInteractionRequirements),

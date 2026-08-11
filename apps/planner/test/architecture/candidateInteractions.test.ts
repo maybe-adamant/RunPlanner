@@ -6,7 +6,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createShopPurchaseAddress,
+  createAcquisitionSiteAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -48,7 +48,7 @@ const families = [
   'rewardWheelStores',
   'rooms',
   'shipCombatPhaseCounts',
-  'shopPurchaseOrders',
+  'acquisitionOrders',
   'sideRoomEntryOrders',
   'sideRoomGenerations',
 ] as const satisfies readonly (keyof WorkspaceInteractionCatalog)[];
@@ -72,7 +72,7 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   rewardWheelStores: 1,
   rooms: 1,
   shipCombatPhaseCounts: 1,
-  shopPurchaseOrders: 1,
+  acquisitionOrders: 1,
   sideRoomEntryOrders: 1,
   sideRoomGenerations: 1,
 });
@@ -274,25 +274,27 @@ describe('workspace candidate interaction families', () => {
     if (profile === undefined) throw new Error('Q Shop profile is missing');
     const offerKeys = profile.slots.values.map((slot) => slot.key);
     const shopOwner = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
-    const purchaseOwner = createShopPurchaseAddress(qBiome, qOccurrenceIds.preboss, offerKeys[0]!);
+    const purchaseOwner = createAcquisitionSiteAddress(shopOwner, 'roomExit');
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: shopOwner,
-      offerKeys,
+      kind: 'ReplaceAcquisitionOrder',
+      site: purchaseOwner,
+      entryKeys: offerKeys,
     });
     const services = createStructuredWorkspaceTestServices({
       observeCandidateEvaluation: (event) => events.push(event),
     });
     const interaction = services.structuredWorkspace
       .project(simulateProjectAssembly(catalog, project))
-      .interactions.shopPurchaseOrders.get(semanticAddressKey(purchaseOwner));
+      .interactions.acquisitionOrders.get(semanticAddressKey(purchaseOwner));
     if (interaction === undefined) throw new Error('Q Shop row interaction is missing');
 
-    expect(interaction.owner).toEqual(shopOwner);
+    expect(interaction.owner).toEqual(purchaseOwner);
     expect(events).toEqual([]);
     interaction.load();
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([
-      expect.objectContaining({ queryCount: 7 }),
+      // The exact Shop-order domain now includes acquisition-time child
+      // capability checks for the participating entries.
+      expect.objectContaining({ queryCount: 12 }),
     ]);
 
     events.length = 0;

@@ -153,7 +153,7 @@ export function evaluateShopPurchases(
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
-  purchaseOrder: readonly number[],
+  entryOrder: readonly number[],
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
@@ -174,7 +174,7 @@ export function evaluateShopPurchases(
     return Object.freeze({
       results: Object.freeze([]),
       failures: Object.freeze([
-        Object.freeze({ purchaseOrder: Object.freeze([]) }) satisfies ShopPurchaseFailure,
+        Object.freeze({ entryOrder: Object.freeze([]) }) satisfies ShopPurchaseFailure,
       ]),
     });
   }
@@ -183,7 +183,7 @@ export function evaluateShopPurchases(
   let failedSlotIndex: number | undefined;
   const acquisitions: ShopPurchaseAcquisition[] = [];
   const remaining = new Set(authored.map((_, index) => index));
-  for (const index of purchaseOrder) {
+  for (const index of entryOrder) {
     const authoredOffer = authored[index];
     const optionKey = witness.optionKeys[index];
     const option = optionKey === undefined ? undefined : optionByWitness(profile, index, optionKey);
@@ -237,7 +237,7 @@ export function evaluateShopPurchases(
       results: Object.freeze([]),
       failures: Object.freeze([
         Object.freeze({
-          purchaseOrder: Object.freeze([...purchaseOrder]),
+          entryOrder: Object.freeze([...entryOrder]),
           ...(failedSlotIndex === undefined ? {} : { failedSlotIndex }),
         }),
       ]),
@@ -245,7 +245,7 @@ export function evaluateShopPurchases(
   }
   const result = Object.freeze({
     history,
-    purchaseOrder: Object.freeze([...purchaseOrder]),
+    entryOrder: Object.freeze([...entryOrder]),
     acquisitions: Object.freeze(acquisitions),
   }) satisfies ShopPurchaseResult;
   return Object.freeze({ results: Object.freeze([result]), failures: Object.freeze([]) });
@@ -256,7 +256,7 @@ export function simulateShopPurchases(
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
-  purchaseOrder: readonly number[],
+  entryOrder: readonly number[],
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
@@ -266,7 +266,7 @@ export function simulateShopPurchases(
     profile,
     authored,
     witness,
-    purchaseOrder,
+    entryOrder,
     initialHistory,
     baseFacts,
     additionalOptionRequirements,

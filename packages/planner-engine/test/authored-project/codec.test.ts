@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -172,9 +173,9 @@ describe('project document codec', () => {
   it('round-trips a non-empty Shop purchase order without changing its sequence', () => {
     const occurrenceId = createOccurrenceId('round-trip-n-preboss');
     const authored = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(nBiome, occurrenceId),
-      offerKeys: ['Minor', 'MajorNonBoon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, occurrenceId), 'roomExit'),
+      entryKeys: ['Minor', 'MajorNonBoon'],
     });
 
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(authored)), catalog);
@@ -183,9 +184,9 @@ describe('project document codec', () => {
       ?.biomes.find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
 
-    expect(occurrence?.state).toMatchObject({
-      kind: 'shop',
-      shop: { purchaseOrder: ['Minor', 'MajorNonBoon'] },
+    expect(occurrence).toMatchObject({
+      state: { kind: 'shop' },
+      acquisitionSites: { roomExit: { order: ['Minor', 'MajorNonBoon'] } },
     });
     expect(encodeProjectDocument(decoded)).toBe(encodeProjectDocument(authored));
   });

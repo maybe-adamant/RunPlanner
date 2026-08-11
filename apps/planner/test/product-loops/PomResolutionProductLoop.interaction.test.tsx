@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
   createOccurrenceAddress,
+  createAcquisitionSiteAddress,
   createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -42,9 +43,12 @@ describe('Pom resolution product loop', () => {
     ).toBe(false);
 
     const purchased = applyProjectCommand(unpurchased, application.catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-      offerKeys: ['Minor'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+        'roomExit',
+      ),
+      entryKeys: ['Minor'],
     });
     application.store.dispatch(authoredProjectReplaced(purchased));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -67,9 +71,9 @@ describe('Pom resolution product loop', () => {
       value: { rewardType: 'StoreRewardRandomStack' },
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop,
-      offerKeys: ['Minor'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(shop, 'roomExit'),
+      entryKeys: ['Minor'],
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());

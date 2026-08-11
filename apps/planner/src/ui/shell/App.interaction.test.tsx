@@ -3,8 +3,10 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
+  createOccurrenceAddress,
   createTraitOfferAddress,
   createShopOfferAddress,
   semanticAddressKey,
@@ -463,7 +465,7 @@ describe('planner history interaction', () => {
     ).toBe(false);
   });
 
-  it('edits ordinary, Hermes, room Hammer, and Shop Hammer offers through shared controls', async () => {
+  it('edits ordinary, Hermes, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {
     const application = createApplication();
     let project = createRepresentativeNOPQProject();
     project = applyProjectCommand(project, application.catalog, {
@@ -478,6 +480,14 @@ describe('planner history interaction', () => {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+        'roomExit',
+      ),
+      entryKeys: ['MajorNonBoon'],
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });

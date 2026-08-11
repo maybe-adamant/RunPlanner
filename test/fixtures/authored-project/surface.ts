@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -564,9 +565,12 @@ export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
     value: { rewardType: 'WeaponUpgradeDrop' },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopPurchaseOrder',
-    shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-    offerKeys: ['MajorNonBoon'],
+    kind: 'ReplaceAcquisitionOrder',
+    site: createAcquisitionSiteAddress(
+      createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      'roomExit',
+    ),
+    entryKeys: ['MajorNonBoon'],
   });
   representativeNOPQShopTraitCache = authorLegalTraitOffers(project);
   return representativeNOPQShopTraitCache;

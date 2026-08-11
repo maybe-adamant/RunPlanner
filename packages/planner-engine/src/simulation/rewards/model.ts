@@ -40,11 +40,6 @@ export type RewardEvent =
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
       readonly optionKeys: readonly string[];
-    })
-  | (RewardEventBase & {
-      readonly kind: 'shopPurchasesSupported';
-      readonly profileKey: string;
-      readonly purchaseOrder: readonly string[];
     });
 
 export interface RewardStoreCandidateSupport {

@@ -1,10 +1,9 @@
-import type { ShopState } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
-import type { ShopPurchaseCandidateContext } from './lifecycle-artifacts';
-import { processShopPurchases, type RewardBranchState } from './processing';
+import type { AcquisitionOrderCandidateContext } from './lifecycle-artifacts';
+import { settleShopAcquisitionSite, type RewardBranchState } from './processing';
 
 interface ShopPurchaseCandidateContextOptions {
   readonly catalog: Catalog;
@@ -20,7 +19,7 @@ interface ShopPurchaseCandidateContextOptions {
   readonly fail: (detail: string) => never;
 }
 
-export function prepareShopPurchaseCandidateContext({
+export function prepareAcquisitionOrderCandidateContext({
   catalog,
   room,
   declaration,
@@ -28,42 +27,28 @@ export function prepareShopPurchaseCandidateContext({
   historySequence,
   facts,
   fail,
-}: ShopPurchaseCandidateContextOptions): ShopPurchaseCandidateContext {
+}: ShopPurchaseCandidateContextOptions): AcquisitionOrderCandidateContext {
   if (room.entryState?.kind !== 'shop') {
     return fail(`${room.gameName} has no shop purchase state`);
   }
   const entryState = room.entryState;
   return Object.freeze({
     origin: room.origin,
-    evaluateState: (state: ShopState) => {
+    evaluateOrder: (order: readonly string[]) => {
       const candidateFindings = new Map<string, FindingRegionEntry>();
       const candidateRoom: CanonicalAuthoredRoom = Object.freeze({
         ...room,
         entryState: Object.freeze({
           kind: 'shop',
-          profileKey: state.profileKey,
+          profileKey: entryState.profileKey,
           ...(entryState.deathDefianceConditionMet === undefined
             ? {}
             : { deathDefianceConditionMet: entryState.deathDefianceConditionMet }),
-          offers: Object.freeze(
-            entryState.offers.map((offer) => {
-              const candidate = state.offers[offer.offerKey];
-              if (candidate === undefined) {
-                return fail(`${room.gameName} lost shop offer ${offer.offerKey}`);
-              }
-              return Object.freeze({
-                ...offer,
-                offer: candidate.reward.offer,
-                traitOffersByAcquisitionRole: candidate.reward.traitOffersByAcquisitionRole,
-                levelResolutionsByAcquisitionRole:
-                  candidate.reward.levelResolutionsByAcquisitionRole,
-              });
-            }),
-          ),
-          purchaseOrder: state.purchaseOrder,
+          offers: entryState.offers,
+          order: Object.freeze([...order]),
         }),
       });
-      const branches = processShopPurchases(
+      const branches = settleShopAcquisitionSite(
         branchesBeforePurchases,
         {
           catalog,
@@ -75,7 +60,7 @@ export function prepareShopPurchaseCandidateContext({
           fail,
         },
         candidateFindings,
-      );
+      ).branches;
       return Object.freeze({
         findings: Object.freeze([...candidateFindings.values()].map((entry) => entry.finding)),
         supported: branches.length > 0,

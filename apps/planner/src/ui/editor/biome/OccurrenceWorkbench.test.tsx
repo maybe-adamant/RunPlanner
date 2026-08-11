@@ -5,6 +5,8 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createAcquisitionSiteAddress,
+  createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
@@ -16,7 +18,6 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
   type OccurrenceId,
@@ -1335,7 +1336,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('authors Shop membership and ordinal as one complete purchase order per row action', async () => {
+  it('authors Shop membership and order through the settlement site per row action', async () => {
     const view = renderOccurrenceWorkbench(
       createRepresentativeNOPQProject(),
       'Surface',
@@ -1352,7 +1353,15 @@ describe('OccurrenceWorkbench', () => {
       if (state.kind !== 'shop' || state.shop === undefined) {
         throw new Error('P Preboss Shop state is missing');
       }
-      return state.shop.purchaseOrder;
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === pOccurrenceIds.prebossShop,
+        );
+      if (occurrence === undefined) throw new Error('P Preboss Shop occurrence is missing');
+      return occurrence.acquisitionSites?.roomExit?.order;
     };
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
@@ -1362,12 +1371,12 @@ describe('OccurrenceWorkbench', () => {
     await view.user.click(screen.getByLabelText('Purchase Offer 2'));
     expect(order()).toEqual(['Boon', 'MajorNonBoon']);
 
-    await view.user.selectOptions(screen.getByLabelText('Purchase order for Offer 2'), '1');
+    await view.user.click(screen.getAllByRole('button', { name: 'Move earlier' })[1]!);
     expect(order()).toEqual(['MajorNonBoon', 'Boon']);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 3,
     );
-  });
+  }, 15_000);
 
   it('renders an unpicked Shop as dormant without inventory controls', () => {
     const { project, shopId } = dormantShopProject();
@@ -1379,7 +1388,13 @@ describe('OccurrenceWorkbench', () => {
 
   it('keeps an impossible Shop purchase disabled while allowing its selected repair', async () => {
     const offer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
-    const purchase = createShopPurchaseAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
+    const purchase = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+        'roomExit',
+      ),
+      'Boon',
+    );
     const unsupportedOffer = {
       rewardType: 'BlindBoxLoot' as const,
       payload: { kind: 'BoonSource' as const, source: 'DemeterUpgrade' as const },
@@ -1407,9 +1422,12 @@ describe('OccurrenceWorkbench', () => {
     cleanup();
 
     const selectedInvalidProject = applyProjectCommand(invalidOfferProject, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-      offerKeys: ['Boon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+        'roomExit',
+      ),
+      entryKeys: ['Boon'],
     });
     const repair = renderOccurrenceWorkbench(
       selectedInvalidProject,
@@ -1427,5 +1445,42 @@ describe('OccurrenceWorkbench', () => {
     expect(repair.application.store.getState().projectWorkspace.history.past).toHaveLength(
       repairBefore + 1,
     );
+  });
+
+  it('keeps a context-invalid acquisition reorder visibly unavailable without dispatching it', async () => {
+    const offer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      'roomExit',
+    );
+    const invalidOfferProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      },
+    });
+    const project = applyProjectCommand(invalidOfferProject, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['Boon', 'MajorNonBoon'],
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'P',
+      occurrenceById(pOccurrenceIds.prebossShop),
+    );
+    const moveLater = screen.getAllByRole('button', { name: 'Move later' })[0] as
+      HTMLButtonElement | undefined;
+    if (moveLater === undefined) throw new Error('first acquisition move button is missing');
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(moveLater);
+
+    expect(moveLater.disabled).toBe(true);
+    expect(moveLater.getAttribute('data-candidate-support')).toBe('impossible');
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
   });
 });

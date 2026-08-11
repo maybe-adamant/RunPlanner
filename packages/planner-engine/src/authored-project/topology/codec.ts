@@ -51,6 +51,8 @@ interface RawOccurrence {
   readonly state: unknown;
   readonly encounters: unknown;
   readonly additionalExits: unknown;
+  readonly acquisitionSites: unknown;
+  readonly hasAcquisitionSites: boolean;
   readonly path: string;
 }
 
@@ -235,6 +237,32 @@ function decodeAnomalyReplacementProvenance(
       `${occurrence.path}.anomalyReplacement.replacedRoomGameName`,
     ),
   });
+}
+
+function decodeAcquisitionSites(
+  value: unknown,
+  occurrence: RawOccurrence,
+): Readonly<Record<string, { readonly order: readonly string[] }>> {
+  const sites = expectRecord(value, `${occurrence.path}.acquisitionSites`);
+  const decoded: Record<string, { readonly order: readonly string[] }> = {};
+  for (const [pointKey, rawSite] of Object.entries(sites)) {
+    const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
+    expectExactKeys(site, ['order'], `${occurrence.path}.acquisitionSites.${pointKey}`);
+    const order = expectArray(
+      site.order,
+      `${occurrence.path}.acquisitionSites.${pointKey}.order`,
+    ).map((key, index) =>
+      expectNonBlankString(key, `${occurrence.path}.acquisitionSites.${pointKey}.order[${index}]`),
+    );
+    if (new Set(order).size !== order.length) {
+      failProjectDocument(
+        `${occurrence.path}.acquisitionSites.${pointKey}.order`,
+        'contains a duplicate entry',
+      );
+    }
+    decoded[pointKey] = Object.freeze({ order: Object.freeze(order) });
+  }
+  return Object.freeze(decoded);
 }
 
 function rewardStoreFor(
@@ -1020,18 +1048,18 @@ export function decodeBiomeTopology(
     const occurrencePath = `${path}.occurrences[${index}]`;
     const occurrence = expectRecord(rawValue, occurrencePath);
     const hasAnomalyReplacement = Object.hasOwn(occurrence, 'anomalyReplacement');
+    const hasAcquisitionSites = Object.hasOwn(occurrence, 'acquisitionSites');
     expectExactKeys(
       occurrence,
-      hasAnomalyReplacement
-        ? [
-            'occurrenceId',
-            'gameName',
-            'anomalyReplacement',
-            'state',
-            'encounters',
-            'additionalExits',
-          ]
-        : ['occurrenceId', 'gameName', 'state', 'encounters', 'additionalExits'],
+      [
+        'occurrenceId',
+        'gameName',
+        'state',
+        'encounters',
+        'additionalExits',
+        ...(hasAnomalyReplacement ? ['anomalyReplacement'] : []),
+        ...(hasAcquisitionSites ? ['acquisitionSites'] : []),
+      ],
       occurrencePath,
     );
     const id = occurrenceId(occurrence.occurrenceId, `${occurrencePath}.occurrenceId`);
@@ -1047,6 +1075,8 @@ export function decodeBiomeTopology(
         state: occurrence.state,
         encounters: occurrence.encounters,
         additionalExits: occurrence.additionalExits,
+        acquisitionSites: occurrence.acquisitionSites,
+        hasAcquisitionSites,
         path: occurrencePath,
       }),
     );
@@ -1299,25 +1329,57 @@ export function decodeBiomeTopology(
     if (owner.gameName !== rawOccurrence.gameName)
       failProjectDocument(`${rawOccurrence.path}.gameName`, `owner requires ${owner.gameName}`);
     const room = requireKnownRoom(rawOccurrence, catalog);
+    const state = decodeRoomState(
+      rawOccurrence.state,
+      catalog,
+      room,
+      owner,
+      `${rawOccurrence.path}.state`,
+    );
+    const acquisitionSites = rawOccurrence.hasAcquisitionSites
+      ? decodeAcquisitionSites(rawOccurrence.acquisitionSites, rawOccurrence)
+      : undefined;
+    if (state.kind === 'shop' && state.shop !== undefined) {
+      if (acquisitionSites === undefined || acquisitionSites.roomExit === undefined) {
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites`,
+          'materialized Shop requires roomExit state',
+        );
+      }
+      if (Object.keys(acquisitionSites).some((pointKey) => pointKey !== 'roomExit')) {
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites`,
+          'Shop only authors roomExit state',
+        );
+      }
+      for (const entryKey of acquisitionSites.roomExit.order) {
+        if (state.shop.offers[entryKey] === undefined) {
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
+            `${entryKey} is not a Shop offer`,
+          );
+        }
+      }
+    } else if (acquisitionSites !== undefined) {
+      failProjectDocument(
+        `${rawOccurrence.path}.acquisitionSites`,
+        'has no authorable acquisition site',
+      );
+    }
     return Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
       ...(owner.anomalyReplacement === undefined
         ? {}
         : { anomalyReplacement: owner.anomalyReplacement }),
-      state: decodeRoomState(
-        rawOccurrence.state,
-        catalog,
-        room,
-        owner,
-        `${rawOccurrence.path}.state`,
-      ),
+      state,
       encounters: decodeRoomEncounterState(
         rawOccurrence.encounters,
         catalog,
         room,
         `${rawOccurrence.path}.encounters`,
       ),
+      ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,
         occurrences,

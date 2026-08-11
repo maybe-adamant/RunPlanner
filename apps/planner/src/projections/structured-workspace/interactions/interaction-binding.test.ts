@@ -17,7 +17,8 @@ import {
   createRewardWheelOfferAddress,
   createRewardWheelAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createTargetAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
@@ -1316,7 +1317,13 @@ describe('structured workspace interaction binding', () => {
     const ship = bind(surface, 'Surface', 'O').interactions;
     const shop = bind(surface, 'Surface', 'N').interactions;
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
-    const purchase = createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
+    const purchase = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+        'roomExit',
+      ),
+      'MajorNonBoon',
+    );
 
     expect(
       ship.shipCombatPhaseCounts.get(
@@ -1335,8 +1342,8 @@ describe('structured workspace interaction binding', () => {
       owner: wheel,
       selected: 1,
     });
-    expect(shop.shopPurchaseOrders.get(semanticAddressKey(purchase))).toMatchObject({
-      owner: createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+    expect(shop.acquisitionOrders.get(semanticAddressKey(purchase.site))).toMatchObject({
+      owner: purchase.site,
       selected: [],
     });
   });

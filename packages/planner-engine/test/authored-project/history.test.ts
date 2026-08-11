@@ -5,6 +5,7 @@ import {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
   canUndoProjectHistory,
+  createAcquisitionSiteAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -62,9 +63,12 @@ describe('authored project history', () => {
   it('records a room-leaf edit as one atomic undoable snapshot', () => {
     const initial = createProjectHistory(createCompleteNProject());
     const ordered = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop: createOccurrenceAddress(nBiome, createOccurrenceId('round-trip-n-preboss')),
-      offerKeys: ['Minor', 'MajorNonBoon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(nBiome, createOccurrenceId('round-trip-n-preboss')),
+        'roomExit',
+      ),
+      entryKeys: ['Minor', 'MajorNonBoon'],
     });
 
     expect(ordered.past).toEqual([initial.present]);

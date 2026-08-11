@@ -1,5 +1,6 @@
 import {
   createEncounterPhaseAddress,
+  createAcquisitionSiteAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -9,7 +10,6 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
   createTraitOfferAddress,
   type AuthoredBiomePlan,
   type AuthoredRewardState,
@@ -37,7 +37,7 @@ export type ExpectedWorkspaceLeafInteractionKind =
   | 'rewardWheelPick'
   | 'rewardWheelStore'
   | 'shipCombatPhaseCount'
-  | 'shopPurchase'
+  | 'acquisitionOrder'
   | 'sideRoomEntryOrder'
   | 'sideRoomGeneration'
   | 'levelResolution'
@@ -329,10 +329,13 @@ export function expectedWorkspaceLeafRequirements(
         for (const slot of profile.slots.values) {
           const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
           requireRewardWithTraits(offer, occurrence.state.shop.offers[slot.key]!.reward);
-          const purchase = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
+          const site = createAcquisitionSiteAddress(
+            createOccurrenceAddress(biome, occurrence.occurrenceId),
+            'roomExit',
+          );
           requireLeaf(
-            purchase,
-            expectedLeafInteraction('shopPurchase', workspaceTestOwnerKey(purchase)),
+            site,
+            expectedLeafInteraction('acquisitionOrder', workspaceTestOwnerKey(site)),
           );
         }
         break;

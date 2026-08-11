@@ -98,7 +98,6 @@ function defaultShopState(
       ? { deathDefianceConditionMet: false }
       : {}),
     offers: Object.freeze(offers),
-    purchaseOrder: Object.freeze([]),
   });
 }
 

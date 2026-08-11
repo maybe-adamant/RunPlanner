@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
@@ -73,9 +74,9 @@ describe('authored-project Shop occurrence commands', () => {
       value: { rewardType: 'MaxHealthDrop' },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopPurchaseOrder',
-      shop,
-      offerKeys: ['MajorNonBoon'],
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(shop, 'roomExit'),
+      entryKeys: ['MajorNonBoon'],
     });
     const state = project.routes
       .find((route) => route.routeKey === 'Surface')
@@ -85,17 +86,23 @@ describe('authored-project Shop occurrence commands', () => {
     expect(state).toMatchObject({
       kind: 'shop',
       shop: {
-        purchaseOrder: ['MajorNonBoon'],
         offers: {
           MajorNonBoon: { reward: { offer: { rewardType: 'MaxHealthDrop' } } },
         },
       },
     });
     expect(
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+        ?.acquisitionSites,
+    ).toEqual({ roomExit: { order: ['MajorNonBoon'] } });
+    expect(
       applyProjectCommand(project, catalog, {
-        kind: 'ReplaceShopPurchaseOrder',
-        shop,
-        offerKeys: ['MajorNonBoon'],
+        kind: 'ReplaceAcquisitionOrder',
+        site: createAcquisitionSiteAddress(shop, 'roomExit'),
+        entryKeys: ['MajorNonBoon'],
       }),
     ).toBe(project);
   });
@@ -116,38 +123,38 @@ describe('authored-project Shop occurrence commands', () => {
     );
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceShopPurchaseOrder',
-        shop: createOccurrenceAddress(nBiome, shopId),
-        offerKeys: 'yes' as unknown as readonly string[],
+        kind: 'ReplaceAcquisitionOrder',
+        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
+        entryKeys: 'yes' as unknown as readonly string[],
       }),
     ).toThrowError(
       expect.objectContaining({
-        commandKind: 'ReplaceShopPurchaseOrder',
-        detail: 'offerKeys must be an array of Shop offer keys',
+        commandKind: 'ReplaceAcquisitionOrder',
+        detail: 'entryKeys must be an array of entry keys',
       }),
     );
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceShopPurchaseOrder',
-        shop: createOccurrenceAddress(nBiome, shopId),
-        offerKeys: ['Unknown'],
+        kind: 'ReplaceAcquisitionOrder',
+        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
+        entryKeys: ['Unknown'],
       }),
     ).toThrowError(
       expect.objectContaining({
-        commandKind: 'ReplaceShopPurchaseOrder',
-        detail: 'unknown shop offer Unknown',
+        commandKind: 'ReplaceAcquisitionOrder',
+        detail: 'unknown entry Unknown',
       }),
     );
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceShopPurchaseOrder',
-        shop: createOccurrenceAddress(nBiome, shopId),
-        offerKeys: ['MajorNonBoon', 'MajorNonBoon'],
+        kind: 'ReplaceAcquisitionOrder',
+        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
+        entryKeys: ['MajorNonBoon', 'MajorNonBoon'],
       }),
     ).toThrowError(
       expect.objectContaining({
-        commandKind: 'ReplaceShopPurchaseOrder',
-        detail: 'shop offer MajorNonBoon is duplicated',
+        commandKind: 'ReplaceAcquisitionOrder',
+        detail: 'entry MajorNonBoon is duplicated',
       }),
     );
 
@@ -190,14 +197,17 @@ describe('authored-project Shop occurrence commands', () => {
     });
     expect(() =>
       applyProjectCommand(project, catalog, {
-        kind: 'ReplaceShopPurchaseOrder',
-        shop: createOccurrenceAddress(gBiome, createOccurrenceId('shop-unselected')),
-        offerKeys: ['Boon'],
+        kind: 'ReplaceAcquisitionOrder',
+        site: createAcquisitionSiteAddress(
+          createOccurrenceAddress(gBiome, createOccurrenceId('shop-unselected')),
+          'roomExit',
+        ),
+        entryKeys: ['Boon'],
       }),
     ).toThrowError(
       expect.objectContaining({
-        commandKind: 'ReplaceShopPurchaseOrder',
-        detail: 'G_PreBoss01 has no materialized shop inventory',
+        commandKind: 'ReplaceAcquisitionOrder',
+        detail: 'does not own a materialized Shop acquisition site',
       }),
     );
   });

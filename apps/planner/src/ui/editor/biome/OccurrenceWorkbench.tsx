@@ -1,4 +1,5 @@
 import {
+  createAcquisitionSiteAddress,
   semanticAddressKey,
   type OccurrenceAddress,
   type ProjectCommand,
@@ -567,7 +568,6 @@ function ShopWorkbench({
             <tr>
               <th scope="col">Offer</th>
               <th scope="col">Purchased</th>
-              <th scope="col">Purchase order</th>
             </tr>
           </thead>
           <tbody>
@@ -587,24 +587,23 @@ function ShopWorkbench({
                     onChange={(offerKeys) =>
                       dispatch(
                         authoredProjectCommandDispatched({
-                          kind: 'ReplaceShopPurchaseOrder',
-                          shop: occurrence,
-                          offerKeys,
+                          kind: 'ReplaceAcquisitionOrder',
+                          site: createAcquisitionSiteAddress(occurrence, 'roomExit'),
+                          entryKeys: offerKeys,
                         }),
                       )
                     }
-                    position={offer.purchase.position}
-                    positionOptions={offer.purchase.positionOptions}
                     purchased={offer.purchase.purchased}
                     toggleOfferKeys={offer.purchase.toggleOfferKeys}
                   />
                 </tr>
                 <tr className="shop-offer-reward" key={`${offer.key}:reward`}>
-                  <td colSpan={3}>
+                  <td colSpan={2}>
                     <RewardControlEditor
                       control={offer.rewardControl}
                       idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                       interactions={interactions}
+                      showAcquisitionChildren={false}
                     />
                   </td>
                 </tr>
@@ -614,6 +613,117 @@ function ShopWorkbench({
         </table>
       </div>
     </div>
+  );
+}
+
+/** One canonical settlement surface, hosted by its declared lifecycle point. */
+export function AcquisitionsWorkbench({
+  acquisitions,
+  interactions,
+}: {
+  readonly acquisitions: NonNullable<WorkspaceRoomSummary['acquisitions']>;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  if (acquisitions.entries.length === 0) return null;
+  return (
+    <section className="acquisitions-workbench">
+      <div className="owner-markers">
+        <h4>Acquisitions</h4>
+        <SemanticOwnerMarker address={acquisitions.marker.address} />
+      </div>
+      {acquisitions.entries.map((entry, index) => {
+        const without = acquisitions.entries.filter((candidate) => candidate.key !== entry.key);
+        const move = (nextIndex: number) => [
+          ...without.slice(0, nextIndex).map((candidate) => candidate.key),
+          entry.key,
+          ...without.slice(nextIndex).map((candidate) => candidate.key),
+        ];
+        return (
+          <div className="acquisition-entry" key={entry.key}>
+            <div className="owner-markers">
+              <span>{entry.label}</span>
+              <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
+            </div>
+            <AcquisitionMoveButton
+              disabled={index === 0}
+              entryKeys={move(index - 1)}
+              interactions={interactions}
+              label="Move earlier"
+              site={acquisitions.site}
+            />
+            <AcquisitionMoveButton
+              disabled={index === acquisitions.entries.length - 1}
+              entryKeys={move(index + 1)}
+              interactions={interactions}
+              label="Move later"
+              site={acquisitions.site}
+            />
+            <RewardControlEditor
+              control={entry.rewardControl}
+              idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
+              interactions={interactions}
+              showOffer={false}
+            />
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function AcquisitionMoveButton({
+  disabled,
+  entryKeys,
+  interactions,
+  label,
+  site,
+}: {
+  readonly disabled: boolean;
+  readonly entryKeys: readonly string[];
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+  readonly site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress;
+}) {
+  const dispatch = useAppDispatch();
+  const interaction = requireWorkspaceInteraction(
+    interactions.acquisitionOrders,
+    workspaceInteractionKey(site),
+  );
+  const projection = useWorkspaceInteraction(interaction);
+  const candidate = projection.result?.find(
+    (option) =>
+      option.value.length === entryKeys.length &&
+      option.value.every((key, index) => key === entryKeys[index]),
+  );
+  const unavailable = projection.result !== undefined && !candidateMayBeAuthored(candidate);
+  const apply = () => {
+    const options = projection.result ?? projection.activate();
+    const proposal = options?.find(
+      (option) =>
+        option.value.length === entryKeys.length &&
+        option.value.every((key, index) => key === entryKeys[index]),
+    );
+    if (!candidateMayBeAuthored(proposal)) return;
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAcquisitionOrder',
+        site,
+        entryKeys,
+      }),
+    );
+  };
+  return (
+    <button
+      aria-busy={projection.pending || undefined}
+      data-candidate-support={candidateSupport(candidate)}
+      disabled={disabled || projection.pending || unavailable}
+      onClick={apply}
+      onFocus={projection.activate}
+      onPointerDown={projection.activate}
+      type="button"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -888,6 +998,11 @@ export function RoomOfferEditor({
       ) : null}
       {state.kind === 'shop' && state.materialized ? (
         <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
+      ) : null}
+      {state.kind === 'shop' &&
+      state.materialized &&
+      room.acquisitions?.placement === 'afterProducer' ? (
+        <AcquisitionsWorkbench acquisitions={room.acquisitions} interactions={interactions} />
       ) : null}
       {state.kind === 'fields' ? (
         <FieldsWorkbench interactions={interactions} room={state} />

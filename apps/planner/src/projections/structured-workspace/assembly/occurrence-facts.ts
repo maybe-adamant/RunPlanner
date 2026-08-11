@@ -14,6 +14,8 @@ export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
   readonly occurrenceId: OccurrenceId;
+  /** The authored decision spine hosts this room's post-outgoing settlement. */
+  readonly postOutgoingSettlement: boolean;
 }
 
 /**
@@ -62,6 +64,13 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
   source: WorkspaceBiomeSource,
 ): WorkspaceBiomeOccurrenceAssemblyFacts {
   const active = authoredDetailsActiveOccurrenceIds(source.plan);
+  const postOutgoingSettlementOwners = new Set<OccurrenceId>(
+    (source.plan.topology?.decisions ?? []).flatMap((decision) =>
+      decision.kind === 'exit' && decision.source.kind === 'occurrence'
+        ? [decision.source.occurrenceId]
+        : [],
+    ),
+  );
   const byOccurrence = new Map<OccurrenceId, WorkspaceOccurrenceAssemblyFact>();
   for (const occurrence of source.plan.topology?.occurrences ?? []) {
     if (byOccurrence.has(occurrence.occurrenceId)) {
@@ -77,6 +86,7 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
         ),
         detailsActive: active.has(occurrence.occurrenceId),
         occurrenceId: occurrence.occurrenceId,
+        postOutgoingSettlement: postOutgoingSettlementOwners.has(occurrence.occurrenceId),
       }),
     );
   }

@@ -672,7 +672,6 @@ interface ShopOfferState {
 interface ShopState {
   profileKey: string;
   offers: Readonly<Record<string, ShopOfferState>>;
-  purchaseOrder: readonly string[];
 }
 ```
 
@@ -718,7 +717,7 @@ rarity and price are deferred, both resolve the same authored `RandomLoot` plus
 source shape; the supporting entry stays in the derived assignment witness so
 two-offer groups still enforce without-replacement selection exactly.
 
-`purchaseOrder: []` is complete authored state. The list contains distinct
+`acquisitionSites.roomExit.order: []` is complete authored state. The list contains distinct
 stable slot keys in the exact player-authored acquisition order; it controls
 acquisition, not whether an inventory offer exists. The ordinary `WorldShop` has three one-offer
 groups and therefore three stable slots whose current labels are `Offer 1`,
@@ -767,7 +766,7 @@ sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
 
-Purchase order is authored Shop state, not a simulation witness. A Blind Box
+Purchase membership and chronology are one occurrence-owned exact acquisition-site order, not Shop state or a simulation witness. A Blind Box
 offer persists its intended eventual `BoonSource`, but source support is not
 validated while the box is merely offered. When the box is purchased, the
 simulator applies the one authored order, evaluates each purchase against the
@@ -776,7 +775,7 @@ It retains ordinary reward-source possibility branches within that fixed order.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
-per-row membership and ordinal controls from the one occurrence-owned list.
+per-row membership and ordered Acquisitions controls from the one occurrence-owned list.
 
 ## Offer and Acquisition
 
@@ -971,7 +970,8 @@ one pre-selection equipped-trait snapshot. A reached invalid offer remains in
 the trace and receives semantic findings, but its selected option does not
 enter equipped state. A valid offer folds only its selected trait. Devotion's
 chosen role therefore equips before combat and its spurned role observes that
-state after combat; Shop purchases fold in authored purchase order.
+state after combat; Shop purchases fold in their occurrence-owned `roomExit`
+acquisition-site order.
 
 The first reached Olympian offer is a complete-offer composition point when
 the pre-offer `ordinaryBoonSlots` projection is empty. Its three alternatives

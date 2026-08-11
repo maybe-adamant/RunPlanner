@@ -659,10 +659,10 @@ one exact finding destination. The occurrence assembler derives these leaves
 from normalized acquisition roles; it does not switch on Hammer names or
 reconstruct lifecycle order. Room, local, wheel, Devotion, and Shop
 projections all reuse the same interaction package. A materialized Shop
-publishes the same authored trait controls for purchased and unpurchased
-offers; an unpurchased control is authoring surface only and has no reached
-acquisition, trait event, or equipped-state fold until its purchase role is
-selected.
+publishes trait and Pom controls only from active entries in its containing
+Acquisitions workbench. Unpurchased inventory exposes only `Purchased`
+membership; it has no acquisition-child control, finding, trait event, or
+equipped-state fold until its entry participates.
 
 The shared trait editor is a projection over the engine's three-option
 assessment. It dispatches complete semantic replacements and selected-option

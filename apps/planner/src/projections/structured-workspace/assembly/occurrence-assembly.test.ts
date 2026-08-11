@@ -12,7 +12,8 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
-  createShopPurchaseAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type OccurrenceId,
@@ -603,7 +604,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(selected.node.room.roomLocal.materialized).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal.offers)).toBe(true);
-    expect(selected.node.room.roomLocal.purchaseOrder).toEqual([]);
+    expect(selected.node.room.roomLocal.acquisitionOrder).toEqual([]);
     expect(
       selected.node.room.roomLocal.offers.map((offer) => [
         offer.key,
@@ -623,18 +624,19 @@ describe('structured workspace occurrence assembly', () => {
           Object.isFrozen(offer.rewardControl),
       ),
     ).toBe(true);
-    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('shopPurchaseOrders');
+    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('acquisitionOrder');
     const selectedOffer = selected.node.room.roomLocal.offers.find(
       (offer) => offer.key === 'MajorNonBoon',
     );
     expect(selectedOffer).toMatchObject({
       label: 'Offer 2',
       purchase: {
-        address: createShopPurchaseAddress(goldenFBiome, shop, 'MajorNonBoon'),
+        address: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(createOccurrenceAddress(goldenFBiome, shop), 'roomExit'),
+          'MajorNonBoon',
+        ),
         purchased: false,
-        position: null,
         toggleOfferKeys: ['MajorNonBoon'],
-        positionOptions: [],
         proposalOfferKeys: [[], ['MajorNonBoon']],
       },
       rewardControl: {

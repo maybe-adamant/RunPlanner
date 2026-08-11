@@ -160,7 +160,7 @@ export type RoomLifecycleEffectKind =
   | 'recordProducerPoint'
   | 'recordRequiredObjectCompletions'
   | 'recordRequiredObjectSpawns'
-  | 'recordShopPurchases';
+  | 'recordAcquisitionPoint';
 
 export interface OnlyEncounterSlotSelector {
   readonly kind: 'only';
@@ -197,8 +197,8 @@ export type RoomLifecycleOperation =
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'generateOutgoingBatch' })
   | (RoomLifecycleOperationBase & {
-      readonly kind: 'applyShopPurchases';
-      readonly offerPoint: string;
+      readonly kind: 'settleAcquisitionPoint';
+      readonly point: string;
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'commitRoom' })
   | (RoomLifecycleOperationBase & { readonly kind: 'exitRoom' });

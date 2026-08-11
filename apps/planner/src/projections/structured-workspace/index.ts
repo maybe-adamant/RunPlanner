@@ -63,7 +63,6 @@ export type {
   WorkspaceRoomSummary,
   WorkspaceRunStateBagSection,
   WorkspaceRunStateLauncher,
-  WorkspaceShopPurchaseOrderOption,
   WorkspaceRoute,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTakeoverBatchNode,

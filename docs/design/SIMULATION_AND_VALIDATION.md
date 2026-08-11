@@ -457,7 +457,7 @@ dormant project state; undo may restore their prior authored snapshot.
 Generated unpicked targets participate because their rooms and incoming or
 free rewards were offered by the game. Their entry-materialized shop state is
 not required and emits no facts. On a picked shop occurrence,
-`purchaseOrder: []` is complete state.
+`acquisitionSites.roomExit.order: []` is complete state.
 
 ## Canonical Snapshots
 
@@ -1006,14 +1006,15 @@ snapshot, validate every authored offer against an eligible option entry, and
 enforce each group's `offerCount` without replacement. Positive weights do not
 change possibility support. After the inventory exists, generate and validate
 the room's outgoing batch from the same pre-purchase acquisition history and
-the complete generated current-room option set. Only then execute the authored
-purchase order. Exact affordability and resource state remain deferred under
-the sufficient-resource policy in `REWARD_MODEL.md`. Blind Box persists its
-intended source, but validates that source only if purchased. The simulator
-evaluates that exact order, merges equivalent reward-source branches within it,
-and never retries a different order. Those post-purchase histories continue
-through the already-generated picked target; they are not used to revalidate its
-room or incoming reward.
+the complete generated current-room option set. Only then settle the
+occurrence-owned `roomExit` acquisition-site order. Exact affordability and
+resource state remain deferred under the sufficient-resource policy in
+`REWARD_MODEL.md`. Blind Box persists its intended source, but validates that
+source only if its entry participates in that order. The simulator evaluates
+the exact order, merges equivalent reward-source branches within it, and never
+retries a different order. Those post-settlement histories continue through the
+already-generated picked target; they are not used to revalidate its room or
+incoming reward.
 
 Source-bearing shop options use their declared policy at their declared
 resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,
@@ -1022,14 +1023,15 @@ role runs after purchase.
 
 An entered Shop may itself be the source of the active incomplete exit
 decision. The progressive evaluator keeps canonical reward history at that
-Shop's outgoing-generation checkpoint, but it also evaluates the exact authored
-purchase order as a discarded room-local interaction branch. This retained
-product publishes purchase findings and purchased trait or level-resolution
-capabilities immediately; it never advances the public reward branches, changes
-the already-generated door offers, or supplies post-purchase history to later
-rooms. Unpurchased offer children remain dormant. Consequently a purchased Pom
-can be repaired before the next room is authored without moving Shop purchases
-earlier in the game lifecycle.
+Shop's outgoing-generation checkpoint, then reaches its declared `roomExit`
+acquisition point through the same prefix lifecycle as a completed decision.
+The resulting public frontier branches contain the concrete purchased
+acquisitions and their post-settlement history while preserving the already
+generated door offers. They publish purchase findings and purchased trait or
+level-resolution capabilities immediately; without a selected continuation,
+that history has no later room to evaluate yet. Unpurchased offer children
+remain dormant. Consequently a purchased Pom can be repaired before the next
+room is authored without moving Shop purchases earlier in the game lifecycle.
 
 For each generated batch:
 
@@ -1243,14 +1245,15 @@ When support membership fails, typed evidence may contain the derived support
 set and the forced/eligibility facts that produced it. It never contains a
 likelihood score.
 
-Shop findings retain the narrowest proven owner. An offer or purchase address
-is marked unavailable only when that slot fails every reachable support branch.
-When each inventory slot remains individually possible but the complete
-authored inventory set has no joint witness, one finding belongs to the Shop
-occurrence with the participating offer keys in evidence. When a structurally
-valid exact purchase order fails only as a sequence, its aggregate finding
-likewise belongs to the Shop occurrence with that authored order in evidence;
-supported sibling slots are not marked invalid.
+Shop findings retain the narrowest proven owner. An offer or individual purchase
+failure belongs to its exact `acquisitionEntry`, and is marked unavailable only
+when that leaf fails every reachable support branch. When each inventory slot
+remains individually possible but the complete authored inventory set has no
+joint witness, one finding belongs to the Shop occurrence with the participating
+offer keys in evidence. When a structurally valid exact acquisition order fails
+only as a sequence, its aggregate finding belongs to the exact
+`acquisitionSite`, with that authored order in evidence; supported sibling
+entries are not marked invalid.
 
 Completeness and legality findings use the same address domain. Contract
 errors remain a separate result class because they indicate malformed data or

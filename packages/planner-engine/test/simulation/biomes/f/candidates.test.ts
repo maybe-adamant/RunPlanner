@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
@@ -335,15 +336,15 @@ describe('F candidate support', () => {
         value: offer.reward.offer,
       },
       {
-        kind: 'shopPurchaseOrder',
-        shop: createOccurrenceAddress(fBiome, shopId),
-        offerKeys: shop.state.shop.purchaseOrder,
+        kind: 'acquisitionOrder',
+        site: createAcquisitionSiteAddress(createOccurrenceAddress(fBiome, shopId), 'roomExit'),
+        entryKeys: shop.acquisitionSites?.roomExit?.order ?? [],
       },
     ]);
 
     expect(results).toEqual([
       { kind: 'shopOffer', result: { supported: true, findings: [] } },
-      { kind: 'shopPurchaseOrder', result: { supported: true, findings: [] } },
+      { kind: 'acquisitionOrder', result: { supported: true, findings: [] } },
     ]);
   });
 
@@ -589,9 +590,12 @@ describe('F candidate support', () => {
         value: offer.reward.offer,
       },
       {
-        kind: 'shopPurchaseOrder',
-        shop: createOccurrenceAddress(fBiome, shop.occurrenceId),
-        offerKeys: shop.state.shop.purchaseOrder,
+        kind: 'acquisitionOrder',
+        site: createAcquisitionSiteAddress(
+          createOccurrenceAddress(fBiome, shop.occurrenceId),
+          'roomExit',
+        ),
+        entryKeys: shop.acquisitionSites?.roomExit?.order ?? [],
       },
     ]);
 

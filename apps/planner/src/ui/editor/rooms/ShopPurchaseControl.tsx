@@ -1,7 +1,6 @@
-import type { ShopPurchaseAddress } from '@run-planner/engine/authored-project';
+import type { AcquisitionEntryAddress } from '@run-planner/engine/authored-project';
 import {
   candidateSupport,
-  presentCandidateLabel,
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
 } from '@planner/projections/candidateProjection';
@@ -9,18 +8,15 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceShopPurchaseOrderOption,
 } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
 interface ShopPurchaseControlProps {
-  readonly address: ShopPurchaseAddress;
+  readonly address: AcquisitionEntryAddress;
   readonly label: string;
   readonly purchased: boolean;
-  readonly position: number | null;
-  readonly positionOptions: readonly WorkspaceShopPurchaseOrderOption[];
   readonly toggleOfferKeys: readonly string[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onChange: (offerKeys: readonly string[]) => void;
@@ -40,23 +36,20 @@ function optionFor(
 }
 
 /**
- * One Shop row presents membership and ordinal as two controls over one
- * occurrence-owned purchase-order interaction. The assembler supplies all
- * complete proposals; React never repairs an array locally.
+ * One Shop inventory row exposes only optional-entry membership. Chronology
+ * belongs to the containing Acquisitions workbench.
  */
 export function ShopPurchaseControl({
   address,
   label,
   purchased,
-  position,
-  positionOptions,
   toggleOfferKeys,
   interactions,
   onChange,
 }: ShopPurchaseControlProps) {
   const interaction = requireWorkspaceInteraction(
-    interactions.shopPurchaseOrders,
-    workspaceInteractionKey(address),
+    interactions.acquisitionOrders,
+    workspaceInteractionKey(address.site),
   );
   const projection = useWorkspaceInteraction(interaction);
   const current = projection.result?.find((option) =>
@@ -69,7 +62,6 @@ export function ShopPurchaseControl({
     if (candidateMayBeAuthored(proposal)) onChange(offerKeys);
   };
   const checkboxId = `shop-${workspaceInteractionKey(address)}-purchased`;
-  const selectId = `shop-${workspaceInteractionKey(address)}-purchase-order`;
 
   return (
     <>
@@ -91,40 +83,6 @@ export function ShopPurchaseControl({
             type="checkbox"
           />
         </label>
-      </td>
-      <td aria-busy={projection.pending || undefined} className="shop-purchase-order">
-        <label className="visually-hidden" htmlFor={selectId}>
-          Purchase order for {label}
-        </label>
-        <select
-          aria-label={`Purchase order for ${label}`}
-          disabled={!purchased}
-          id={selectId}
-          onChange={(event) => {
-            const option = positionOptions.find(
-              (candidate) => candidate.position === Number(event.target.value),
-            );
-            if (option !== undefined) apply(option.offerKeys);
-          }}
-          onFocus={projection.activate}
-          onPointerDown={projection.activate}
-          value={position === null ? '' : String(position)}
-        >
-          {purchased ? null : <option value="">—</option>}
-          {positionOptions.map((option) => {
-            const candidate = optionFor(projection.result, option.offerKeys);
-            return (
-              <option
-                data-candidate-support={candidateSupport(candidate)}
-                disabled={projection.result !== undefined && !candidateMayBeAuthored(candidate)}
-                key={option.position}
-                value={option.position}
-              >
-                {presentCandidateLabel(option.label, candidate)}
-              </option>
-            );
-          })}
-        </select>
       </td>
     </>
   );

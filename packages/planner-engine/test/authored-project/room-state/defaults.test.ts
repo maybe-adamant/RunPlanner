@@ -127,7 +127,6 @@ describe('authored room-state defaults', () => {
       kind: 'shop',
       shop: {
         profileKey: 'WorldShop',
-        purchaseOrder: [],
         offers: {
           Boon: {},
           MajorNonBoon: {},

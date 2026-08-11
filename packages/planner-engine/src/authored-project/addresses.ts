@@ -128,11 +128,6 @@ export interface HubVisitAddress extends BiomeOwnedAddress {
   readonly hubKey: string;
   readonly visitIndex: number;
 }
-export interface ShopPurchaseAddress extends BiomeOwnedAddress {
-  readonly kind: 'shopPurchase';
-  readonly occurrenceId: OccurrenceId;
-  readonly offerKey: string;
-}
 export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'shopOffer';
   readonly occurrenceId: OccurrenceId;
@@ -201,8 +196,9 @@ export type SemanticAddress =
   | HubOpenSetAddress
   | HubRoomAddress
   | HubVisitAddress
-  | ShopPurchaseAddress
   | ShopOfferAddress
+  | AcquisitionSiteAddress
+  | AcquisitionEntryAddress
   | TraitOfferAddress
   | LevelResolutionAddress;
 
@@ -453,18 +449,6 @@ export function createHubVisitAddress(
     visitIndex: positiveInteger(visitIndex, 'visitIndex'),
   });
 }
-export function createShopPurchaseAddress(
-  biome: BiomeAddress,
-  occurrenceId: OccurrenceId,
-  offerKey: string,
-): ShopPurchaseAddress {
-  return Object.freeze({
-    kind: 'shopPurchase',
-    ...owner(biome),
-    occurrenceId,
-    offerKey: nonBlank(offerKey, 'offerKey'),
-  });
-}
 export function createShopOfferAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -529,9 +513,7 @@ export function createLevelResolutionAddress(
   });
 }
 
-export function semanticAddressKey(
-  address: SemanticAddress | AcquisitionSiteAddress | AcquisitionEntryAddress,
-): string {
+export function semanticAddressKey(address: SemanticAddress): string {
   const base = [
     address.kind,
     'routeKey' in address ? address.routeKey : undefined,
@@ -580,7 +562,6 @@ export function semanticAddressKey(
     case 'rewardWheelOffer':
       return JSON.stringify([...base, address.occurrenceId, address.wheelKey, address.offerKey]);
     case 'shopOffer':
-    case 'shopPurchase':
       return JSON.stringify([...base, address.occurrenceId, address.offerKey]);
     case 'acquisitionSite':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.pointKey]);

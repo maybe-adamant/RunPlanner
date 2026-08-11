@@ -23,6 +23,23 @@ function rewardControlMarkers(control: {
   ]);
 }
 
+/**
+ * A post-outgoing site is hosted by the following decision. Participation
+ * remains at the inventory row, while acquisition-time descendants move with
+ * the site that settles them.
+ */
+function workspacePostOutgoingAcquisitionMarkers(
+  acquisitions: NonNullable<WorkspaceRoomSummary['acquisitions']>,
+): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    acquisitions.marker,
+    ...acquisitions.entries.flatMap((entry) => [
+      ...(entry.rewardControl.traitOffers ?? []).map((trait) => trait.marker),
+      ...(entry.rewardControl.levelResolutions ?? []).map((resolution) => resolution.marker),
+    ]),
+  ]);
+}
+
 /** A workbench's room-local surface excludes its incoming offer. */
 export function workspaceLocalDetailMarkers(
   roomLocal: WorkspaceRoomLocal,
@@ -101,6 +118,9 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
+    ...(room.acquisitions?.placement === 'afterProducer'
+      ? workspacePostOutgoingAcquisitionMarkers(room.acquisitions)
+      : []),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
@@ -116,6 +136,9 @@ export function workspaceDecisionOwnedMarkers(
     node.selection,
     ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker]),
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
+    ...(node.acquisitions === undefined
+      ? []
+      : workspacePostOutgoingAcquisitionMarkers(node.acquisitions)),
     ...(node.zagreusContract === undefined
       ? []
       : [

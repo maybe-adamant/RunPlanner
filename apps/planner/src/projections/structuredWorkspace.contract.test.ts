@@ -2,6 +2,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -14,7 +16,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
@@ -31,7 +32,6 @@ import {
   type CanonicalHubDecision,
   type MaterializedBiomePrefix,
   type ProjectEvaluation,
-  type ProjectEvaluationAssembly,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
@@ -69,7 +69,7 @@ import {
 import { assertExpectedWorkspaceTopologyClosure } from '@planner-test/support/structured-workspace/topology-closure';
 import { unsafeOmitWorkspaceProperty } from '@planner-test/support/structured-workspace/unsafe-product-mutation';
 import { createCandidateSessionFactory } from './candidateProjection';
-import type { CandidateProjectionSession, CandidateSessionFactory } from './candidateProjection';
+import type { CandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
@@ -145,18 +145,6 @@ function withMalformedAuthoredBiome(
   return { ...project, routes };
 }
 
-const inertCandidateSessions: CandidateSessionFactory = Object.freeze({
-  bind(assembly: ProjectEvaluationAssembly) {
-    // Malformed-overlay tests never activate candidate loaders. Their inert
-    // session prevents the real exact-session boundary from accepting a
-    // deliberately forged assembly while preserving projection guard coverage.
-    return Object.freeze({
-      project: assembly.project,
-      evaluation: assembly.evaluation,
-    }) as CandidateProjectionSession;
-  },
-});
-
 function projection(
   candidateSessions: CandidateSessionFactory = createCandidateSessionFactory(catalog),
 ) {
@@ -178,7 +166,16 @@ function projection(
 function projectWorkspace(project: ProjectDocument, evaluation?: ProjectEvaluation) {
   const assembly = simulateProjectAssembly(catalog, project);
   if (evaluation === undefined) return projection().project(assembly);
-  return projection(inertCandidateSessions).project(Object.freeze({ ...assembly, evaluation }));
+  // The malformed-overlay tests exercise projection guards, not candidate
+  // recovery. Keep the genuine, callable candidate capabilities from the
+  // matching assembly so newly projected dormant/settlement controls do not
+  // fail before the intended malformed-evaluation assertion is reached.
+  const matchingCandidates = createCandidateSessionFactory(catalog).bind(assembly);
+  return projection(
+    Object.freeze({
+      bind: () => matchingCandidates,
+    }),
+  ).project(Object.freeze({ ...assembly, evaluation }));
 }
 
 function fBatch(snapshot: CanonicalBiome): CanonicalBatch {
@@ -301,10 +298,10 @@ function withoutLeafInteraction(
         ...interactions,
         shipCombatPhaseCounts: without(interactions.shipCombatPhaseCounts),
       };
-    case 'shopPurchase':
+    case 'acquisitionOrder':
       return {
         ...interactions,
-        shopPurchaseOrders: without(interactions.shopPurchaseOrders),
+        acquisitionOrders: without(interactions.acquisitionOrders),
       };
     case 'sideRoomEntryOrder':
       return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
@@ -536,9 +533,11 @@ describe('structured workspace overlay contract', () => {
     const finding = {
       code: 'shopPurchaseUnavailable',
       evidence: {},
-      origin: createShopPurchaseAddress(
-        goldenFBiome,
-        createOccurrenceId('evaluator-only-shop'),
+      origin: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, createOccurrenceId('evaluator-only-shop')),
+          'roomExit',
+        ),
         'offer1',
       ),
       phase: 'rewardGeneration',
@@ -737,7 +736,7 @@ describe('structured workspace overlay contract', () => {
         'rewardWheelPick',
         'rewardWheelStore',
         'shipCombatPhaseCount',
-        'shopPurchase',
+        'acquisitionOrder',
         'sideRoomEntryOrder',
         'sideRoomGeneration',
         'levelResolution',

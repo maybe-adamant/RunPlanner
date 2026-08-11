@@ -749,7 +749,7 @@ function foldHistoryEventStream(
       case 'producerRoleAdvanced':
       case 'producerPointReached':
       case 'roomCommitted':
-      case 'shopPurchasesApplied':
+      case 'acquisitionPointReached':
         break;
     }
   }

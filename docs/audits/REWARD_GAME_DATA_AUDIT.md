@@ -613,7 +613,8 @@ state could not afford. The Last Stand support expansion above is separately
 `Simplified` because its missing-inventory condition controls generation as
 well as purchase.
 
-Purchase order is authored Shop state and remains available to later consumers.
+The exact `acquisitionSites.roomExit.order` is occurrence-owned authored state and remains
+available to later consumers.
 A Blind Box persists its intended eventual source in authored payload while
 keeping that source game-hidden and semantically dormant until purchase. An
 earlier purchased Boon can change whether the authored source is then possible.

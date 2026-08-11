@@ -31,7 +31,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceSideRoomEntryOrder':
       return applyEphyraOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
-    case 'ReplaceShopPurchaseOrder':
     case 'ReplaceShopDeathDefianceCondition':
       return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':

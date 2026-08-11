@@ -47,41 +47,6 @@ export function applyShopOccurrenceCommand(
       ),
     );
   }
-  if (command.kind === 'ReplaceShopPurchaseOrder') {
-    if (
-      !Array.isArray(command.offerKeys) ||
-      !command.offerKeys.every((key) => typeof key === 'string')
-    ) {
-      failCommand(command, 'offerKeys must be an array of Shop offer keys');
-    }
-    const seen = new Set<string>();
-    for (const offerKey of command.offerKeys) {
-      if (occurrence.state.shop.offers[offerKey] === undefined) {
-        failCommand(command, `unknown shop offer ${offerKey}`);
-      }
-      if (seen.has(offerKey)) failCommand(command, `shop offer ${offerKey} is duplicated`);
-      seen.add(offerKey);
-    }
-    if (sameOccurrenceValue(command.offerKeys, occurrence.state.shop.purchaseOrder))
-      return document;
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        current,
-        Object.freeze({
-          ...occurrence,
-          state: Object.freeze({
-            ...occurrence.state,
-            shop: Object.freeze({
-              ...occurrence.state.shop,
-              purchaseOrder: Object.freeze([...command.offerKeys]),
-            }),
-          }),
-        }),
-      ),
-    );
-  }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
   if (sameOccurrenceValue(offer.reward.offer, command.value)) return document;

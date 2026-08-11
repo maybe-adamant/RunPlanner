@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 18 Boundary
+## Schema 20 Boundary
 
-Schema 18 is the sole persisted authored-project contract. The codec rejects
+Schema 20 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -84,7 +84,7 @@ does. Boss and optional Postboss rooms are catalog-derived completion tail
 rooms, not authored decisions or occurrences.
 
 Topology owns occurrence relationships and decisions. Room state owns rewards,
-Shop inventory and exact purchase order when materialized, exact concrete
+Shop inventory and occurrence-owned exact acquisition-site order when materialized, exact concrete
 encounter selections, wheels, cages, and side-room state. UI state owns no
 domain topology.
 
@@ -274,8 +274,8 @@ encounter slots. Fixed slots and slots in an empty Encounter Envelope carry no
 redundant authored selection.
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
 it; changing selection removes unselected inventory. Its materialized state
-owns declaration-keyed offers and one exact `purchaseOrder`; membership and
-ordinal derive only from that list. A counted-free Preboss
+owns declaration-keyed offers; the occurrence's exact `acquisitionSites.roomExit.order`
+owns purchase membership and order. A counted-free Preboss
 keeps its complete resolved offer regardless of selection.
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
@@ -322,7 +322,7 @@ ordinary decision owns the fresh host continuation.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
-Ephyra side-room generation/order/rewards, and Shop offers/purchase order. Leaf
+Ephyra side-room generation/order/rewards, Shop offers, and exact acquisition-site order. Leaf
 edits do not rewrite topology.
 
 ### Concrete Encounter Selections
