@@ -235,6 +235,67 @@ describe('Shop trait acquisition processing', () => {
     );
     expect(purchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
 
+    const giftCanonical = materializeAuthoredRoom({
+      catalog,
+      biome,
+      room,
+      occurrence: Object.freeze({
+        ...occurrence,
+        state: Object.freeze({
+          ...pomState,
+          shop: Object.freeze({
+            ...pomState.shop!,
+            purchaseOrder: Object.freeze(['MajorNonBoon']),
+            offers: Object.freeze({
+              ...pomState.shop!.offers,
+              MajorNonBoon: Object.freeze({
+                reward: Object.freeze({
+                  offer: Object.freeze({ rewardType: 'GiftDrop' }),
+                  traitOffersByAcquisitionRole: Object.freeze({}),
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+      role: 'ordinary',
+      entered: true,
+      lifecycleProfileKey: 'WorldShopRoom',
+      loadout,
+    });
+    const giftPurchased = processShopPurchases(
+      processShopInventory(
+        seeded,
+        {
+          catalog,
+          room: giftCanonical,
+          declaration: room,
+          historySequence: 1,
+          facts,
+          fail: (detail) => {
+            throw new Error(detail);
+          },
+        },
+        new Map(),
+      ),
+      {
+        catalog,
+        room: giftCanonical,
+        declaration: room,
+        historySequence: 2,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    expect(giftPurchased[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(giftPurchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(
+      giftPurchased[0]?.traitHistory?.events.some((event) => event.kind === 'levelMutation'),
+    ).toBe(false);
+
     const dormant = createDefaultRoomState(catalog, room, {
       role: 'ordinary',
       entryActive: false,

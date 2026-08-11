@@ -4,6 +4,7 @@ import type {
   AcquisitionKind,
   AcquisitionLifecycleBinding,
   HistoryProjectionKey,
+  LevelResolutionEffect,
   OfferProjectionKey,
   PayloadDomainDeclaration,
   ProducerLifecyclePointKey,
@@ -18,9 +19,7 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly gameName: string;
   readonly kind: AcquisitionKind;
   readonly historyProjection: HistoryProjectionKey;
-  readonly levelResolutionEffect?:
-    | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
-    | { readonly kind: 'randomTarget'; readonly levelCount: 1 };
+  readonly levelResolutionEffect?: LevelResolutionEffect;
 }
 
 export interface RawAcquisitionRoleDeclaration {

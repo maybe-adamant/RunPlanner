@@ -2,11 +2,17 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { AuthoredRoomState } from '../model';
-import { requireEphyraSideRooms, requireFieldsCages, requireShipCombatWheels } from './declaration';
+import {
+  requireCountedBinding,
+  requireEphyraSideRooms,
+  requireFieldsCages,
+  requireShipCombatWheels,
+} from './declaration';
 import { reconcileRoomEncounterState } from './encounters';
 import {
   createDefaultLevelResolutions,
   createDefaultTraitOffers,
+  producerLevelEffectSource,
   type TraitOfferDefaultsContext,
 } from '../traits';
 
@@ -14,8 +20,9 @@ function defaultRewardLeaves(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   loadout: TraitOfferDefaultsContext,
+  source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
 ) {
-  const levelResolutions = createDefaultLevelResolutions(catalog, offer);
+  const levelResolutions = createDefaultLevelResolutions(catalog, offer, source);
   return Object.freeze({
     traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
     ...(levelResolutions === undefined
@@ -79,7 +86,12 @@ function reconcileFieldsCombatState(
         countedOfferIsAdmitted(replacementDescriptor.reward, previousReward.offer)
           ? Object.freeze({
               offer: previousReward.offer,
-              ...defaultRewardLeaves(catalog, previousReward.offer, loadout),
+              ...defaultRewardLeaves(
+                catalog,
+                previousReward.offer,
+                loadout,
+                producerLevelEffectSource(replacementDescriptor.reward),
+              ),
             })
           : replacementReward,
       ];
@@ -143,7 +155,12 @@ function reconcileShipCombatState(
             countedOfferIsAdmitted(descriptor.reward, previousReward.offer)
               ? Object.freeze({
                   offer: previousReward.offer,
-                  ...defaultRewardLeaves(catalog, previousReward.offer, loadout),
+                  ...defaultRewardLeaves(
+                    catalog,
+                    previousReward.offer,
+                    loadout,
+                    producerLevelEffectSource(descriptor.reward),
+                  ),
                 })
               : replacementReward,
           ];
@@ -235,7 +252,14 @@ function reconcileEphyraCombatState(
         enteredOrdinal: null,
         reward: Object.freeze({
           offer,
-          ...defaultRewardLeaves(catalog, offer, loadout),
+          ...defaultRewardLeaves(
+            catalog,
+            offer,
+            loadout,
+            producerLevelEffectSource(
+              requireCountedBinding(replacementChild, replacementChild.gameName),
+            ),
+          ),
         }),
         encounters: reconcileRoomEncounterState(
           catalog,
@@ -269,7 +293,12 @@ function reconcileEphyraCombatState(
     kind: 'ephyraCombat',
     reward: Object.freeze({
       offer: parentOffer,
-      ...defaultRewardLeaves(catalog, parentOffer, loadout),
+      ...defaultRewardLeaves(
+        catalog,
+        parentOffer,
+        loadout,
+        producerLevelEffectSource(requireCountedBinding(replacementRoom, replacementRoom.gameName)),
+      ),
     }),
     sideRooms: Object.freeze(sideRooms),
   });
@@ -301,7 +330,12 @@ export function reconcileReplacementRoomState(
             kind: 'counted',
             reward: Object.freeze({
               offer: previousState.reward.offer,
-              ...defaultRewardLeaves(catalog, previousState.reward.offer, loadout),
+              ...defaultRewardLeaves(
+                catalog,
+                previousState.reward.offer,
+                loadout,
+                producerLevelEffectSource(replacementRoom.incomingReward),
+              ),
             }),
           })
         : replacementState;

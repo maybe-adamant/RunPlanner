@@ -68,6 +68,7 @@ export interface TraitOfferCandidateArtifacts {
 
 export interface LevelResolutionCandidateBranch {
   readonly effectKind: 'choice' | 'random';
+  readonly emptyTargetAllowed?: boolean;
   readonly levelCount: number;
   /** Defined only for a declaration-owned visible Pom choice. */
   readonly requiredOfferCount?: number;
@@ -166,6 +167,7 @@ export function createLevelResolutionCandidateArtifacts(
       readonly before: TraitHistoryState;
       readonly levelCount: number;
       readonly effectKind: 'choice' | 'random';
+      readonly emptyTargetAllowed?: boolean;
     }[]
   >,
 ): LevelResolutionCandidateArtifacts {
@@ -178,6 +180,7 @@ export function createLevelResolutionCandidateArtifacts(
         branches.map((branch) =>
           Object.freeze({
             effectKind: branch.effectKind,
+            ...(branch.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
             levelCount: branch.levelCount,
             ...(branch.effectKind === 'choice'
               ? { requiredOfferCount: Math.min(3, branch.before.upgradableTraitCount) }
@@ -199,6 +202,7 @@ export function createLevelResolutionCandidateArtifacts(
                 branch.before,
                 0,
                 branch.effectKind,
+                branch.emptyTargetAllowed ?? false,
               );
               return Object.freeze({
                 branchIndex,

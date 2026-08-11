@@ -784,6 +784,14 @@ describe('reward-kernel declaration parity', () => {
     expect(roomReward?.rewardTypes.byKey.InfernalContractBoon?.acquisitionLifecycle).toEqual([
       { role: 'self', lifecyclePoint: 'roomRewardPickup' },
     ]);
+    expect(roomReward?.rewardTypes.byKey.GiftDrop?.acquisitionLifecycle).toEqual([
+      {
+        role: 'self',
+        lifecyclePoint: 'roomRewardPickup',
+        levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+      },
+    ]);
+    expect(rewardKernelCatalog.acquisitions.byKey.GiftDrop?.levelResolutionEffect).toBeUndefined();
     expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
   });
 

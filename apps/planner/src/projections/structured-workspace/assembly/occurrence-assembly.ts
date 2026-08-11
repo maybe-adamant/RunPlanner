@@ -199,6 +199,15 @@ function levelResolutionControls(
           acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
           address,
           levelCount,
+          settledEmptyNoOp:
+            value.kind === 'random' &&
+            value.targetTraitKey === null &&
+            assessment.branches.some(
+              (branch) =>
+                branch.emptyTargetAllowed &&
+                branch.eligibleTargetCount === 0 &&
+                branch.findings.length === 0,
+            ),
           marker: input.markerDestinations.marker(address),
           rewardOwner: owner.address,
           value,

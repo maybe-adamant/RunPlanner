@@ -16,6 +16,7 @@ export {
   factsWithHistory,
   resolveAcquisitionRole,
 } from './history';
+export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './level-effects';
 export {
   evaluateShopGenerationSupport,
   evaluateShopPurchases,
@@ -42,6 +43,7 @@ export type {
   CountedOfferTransitionOptions,
   DevotionPairPayload,
   HistoryProjectionKey,
+  LevelResolutionEffect,
   OfferProjectionKey,
   PayloadDomainDeclaration,
   ProducerLifecycleProfileDeclaration,

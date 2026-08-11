@@ -12,7 +12,11 @@ import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { LocalRewardCommand } from './types';
-import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import {
+  createDefaultLevelResolutions,
+  createDefaultTraitOffers,
+  producerLevelEffectSource,
+} from '../traits';
 
 export function applyLocalRewardCommand(
   document: ProjectDocument,
@@ -36,6 +40,7 @@ export function applyLocalRewardCommand(
       );
     }
     const reward = occurrence.state.cages[command.reward.slotKey];
+    const levelEffectSource = producerLevelEffectSource(group.reward);
     if (reward === undefined)
       failCommand(command, `missing local reward ${command.reward.slotKey}`);
     if (sameOccurrenceValue(reward.offer, command.value)) return document;
@@ -57,12 +62,14 @@ export function applyLocalRewardCommand(
                   command.value,
                   located.loadout,
                 ),
-                ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+                ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) ===
+                undefined
                   ? {}
                   : {
                       levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                         catalog,
                         command.value,
+                        levelEffectSource,
                       ),
                     }),
               }),
@@ -86,6 +93,13 @@ export function applyLocalRewardCommand(
   if (sideRoom === undefined)
     failCommand(command, `missing side-room state ${command.reward.slotKey}`);
   if (sameOccurrenceValue(sideRoom.reward.offer, command.value)) return document;
+  const sideDeclaration =
+    catalog.rooms.byKey[
+      group.slots.find((slot) => slot.slotKey === command.reward.slotKey)?.roomGameName ?? ''
+    ];
+  if (sideDeclaration === undefined || sideDeclaration.incomingReward.kind === 'none')
+    failCommand(command, `missing side-room reward binding ${command.reward.slotKey}`);
+  const levelEffectSource = producerLevelEffectSource(sideDeclaration.incomingReward);
   return updateOccurrenceTopology(
     document,
     located,
@@ -106,12 +120,14 @@ export function applyLocalRewardCommand(
                   command.value,
                   located.loadout,
                 ),
-                ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+                ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) ===
+                undefined
                   ? {}
                   : {
                       levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                         catalog,
                         command.value,
+                        levelEffectSource,
                       ),
                     }),
               }),

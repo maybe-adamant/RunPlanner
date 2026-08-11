@@ -1,6 +1,7 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
-import { resolveAcquisitionRole } from '../reward-kernel/history';
+import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
+import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
 export interface AuthoredTraitOption {
   readonly traitKey: string;
@@ -19,6 +20,13 @@ export interface AuthoredTraitOffer {
 }
 
 export type TraitOptionKey = AuthoredTraitOffer['selectedOptionKey'];
+
+/** Makes the declaration-owned producer identity explicit at authored boundaries. */
+export function producerLevelEffectSource(binding: {
+  readonly producerLifecycleKey: string;
+}): LevelResolutionEffectSource {
+  return Object.freeze({ kind: 'producerLifecycle', key: binding.producerLifecycleKey });
+}
 
 export const TRAIT_OPTION_KEYS: readonly TraitOptionKey[] = Object.freeze([
   'option1',
@@ -51,19 +59,16 @@ export type AuthoredLevelResolution =
 export function createDefaultLevelResolutions(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
+  source: LevelResolutionEffectSource,
 ): Readonly<Record<string, AuthoredLevelResolution>> | undefined {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
   const result: Record<string, AuthoredLevelResolution> = {};
   for (const role of declaration.acquisitionRoles.values) {
-    const acquisition =
-      catalog.rewards.acquisitions.byKey[
-        resolveAcquisitionRole(catalog.rewards, offer, role.key, 'roomRewardPickup').acquisition
-          .gameName
-      ];
-    if (acquisition?.levelResolutionEffect === undefined) continue;
+    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role.key);
+    if (effect === undefined) continue;
     result[role.key] = Object.freeze(
-      acquisition.levelResolutionEffect.kind === 'visibleChoice'
+      effect.kind === 'visibleChoice'
         ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
         : { kind: 'random' as const, targetTraitKey: null },
     );

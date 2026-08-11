@@ -7,6 +7,7 @@ import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import { incomingLevelEffectSource } from '../room-state/level-effects';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -25,6 +26,9 @@ export function applyIncomingRewardCommand(
   if (room === undefined) {
     failCommand(command, `${occurrence.gameName} is not a legal topology room occurrence`);
   }
+  const levelEffectSource = incomingLevelEffectSource(catalog, occurrence);
+  if (levelEffectSource === undefined)
+    failCommand(command, `${room.gameName} has no reward binding`);
   if (
     'reward' in occurrence.state &&
     sameOccurrenceValue(occurrence.state.reward.offer, command.value)
@@ -44,12 +48,13 @@ export function applyIncomingRewardCommand(
       reward: Object.freeze({
         offer: command.value,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
-        ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+        ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
           ? {}
           : {
               levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                 catalog,
                 command.value,
+                levelEffectSource,
               ),
             }),
       }),
@@ -65,12 +70,13 @@ export function applyIncomingRewardCommand(
       reward: Object.freeze({
         offer: command.value,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
-        ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+        ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
           ? {}
           : {
               levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                 catalog,
                 command.value,
+                levelEffectSource,
               ),
             }),
       }),

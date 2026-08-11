@@ -9,6 +9,11 @@ export type ProducerLifecyclePointKey =
   'afterCombat' | 'afterUnwrap' | 'beforeCombat' | 'purchase' | 'roomRewardPickup';
 export type SourceSupportPolicyKey = 'devotionAcquiredPair' | 'ordinaryBoonPeer' | 'ordinaryNoPeer';
 
+export type LevelResolutionEffect =
+  | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
+  | { readonly kind: 'randomTarget'; readonly levelCount: 1 }
+  | { readonly kind: 'randomTargetIfAvailable'; readonly levelCount: 1 };
+
 export interface BoonSourcePayload {
   readonly kind: 'BoonSource';
   readonly source: string;
@@ -46,9 +51,7 @@ export interface ConcreteAcquisitionAddress {
 
 export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddress {
   readonly historyProjection: HistoryProjectionKey;
-  readonly levelResolutionEffect?:
-    | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
-    | { readonly kind: 'randomTarget'; readonly levelCount: 1 };
+  readonly levelResolutionEffect?: LevelResolutionEffect;
 }
 
 export type AcquisitionRoleResolution =
@@ -74,6 +77,8 @@ export interface AcquisitionRoleDeclaration {
 export interface AcquisitionLifecycleBinding {
   readonly role: string;
   readonly lifecyclePoint: ProducerLifecyclePointKey;
+  /** A narrow producer-local override; acquisition declarations retain universal effects. */
+  readonly levelResolutionEffect?: LevelResolutionEffect;
 }
 
 export type SourceResolutionPoint =

@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
-import { resolveAcquisitionRole } from '../../reward-kernel/history';
+import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import {
   locateTraitReward,
@@ -11,23 +11,9 @@ import {
 import type { LevelResolutionCommand, TraitOfferCommand } from './types';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 
-function effectFor(
-  catalog: Catalog,
-  offer: import('../../reward-kernel/model').ResolvedRewardOffer,
-  role: string,
-) {
-  try {
-    const acquisition = resolveAcquisitionRole(catalog.rewards, offer, role, 'roomRewardPickup');
-    return catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
-      ?.levelResolutionEffect;
-  } catch {
-    return undefined;
-  }
-}
-
 function validate(
   catalog: Catalog,
-  effect: NonNullable<ReturnType<typeof effectFor>>,
+  effect: NonNullable<ReturnType<typeof levelResolutionEffectFor>>,
   value: AuthoredLevelResolution,
   command: LevelResolutionCommand,
 ): AuthoredLevelResolution {
@@ -77,10 +63,15 @@ export function applyLevelResolutionCommand(
     kind: 'ReplaceTraitOffer',
     trait: { ...command.levelResolution, kind: 'traitOffer' },
   } as unknown as TraitOfferCommand;
-  const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, shim);
-  if (reward === undefined)
+  const locatedReward = locateTraitReward(catalog, located, occurrence, occurrence.state, shim);
+  if (locatedReward === undefined)
     failCommand(command, `no reward at role ${command.levelResolution.acquisitionRole}`);
-  const effect = effectFor(catalog, reward.offer, command.levelResolution.acquisitionRole);
+  const effect = levelResolutionEffectFor(
+    catalog.rewards,
+    locatedReward.reward.offer,
+    locatedReward.levelEffectSource,
+    command.levelResolution.acquisitionRole,
+  );
   if (effect === undefined)
     failCommand(
       command,
@@ -88,7 +79,9 @@ export function applyLevelResolutionCommand(
     );
   const value = validate(catalog, effect, command.value, command);
   const existing =
-    reward.levelResolutionsByAcquisitionRole?.[command.levelResolution.acquisitionRole];
+    locatedReward.reward.levelResolutionsByAcquisitionRole?.[
+      command.levelResolution.acquisitionRole
+    ];
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
   const state = updateTraitRewardState(
     catalog,

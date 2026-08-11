@@ -29,6 +29,7 @@ import { createDefaultRoomEncounterState } from './encounters';
 import {
   createDefaultLevelResolutions,
   createDefaultTraitOffers,
+  producerLevelEffectSource,
   type TraitOfferDefaultsContext,
 } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
@@ -76,12 +77,16 @@ function defaultShopState(
       reward: Object.freeze({
         offer: slot.defaultOffer,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, slot.defaultOffer, loadout),
-        ...(createDefaultLevelResolutions(catalog, slot.defaultOffer) === undefined
+        ...(createDefaultLevelResolutions(catalog, slot.defaultOffer, {
+          kind: 'shopProfile',
+          key: profile.key,
+        }) === undefined
           ? {}
           : {
               levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                 catalog,
                 slot.defaultOffer,
+                { kind: 'shopProfile', key: profile.key },
               ),
             }),
       }),
@@ -130,10 +135,18 @@ function defaultRewardWheel(
           Object.freeze({
             offer,
             traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
-            ...(createDefaultLevelResolutions(catalog, offer) === undefined
+            ...(createDefaultLevelResolutions(
+              catalog,
+              offer,
+              producerLevelEffectSource(descriptor.reward),
+            ) === undefined
               ? {}
               : {
-                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer),
+                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                    catalog,
+                    offer,
+                    producerLevelEffectSource(descriptor.reward),
+                  ),
                 }),
           }),
         ]),
@@ -199,6 +212,7 @@ function defaultEphyraCombatState(
             sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
             `${path}.sideRooms.${slot.slotKey}.offer`,
           ),
+          producerLevelEffectSource(requireCountedBinding(sideRoom, path)),
         ) === undefined
           ? {}
           : {
@@ -209,6 +223,7 @@ function defaultEphyraCombatState(
                   sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
                   `${path}.sideRooms.${slot.slotKey}.offer`,
                 ),
+                producerLevelEffectSource(requireCountedBinding(sideRoom, path)),
               ),
             }),
       }),
@@ -229,9 +244,19 @@ function defaultEphyraCombatState(
     reward: Object.freeze({
       offer,
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
-      ...(createDefaultLevelResolutions(catalog, offer) === undefined
+      ...(createDefaultLevelResolutions(
+        catalog,
+        offer,
+        producerLevelEffectSource(requireCountedBinding(room, path)),
+      ) === undefined
         ? {}
-        : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
+        : {
+            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+              catalog,
+              offer,
+              producerLevelEffectSource(requireCountedBinding(room, path)),
+            ),
+          }),
     }),
     sideRooms: Object.freeze(sideRooms),
   });
@@ -245,13 +270,22 @@ export function createDefaultRoomState(
   const path = `rooms.${room.gameName}.state`;
   const { role, entryActive } = context;
   const defaultLoadout = context.loadout;
-  const traitOffers = (offer: ResolvedRewardOffer) => ({
+  const traitOffers = (
+    offer: ResolvedRewardOffer,
+    source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  ) => ({
     reward: Object.freeze({
       offer,
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
-      ...(createDefaultLevelResolutions(catalog, offer) === undefined
+      ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
         ? {}
-        : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
+        : {
+            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+              catalog,
+              offer,
+              source,
+            ),
+          }),
     }),
   });
 
@@ -277,12 +311,17 @@ export function createDefaultRoomState(
                     offer,
                     defaultLoadout,
                   ),
-                  ...(createDefaultLevelResolutions(catalog, offer) === undefined
+                  ...(createDefaultLevelResolutions(
+                    catalog,
+                    offer,
+                    producerLevelEffectSource(requireFieldsCages(room, path).reward),
+                  ) === undefined
                     ? {}
                     : {
                         levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
                           catalog,
                           offer,
+                          producerLevelEffectSource(requireFieldsCages(room, path).reward),
                         ),
                       }),
                 }),
@@ -318,7 +357,7 @@ export function createDefaultRoomState(
       );
       return Object.freeze({
         kind: 'counted',
-        ...traitOffers(offer),
+        ...traitOffers(offer, producerLevelEffectSource(requireCountedBinding(room, path))),
       });
     }
     case 'Anomaly': {
@@ -330,7 +369,7 @@ export function createDefaultRoomState(
       );
       return Object.freeze({
         kind: 'anomaly',
-        ...traitOffers(offer),
+        ...traitOffers(offer, producerLevelEffectSource(requireCountedBinding(room, path))),
         success: true,
       });
     }
@@ -351,9 +390,19 @@ export function createDefaultRoomState(
         reward: Object.freeze({
           offer,
           traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
-          ...(createDefaultLevelResolutions(catalog, offer) === undefined
+          ...(createDefaultLevelResolutions(
+            catalog,
+            offer,
+            producerLevelEffectSource(room.incomingReward),
+          ) === undefined
             ? {}
-            : { levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(catalog, offer) }),
+            : {
+                levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                  catalog,
+                  offer,
+                  producerLevelEffectSource(room.incomingReward),
+                ),
+              }),
         }),
       });
     }
@@ -399,7 +448,10 @@ export function createDefaultRoomState(
       );
       return Object.freeze({
         kind: 'freeReward',
-        ...traitOffers(offer),
+        ...traitOffers(
+          offer,
+          producerLevelEffectSource(room.prebossBatchPolicy.remainingOffers.reward),
+        ),
       });
     }
   }

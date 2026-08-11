@@ -43,7 +43,7 @@ describe('Pom resolution editor', () => {
     const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
     let authoredProject = project;
     let workspace = initialWorkspace;
-    let control = [...workspace.interactions.levelResolutions.values()][0];
+    let control: WorkspaceLevelResolutionInteraction | undefined;
     for (const reward of initialWorkspace.interactions.rewards.values()) {
       if (control !== undefined) break;
       const withPom = applyProjectCommand(
@@ -54,17 +54,15 @@ describe('Pom resolution editor', () => {
       authoredProject = withPom;
       application.store.dispatch(authoredProjectReplaced(withPom));
       workspace = application.selectStructuredWorkspace(application.store.getState());
-      control = [...workspace.interactions.levelResolutions.values()][0];
+      control = [...workspace.interactions.levelResolutions.values()].find(
+        (candidate) => candidate.value.kind === 'choice',
+      );
     }
     if (control === undefined) throw new Error('Pom control is not projected');
     const incompleteProject = applyProjectCommand(
       authoredProject,
       application.catalog,
-      control.intentFor({
-        kind: 'choice',
-        offeredTraitKeys: [],
-        selectedTraitKey: null,
-      }).command,
+      control.intentFor(control.value).command,
     );
     application.store.dispatch(authoredProjectReplaced(incompleteProject));
     workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -176,6 +174,7 @@ describe('Pom resolution editor', () => {
     supported: boolean,
     findings: readonly string[] = [],
     requiredOfferCount?: number,
+    emptyTargetAllowed = false,
   ): LevelResolutionCandidateGroup =>
     Object.freeze({
       branchIndices: Object.freeze([Number(key.replace(/\D/g, '')) || 0]),
@@ -187,6 +186,7 @@ describe('Pom resolution editor', () => {
         effectKind,
         eligibleTargetTraitKeys: Object.freeze([...targets]),
         levelCount: 1,
+        ...(emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
         ...(requiredOfferCount === undefined ? {} : { requiredOfferCount }),
       }),
     });
@@ -304,5 +304,47 @@ describe('Pom resolution editor', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: 'A' });
+  });
+
+  it('presents a supported empty random domain as a no-op without a picker', () => {
+    const editorInteraction = interaction({
+      value: { kind: 'random', targetTraitKey: null },
+      load: () =>
+        Object.freeze({
+          groups: Object.freeze([group('empty', 'random', [], true, [], undefined, true)]),
+        }),
+    });
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
+    expect(screen.getByText('No eligible traits; no level is gained.')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Recorded random Pom target' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
+
+  it('lets an unavailable random target be cleared for a supported empty domain', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const editorInteraction = interaction({
+      value: { kind: 'random', targetTraitKey: 'Stale' },
+      load: (value) =>
+        Object.freeze({
+          groups: Object.freeze([
+            group(
+              'empty',
+              'random',
+              [],
+              value.kind === 'random' && value.targetTraitKey === null,
+              ['targetUnavailable'],
+              undefined,
+              true,
+            ),
+          ]),
+        }),
+    });
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
+    await user.click(screen.getByRole('button', { name: 'Clear recorded target' }));
+    await user.click(screen.getByRole('button', { name: 'Save Pom' }));
+    expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: null });
   });
 });

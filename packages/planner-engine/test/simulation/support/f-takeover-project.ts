@@ -5,6 +5,8 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -122,13 +124,21 @@ export function createCompleteFTakeoverProject(
       exit2: createOccurrenceId('f-takeover-preboss-free'),
     },
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(fBiome, fCombatId),
+      'self',
+    ),
+    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+  });
   return selectFCombatExit(project, selectedExitKey);
 }
 
 /** A complete physical takeover batch whose normal exit remains unselected. */
 export function createUnselectedFTakeoverProject(): ProjectDocument {
-  const project = createFOpeningTarget();
-  return applyProjectCommand(project, catalog, {
+  let project = createFOpeningTarget();
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: fDecision(fCombatId),
     gameName: 'F_PreBoss01',
@@ -136,5 +146,13 @@ export function createUnselectedFTakeoverProject(): ProjectDocument {
       exit1: createOccurrenceId('f-takeover-preboss-shop'),
       exit2: createOccurrenceId('f-takeover-preboss-free'),
     },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(fBiome, fCombatId),
+      'self',
+    ),
+    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
   });
 }

@@ -46,8 +46,8 @@ import {
   TRAIT_OPTION_KEYS,
   traitGiverUsesOfferContext,
 } from '../traits';
+import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
-import { resolveAcquisitionRole } from '../../reward-kernel/history';
 
 function decodePayload(
   value: unknown,
@@ -295,7 +295,12 @@ function decodeCountedOffer(
   return offer;
 }
 
-function decodeRewardState(value: unknown, catalog: Catalog, path: string): AuthoredRewardState {
+function decodeRewardState(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+  source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
+): AuthoredRewardState {
   const raw = expectRecord(value, path);
   for (const key of Object.keys(raw)) {
     if (
@@ -304,7 +309,7 @@ function decodeRewardState(value: unknown, catalog: Catalog, path: string): Auth
       failProjectDocument(path, `unexpected key ${key}`);
   }
   const offer = decodeOffer(raw.offer, catalog, `${path}.offer`);
-  const requiredLevels = createDefaultLevelResolutions(catalog, offer);
+  const requiredLevels = createDefaultLevelResolutions(catalog, offer, source);
   if (requiredLevels === undefined && raw.levelResolutionsByAcquisitionRole !== undefined)
     failProjectDocument(
       `${path}.levelResolutionsByAcquisitionRole`,
@@ -322,6 +327,7 @@ function decodeRewardState(value: unknown, catalog: Catalog, path: string): Auth
           raw.levelResolutionsByAcquisitionRole,
           catalog,
           offer,
+          source,
           `${path}.levelResolutionsByAcquisitionRole`,
         );
   return Object.freeze({
@@ -340,24 +346,18 @@ function decodeLevelResolutions(
   value: unknown,
   catalog: Catalog,
   offer: ResolvedRewardOffer,
+  source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
   path: string,
 ): Readonly<Record<string, AuthoredLevelResolution>> {
   const raw = expectRecord(value, path);
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined)
     failProjectDocument(path, `unknown reward type ${offer.rewardType}`);
-  const expectedRoles = declaration.acquisitionRoles.values.flatMap((role) => {
-    try {
-      const acquisition =
-        catalog.rewards.acquisitions.byKey[
-          resolveAcquisitionRole(catalog.rewards, offer, role.key, 'roomRewardPickup').acquisition
-            .gameName
-        ];
-      return acquisition?.levelResolutionEffect === undefined ? [] : [role.key];
-    } catch {
-      return [];
-    }
-  });
+  const expectedRoles = declaration.acquisitionRoles.values.flatMap((role) =>
+    levelResolutionEffectFor(catalog.rewards, offer, source, role.key) === undefined
+      ? []
+      : [role.key],
+  );
   if (expectedRoles.length === 0) {
     if (Object.keys(raw).length > 0) failProjectDocument(path, 'Pom resolutions are not supported');
     return Object.freeze({});
@@ -369,17 +369,7 @@ function decodeLevelResolutions(
     failProjectDocument(path, 'must contain exactly every Pom acquisition role');
   const result: Record<string, AuthoredLevelResolution> = {};
   for (const [role, encoded] of Object.entries(raw)) {
-    let acquisition: import('../../reward-kernel/model').ConcreteAcquisitionDeclaration | undefined;
-    try {
-      acquisition =
-        catalog.rewards.acquisitions.byKey[
-          resolveAcquisitionRole(catalog.rewards, offer, role, 'roomRewardPickup').acquisition
-            .gameName
-        ];
-    } catch {
-      failProjectDocument(`${path}.${role}`, 'has no valid acquisition role');
-    }
-    const effect = acquisition?.levelResolutionEffect;
+    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role);
     if (effect === undefined)
       failProjectDocument(`${path}.${role}`, 'has no Pom level-resolution effect');
     const entry = expectRecord(encoded, `${path}.${role}`);
@@ -455,7 +445,10 @@ function decodeRewardWheel(
   expectExactKeys(rawOffers, descriptor.offerKeys, `${path}.offers`);
   const offers: Record<string, AuthoredRewardState> = {};
   for (const offerKey of descriptor.offerKeys) {
-    const reward = decodeRewardState(rawOffers[offerKey], catalog, `${path}.offers.${offerKey}`);
+    const reward = decodeRewardState(rawOffers[offerKey], catalog, `${path}.offers.${offerKey}`, {
+      kind: 'producerLifecycle',
+      key: descriptor.reward.producerLifecycleKey,
+    });
     if (!descriptor.reward.allowedRewardTypes.includes(reward.offer.rewardType))
       failProjectDocument(
         `${path}.offers.${offerKey}.offer.rewardType`,
@@ -557,7 +550,10 @@ function decodeEphyraCombatState(
     if (sideRoom === undefined) {
       failProjectDocument(slotPath, `unknown room ${slot.roomGameName}`);
     }
-    const sideReward = decodeRewardState(rawState.reward, catalog, `${slotPath}.reward`);
+    const sideReward = decodeRewardState(rawState.reward, catalog, `${slotPath}.reward`, {
+      kind: 'producerLifecycle',
+      key: requireCountedBinding(sideRoom, slotPath).producerLifecycleKey,
+    });
     const sideOffer = decodeCountedOffer(
       sideReward.offer,
       catalog,
@@ -584,7 +580,10 @@ function decodeEphyraCombatState(
       );
     }
   }
-  const parentReward = decodeRewardState(value.reward, catalog, `${path}.reward`);
+  const parentReward = decodeRewardState(value.reward, catalog, `${path}.reward`, {
+    kind: 'producerLifecycle',
+    key: requireCountedBinding(room, path).producerLifecycleKey,
+  });
   const offer = decodeCountedOffer(
     parentReward.offer,
     catalog,
@@ -655,7 +654,10 @@ function decodeShopOffers(
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
     expectExactKeys(rawOffer, ['reward'], offerPath);
-    const reward = decodeRewardState(rawOffer.reward, catalog, `${offerPath}.reward`);
+    const reward = decodeRewardState(rawOffer.reward, catalog, `${offerPath}.reward`, {
+      kind: 'shopProfile',
+      key: profile.key,
+    });
     const offer = reward.offer;
     const group = profile.groups.byKey[slot.groupKey];
     if (group === undefined) {
@@ -726,7 +728,10 @@ export function decodeRoomState(
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
       const cages: Record<string, AuthoredRewardState> = {};
       for (const slotKey of descriptor.slotKeys) {
-        const reward = decodeRewardState(rawCages[slotKey], catalog, `${path}.cages.${slotKey}`);
+        const reward = decodeRewardState(rawCages[slotKey], catalog, `${path}.cages.${slotKey}`, {
+          kind: 'producerLifecycle',
+          key: descriptor.reward.producerLifecycleKey,
+        });
         const offer = decodeCountedOffer(
           reward.offer,
           catalog,
@@ -756,7 +761,10 @@ export function decodeRoomState(
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'counted', path);
       expectExactKeys(state, ['kind', 'reward'], path);
-      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`, {
+        kind: 'producerLifecycle',
+        key: requireCountedBinding(room, path).producerLifecycleKey,
+      });
       const offer = decodeCountedOffer(
         reward.offer,
         catalog,
@@ -775,7 +783,10 @@ export function decodeRoomState(
       if (rememberedCountedBinding === undefined) {
         failProjectDocument(path, 'Anomaly requires its remembered counted reward binding');
       }
-      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`, {
+        kind: 'producerLifecycle',
+        key: rememberedCountedBinding.producerLifecycleKey,
+      });
       const offer = decodeCountedOffer(
         reward.offer,
         catalog,
@@ -807,7 +818,10 @@ export function decodeRoomState(
       if (rewardType === undefined) {
         failProjectDocument(path, `unknown fixed reward ${room.incomingReward.offer.rewardType}`);
       }
-      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`, {
+        kind: 'producerLifecycle',
+        key: room.incomingReward.producerLifecycleKey,
+      });
       const payload = decodePayload(
         reward.offer.payload,
         rewardType,
@@ -846,7 +860,10 @@ export function decodeRoomState(
       ) {
         failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
-      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`);
+      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`, {
+        kind: 'producerLifecycle',
+        key: room.prebossBatchPolicy.remainingOffers.reward.producerLifecycleKey,
+      });
       const offer = decodeCountedOffer(
         reward.offer,
         catalog,

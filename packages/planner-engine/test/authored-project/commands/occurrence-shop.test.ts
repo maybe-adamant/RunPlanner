@@ -8,6 +8,7 @@ import {
   createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createLevelResolutionAddress,
   createShopOfferAddress,
   createProjectHistory,
   createTargetAddress,
@@ -23,6 +24,22 @@ import { gBiome, gProject, nBiome } from '../support/configured-projects';
 import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures';
 
 describe('authored-project Shop occurrence commands', () => {
+  it('rejects a level-resolution child on Shop GiftDrop', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const shopOffer = createShopOfferAddress(nBiome, shopId, 'MajorNonBoon');
+    const shopProject = applyProjectCommand(createCompleteNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: shopOffer,
+      value: { rewardType: 'GiftDrop' },
+    });
+    expect(() =>
+      applyProjectCommand(shopProject, catalog, {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: createLevelResolutionAddress(shopOffer, 'self'),
+        value: { kind: 'random', targetTraitKey: null },
+      }),
+    ).toThrow('no Pom level-resolution effect at role self');
+  });
   it('preserves customized Shop trait children when the parent offer is unchanged', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const offer = createShopOfferAddress(nBiome, shopId, 'Boon');
