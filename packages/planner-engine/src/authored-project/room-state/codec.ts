@@ -40,9 +40,14 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { decodeRoomEncounterState } from './encounters';
-import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
-import { TRAIT_OPTION_KEYS, traitGiverUsesOfferContext } from '../traits';
+import type { AuthoredLevelResolution, AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
+import {
+  createDefaultLevelResolutions,
+  TRAIT_OPTION_KEYS,
+  traitGiverUsesOfferContext,
+} from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
+import { resolveAcquisitionRole } from '../../reward-kernel/history';
 
 function decodePayload(
   value: unknown,
@@ -292,8 +297,33 @@ function decodeCountedOffer(
 
 function decodeRewardState(value: unknown, catalog: Catalog, path: string): AuthoredRewardState {
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['offer', 'traitOffersByAcquisitionRole'], path);
+  for (const key of Object.keys(raw)) {
+    if (
+      !['offer', 'traitOffersByAcquisitionRole', 'levelResolutionsByAcquisitionRole'].includes(key)
+    )
+      failProjectDocument(path, `unexpected key ${key}`);
+  }
   const offer = decodeOffer(raw.offer, catalog, `${path}.offer`);
+  const requiredLevels = createDefaultLevelResolutions(catalog, offer);
+  if (requiredLevels === undefined && raw.levelResolutionsByAcquisitionRole !== undefined)
+    failProjectDocument(
+      `${path}.levelResolutionsByAcquisitionRole`,
+      'Pom resolutions are not supported',
+    );
+  if (requiredLevels !== undefined && raw.levelResolutionsByAcquisitionRole === undefined)
+    failProjectDocument(
+      `${path}.levelResolutionsByAcquisitionRole`,
+      'is required for this Pom reward',
+    );
+  const levels =
+    raw.levelResolutionsByAcquisitionRole === undefined
+      ? undefined
+      : decodeLevelResolutions(
+          raw.levelResolutionsByAcquisitionRole,
+          catalog,
+          offer,
+          `${path}.levelResolutionsByAcquisitionRole`,
+        );
   return Object.freeze({
     offer,
     traitOffersByAcquisitionRole: decodeTraitOffers(
@@ -302,7 +332,104 @@ function decodeRewardState(value: unknown, catalog: Catalog, path: string): Auth
       offer,
       `${path}.traitOffersByAcquisitionRole`,
     ),
+    ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
   });
+}
+
+function decodeLevelResolutions(
+  value: unknown,
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  path: string,
+): Readonly<Record<string, AuthoredLevelResolution>> {
+  const raw = expectRecord(value, path);
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined)
+    failProjectDocument(path, `unknown reward type ${offer.rewardType}`);
+  const expectedRoles = declaration.acquisitionRoles.values.flatMap((role) => {
+    try {
+      const acquisition =
+        catalog.rewards.acquisitions.byKey[
+          resolveAcquisitionRole(catalog.rewards, offer, role.key, 'roomRewardPickup').acquisition
+            .gameName
+        ];
+      return acquisition?.levelResolutionEffect === undefined ? [] : [role.key];
+    } catch {
+      return [];
+    }
+  });
+  if (expectedRoles.length === 0) {
+    if (Object.keys(raw).length > 0) failProjectDocument(path, 'Pom resolutions are not supported');
+    return Object.freeze({});
+  }
+  if (
+    Object.keys(raw).length !== expectedRoles.length ||
+    expectedRoles.some((role) => raw[role] === undefined)
+  )
+    failProjectDocument(path, 'must contain exactly every Pom acquisition role');
+  const result: Record<string, AuthoredLevelResolution> = {};
+  for (const [role, encoded] of Object.entries(raw)) {
+    let acquisition: import('../../reward-kernel/model').ConcreteAcquisitionDeclaration | undefined;
+    try {
+      acquisition =
+        catalog.rewards.acquisitions.byKey[
+          resolveAcquisitionRole(catalog.rewards, offer, role, 'roomRewardPickup').acquisition
+            .gameName
+        ];
+    } catch {
+      failProjectDocument(`${path}.${role}`, 'has no valid acquisition role');
+    }
+    const effect = acquisition?.levelResolutionEffect;
+    if (effect === undefined)
+      failProjectDocument(`${path}.${role}`, 'has no Pom level-resolution effect');
+    const entry = expectRecord(encoded, `${path}.${role}`);
+    if (effect.kind === 'visibleChoice') {
+      expectExactKeys(entry, ['kind', 'offeredTraitKeys', 'selectedTraitKey'], `${path}.${role}`);
+      if (expectString(entry.kind, `${path}.${role}.kind`) !== 'choice')
+        failProjectDocument(`${path}.${role}.kind`, 'expected choice');
+      const keys = expectArray(entry.offeredTraitKeys, `${path}.${role}.offeredTraitKeys`).map(
+        (candidate, index) => {
+          const key = expectString(candidate, `${path}.${role}.offeredTraitKeys[${index}]`);
+          if (catalog.traits.byKey[key] === undefined)
+            failProjectDocument(
+              `${path}.${role}.offeredTraitKeys[${index}]`,
+              `unknown trait ${key}`,
+            );
+          return key;
+        },
+      );
+      if (new Set(keys).size !== keys.length)
+        failProjectDocument(`${path}.${role}.offeredTraitKeys`, 'must be distinct');
+      const selected =
+        entry.selectedTraitKey === null
+          ? null
+          : expectString(entry.selectedTraitKey, `${path}.${role}.selectedTraitKey`);
+      if (selected !== null && catalog.traits.byKey[selected] === undefined)
+        failProjectDocument(`${path}.${role}.selectedTraitKey`, `unknown trait ${selected}`);
+      if (selected !== null && !keys.includes(selected))
+        failProjectDocument(
+          `${path}.${role}.selectedTraitKey`,
+          'must be one of the offered trait keys',
+        );
+      result[role] = Object.freeze({
+        kind: 'choice',
+        offeredTraitKeys: Object.freeze(keys),
+        selectedTraitKey: selected,
+      });
+    } else {
+      expectExactKeys(entry, ['kind', 'targetTraitKey'], `${path}.${role}`);
+      if (expectString(entry.kind, `${path}.${role}.kind`) !== 'random')
+        failProjectDocument(`${path}.${role}.kind`, 'expected random');
+      const target =
+        entry.targetTraitKey === null
+          ? null
+          : expectString(entry.targetTraitKey, `${path}.${role}.targetTraitKey`);
+      if (target !== null && catalog.traits.byKey[target] === undefined)
+        failProjectDocument(`${path}.${role}.targetTraitKey`, `unknown trait ${target}`);
+      result[role] = Object.freeze({ kind: 'random', targetTraitKey: target });
+    }
+  }
+  return Object.freeze(result);
 }
 
 function decodeRewardWheel(

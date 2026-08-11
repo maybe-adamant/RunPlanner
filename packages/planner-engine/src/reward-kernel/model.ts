@@ -46,6 +46,9 @@ export interface ConcreteAcquisitionAddress {
 
 export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddress {
   readonly historyProjection: HistoryProjectionKey;
+  readonly levelResolutionEffect?:
+    | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
+    | { readonly kind: 'randomTarget'; readonly levelCount: 1 };
 }
 
 export type AcquisitionRoleResolution =

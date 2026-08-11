@@ -6,7 +6,7 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
-import { createDefaultTraitOffers } from '../traits';
+import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -44,6 +44,14 @@ export function applyIncomingRewardCommand(
       reward: Object.freeze({
         offer: command.value,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
+        ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                catalog,
+                command.value,
+              ),
+            }),
       }),
     });
   } else if (
@@ -57,6 +65,14 @@ export function applyIncomingRewardCommand(
       reward: Object.freeze({
         offer: command.value,
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
+        ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                catalog,
+                command.value,
+              ),
+            }),
       }),
     });
   } else {

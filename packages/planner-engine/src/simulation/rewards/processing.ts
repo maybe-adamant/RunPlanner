@@ -1,6 +1,7 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import {
   createTraitOfferAddress,
+  createLevelResolutionAddress,
   semanticAddressKey,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
@@ -51,8 +52,11 @@ import {
   attachTraitHistory,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
+  evaluateReachedLevelResolution,
+  recordReachedLevelResolution,
   recordReachedTraitOffer,
   type ReachedTraitOfferEvaluation,
+  type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
 } from '../traits';
 import type { AuthoredTraitOffer } from '../../authored-project/traits';
@@ -72,6 +76,7 @@ export interface RewardBranchState {
   readonly processedThroughHistorySequence: number;
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
+  readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
 }
 
 export type RewardFactsFactory = (
@@ -137,6 +142,27 @@ function mergeTraitEvaluations(
   return Object.freeze([...unique.values()]);
 }
 
+function mergeLevelResolutionEvaluations(
+  left: readonly ReachedLevelResolutionEvaluation[] | undefined,
+  right: readonly ReachedLevelResolutionEvaluation[] | undefined,
+): readonly ReachedLevelResolutionEvaluation[] | undefined {
+  const values = [...(left ?? []), ...(right ?? [])];
+  if (values.length === 0) return undefined;
+  const unique = new Map<string, ReachedLevelResolutionEvaluation>();
+  for (const value of values) {
+    unique.set(
+      JSON.stringify([
+        semanticAddressKey(value.address),
+        value.chronologicalIndex,
+        value.before,
+        value.value,
+      ]),
+      value,
+    );
+  }
+  return Object.freeze([...unique.values()]);
+}
+
 export function mergeEquivalentRewardBranches(
   branches: readonly RewardBranchState[],
 ): readonly RewardBranchState[] {
@@ -151,11 +177,19 @@ export function mergeEquivalentRewardBranches(
         previous.traitEvaluations,
         branch.traitEvaluations,
       );
+      const levelResolutionEvaluations = mergeLevelResolutionEvaluations(
+        previous.levelResolutionEvaluations,
+        branch.levelResolutionEvaluations,
+      );
       merged.set(
         key,
-        traitEvaluations === undefined
+        traitEvaluations === undefined && levelResolutionEvaluations === undefined
           ? previous
-          : Object.freeze({ ...previous, traitEvaluations }),
+          : Object.freeze({
+              ...previous,
+              ...(traitEvaluations === undefined ? {} : { traitEvaluations }),
+              ...(levelResolutionEvaluations === undefined ? {} : { levelResolutionEvaluations }),
+            }),
       );
     }
   }
@@ -186,6 +220,7 @@ function applyTraitOfferForAcquisition(
     readonly origin: SemanticAddress;
     readonly offer?: CanonicalResolvedIncomingReward['offer'];
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   role: string,
@@ -195,8 +230,95 @@ function applyTraitOfferForAcquisition(
   findingChronology?: FindingChronology,
 ): RewardBranchState {
   const authored = reward.traitOffersByAcquisitionRole?.[role];
-  if (authored === undefined) return branch;
+  const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.traitHistory ?? createTraitHistoryState();
+  {
+    let acquisition: import('../../reward-kernel/model').ConcreteAcquisitionDeclaration | undefined;
+    try {
+      acquisition =
+        reward.offer === undefined
+          ? undefined
+          : catalog.rewards.acquisitions.byKey[
+              resolveAcquisitionRole(
+                catalog.rewards,
+                reward.offer,
+                role,
+                lifecyclePoint as import('../../reward-kernel/model').ProducerLifecyclePointKey,
+              ).acquisition.gameName
+            ];
+    } catch {
+      acquisition = undefined;
+    }
+    const effect = acquisition?.levelResolutionEffect;
+    if (effect !== undefined) {
+      const owner = traitOwnerAddress(reward.origin);
+      if (owner === undefined) return branch;
+      const address = createLevelResolutionAddress(owner, role);
+      // A missing child is still a reached, incomplete declaration-owned Pom.
+      // Do not let malformed legacy/project state silently bypass the effect.
+      const levelResolution =
+        authoredLevelResolution ??
+        (effect.kind === 'visibleChoice'
+          ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
+          : { kind: 'random' as const, targetTraitKey: null });
+      const evaluation = evaluateReachedLevelResolution(
+        catalog,
+        address,
+        levelResolution,
+        effect.levelCount,
+        before,
+        branch.levelResolutionEvaluations?.length ?? 0,
+        effect.kind === 'visibleChoice' ? 'choice' : 'random',
+      );
+      const applied = recordReachedLevelResolution(
+        catalog,
+        address,
+        levelResolution,
+        effect.levelCount,
+        before,
+        sequence,
+        lifecyclePoint,
+        effect.kind === 'visibleChoice' ? 'choice' : 'random',
+      );
+      if (findings !== undefined && evaluation.findings.length > 0) {
+        const codeByFinding = {
+          missingTarget: 'missingPomTarget',
+          wrongOfferCount: 'pomWrongOfferCount',
+          selectedTargetNotOffered: 'pomSelectedTargetNotOffered',
+          targetUnavailable: 'pomTargetUnavailable',
+          kindMismatch: 'pomTargetUnavailable',
+        } as const;
+        for (const finding of evaluation.findings) {
+          addRewardFinding(
+            findings,
+            Object.freeze({
+              code: codeByFinding[finding],
+              severity: 'error',
+              phase: 'rewardGeneration',
+              origin: evaluation.address,
+              evidence: Object.freeze({
+                acquisitionRole: role,
+                lifecyclePoint,
+                levelCount: effect.levelCount,
+              }),
+            }),
+            ownerRegion(evaluation.address),
+            findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+          );
+        }
+      }
+      return Object.freeze({
+        ...branch,
+        history: attachTraitHistory(branch.history, applied.history),
+        traitHistory: applied.history,
+        levelResolutionEvaluations: Object.freeze([
+          ...(branch.levelResolutionEvaluations ?? []),
+          evaluation,
+        ]),
+      });
+    }
+  }
+  if (authored === undefined) return branch;
   const evaluation = evaluateReachedTraitOffer(
     catalog,
     reward.origin,
@@ -1074,6 +1196,9 @@ export function processShopPurchases(
             ...(offer.traitOffersByAcquisitionRole === undefined
               ? {}
               : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
+            ...(offer.levelResolutionsByAcquisitionRole === undefined
+              ? {}
+              : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
             ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
           }),
           acquisition.event.role,
@@ -1211,6 +1336,7 @@ export function processOwnedRewardAcquisition(
     readonly origin: SemanticAddress;
     readonly producerLifecycleKey: string;
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   historySequence: number,

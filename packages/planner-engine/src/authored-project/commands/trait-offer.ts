@@ -5,6 +5,7 @@ import {
   type AuthoredTraitOffer,
 } from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
+import type { AuthoredLevelResolution } from '../traits';
 import { selectedEncounterDefinitionKey } from '../room-state/encounters';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
@@ -70,6 +71,20 @@ function validateOffer(
   });
 }
 
+export function updateLevelResolutionReward(
+  reward: AuthoredRewardState,
+  role: string,
+  value: AuthoredLevelResolution,
+): AuthoredRewardState {
+  return Object.freeze({
+    ...reward,
+    levelResolutionsByAcquisitionRole: Object.freeze({
+      ...(reward.levelResolutionsByAcquisitionRole ?? {}),
+      [role]: value,
+    }),
+  });
+}
+
 function updateReward(
   reward: AuthoredRewardState,
   role: string,
@@ -84,7 +99,7 @@ function updateReward(
   });
 }
 
-function locateReward(
+export function locateTraitReward(
   catalog: Catalog,
   located: LocatedBiome,
   occurrence: RoomOccurrence,
@@ -168,13 +183,18 @@ function locateReward(
   }
 }
 
-function updateState(
+export function updateTraitRewardState(
   catalog: Catalog,
   located: LocatedBiome,
   occurrence: RoomOccurrence,
   state: RoomOccurrence['state'],
   command: TraitOfferCommand,
   value: AuthoredTraitOffer,
+  update: (
+    reward: AuthoredRewardState,
+    role: string,
+    value: AuthoredTraitOffer,
+  ) => AuthoredRewardState = updateReward,
 ): RoomOccurrence['state'] {
   const owner = command.trait.owner;
   switch (owner.kind) {
@@ -187,7 +207,7 @@ function updateState(
         case 'freeReward':
           return Object.freeze({
             ...state,
-            reward: updateReward(state.reward, command.trait.acquisitionRole, value),
+            reward: update(state.reward, command.trait.acquisitionRole, value),
           });
         case 'none':
         case 'fieldsCombat':
@@ -215,7 +235,7 @@ function updateState(
           ...state,
           cages: Object.freeze({
             ...state.cages,
-            [owner.slotKey]: updateReward(reward, command.trait.acquisitionRole, value),
+            [owner.slotKey]: update(reward, command.trait.acquisitionRole, value),
           }),
         });
       }
@@ -238,7 +258,7 @@ function updateState(
             ...state.sideRooms,
             [owner.slotKey]: Object.freeze({
               ...sideRoom,
-              reward: updateReward(sideRoom.reward, command.trait.acquisitionRole, value),
+              reward: update(sideRoom.reward, command.trait.acquisitionRole, value),
             }),
           }),
         });
@@ -265,7 +285,7 @@ function updateState(
               ...wheel,
               offers: Object.freeze({
                 ...wheel.offers,
-                [owner.offerKey]: updateReward(reward, command.trait.acquisitionRole, value),
+                [owner.offerKey]: update(reward, command.trait.acquisitionRole, value),
               }),
             }),
           }),
@@ -286,7 +306,7 @@ function updateState(
               ...state.shop.offers,
               [owner.offerKey]: Object.freeze({
                 ...entry,
-                reward: updateReward(entry.reward, command.trait.acquisitionRole, value),
+                reward: update(entry.reward, command.trait.acquisitionRole, value),
               }),
             }),
           }),
@@ -406,7 +426,7 @@ export function applyTraitOfferCommand(
       ),
     );
   }
-  const reward = locateReward(catalog, located, occurrence, occurrence.state, command);
+  const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
   if (reward === undefined)
     failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
   const existing = reward.traitOffersByAcquisitionRole[command.trait.acquisitionRole];
@@ -437,7 +457,14 @@ export function applyTraitOfferCommand(
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
   if (sameOccurrenceValue(value, existing)) return document;
-  const state = updateState(catalog, located, occurrence, occurrence.state, command, value);
+  const state = updateTraitRewardState(
+    catalog,
+    located,
+    occurrence,
+    occurrence.state,
+    command,
+    value,
+  );
   return updateOccurrenceTopology(
     document,
     located,

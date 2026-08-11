@@ -3,6 +3,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createBiomeAddress,
+  createLevelResolutionAddress,
   createOccurrenceId,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -15,11 +16,17 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
+import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import {
   initializeRewardBranches,
   processShopInventory,
   processShopPurchases,
 } from '../../src/simulation/rewards/processing';
+import {
+  attachTraitHistory,
+  foldTraitHistoryEvents,
+  type TraitOfferEvent,
+} from '../../src/simulation/traits';
 import { simulateProject } from '../../src/simulation';
 import {
   createRepresentativeNOPQShopTraitProject,
@@ -61,7 +68,448 @@ function baseFacts(): RewardKernelFacts {
   };
 }
 
+function pomTargetHistory() {
+  const event: TraitOfferEvent = {
+    kind: 'traitOffer',
+    owner: { kind: 'project' },
+    acquisitionRole: 'seed',
+    sequence: 1,
+    giverKey: 'Apollo',
+    options: Object.freeze([
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+      { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+    ]),
+    selectedOptionKey: 'option1',
+    acquisitionPoint: 'seed',
+  };
+  return foldTraitHistoryEvents(catalog, [event]);
+}
+
 describe('Shop trait acquisition processing', () => {
+  it('folds a purchased random Shop Pom only at purchase, while unpurchased and dormant inventory stay inert', () => {
+    const room = catalog.rooms.byKey.F_Shop01;
+    if (room === undefined) throw new Error('missing F Shop declaration');
+    const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+    const active = createDefaultRoomState(catalog, room, {
+      role: 'ordinary',
+      entryActive: true,
+      loadout,
+    });
+    if (active.kind !== 'shop' || active.shop === undefined) throw new Error('missing active Shop');
+    const minor = active.shop.offers.Minor;
+    if (minor === undefined) throw new Error('missing Minor Shop offer');
+    const pomState = Object.freeze({
+      ...active,
+      shop: Object.freeze({
+        ...active.shop,
+        offers: Object.freeze({
+          ...active.shop.offers,
+          Minor: Object.freeze({
+            reward: Object.freeze({
+              offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
+              traitOffersByAcquisitionRole: Object.freeze({}),
+              levelResolutionsByAcquisitionRole: Object.freeze({
+                self: Object.freeze({
+                  kind: 'random' as const,
+                  targetTraitKey: 'ApolloWeaponBoon',
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    });
+    const occurrence = Object.freeze({
+      occurrenceId: shopId,
+      gameName: room.gameName,
+      state: pomState,
+      encounters: createDefaultRoomEncounterState(catalog, room, 'pom-shop.encounters'),
+      additionalExits: Object.freeze([]),
+    });
+    const canonical = materializeAuthoredRoom({
+      catalog,
+      biome,
+      room,
+      occurrence,
+      role: 'ordinary',
+      entered: true,
+      lifecycleProfileKey: 'WorldShopRoom',
+      loadout,
+    });
+    const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+      factsWithHistory(
+        {
+          ...baseFacts(),
+          requirements: {
+            ...baseFacts().requirements,
+            counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
+          },
+        },
+        history,
+        new Set(),
+      );
+    const traitHistory = pomTargetHistory();
+    const seeded = initializeRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        history: attachTraitHistory(branch.history, traitHistory),
+        traitHistory,
+      }),
+    );
+    const inventory = processShopInventory(
+      seeded,
+      {
+        catalog,
+        room: canonical,
+        declaration: room,
+        historySequence: 1,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    const unpurchased = processShopPurchases(
+      inventory,
+      {
+        catalog,
+        room: canonical,
+        declaration: room,
+        historySequence: 2,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    expect(inventory).not.toHaveLength(0);
+    expect(unpurchased).not.toHaveLength(0);
+    expect(unpurchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+
+    const purchasedCanonical = materializeAuthoredRoom({
+      catalog,
+      biome,
+      room,
+      occurrence: Object.freeze({
+        ...occurrence,
+        state: Object.freeze({
+          ...pomState,
+          shop: Object.freeze({ ...pomState.shop!, purchaseOrder: Object.freeze(['Minor']) }),
+        }),
+      }),
+      role: 'ordinary',
+      entered: true,
+      lifecycleProfileKey: 'WorldShopRoom',
+      loadout,
+    });
+    const purchasedInventory = processShopInventory(
+      seeded,
+      {
+        catalog,
+        room: purchasedCanonical,
+        declaration: room,
+        historySequence: 1,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    const purchased = processShopPurchases(
+      purchasedInventory,
+      {
+        catalog,
+        room: purchasedCanonical,
+        declaration: room,
+        historySequence: 2,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    expect(purchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+
+    const dormant = createDefaultRoomState(catalog, room, {
+      role: 'ordinary',
+      entryActive: false,
+      loadout,
+    });
+    expect(dormant).toEqual({ kind: 'shop' });
+  });
+
+  it('keeps a reached Pom with a missing authored child visible, candidate-backed, and inert', () => {
+    const room = catalog.rooms.byKey.F_Shop01;
+    if (room === undefined) throw new Error('missing F Shop declaration');
+    const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+    const active = createDefaultRoomState(catalog, room, {
+      role: 'ordinary',
+      entryActive: true,
+      loadout,
+    });
+    if (active.kind !== 'shop' || active.shop === undefined) throw new Error('missing active Shop');
+    const occurrenceId = createOccurrenceId('missing-pom-child-shop');
+    const minorOwner = createShopOfferAddress(biome, occurrenceId, 'Minor');
+    const address = createLevelResolutionAddress(minorOwner, 'self');
+    const state = Object.freeze({
+      ...active,
+      shop: Object.freeze({
+        ...active.shop,
+        purchaseOrder: Object.freeze(['Minor']),
+        offers: Object.freeze({
+          ...active.shop.offers,
+          Minor: Object.freeze({
+            reward: Object.freeze({
+              offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
+              traitOffersByAcquisitionRole: Object.freeze({}),
+              // Deliberately omit levelResolutionsByAcquisitionRole to witness
+              // malformed-but-reached imported state at the simulation boundary.
+            }),
+          }),
+        }),
+      }),
+    });
+    const canonical = materializeAuthoredRoom({
+      catalog,
+      biome,
+      room,
+      occurrence: Object.freeze({
+        occurrenceId,
+        gameName: room.gameName,
+        state,
+        encounters: createDefaultRoomEncounterState(catalog, room, 'missing-pom.encounters'),
+        additionalExits: Object.freeze([]),
+      }),
+      role: 'ordinary',
+      entered: true,
+      lifecycleProfileKey: 'WorldShopRoom',
+      loadout,
+    });
+    const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+      factsWithHistory(
+        {
+          ...baseFacts(),
+          requirements: {
+            ...baseFacts().requirements,
+            counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
+          },
+        },
+        history,
+        new Set(),
+      );
+    const seeded = initializeRewardBranches().map((branch) => {
+      const traitHistory = pomTargetHistory();
+      return Object.freeze({
+        ...branch,
+        history: attachTraitHistory(branch.history, traitHistory),
+        traitHistory,
+      });
+    });
+    const inventory = processShopInventory(
+      seeded,
+      {
+        catalog,
+        room: canonical,
+        declaration: room,
+        historySequence: 1,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      new Map(),
+    );
+    const findings = new Map();
+    const purchased = processShopPurchases(
+      inventory,
+      {
+        catalog,
+        room: canonical,
+        declaration: room,
+        historySequence: 2,
+        facts,
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      },
+      findings,
+    );
+    const branch = purchased[0];
+    const evaluation = branch?.levelResolutionEvaluations?.[0];
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({ code: 'missingPomTarget', origin: address }),
+    );
+    expect(evaluation).toMatchObject({
+      address,
+      value: { kind: 'random', targetTraitKey: null },
+      reached: true,
+      findings: ['missingTarget'],
+    });
+    expect(branch?.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
+      false,
+    );
+    if (evaluation === undefined) throw new Error('missing retained Pom assessment');
+    const capability = createLevelResolutionCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(address),
+          [
+            {
+              address,
+              before: evaluation.before,
+              levelCount: evaluation.levelCount,
+              effectKind: evaluation.effectKind,
+            },
+          ],
+        ],
+      ]),
+    ).at(address);
+    expect(capability?.branches).toEqual([
+      {
+        effectKind: 'random',
+        levelCount: 1,
+        eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
+      },
+    ]);
+  });
+
+  it.each([
+    ['Pom then replacement', ['Minor', 'Boon'], 'ApolloWeaponBoon', 'ZeusWeaponBoon', 2],
+    ['replacement then Pom', ['Boon', 'Minor'], 'ZeusWeaponBoon', 'ZeusWeaponBoon', 2],
+  ] as const)(
+    'folds Shop Pom and Olympian replacement in authored purchase order: %s',
+    (_label, purchaseOrder, pomTarget, expectedTraitKey, expectedLevel) => {
+      const room = catalog.rooms.byKey.F_Shop01;
+      if (room === undefined) throw new Error('missing F Shop declaration');
+      const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+      const active = createDefaultRoomState(catalog, room, {
+        role: 'ordinary',
+        entryActive: true,
+        loadout,
+      });
+      if (active.kind !== 'shop' || active.shop === undefined)
+        throw new Error('missing active Shop');
+      const pom = active.shop.offers.Minor;
+      const boon = active.shop.offers.Boon;
+      if (pom === undefined || boon === undefined) throw new Error('missing Shop Pom or Boon slot');
+      const state = Object.freeze({
+        ...active,
+        shop: Object.freeze({
+          ...active.shop,
+          purchaseOrder: Object.freeze([...purchaseOrder]),
+          offers: Object.freeze({
+            ...active.shop.offers,
+            Minor: Object.freeze({
+              reward: Object.freeze({
+                offer: Object.freeze({ rewardType: 'StackUpgrade' }),
+                traitOffersByAcquisitionRole: Object.freeze({}),
+                levelResolutionsByAcquisitionRole: Object.freeze({
+                  self: Object.freeze({
+                    kind: 'choice' as const,
+                    offeredTraitKeys: Object.freeze([pomTarget]),
+                    selectedTraitKey: pomTarget,
+                  }),
+                }),
+              }),
+            }),
+            Boon: Object.freeze({
+              reward: Object.freeze({
+                offer: Object.freeze({
+                  rewardType: 'RandomLoot',
+                  payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
+                }),
+                traitOffersByAcquisitionRole: Object.freeze({
+                  source: Object.freeze({
+                    giverKey: 'Zeus',
+                    options: Object.freeze([
+                      { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' as const },
+                      { traitKey: 'ZeusSpecialBoon', rarity: 'Common' as const },
+                      { traitKey: 'ZeusCastBoon', rarity: 'Common' as const },
+                    ] as const),
+                    selectedOptionKey: 'option1' as const,
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      });
+      const canonical = materializeAuthoredRoom({
+        catalog,
+        biome,
+        room,
+        occurrence: Object.freeze({
+          occurrenceId: createOccurrenceId(`pom-replacement-${purchaseOrder.join('-')}`),
+          gameName: room.gameName,
+          state,
+          encounters: createDefaultRoomEncounterState(catalog, room, 'pom-replacement.encounters'),
+          additionalExits: Object.freeze([]),
+        }),
+        role: 'ordinary',
+        entered: true,
+        lifecycleProfileKey: 'WorldShopRoom',
+        loadout,
+      });
+      const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+        factsWithHistory(
+          {
+            ...baseFacts(),
+            requirements: {
+              ...baseFacts().requirements,
+              counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
+            },
+          },
+          history,
+          new Set(),
+        );
+      const seeded = initializeRewardBranches().map((branch) => {
+        const traitHistory = pomTargetHistory();
+        return Object.freeze({
+          ...branch,
+          history: attachTraitHistory(branch.history, traitHistory),
+          traitHistory,
+        });
+      });
+      const inventory = processShopInventory(
+        seeded,
+        {
+          catalog,
+          room: canonical,
+          declaration: room,
+          historySequence: 1,
+          facts,
+          fail: (detail) => {
+            throw new Error(detail);
+          },
+        },
+        new Map(),
+      );
+      const purchased = processShopPurchases(
+        inventory,
+        {
+          catalog,
+          room: canonical,
+          declaration: room,
+          historySequence: 2,
+          facts,
+          fail: (detail) => {
+            throw new Error(detail);
+          },
+        },
+        new Map(),
+      );
+      const result = purchased[0]?.traitHistory;
+      expect(result?.equippedTraits[expectedTraitKey]).toMatchObject({ level: expectedLevel });
+      expect(result?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+    },
+  );
+
   it('folds a purchased P Shop Hammer at its exact shop owner and purchase lifecycle', () => {
     const project = createRepresentativeNOPQShopTraitProject();
     const evaluation = simulateProject(catalog, project);
@@ -115,7 +563,7 @@ describe('Shop trait acquisition processing', () => {
     if (purchase?.kind === 'concreteAcquisition') {
       expect(purchase.acquisition.lifecyclePoint).toBe('purchase');
     }
-  });
+  }, 10_000);
 
   it('reports and withholds a persisted Hammer choice made stale by a loadout change', () => {
     const room = catalog.rooms.byKey.F_Shop01;

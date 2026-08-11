@@ -186,6 +186,7 @@ function localIncomingReward(
     producerLifecycleKey: binding.producerLifecycleKey,
     offer: state.reward.offer,
     traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
+    levelResolutionsByAcquisitionRole: state.reward.levelResolutionsByAcquisitionRole,
     traitContext: Object.freeze({
       ...loadout,
       blockGiftBoons: room.blockGiftBoons,

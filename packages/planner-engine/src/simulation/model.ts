@@ -64,6 +64,10 @@ export type FindingCode =
   | EncounterResolutionFindingCode
   | RewardGenerationFindingCode
   | TraitFindingCode
+  | 'missingPomTarget'
+  | 'pomWrongOfferCount'
+  | 'pomSelectedTargetNotOffered'
+  | 'pomTargetUnavailable'
   | RoomGenerationFindingCode;
 
 export type FindingEvidenceValue =

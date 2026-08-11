@@ -16,7 +16,7 @@ import type {
 } from '../model';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
-import { createDefaultTraitOffers } from '../traits';
+import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 import {
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
@@ -285,6 +285,14 @@ function switchTargetToAnomaly(
           occurrence.state.reward.offer,
           located.loadout,
         ),
+        ...(createDefaultLevelResolutions(catalog, occurrence.state.reward.offer) === undefined
+          ? {}
+          : {
+              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                catalog,
+                occurrence.state.reward.offer,
+              ),
+            }),
       }),
       success: true,
     }),
@@ -396,6 +404,14 @@ function revertAnomaly(
               occurrence.state.reward.offer,
               located.loadout,
             ),
+            ...(createDefaultLevelResolutions(catalog, occurrence.state.reward.offer) === undefined
+              ? {}
+              : {
+                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                    catalog,
+                    occurrence.state.reward.offer,
+                  ),
+                }),
           }),
         }),
         encounters: createDefaultRoomEncounterState(

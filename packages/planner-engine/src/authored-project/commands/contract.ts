@@ -106,6 +106,8 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'ReplaceTraitOffer':
     case 'ReplaceTraitSelection':
       return command.trait;
+    case 'ReplaceLevelResolution':
+      return command.levelResolution;
   }
 }
 

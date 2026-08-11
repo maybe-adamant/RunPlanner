@@ -22,7 +22,7 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
-import type { AuthoredTraitOffer } from '../../authored-project/traits';
+import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
 import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
@@ -34,6 +34,8 @@ export interface CanonicalResolvedIncomingReward {
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly levelResolutionsByAcquisitionRole?:
+    Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey?: string;
   /**
@@ -50,6 +52,8 @@ export interface CanonicalShopOffer {
   readonly purchaseOrigin: ShopPurchaseAddress;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly levelResolutionsByAcquisitionRole?:
+    Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly traitContext?: TraitOfferContext;
 }
 
@@ -69,6 +73,8 @@ export interface CanonicalLocalReward {
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly levelResolutionsByAcquisitionRole?:
+    Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey: string;
 }
@@ -78,6 +84,8 @@ export interface CanonicalRewardWheelOffer {
   readonly offerKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly levelResolutionsByAcquisitionRole?:
+    Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly traitContext?: TraitOfferContext;
   readonly picked: boolean;
 }

@@ -9,6 +9,7 @@ import { applyRoomReplacementCommand } from './room-replacement';
 import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
+import { applyLevelResolutionCommand } from './level-resolution';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -88,6 +89,13 @@ function applyUnchecked(
     case 'ReplaceTraitOffer':
     case 'ReplaceTraitSelection':
       return applyTraitOfferCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceLevelResolution':
+      return applyLevelResolutionCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
-import type { AuthoredTraitOffer } from './traits';
+import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 18 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 19 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -14,10 +14,12 @@ export interface ShopOfferState {
 }
 
 export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer>>;
+export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;
 
 export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
+  readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
 }
 
 export interface RouteLoadout {

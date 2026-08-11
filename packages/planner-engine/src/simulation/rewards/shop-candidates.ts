@@ -55,6 +55,8 @@ export function prepareShopPurchaseCandidateContext({
                 ...offer,
                 offer: candidate.reward.offer,
                 traitOffersByAcquisitionRole: candidate.reward.traitOffersByAcquisitionRole,
+                levelResolutionsByAcquisitionRole:
+                  candidate.reward.levelResolutionsByAcquisitionRole,
               });
             }),
           ),

@@ -25,6 +25,7 @@ import {
   createRepresentativeNOProject,
   createRepresentativeNOPQProject,
   createRepresentativeNProject,
+  authorLegalTraitOffers,
   nBiome,
   nOccurrenceId,
 } from '@run-planner/test-fixtures';
@@ -393,11 +394,13 @@ describe('project simulation composition', () => {
       { kind: 'occurrence', occurrenceId: goldenFStartId },
       'exit1',
     );
-    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
-      gameName: 'F_Combat14',
-    });
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        gameName: 'F_Combat14',
+      }),
+    );
     const { result, route: underworld } = route(project, 'Underworld');
     const f = underworld.biomes[0];
     if (f?.authoring !== 'complete' || f.validity !== 'invalid') {

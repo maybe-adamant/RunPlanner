@@ -12,7 +12,7 @@ import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { LocalRewardCommand } from './types';
-import { createDefaultTraitOffers } from '../traits';
+import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 
 export function applyLocalRewardCommand(
   document: ProjectDocument,
@@ -57,6 +57,14 @@ export function applyLocalRewardCommand(
                   command.value,
                   located.loadout,
                 ),
+                ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+                  ? {}
+                  : {
+                      levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                        catalog,
+                        command.value,
+                      ),
+                    }),
               }),
             }),
           }),
@@ -98,6 +106,14 @@ export function applyLocalRewardCommand(
                   command.value,
                   located.loadout,
                 ),
+                ...(createDefaultLevelResolutions(catalog, command.value) === undefined
+                  ? {}
+                  : {
+                      levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                        catalog,
+                        command.value,
+                      ),
+                    }),
               }),
             }),
           }),

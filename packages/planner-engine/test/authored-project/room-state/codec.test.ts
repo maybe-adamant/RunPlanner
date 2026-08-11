@@ -132,6 +132,58 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('$.room.state.shop: is required for an entered shop occurrence');
   });
 
+  it('requires the exact closed Pom role map and rejects it on non-Pom rewards', () => {
+    const declaration = room('F_Combat04');
+    const raw = mutable(
+      createDefaultRoomState(catalog, declaration, {
+        role: 'ordinary',
+        entryActive: true,
+        resolvedStoreKey: 'RunProgress',
+      }),
+    );
+    const reward = raw.reward as Record<string, unknown>;
+    reward.offer = { rewardType: 'StackUpgrade' };
+    reward.traitOffersByAcquisitionRole = {};
+
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('levelResolutionsByAcquisitionRole: is required for this Pom reward');
+
+    reward.levelResolutionsByAcquisitionRole = {
+      self: { kind: 'random', targetTraitKey: null },
+    };
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow(
+      'levelResolutionsByAcquisitionRole.self.targetTraitKey: is not a project document field',
+    );
+
+    reward.levelResolutionsByAcquisitionRole = {
+      self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+      extra: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+    };
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('must contain exactly every Pom acquisition role');
+
+    reward.offer = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } };
+    reward.traitOffersByAcquisitionRole = {
+      source: {
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    };
+    reward.levelResolutionsByAcquisitionRole = {};
+    expect(() =>
+      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+    ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
+  });
+
   it('requires an exact, distinct Shop purchase order over materialized offer keys', () => {
     const declaration = room('F_Shop01');
     const raw = mutable(
@@ -157,7 +209,7 @@ describe('persisted authored room-state codec', () => {
     (offers.Boon!.reward as Record<string, unknown>).purchased = false;
     expect(() =>
       decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
-    ).toThrow('$.room.state.shop.offers.Boon.reward.purchased: is not a project document field');
+    ).toThrow('$.room.state.shop.offers.Boon.reward: unexpected key purchased');
   });
 
   it('preserves valid Ephyra side-room ownership and rejects an entered dormant side room', () => {

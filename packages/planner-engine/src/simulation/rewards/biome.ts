@@ -58,9 +58,14 @@ import type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
 } from './model';
-import { createTraitOfferCandidateArtifacts } from '../candidate-artifacts';
+import {
+  createLevelResolutionCandidateArtifacts,
+  createTraitOfferCandidateArtifacts,
+} from '../candidate-artifacts';
 import type {
   ReachedTraitOfferEvaluation,
+  ReachedLevelResolutionEvaluation,
+  SelectedLevelResolutionAssessment,
   SelectedTraitOfferAssessment,
   TraitOfferCandidateContext,
 } from '../traits';
@@ -613,6 +618,7 @@ function processOwnedRewardAcquisition(
     readonly origin: SemanticAddress;
     readonly producerLifecycleKey: string;
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
+    readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   view: HistoryStateView,
@@ -835,6 +841,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly producerArtifacts: RewardProducerCandidateArtifacts;
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
   readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
+  readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -854,7 +861,17 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
 
 function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
+  readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
+  readonly levelCandidateContexts: ReadonlyMap<
+    string,
+    readonly {
+      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
+      readonly before: import('../traits').TraitHistoryState;
+      readonly levelCount: number;
+      readonly effectKind: 'choice' | 'random';
+    }[]
+  >;
 } {
   const grouped = new Map<
     string,
@@ -932,9 +949,83 @@ function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
       ),
     );
   }
+  const levels = new Map<
+    string,
+    {
+      address: import('../../authored-project/addresses').LevelResolutionAddress;
+      value: ReachedLevelResolutionEvaluation['value'];
+      branches: ReachedLevelResolutionEvaluation[];
+      chronologicalIndex: number;
+    }
+  >();
+  for (const branch of branches)
+    for (const trace of branch.levelResolutionEvaluations ?? []) {
+      const key = semanticAddressKey(trace.address);
+      const current = levels.get(key);
+      if (current === undefined)
+        levels.set(key, {
+          address: trace.address,
+          value: trace.value,
+          branches: [trace],
+          chronologicalIndex: trace.chronologicalIndex,
+        });
+      else if (
+        !current.branches.some(
+          (candidate) =>
+            JSON.stringify([candidate.before, candidate.value]) ===
+            JSON.stringify([trace.before, trace.value]),
+        )
+      ) {
+        current.branches.push(trace);
+        current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
+      }
+    }
+  const selectedLevelResolutions = Object.freeze(
+    [...levels.values()]
+      .sort((left, right) => left.chronologicalIndex - right.chronologicalIndex)
+      .map((entry) =>
+        Object.freeze({
+          address: entry.address,
+          value: entry.value,
+          branches: Object.freeze(
+            entry.branches.map((trace) =>
+              Object.freeze({ findings: trace.findings, levelCount: trace.levelCount }),
+            ),
+          ),
+          reached: true as const,
+          chronologicalIndex: entry.chronologicalIndex,
+        }),
+      ),
+  );
+  const levelCandidateContexts = new Map<
+    string,
+    readonly {
+      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
+      readonly before: import('../traits').TraitHistoryState;
+      readonly levelCount: number;
+      readonly effectKind: 'choice' | 'random';
+    }[]
+  >();
+  for (const [key, entry] of levels) {
+    levelCandidateContexts.set(
+      key,
+      Object.freeze(
+        entry.branches.map((trace) =>
+          Object.freeze({
+            address: trace.address,
+            before: trace.before,
+            levelCount: trace.levelCount,
+            effectKind: trace.effectKind,
+          }),
+        ),
+      ),
+    );
+  }
   return Object.freeze({
     selectedTraitOffers,
+    selectedLevelResolutions,
     candidateContexts,
+    levelCandidateContexts,
   });
 }
 
@@ -2330,6 +2421,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     selectedTraitOffers: traitProducts.selectedTraitOffers,
+    selectedLevelResolutions: traitProducts.selectedLevelResolutions,
   });
   return Object.freeze({
     simulation,
@@ -2341,6 +2433,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     traitOfferArtifacts: createTraitOfferCandidateArtifacts(
       catalog,
       traitProducts.candidateContexts,
+    ),
+    levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
+      catalog,
+      traitProducts.levelCandidateContexts,
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
   });

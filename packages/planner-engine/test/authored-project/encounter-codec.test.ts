@@ -85,13 +85,13 @@ function arachneStoryProject(): ProjectDocument {
   });
 }
 
-describe('schema-18 occurrence-owned additional-exit persistence', () => {
+describe('schema-19 occurrence-owned additional-exit persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(18);
+    expect(decoded.schemaVersion).toBe(19);
   });
 
   it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
@@ -125,11 +125,11 @@ describe('schema-18 occurrence-owned additional-exit persistence', () => {
     );
   });
 
-  it('rejects schema 12 rather than inventing an encounter migration', () => {
+  it('rejects schema 18 rather than inventing a Pom migration', () => {
     const document = encoded(createRepresentativeNOPProject());
-    document.schemaVersion = 12;
+    document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 18, received 12');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 19, received 18');
   });
 
   it.each([

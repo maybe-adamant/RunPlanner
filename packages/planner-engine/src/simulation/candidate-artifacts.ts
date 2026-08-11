@@ -1,11 +1,12 @@
 import {
   semanticAddressKey,
   type BiomeAddress,
+  type LevelResolutionAddress,
   type TraitOfferAddress,
   type TargetAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
-import type { AuthoredTraitOffer } from '../authored-project/traits';
+import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../authored-project/traits';
 import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
@@ -26,6 +27,9 @@ import {
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
   type TraitOfferContext,
+  evaluateReachedLevelResolution,
+  pomEligibleTargetKeys,
+  type TraitHistoryState,
 } from './traits';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -62,6 +66,33 @@ export interface TraitOfferCandidateArtifacts {
   readonly at: (address: TraitOfferAddress) => TraitOfferCandidateCapability | undefined;
 }
 
+export interface LevelResolutionCandidateBranch {
+  readonly effectKind: 'choice' | 'random';
+  readonly levelCount: number;
+  /** Defined only for a declaration-owned visible Pom choice. */
+  readonly requiredOfferCount?: number;
+  /** Exact pre-acquisition target domain for this simulation branch. */
+  readonly eligibleTargetTraitKeys: readonly string[];
+}
+
+export interface LevelResolutionCandidateEvaluation {
+  /** Stable index into the capability's branch-correlated surfaces. */
+  readonly branchIndex: number;
+  readonly supported: boolean;
+  readonly findings: readonly string[];
+}
+
+export interface LevelResolutionCandidateCapability {
+  readonly branches: readonly LevelResolutionCandidateBranch[];
+  readonly evaluate: (
+    value: AuthoredLevelResolution,
+  ) => readonly LevelResolutionCandidateEvaluation[];
+}
+
+export interface LevelResolutionCandidateArtifacts {
+  readonly at: (address: LevelResolutionAddress) => LevelResolutionCandidateCapability | undefined;
+}
+
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
   readonly roomTargets: RoomTargetCandidateArtifacts;
@@ -69,6 +100,7 @@ export interface BiomeCandidateArtifacts {
   readonly roomLifecycles: RoomLifecycleCandidateArtifacts;
   readonly encounters: EncounterCandidateArtifacts;
   readonly traitOffers: TraitOfferCandidateArtifacts;
+  readonly levelResolutions: LevelResolutionCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -112,6 +144,7 @@ export function createBiomeCandidateArtifacts(
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   encounters: EncounterCandidateArtifacts = emptyEncounterCandidateArtifacts(),
   traitOffers: TraitOfferCandidateArtifacts = createEmptyTraitOfferCandidateArtifacts(),
+  levelResolutions: LevelResolutionCandidateArtifacts = createEmptyLevelResolutionCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -120,7 +153,67 @@ export function createBiomeCandidateArtifacts(
     roomLifecycles,
     encounters,
     traitOffers,
+    levelResolutions,
   });
+}
+
+export function createLevelResolutionCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<
+    string,
+    readonly {
+      readonly address: LevelResolutionAddress;
+      readonly before: TraitHistoryState;
+      readonly levelCount: number;
+      readonly effectKind: 'choice' | 'random';
+    }[]
+  >,
+): LevelResolutionCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: LevelResolutionAddress) => {
+      const branches = privateContexts.get(semanticAddressKey(address));
+      if (branches === undefined) return undefined;
+      const surfaces = Object.freeze(
+        branches.map((branch) =>
+          Object.freeze({
+            effectKind: branch.effectKind,
+            levelCount: branch.levelCount,
+            ...(branch.effectKind === 'choice'
+              ? { requiredOfferCount: Math.min(3, branch.before.upgradableTraitCount) }
+              : {}),
+            eligibleTargetTraitKeys: pomEligibleTargetKeys(catalog, branch.before),
+          }),
+        ),
+      );
+      return Object.freeze({
+        branches: surfaces,
+        evaluate: (value: AuthoredLevelResolution) =>
+          Object.freeze(
+            branches.map((branch, branchIndex) => {
+              const evaluation = evaluateReachedLevelResolution(
+                catalog,
+                branch.address,
+                value,
+                branch.levelCount,
+                branch.before,
+                0,
+                branch.effectKind,
+              );
+              return Object.freeze({
+                branchIndex,
+                supported: evaluation.findings.length === 0,
+                findings: evaluation.findings,
+              });
+            }),
+          ),
+      });
+    },
+  });
+}
+
+export function createEmptyLevelResolutionCandidateArtifacts(): LevelResolutionCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 export function createTraitOfferCandidateArtifacts(
@@ -197,6 +290,7 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
     createEmptyRoomLifecycleCandidateArtifacts(),
     emptyEncounterCandidateArtifacts(),
     createEmptyTraitOfferCandidateArtifacts(),
+    createEmptyLevelResolutionCandidateArtifacts(),
   );
 }
 
