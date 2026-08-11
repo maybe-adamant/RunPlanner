@@ -10,17 +10,26 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   foldTraitHistoryEvents,
+  attachTraitHistory,
   recordReachedLevelResolution,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
+import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
+import {
+  initializeRewardBranches,
+  processOwnedRewardAcquisition,
+} from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import {
+  createGoldenFGHIProject,
   createRepresentativeNOPQProject,
   oBiome,
   oOccurrenceIds,
+  targetOccurrenceId,
 } from '@run-planner/test-fixtures';
 
 const owner = { kind: 'project' } as const;
@@ -78,6 +87,37 @@ function twoTargetHistory() {
     selectedOptionKey: 'option2',
   };
   return foldTraitHistoryEvents(catalog, [first, second]);
+}
+
+function rewardFacts(): RewardKernelFacts {
+  return {
+    requirements: {
+      counters: {
+        biomeDepthCache: 1,
+        biomeEncounterDepth: 1,
+        encounterDepth: 1,
+        enteredBiomes: 1,
+        upgradableTraitCount: 0,
+      },
+      records: {
+        biomeUseRecord: {},
+        lootTypeHistory: {},
+        roomsEntered: {},
+        useRecord: {},
+      },
+      currentRoomShopOptionNames: new Set(),
+      currentRoomRewardType: undefined,
+      currentRoomStructuralTags: [],
+      rewardLookups: {},
+      runDepthCache: 1,
+      lastEventRunDepthCaches: {},
+      recentEncounterEnvelopeSlots: [],
+      offeredExitCount: 1,
+      currentBatchRoomGameNames: [],
+      clockwork: undefined,
+      flags: { allSpellInvested: false, pendingSpellDrop: false },
+    },
+  };
 }
 
 describe('Pom level resolutions', () => {
@@ -285,6 +325,20 @@ describe('Pom level resolutions', () => {
       { branchIndex: 0, supported: true, findings: [] },
       { branchIndex: 1, supported: false, findings: ['wrongOfferCount'] },
     ]);
+    expect(
+      capability?.evaluate({
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'ApolloWeaponBoon'],
+        selectedTraitKey: 'ApolloWeaponBoon',
+      }),
+    ).toEqual([
+      {
+        branchIndex: 0,
+        supported: false,
+        findings: ['wrongOfferCount', 'duplicateTargets'],
+      },
+      { branchIndex: 1, supported: false, findings: ['duplicateTargets'] },
+    ]);
   });
 
   it('retains the first blocking reached Pom assessment and exact capability', () => {
@@ -309,5 +363,104 @@ describe('Pom level resolutions', () => {
       expect.objectContaining({ address, branches: expect.any(Array) }),
     );
     expect(levelResolutionCandidateForProjectEvaluationAssembly(assembly, address)).toBeDefined();
+  });
+
+  it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'F'),
+        targetOccurrenceId('F', 2, 1),
+      ),
+      value: { rewardType: 'MaxManaDrop' },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F reward product');
+    const findings = f.findings.filter((finding) => finding.origin.kind === 'levelResolution');
+    expect(findings).not.toHaveLength(0);
+    for (const finding of findings) {
+      if (finding.origin.kind !== 'levelResolution') continue;
+      expect(
+        f.rewards.selectedLevelResolutions.some(
+          (assessment) =>
+            semanticAddressKey(assessment.address) === semanticAddressKey(finding.origin),
+        ),
+      ).toBe(true);
+      expect(
+        levelResolutionCandidateForProjectEvaluationAssembly(assembly, finding.origin),
+      ).toBeDefined();
+    }
+  });
+
+  it('retains every divergent Pom surface when identical findings eliminate all carrying branches', () => {
+    const oneTarget = equippedHistory();
+    const twoTargets = twoTargetHistory();
+    const base = initializeRewardBranches()[0];
+    if (base === undefined) throw new Error('divergent Pom fixture has no initial branch');
+    const branches = Object.freeze(
+      [oneTarget, twoTargets].map((history) =>
+        Object.freeze({
+          ...base,
+          history: attachTraitHistory(base.history, history),
+          traitHistory: history,
+        }),
+      ),
+    );
+    const findings = new Map();
+    processOwnedRewardAcquisition(
+      catalog,
+      branches,
+      {
+        origin: levelAddress.owner,
+        offer: { rewardType: 'StackUpgrade' },
+        producerLifecycleKey: 'RoomReward',
+        levelResolutionsByAcquisitionRole: {
+          self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+        },
+      },
+      1,
+      (history) => factsWithHistory(rewardFacts(), history, new Set()),
+      findings,
+      (detail) => {
+        throw new Error(detail);
+      },
+    );
+    const retained = [...findings.values()].find(
+      (entry) => entry.finding.code === 'missingPomTarget',
+    )?.levelResolutionEvaluations;
+    expect(retained).toHaveLength(2);
+
+    // Natural progressive divergence is currently precluded by the run-state
+    // invariant, so construct only the later elimination at this exact seam.
+    const products = selectedTraitOfferProducts(Object.freeze([]), retained);
+    const assessment = products.selectedLevelResolutions.find(
+      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(levelAddress),
+    );
+    expect(assessment?.branches).toHaveLength(2);
+    expect(assessment?.branches.map((branch) => branch.findings)).toEqual([
+      ['missingTarget', 'wrongOfferCount'],
+      ['missingTarget', 'wrongOfferCount'],
+    ]);
+    expect(
+      createLevelResolutionCandidateArtifacts(catalog, products.levelCandidateContexts).at(
+        levelAddress,
+      )?.branches,
+    ).toEqual([
+      {
+        effectKind: 'choice',
+        levelCount: 1,
+        requiredOfferCount: 1,
+        eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
+      },
+      {
+        effectKind: 'choice',
+        levelCount: 1,
+        requiredOfferCount: 2,
+        eligibleTargetTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
+      },
+    ]);
   });
 });

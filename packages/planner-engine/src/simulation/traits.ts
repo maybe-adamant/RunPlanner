@@ -696,6 +696,7 @@ export function recordReachedLevelResolution(
 export type LevelResolutionFindingCode =
   | 'missingTarget'
   | 'wrongOfferCount'
+  | 'duplicateTargets'
   | 'selectedTargetNotOffered'
   | 'targetUnavailable'
   | 'kindMismatch';
@@ -742,6 +743,8 @@ export function evaluateReachedLevelResolution(
   if (value.kind === 'choice') {
     if (value.offeredTraitKeys.length !== Math.min(3, before.upgradableTraitCount))
       findings.push('wrongOfferCount');
+    if (new Set(value.offeredTraitKeys).size !== value.offeredTraitKeys.length)
+      findings.push('duplicateTargets');
     if (target !== null && !value.offeredTraitKeys.includes(target))
       findings.push('selectedTargetNotOffered');
     if (

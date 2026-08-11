@@ -859,7 +859,10 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
   }
 }
 
-function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
+export function selectedTraitOfferProducts(
+  branches: readonly RewardBranchState[],
+  retainedLevelEvaluations: readonly ReachedLevelResolutionEvaluation[] = Object.freeze([]),
+): {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
@@ -958,28 +961,30 @@ function selectedTraitOfferProducts(branches: readonly RewardBranchState[]): {
       chronologicalIndex: number;
     }
   >();
-  for (const branch of branches)
-    for (const trace of branch.levelResolutionEvaluations ?? []) {
-      const key = semanticAddressKey(trace.address);
-      const current = levels.get(key);
-      if (current === undefined)
-        levels.set(key, {
-          address: trace.address,
-          value: trace.value,
-          branches: [trace],
-          chronologicalIndex: trace.chronologicalIndex,
-        });
-      else if (
-        !current.branches.some(
-          (candidate) =>
-            JSON.stringify([candidate.before, candidate.value]) ===
-            JSON.stringify([trace.before, trace.value]),
-        )
-      ) {
-        current.branches.push(trace);
-        current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
-      }
+  for (const trace of [
+    ...branches.flatMap((branch) => branch.levelResolutionEvaluations ?? []),
+    ...retainedLevelEvaluations,
+  ]) {
+    const key = semanticAddressKey(trace.address);
+    const current = levels.get(key);
+    if (current === undefined)
+      levels.set(key, {
+        address: trace.address,
+        value: trace.value,
+        branches: [trace],
+        chronologicalIndex: trace.chronologicalIndex,
+      });
+    else if (
+      !current.branches.some(
+        (candidate) =>
+          JSON.stringify([candidate.before, candidate.value]) ===
+          JSON.stringify([trace.before, trace.value]),
+      )
+    ) {
+      current.branches.push(trace);
+      current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
     }
+  }
   const selectedLevelResolutions = Object.freeze(
     [...levels.values()]
       .sort((left, right) => left.chronologicalIndex - right.chronologicalIndex)
@@ -2405,7 +2410,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
   recordBlankFrontierTargetHistory();
   const immutableFindingRegions = Object.freeze([...findings.values()]);
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
-  const traitProducts = selectedTraitOfferProducts(branches);
+  const traitProducts = selectedTraitOfferProducts(
+    branches,
+    immutableFindingRegions.flatMap((entry) =>
+      entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
+    ),
+  );
   const runStatePublication = publishRunStateThroughCoverage(
     [...runStateSnapshotsByOwner.values()],
     [...runStateSnapshotsByOwner.values()],
