@@ -119,7 +119,7 @@ describe('decision run-state snapshots', () => {
       soulPylonsSpawned: 6,
       soulPylonsCompleted: 6,
     });
-    expect(beforePreboss.traits.upgradableTraitCount).toBe(6);
+    expect(beforePreboss.traits.upgradableTraitCount).toBe(5);
   });
 
   it('publishes the reached N Preboss frontier before its handoff is authored', () => {

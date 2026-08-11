@@ -73,6 +73,8 @@ export const iEncounterDefinitions = [
     label: 'Hades story',
     kind: 'story',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Hades',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Hades' },
   },
   {
     key: 'MiniBossRatCatcher',

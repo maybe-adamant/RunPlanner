@@ -704,6 +704,119 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', chronologicalIndex: expect.any(Number) });
   });
 
+  it('gates Last Gasp locally and acquires a fixed-Common Hades Story trait', () => {
+    const history = createTraitHistoryState();
+    expect(
+      traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: false }).find(
+        (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
+      ),
+    ).toMatchObject({ available: false });
+    expect(
+      traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: true }).find(
+        (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
+      ),
+    ).toMatchObject({ available: true, rarity: 'Common' });
+
+    const reachedStoryId = createOccurrenceId('golden-i-story01');
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenIBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-i-combat01'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const storyPhase = phase(goldenIBiome, reachedStoryId);
+    const storyOffer = authoredOccurrence(project, 'I', reachedStoryId).encounters
+      .traitOffersByPhase?.Encounter?.Story_Hades_01;
+    expect(storyOffer).toMatchObject({
+      giverKey: 'Hades',
+      deathDefianceConditionMet: false,
+      options: [
+        { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
+        { traitKey: 'HadesCastProjectileBoon', rarity: 'Common' },
+        { traitKey: 'HadesPreDamageBoon', rarity: 'Common' },
+      ],
+    });
+    const editedOffer = {
+      ...storyOffer!,
+      options: [
+        { traitKey: 'HadesDeathDefianceDamageBoon', rarity: 'Common' as const },
+        { traitKey: 'HadesManaUrnBoon', rarity: 'Common' as const },
+        { traitKey: 'HadesDashSweepBoon', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      deathDefianceConditionMet: true,
+    };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      value: editedOffer,
+    });
+    const { biome } = evaluatedBiome(project, 'I');
+    if (!('rewards' in biome)) throw new Error('I reward evaluation is missing');
+    const trace = biome.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(storyPhase),
+    );
+    expect(trace).toMatchObject({
+      acquisitionRole: 'selection',
+      branches: [
+        expect.objectContaining({
+          assessments: [
+            expect.objectContaining({ legal: true }),
+            expect.objectContaining({ legal: true }),
+            expect.objectContaining({ legal: true }),
+          ],
+        }),
+      ],
+    });
+    expect(
+      biome.rewards.branches.some(
+        (branch) =>
+          branch.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon?.giverKey === 'Hades',
+      ),
+    ).toBe(true);
+  });
+
+  it('acquires selectable Dionysus rarity and Water without Olympian composition', () => {
+    const storyId = pOccurrenceId('P_Story01', 7, 1);
+    const storyPhase = phase(pBiome, storyId);
+    const initial = createRepresentativeNOPQProject();
+    const storyOffer = authoredOccurrence(initial, 'P', storyId).encounters.traitOffersByPhase
+      ?.Encounter?.Story_Dionysus_01;
+    expect(storyOffer).toMatchObject({ giverKey: 'Dionysus' });
+    const project = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      value: {
+        giverKey: 'Dionysus',
+        options: [
+          { traitKey: 'CastLobBoon', rarity: 'Rare' },
+          { traitKey: 'HiddenMaxHealthBoon', rarity: 'Epic' },
+          { traitKey: 'FirstHangoverBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const { biome } = evaluatedSurfaceBiome(project, 'P');
+    if (!('rewards' in biome)) throw new Error('P reward evaluation is missing');
+    const trace = biome.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(storyPhase),
+    );
+    expect(trace?.branches).toEqual([
+      expect.objectContaining({
+        composition: { applies: false, legal: true, findings: [] },
+        replacementComposition: expect.objectContaining({ applies: false, legal: true }),
+      }),
+    ]);
+    expect(biome.rewards.branches[0]?.traitHistory).toMatchObject({
+      equippedTraits: {
+        CastLobBoon: { giverKey: 'Dionysus', providerKind: 'npc', rarity: 'Rare' },
+      },
+    });
+    expect(biome.rewards.branches[0]?.traitHistory?.elementCounts.Water).toBeGreaterThanOrEqual(1);
+  });
+
   it('keeps an invalid Artemis selection authored at its exact phase trait owner', () => {
     let project = select(createCompleteFGProject(), fNpcPhase, 'ArtemisCombatF');
     const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
