@@ -51,6 +51,7 @@ import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteTraitsPanel } from './RouteTraitsPanel';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
+import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
 
 interface AppProps {
@@ -462,6 +463,9 @@ export function App({
   const traitDialogTarget = useAppSelector(
     (state) => state.editorSession.traitDialogTarget ?? null,
   );
+  const levelResolutionDialogTarget = useAppSelector(
+    (state) => state.editorSession.levelResolutionDialogTarget ?? null,
+  );
   const dispatch = useAppDispatch();
   const feedback = projectFeedbackHierarchy(evaluation);
   const activeRouteNavigation =
@@ -585,6 +589,13 @@ export function App({
           interactions={workspace.interactions}
           key={semanticAddressKey(traitDialogTarget)}
           target={traitDialogTarget}
+        />
+      )}
+      {levelResolutionDialogTarget === null ? null : (
+        <PomResolutionDialog
+          interactions={workspace.interactions}
+          key={semanticAddressKey(levelResolutionDialogTarget)}
+          target={levelResolutionDialogTarget}
         />
       )}
     </main>

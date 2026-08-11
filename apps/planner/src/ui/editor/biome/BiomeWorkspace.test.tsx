@@ -192,9 +192,9 @@ describe('BiomeWorkspace', () => {
     const traitHeading = within(sheet).getByRole('heading', { name: 'Equipped traits' });
     const traitSection = traitHeading.closest('section');
     if (traitSection === null) throw new Error('Equipped traits section is missing');
-    expect(within(traitSection).getByText('Nova Strike · Common')).toBeTruthy();
-    expect(within(traitSection).getByText('Nova Flourish · Common')).toBeTruthy();
-    expect(within(traitSection).getByText('Solar Ring · Common')).toBeTruthy();
+    expect(within(traitSection).getByText('Nova Strike · Common · Lv. 2')).toBeTruthy();
+    expect(within(traitSection).getByText('Nova Flourish · Common · Lv. 1')).toBeTruthy();
+    expect(within(traitSection).getByText('Solar Ring · Common · Lv. 1')).toBeTruthy();
     expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
     expect(within(traitSection).getByText('Wicked Thrasher · Rank I')).toBeTruthy();
     expect(within(traitSection).getAllByText('None')).toHaveLength(2);

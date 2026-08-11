@@ -10,6 +10,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTraitOfferAddress,
+  createLevelResolutionAddress,
   traitGiverUsesOfferContext,
   semanticAddressKey,
   type BiomeAddress,
@@ -18,6 +19,7 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
   type AuthoredRewardState,
+  type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
 import type {
@@ -30,6 +32,7 @@ import type {
   CanonicalAuthoredRoom,
   EncounterPhaseSequenceStatus,
   FieldsBatchFacts,
+  SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
   encounterPhaseAuthoringDomainForRoom,
@@ -56,6 +59,7 @@ import {
   type WorkspaceRewardControl,
   type WorkspaceShopConditionControl,
   type WorkspaceTraitOfferControl,
+  type WorkspaceLevelResolutionControl,
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
@@ -91,6 +95,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly facts: WorkspaceOccurrenceProjectionFacts;
+  readonly levelResolutionAssessment: (
+    owner: LevelResolutionAddress,
+  ) => SelectedLevelResolutionAssessment | undefined;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
   readonly roomPicker?: WorkspaceRoomPickerControl;
@@ -121,6 +128,16 @@ export type WorkspaceOccurrenceAssembler = (
   input: WorkspaceOccurrenceAssemblyRequest,
 ) => WorkspaceOccurrenceAssembly;
 
+function acquisitionRoleLabel(acquisitionRole: string): string {
+  return acquisitionRole === 'chosenSource'
+    ? 'Chosen God'
+    : acquisitionRole === 'spurnedSource'
+      ? 'Spurned God'
+      : acquisitionRole
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .replace(/^./, (character) => character.toUpperCase());
+}
+
 function traitOfferControls(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
@@ -143,17 +160,9 @@ function traitOfferControls(
     const giver = input.catalog.traitGivers.byKey[giverKey];
     if (giver === undefined) continue;
     const address = createTraitOfferAddress(owner.address, acquisitionRole);
-    const acquisitionRoleLabel =
-      acquisitionRole === 'chosenSource'
-        ? 'Chosen God'
-        : acquisitionRole === 'spurnedSource'
-          ? 'Spurned God'
-          : acquisitionRole
-              .replace(/([a-z])([A-Z])/g, '$1 $2')
-              .replace(/^./, (character) => character.toUpperCase());
     controls.push(
       Object.freeze({
-        acquisitionRoleLabel,
+        acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
         address,
         giver,
         marker: input.markerDestinations.marker(address),
@@ -166,6 +175,37 @@ function traitOfferControls(
     );
   }
   return Object.freeze(controls);
+}
+
+function levelResolutionControls(
+  input: WorkspaceOccurrenceAssemblyInput,
+  owner: RewardCandidateOwner,
+  reward: AuthoredRewardState,
+): readonly WorkspaceLevelResolutionControl[] {
+  if (reward.levelResolutionsByAcquisitionRole === undefined) return Object.freeze([]);
+  return Object.freeze(
+    Object.entries(reward.levelResolutionsByAcquisitionRole).flatMap(([acquisitionRole, value]) => {
+      const address = createLevelResolutionAddress(owner.address, acquisitionRole);
+      const assessment = input.levelResolutionAssessment(address);
+      if (assessment === undefined) return [];
+      const levelCount = assessment.branches[0]?.levelCount;
+      if (levelCount === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(address)} has a reached Pom assessment without a level count`,
+        );
+      }
+      return [
+        Object.freeze({
+          acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
+          address,
+          levelCount,
+          marker: input.markerDestinations.marker(address),
+          rewardOwner: owner.address,
+          value,
+        }),
+      ];
+    }),
+  );
 }
 
 function rewardControl(
@@ -183,6 +223,7 @@ function rewardControl(
         offer,
         owner,
         traitOffers: traitOfferControls(input, owner, authoredReward),
+        levelResolutions: levelResolutionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
       })
     : Object.freeze({
@@ -192,6 +233,7 @@ function rewardControl(
         offer,
         owner: owner as CountedRewardCandidateOwner,
         traitOffers: traitOfferControls(input, owner, authoredReward),
+        levelResolutions: levelResolutionControls(input, owner, authoredReward),
       });
 }
 

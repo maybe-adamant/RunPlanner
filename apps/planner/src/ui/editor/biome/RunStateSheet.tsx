@@ -116,7 +116,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               <dd>
                 {slot.trait === undefined
                   ? 'None'
-                  : `${slot.trait.label}${slot.trait.rarity === undefined ? '' : ` · ${slot.trait.rarity}`}${slot.trait.hammerRank === undefined ? '' : ` · ${slot.trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}`}
+                  : `${slot.trait.label}${slot.trait.rarity === undefined ? '' : ` · ${slot.trait.rarity}`}${slot.trait.level === undefined ? '' : ` · Lv. ${slot.trait.level}`}${slot.trait.hammerRank === undefined ? '' : ` · ${slot.trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}`}
               </dd>
             </div>
           ))}
@@ -130,6 +130,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               <li key={trait.traitKey}>
                 {trait.label}
                 {trait.rarity === undefined ? '' : ` · ${trait.rarity}`}
+                {trait.level === undefined ? '' : ` · Lv. ${trait.level}`}
                 {trait.hammerRank === undefined
                   ? ''
                   : ` · ${trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}

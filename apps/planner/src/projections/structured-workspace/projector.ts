@@ -43,6 +43,7 @@ import type {
   WorkspaceInspectorDestination,
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
+  WorkspaceLevelResolutionControl,
   WorkspaceRoomPickerControl,
   WorkspaceStatus,
 } from './contract';
@@ -158,6 +159,7 @@ export function createStructuredWorkspaceProjection(
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const traitControls = new Map<string, WorkspaceTraitOfferControl>();
+      const levelResolutionControls = new Map<string, WorkspaceLevelResolutionControl>();
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
         encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
       );
@@ -206,6 +208,13 @@ export function createStructuredWorkspaceProjection(
                 throw new Error(`${key} has multiple projected trait controls`);
               }
               traitControls.set(key, traitControl);
+            }
+            for (const control of rewardControl.levelResolutions ?? []) {
+              const key = semanticAddressKey(control.address);
+              if (levelResolutionControls.has(key)) {
+                throw new Error(`${key} has multiple projected Pom controls`);
+              }
+              levelResolutionControls.set(key, control);
             }
           }
           for (const node of projected.biome.nodes) {
@@ -286,6 +295,7 @@ export function createStructuredWorkspaceProjection(
         occurrenceInteractionRequirements,
         rewardControls,
         traitControls,
+        levelResolutionControls,
         roomControls,
         services,
         startInteractionRequirements,

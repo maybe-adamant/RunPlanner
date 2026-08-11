@@ -41,6 +41,9 @@ function appendRewardControlMarkers(
 ): void {
   appendMarker(markers, control.marker);
   for (const trait of control.traitOffers ?? []) appendMarker(markers, trait.marker);
+  for (const resolution of control.levelResolutions ?? []) {
+    appendMarker(markers, resolution.marker);
+  }
 }
 
 function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
@@ -105,16 +108,19 @@ function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMar
       return Object.freeze([
         local.marker,
         ...(local.control?.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'incomingReward':
       return Object.freeze([
         local.control.marker,
         ...(local.control.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.control.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'ephyra':
       return Object.freeze([
         local.incomingReward.marker,
         ...(local.incomingReward.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.incomingReward.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'none':
     case 'fields':

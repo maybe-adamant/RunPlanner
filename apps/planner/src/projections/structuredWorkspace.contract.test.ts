@@ -23,6 +23,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
   type CanonicalBatch,
@@ -309,6 +310,8 @@ function withoutLeafInteraction(
       return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
     case 'sideRoomGeneration':
       return { ...interactions, sideRoomGenerations: without(interactions.sideRoomGenerations) };
+    case 'levelResolution':
+      return { ...interactions, levelResolutions: without(interactions.levelResolutions) };
     case 'traitOffer':
       return { ...interactions, traitOffers: without(interactions.traitOffers) };
   }
@@ -709,7 +712,9 @@ describe('structured workspace overlay contract', () => {
           if (nodes === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
           const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
           const requirements = [
-            ...expectedWorkspaceLeafRequirements(catalog, biome, plan),
+            ...expectedWorkspaceLeafRequirements(catalog, biome, plan, (resolution) =>
+              levelResolutionCandidateForProjectEvaluationAssembly(assembly, resolution),
+            ),
             ...expectedWorkspaceEncounterPhaseLeafRequirements(catalog, biome, plan, (phase) =>
               encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase),
             ),
@@ -735,6 +740,7 @@ describe('structured workspace overlay contract', () => {
         'shopPurchase',
         'sideRoomEntryOrder',
         'sideRoomGeneration',
+        'levelResolution',
         'traitOffer',
       ].sort(),
     );

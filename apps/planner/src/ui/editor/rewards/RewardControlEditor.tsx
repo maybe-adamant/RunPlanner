@@ -7,6 +7,7 @@ import {
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { TraitOfferLauncher } from './TraitOfferEditor';
+import { PomResolutionLauncher } from './PomResolutionEditor';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -50,6 +51,13 @@ export function RewardControlEditor({
             control={trait}
             interactions={interactions}
             key={workspaceInteractionKey(trait.address)}
+          />
+        ))}
+        {(control.levelResolutions ?? []).map((resolution) => (
+          <PomResolutionLauncher
+            control={resolution}
+            interactions={interactions}
+            key={workspaceInteractionKey(resolution.address)}
           />
         ))}
       </div>

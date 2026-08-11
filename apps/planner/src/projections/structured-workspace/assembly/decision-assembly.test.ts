@@ -85,6 +85,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
       ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: occurrenceFacts,
+      levelResolutionAssessment: source.levelResolutionAssessment,
       markerDestinations: markers.emitter,
       occurrence: input.occurrence,
     });

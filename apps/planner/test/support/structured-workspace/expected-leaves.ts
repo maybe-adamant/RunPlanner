@@ -4,6 +4,7 @@ import {
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
+  createLevelResolutionAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -18,6 +19,7 @@ import {
   type OccurrenceId,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
+  type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
@@ -38,6 +40,7 @@ export type ExpectedWorkspaceLeafInteractionKind =
   | 'shopPurchase'
   | 'sideRoomEntryOrder'
   | 'sideRoomGeneration'
+  | 'levelResolution'
   | 'traitOffer';
 
 export interface ExpectedWorkspaceLeafInteraction {
@@ -57,6 +60,11 @@ export interface ExpectedWorkspaceLeafRequirement {
  */
 export type ExpectedEncounterPhaseCandidateAt = (
   phase: EncounterPhaseAddress,
+) => unknown | undefined;
+
+/** Exact engine capability presence for one reached Pom resolution owner. */
+export type ExpectedLevelResolutionCandidateAt = (
+  resolution: LevelResolutionAddress,
 ) => unknown | undefined;
 
 function requireExpectedRoom(catalog: Catalog, gameName: string): RoomDeclaration {
@@ -139,6 +147,7 @@ export function expectedWorkspaceLeafRequirements(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
+  levelResolutionCandidateAt?: ExpectedLevelResolutionCandidateAt,
 ): readonly ExpectedWorkspaceLeafRequirement[] {
   const required = new Map<string, MutableExpectedWorkspaceLeafRequirement>();
   const requireLeaf = (
@@ -176,12 +185,32 @@ export function expectedWorkspaceLeafRequirements(
       );
     }
   };
+  const requireLevelResolutions = (
+    address: TraitOfferOwnerAddress,
+    reward: AuthoredRewardState,
+  ): void => {
+    if (
+      levelResolutionCandidateAt === undefined ||
+      reward.levelResolutionsByAcquisitionRole === undefined
+    ) {
+      return;
+    }
+    for (const acquisitionRole of Object.keys(reward.levelResolutionsByAcquisitionRole)) {
+      const resolutionAddress = createLevelResolutionAddress(address, acquisitionRole);
+      if (levelResolutionCandidateAt(resolutionAddress) === undefined) continue;
+      requireLeaf(
+        resolutionAddress,
+        expectedLeafInteraction('levelResolution', workspaceTestOwnerKey(resolutionAddress)),
+      );
+    }
+  };
   const requireRewardWithTraits = (
     address: TraitOfferOwnerAddress,
     reward: AuthoredRewardState,
   ): void => {
     requireReward(address);
     requireTraitOffers(address, reward);
+    requireLevelResolutions(address, reward);
   };
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
