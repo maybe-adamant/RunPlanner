@@ -120,13 +120,24 @@ import {
   type RewardBranchState,
 } from './processing';
 import {
+  applyKeepsakeDisposition,
+  keepsakeSelectionUnavailableReason,
+  refreshKeepsakeFatedStatus,
+} from '../keepsakes';
+import {
   activateTemporaryArcana,
   createArcanaFearState,
   inactiveArcanaKeys,
   judgmentRequiredCount,
 } from '../arcana-fear';
-import { createBossCompletionArcanaAddress } from '../../authored-project/addresses';
-import { createBossCompletionArcanaCandidateArtifacts } from '../candidate-artifacts';
+import {
+  createBossCompletionArcanaAddress,
+  createPostbossKeepsakeSelectionAddress,
+} from '../../authored-project/addresses';
+import {
+  createBossCompletionArcanaCandidateArtifacts,
+  createKeepsakeSelectionCandidateArtifacts,
+} from '../candidate-artifacts';
 import {
   prepareAcquisitionOrderCandidateContext,
   preparePickupAcquisitionOrderCandidateContext,
@@ -874,6 +885,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
   readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
   readonly bossCompletionArcanaArtifacts: import('../candidate-artifacts').BossCompletionArcanaCandidateArtifacts;
+  readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -1109,6 +1121,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     import('../candidate-artifacts').BossCompletionArcanaCandidateCapability
   >();
+  const keepsakeSelectionContexts = new Map<
+    string,
+    import('../candidate-artifacts').KeepsakeSelectionCandidateCapability
+  >();
 
   /**
    * Judgment is one authored exact set, so its pre-effect domain cannot be
@@ -1200,6 +1216,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
   let branches: readonly RewardBranchState[] = initializeRewardBranches(
     initialBranches,
     initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+    catalog,
+    initialBranches === undefined ? routeLoadout.startingKeepsakeKey : undefined,
   );
   let pendingHubBoard:
     | {
@@ -1646,6 +1664,78 @@ export function evaluateBiomeRewardsAssemblyInternal(
         branches = beginRewardRoom(branches, event.sequence);
         break;
       case 'roomCreated': {
+        if (
+          event.origin.kind === 'completionRoom' &&
+          event.origin.role === 'postboss' &&
+          snapshot.kind === 'biome' &&
+          snapshot.postbossKeepsakeDisposition !== undefined
+        ) {
+          const disposition = snapshot.postbossKeepsakeDisposition;
+          const selection = createPostbossKeepsakeSelectionAddress(event.origin);
+          const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
+          keepsakeSelectionContexts.set(
+            semanticAddressKey(selection),
+            Object.freeze({
+              state: branches[0]!.keepsakes,
+              encounterBlockedKeepsakeKeys: Object.freeze([
+                ...new Set(
+                  historyAtRack?.ledgers.encounterRecords.flatMap(
+                    (encounter) =>
+                      catalog.encounterDefinitions.byKey[encounter.encounterKey]
+                        ?.blocksKeepsakeSelectionKeys ?? [],
+                  ) ?? [],
+                ),
+              ]),
+            }),
+          );
+          const encounterBlockedKeepsakeKeys = keepsakeSelectionContexts.get(
+            semanticAddressKey(selection),
+          )!.encounterBlockedKeepsakeKeys;
+          const invalidReplacement =
+            disposition.kind === 'replace' &&
+            branches.some(
+              (branch) =>
+                keepsakeSelectionUnavailableReason(
+                  catalog,
+                  branch.keepsakes,
+                  disposition.keepsakeKey,
+                  encounterBlockedKeepsakeKeys,
+                ) !== undefined,
+            );
+          if (invalidReplacement) {
+            addRewardFinding(
+              findings,
+              rewardFinding('keepsakeUnavailable', selection, {
+                key: disposition.keepsakeKey,
+                reason: 'unavailableAtRack',
+              }),
+              ownerRegion(selection),
+              historyFindingChronology(event.sequence),
+            );
+          }
+          branches = Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({
+                ...branch,
+                keepsakes:
+                  disposition.kind === 'replace' &&
+                  keepsakeSelectionUnavailableReason(
+                    catalog,
+                    branch.keepsakes,
+                    disposition.keepsakeKey,
+                    encounterBlockedKeepsakeKeys,
+                  ) !== undefined
+                    ? branch.keepsakes
+                    : applyKeepsakeDisposition(
+                        catalog,
+                        branch.keepsakes,
+                        disposition,
+                        branch.arcanaFear,
+                      ),
+              }),
+            ),
+          );
+        }
         if (event.source === 'generatedTarget' && event.parentOrigin.kind === 'hubRoom') {
           const handoff = batchesByParent.get(semanticAddressKey(event.parentOrigin));
           const parent = rooms.get(semanticAddressKey(event.parentOrigin));
@@ -2565,7 +2655,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
             bossCompletionArcanaContexts.set(
               semanticAddressKey(owner),
               Object.freeze({
-                inactiveArcanaKeys: inactiveArcanaKeys(catalog, firstArcanaFear),
+                inactiveArcanaKeys: inactiveArcanaKeys(catalog, firstArcanaFear).filter(
+                  (key) =>
+                    branches[0]?.keepsakes.fatedStatus !== 'Fated' ||
+                    catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
+                ),
                 requiredCount,
               }),
             );
@@ -2595,13 +2689,19 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 owner,
                 sequence: event.sequence,
               });
-              if (!assessed.legal) {
+              if (
+                !assessed.legal ||
+                (branch.keepsakes.fatedStatus === 'Fated' &&
+                  selected.some(
+                    (key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true,
+                  ))
+              ) {
                 addRewardFinding(
                   findings,
                   rewardFinding(
                     'judgmentOutcomeTargetUnavailable',
                     owner,
-                    Object.freeze({ reason: assessed.reason }),
+                    Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
                   ),
                   ownerRegion(owner),
                   historyFindingChronology(event.sequence),
@@ -2612,6 +2712,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 Object.freeze({
                   ...branch,
                   arcanaFear: assessed.state,
+                  keepsakes: refreshKeepsakeFatedStatus(catalog, branch.keepsakes, assessed.state),
                   processedThroughHistorySequence: event.sequence,
                 }),
               ];
@@ -2807,6 +2908,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
     bossCompletionArcanaArtifacts: createBossCompletionArcanaCandidateArtifacts(
       bossCompletionArcanaContexts,
     ),
+    keepsakeSelectionArtifacts:
+      createKeepsakeSelectionCandidateArtifacts(keepsakeSelectionContexts),
     findingRegions: Object.freeze(immutableFindingRegions),
   });
 }

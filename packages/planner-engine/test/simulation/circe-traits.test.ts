@@ -21,13 +21,11 @@ import { describe, expect, it } from 'vitest';
 
 import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import {
-  initializeRewardBranches,
-  processEncounterTraitOffer,
-} from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 
 const surface = createRouteAddress('Surface');
@@ -151,7 +149,7 @@ describe('Circe selected trait acquisition', () => {
     if (!heroic.legal) throw new Error('Heroic Lapis exclusion fixture must be legal');
     const applied = processEncounterTraitOffer(
       catalog,
-      initializeRewardBranches(undefined, heroic.state)[0]!,
+      initializeTestRewardBranches(heroic.state)[0]!,
       circeOwner.owner,
       lapis,
       2,
@@ -171,7 +169,7 @@ describe('Circe selected trait acquisition', () => {
     });
     const red = processEncounterTraitOffer(
       catalog,
-      initializeRewardBranches(undefined, exhausted)[0]!,
+      initializeTestRewardBranches(exhausted)[0]!,
       circeOwner.owner,
       circeOffer('option1', [
         {
@@ -226,7 +224,7 @@ describe('Circe selected trait acquisition', () => {
     const findings = new Map();
     const repeated = processEncounterTraitOffer(
       catalog,
-      initializeRewardBranches(undefined, disabled.state)[0]!,
+      initializeTestRewardBranches(disabled.state)[0]!,
       circeOwner.owner,
       black,
       2,
@@ -341,7 +339,7 @@ describe('Circe selected trait acquisition', () => {
     const history = createTraitHistoryState();
     const context = Object.freeze({ resolvedProviderKey: 'Circe' });
     const branches = [initial, changed.state].map((arcanaFear) => {
-      const branch = initializeRewardBranches(undefined, arcanaFear)[0]!;
+      const branch = initializeTestRewardBranches(arcanaFear)[0]!;
       return Object.freeze({
         ...branch,
         traitEvaluations: Object.freeze([

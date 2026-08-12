@@ -7,6 +7,7 @@ import {
   createBiomeAddress,
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
+  createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
@@ -22,7 +23,7 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
@@ -1251,5 +1252,35 @@ describe('BiomeWorkspace', () => {
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')?.bossCompletionArcanaKeys,
     ).toHaveLength(1);
+  });
+
+  it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const owner = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(nBiome, 'postboss'),
+    );
+    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
+    const selector = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' });
+    fireEvent.focus(selector);
+    await waitFor(() =>
+      expect(
+        selector.querySelector<HTMLOptionElement>('option[value="BossPreDamageKeepsake"]')?.dataset
+          .candidateSupport,
+      ).toBe('possible'),
+    );
+    fireEvent.change(selector, { target: { value: 'BossPreDamageKeepsake' } });
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
+    ).toEqual({ kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' });
+    fireEvent.change(selector, { target: { value: '' } });
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
+    ).toEqual({ kind: 'retain' });
   });
 });

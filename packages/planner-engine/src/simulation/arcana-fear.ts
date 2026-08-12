@@ -90,9 +90,13 @@ export function circeResolutionDomain(
   catalog: Catalog,
   state: ArcanaFearState,
   effect: CirceResolutionEffect,
+  fatedStatus?: 'Unknown' | 'Fated' | 'Unfated',
 ): CirceResolutionDomain {
   if (effect === 'activateArcana') {
-    const arcanaKeys = inactiveArcanaKeys(catalog, state);
+    const arcanaKeys = inactiveArcanaKeys(catalog, state).filter(
+      (key) =>
+        fatedStatus !== 'Fated' || catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
+    );
     return Object.freeze({
       effect,
       requiredCount: arcanaKeys.length === 0 ? 0 : 1,

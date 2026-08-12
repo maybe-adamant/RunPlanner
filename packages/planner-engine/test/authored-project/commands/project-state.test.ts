@@ -50,8 +50,8 @@ describe('authored-project project-state commands', () => {
     expect(grown.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
     expect(grown.routes[0]?.biomes[0]).toEqual(retainedF);
     expect(grown.routes[0]?.biomes.slice(1)).toEqual([
-      { biomeKey: 'G', state: {}, topology: null },
-      { biomeKey: 'H', state: {}, topology: null },
+      { biomeKey: 'G', state: {}, topology: null, postbossKeepsakeDisposition: { kind: 'retain' } },
+      { biomeKey: 'H', state: {}, topology: null, postbossKeepsakeDisposition: { kind: 'retain' } },
       { biomeKey: 'I', state: { maxNonGoalRewards: null }, topology: null },
     ]);
     expect(

@@ -1,5 +1,6 @@
 import {
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   deriveRouteLoadout,
   semanticAddressKey,
   type EncounterPhaseAddress,
@@ -38,6 +39,12 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
+import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  candidateMayBeAuthored,
+  candidateSelectState,
+} from '@planner/ui/feedback/candidatePresentation';
 import {
   FindingCount,
   NavigationStatusMarker,
@@ -78,6 +85,7 @@ function RouteOverview({
   feedback,
   project,
   workspaceRoute,
+  interactions,
 }: {
   readonly catalog: Catalog;
   readonly label: string;
@@ -85,6 +93,7 @@ function RouteOverview({
   readonly feedback: RouteFeedbackPresentation;
   readonly project: RootState['projectWorkspace']['history']['present'];
   readonly workspaceRoute: WorkspaceRoute;
+  readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const dispatch = useAppDispatch();
   const configuredBiomeCount = workspaceRoute.biomes.length;
@@ -108,6 +117,11 @@ function RouteOverview({
   const fearVows = catalog.fearVows.values;
   const manualArcanaKeys = authoredRoute.loadout.manualArcanaKeys;
   const fearRanks = authoredRoute.loadout.fearRanks;
+  const startingKeepsake = createRouteStartKeepsakeSelectionAddress(workspaceRoute.routeKey);
+  const keepsake = interactions.keepsakeSelections.get(workspaceInteractionKey(startingKeepsake));
+  if (keepsake === undefined)
+    throw new Error(`Missing starting keepsake interaction for ${workspaceRoute.routeKey}`);
+  const keepsakeCandidates = useWorkspaceInteraction(keepsake);
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -149,6 +163,40 @@ function RouteOverview({
       </label>
       <p className="panel-description">{routeDescription}</p>
       <div className="route-loadout-controls">
+        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-starting-keepsake`}>
+          <span>Starting keepsake</span>
+          <select
+            aria-busy={keepsakeCandidates.pending || undefined}
+            id={`${workspaceRoute.routeKey}-starting-keepsake`}
+            onChange={(event) => {
+              const key = event.target.value;
+              const option = keepsakeCandidates.result?.find(
+                (candidate) => candidate.value === key,
+              );
+              if (candidateMayBeAuthored(option))
+                dispatch(authoredProjectCommandDispatched(keepsake.replaceIntent(key).command));
+            }}
+            onFocus={keepsakeCandidates.activate}
+            onPointerDown={keepsakeCandidates.activate}
+            value={authoredRoute.loadout.startingKeepsakeKey}
+          >
+            {keepsake.choices.map((choice) => {
+              const option = keepsakeCandidates.result?.find(
+                (candidate) => candidate.value === choice.value,
+              );
+              return (
+                <option
+                  key={choice.value}
+                  value={choice.value}
+                  disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                  {...candidateSelectState(option)}
+                >
+                  {choice.label}
+                </option>
+              );
+            })}
+          </select>
+        </label>
         <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
           <span>Weapon</span>
           <select
@@ -503,6 +551,7 @@ function RouteWorkspace({
               feedback={feedback}
               project={project}
               workspaceRoute={workspaceRoute}
+              interactions={interactions}
             />
           ) : activePanel.kind === 'npcIndex' ? (
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
@@ -516,6 +565,7 @@ function RouteWorkspace({
               feedback={feedback}
               project={project}
               workspaceRoute={workspaceRoute}
+              interactions={interactions}
             />
           ) : (
             <BiomeWorkspace

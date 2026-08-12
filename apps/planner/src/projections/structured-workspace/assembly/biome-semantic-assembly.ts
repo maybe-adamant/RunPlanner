@@ -2,6 +2,7 @@ import {
   createBiomeFieldAddress,
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
+  createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
@@ -414,6 +415,7 @@ export function assembleWorkspaceBiomeSemantics(
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
   },
+  postbossKeepsakeReached = false,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -651,9 +653,24 @@ export function assembleWorkspaceBiomeSemantics(
         gameName: descriptor.roomGameName,
         label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
         ...(judgment === undefined ? {} : { judgment }),
+        ...(descriptor.role !== 'postboss' ||
+        plan.postbossKeepsakeDisposition === undefined ||
+        !postbossKeepsakeReached
+          ? {}
+          : {
+              keepsakeSelection: Object.freeze({
+                address: createPostbossKeepsakeSelectionAddress(address),
+                marker: markerDestinations.marker(createPostbossKeepsakeSelectionAddress(address)),
+                value: plan.postbossKeepsakeDisposition,
+              }),
+            }),
       });
       markerDestinations.redirect(
-        Object.freeze([node.marker, ...(judgment === undefined ? [] : [judgment.marker])]),
+        Object.freeze([
+          node.marker,
+          ...(judgment === undefined ? [] : [judgment.marker]),
+          ...(node.keepsakeSelection === undefined ? [] : [node.keepsakeSelection.marker]),
+        ]),
         node.key,
       );
       return node;

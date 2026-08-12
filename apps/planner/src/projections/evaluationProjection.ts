@@ -259,6 +259,10 @@ const findingCopy = {
     title: 'Judgment target is unavailable',
     description: 'Choose distinct Arcana cards that were inactive before this Boss completed.',
   },
+  keepsakeUnavailable: {
+    title: 'Keepsake is unavailable',
+    description: 'Choose a keepsake that remains available at this rack frontier.',
+  },
   circeResolutionMissing: {
     title: 'Choose the Circe outcome',
     description: 'Record the exact Arcana or Vow outcome for the selected Circe trait.',
@@ -550,6 +554,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     }
     return route.label;
   }
+  if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
+    return 'Starting keepsake';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${origin.biomeKey}`);
@@ -614,5 +620,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · ${origin.role === 'boss' ? 'Boss' : 'Postboss'}`;
     case 'bossCompletionArcana':
       return `${biomeLabel} · Boss Judgment`;
+    case 'keepsakeSelection':
+      return `${biomeLabel} · Postboss keepsake`;
   }
 }

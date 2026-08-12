@@ -30,6 +30,13 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawRewardKernelInput } from './rewards/types';
 import type { RawTraitCatalogInput } from './traits';
 
+export interface RawKeepsakeDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly rank: 'Epic';
+  readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+}
+
 export interface RawEncounterRewardWheelAttachment {
   readonly kind: 'rewardWheel';
   readonly key: string;
@@ -55,6 +62,7 @@ export interface RawArcanaCardDeclaration {
     | { readonly kind: 'manual' }
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
+  readonly fatedIncompatible?: boolean;
   readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
 }
 export interface RawFearVowDeclaration {
@@ -94,6 +102,7 @@ export interface RawEncounterDefinitionDeclaration {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly npcPresentationKey?: string;
@@ -308,6 +317,7 @@ export interface RawCatalogInput {
   readonly routes: readonly RouteDeclaration[];
   readonly arcanaCards: readonly RawArcanaCardDeclaration[];
   readonly fearVows: readonly RawFearVowDeclaration[];
+  readonly keepsakes: readonly RawKeepsakeDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];

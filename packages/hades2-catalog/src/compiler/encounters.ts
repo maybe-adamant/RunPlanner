@@ -5,6 +5,7 @@ import type {
   EncounterEnvelopeSlot,
   EncounterPhaseKind,
   EncounterSet,
+  KeepsakeDeclaration,
   EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
@@ -172,6 +173,7 @@ export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
   rewards: RewardKernelCatalog,
   traits: TraitCatalog,
+  keepsakes: CatalogCollection<KeepsakeDeclaration>,
 ): CatalogCollection<EncounterDefinition> {
   const definitions = createCollection(
     rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
@@ -183,6 +185,19 @@ export function normalizeEncounterDefinitions(
       }
       if (typeof raw.countsEncounterDepth !== 'boolean') {
         fail(`${path}.countsEncounterDepth`, 'must be boolean');
+      }
+      const blocksKeepsakeSelectionKeys =
+        raw.blocksKeepsakeSelectionKeys === undefined
+          ? undefined
+          : freezeUniqueStrings(
+              raw.blocksKeepsakeSelectionKeys.map((key) =>
+                requireNonEmpty(key, `${path}.blocksKeepsakeSelectionKeys`),
+              ),
+              `${path}.blocksKeepsakeSelectionKeys`,
+            );
+      for (const keepsakeKey of blocksKeepsakeSelectionKeys ?? []) {
+        if (keepsakes.byKey[keepsakeKey] === undefined)
+          fail(`${path}.blocksKeepsakeSelectionKeys`, `unknown keepsake ${keepsakeKey}`);
       }
       const requirements =
         raw.requirements === undefined
@@ -225,6 +240,7 @@ export function normalizeEncounterDefinitions(
         label,
         kind: raw.kind,
         countsEncounterDepth: raw.countsEncounterDepth,
+        ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
         ...(requirements === undefined ? {} : { requirements }),
         ...(raw.sequenceEffect === undefined
           ? {}

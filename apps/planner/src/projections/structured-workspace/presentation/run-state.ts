@@ -157,6 +157,15 @@ export function presentRunState(
     Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),
   );
   return Object.freeze({
+    keepsakes: Object.freeze({
+      currentLabel:
+        catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
+        snapshot.keepsakes.currentKey,
+      removedLabels: Object.freeze(
+        snapshot.keepsakes.removedKeys.map((key) => catalog.keepsakes.byKey[key]?.label ?? key),
+      ),
+      fatedStatus: snapshot.keepsakes.fatedStatus,
+    }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>
         Object.freeze({

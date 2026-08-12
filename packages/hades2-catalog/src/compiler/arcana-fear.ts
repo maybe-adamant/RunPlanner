@@ -100,6 +100,7 @@ export function normalizeArcanaCards(
           });
     return Object.freeze({
       ...card,
+      fatedIncompatible: card.fatedIncompatible === true,
       activation,
       ...(postBossActivationCounts === undefined
         ? {}

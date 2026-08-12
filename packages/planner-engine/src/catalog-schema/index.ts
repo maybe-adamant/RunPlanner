@@ -44,6 +44,8 @@ export type { RoomStructuralTag } from '../requirements/model';
 export interface BiomeDeclaration {
   readonly key: string;
   readonly label: string;
+  /** Whether this biome's derived Postboss room owns the ordinary in-run rack. */
+  readonly hasPostbossKeepsakeRack: boolean;
 }
 
 export interface RouteDeclaration {
@@ -71,6 +73,8 @@ export interface ArcanaCardDeclaration {
     | { readonly kind: 'manual' }
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
+  /** Source-declared Fated incompatibility, consumed by Arcana candidate authority. */
+  readonly fatedIncompatible: boolean;
   /** Judgment alone declares its rank-scaled post-Boss activation counts. */
   readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
 }
@@ -87,6 +91,14 @@ export interface FearVowDeclaration {
         readonly maximumPerBiome: 1;
         readonly qualifyingRewardTypes: readonly ['Boon', 'HermesUpgrade'];
       };
+}
+
+/** A rank-III ordinary keepsake. Effects are deliberately introduced by their owning gates. */
+export interface KeepsakeDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly rank: 'Epic';
+  readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
@@ -150,6 +162,8 @@ export interface EncounterDefinition {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */
+  readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   /** Presentation-only grouping for the later read-only NPC route index. */
@@ -681,6 +695,8 @@ export interface Catalog {
   readonly routes: CatalogCollection<RouteDeclaration>;
   readonly arcanaCards: CatalogCollection<ArcanaCardDeclaration>;
   readonly fearVows: CatalogCollection<FearVowDeclaration>;
+  readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
+  readonly defaultStartingKeepsakeKey: string;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;

@@ -15,6 +15,7 @@ import {
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
+  type WorkspaceKeepsakeSelectionInteraction,
   type WorkspaceMarker,
   type WorkspaceNode,
   type WorkspaceRailEntry,
@@ -31,6 +32,11 @@ import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { RunStateSheet } from './RunStateSheet';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  candidateMayBeAuthored,
+  candidateSelectState,
+} from '@planner/ui/feedback/candidatePresentation';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -324,6 +330,57 @@ function RailEntry({
   }
 }
 
+function PostbossKeepsakeControl({
+  interaction,
+  value,
+}: {
+  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+  readonly value: Extract<WorkspaceCompletionNode['keepsakeSelection'], object>['value'];
+}) {
+  const dispatch = useAppDispatch();
+  const candidates = useWorkspaceInteraction(interaction);
+  return (
+    <label className="field-control" htmlFor={`postboss-keepsake-${interaction.key}`}>
+      <span className="field-label-with-marker">
+        Keepsake <SemanticOwnerMarker address={interaction.owner} />
+      </span>
+      <select
+        aria-busy={candidates.pending || undefined}
+        id={`postboss-keepsake-${interaction.key}`}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        onChange={(event) => {
+          const key = event.target.value;
+          if (key === '') {
+            if (interaction.retainIntent !== undefined)
+              dispatch(authoredProjectCommandDispatched(interaction.retainIntent().command));
+            return;
+          }
+          const option = candidates.result?.find((candidate) => candidate.value === key);
+          if (candidateMayBeAuthored(option))
+            dispatch(authoredProjectCommandDispatched(interaction.replaceIntent(key).command));
+        }}
+        value={value.kind === 'replace' ? value.keepsakeKey : ''}
+      >
+        <option value="">Retain current keepsake</option>
+        {interaction.choices.map((choice) => {
+          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
+          return (
+            <option
+              key={choice.value}
+              value={choice.value}
+              disabled={option !== undefined && !candidateMayBeAuthored(option)}
+              {...candidateSelectState(option)}
+            >
+              {choice.label}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
 function CompletionWorkbench({
   interactions,
   node,
@@ -336,6 +393,12 @@ function CompletionWorkbench({
     node.judgment === undefined
       ? undefined
       : interactions.bossCompletionArcana.get(workspaceInteractionKey(node.judgment.address));
+  const keepsake =
+    node.keepsakeSelection === undefined
+      ? undefined
+      : interactions.keepsakeSelections.get(
+          workspaceInteractionKey(node.keepsakeSelection.address),
+        );
   return (
     <article className="biome-completion-workbench">
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
@@ -373,6 +436,9 @@ function CompletionWorkbench({
               );
             })}
         </fieldset>
+      )}
+      {keepsake === undefined || node.keepsakeSelection === undefined ? null : (
+        <PostbossKeepsakeControl interaction={keepsake} value={node.keepsakeSelection.value} />
       )}
     </article>
   );

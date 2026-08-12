@@ -11,6 +11,7 @@ import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
 import {
   initializeRewardBranches,
@@ -68,7 +69,7 @@ describe('progressive Arcana and Fear state', () => {
     expect(forfeitStatus(suppressed.state)).toBe('consumed');
 
     const branch = Object.freeze({
-      ...initializeRewardBranches(undefined, consumed.state)[0]!,
+      ...initializeTestRewardBranches(consumed.state)[0]!,
       arcanaFear: consumed.state,
     });
     const nextBiome = initializeRewardBranches([publicRewardBranch(branch)])[0]!;
@@ -166,7 +167,7 @@ describe('progressive Arcana and Fear state', () => {
   it('keeps branches distinct when their explicit progressive state differs', () => {
     const state = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
     const evidence = { owner: createBiomeAddress('Underworld', 'F'), sequence: 1 };
-    const base = initializeRewardBranches(undefined, state)[0]!;
+    const base = initializeTestRewardBranches(state)[0]!;
     const distinct = Object.freeze({
       ...base,
       arcanaFear: activateTemporaryArcana(catalog, state, ['ChanneledCast'], evidence).state,

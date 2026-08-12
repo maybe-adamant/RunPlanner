@@ -23,6 +23,7 @@ import {
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type BossCompletionArcanaAddress,
+  type KeepsakeSelectionAddress,
   type ExitDecisionAddress,
   type EncounterPhaseAddress,
   type HubDecisionAddress,
@@ -239,6 +240,10 @@ export interface CandidateProjectionSession {
     owner: BossCompletionArcanaAddress,
     arcanaKeys: readonly string[],
   ) => CandidateProjectionEvaluation;
+  /** Exact engine-captured keepsake frontier, projected one option at a time for controls. */
+  readonly keepsakeSelections: (
+    owner: KeepsakeSelectionAddress,
+  ) => readonly CandidateOptionProjection<string>[];
 }
 
 export interface LevelResolutionCandidateProjection {
@@ -911,6 +916,39 @@ export function createCandidateSessionFactory(
           completion: owner,
           arcanaKeys,
         }),
+      keepsakeSelections: (owner: KeepsakeSelectionAddress) => {
+        const evaluation = requireProjectCache(
+          cache,
+          assembly,
+          catalog,
+          options,
+        ).evaluator.evaluate({
+          kind: 'keepsakeSelection',
+          selection: owner,
+        });
+        if (evaluation.kind === 'unavailable') return Object.freeze([]);
+        if (evaluation.kind !== 'keepsakeSelection') {
+          throw new Error(
+            `Keepsake candidate ${semanticAddressKey(owner)} returned ${evaluation.kind}`,
+          );
+        }
+        return Object.freeze(
+          evaluation.result.options.map((option) =>
+            Object.freeze({
+              value: option.key,
+              // The engine publishes support per option. This shallow projection
+              // preserves the exact evidence while adapting the shared picker shape.
+              evaluation: Object.freeze({
+                ...evaluation,
+                result: Object.freeze({
+                  ...evaluation.result,
+                  selectedPossible: option.selectedPossible,
+                }),
+              }),
+            }),
+          ),
+        );
+      },
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
@@ -971,6 +1009,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       return evaluation.result.supported;
     case 'bossCompletionArcana':
       return evaluation.result.selectedPossible;
+    case 'keepsakeSelection':
+      return evaluation.result.selectedPossible;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -983,6 +1023,7 @@ function candidateForced(
     case 'encounter':
       return evaluation.result.support === 'forced';
     case 'bossCompletionArcana':
+    case 'keepsakeSelection':
       return false;
     case 'roomTarget':
       return (

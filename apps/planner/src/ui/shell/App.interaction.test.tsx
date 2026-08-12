@@ -672,6 +672,25 @@ describe('planner history interaction', () => {
 });
 
 describe('route loadout interaction', () => {
+  it('authors one of the complete starting-keepsake inventory through route settings', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    const selector = screen.getByRole('combobox', { name: 'Starting keepsake' });
+
+    expect(within(selector).getAllByRole('option')).toHaveLength(33);
+    expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
+
+    await user.selectOptions(selector, 'GoldifyKeepsake');
+
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .startingKeepsakeKey,
+    ).toBe('GoldifyKeepsake');
+    expect(selector).toHaveProperty('value', 'GoldifyKeepsake');
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
+  });
+
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();
 

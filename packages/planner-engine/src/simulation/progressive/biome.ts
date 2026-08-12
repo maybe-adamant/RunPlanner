@@ -10,6 +10,7 @@ import {
   type TargetAddress,
   type LevelResolutionAddress,
   type TraitOfferAddress,
+  type KeepsakeSelectionAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -21,6 +22,7 @@ import type {
 } from '../generation/model';
 import {
   createBiomeCandidateArtifacts,
+  createKeepsakeSelectionCandidateArtifacts,
   type BiomeCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
 } from '../candidate-artifacts';
@@ -100,6 +102,8 @@ export interface ProgressiveSeed {
 
 export interface ProgressiveBiomeContext {
   readonly enteredBiomeCount: number;
+  /** A Postboss rack is reached only when this configured route continues. */
+  readonly hasConfiguredSuccessor?: boolean;
   readonly loadout: RouteLoadout;
   readonly seed?: ProgressiveSeed;
 }
@@ -427,6 +431,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
     blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
+  const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
+    blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
@@ -553,6 +559,20 @@ function retainBlockedRegionProducts(
               ? blockedBossCapability
               : retainedArtifacts.bossCompletionArcana.at(address),
         });
+  const blockedKeepsakeCapability =
+    blockedKeepsakeAt === undefined
+      ? undefined
+      : (selectedArtifacts.keepsakeSelections.at(blockedKeepsakeAt) ??
+        blockedArtifacts.keepsakeSelections.at(blockedKeepsakeAt));
+  const keepsakeSelections =
+    blockedKeepsakeAt === undefined || blockedKeepsakeCapability === undefined
+      ? retainedArtifacts.keepsakeSelections
+      : createKeepsakeSelectionCandidateArtifacts(
+          new Map([
+            ...retainedArtifacts.keepsakeSelections.entries(),
+            [semanticAddressKey(blockedKeepsakeAt), blockedKeepsakeCapability] as const,
+          ]),
+        );
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
     rewardOwner === undefined
@@ -639,6 +659,7 @@ function retainBlockedRegionProducts(
     traitOffers,
     levelResolutions,
     bossCompletionArcana,
+    keepsakeSelections,
   );
   return Object.freeze({
     rewards:
@@ -1065,6 +1086,28 @@ function locateFinding(
   // no room occurrence to use for ordinary ownership lookup.
   if (
     finding.origin.kind === 'bossCompletionArcana' &&
+    finding.origin.routeKey === prefix.routeKey &&
+    finding.origin.biomeKey === prefix.biomeKey
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: prefix.decisions.length - 1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
+  // The ordinary rack is a fixed Postboss first-action boundary, not an
+  // authored occurrence or normal-door decision. Its invalid persisted value
+  // still belongs to the completed biome's final assessable region.
+  if (
+    finding.origin.kind === 'keepsakeSelection' &&
+    finding.origin.owner !== 'routeStart' &&
     finding.origin.routeKey === prefix.routeKey &&
     finding.origin.biomeKey === prefix.biomeKey
   ) {
@@ -1584,6 +1627,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.traitOffers,
       evaluated.candidateArtifacts.levelResolutions,
       evaluated.candidateArtifacts.bossCompletionArcana,
+      evaluated.candidateArtifacts.keepsakeSelections,
     ),
   });
 }
@@ -1696,6 +1740,7 @@ function clampSelectedProducts(
       retainedInteractions.traitOffers,
       retainedInteractions.levelResolutions,
       retainedInteractions.bossCompletionArcana,
+      retainedInteractions.keepsakeSelections,
     ),
   });
 }

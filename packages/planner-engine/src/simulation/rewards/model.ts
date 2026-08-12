@@ -15,6 +15,7 @@ import type {
 } from '../traits';
 import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
+import type { KeepsakeState } from '../keepsakes';
 
 interface RewardEventBase {
   readonly rewardSequence: number;
@@ -65,6 +66,7 @@ export interface RewardBranch {
   readonly processedThroughHistorySequence: number;
   readonly traitHistory?: TraitHistoryState;
   readonly arcanaFear: ArcanaFearState;
+  readonly keepsakes: KeepsakeState;
 }
 
 export interface TargetRewardHistoryCheckpoint {

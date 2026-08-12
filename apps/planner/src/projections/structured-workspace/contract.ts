@@ -30,6 +30,7 @@ import {
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
+  type KeepsakeSelectionAddress,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -309,6 +310,29 @@ export interface WorkspaceBossCompletionArcanaInteraction {
   readonly value: readonly string[];
 }
 
+/** One exact route-start or Postboss rack selection, with engine-backed option support. */
+export interface WorkspaceKeepsakeSelectionInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly key: string;
+  readonly load: () => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+  readonly owner: KeepsakeSelectionAddress;
+  readonly value:
+    | { readonly kind: 'retain' }
+    | { readonly kind: 'replace'; readonly keepsakeKey: string }
+    | string;
+  readonly replaceIntent: (
+    keepsakeKey: string,
+  ) => WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceStartingKeepsake' | 'ReplacePostbossKeepsake' }
+    >
+  >;
+  readonly retainIntent?: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplacePostbossKeepsake' }>
+  >;
+}
+
 interface WorkspaceRoomInteractionBase {
   readonly choices: readonly {
     readonly category: string;
@@ -545,6 +569,7 @@ export interface WorkspaceInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
+  readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -1165,6 +1190,11 @@ export type WorkspaceRunStateLauncher =
     };
 
 export interface WorkspaceRunStatePresentation {
+  readonly keepsakes: {
+    readonly currentLabel: string;
+    readonly removedLabels: readonly string[];
+    readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
+  };
   readonly arcana: readonly {
     readonly key: string;
     readonly label: string;
@@ -1271,6 +1301,12 @@ export interface WorkspaceCompletionNode {
     readonly marker: WorkspaceMarker;
     readonly requiredCount: number;
     readonly value: readonly string[];
+  };
+  readonly keepsakeSelection?: {
+    readonly address: KeepsakeSelectionAddress;
+    readonly marker: WorkspaceMarker;
+    readonly value:
+      { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
   };
 }
 

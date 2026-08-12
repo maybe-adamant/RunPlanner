@@ -231,6 +231,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Repair the Judgment activation at this Boss completion.',
       };
+    case 'keepsakeUnavailable':
+      return {
+        kind: 'generic',
+        message: 'Choose a keepsake that remains available at this rack frontier.',
+      };
     case 'circeResolutionMissing':
     case 'circeResolutionWrongCardinality':
     case 'circeResolutionTargetUnavailable':

@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 22 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 23 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -32,7 +32,12 @@ export interface RouteWeaponAspectLoadout {
 export interface RouteLoadout extends RouteWeaponAspectLoadout {
   readonly manualArcanaKeys: readonly string[];
   readonly fearRanks: Readonly<Record<string, number>>;
+  /** Mandatory ordinary rack selection established before the route begins. */
+  readonly startingKeepsakeKey: string;
 }
+
+export type PostbossKeepsakeDisposition =
+  { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
 
 export interface ShopState {
   readonly profileKey: string;
@@ -231,6 +236,8 @@ export interface AuthoredBiomePlan {
   readonly topology: BiomeTopology | null;
   /** Dormant unless Judgment is active at this biome's Boss completion. */
   readonly bossCompletionArcanaKeys?: readonly string[];
+  /** Present on physical ordinary-rack biomes, including a dormant final configured biome. */
+  readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
 }
 
 export interface AuthoredRoutePlan {

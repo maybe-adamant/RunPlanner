@@ -1,6 +1,7 @@
 import {
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
+  createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -78,6 +79,7 @@ function projectBiome(
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
   },
+  postbossKeepsakeReached = false,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -107,7 +109,12 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const semantic = assembleWorkspaceBiomeSemantics(catalog, source, bossCompletionArcanaCapability);
+  const semantic = assembleWorkspaceBiomeSemantics(
+    catalog,
+    source,
+    bossCompletionArcanaCapability,
+    postbossKeepsakeReached,
+  );
   const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
@@ -173,12 +180,35 @@ export function createStructuredWorkspaceProjection(
         string,
         NonNullable<WorkspaceCompletionNode['judgment']>
       >();
+      const keepsakeSelectionControls = new Map<
+        string,
+        {
+          readonly address: import('@run-planner/engine/authored-project').KeepsakeSelectionAddress;
+          readonly value:
+            | { readonly kind: 'retain' }
+            | { readonly kind: 'replace'; readonly keepsakeKey: string }
+            | string;
+        }
+      >();
       const candidates = services.candidateSessions.bind(assembly);
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
         encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
       );
       const routes = sources.routes.map((routeSource) => {
-        const biomes = routeSource.biomes.map((biomeSource) => {
+        const authoredRoute = project.routes.find(
+          (route) => route.routeKey === routeSource.routeKey,
+        );
+        if (authoredRoute === undefined)
+          throw new Error(`Missing authored route ${routeSource.routeKey}`);
+        const routeStartKeepsake = createRouteStartKeepsakeSelectionAddress(routeSource.routeKey);
+        keepsakeSelectionControls.set(
+          semanticAddressKey(routeStartKeepsake),
+          Object.freeze({
+            address: routeStartKeepsake,
+            value: authoredRoute.loadout.startingKeepsakeKey,
+          }),
+        );
+        const biomes = routeSource.biomes.map((biomeSource, biomeIndex) => {
           const bossCompletionAddress = createBossCompletionArcanaAddress(
             createCompletionRoomAddress(biomeSource.biome, 'boss'),
           );
@@ -190,6 +220,7 @@ export function createStructuredWorkspaceProjection(
             catalog,
             biomeSource,
             bossCompletion.kind === 'bossCompletionArcana' ? bossCompletion.result : undefined,
+            biomeIndex + 1 < routeSource.biomes.length,
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueOccurrenceInteractionRequirements(
@@ -247,6 +278,15 @@ export function createStructuredWorkspaceProjection(
               bossCompletionArcanaControls.set(
                 semanticAddressKey(node.judgment.address),
                 node.judgment,
+              );
+            }
+            if (node.kind === 'completion' && node.keepsakeSelection !== undefined) {
+              keepsakeSelectionControls.set(
+                semanticAddressKey(node.keepsakeSelection.address),
+                Object.freeze({
+                  address: node.keepsakeSelection.address,
+                  value: node.keepsakeSelection.value,
+                }),
               );
             }
             if (node.kind === 'occurrenceWorkbench') {
@@ -328,6 +368,7 @@ export function createStructuredWorkspaceProjection(
         traitControls,
         levelResolutionControls,
         bossCompletionArcanaControls,
+        keepsakeSelectionControls,
         roomControls,
         services,
         startInteractionRequirements,

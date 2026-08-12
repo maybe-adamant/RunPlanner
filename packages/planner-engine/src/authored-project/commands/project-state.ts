@@ -12,15 +12,19 @@ function routeForCommand(
     | { readonly kind: 'ReplaceRouteLoadout' }
     | { readonly kind: 'ReplaceManualArcanaSelection' }
     | { readonly kind: 'ReplaceFearVowRank' }
+    | { readonly kind: 'ReplaceStartingKeepsake' }
   >,
 ) {
   const routeIndex = document.routes.findIndex(
-    (route) => route.routeKey === command.route.routeKey,
+    (route) =>
+      route.routeKey ===
+      (command.kind === 'ReplaceStartingKeepsake'
+        ? command.selection.routeKey
+        : command.route.routeKey),
   );
-  if (routeIndex < 0) failCommand(command, `project is missing route ${command.route.routeKey}`);
+  if (routeIndex < 0) failCommand(command, `project is missing route`);
   const route = document.routes[routeIndex];
-  if (route === undefined)
-    failCommand(command, `project is missing route ${command.route.routeKey}`);
+  if (route === undefined) failCommand(command, `project is missing route`);
   return { route, routeIndex };
 }
 
@@ -69,6 +73,9 @@ function configureRoutePrefix(
         biomeKey,
         state: createInitialBiomeState(layout),
         topology: null,
+        ...(catalog.biomes.byKey[biomeKey]?.hasPostbossKeepsakeRack
+          ? { postbossKeepsakeDisposition: { kind: 'retain' as const } }
+          : {}),
       };
     });
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };
@@ -113,6 +120,23 @@ export function applyProjectStateCommand(
                   weaponKey: command.weaponKey,
                   aspectKey: command.aspectKey,
                 },
+              }
+            : candidate,
+        ),
+      };
+    }
+    case 'ReplaceStartingKeepsake': {
+      const { route, routeIndex } = routeForCommand(document, command);
+      if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
+        failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
+      if (route.loadout.startingKeepsakeKey === command.keepsakeKey) return document;
+      return {
+        ...document,
+        routes: document.routes.map((candidate, index) =>
+          index === routeIndex
+            ? {
+                ...candidate,
+                loadout: { ...route.loadout, startingKeepsakeKey: command.keepsakeKey },
               }
             : candidate,
         ),

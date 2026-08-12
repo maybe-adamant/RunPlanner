@@ -70,6 +70,12 @@ export type {
   StartRoomCandidateSupport,
 } from './start-room';
 export type {
+  EvaluatedKeepsakeSelectionCandidate,
+  KeepsakeSelectionCandidateOption,
+  KeepsakeSelectionCandidateQuery,
+  KeepsakeSelectionUnavailableReason,
+} from './keepsake-selection';
+export type {
   EvaluatedTakeoverPrebossBatchCandidate,
   TakeoverPrebossBatchCandidateQuery,
 } from './takeover-preboss';

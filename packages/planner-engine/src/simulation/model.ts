@@ -38,7 +38,8 @@ export type RewardGenerationFindingCode =
   | 'shopPurchaseUnavailable'
   | 'judgmentOutcomeMissing'
   | 'judgmentOutcomeWrongCardinality'
-  | 'judgmentOutcomeTargetUnavailable';
+  | 'judgmentOutcomeTargetUnavailable'
+  | 'keepsakeUnavailable';
 
 export type TraitFindingCode =
   | 'alreadyEquipped'

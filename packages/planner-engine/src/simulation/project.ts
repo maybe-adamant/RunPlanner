@@ -22,7 +22,11 @@ import {
   createProjectCandidateArtifacts,
   type BiomeCandidateArtifacts,
   type ProjectCandidateArtifacts,
+  type KeepsakeSelectionCandidateCapability,
 } from './candidate-artifacts';
+import { createKeepsakeState } from './keepsakes';
+import { createArcanaFearState } from './arcana-fear';
+import { createRouteStartKeepsakeSelectionAddress } from '../authored-project/addresses';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -618,6 +622,7 @@ function evaluateBiomeAssembly(
     completeness,
     context.loadout,
     plan.bossCompletionArcanaKeys,
+    context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
   const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
@@ -706,6 +711,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,
+        rewards.keepsakeSelectionArtifacts,
       ),
     });
   }
@@ -729,6 +735,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,
+        rewards.keepsakeSelectionArtifacts,
       ),
       findingRegions: selectedFindingRegions,
     }),
@@ -836,6 +843,7 @@ function summarizeRoute(
 interface RouteProjectEvaluationAssembly {
   readonly evaluation: ProjectRouteEvaluation;
   readonly candidateArtifacts: readonly BiomeCandidateArtifacts[];
+  readonly routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
 }
 
 function evaluateRouteAssembly(
@@ -848,6 +856,19 @@ function evaluateRouteAssembly(
   const findings: SemanticFinding[] = [];
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
+  const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
+  const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
+  routeStartKeepsakes.set(
+    semanticAddressKey(routeStart),
+    Object.freeze({
+      state: createKeepsakeState(
+        catalog,
+        route.loadout.startingKeepsakeKey,
+        createArcanaFearState(catalog, route.loadout),
+      ),
+      encounterBlockedKeepsakeKeys: Object.freeze([]),
+    }),
+  );
   for (const [index, plan] of route.biomes.entries()) {
     const previous = evaluations.at(-1);
     if (previous?.authoring === 'incomplete' && previous.validity !== 'invalid') {
@@ -862,6 +883,7 @@ function evaluateRouteAssembly(
         : undefined;
     const context = Object.freeze({
       enteredBiomeCount: index + 1,
+      hasConfiguredSuccessor: index + 1 < route.biomes.length,
       loadout: route.loadout,
       ...(seed === undefined ? {} : { seed }),
     });
@@ -897,6 +919,7 @@ function evaluateRouteAssembly(
       summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
     }),
     candidateArtifacts: Object.freeze(candidateArtifacts),
+    routeStartKeepsakes,
   });
 }
 
@@ -961,7 +984,10 @@ export function simulateProjectAssembly(
   return new ExactProjectEvaluationAssembly(
     project,
     evaluation,
-    createProjectCandidateArtifacts(assembledRoutes.flatMap((route) => route.candidateArtifacts)),
+    createProjectCandidateArtifacts(
+      assembledRoutes.flatMap((route) => route.candidateArtifacts),
+      new Map(assembledRoutes.flatMap((route) => [...route.routeStartKeepsakes.entries()])),
+    ),
     exactProjectEvaluationAssemblyConstructionToken,
   );
 }

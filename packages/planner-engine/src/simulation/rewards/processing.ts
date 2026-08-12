@@ -80,6 +80,7 @@ import {
   promoteArcana,
   suppressFearVow,
 } from '../arcana-fear';
+import { createKeepsakeState, refreshKeepsakeFatedStatus, type KeepsakeState } from '../keepsakes';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -98,6 +99,7 @@ export interface RewardBranchState {
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
   readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
   readonly arcanaFear: ArcanaFearState;
+  readonly keepsakes: KeepsakeState;
 }
 
 /**
@@ -194,6 +196,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     pendingShops: orderedRecord(branch.pendingShops),
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
+    keepsakes: branch.keepsakes,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
 }
@@ -644,7 +647,12 @@ export function processEncounterTraitOffer(
     sequence,
   };
   if (disposition.effect === 'activateArcana') {
-    const domain = circeResolutionDomain(catalog, applied.arcanaFear, disposition.effect);
+    const domain = circeResolutionDomain(
+      catalog,
+      applied.arcanaFear,
+      disposition.effect,
+      applied.keepsakes.fatedStatus,
+    );
     if (
       resolution?.kind !== 'activateArcana' ||
       resolution.arcanaKeys.length !== domain.requiredCount
@@ -657,17 +665,34 @@ export function processEncounterTraitOffer(
       resolution.arcanaKeys,
       evidence,
     );
-    return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+    return outcome.legal
+      ? Object.freeze({
+          ...applied,
+          arcanaFear: outcome.state,
+          keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
+        })
+      : applied;
   }
   if (disposition.effect === 'promoteArcana') {
-    const domain = circeResolutionDomain(catalog, applied.arcanaFear, disposition.effect);
+    const domain = circeResolutionDomain(
+      catalog,
+      applied.arcanaFear,
+      disposition.effect,
+      applied.keepsakes.fatedStatus,
+    );
     if (
       resolution?.kind !== 'promoteArcana' ||
       resolution.arcanaKeys.length !== domain.requiredCount
     )
       return applied;
     const outcome = promoteArcana(catalog, applied.arcanaFear, resolution.arcanaKeys, evidence);
-    return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+    return outcome.legal
+      ? Object.freeze({
+          ...applied,
+          arcanaFear: outcome.state,
+          keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
+        })
+      : applied;
   }
   if (resolution?.kind !== 'disableFear' || resolution.vowKey === null) return applied;
   const outcome = suppressFearVow(catalog, applied.arcanaFear, resolution.vowKey, evidence);
@@ -770,9 +795,16 @@ export function beginRewardRoom(
 export function initializeRewardBranches(
   initialBranches?: readonly RewardBranch[],
   initialArcanaFear?: ArcanaFearState,
+  catalog?: Catalog,
+  startingKeepsakeKey?: string,
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
-    if (initialArcanaFear === undefined) throw new Error('initial Arcana/Fear state is required');
+    if (
+      initialArcanaFear === undefined ||
+      catalog === undefined ||
+      startingKeepsakeKey === undefined
+    )
+      throw new Error('initial branch state is required');
     return Object.freeze([
       Object.freeze({
         bags: Object.freeze({}),
@@ -783,6 +815,7 @@ export function initializeRewardBranches(
         traitHistory: createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
         arcanaFear: initialArcanaFear,
+        keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
       }),
     ]);
   }
@@ -797,6 +830,7 @@ export function initializeRewardBranches(
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
         arcanaFear: beginBiomeArcanaFearState(branch.arcanaFear),
+        keepsakes: branch.keepsakes,
       }),
     ),
   );
@@ -1967,5 +2001,6 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
     ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
     arcanaFear: branch.arcanaFear,
+    keepsakes: branch.keepsakes,
   });
 }

@@ -18,11 +18,9 @@ import { describe, expect, it } from 'vitest';
 
 import { createRepresentativeNOProject } from '@run-planner/test-fixtures';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+import { publicRewardBranch } from '../../src/simulation/rewards/processing';
 
 const surface = createRouteAddress('Surface');
 const n = createBiomeAddress('Surface', 'N');
@@ -88,7 +86,7 @@ function evaluateNBossLifecycle(
     evaluated.history,
     1,
     project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
-    [publicRewardBranch(initializeRewardBranches(undefined, arcanaFear)[0]!)],
+    [publicRewardBranch(initializeTestRewardBranches(arcanaFear)[0]!)],
   );
 }
 

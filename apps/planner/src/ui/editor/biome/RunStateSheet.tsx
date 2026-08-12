@@ -100,6 +100,12 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         </button>
       </header>
       <section>
+        <h3>Keepsakes</h3>
+        <p>Current: {state.keepsakes.currentLabel}</p>
+        <p>Fated: {state.keepsakes.fatedStatus}</p>
+        <p>Removed: {state.keepsakes.removedLabels.join(' · ') || 'None'}</p>
+      </section>
+      <section>
         <h3>Arcana</h3>
         {state.arcana.length === 0 ? (
           <p>None active</p>
