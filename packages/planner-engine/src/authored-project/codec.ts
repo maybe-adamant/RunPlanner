@@ -38,7 +38,11 @@ function decodeBiomePlan(
 
   // This dormant child is optional in the authored model. Encoding can omit
   // it, so decoding must accept that exact persisted representation too.
-  expectExactKeys(plan, ['biomeKey', 'state', 'topology', 'bossCompletionArcanaKeys'], path);
+  expectExactKeys(
+    plan,
+    ['biomeKey', 'state', 'topology', 'bossCompletionArcanaKeys', 'postbossKeepsakeDisposition'],
+    path,
+  );
   const rawBossKeys =
     plan.bossCompletionArcanaKeys === undefined
       ? []
@@ -60,6 +64,31 @@ function decodeBiomePlan(
     plan.topology === null
       ? null
       : decodeBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
+  const canOwnPostbossKeepsake = catalog.biomes.byKey[biomeKey]?.hasPostbossKeepsakeRack === true;
+  const rawDisposition = plan.postbossKeepsakeDisposition;
+  if (canOwnPostbossKeepsake !== (rawDisposition !== undefined))
+    fail(
+      `${path}.postbossKeepsakeDisposition`,
+      canOwnPostbossKeepsake ? 'is required' : 'is not supported',
+    );
+  let postbossKeepsakeDisposition: AuthoredBiomePlan['postbossKeepsakeDisposition'];
+  if (rawDisposition !== undefined) {
+    const disposition = expectRecord(rawDisposition, `${path}.postbossKeepsakeDisposition`);
+    const kind = expectString(disposition.kind, `${path}.postbossKeepsakeDisposition.kind`);
+    if (kind === 'retain') {
+      expectExactKeys(disposition, ['kind'], `${path}.postbossKeepsakeDisposition`);
+      postbossKeepsakeDisposition = Object.freeze({ kind: 'retain' });
+    } else if (kind === 'replace') {
+      expectExactKeys(disposition, ['kind', 'keepsakeKey'], `${path}.postbossKeepsakeDisposition`);
+      const keepsakeKey = expectString(
+        disposition.keepsakeKey,
+        `${path}.postbossKeepsakeDisposition.keepsakeKey`,
+      );
+      if (catalog.keepsakes.byKey[keepsakeKey] === undefined)
+        fail(`${path}.postbossKeepsakeDisposition.keepsakeKey`, `unknown keepsake ${keepsakeKey}`);
+      postbossKeepsakeDisposition = Object.freeze({ kind: 'replace', keepsakeKey });
+    } else fail(`${path}.postbossKeepsakeDisposition.kind`, 'must be retain or replace');
+  }
   return Object.freeze({
     biomeKey,
     state: decodeBiomeState(plan.state, layout, `${path}.state`),
@@ -73,6 +102,7 @@ function decodeBiomePlan(
               .map((card) => card.key),
           ),
         }),
+    ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
   });
 }
 
@@ -95,11 +125,17 @@ function decodeRoutePlan(
   const loadout = expectRecord(plan.loadout, `${path}.loadout`);
   expectExactKeys(
     loadout,
-    ['weaponKey', 'aspectKey', 'manualArcanaKeys', 'fearRanks'],
+    ['weaponKey', 'aspectKey', 'manualArcanaKeys', 'fearRanks', 'startingKeepsakeKey'],
     `${path}.loadout`,
   );
   const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
   const aspectKey = expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
+  const startingKeepsakeKey = expectString(
+    loadout.startingKeepsakeKey,
+    `${path}.loadout.startingKeepsakeKey`,
+  );
+  if (catalog.keepsakes.byKey[startingKeepsakeKey] === undefined)
+    fail(`${path}.loadout.startingKeepsakeKey`, `unknown keepsake ${startingKeepsakeKey}`);
   const weapon = catalog.weapons.byKey[weaponKey];
   if (weapon === undefined) fail(`${path}.loadout.weaponKey`, `unknown weapon ${weaponKey}`);
   if (!weapon.aspectKeys.includes(aspectKey)) {
@@ -164,6 +200,7 @@ function decodeRoutePlan(
       aspectKey,
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
+      startingKeepsakeKey,
     }),
     biomes: Object.freeze(biomes),
   });

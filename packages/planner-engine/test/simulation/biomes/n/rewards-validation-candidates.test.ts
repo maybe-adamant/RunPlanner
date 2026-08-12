@@ -23,12 +23,12 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
-import { createTestArcanaFearState } from '../../../support/arcana-fear';
-import { materializeHubDecision } from '../../../../src/simulation/materialization';
 import {
-  initializeRewardBranches,
-  settleOwnedAcquisitionSite,
-} from '../../../../src/simulation/rewards/processing';
+  createTestArcanaFearState,
+  initializeTestRewardBranches,
+} from '../../../support/arcana-fear';
+import { materializeHubDecision } from '../../../../src/simulation/materialization';
+import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -787,7 +787,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     };
     const branches = settleOwnedAcquisitionSite(
       catalog,
-      initializeRewardBranches(undefined, createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 })),
+      initializeTestRewardBranches(createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 })),
       {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',

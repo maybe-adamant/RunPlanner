@@ -22,6 +22,7 @@ import { createRewardKernelCatalog } from './rewards/normalize';
 import { createTraitCatalog } from './traits';
 import { fail } from './errors';
 import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
+import { normalizeKeepsakes } from './keepsakes';
 
 function validateLifecycleBindings(
   rooms: Catalog['rooms'],
@@ -87,11 +88,13 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const traitCatalog = createTraitCatalog(input.traitCatalog);
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
   const fearVows = normalizeFearVows(input.fearVows);
+  const keepsakes = normalizeKeepsakes(input.keepsakes);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
   const encounterDefinitions = normalizeEncounterDefinitions(
     input.encounterDefinitions,
     rewards,
     traitCatalog,
+    keepsakes,
   );
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
@@ -129,6 +132,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     routes,
     arcanaCards,
     fearVows,
+    keepsakes,
+    defaultStartingKeepsakeKey: 'ManaOverTimeRefundKeepsake',
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

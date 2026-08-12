@@ -73,6 +73,8 @@ export interface DecisionRunStateSnapshot {
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
   readonly arcanaFear: RewardBranchState['arcanaFear'];
+  /** Branch-derived identity chronology; effects are introduced by later gates. */
+  readonly keepsakes: RewardBranchState['keepsakes'];
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -318,6 +320,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
       traits: traitState(branch.traitHistory),
       counters: historyCounters(context.historyView, branch.history, context.enteredBiomeCount),
       arcanaFear: branch.arcanaFear,
+      keepsakes: branch.keepsakes,
       forfeitStatus: forfeitStatus(branch.arcanaFear),
     });
   });
@@ -338,6 +341,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
     traits: first.traits,
     counters: first.counters,
     arcanaFear: first.arcanaFear,
+    keepsakes: first.keepsakes,
     forfeitStatus: first.forfeitStatus,
     bags: Object.freeze(
       context.catalog.rewards.stores.values.map((store) =>

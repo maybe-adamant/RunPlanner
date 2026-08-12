@@ -177,6 +177,19 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 }
 
 describe('structured workspace biome semantic assembly', () => {
+  it('publishes the Postboss keepsake child only when a configured successor reaches the rack', () => {
+    const source = biomeSource(createRepresentativeNOPQProject());
+    const dormant = assembleWorkspaceBiomeSemantics(catalog, source);
+    const reached = assembleWorkspaceBiomeSemantics(catalog, source, undefined, true);
+    const dormantPostboss = dormant.completion.find((node) => node.role === 'postboss');
+    const reachedPostboss = reached.completion.find((node) => node.role === 'postboss');
+
+    expect(dormantPostboss).not.toHaveProperty('keepsakeSelection');
+    expect(reachedPostboss?.keepsakeSelection).toMatchObject({
+      value: { kind: 'retain' },
+    });
+  });
+
   it('projects and focuses an evaluated selected continuation without a normal-target overlay', () => {
     const fixture = selectedContractWithoutNormalTargets();
     const source = biomeSource(fixture.project, fixture.biome.routeKey, fixture.biome.biomeKey);

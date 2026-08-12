@@ -25,9 +25,8 @@ import {
 } from '@run-planner/test-fixtures';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
-import { createTestArcanaFearState } from '../support/arcana-fear';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
-import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
 import { aggregateDecisionRewardBag, createRunState } from '../../src/simulation/rewards/run-state';
 import {
   attachTraitHistory,
@@ -488,7 +487,7 @@ describe('decision run-state snapshots', () => {
       }),
     });
     const branch = Object.freeze({
-      ...initializeRewardBranches(undefined, createTestArcanaFearState())[0]!,
+      ...initializeTestRewardBranches()[0]!,
       history,
     });
     const snapshot = createRunState({
@@ -574,7 +573,7 @@ describe('decision run-state snapshots', () => {
       }),
     );
     const branch = Object.freeze({
-      ...initializeRewardBranches(undefined, createTestArcanaFearState())[0]!,
+      ...initializeTestRewardBranches()[0]!,
       history: attachTraitHistory(createRewardHistoryState(), traits),
       traitHistory: traits,
     });

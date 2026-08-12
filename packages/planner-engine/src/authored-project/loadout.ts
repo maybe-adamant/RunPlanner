@@ -22,6 +22,7 @@ export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
     fearRanks: Object.freeze(
       Object.fromEntries(catalog.fearVows.values.map((vow) => [vow.key, 0])),
     ),
+    startingKeepsakeKey: catalog.defaultStartingKeepsakeKey,
   });
 }
 

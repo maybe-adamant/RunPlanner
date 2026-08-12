@@ -36,6 +36,20 @@ export interface BossCompletionArcanaAddress extends BiomeOwnedAddress {
   readonly kind: 'bossCompletionArcana';
   readonly completion: CompletionRoomAddress & { readonly role: 'boss' };
 }
+/** A rack selection has exactly one start owner or one derived Postboss owner. */
+export type KeepsakeSelectionAddress =
+  | {
+      readonly kind: 'keepsakeSelection';
+      readonly routeKey: string;
+      readonly biomeKey: 'routeStart';
+      readonly owner: 'routeStart';
+    }
+  | {
+      readonly kind: 'keepsakeSelection';
+      readonly routeKey: string;
+      readonly biomeKey: string;
+      readonly owner: CompletionRoomAddress & { readonly role: 'postboss' };
+    };
 
 export type ExitDecisionSourceAddress =
   | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
@@ -193,6 +207,7 @@ export type SemanticAddress =
   | IncomingRewardAddress
   | CompletionRoomAddress
   | BossCompletionArcanaAddress
+  | KeepsakeSelectionAddress
   | ExitDecisionAddress
   | ExitSelectionAddress
   | BatchRewardStoreAddress
@@ -301,6 +316,31 @@ export function createBossCompletionArcanaAddress(
     routeKey: completion.routeKey,
     biomeKey: completion.biomeKey,
     completion: bossCompletion,
+  });
+}
+export function createRouteStartKeepsakeSelectionAddress(
+  routeKey: string,
+): Extract<KeepsakeSelectionAddress, { readonly owner: 'routeStart' }> {
+  return Object.freeze({
+    kind: 'keepsakeSelection',
+    routeKey: nonBlank(routeKey, 'routeKey'),
+    biomeKey: 'routeStart' as const,
+    owner: 'routeStart',
+  });
+}
+export function createPostbossKeepsakeSelectionAddress(
+  completion: CompletionRoomAddress,
+): Extract<KeepsakeSelectionAddress, { readonly owner: CompletionRoomAddress }> {
+  if (completion.role !== 'postboss')
+    throw new SemanticAddressContractError(
+      'completion.role',
+      'Keepsake rack must be owned by Postboss',
+    );
+  return Object.freeze({
+    kind: 'keepsakeSelection',
+    routeKey: completion.routeKey,
+    biomeKey: completion.biomeKey,
+    owner: Object.freeze({ ...completion, role: 'postboss' as const }),
   });
 }
 export function createExitDecisionAddress(
@@ -577,6 +617,12 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.role]);
     case 'bossCompletionArcana':
       return JSON.stringify([...base, semanticAddressKey(address.completion)]);
+    case 'keepsakeSelection':
+      return JSON.stringify([
+        address.kind,
+        address.routeKey,
+        address.owner === 'routeStart' ? address.owner : semanticAddressKey(address.owner),
+      ]);
     case 'exitDecision':
     case 'exitSelection':
     case 'batchRewardStore':

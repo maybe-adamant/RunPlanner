@@ -12,6 +12,7 @@ import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand } from './acquisition-site';
 import { applyBossCompletionCommand } from './boss-completion';
+import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -24,9 +25,12 @@ function applyUnchecked(
     case 'ReplaceRouteLoadout':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
+    case 'ReplaceStartingKeepsake':
     case 'ConfigureRoutePrefix':
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
+    case 'ReplacePostbossKeepsake':
+      return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':
     case 'CreateBatch':
     case 'CreateTarget':

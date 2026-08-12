@@ -38,6 +38,7 @@ export type {
   WorkspaceHubVisitOrderProposal,
   WorkspaceInspectorDestination,
   WorkspaceInteractionCatalog,
+  WorkspaceKeepsakeSelectionInteraction,
   WorkspaceMarker,
   WorkspaceMissingPhysicalTarget,
   WorkspaceMixedBatchNode,

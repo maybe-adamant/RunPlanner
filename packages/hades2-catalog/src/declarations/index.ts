@@ -18,6 +18,7 @@ import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
 import { arcanaCards, fearVows } from './arcana-fear';
+import { keepsakes } from './keepsakes';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 
 const rooms: readonly RawRoomDeclaration[] = [
@@ -40,6 +41,7 @@ export const declarations = {
   routes,
   arcanaCards,
   fearVows,
+  keepsakes,
   rewardKernel: rewardKernelDeclarations,
   encounterEnvelopes,
   encounterDefinitions,
@@ -56,6 +58,7 @@ export type {
   RawCatalogInput,
   RawArcanaCardDeclaration,
   RawFearVowDeclaration,
+  RawKeepsakeDeclaration,
   RawAdditionalExitDeclaration,
   RawCountedRewardBinding,
   RawEncounterDefinitionDeclaration,

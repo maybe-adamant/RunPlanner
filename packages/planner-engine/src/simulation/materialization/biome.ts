@@ -1084,6 +1084,7 @@ export function materializeBiome(
   completeness: CompleteBiomeCompletenessResult,
   loadout: RouteWeaponAspectLoadout,
   bossCompletionArcanaKeys: readonly string[] = [],
+  postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition,
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
@@ -1190,5 +1191,6 @@ export function materializeBiome(
     completionRooms,
     biomeState,
     bossCompletionArcanaKeys: Object.freeze([...bossCompletionArcanaKeys]),
+    ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
   });
 }

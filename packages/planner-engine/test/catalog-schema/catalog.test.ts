@@ -21,17 +21,19 @@ describe('summarizeCatalog', () => {
       version: 'fixture-1',
       biomes: {
         values: [
-          { key: 'A', label: 'Biome A' },
-          { key: 'B', label: 'Biome B' },
+          { key: 'A', label: 'Biome A', hasPostbossKeepsakeRack: false },
+          { key: 'B', label: 'Biome B', hasPostbossKeepsakeRack: false },
         ],
         byKey: {
-          A: { key: 'A', label: 'Biome A' },
-          B: { key: 'B', label: 'Biome B' },
+          A: { key: 'A', label: 'Biome A', hasPostbossKeepsakeRack: false },
+          B: { key: 'B', label: 'Biome B', hasPostbossKeepsakeRack: false },
         },
       },
       routes: { values: [route], byKey: { FixtureRoute: route } },
       arcanaCards: emptyCollection(),
       fearVows: emptyCollection(),
+      keepsakes: emptyCollection(),
+      defaultStartingKeepsakeKey: 'FixtureKeepsake',
       rewards: {
         payloadDomains: emptyCollection(),
         rewardTypes: emptyCollection(),

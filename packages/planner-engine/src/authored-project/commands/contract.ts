@@ -42,10 +42,14 @@ export function projectCommandAddress(
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;
+    case 'ReplaceStartingKeepsake':
+      return command.selection;
     case 'ReplaceBiomeField':
       return command.field;
     case 'ReplaceBossCompletionArcana':
       return command.completion;
+    case 'ReplacePostbossKeepsake':
+      return command.selection;
     case 'CreateStart':
     case 'ClearTopology':
       return command.biome;

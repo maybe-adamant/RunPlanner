@@ -31,12 +31,9 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
-import { createTestArcanaFearState } from '../support/arcana-fear';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import {
-  initializeRewardBranches,
-  settleOwnedAcquisitionSite,
-} from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHIProject,
@@ -192,7 +189,7 @@ describe('Pom level resolutions', () => {
 
     const noTargetFindings = new Map();
     const empty = settleTestRoomReward(
-      initializeRewardBranches(undefined, createTestArcanaFearState()),
+      initializeTestRewardBranches(),
       {
         origin: levelAddress.owner,
         offer: { rewardType: 'GiftDrop' },
@@ -210,7 +207,7 @@ describe('Pom level resolutions', () => {
     const withTarget = settleTestRoomReward(
       [
         Object.freeze({
-          ...initializeRewardBranches(undefined, createTestArcanaFearState())[0]!,
+          ...initializeTestRewardBranches()[0]!,
           traitHistory: equippedHistory(),
         }),
       ],
@@ -693,7 +690,7 @@ describe('Pom level resolutions', () => {
   it('retains every divergent Pom surface when identical findings eliminate all carrying branches', () => {
     const oneTarget = equippedHistory();
     const twoTargets = twoTargetHistory();
-    const base = initializeRewardBranches(undefined, createTestArcanaFearState())[0];
+    const base = initializeTestRewardBranches()[0];
     if (base === undefined) throw new Error('divergent Pom fixture has no initial branch');
     const branches = Object.freeze(
       [oneTarget, twoTargets].map((history) =>

@@ -5,6 +5,7 @@ import {
   type TraitOfferAddress,
   type TargetAddress,
   type BossCompletionArcanaAddress,
+  type KeepsakeSelectionAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
 import type {
@@ -39,6 +40,7 @@ import {
   pomEligibleTargetKeys,
   type TraitHistoryState,
 } from './traits';
+import type { KeepsakeState } from './keepsakes';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({ at: () => undefined, statusAt: () => undefined, roomAt: () => undefined });
@@ -128,6 +130,32 @@ export interface BossCompletionArcanaCandidateArtifacts {
     address: BossCompletionArcanaAddress,
   ) => BossCompletionArcanaCandidateCapability | undefined;
 }
+
+/**
+ * Exact rack frontier captured by the selected chronological reward walk.
+ * It deliberately contains the already-derived identity history rather than
+ * a project or biome handle that a candidate consumer could replay.
+ */
+export interface KeepsakeSelectionCandidateCapability {
+  readonly state: KeepsakeState;
+  readonly encounterBlockedKeepsakeKeys: readonly string[];
+}
+export interface KeepsakeSelectionCandidateArtifacts {
+  readonly at: (
+    address: KeepsakeSelectionAddress,
+  ) => KeepsakeSelectionCandidateCapability | undefined;
+  /** Engine assembly composition only; candidate consumers use `at`. */
+  readonly entries: () => readonly (readonly [string, KeepsakeSelectionCandidateCapability])[];
+}
+export function createKeepsakeSelectionCandidateArtifacts(
+  contexts: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>,
+): KeepsakeSelectionCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: KeepsakeSelectionAddress) => privateContexts.get(semanticAddressKey(address)),
+    entries: () => Object.freeze([...privateContexts.entries()]),
+  });
+}
 export function createBossCompletionArcanaCandidateArtifacts(
   contexts: ReadonlyMap<string, BossCompletionArcanaCandidateCapability>,
 ): BossCompletionArcanaCandidateArtifacts {
@@ -146,11 +174,13 @@ export interface BiomeCandidateArtifacts {
   readonly traitOffers: TraitOfferCandidateArtifacts;
   readonly levelResolutions: LevelResolutionCandidateArtifacts;
   readonly bossCompletionArcana: BossCompletionArcanaCandidateArtifacts;
+  readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
 export interface ProjectCandidateArtifacts {
   readonly biomeAt: (biome: BiomeAddress) => BiomeCandidateArtifacts | undefined;
+  readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
 }
 
 export class CandidateArtifactContractError extends Error {
@@ -194,6 +224,9 @@ export function createBiomeCandidateArtifacts(
   bossCompletionArcana: BossCompletionArcanaCandidateArtifacts = createBossCompletionArcanaCandidateArtifacts(
     new Map(),
   ),
+  keepsakeSelections: KeepsakeSelectionCandidateArtifacts = createKeepsakeSelectionCandidateArtifacts(
+    new Map(),
+  ),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -204,6 +237,7 @@ export function createBiomeCandidateArtifacts(
     traitOffers,
     levelResolutions,
     bossCompletionArcana,
+    keepsakeSelections,
   });
 }
 
@@ -392,16 +426,28 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
 
 export function createProjectCandidateArtifacts(
   biomes: readonly BiomeCandidateArtifacts[],
+  routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability> = new Map(),
 ): ProjectCandidateArtifacts {
   const privateBiomes = new Map<string, BiomeCandidateArtifacts>();
+  const keepsakeSelections = new Map(routeStartKeepsakes);
   for (const biome of biomes) {
     const key = semanticAddressKey(biome.origin);
     if (privateBiomes.has(key)) {
       throw new CandidateArtifactContractError(`duplicate candidate artifacts for ${key}`);
     }
     privateBiomes.set(key, biome);
+    // A Postboss artifact is produced by the one reward walk that reaches its
+    // physical completion room. Duplicate publication would be a chronology bug.
+    for (const [selectionKey, capability] of biome.keepsakeSelections.entries()) {
+      if (keepsakeSelections.has(selectionKey))
+        throw new CandidateArtifactContractError(
+          `duplicate keepsake candidate artifact for ${selectionKey}`,
+        );
+      keepsakeSelections.set(selectionKey, capability);
+    }
   }
   return Object.freeze({
     biomeAt: (biome: BiomeAddress) => privateBiomes.get(semanticAddressKey(biome)),
+    keepsakeSelections: createKeepsakeSelectionCandidateArtifacts(keepsakeSelections),
   });
 }

@@ -10,6 +10,7 @@ import {
   type TraitOfferAddress,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
+  type KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -58,6 +59,7 @@ import type {
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
   WorkspaceBossCompletionArcanaInteraction,
+  WorkspaceKeepsakeSelectionInteraction,
   WorkspaceTraitOfferInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceRoomInteraction,
@@ -160,6 +162,16 @@ export interface WorkspaceInteractionBindingInput {
   readonly bossCompletionArcanaControls?: ReadonlyMap<
     string,
     { readonly address: BossCompletionArcanaAddress; readonly value: readonly string[] }
+  >;
+  readonly keepsakeSelectionControls?: ReadonlyMap<
+    string,
+    {
+      readonly address: KeepsakeSelectionAddress;
+      readonly value:
+        | { readonly kind: 'retain' }
+        | { readonly kind: 'replace'; readonly keepsakeKey: string }
+        | string;
+    }
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
@@ -1242,6 +1254,7 @@ export function bindWorkspaceInteractions(
     traitControls,
     levelResolutionControls,
     bossCompletionArcanaControls,
+    keepsakeSelectionControls,
     roomControls,
     services,
     startInteractionRequirements,
@@ -1788,6 +1801,63 @@ export function bindWorkspaceInteractions(
       }),
     );
   }
+  const keepsakeSelections = new Map<string, WorkspaceKeepsakeSelectionInteraction>();
+  for (const [key, control] of keepsakeSelectionControls ?? []) {
+    const postboss = control.address.owner !== 'routeStart';
+    keepsakeSelections.set(
+      key,
+      Object.freeze({
+        choices: Object.freeze(
+          catalog.keepsakes.values.map((keepsake) =>
+            Object.freeze({ label: keepsake.label, value: keepsake.key }),
+          ),
+        ),
+        key,
+        load: () => candidates.keepsakeSelections(control.address),
+        owner: control.address,
+        value: control.value,
+        replaceIntent: (keepsakeKey: string) =>
+          Object.freeze({
+            command: postboss
+              ? Object.freeze({
+                  kind: 'ReplacePostbossKeepsake' as const,
+                  selection: control.address as Extract<
+                    KeepsakeSelectionAddress,
+                    {
+                      readonly owner: import('@run-planner/engine/authored-project').CompletionRoomAddress;
+                    }
+                  >,
+                  value: Object.freeze({ kind: 'replace' as const, keepsakeKey }),
+                })
+              : Object.freeze({
+                  kind: 'ReplaceStartingKeepsake' as const,
+                  selection: control.address as Extract<
+                    KeepsakeSelectionAddress,
+                    { readonly owner: 'routeStart' }
+                  >,
+                  keepsakeKey,
+                }),
+          }),
+        ...(postboss
+          ? {
+              retainIntent: () =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplacePostbossKeepsake' as const,
+                    selection: control.address as Extract<
+                      KeepsakeSelectionAddress,
+                      {
+                        readonly owner: import('@run-planner/engine/authored-project').CompletionRoomAddress;
+                      }
+                    >,
+                    value: Object.freeze({ kind: 'retain' as const }),
+                  }),
+                }),
+            }
+          : {}),
+      }),
+    );
+  }
 
   return Object.freeze({
     batchRewardStores,
@@ -1804,6 +1874,7 @@ export function bindWorkspaceInteractions(
     traitOffers,
     levelResolutions,
     bossCompletionArcana,
+    keepsakeSelections,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,

@@ -167,6 +167,7 @@ export const pEncounterDefinitions = [
     label: 'Athena combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksKeepsakeSelectionKeys: ['AthenaEncounterKeepsake'],
     npcPresentationKey: 'Athena',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Athena' },
     requirements: {

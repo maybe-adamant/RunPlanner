@@ -6,6 +6,8 @@ import type {
   BatchRewardStoreAddress,
   BiomeAddress,
   BossCompletionArcanaAddress,
+  CompletionRoomAddress,
+  KeepsakeSelectionAddress,
   BiomeFieldAddress,
   ExitDecisionAddress,
   ExitSelectionAddress,
@@ -30,6 +32,11 @@ import type { AuthoredLevelResolution, AuthoredTraitOffer, TraitOptionKey } from
 
 export type ProjectStateCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
+  | {
+      readonly kind: 'ReplaceStartingKeepsake';
+      readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: 'routeStart' }>;
+      readonly keepsakeKey: string;
+    }
   | {
       readonly kind: 'ReplaceRouteLoadout';
       readonly route: RouteAddress;
@@ -62,6 +69,11 @@ export type BossCompletionCommand = {
   readonly kind: 'ReplaceBossCompletionArcana';
   readonly completion: BossCompletionArcanaAddress;
   readonly arcanaKeys: readonly string[];
+};
+export type KeepsakeCommand = {
+  readonly kind: 'ReplacePostbossKeepsake';
+  readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: CompletionRoomAddress }>;
+  readonly value: import('../model').PostbossKeepsakeDisposition;
 };
 
 export type TopologyCommand =
@@ -302,6 +314,7 @@ export type OccurrenceLeafCommand =
 export type ProjectCommand =
   | ProjectStateCommand
   | BossCompletionCommand
+  | KeepsakeCommand
   | TopologyCommand
   | RoomReplacementCommand
   | RouteDetourCommand

@@ -56,6 +56,9 @@ export function createProjectDocument(
           biomeKey,
           state: createInitialBiomeState(layout),
           topology: null,
+          ...(catalog.biomes.byKey[biomeKey]?.hasPostbossKeepsakeRack
+            ? { postbossKeepsakeDisposition: { kind: 'retain' as const } }
+            : {}),
         };
       }),
     };

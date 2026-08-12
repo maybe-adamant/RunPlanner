@@ -75,6 +75,12 @@ describe('Run State presentation', () => {
         },
         events: [],
       },
+      keepsakes: {
+        currentKey: 'ManaOverTimeRefundKeepsake',
+        history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
+        removedKeys: [],
+        fatedStatus: 'Unknown',
+      },
       forfeitStatus: 'consumed',
       bags: [
         {
