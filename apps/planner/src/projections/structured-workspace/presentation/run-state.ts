@@ -157,6 +157,16 @@ export function presentRunState(
     Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),
   );
   return Object.freeze({
+    arcana: Object.freeze(
+      snapshot.arcanaFear.arcana.active.map((card) =>
+        Object.freeze({
+          key: card.key,
+          label: catalog.arcanaCards.byKey[card.key]?.label ?? card.key,
+          origin: card.origin,
+          rarity: card.rarity,
+        }),
+      ),
+    ),
     bags: Object.freeze(
       snapshot.bags.map((bag) =>
         Object.freeze({
@@ -181,6 +191,23 @@ export function presentRunState(
     godPool: Object.freeze({
       inPool: Object.freeze(
         snapshot.godPool.acquiredSourceKeys.map((key) => sourcePresentation(catalog, key)),
+      ),
+    }),
+    fear: Object.freeze({
+      configuredTotal: snapshot.arcanaFear.fear.configuredTotal,
+      active: Object.freeze(
+        catalog.fearVows.values.flatMap((vow) => {
+          const rank = snapshot.arcanaFear.fear.effectiveRanks[vow.key] ?? 0;
+          return rank > 0 ? [Object.freeze({ key: vow.key, label: vow.label, rank })] : [];
+        }),
+      ),
+      disabled: Object.freeze(
+        snapshot.arcanaFear.fear.disabledVowKeys.flatMap((key) => {
+          const rank = snapshot.arcanaFear.fear.configuredRanks[key] ?? 0;
+          return rank > 0
+            ? [Object.freeze({ key, label: catalog.fearVows.byKey[key]?.label ?? key, rank })]
+            : [];
+        }),
       ),
     }),
     traits: Object.freeze({

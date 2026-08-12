@@ -40,6 +40,7 @@ import {
 } from '@run-planner/test-fixtures';
 
 import { createDefaultTraitOffers } from '../../src/authored-project/traits';
+import { createTestArcanaFearState } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import {
   initializeRewardBranches,
@@ -1733,7 +1734,7 @@ describe('reached trait offer chronology', () => {
     let branches = settleTestRoomReward(
       biome,
       createOccurrenceId('invalid-hammer-trace'),
-      initializeRewardBranches(),
+      initializeRewardBranches(undefined, createTestArcanaFearState()),
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('invalid-hammer-trace')),
         offer: hammer,

@@ -63,6 +63,16 @@ describe('Run State presentation', () => {
         enteredBiomes: 0,
         upgradableTraitCount: 0,
       },
+      arcanaFear: {
+        arcana: { active: [{ key: 'ChanneledCast', origin: 'temporary', rarity: 'Heroic' }] },
+        fear: {
+          configuredRanks: { EnemyDamageShrineUpgrade: 2, EnemyHealthShrineUpgrade: 1 },
+          configuredTotal: 4,
+          disabledVowKeys: ['EnemyDamageShrineUpgrade'],
+          effectiveRanks: { EnemyDamageShrineUpgrade: 0, EnemyHealthShrineUpgrade: 1 },
+        },
+        events: [],
+      },
       bags: [
         {
           storeKey: 'RunProgress',
@@ -95,6 +105,14 @@ describe('Run State presentation', () => {
     });
     expect(state.godPool).toMatchObject({
       inPool: [{ key: 'ApolloUpgrade', label: 'Apollo' }],
+    });
+    expect(state.arcana).toEqual([
+      { key: 'ChanneledCast', label: 'The Sorceress', origin: 'temporary', rarity: 'Heroic' },
+    ]);
+    expect(state.fear).toMatchObject({
+      configuredTotal: 4,
+      active: [{ key: 'EnemyHealthShrineUpgrade', label: 'Vow of Grit', rank: 1 }],
+      disabled: [{ key: 'EnemyDamageShrineUpgrade', label: 'Vow of Pain', rank: 2 }],
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',

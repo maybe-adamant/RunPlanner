@@ -23,6 +23,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
+import { createTestArcanaFearState } from '../../../support/arcana-fear';
 import { materializeHubDecision } from '../../../../src/simulation/materialization';
 import {
   initializeRewardBranches,
@@ -786,7 +787,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     };
     const branches = settleOwnedAcquisitionSite(
       catalog,
-      initializeRewardBranches(),
+      initializeRewardBranches(undefined, createTestArcanaFearState()),
       {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',

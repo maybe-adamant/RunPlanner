@@ -183,6 +183,8 @@ describe('BiomeWorkspace', () => {
 
     await user.click(launcher);
     const sheet = screen.getByRole('region', { name: /State before/ });
+    expect(within(sheet).getByRole('heading', { name: 'Arcana' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: /Fear/ })).toBeTruthy();
     const godHeading = within(sheet).getByRole('heading', { name: 'Gods in pool' });
     const godSection = godHeading.closest('section');
     if (godSection === null) throw new Error('Gods in pool section is missing');

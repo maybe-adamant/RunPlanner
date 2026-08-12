@@ -1,4 +1,21 @@
 export {
+  createArcanaFearState,
+  activateTemporaryArcana,
+  promoteArcana,
+  suppressFearVow,
+  type ActiveArcanaState,
+  type ArcanaActivationOrigin,
+  type ArcanaFearState,
+  type ArcanaFearEvent,
+  type ArcanaFearEvidence,
+  type ArcanaTransitionAssessment,
+  type ArcanaTransitionReason,
+  type FearTransitionAssessment,
+  type FearTransitionReason,
+  type ArcanaState,
+  type FearState,
+} from './arcana-fear';
+export {
   CompletenessContractError,
   evaluateBiomeCompleteness,
   type BiomeCompletenessResult,

@@ -69,6 +69,7 @@ import {
 } from '../traits';
 import type { AuthoredTraitOffer } from '../../authored-project/traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
+import type { ArcanaFearState } from '../arcana-fear';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -86,6 +87,7 @@ export interface RewardBranchState {
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
   readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
+  readonly arcanaFear: ArcanaFearState;
 }
 
 /**
@@ -181,6 +183,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     },
     pendingShops: orderedRecord(branch.pendingShops),
     traitHistory: branch.traitHistory,
+    arcanaFear: branch.arcanaFear,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
 }
@@ -593,8 +596,10 @@ export function beginRewardRoom(
 
 export function initializeRewardBranches(
   initialBranches?: readonly RewardBranch[],
+  initialArcanaFear?: ArcanaFearState,
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
+    if (initialArcanaFear === undefined) throw new Error('initial Arcana/Fear state is required');
     return Object.freeze([
       Object.freeze({
         bags: Object.freeze({}),
@@ -604,6 +609,7 @@ export function initializeRewardBranches(
         processedThroughHistorySequence: 0,
         traitHistory: createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
+        arcanaFear: initialArcanaFear,
       }),
     ]);
   }
@@ -617,6 +623,7 @@ export function initializeRewardBranches(
         processedThroughHistorySequence: 0,
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
+        arcanaFear: branch.arcanaFear,
       }),
     ),
   );
@@ -1720,5 +1727,6 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
     ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
+    arcanaFear: branch.arcanaFear,
   });
 }

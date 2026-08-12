@@ -119,6 +119,7 @@ import {
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
+import { createArcanaFearState } from '../arcana-fear';
 import {
   prepareAcquisitionOrderCandidateContext,
   preparePickupAcquisitionOrderCandidateContext,
@@ -1150,7 +1151,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
       .map((decision) => [semanticAddressKey(decision.source.origin), decision]),
   );
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
-  let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
+  let branches: readonly RewardBranchState[] = initializeRewardBranches(
+    initialBranches,
+    initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+  );
   let pendingHubBoard:
     | {
         readonly frontierBranches: readonly RewardBranchState[];

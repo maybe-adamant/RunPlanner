@@ -100,6 +100,33 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         </button>
       </header>
       <section>
+        <h3>Arcana</h3>
+        {state.arcana.length === 0 ? (
+          <p>None active</p>
+        ) : (
+          <ul>
+            {state.arcana.map((card) => (
+              <li key={card.key}>
+                {card.label} · {card.rarity} · {card.origin}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section>
+        <h3>Fear · {state.fear.configuredTotal} configured</h3>
+        <p>
+          Active:{' '}
+          {state.fear.active.map((vow) => `${vow.label} · Rank ${vow.rank}`).join(' · ') || 'None'}
+        </p>
+        {state.fear.disabled.length === 0 ? null : (
+          <p>
+            Circe-disabled:{' '}
+            {state.fear.disabled.map((vow) => `${vow.label} · Rank ${vow.rank}`).join(' · ')}
+          </p>
+        )}
+      </section>
+      <section>
         <h3>Gods in pool</h3>
         <p>{state.godPool.inPool.map(({ label }) => label).join(' · ') || 'None yet'}</p>
       </section>
