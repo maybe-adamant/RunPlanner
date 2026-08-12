@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createBatchRewardStoreAddress,
+  createCirceResolutionAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -42,6 +43,7 @@ import {
   goldenHBiome,
   goldenIBiome,
   createRepresentativeNOPQProject,
+  createRepresentativeNOProject,
   appendCompleteN,
   appendNEntry,
   authorLegalTraitOffers,
@@ -95,6 +97,35 @@ function bind(
       .flatMap((control) => control.traitOffers ?? [])
       .map((control) => [semanticAddressKey(control.address), control] as const),
   );
+  const appendEncounterTraits = (
+    rooms: readonly {
+      readonly encounterPhases: readonly {
+        readonly traitOffer?: import('../contract').WorkspaceTraitOfferControl;
+      }[];
+    }[],
+  ) => {
+    for (const room of rooms)
+      for (const phase of room.encounterPhases)
+        if (phase.traitOffer !== undefined)
+          traitControls.set(semanticAddressKey(phase.traitOffer.address), phase.traitOffer);
+  };
+  for (const node of assembly.nodes) {
+    if (node.kind === 'occurrenceWorkbench') appendEncounterTraits([node.room]);
+    else if (
+      node.kind === 'ordinaryBatch' ||
+      node.kind === 'takeoverBatch' ||
+      node.kind === 'mixedBatch'
+    )
+      appendEncounterTraits(node.targets.map((target) => target.room));
+    else if (node.kind === 'hubDecision') {
+      appendEncounterTraits(
+        node.slots.flatMap((slot) => (slot.room === undefined ? [] : [slot.room])),
+      );
+      appendEncounterTraits(
+        node.visits.flatMap((visit) => (visit.room === undefined ? [] : [visit.room])),
+      );
+    }
+  }
   const interactionServices =
     candidateSession === undefined
       ? services
@@ -125,6 +156,102 @@ function bind(
 }
 
 describe('structured workspace interaction binding', () => {
+  it('binds Circe draft switches and the blocking finding to the exact resolution child', () => {
+    let project = createRepresentativeNOProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Surface'),
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank: 1,
+    });
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        oBiome,
+        { kind: 'occurrence', occurrenceId: oOccurrenceIds.story },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const directOffer: AuthoredTraitOffer = Object.freeze({
+      giverKey: 'Circe',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'CirceShrinkTrait', rarity: 'Common' as const }),
+        Object.freeze({
+          traitKey: 'RandomArcanaTrait',
+          rarity: 'Common' as const,
+          circeResolution: Object.freeze({
+            kind: 'activateArcana' as const,
+            arcanaKeys: Object.freeze(['ChanneledCast']),
+          }),
+        }),
+        Object.freeze({
+          traitKey: 'RemoveShrineTrait',
+          rarity: 'Common' as const,
+          circeResolution: Object.freeze({
+            kind: 'disableFear' as const,
+            vowKey: 'EnemyDamageShrineUpgrade',
+          }),
+        }),
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option1',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: directOffer,
+    });
+    const interaction = bind(project, 'Surface', 'O').interactions.traitOffers.get(
+      semanticAddressKey(trait),
+    );
+    if (interaction === undefined) throw new Error('Circe interaction is missing');
+
+    const redDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option2' as const });
+    const red = interaction.optionDomain(redDraft, 'option2').circeResolution;
+    expect(red?.control.address).toEqual(createCirceResolutionAddress(trait, 'option2'));
+    expect(red?.forOffer(redDraft).load()).toMatchObject({
+      effect: 'activateArcana',
+      requiredCount: 1,
+    });
+    const redIntent = red?.intentFor(redDraft, {
+      kind: 'activateArcana',
+      arcanaKeys: ['ChanneledCast'],
+    });
+    expect(redIntent?.command.value.options[2]?.circeResolution).toEqual(
+      directOffer.options[2]?.circeResolution,
+    );
+
+    const blackDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option3' as const });
+    const black = interaction.optionDomain(blackDraft, 'option3').circeResolution;
+    expect(black?.control.address).toEqual(createCirceResolutionAddress(trait, 'option3'));
+    expect(black?.forOffer(blackDraft).load()).toMatchObject({
+      effect: 'disableFear',
+      requiredCount: 1,
+    });
+
+    const invalidOffer = Object.freeze({
+      ...directOffer,
+      options: Object.freeze([
+        directOffer.options[0],
+        Object.freeze({ traitKey: 'RandomArcanaTrait', rarity: 'Common' as const }),
+        directOffer.options[2],
+      ]) as AuthoredTraitOffer['options'],
+      selectedOptionKey: 'option2' as const,
+    });
+    const invalidProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: invalidOffer,
+    });
+    const invalid = bind(invalidProject, 'Surface', 'O');
+    const child = createCirceResolutionAddress(trait, 'option2');
+    expect(invalid.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
+    expect(
+      invalid.interactions.traitOffers
+        .get(semanticAddressKey(trait))
+        ?.optionDomain(invalidOffer, 'option2').circeResolution?.control.marker.findingCount,
+    ).toBeGreaterThan(0);
+  });
+
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {
     const events: CandidateEvaluationEvent[] = [];
     const project = createGoldenFGHIProject();

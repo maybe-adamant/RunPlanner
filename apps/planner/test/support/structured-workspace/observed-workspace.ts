@@ -40,7 +40,10 @@ function appendRewardControlMarkers(
   control: WorkspaceRoomSummary['rewardControls'][number],
 ): void {
   appendMarker(markers, control.marker);
-  for (const trait of control.traitOffers ?? []) appendMarker(markers, trait.marker);
+  for (const trait of control.traitOffers ?? []) {
+    appendMarker(markers, trait.marker);
+    appendMarker(markers, trait.circeResolution?.marker);
+  }
   for (const resolution of control.levelResolutions ?? []) {
     appendMarker(markers, resolution.marker);
   }
@@ -56,8 +59,10 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   if (room.acquisitions?.placement === 'afterProducer') {
     appendMarker(markers, room.acquisitions.marker);
     for (const entry of room.acquisitions.entries) {
-      for (const trait of entry.rewardControl?.traitOffers ?? [])
+      for (const trait of entry.rewardControl?.traitOffers ?? []) {
         appendMarker(markers, trait.marker);
+        appendMarker(markers, trait.circeResolution?.marker);
+      }
       for (const resolution of entry.rewardControl?.levelResolutions ?? []) {
         appendMarker(markers, resolution.marker);
       }
@@ -117,19 +122,28 @@ function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMar
     case 'fixed':
       return Object.freeze([
         local.marker,
-        ...(local.control?.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.control?.traitOffers ?? []).flatMap((trait) => [
+          trait.marker,
+          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ]),
         ...(local.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'incomingReward':
       return Object.freeze([
         local.control.marker,
-        ...(local.control.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.control.traitOffers ?? []).flatMap((trait) => [
+          trait.marker,
+          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ]),
         ...(local.control.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'ephyra':
       return Object.freeze([
         local.incomingReward.marker,
-        ...(local.incomingReward.traitOffers ?? []).map((trait) => trait.marker),
+        ...(local.incomingReward.traitOffers ?? []).flatMap((trait) => [
+          trait.marker,
+          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ]),
         ...(local.incomingReward.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'none':

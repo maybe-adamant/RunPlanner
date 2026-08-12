@@ -17,6 +17,7 @@ import type {
   TraitOptionKey,
 } from '../authored-project/traits';
 import type { RewardHistoryState } from '../reward-kernel/model';
+import type { ArcanaFearState } from './arcana-fear';
 import type { TraitFindingCode } from './model';
 export type { TraitFindingCode } from './model';
 import { optionIndex } from '../authored-project/traits';
@@ -404,8 +405,11 @@ export interface TraitOfferContext {
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
   readonly deathDefianceConditionMet?: boolean;
+  /** Exact pre-acquisition Fear frontier for catalog-owned Circe availability. */
+  readonly circeRemovableFearVow?: boolean;
   /** The declaration-resolved provider for the addressed acquisition role. */
   readonly resolvedProviderKey?: string;
+  readonly manualArcanaGraspCost?: number;
 }
 
 export interface TraitAssessmentFinding {
@@ -454,6 +458,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly before: TraitHistoryState;
   readonly offer: AuthoredTraitOffer;
   readonly context: TraitOfferContext;
+  /** Exact pre-acquisition frontier retained only for Circe candidate capability. */
+  readonly arcanaFear?: ArcanaFearState;
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
@@ -488,6 +494,7 @@ export interface SelectedTraitOfferAssessment {
 export interface TraitOfferCandidateContext {
   readonly before: TraitHistoryState;
   readonly context: TraitOfferContext;
+  readonly arcanaFear?: ArcanaFearState;
 }
 
 export interface TraitContextUnavailable {
@@ -505,6 +512,7 @@ export function evaluateReachedTraitOffer(
   before: TraitHistoryState,
   context: TraitOfferContext,
   chronologicalIndex: number,
+  arcanaFear?: ArcanaFearState,
 ): ReachedTraitOfferEvaluation {
   const composition = assessTraitOfferComposition(catalog, offer, before);
   const replacementComposition = assessTraitReplacementComposition(catalog, offer, before, context);
@@ -515,6 +523,7 @@ export function evaluateReachedTraitOffer(
     before,
     offer,
     context,
+    ...(arcanaFear === undefined ? {} : { arcanaFear }),
     assessments: assessTraitOffer(catalog, offer, before, context),
     composition,
     replacementComposition,
@@ -651,7 +660,8 @@ export function recordReachedTraitOffer(
   // Only declarations that equip their selection may mutate the canonical
   // equipped-trait history; descriptors and pickup producers remain
   // observational at this boundary.
-  if (catalog.traits.byKey[selectedTraitKey]?.selectedDisposition.kind !== 'equip') {
+  const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
+  if (selectedDisposition?.kind !== 'equip' && selectedDisposition?.kind !== 'circe') {
     return Object.freeze({ history: evaluation.before });
   }
   const selectedAssessment =
@@ -913,10 +923,16 @@ function checkRequirement(
           ? context.devotionNoDuo
           : requirement.context === 'blockGiftBoons'
             ? context.blockGiftBoons
-            : context.deathDefianceConditionMet) === requirement.required
+            : requirement.context === 'circeRemovableFearVow'
+              ? context.circeRemovableFearVow
+              : context.deathDefianceConditionMet) === requirement.required
       )
         return undefined;
       return { code: 'offerContext', detail: requirement.context };
+    case 'manualArcanaGraspCost':
+      return (context.manualArcanaGraspCost ?? 0) >= requirement.minimum
+        ? undefined
+        : { code: 'missingPrerequisite', detail: 'manualArcanaGraspCost' };
   }
 }
 

@@ -19,6 +19,7 @@ import { medeaGiver, medeaTraits } from './medea';
 import { narcissusGiver, narcissusTraits } from './narcissus';
 import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
 import { arcanaTraits } from './arcana';
+import { circeGiver, circeTraits } from './circe';
 
 const weapons = [
   {
@@ -106,6 +107,7 @@ const aspects = [
 ] as const;
 const traits = [
   ...arcanaTraits,
+  ...circeTraits,
   ...aphroditeTraits,
   ...arachneTraits,
   ...artemisTraits,
@@ -146,6 +148,7 @@ const givers = [
   hermesGiver,
   medeaGiver,
   narcissusGiver,
+  circeGiver,
   weaponUpgradeGiver,
 ] as const;
 
@@ -161,6 +164,11 @@ export const traitCatalogInput: RawTraitCatalogInput = {
       key: 'deathDefianceConditionMet',
       kind: 'authoredCondition',
       authoredCondition: 'deathDefianceConditionMet',
+    },
+    {
+      key: 'circeRemovableFearVow',
+      kind: 'authoredCondition',
+      authoredCondition: 'circeRemovableFearVow',
     },
   ],
   deferredTraitKeys: [

@@ -11,6 +11,7 @@ import {
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createTraitOfferAddress,
+  createCirceResolutionAddress,
   createLevelResolutionAddress,
   traitGiverUsesOfferContext,
   semanticAddressKey,
@@ -163,6 +164,25 @@ function traitOfferControls(
     const giver = input.catalog.traitGivers.byKey[giverKey];
     if (giver === undefined) continue;
     const address = createTraitOfferAddress(owner.address, acquisitionRole);
+    const selected =
+      offer.options[
+        offer.selectedOptionKey === 'option1' ? 0 : offer.selectedOptionKey === 'option2' ? 1 : 2
+      ];
+    const selectedDisposition =
+      selected === undefined
+        ? undefined
+        : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+    const circeResolution =
+      selectedDisposition?.kind !== 'circe'
+        ? undefined
+        : Object.freeze({
+            address: createCirceResolutionAddress(address, offer.selectedOptionKey),
+            marker: input.markerDestinations.marker(
+              createCirceResolutionAddress(address, offer.selectedOptionKey),
+            ),
+            optionKey: offer.selectedOptionKey,
+            ...(selected?.circeResolution === undefined ? {} : { value: selected.circeResolution }),
+          });
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
@@ -171,6 +191,7 @@ function traitOfferControls(
         marker: input.markerDestinations.marker(address),
         offer,
         rewardOwner: owner.address,
+        ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
           ? { deathDefianceCondition: { value: offer.deathDefianceConditionMet ?? false } }
           : {}),
@@ -540,21 +561,56 @@ function activeEncounterPhasesForOwner(
       producer === undefined ? undefined : input.catalog.traitGivers.byKey[producer.giverKey];
     const traitOffer =
       authoredTraitOffer !== undefined && producer !== undefined && giver !== undefined
-        ? Object.freeze({
-            acquisitionRoleLabel: 'Selection',
-            address: createTraitOfferAddress(address, 'selection'),
-            giver,
-            marker: input.markerDestinations.marker(createTraitOfferAddress(address, 'selection')),
-            offer: authoredTraitOffer,
-            rewardOwner: address,
-            ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
-              ? {
-                  deathDefianceCondition: {
-                    value: authoredTraitOffer.deathDefianceConditionMet ?? false,
-                  },
-                }
-              : {}),
-          })
+        ? (() => {
+            const traitAddress = createTraitOfferAddress(address, 'selection');
+            const selected =
+              authoredTraitOffer.options[
+                authoredTraitOffer.selectedOptionKey === 'option1'
+                  ? 0
+                  : authoredTraitOffer.selectedOptionKey === 'option2'
+                    ? 1
+                    : 2
+              ];
+            const selectedDisposition =
+              selected === undefined
+                ? undefined
+                : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+            const circeResolution =
+              selectedDisposition?.kind !== 'circe'
+                ? undefined
+                : Object.freeze({
+                    address: createCirceResolutionAddress(
+                      traitAddress,
+                      authoredTraitOffer.selectedOptionKey,
+                    ),
+                    marker: input.markerDestinations.marker(
+                      createCirceResolutionAddress(
+                        traitAddress,
+                        authoredTraitOffer.selectedOptionKey,
+                      ),
+                    ),
+                    optionKey: authoredTraitOffer.selectedOptionKey,
+                    ...(selected?.circeResolution === undefined
+                      ? {}
+                      : { value: selected.circeResolution }),
+                  });
+            return Object.freeze({
+              acquisitionRoleLabel: 'Selection',
+              address: traitAddress,
+              giver,
+              marker: input.markerDestinations.marker(traitAddress),
+              offer: authoredTraitOffer,
+              rewardOwner: address,
+              ...(circeResolution === undefined ? {} : { circeResolution }),
+              ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
+                ? {
+                    deathDefianceCondition: {
+                      value: authoredTraitOffer.deathDefianceConditionMet ?? false,
+                    },
+                  }
+                : {}),
+            });
+          })()
         : undefined;
     phases.push(
       Object.freeze({

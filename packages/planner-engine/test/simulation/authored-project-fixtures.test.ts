@@ -93,17 +93,17 @@ describe('canonical authored-project fixtures', () => {
     [
       'Surface N/O',
       () => createRepresentativeNOProject(),
-      'c58591d5bcb423f370d2851a9005c911b38d61ad981de2067389b070293f8e2d',
+      '45c8d4e07d63dfa6ea0d1caf458847827a42945bf8f8aafaf2b0ed9f7acb4b46',
     ],
     [
       'Surface N/O/P',
       () => createRepresentativeNOPProject(),
-      '4025d645442a1732155a5380a7d71eb8175bc160190f1131e149e98aa1094d19',
+      '0596e77a8ecffb1cf830fc3df103572a43fb9dfafc1f36e4db4b3c694868b2ad',
     ],
     [
       'Surface N/O/P/Q',
       () => createRepresentativeNOPQProject(),
-      'f265534458d82adfcf718744c237a282fc4bf4773655788f456ba3fc375f3863',
+      '340880ce98cc1e8e7d2deb0d1c72b0512ed0f414da3192dee2bdf6dc645f5025',
     ],
   ])('preserves the characterized %s document', (_name, createProject, digest) => {
     expect(authoredDocumentDigest(createProject())).toBe(digest);

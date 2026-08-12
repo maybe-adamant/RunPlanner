@@ -87,6 +87,10 @@ import {
 } from './boss-completion-arcana';
 import {
   evaluateTraitAcquisitionTargetDomain,
+  evaluateCirceResolutionDomain,
+  type CirceResolutionDomainEvaluation,
+  type CirceResolutionDomainQuery,
+  type EvaluatedCirceResolutionDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
@@ -125,7 +129,10 @@ export type ProjectCandidateQuery =
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
-  ProjectCandidateQuery | TraitOfferFocusedOptionCandidateQuery | TraitAcquisitionTargetDomainQuery;
+  | ProjectCandidateQuery
+  | TraitOfferFocusedOptionCandidateQuery
+  | TraitAcquisitionTargetDomainQuery
+  | CirceResolutionDomainQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -156,7 +163,8 @@ export type ProjectCandidateEvaluation =
 export type ProjectCandidateSessionEvaluation =
   | ProjectCandidateEvaluation
   | EvaluatedTraitOfferFocusedOptionCandidate
-  | EvaluatedTraitAcquisitionTargetDomain;
+  | EvaluatedTraitAcquisitionTargetDomain
+  | EvaluatedCirceResolutionDomain;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -179,6 +187,8 @@ export interface ProjectCandidateSession {
     (
       queries: readonly TraitAcquisitionTargetDomainQuery[],
     ): readonly TraitAcquisitionTargetDomainEvaluation[];
+    (query: CirceResolutionDomainQuery): CirceResolutionDomainEvaluation;
+    (queries: readonly CirceResolutionDomainQuery[]): readonly CirceResolutionDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
     (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
@@ -358,6 +368,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'circeResolutionDomain':
+      return evaluateCirceResolutionDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -386,6 +405,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly TraitAcquisitionTargetDomainQuery[],
   ): readonly TraitAcquisitionTargetDomainEvaluation[];
+  function evaluate(query: CirceResolutionDomainQuery): CirceResolutionDomainEvaluation;
+  function evaluate(
+    queries: readonly CirceResolutionDomainQuery[],
+  ): readonly CirceResolutionDomainEvaluation[];
   function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
   function evaluate(
     queries: readonly ProjectCandidateSessionQuery[],

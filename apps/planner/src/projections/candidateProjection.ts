@@ -5,6 +5,7 @@ import {
   type CandidateEvaluationEvent,
   type EvaluatedTraitAcquisitionTargetCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
+  type CirceResolutionDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
@@ -209,6 +210,12 @@ export interface CandidateProjectionSession {
     optionKey: TraitOptionKey,
     retainedTargetTraitKey?: string,
   ) => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+  /** Typed exact Circe frontier from the prepared engine candidate session. */
+  readonly circeResolution: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => CirceResolutionDomainEvaluation;
   /**
    * Exact declaration-owned Pom capability. The engine retains the correlated
    * branch histories; application presentation only adapts its returned data.
@@ -285,7 +292,10 @@ function offerWithFocusedOption(
 function candidateOptionEvaluation(
   evaluation: ProjectCandidateSessionEvaluation,
 ): CandidateProjectionEvaluation {
-  if (evaluation.kind === 'traitAcquisitionTargetDomain') {
+  if (
+    evaluation.kind === 'traitAcquisitionTargetDomain' ||
+    evaluation.kind === 'circeResolutionDomain'
+  ) {
     throw new Error('a target-domain aggregate cannot be projected as one candidate option');
   }
   return evaluation;
@@ -816,6 +826,17 @@ export function createCandidateSessionFactory(
         projectCache.options.set(key, projected);
         return projected;
       },
+      circeResolution: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+      ) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'circeResolutionDomain',
+          trait: owner,
+          value,
+          optionKey,
+        }),
       levelResolution: (owner: LevelResolutionAddress, value: AuthoredLevelResolution) => {
         const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, owner);
         if (capability === undefined) return undefined;

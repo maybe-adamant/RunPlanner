@@ -934,8 +934,12 @@ export function selectedTraitOfferProducts(
       } else {
         const duplicate = current.branches.some(
           (candidate) =>
-            JSON.stringify([candidate.before, candidate.context, candidate.offer]) ===
-            JSON.stringify([trace.before, trace.context, trace.offer]),
+            JSON.stringify([
+              candidate.before,
+              candidate.context,
+              candidate.offer,
+              candidate.arcanaFear,
+            ]) === JSON.stringify([trace.before, trace.context, trace.offer, trace.arcanaFear]),
         );
         if (!duplicate) current.branches.push(trace);
         current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
@@ -977,7 +981,11 @@ export function selectedTraitOfferProducts(
       semanticAddressKey(address),
       Object.freeze(
         entry.branches.map((trace) =>
-          Object.freeze({ before: trace.before, context: trace.context }),
+          Object.freeze({
+            before: trace.before,
+            context: trace.context,
+            ...(trace.arcanaFear === undefined ? {} : { arcanaFear: trace.arcanaFear }),
+          }),
         ),
       ),
     );

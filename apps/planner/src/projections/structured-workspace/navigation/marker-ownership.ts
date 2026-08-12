@@ -13,12 +13,18 @@ export type WorkspaceDecisionBatchNode =
 
 function rewardControlMarkers(control: {
   readonly marker: WorkspaceMarker;
-  readonly traitOffers?: readonly { readonly marker: WorkspaceMarker }[];
+  readonly traitOffers?: readonly {
+    readonly marker: WorkspaceMarker;
+    readonly circeResolution?: { readonly marker: WorkspaceMarker };
+  }[];
   readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
   return Object.freeze([
     control.marker,
-    ...(control.traitOffers ?? []).map((trait) => trait.marker),
+    ...(control.traitOffers ?? []).flatMap((trait) => [
+      trait.marker,
+      ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+    ]),
     ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
 }
@@ -34,7 +40,10 @@ function workspacePostOutgoingAcquisitionMarkers(
   return Object.freeze([
     acquisitions.marker,
     ...acquisitions.entries.flatMap((entry) => [
-      ...(entry.rewardControl?.traitOffers ?? []).map((trait) => trait.marker),
+      ...(entry.rewardControl?.traitOffers ?? []).flatMap((trait) => [
+        trait.marker,
+        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+      ]),
       ...(entry.rewardControl?.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
   ]);
@@ -110,11 +119,21 @@ export function workspaceOccurrenceOwnedMarkers(
     room.marker,
     ...room.encounterPhases.flatMap((phase) => [
       phase.marker,
-      ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+      ...(phase.traitOffer === undefined
+        ? []
+        : [
+            phase.traitOffer.marker,
+            ...(phase.traitOffer.circeResolution === undefined
+              ? []
+              : [phase.traitOffer.circeResolution.marker]),
+          ]),
     ]),
     ...room.rewardControls.flatMap((control) => [
       control.marker,
-      ...(control.traitOffers ?? []).map((trait) => trait.marker),
+      ...(control.traitOffers ?? []).flatMap((trait) => [
+        trait.marker,
+        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+      ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
@@ -167,7 +186,10 @@ export function workspaceHubMainRewardMarkers(
     case 'fixed':
       return Object.freeze([
         room.roomLocal.marker,
-        ...(room.roomLocal.control?.traitOffers ?? []).map((trait) => trait.marker),
+        ...(room.roomLocal.control?.traitOffers ?? []).flatMap((trait) => [
+          trait.marker,
+          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ]),
         ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
     case 'incomingReward':

@@ -3,6 +3,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
+  createCirceResolutionAddress,
   createLevelResolutionAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
@@ -67,9 +68,10 @@ import {
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
 } from '../traits';
-import type { AuthoredTraitOffer } from '../../authored-project/traits';
+import { optionIndex, type AuthoredTraitOffer } from '../../authored-project/traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { ArcanaFearState } from '../arcana-fear';
+import { activateTemporaryArcana, promoteArcana, suppressFearVow } from '../arcana-fear';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -203,6 +205,7 @@ function mergeTraitEvaluations(
       value.before,
       value.context,
       value.offer,
+      value.arcanaFear,
     ]);
     unique.set(key, value);
   }
@@ -402,6 +405,7 @@ function applyTraitOfferForAcquisition(
       resolvedProviderKey: authored.giverKey,
     },
     branch.traitEvaluations?.length ?? 0,
+    branch.arcanaFear,
   );
   const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
@@ -514,19 +518,177 @@ export function processEncounterTraitOffer(
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
 ): RewardBranchState {
-  return applyTraitOfferForAcquisition(
+  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+  const disposition =
+    selected === undefined
+      ? undefined
+      : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+  const resolution = selected?.circeResolution;
+  const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, 'selection');
+  const circeRemovableFearVow = catalog.fearVows.values.some(
+    (vow) => vow.circeRemovable && (branch.arcanaFear.fear.effectiveRanks[vow.key] ?? 0) > 0,
+  );
+  const source = {
+    origin,
+    traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
+    traitContext: Object.freeze({
+      manualArcanaGraspCost: branch.arcanaFear.arcana.active
+        .filter((card) => card.origin === 'manual')
+        .reduce((total, card) => total + (catalog.arcanaCards.byKey[card.key]?.graspCost ?? 0), 0),
+      circeRemovableFearVow,
+    }),
+  } as const;
+  // Record the exact pre-effect frontier before validating Circe's authored
+  // child. Circe's ordinary offer findings stay provisional until that child
+  // is valid, so the child remains the first blocking repair owner.
+  const provisionalFindings =
+    disposition?.kind === 'circe' && findings !== undefined
+      ? new Map<string, FindingRegionEntry>()
+      : findings;
+  const applied = applyTraitOfferForAcquisition(
     catalog,
     branch,
-    {
-      origin,
-      traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
-      traitContext: Object.freeze({}),
-    },
+    source,
     'selection',
     lifecyclePoint,
     sequence,
-    findings,
+    provisionalFindings,
     findingChronology,
+  );
+  const preEffect: RewardBranchState = Object.freeze({
+    ...branch,
+    ...(applied.traitEvaluations === undefined
+      ? {}
+      : { traitEvaluations: applied.traitEvaluations }),
+  });
+  const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
+    if (findings !== undefined)
+      addCirceResolutionFinding(
+        findings,
+        createCirceResolutionAddress(
+          createTraitOfferAddress(origin as TraitOfferOwnerAddress, 'selection'),
+          offer.selectedOptionKey,
+        ),
+        lifecyclePoint,
+        sequence,
+        code,
+        selected?.traitKey,
+        detail,
+        findingChronology,
+      );
+    return preEffect;
+  };
+  if (disposition?.kind === 'circe') {
+    if (disposition.effect === 'activateArcana') {
+      const inactive = catalog.arcanaCards.values.filter(
+        (card) => !branch.arcanaFear.arcana.active.some((active) => active.key === card.key),
+      );
+      if (resolution?.kind !== 'activateArcana') return rejectCirce('circeResolutionMissing');
+      const required = inactive.length === 0 ? 0 : 1;
+      if (resolution.arcanaKeys.length !== required)
+        return rejectCirce(
+          'circeResolutionWrongCardinality',
+          `${required}:${resolution.arcanaKeys.length}`,
+        );
+      if (resolution.arcanaKeys.some((key) => !inactive.some((card) => card.key === key)))
+        return rejectCirce('circeResolutionTargetUnavailable');
+    } else if (disposition.effect === 'promoteArcana') {
+      const eligible = branch.arcanaFear.arcana.active.filter((card) => card.rarity === 'Epic');
+      if (resolution?.kind !== 'promoteArcana') return rejectCirce('circeResolutionMissing');
+      const required = Math.min(2, eligible.length);
+      if (resolution.arcanaKeys.length !== required)
+        return rejectCirce(
+          'circeResolutionWrongCardinality',
+          `${required}:${resolution.arcanaKeys.length}`,
+        );
+      if (resolution.arcanaKeys.some((key) => !eligible.some((card) => card.key === key)))
+        return rejectCirce('circeResolutionTargetUnavailable');
+    } else {
+      const eligible = catalog.fearVows.values.filter(
+        (vow) => vow.circeRemovable && (branch.arcanaFear.fear.effectiveRanks[vow.key] ?? 0) > 0,
+      );
+      if (eligible.length === 0) return rejectCirce('circeOptionUnavailable');
+      if (resolution?.kind !== 'disableFear' || resolution.vowKey === null)
+        return rejectCirce('circeResolutionMissing');
+      if (!eligible.some((vow) => vow.key === resolution.vowKey))
+        return rejectCirce('circeResolutionTargetUnavailable');
+    }
+  }
+  if (
+    findings !== undefined &&
+    provisionalFindings !== undefined &&
+    provisionalFindings !== findings
+  )
+    for (const [key, entry] of provisionalFindings) findings.set(key, entry);
+  if (
+    applied.traitHistory === branch.traitHistory ||
+    disposition?.kind !== 'circe' ||
+    selected === undefined
+  )
+    return applied;
+  const evidence = {
+    owner,
+    sequence,
+  };
+  if (disposition.effect === 'activateArcana') {
+    const inactive = catalog.arcanaCards.values.filter(
+      (card) => !applied.arcanaFear.arcana.active.some((active) => active.key === card.key),
+    );
+    if (
+      resolution?.kind !== 'activateArcana' ||
+      (inactive.length === 0
+        ? resolution.arcanaKeys.length !== 0
+        : resolution.arcanaKeys.length !== 1)
+    )
+      return applied;
+    if (resolution.arcanaKeys.length === 0) return applied;
+    const outcome = activateTemporaryArcana(
+      catalog,
+      applied.arcanaFear,
+      resolution.arcanaKeys,
+      evidence,
+    );
+    return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+  }
+  if (disposition.effect === 'promoteArcana') {
+    const eligible = applied.arcanaFear.arcana.active.filter((card) => card.rarity === 'Epic');
+    const required = Math.min(2, eligible.length);
+    if (resolution?.kind !== 'promoteArcana' || resolution.arcanaKeys.length !== required)
+      return applied;
+    const outcome = promoteArcana(catalog, applied.arcanaFear, resolution.arcanaKeys, evidence);
+    return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+  }
+  if (resolution?.kind !== 'disableFear' || resolution.vowKey === null) return applied;
+  const outcome = suppressFearVow(catalog, applied.arcanaFear, resolution.vowKey, evidence);
+  return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+}
+
+function addCirceResolutionFinding(
+  findings: Map<string, FindingRegionEntry>,
+  origin: SemanticAddress,
+  lifecyclePoint: string,
+  sequence: number,
+  code: TraitFindingCode,
+  traitKey: string | undefined,
+  detail?: string,
+  findingChronology?: FindingChronology,
+): void {
+  const value: SemanticFinding = Object.freeze({
+    code,
+    severity: 'error',
+    phase: 'rewardGeneration',
+    origin,
+    evidence: Object.freeze({
+      lifecyclePoint,
+      ...(traitKey === undefined ? {} : { traitKey }),
+      ...(detail === undefined ? {} : { detail }),
+    }),
+  });
+  addRewardFinding(
+    findings,
+    value,
+    ownerRegion(origin),
+    findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
   );
 }
 

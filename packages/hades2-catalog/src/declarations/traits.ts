@@ -81,7 +81,7 @@ export interface RawTraitOfferContextDeclaration {
   readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
   readonly blockedRarity?: TraitRarity;
   readonly roomFlag?: 'BlockGiftBoons';
-  readonly authoredCondition?: 'deathDefianceConditionMet';
+  readonly authoredCondition?: 'deathDefianceConditionMet' | 'circeRemovableFearVow';
 }
 
 export interface RawTraitCatalogInput {

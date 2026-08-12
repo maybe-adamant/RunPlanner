@@ -79,6 +79,9 @@ export type {
 } from './takeover-hub';
 export type {
   EvaluatedTraitAcquisitionTargetCandidate,
+  EvaluatedCirceResolutionDomain,
+  CirceResolutionDomainEvaluation,
+  CirceResolutionDomainQuery,
   EvaluatedTraitAcquisitionTargetDomain,
   EvaluatedTraitOfferCandidate,
   EvaluatedTraitOfferFocusedOptionCandidate,

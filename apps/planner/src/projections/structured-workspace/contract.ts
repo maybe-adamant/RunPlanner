@@ -25,6 +25,8 @@ import {
   type AcquisitionEntryAddress,
   type TargetAddress,
   type TraitOfferAddress,
+  type CirceResolutionAddress,
+  type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
   type TraitOptionKey,
@@ -189,9 +191,19 @@ export interface WorkspaceTraitOfferControl {
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
   readonly rewardOwner: SemanticAddress;
+  /** Present only for this offer's currently selected Circe special option. */
+  readonly circeResolution?: WorkspaceCirceResolutionControl;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
+}
+
+/** Exact selected Circe outcome owner; its domain is supplied by the candidate session. */
+export interface WorkspaceCirceResolutionControl {
+  readonly address: CirceResolutionAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly value?: AuthoredCirceResolution;
 }
 
 /** One exact declaration-owned Pom child beneath an active reward owner. */
@@ -210,6 +222,28 @@ export interface WorkspaceTraitOptionDomainInteraction {
   /** Whether this exact selected option owns a downstream acquisition-target step. */
   readonly hasTargetPicker: boolean;
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
+  /** Candidate-backed exact outcome editor for a selected Circe option only. */
+  readonly circeResolution?: WorkspaceCirceResolutionInteraction;
+}
+
+export interface WorkspaceCirceResolutionDomain {
+  readonly arcanaChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+  readonly outerAvailable: boolean;
+  readonly requiredCount: number;
+  readonly vowChoices: readonly WorkspaceInteractionChoice<string>[];
+}
+
+export interface WorkspaceCirceResolutionInteraction {
+  readonly control: WorkspaceCirceResolutionControl;
+  readonly intentFor: (
+    offer: AuthoredTraitOffer,
+    resolution: AuthoredCirceResolution,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  /** Binds the current draft before handing its loader to the sole React adapter. */
+  readonly forOffer: (offer: AuthoredTraitOffer) => {
+    readonly load: () => WorkspaceCirceResolutionDomain | undefined;
+  };
 }
 
 export interface WorkspaceTraitOfferInteraction {
