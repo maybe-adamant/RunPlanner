@@ -71,6 +71,8 @@ export interface ArcanaCardDeclaration {
     | { readonly kind: 'manual' }
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
+  /** Judgment alone declares its rank-scaled post-Boss activation counts. */
+  readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
 }
 
 export interface FearVowDeclaration {

@@ -9,6 +9,7 @@ import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
 import {
   initializeRewardBranches,
   mergeEquivalentRewardBranches,
@@ -106,5 +107,29 @@ describe('progressive Arcana and Fear state', () => {
       arcanaFear: activateTemporaryArcana(catalog, state, ['ChanneledCast'], evidence).state,
     });
     expect(mergeEquivalentRewardBranches([base, distinct])).toHaveLength(2);
+  });
+
+  it('derives the complete Circe target product and catalog-owned Judgment count once', () => {
+    const loadout = createDefaultRouteLoadout(catalog);
+    const state = createArcanaFearState(catalog, {
+      ...loadout,
+      manualArcanaKeys: ['CastCount'],
+      fearRanks: { ...loadout.fearRanks, EnemyDamageShrineUpgrade: 1 },
+    });
+    expect(circeResolutionDomain(catalog, state, 'activateArcana')).toMatchObject({
+      requiredCount: 1,
+      outerAvailable: true,
+    });
+    expect(circeResolutionDomain(catalog, state, 'promoteArcana')).toMatchObject({
+      requiredCount: 2,
+      outerAvailable: true,
+      arcanaKeys: ['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'],
+    });
+    expect(circeResolutionDomain(catalog, state, 'disableFear')).toMatchObject({
+      requiredCount: 1,
+      vowKeys: ['EnemyDamageShrineUpgrade'],
+      outerAvailable: true,
+    });
+    expect(judgmentRequiredCount(catalog, state)).toBe(5);
   });
 });

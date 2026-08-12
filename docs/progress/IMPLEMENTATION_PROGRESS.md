@@ -12,6 +12,22 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
+The Arcana, Fear, Judgment, and Circe delivery is complete. Schema 21 adds
+route-owned manual Arcana and ranked Fear loadouts, exact Boss-completion
+Judgment outcomes, and selected Circe resolution children. The catalog owns the
+25-card board, automatic activation rules, Vow rank/Fear data, Judgment's
+Epic-five/Heroic-six count, and Circe's fixed-Common provider. The engine owns
+progressive Arcana/Fear state, branch identity, exact target domains, selected
+effects, findings, and repair candidates; the application projects route
+settings, Run State, trait-dialog children, and exact completion controls
+without recreating that policy. The closing audit centralized Circe target
+domains and Judgment counts and retired the temporary delivery plan. The
+complete inventory passed: 1,383 tests passed in the parallel run, and its six
+five-second timeout-only witnesses passed 59/59 in a single-worker rerun;
+typecheck, lint, formatting, build, and diff checks also pass. Grasp capacity,
+Fated mode, permanent Arcana progression, and ordinary Vow effects remain
+excluded by the source audit.
+
 Oceanus Anomaly replacement, the Zagreus Midshop contract, and natural Chaos
 are complete. Schema 14 gives closed catalog insertion rules, persisted
 occurrence-owned additional exits, shared lifecycle/history, simulation and

@@ -8,6 +8,7 @@ const card = (
   column: number,
   graspCost: number,
   activation: RawArcanaCardDeclaration['activation'] = { kind: 'manual' },
+  postBossActivationCounts?: RawArcanaCardDeclaration['postBossActivationCounts'],
 ): RawArcanaCardDeclaration => ({
   key,
   label,
@@ -17,6 +18,7 @@ const card = (
   graspCost,
   activation,
   permanentRank: 3,
+  ...(postBossActivationCounts === undefined ? {} : { postBossActivationCounts }),
 });
 const automatic = (
   rule: Exclude<RawArcanaCardDeclaration['activation'], { readonly kind: 'manual' }>['rule'],
@@ -95,6 +97,7 @@ export const arcanaCards = [
     5,
     0,
     automatic({ kind: 'manualCardCount', minimum: 1, maximum: 3 }),
+    { Epic: 5, Heroic: 6 },
   ),
 ] as const;
 

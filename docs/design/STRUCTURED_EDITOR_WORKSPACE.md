@@ -686,6 +686,16 @@ evaluate candidate alternatives. One activated domain evaluates its complete
 declaration-owned concrete variant batch through the project-bound candidate
 session and caches it for the immutable workspace interaction identity.
 
+A selected Circe effect option adds one exact resolution child beneath the
+same trait leaf. The workspace publishes its value, exact marker and finding
+destination, and a lazy engine-backed domain loader; it does not expose the
+Arcana/Fear ledger. Red, Lapis, and Black Night differ only in the engine
+domain product rendered by the shared trait surface. Switching a draft option
+updates this child in the existing dialog, while dormant detail remains owned
+by authored state. A reached Boss completion similarly publishes one exact
+Judgment child control and interaction from its completion address, not a room
+occurrence or route-settings substitute.
+
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the
 engine derives empty ordinary-boon slots from equipped state, and dormant,
