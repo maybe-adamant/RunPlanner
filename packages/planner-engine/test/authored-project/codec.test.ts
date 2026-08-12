@@ -170,6 +170,64 @@ const codecRejections: readonly {
 ];
 
 describe('project document codec', () => {
+  it('round-trips the complete Arcana and Fear loadout', () => {
+    const encoded = encodedFStart();
+    const routes = encoded.routes as Array<Record<string, unknown>>;
+    const first = routes[0]!;
+    const loadout = first.loadout as Record<string, unknown>;
+    loadout.manualArcanaKeys = ['CastCount', 'ChanneledCast'];
+    loadout.fearRanks = {
+      ...(loadout.fearRanks as Record<string, number>),
+      EnemyDamageShrineUpgrade: 3,
+    };
+
+    const decoded = decodeProjectDocument(encoded, catalog);
+    expect(decoded.routes[0]?.loadout).toMatchObject({
+      manualArcanaKeys: ['ChanneledCast', 'CastCount'],
+      fearRanks: { EnemyDamageShrineUpgrade: 3 },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
+      decoded,
+    );
+  });
+
+  it.each([
+    [
+      'an automatic manual Arcana entry',
+      (loadout: Record<string, unknown>) => {
+        loadout.manualArcanaKeys = ['CardDraw'];
+      },
+    ],
+    [
+      'a duplicate manual Arcana entry',
+      (loadout: Record<string, unknown>) => {
+        loadout.manualArcanaKeys = ['ChanneledCast', 'ChanneledCast'];
+      },
+    ],
+    [
+      'an out-of-range Fear rank',
+      (loadout: Record<string, unknown>) => {
+        loadout.fearRanks = {
+          ...(loadout.fearRanks as Record<string, number>),
+          BossDifficultyShrineUpgrade: 5,
+        };
+      },
+    ],
+    [
+      'a missing Fear rank',
+      (loadout: Record<string, unknown>) => {
+        const fearRanks = { ...(loadout.fearRanks as Record<string, number>) };
+        delete fearRanks.BossDifficultyShrineUpgrade;
+        loadout.fearRanks = fearRanks;
+      },
+    ],
+  ] as const)('rejects %s', (_name, mutate) => {
+    const encoded = encodedFStart();
+    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    mutate(route.loadout as Record<string, unknown>);
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
+  });
+
   it('round-trips a non-empty Shop purchase order without changing its sequence', () => {
     const occurrenceId = createOccurrenceId('round-trip-n-preboss');
     const authored = applyProjectCommand(createCompleteNProject(), catalog, {

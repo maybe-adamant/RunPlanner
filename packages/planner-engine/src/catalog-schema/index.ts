@@ -52,6 +52,34 @@ export interface RouteDeclaration {
   readonly biomeKeys: readonly string[];
 }
 
+export type ArcanaActivationRule =
+  | { readonly kind: 'adjacentActive' }
+  | { readonly kind: 'manualCostsOneThroughFive' }
+  | { readonly kind: 'manualCostMultiplicityAtMost'; readonly maximum: number }
+  | { readonly kind: 'surroundingCellsActive' }
+  | { readonly kind: 'completeOtherRowOrColumn' }
+  | { readonly kind: 'manualCardCount'; readonly minimum: number; readonly maximum: number };
+
+export interface ArcanaCardDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly traitKey: string;
+  readonly row: number;
+  readonly column: number;
+  readonly graspCost: number;
+  readonly activation:
+    | { readonly kind: 'manual' }
+    | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
+  readonly permanentRank: 3;
+}
+
+export interface FearVowDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly incrementalFear: readonly number[];
+  readonly circeRemovable: boolean;
+}
+
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
 
 /**
@@ -642,6 +670,8 @@ export interface Catalog {
   readonly version: string;
   readonly biomes: CatalogCollection<BiomeDeclaration>;
   readonly routes: CatalogCollection<RouteDeclaration>;
+  readonly arcanaCards: CatalogCollection<ArcanaCardDeclaration>;
+  readonly fearVows: CatalogCollection<FearVowDeclaration>;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;

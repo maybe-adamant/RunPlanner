@@ -21,6 +21,7 @@ import { normalizeRoutes } from './routes';
 import { createRewardKernelCatalog } from './rewards/normalize';
 import { createTraitCatalog } from './traits';
 import { fail } from './errors';
+import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
 
 function validateLifecycleBindings(
   rooms: Catalog['rooms'],
@@ -84,6 +85,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const traitCatalog = createTraitCatalog(input.traitCatalog);
+  const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
+  const fearVows = normalizeFearVows(input.fearVows);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
   const encounterDefinitions = normalizeEncounterDefinitions(
     input.encounterDefinitions,
@@ -124,6 +127,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     version: input.version,
     biomes,
     routes,
+    arcanaCards,
+    fearVows,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

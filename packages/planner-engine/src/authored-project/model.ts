@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 20 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 21 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -22,9 +22,16 @@ export interface AuthoredRewardState {
   readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
 }
 
-export interface RouteLoadout {
+/** The narrow loadout surface consumed by room/reward materialization. */
+export interface RouteWeaponAspectLoadout {
   readonly weaponKey: string;
   readonly aspectKey: string;
+}
+
+/** Complete persisted route configuration. */
+export interface RouteLoadout extends RouteWeaponAspectLoadout {
+  readonly manualArcanaKeys: readonly string[];
+  readonly fearRanks: Readonly<Record<string, number>>;
 }
 
 export interface ShopState {

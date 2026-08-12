@@ -23,7 +23,7 @@ import type {
   HubDecision,
   OccurrenceId,
   RoomOccurrence,
-  RouteLoadout,
+  RouteWeaponAspectLoadout,
 } from '../../authored-project/model';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
@@ -171,7 +171,7 @@ function localIncomingReward(
   slot: FixedRoomSlotDescriptor,
   room: RoomDeclaration,
   state: EphyraSideRoomState,
-  loadout?: RouteLoadout,
+  loadout?: RouteWeaponAspectLoadout,
 ): CanonicalResolvedIncomingReward {
   if (loadout === undefined || loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
     fail(`${room.gameName} side-room materialization requires a route loadout`);
@@ -201,7 +201,7 @@ function materializeLocalSlots(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
-  loadout?: RouteLoadout,
+  loadout?: RouteWeaponAspectLoadout,
 ): readonly CanonicalLocalChildRoom[] {
   const descriptor = room.localChildren[0];
   if (descriptor === undefined) return Object.freeze([]);
@@ -276,7 +276,7 @@ function materializeBoard(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   room: CanonicalHubRoom,
-  loadout?: RouteLoadout,
+  loadout?: RouteWeaponAspectLoadout,
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(decision.visitOrder);
@@ -318,7 +318,7 @@ function materializeVisits(
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   board: CanonicalHubBoard,
-  loadout?: RouteLoadout,
+  loadout?: RouteWeaponAspectLoadout,
 ): readonly CanonicalHubVisit[] {
   const targets = new Map(board.targets.map((target) => [target.hubSlotKey, target]));
   return Object.freeze(
@@ -364,7 +364,7 @@ export function materializeHubDecision(
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  loadout: RouteLoadout,
+  loadout: RouteWeaponAspectLoadout,
 ): CanonicalHubDecision {
   if (loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
     fail(`${descriptor.hubKey} Hub materialization requires a route loadout`);

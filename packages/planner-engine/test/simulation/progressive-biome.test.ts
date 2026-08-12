@@ -12,6 +12,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createDefaultRouteLoadout,
   createRewardWheelAddress,
   createRouteAddress,
   createTargetAddress,
@@ -43,6 +44,8 @@ import {
   evaluateProgressiveBiomeAssemblyBeforeClamp,
 } from '../../src/simulation/progressive/biome';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project';
+
+const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 import {
   createFOpeningBatch,
   createUnselectedFTakeoverProject,
@@ -567,12 +570,12 @@ describe('progressive biome evaluation', () => {
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       enteredBiomeCount: 2,
-      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, goldenGBiome, plan, {
       enteredBiomeCount: 2,
-      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      loadout: defaultRouteLoadout,
       seed,
     });
     const firstGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit1');
@@ -628,7 +631,7 @@ describe('progressive biome evaluation', () => {
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
       enteredBiomeCount: 2,
-      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      loadout: defaultRouteLoadout,
       seed: blockedSeed,
     });
     const blockedBeforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
@@ -637,7 +640,7 @@ describe('progressive biome evaluation', () => {
       blockedPlan,
       {
         enteredBiomeCount: 2,
-        loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+        loadout: defaultRouteLoadout,
         seed: blockedSeed,
       },
     );
@@ -789,12 +792,12 @@ describe('progressive biome evaluation', () => {
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
       enteredBiomeCount: 2,
-      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, {
       enteredBiomeCount: 2,
-      loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+      loadout: defaultRouteLoadout,
       seed,
     });
     const clampedLifecycle = clamped?.candidateArtifacts.roomLifecycles.shipAt(owner);

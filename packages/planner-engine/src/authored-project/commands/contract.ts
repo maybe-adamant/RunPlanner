@@ -39,6 +39,8 @@ export function projectCommandAddress(
       return createProjectAddress();
     case 'ConfigureRoutePrefix':
     case 'ReplaceRouteLoadout':
+    case 'ReplaceManualArcanaSelection':
+    case 'ReplaceFearVowRank':
       return command.route;
     case 'ReplaceBiomeField':
       return command.field;

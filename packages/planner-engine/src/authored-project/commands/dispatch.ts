@@ -21,6 +21,8 @@ function applyUnchecked(
   switch (command.kind) {
     case 'RenameProject':
     case 'ReplaceRouteLoadout':
+    case 'ReplaceManualArcanaSelection':
+    case 'ReplaceFearVowRank':
     case 'ConfigureRoutePrefix':
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);

@@ -1,5 +1,6 @@
 import {
   createRouteAddress,
+  deriveRouteLoadout,
   semanticAddressKey,
   type EncounterPhaseAddress,
 } from '@run-planner/engine/authored-project';
@@ -102,6 +103,11 @@ function RouteOverview({
     throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
   const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];
   if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
+  const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
+  const arcanaCards = catalog.arcanaCards.values;
+  const fearVows = catalog.fearVows.values;
+  const manualArcanaKeys = authoredRoute.loadout.manualArcanaKeys;
+  const fearRanks = authoredRoute.loadout.fearRanks;
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -196,6 +202,81 @@ function RouteOverview({
           </select>
         </label>
       </div>
+      <details
+        aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
+        className="route-loadout-section"
+      >
+        <summary>
+          Arcana <span>{derivedLoadout.activeArcanaKeys.length} active</span>
+        </summary>
+        <div className="arcana-board">
+          {arcanaCards.map((card) => {
+            const automatic = card.activation.kind === 'automatic';
+            const selected = automatic
+              ? derivedLoadout.automaticArcanaKeys.includes(card.key)
+              : manualArcanaKeys.includes(card.key);
+            return (
+              <label key={card.key} className="arcana-card-control" data-automatic={automatic}>
+                <span>
+                  {card.label}
+                  {automatic ? ' (automatic)' : ''}
+                </span>
+                <input
+                  checked={selected}
+                  disabled={automatic}
+                  onChange={() =>
+                    dispatch(
+                      authoredProjectCommandDispatched({
+                        kind: 'ReplaceManualArcanaSelection',
+                        route: createRouteAddress(workspaceRoute.routeKey),
+                        arcanaKeys: selected
+                          ? manualArcanaKeys.filter((key) => key !== card.key)
+                          : [...manualArcanaKeys, card.key],
+                      }),
+                    )
+                  }
+                  type="checkbox"
+                />
+              </label>
+            );
+          })}
+        </div>
+      </details>
+      <details
+        aria-label={`Fear, ${derivedLoadout.fearTotal} total`}
+        className="route-loadout-section"
+      >
+        <summary>
+          Fear <span>{derivedLoadout.fearTotal} total</span>
+        </summary>
+        <div className="fear-rank-list">
+          {fearVows.map((vow) => (
+            <label key={vow.key} className="field-control">
+              <span>{vow.label}</span>
+              <select
+                aria-label={`${vow.label} rank`}
+                value={fearRanks[vow.key]}
+                onChange={(event) =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'ReplaceFearVowRank',
+                      route: createRouteAddress(workspaceRoute.routeKey),
+                      vowKey: vow.key,
+                      rank: Number(event.target.value),
+                    }),
+                  )
+                }
+              >
+                {Array.from({ length: vow.incrementalFear.length + 1 }, (_, rank) => (
+                  <option key={rank} value={rank}>
+                    {rank}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }

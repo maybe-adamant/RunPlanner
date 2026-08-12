@@ -143,6 +143,7 @@ export {
   type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,
   type RouteLoadout,
+  type RouteWeaponAspectLoadout,
   type AuthoredBatchState,
   type AuthoredAdditionalExit,
   type AnomalyReplacementProvenance,
@@ -172,3 +173,4 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
+export { createDefaultRouteLoadout, deriveRouteLoadout, type DerivedRouteLoadout } from './loadout';
