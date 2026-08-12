@@ -418,16 +418,16 @@ Echo's live menu is also fixed Common. Its entries mix one-shot effects,
 temporary lifecycle state, and persistent traits, so the selected key alone is
 not a sufficient acquisition model.
 
-| Choice                         | Label                   | Eligibility                                                       | Exact source effect and baseline disposition                                                                                                                                                                                                                                                     |
-| ------------------------------ | ----------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `EchoLastReward`               | Reward Reward Reward    | a prior effective `LastRewardEligible` pickup exists              | recreate that exact reward source; a loot source opens a fresh offer, while a consumable repeats its pickup. Recreated consumables receive `RunProgressUpgradeEligible = true`, including replayed Nectar                                                                                        |
-| `EchoLastRunBoon`              | Boon Boon Boon          | eligible prior-run trait payload and no previous Shrine encounter | excluded until prior-run state is an authored input; no placeholder option under the neutral baseline                                                                                                                                                                                            |
-| `EchoDeathDefianceRefill`      | Survive Survive Survive | missing Death Defiance                                            | reuse the source-local Death Defiance condition; restoration count and healing remain outside the planner                                                                                                                                                                                        |
-| `EchoDoubleLevelBoon`          | Pom Pom Pom             | no offer-time requirement                                         | among Pom-eligible equipped traits at the greatest current level, choose one random tied target and add that same level, thereby doubling it; with no eligible target the game performs no mutation                                                                                              |
-| `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                              | persistent equipped Echo trait; retain identity while numeric dodge and per-dodge decay remain outside the planner                                                                                                                                                                               |
-| `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                              | persistent equipped Echo trait; retain identity while numeric Life/Magick and room decay remain outside the planner                                                                                                                                                                              |
-| `EchoDoubleShop`               | Gold Gold Gold          | none                                                              | retain one pending use; the next purchased World Shop item other than `SpellDrop` is recreated for free, then the use is consumed. Loot recreations open a fresh trait offer; consumables use the Shop-duplicate creation path, which does not opt `GiftDrop` into its run-progress level effect |
-| `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | supported previous-keepsake payload plus progression              | excluded with keepsake and prior-run state; no placeholder option under the neutral baseline                                                                                                                                                                                                     |
+| Choice                         | Label                   | Eligibility                                                       | Exact source effect and baseline disposition                                                                                                                                                                                                                                                                                               |
+| ------------------------------ | ----------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EchoLastReward`               | Reward Reward Reward    | a prior effective `LastRewardEligible` pickup exists              | recreate that exact reward source; a loot source opens a fresh offer, while a consumable repeats its pickup. Recreated consumables receive `RunProgressUpgradeEligible = true`, including replayed Nectar                                                                                                                                  |
+| `EchoLastRunBoon`              | Boon Boon Boon          | eligible prior-run trait payload and no previous Shrine encounter | the game filters the prior run's exact trait/rarity cache against current eligibility, occupied slots, equipped traits, giver participation, and explicit exclusions, then offers up to three cross-provider traits and directly equips the selected one                                                                                   |
+| `EchoDeathDefianceRefill`      | Survive Survive Survive | missing Death Defiance                                            | reuse the source-local Death Defiance condition; restoration count and healing remain outside the planner                                                                                                                                                                                                                                  |
+| `EchoDoubleLevelBoon`          | Pom Pom Pom             | no offer-time requirement                                         | among Pom-eligible equipped traits at the greatest current level, choose one random tied target and add that same level, thereby doubling it; with no eligible target the game performs no mutation                                                                                                                                        |
+| `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                              | persistent equipped Echo trait; retain identity while numeric dodge and per-dodge decay remain outside the planner                                                                                                                                                                                                                         |
+| `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                              | persistent equipped Echo trait; retain identity while numeric Life/Magick and room decay remain outside the planner                                                                                                                                                                                                                        |
+| `EchoDoubleShop`               | Gold Gold Gold          | none                                                              | equip one one-use Echo trait. The next purchased World Shop item other than `SpellDrop` sees that equipped trait, recreates the item for free, and consumes the trait's use. Loot recreations open a fresh trait offer; consumables use the Shop-duplicate creation path, which does not opt `GiftDrop` into its run-progress level effect |
+| `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | supported previous-keepsake payload plus progression              | excluded with keepsake and prior-run state; no placeholder option under the neutral baseline                                                                                                                                                                                                                                               |
 
 `CurrentRun.LastReward` is not simply the latest reward-history event. Loot
 inherits `LastRewardEligible = true`; consumables/resources declare or inherit
@@ -435,6 +435,27 @@ their own effective value, and the last assignment in a Lua table wins. In
 particular, `GiftDrop` first writes `false` and later writes `true`, so Nectar
 is replayable. Echo's replay must retain the exact resolved reward source and
 must not synthesize a generic Boon, Pom, or consumable alias.
+
+The planner can support a seven-choice Echo subset without pretending to know
+the previous run. For Boon Boon Boon, the authored approximation is one to
+three cross-provider trait-and-rarity options from the source-valid Echo domain
+that remain legal at Echo's current pre-offer state, followed by one direct
+selection. This is explicitly a user-authored stand-in for the unknown prior-
+run cache; it is not evidence those traits appeared in a previous run and it
+must not force all three options through a fictional Echo giver.
+
+Gold Gold Gold needs no parallel pending-effect record. `EchoDoubleShop`
+itself is the equipped pending state. Shop settlement tests for it at each
+eligible purchased entry in authored order, inserts the mandatory duplicate
+pickup immediately after the triggering purchase, and consumes the one-use
+trait. `SpellDrop` neither triggers nor consumes it. With no later eligible
+World Shop purchase, the trait remains equipped. Wells use separate purchase
+paths and are not part of this effect.
+
+Gift Gift Gift remains excluded until the planner owns previous-keepsake
+identity and keepsake lifecycle. The resulting provider is intentionally the
+planner's supported seven-choice subset, not a claim that the game menu has
+only seven entries.
 
 #### Hades
 

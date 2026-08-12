@@ -631,7 +631,7 @@ export function AcquisitionsWorkbench({
         <h4>Acquisitions</h4>
         <SemanticOwnerMarker address={acquisitions.marker.address} />
       </div>
-      {acquisitions.entries.map((entry, index) => {
+      {acquisitions.entries.map((entry) => {
         const participants = acquisitions.entries.filter(
           (candidate) => candidate.participation === undefined || candidate.participation.selected,
         );

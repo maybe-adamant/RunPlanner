@@ -190,10 +190,12 @@ export function PomResolutionEditor({
     levelResolutionLoadable(interaction, interaction.value),
   );
   const loaded = controller.observe(loadable);
-  const authoritativeRef = useRef(interaction);
+  const [authoritativeInteraction, setAuthoritativeInteraction] = useState(interaction);
   useEffect(() => {
-    if (authoritativeRef.current === interaction) return;
-    authoritativeRef.current = interaction;
+    controller.activate(loadable);
+  }, [controller, loadable]);
+  if (authoritativeInteraction !== interaction) {
+    setAuthoritativeInteraction(interaction);
     if (interaction.value.kind === 'choice') {
       setChoiceSlots(interaction.value.offeredTraitKeys);
       setSelectedChoice(interaction.value.selectedTraitKey);
@@ -204,13 +206,8 @@ export function PomResolutionEditor({
       setRandomTarget(interaction.value.targetTraitKey);
     }
     setActiveGroupKey(null);
-    const nextLoadable = levelResolutionLoadable(interaction, interaction.value);
-    setLoadable(nextLoadable);
-    controller.activate(nextLoadable);
-  }, [controller, interaction]);
-  useEffect(() => {
-    controller.activate(loadable);
-  }, [controller, loadable]);
+    setLoadable(levelResolutionLoadable(interaction, interaction.value));
+  }
   const evaluateDraft = (next: AuthoredLevelResolution): void => {
     const nextLoadable = levelResolutionLoadable(interaction, next);
     setLoadable(nextLoadable);
@@ -222,18 +219,6 @@ export function PomResolutionEditor({
     groups.find((group) => group.key === activeGroupKey) ??
     groups.find((group) => group.evaluations.some((evaluation) => evaluation.supported)) ??
     groups[0];
-  useEffect(() => {
-    if (activeGroup === undefined || activeGroup.key === activeGroupKey) return;
-    setActiveGroupKey(activeGroup.key);
-    if (interaction.value.kind !== 'choice') return;
-    const count = activeGroup.surface.requiredOfferCount ?? 0;
-    const slots = Array.from({ length: count }, (_, index) =>
-      interaction.value.kind === 'choice'
-        ? (interaction.value.offeredTraitKeys[index] ?? null)
-        : null,
-    );
-    setChoiceSlots(slots);
-  }, [activeGroup, activeGroupKey, interaction.value]);
   const findings = activeGroup?.evaluations.flatMap((entry) => entry.findings) ?? [];
   const supported = activeGroup?.evaluations.some((entry) => entry.supported) ?? false;
   const requiredCount = activeGroup?.surface.requiredOfferCount;

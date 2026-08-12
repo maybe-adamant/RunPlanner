@@ -278,6 +278,17 @@ owns declaration-keyed offers; the occurrence's exact `acquisitionSites.roomExit
 owns purchase membership and order. A counted-free Preboss
 keeps its complete resolved offer regardless of selection.
 
+An acquisition site is sparse occurrence-owned state for one exact authorable
+lifecycle point. Its `order` is both optional-entry participation and
+chronology: an entry appears once when acquired and is absent when skipped.
+Shop offers remain owned by Shop inventory, while a declaration-produced
+pickup stores its exact reward, trait-offer, and level-resolution children in
+the site's `pickupEntries`. Mandatory singleton room rewards have derived
+participation and order, so they do not create redundant persisted site state.
+`ReplaceAcquisitionOrder` replaces one complete site order;
+`ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
+pickup. Neither command may infer entries from room names or rendered rows.
+
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or
 guesses a reward. It resets incompatible state to complete defaults and cannot
@@ -424,7 +435,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 18;
+  schemaVersion: 20;
   projectId: string;
   name: string;
   catalogVersion: string;

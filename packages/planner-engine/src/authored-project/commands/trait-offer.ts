@@ -3,7 +3,6 @@ import {
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
   createDefaultSelectedPickupEntries,
-  optionIndex,
   selectedPickupProducer,
   type AuthoredTraitOffer,
 } from '../traits';

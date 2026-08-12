@@ -664,6 +664,13 @@ Acquisitions workbench. Unpurchased inventory exposes only `Purchased`
 membership; it has no acquisition-child control, finding, trait event, or
 equipped-state fold until its entry participates.
 
+The same workbench contains declaration-produced pickups such as Narcissus
+outputs. It derives entry labels, participation, order, reward controls, and
+exact acquisition children from the engine product. Producer cards may expose
+the outer Story choice or Shop inventory, but they do not duplicate pickup-
+owned trait or Pom editors. Mandatory singleton settlements remain compact and
+do not acquire an otherwise empty Acquisitions card.
+
 The shared trait editor is a projection over the engine's three-option
 assessment. It dispatches complete semantic replacements and selected-option
 commands; it never evaluates prerequisites, slots, rarity counts, element

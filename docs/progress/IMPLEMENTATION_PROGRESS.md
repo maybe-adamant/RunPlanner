@@ -2394,3 +2394,40 @@ application projection. The engine keeps the floor derived on
 effect framework, or Proper Upbringing-specific React path was added. The
 temporary implementation tracker is retired after this durable model and
 editor contract absorption.
+
+Acquisition settlement is complete through schema 20. Ordinary room rewards,
+Devotion roles, O wheel rewards, H cage rewards, entered N main and side-room
+rewards, and Shop purchases now publish one canonical settlement product at
+their exact declaration-owned lifecycle point. Mandatory singleton entries use
+derived participation and order. Optional Shop entries use one occurrence-owned
+site order for both purchase membership and chronology; the Shop-private
+purchase order and incomplete-Midshop replay are absent. Progressive Midshop
+evaluation reaches the same post-outgoing settlement product before a next
+decision exists, so purchased trait and Pom repairs are immediately available
+without moving purchases earlier in game time.
+
+Narcissus is the second authored consumer of that seam. Its selected
+fixed-Common descriptor may materialize exact `roomExit` pickups, but the
+descriptor never enters equipped state and owns no nested outcome controls.
+Pickup entries own their concrete reward, fresh trait offer, or level target
+and settle after the current outgoing batch in one authored order. Currency,
+Life, Magick, Last Stand, random Pom, two Elemental Boosts, and Blind Box use
+the existing reward, trait, element, and level authorities. Inactive or skipped
+pickups emit no history, finding, or acquisition child.
+
+The delivery changed production by +2,761/-839 lines from the locked plan
+baseline (net +1,922), tests by +2,173/-285, and documentation by +261/-373
+before closure absorption. The growth replaces direct and Shop-private folds
+with explicit site/entry products across every current acquisition family; no
+discarded `NarcissusOutcome`, `outcomeResolution`, `purchaseOrder`, or private
+frontier replay remains. Primary policy matrices remain in catalog, authored,
+simulation, and workspace tests rather than production self-audits.
+
+The closure run passed 131 test files and 1,344 tests. It exposed four dead
+symbols and two synchronous state-reset effects in the Pom editor at the clean
+committed baseline. The focused closure fix removed the dead code and derives
+the default route-state branch while reconciling authoritative interaction
+changes during render. The two affected UI files pass 36 focused tests; full
+lint, all workspace typechecks, formatting, and the production build pass. The
+Echo Gate E reassessment is retained in its source audits and isolated follow-
+up plan; Gift Gift Gift remains deferred with keepsake state.

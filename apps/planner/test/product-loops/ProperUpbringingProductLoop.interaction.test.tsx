@@ -38,12 +38,6 @@ function prepareProperUpbringingFixture() {
   const application = createApplication();
   const original = createGoldenFGHIProject();
   let authored = original;
-  const locateTrace = (address: TraitOfferOwnerAddress, role: string) =>
-    reachedTraitOffers(authored).find(
-      (trace) =>
-        semanticAddressKey(trace.address.owner) === semanticAddressKey(address) &&
-        trace.acquisitionRole === role,
-    );
   const rewriteWithGiver = (
     trace: SelectedTraitOfferAssessment,
     giverKey: string,
