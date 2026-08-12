@@ -36,6 +36,17 @@ export type ProjectStateCommand =
       readonly aspectKey: string;
     }
   | {
+      readonly kind: 'ReplaceManualArcanaSelection';
+      readonly route: RouteAddress;
+      readonly arcanaKeys: readonly string[];
+    }
+  | {
+      readonly kind: 'ReplaceFearVowRank';
+      readonly route: RouteAddress;
+      readonly vowKey: string;
+      readonly rank: number;
+    }
+  | {
       readonly kind: 'ConfigureRoutePrefix';
       readonly route: RouteAddress;
       readonly configuredBiomeCount: number;

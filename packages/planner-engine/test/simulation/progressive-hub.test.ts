@@ -14,6 +14,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createDefaultRouteLoadout,
   createTargetAddress,
   createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -25,6 +26,8 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
+
+const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 import {
   authorLegalTraitOffers,
@@ -162,7 +165,7 @@ function progressiveN(project: ReturnType<typeof openHub>) {
   if (plan === undefined) throw new Error('project lost authored N');
   const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
     enteredBiomeCount: 1,
-    loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+    loadout: defaultRouteLoadout,
   });
   if (progressive === null) throw new Error('N did not produce a progressive prefix');
   return progressive;

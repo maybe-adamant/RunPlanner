@@ -10,7 +10,7 @@ import {
 import type {
   AuthoredRoomState,
   RoomOccurrence,
-  RouteLoadout,
+  RouteWeaponAspectLoadout,
   ShopState,
 } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
@@ -64,7 +64,7 @@ export interface AuthoredRoomMaterializationContext {
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
-  readonly loadout?: RouteLoadout;
+  readonly loadout?: RouteWeaponAspectLoadout;
 }
 
 interface MaterializedRoomLeaf {
@@ -353,7 +353,7 @@ export function materializeShipCombatState(
   biome: BiomeAddress,
   room: RoomDeclaration,
   occurrence: RoomOccurrence,
-  loadout: RouteLoadout,
+  loadout: RouteWeaponAspectLoadout,
 ): MaterializedShipCombatState {
   if (loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
     fail(`${room.gameName} ShipCombat materialization requires a route loadout`);

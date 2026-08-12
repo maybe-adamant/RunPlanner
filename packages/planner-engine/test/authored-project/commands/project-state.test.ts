@@ -6,6 +6,7 @@ import {
   createBiomeFieldAddress,
   createOccurrenceId,
   createRouteAddress,
+  deriveRouteLoadout,
   ProjectCommandContractError,
   ProjectDocumentContractError,
 } from '@run-planner/engine/authored-project';
@@ -68,6 +69,101 @@ describe('authored-project project-state commands', () => {
     });
     expect(shrunk.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
     expect(shrunk.routes[0]?.biomes[0]).toEqual(retainedF);
+  });
+
+  it('authors Arcana and Fear independently from weapon, aspect, and biome state', () => {
+    const route = createRouteAddress('Underworld');
+    const original = fProject();
+    const withArcana = applyProjectCommand(original, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route,
+      arcanaKeys: ['ChanneledCast', 'CastCount'],
+    });
+    const withFear = applyProjectCommand(withArcana, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route,
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank: 3,
+    });
+    const withWeapon = applyProjectCommand(withFear, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route,
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerBackstabAspect',
+    });
+
+    expect(withWeapon.routes[0]?.loadout).toMatchObject({
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerBackstabAspect',
+      manualArcanaKeys: ['ChanneledCast', 'CastCount'],
+      fearRanks: { EnemyDamageShrineUpgrade: 3 },
+    });
+    expect(withWeapon.routes[0]?.biomes).toEqual(original.routes[0]?.biomes);
+    expect(
+      applyProjectCommand(withWeapon, catalog, {
+        kind: 'ReplaceFearVowRank',
+        route,
+        vowKey: 'EnemyDamageShrineUpgrade',
+        rank: 3,
+      }),
+    ).toBe(withWeapon);
+    expect(
+      applyProjectCommand(withWeapon, catalog, {
+        kind: 'ReplaceManualArcanaSelection',
+        route,
+        arcanaKeys: ['CastCount', 'ChanneledCast'],
+      }),
+    ).toBe(withWeapon);
+  });
+
+  it('derives automatic Arcana and cumulative Fear from the complete route loadout', () => {
+    const route = createRouteAddress('Underworld');
+    let project = fProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route,
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'LowManaDamageBonus', 'CastCount'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route,
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route,
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 4,
+    });
+
+    const derived = deriveRouteLoadout(catalog, project.routes[0]!.loadout);
+    expect(derived.automaticArcanaKeys).toEqual([
+      'SorceryRegenUpgrade',
+      'BonusRarity',
+      'EpicRarityBoost',
+    ]);
+    expect(derived.fearTotal).toBe(17);
+  });
+
+  it('rejects invalid Arcana and Fear commands at the route owner', () => {
+    const route = createRouteAddress('Underworld');
+    const project = fProject();
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceManualArcanaSelection',
+        route,
+        arcanaKeys: ['CardDraw'],
+      }),
+    ).toThrow(/invalid manual Arcana CardDraw/);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFearVowRank',
+        route,
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank: 5,
+      }),
+    ).toThrow(/invalid Vow rank/);
   });
 
   it.each([

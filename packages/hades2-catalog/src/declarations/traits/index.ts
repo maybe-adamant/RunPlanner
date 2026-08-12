@@ -18,6 +18,7 @@ import { hermesGiver, hermesTraits } from './hermes';
 import { medeaGiver, medeaTraits } from './medea';
 import { narcissusGiver, narcissusTraits } from './narcissus';
 import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
+import { arcanaTraits } from './arcana';
 
 const weapons = [
   {
@@ -104,6 +105,7 @@ const aspects = [
   { key: 'SuitComboAspect', label: 'Aspect of Shiva', weaponKey: 'WeaponSuit' },
 ] as const;
 const traits = [
+  ...arcanaTraits,
   ...aphroditeTraits,
   ...arachneTraits,
   ...artemisTraits,

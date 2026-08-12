@@ -54,6 +54,8 @@ function decodeRoutePlan(
   route: RouteDeclaration,
   catalog: Catalog,
 ): AuthoredRoutePlan {
+  const arcanaCards = catalog.arcanaCards;
+  const fearVows = catalog.fearVows;
   const plan = expectRecord(value, path);
   expectExactKeys(plan, ['routeKey', 'loadout', 'biomes'], path);
 
@@ -63,13 +65,55 @@ function decodeRoutePlan(
   }
 
   const loadout = expectRecord(plan.loadout, `${path}.loadout`);
-  expectExactKeys(loadout, ['weaponKey', 'aspectKey'], `${path}.loadout`);
+  expectExactKeys(
+    loadout,
+    ['weaponKey', 'aspectKey', 'manualArcanaKeys', 'fearRanks'],
+    `${path}.loadout`,
+  );
   const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
   const aspectKey = expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
   const weapon = catalog.weapons.byKey[weaponKey];
   if (weapon === undefined) fail(`${path}.loadout.weaponKey`, `unknown weapon ${weaponKey}`);
   if (!weapon.aspectKeys.includes(aspectKey)) {
     fail(`${path}.loadout.aspectKey`, `${aspectKey} does not belong to ${weaponKey}`);
+  }
+  const manualArcanaKeys = expectArray(
+    loadout.manualArcanaKeys,
+    `${path}.loadout.manualArcanaKeys`,
+  ).map((value, index) => expectString(value, `${path}.loadout.manualArcanaKeys[${index}]`));
+  const manualSet = new Set<string>();
+  for (const [index, key] of manualArcanaKeys.entries()) {
+    const card = arcanaCards.byKey[key];
+    if (card === undefined)
+      fail(`${path}.loadout.manualArcanaKeys[${index}]`, `unknown Arcana ${key}`);
+    if (card.activation.kind !== 'manual')
+      fail(`${path}.loadout.manualArcanaKeys[${index}]`, `${key} is automatic`);
+    if (manualSet.has(key)) fail(`${path}.loadout.manualArcanaKeys[${index}]`, `duplicates ${key}`);
+    manualSet.add(key);
+  }
+  const canonicalManualArcanaKeys = arcanaCards.values
+    .filter((card) => manualSet.has(card.key))
+    .map((card) => card.key);
+  const fearRanksRecord = expectRecord(loadout.fearRanks, `${path}.loadout.fearRanks`);
+  expectExactKeys(
+    fearRanksRecord,
+    fearVows.values.map((vow) => vow.key),
+    `${path}.loadout.fearRanks`,
+  );
+  const fearRanks: Record<string, number> = {};
+  for (const vow of fearVows.values) {
+    const rank = fearRanksRecord[vow.key];
+    if (
+      !Number.isInteger(rank) ||
+      typeof rank !== 'number' ||
+      rank < 0 ||
+      rank > vow.incrementalFear.length
+    )
+      fail(
+        `${path}.loadout.fearRanks.${vow.key}`,
+        `must be an integer from 0 through ${vow.incrementalFear.length}`,
+      );
+    fearRanks[vow.key] = rank;
   }
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);
@@ -87,7 +131,12 @@ function decodeRoutePlan(
 
   return Object.freeze({
     routeKey,
-    loadout: Object.freeze({ weaponKey, aspectKey }),
+    loadout: Object.freeze({
+      weaponKey,
+      aspectKey,
+      manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
+      fearRanks: Object.freeze(fearRanks),
+    }),
     biomes: Object.freeze(biomes),
   });
 }

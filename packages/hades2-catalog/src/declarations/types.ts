@@ -1,4 +1,5 @@
 import type {
+  ArcanaActivationRule,
   AuthoredFieldDescriptor,
   CompletionDescriptor,
   CompletedHubExitDescriptor,
@@ -41,6 +42,25 @@ export interface RawEncounterRewardWheelAttachment {
     readonly defaultValue: number;
   };
   readonly picked: 'exactlyOne';
+}
+
+export interface RawArcanaCardDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly traitKey: string;
+  readonly row: number;
+  readonly column: number;
+  readonly graspCost: number;
+  readonly activation:
+    | { readonly kind: 'manual' }
+    | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
+  readonly permanentRank: 3;
+}
+export interface RawFearVowDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly incrementalFear: readonly number[];
+  readonly circeRemovable: boolean;
 }
 
 export interface RawEncounterLocalRewardAttachment {
@@ -278,6 +298,8 @@ export interface RawCatalogInput {
   readonly version: string;
   readonly biomes: readonly BiomeDeclaration[];
   readonly routes: readonly RouteDeclaration[];
+  readonly arcanaCards: readonly RawArcanaCardDeclaration[];
+  readonly fearVows: readonly RawFearVowDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];

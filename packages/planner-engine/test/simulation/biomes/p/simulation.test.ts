@@ -4,6 +4,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
+  createDefaultRouteLoadout,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
@@ -27,6 +28,8 @@ import {
 } from '@run-planner/test-fixtures';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../../src/simulation/project';
+
+const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 function completeP() {
   const evaluation = simulateProject(catalog, createRepresentativeNOPProject());
@@ -241,7 +244,7 @@ describe('P core loop', () => {
       previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
         ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
             enteredBiomeCount: 3,
-            loadout: { weaponKey: 'Staff', aspectKey: 'BaseStaffAspect' },
+            loadout: defaultRouteLoadout,
             seed: {
               history: previous.history,
               rewardBranches: previous.rewards.branches,

@@ -7,6 +7,7 @@ import {
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
+  createRouteAddress,
   createTraitOfferAddress,
   createShopOfferAddress,
   semanticAddressKey,
@@ -658,6 +659,51 @@ describe('planner history interaction', () => {
   });
 });
 
+describe('route loadout interaction', () => {
+  it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
+    const { application, user } = renderPlannerForInteraction();
+
+    const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
+    const arcanaSummary = arcana.querySelector('summary');
+    if (arcanaSummary === null) throw new Error('Arcana summary is missing');
+    await user.click(arcanaSummary);
+    expect(screen.getByRole('checkbox', { name: 'The Moon (automatic)' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    await user.click(screen.getByRole('checkbox', { name: /The Sorceress/ }));
+
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .manualArcanaKeys,
+    ).toEqual(['ChanneledCast']);
+    expect(screen.getByRole('group', { name: 'Arcana, 3 active' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .manualArcanaKeys,
+    ).toEqual([]);
+    await user.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .manualArcanaKeys,
+    ).toEqual(['ChanneledCast']);
+
+    const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
+    const fearSummary = fear.querySelector('summary');
+    if (fearSummary === null) throw new Error('Fear summary is missing');
+    await user.click(fearSummary);
+    await user.selectOptions(screen.getByLabelText('Vow of Pain rank'), '3');
+
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout.fearRanks
+        .EnemyDamageShrineUpgrade,
+    ).toBe(3);
+    expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
+  });
+});
+
 describe('project profile interaction', () => {
   it('renames the project through one undoable semantic command', async () => {
     const { application, user } = renderPlannerForInteraction();
@@ -699,6 +745,21 @@ describe('project profile interaction', () => {
     ).toBe(true);
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Underworld'),
+        arcanaKeys: ['ChanneledCast'],
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceFearVowRank',
+        route: createRouteAddress('Underworld'),
+        vowKey: 'EnemyDamageShrineUpgrade',
+        rank: 3,
+      }),
+    );
     const savedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
@@ -718,6 +779,12 @@ describe('project profile interaction', () => {
     await user.click(screen.getByRole('button', { name: 'Load Profile' }));
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout,
+    ).toMatchObject({
+      manualArcanaKeys: ['ChanneledCast'],
+      fearRanks: { EnemyDamageShrineUpgrade: 3 },
+    });
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
     expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
     expect(application.store.getState().projectWorkspace.assembly.evaluation).toEqual(

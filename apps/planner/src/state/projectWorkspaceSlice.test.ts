@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createDefaultRouteLoadout,
   createEmptyProjectDocument,
   createOccurrenceId,
   createProjectDocument,
@@ -47,16 +48,15 @@ describe('project workspace application state', () => {
     const project = selectPresentProject(state);
 
     expect(project.projectId).toBe('run-plan');
-    const defaultWeapon = catalog.weapons.values[0]!;
     expect(project.routes).toEqual([
       {
         routeKey: 'Underworld',
-        loadout: { weaponKey: defaultWeapon.key, aspectKey: defaultWeapon.defaultAspectKey },
+        loadout: createDefaultRouteLoadout(catalog),
         biomes: [],
       },
       {
         routeKey: 'Surface',
-        loadout: { weaponKey: defaultWeapon.key, aspectKey: defaultWeapon.defaultAspectKey },
+        loadout: createDefaultRouteLoadout(catalog),
         biomes: [],
       },
     ]);

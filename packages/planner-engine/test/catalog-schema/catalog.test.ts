@@ -30,6 +30,8 @@ describe('summarizeCatalog', () => {
         },
       },
       routes: { values: [route], byKey: { FixtureRoute: route } },
+      arcanaCards: emptyCollection(),
+      fearVows: emptyCollection(),
       rewards: {
         payloadDomains: emptyCollection(),
         rewardTypes: emptyCollection(),

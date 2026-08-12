@@ -17,6 +17,7 @@ import { qRooms } from './rooms/q';
 import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
+import { arcanaCards, fearVows } from './arcana-fear';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 
 const rooms: readonly RawRoomDeclaration[] = [
@@ -34,9 +35,11 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.26.0-narcissus-pickups',
+  version: '0.27.0-arcana-fear-loadout',
   biomes,
   routes,
+  arcanaCards,
+  fearVows,
   rewardKernel: rewardKernelDeclarations,
   encounterEnvelopes,
   encounterDefinitions,
@@ -51,6 +54,8 @@ export const declarations = {
 
 export type {
   RawCatalogInput,
+  RawArcanaCardDeclaration,
+  RawFearVowDeclaration,
   RawAdditionalExitDeclaration,
   RawCountedRewardBinding,
   RawEncounterDefinitionDeclaration,
