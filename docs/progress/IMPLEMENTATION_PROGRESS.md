@@ -12,6 +12,20 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
+Trait-offer exhaustion and the two reward-facing Fear Vows are complete.
+Schema 22 persists one-to-three Olympian/Hermes trait outcomes or mutually
+exclusive Fallback Gold while retaining declaration-owned triples elsewhere.
+One engine composition authority owns ordinary, optional high-tier, and
+replacement participation; Denial folds exact displayed unselected keys into
+route history, and Forfeit vetoes the first qualifying ordinary-room Boon or
+Hermes acquisition per biome without introducing reward-replacement or
+consolation machinery. Progressive candidates, workspace interactions, the
+trait dialog, and Run State consume those engine products. The stable authored,
+catalog, reward, simulation, candidate, editor, workspace, and audit documents
+own the accepted contracts, and the temporary delivery plan is retired. The
+closure gate passed 138 test files and 1,441 tests, typecheck, lint, formatting,
+and the production build.
+
 The Arcana, Fear, Judgment, and Circe delivery is complete. Schema 21 adds
 route-owned manual Arcana and ranked Fear loadouts, exact Boss-completion
 Judgment outcomes, and selected Circe resolution children. The catalog owns the

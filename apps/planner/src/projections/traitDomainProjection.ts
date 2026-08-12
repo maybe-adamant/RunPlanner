@@ -112,7 +112,7 @@ function optionState(option: TraitCandidate): ReturnType<typeof candidateSupport
 function visibleCandidate(candidate: TraitCandidate, selected: AuthoredTraitOption): boolean {
   if (candidate.value.rarity !== 'Heroic') return true;
   // Heroic is a technical probe unless it is the retained authored value or
-  // Gate A proves an exact Epic-to-Heroic replacement.
+  // the engine proves an exact Epic-to-Heroic replacement.
   return (
     sameOption(candidate.value, selected) || ['possible', 'forced'].includes(optionState(candidate))
   );

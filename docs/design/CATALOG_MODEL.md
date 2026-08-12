@@ -733,9 +733,15 @@ Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,
 and ordinary activation rule; Judgment additionally declares its Epic and
 Heroic post-Boss activation counts. Vows own bounded incremental Fear ranks
-and whether Circe may suppress them. Circe's three effect-backed traits carry
-one closed selected-disposition descriptor only; their live target domains and
-effects remain simulation-owned.
+and whether Circe may suppress them. The two modeled reward-facing Vows own a
+closed effect declaration: Denial bans up to two displayed unselected traits,
+while Forfeit prevents one qualifying ordinary-room Boon or Hermes acquisition
+per biome. Exactly the nine Olympian givers and Hermes declare Denial
+participation; normalization rejects missing or extra participants rather than
+inferring participation from provider names at runtime. Current banned keys,
+per-biome Forfeit usage, and effect timing remain simulation-owned. Circe's
+three effect-backed traits carry one closed selected-disposition descriptor
+only; their live target domains and effects remain simulation-owned.
 
 `ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
 product. Its activation minimums are the four base elements at `2`, and its

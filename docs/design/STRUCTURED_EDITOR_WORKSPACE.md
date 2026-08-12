@@ -139,6 +139,10 @@ launcher carries the engine coverage reason and binds no invented state.
 Presentation owns structural titles, catalog-backed labels, section ordering,
 and compact requirement copy; it does not evaluate requirements, fold traits,
 derive bags, or infer availability.
+Equipped and banned trait labels come from the same engine snapshot. Forfeit's
+inactive, available, or consumed state is likewise passed through from the
+progressive Arcana/Fear ledger; the workspace does not infer it from the route
+loadout or room list.
 
 Run State remains available through the covered decision that contains the
 first blocking value and unavailable afterward. The workspace consumes that
@@ -671,12 +675,15 @@ the outer Story choice or Shop inventory, but they do not duplicate pickup-
 owned trait or Pom editors. Mandatory singleton settlements remain compact and
 do not acquire an otherwise empty Acquisitions card.
 
-The shared trait editor is a projection over the engine's three-option
-assessment. It dispatches complete semantic replacements and selected-option
-commands; it never evaluates prerequisites, slots, rarity counts, element
-thresholds, loadout compatibility, or chronology. The route Traits panel is a
-second reference to those controls, not a persisted route-wide model. Dialog
-target and focus restoration remain transient editor-session state.
+The shared trait editor is a projection over the engine's complete offer
+assessment: one to three materialized trait options or mutually exclusive
+Fallback Gold for exhausted Olympian/Hermes offers, and the existing fixed
+three-option outcomes elsewhere. It dispatches complete semantic replacements
+and selected-option commands; it never evaluates prerequisites, slots, rarity
+counts, element thresholds, exhaustion fill, loadout compatibility, or
+chronology. The route Traits panel is a second reference to those controls,
+not a persisted route-wide model. Dialog target and focus restoration remain
+transient editor-session state.
 
 Each trait leaf binds one lazy focused-option domain factory. Its inputs are the
 complete local offer draft and exact option key; its output is an
@@ -685,6 +692,10 @@ not traverse selected assessments to enrich replacement rarities and does not
 evaluate candidate alternatives. One activated domain evaluates its complete
 declaration-owned concrete variant batch through the project-bound candidate
 session and caches it for the immutable workspace interaction identity.
+The same interaction binds engine-owned starting- and next-draft capabilities
+for returning from fallback and appending a position. Fallback owns no
+option-local expected leaf, and removing a trailing row never creates a
+placeholder owner.
 
 A selected Circe effect option adds one exact resolution child beneath the
 same trait leaf. The workspace publishes its value, exact marker and finding
@@ -700,6 +711,8 @@ Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the
 engine derives empty ordinary-boon slots from equipped state, and dormant,
 unpicked, or unpurchased leaves remain non-consuming authoring surfaces.
+Exhaustion, banned-trait, and Fallback Gold findings follow that same exact
+owner and interaction; the workspace does not duplicate their policy.
 
 Replacement evidence uses that same leaf and interaction. A reached
 Olympian replacement carries its exact engine transition and promoted rarity

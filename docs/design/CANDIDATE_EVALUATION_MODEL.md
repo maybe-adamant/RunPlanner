@@ -539,17 +539,21 @@ products of the same reached reward walk:
   composition, and replacement-composition assessments. It does not contain
   pre-offer trait histories or resolved giver contexts.
 - `BiomeCandidateArtifacts.traitOffers.at(address)` returns only opaque
-  `evaluateOffer(value)` and
+  `evaluateOffer(value)`, `traitsStartingDraft(giverKey)`,
+  `nextTraitOptionDraft(value)`, and
   `targetedAcquisitionTargets(value, optionKey)` capabilities. Their private
   branch-local inputs are the exact pre-offer `TraitHistoryState` and resolved
   `TraitOfferContext` captured before the selected offer was processed and
-  before equivalent post-state branches could merge.
+  before equivalent post-state branches could merge. The two draft
+  capabilities construct supported offer shapes; they do not expose the
+  composition domains to the application.
 
-A query names one exact address and passes one complete proposed offer to that
-capability. The engine assesses all three options against every retained
-branch-local context and returns branch-grouped evidence. The application may
-present the selected assessment, but it cannot use that data-only product to
-assess a replacement. Provider membership and trait-local rarity shape remain
+A query names one exact address and passes one complete proposed outcome to
+that capability. The engine assesses every materialized option, or the
+mutually exclusive Fallback Gold outcome, against every retained branch-local
+context and returns branch-grouped evidence. The application may present the
+selected assessment, but it cannot use that data-only product to assess a
+replacement. Provider membership and trait-local rarity shape remain
 structural command/codec checks.
 
 The selected assessment is published once at biome reward ownership and only
@@ -604,13 +608,13 @@ one branch; evidence from separate branch histories is never combined.
 
 Trait editing uses two projections of that one assessment authority:
 
-- a complete-offer query evaluates all three authored options and remains the
-  authority for consolidated feedback and whether the complete draft is
-  supported for Save; selected simulation remains the acquisition and history
-  authority;
+- a complete-offer query evaluates every materialized authored option or the
+  Fallback Gold outcome and remains the authority for consolidated feedback
+  and whether the complete draft is supported for Save; selected simulation
+  remains the acquisition and history authority;
 - a focused-option query receives the same complete proposal plus one
   `TraitOptionKey` and asks whether the concrete value in that position is
-  supported while the two siblings remain fixed.
+  supported while every materialized sibling remains fixed.
 
 Focused support attributes option-local findings to their exact position.
 Unrelated sibling prerequisite, rarity, context, loadout, and priority
@@ -621,6 +625,14 @@ composition blocks a focused replacement participant but does not poison an
 ordinary focused option solely because siblings exceed the replacement limit.
 One retained branch satisfying every focused requirement is sufficient, and
 all required evidence must succeed in that same branch.
+
+Offer-shape editing remains behind that exact prepared context. The candidate
+session exposes one engine-constructed starting trait draft for returning from
+Fallback Gold and one engine-constructed append result for adding the next
+materialized position. Removing a trailing position is structural, but its
+result still passes through complete-offer assessment. React never derives the
+ordinary/high-tier/replacement partition, mandatory exhaustion fill, or a
+Fallback Gold availability rule.
 
 An unreached offer normally returns unavailable contextual coverage. Closed
 authored invariants do not disappear with that coverage: duplicate sibling

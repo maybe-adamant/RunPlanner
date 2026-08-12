@@ -2,7 +2,8 @@
 
 ## Status
 
-Draft source-fact audit against the installed Hades II scripts on 2026-08-12.
+Locked source-fact audit against the installed Hades II scripts on 2026-08-12,
+with the accepted schema-22 planner disposition recorded below.
 The giver inventories, trait requirements, rarity domains, and replacement
 target rules remain owned by
 [`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
@@ -207,9 +208,9 @@ only accelerates exhaustion by banning traits. That interpretation is cleaner
 and matches the observed game-language model, but it is not a literal
 translation of the source guard above.
 
-This discrepancy must be resolved explicitly before an implementation plan is
-locked. The implementation must not accidentally claim both behaviors or put
-an unexplained Denial conditional inside otherwise general composition.
+The schema-22 planner resolves this discrepancy in favor of the universal
+exhaustion contract. Production has one composition algorithm; the source
+guard remains evidence rather than an unexplained Denial conditional.
 
 ## Vow of Denial
 
@@ -315,17 +316,23 @@ trait offer is restored retroactively.
 8. Forfeit prevents the trait-offer lifecycle from starting; Denial acts only
    after a real trait option is selected.
 
-## Planning Disposition
+## Planner Disposition
 
-1. The planner adopts the universal exhaustion contract above as the
-   user-validated game model. Denial adds bans but does not select a separate
-   composition algorithm. The installed source guard remains recorded as an
-   explicit discrepancy rather than becoming hidden production policy.
-2. `RoomRewardConsolationPrize` receives its exact normalized concrete
-   acquisition identity. Its numeric one-health/currency behavior remains
-   outside the planner; it is not an equipped trait or ordinary authored
-   reward type.
-3. `CalcNumLootChoices` supports a separate acquired effect that reduces a god
+1. Schema 22 implements the universal exhaustion contract above. Olympian and
+   Hermes outcomes persist one to three materialized traits or mutually
+   exclusive Fallback Gold, while declaration defaults and nonparticipating
+   providers retain their complete triples.
+2. One engine-owned ordinary/high-tier/replacement domain drives selected
+   assessment, progressive candidates, findings, deterministic add/return
+   drafts, and Fallback Gold. Denial adds exact unselected bans to the normal
+   trait-history fold and does not select a separate composition algorithm.
+3. The planner deliberately models Forfeit as an acquisition veto at the
+   ordinary authored room boundary. It retains the authored reward and bag
+   evidence, records biome-local usage, and skips the concrete Boon/Hermes and
+   trait transition. `RoomRewardConsolationPrize` remains a source fact only:
+   its inert numeric result is not normalized or recorded as a substitute
+   acquisition.
+4. `CalcNumLootChoices` supports a separate acquired effect that reduces a god
    screen from three choices to two. No currently modeled trait supplies that
-   effect, so it remains outside this slice rather than being conflated with
+   effect, so it remains outside production rather than being conflated with
    exhaustion cardinality.

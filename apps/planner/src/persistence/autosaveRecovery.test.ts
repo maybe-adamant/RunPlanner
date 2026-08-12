@@ -151,7 +151,7 @@ describe('profile status', () => {
 });
 
 describe('autosave recovery lifecycle', () => {
-  it('blocks and preserves schema-8 and stale-catalog autosaves without migrating either payload', () => {
+  it('blocks and preserves schema-21 and stale-catalog autosaves without migrating either payload', () => {
     const fallback = createProjectDocument(catalog, {
       projectId: 'fallback',
       name: 'Fallback',
@@ -159,7 +159,7 @@ describe('autosave recovery lifecycle', () => {
     });
     const current = JSON.parse(encodeProjectDocument(fallback)) as Record<string, unknown>;
     const legacy = createRecoveryFixture(
-      JSON.stringify({ ...current, schemaVersion: 8, catalogVersion: catalog.version }),
+      JSON.stringify({ ...current, schemaVersion: 21, catalogVersion: catalog.version }),
     );
     const stale = createRecoveryFixture(
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
