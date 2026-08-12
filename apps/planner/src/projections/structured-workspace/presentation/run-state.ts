@@ -229,6 +229,11 @@ export function presentRunState(
           .filter(({ traitKey }) => !coreTraitKeys.has(traitKey))
           .map((equipped) => traitPresentation(catalog, equipped)),
       ),
+      banned: Object.freeze(
+        snapshot.traits.bannedTraitKeys.map((key) =>
+          Object.freeze({ key, label: catalog.traits.byKey[key]?.label ?? key }),
+        ),
+      ),
     }),
   });
 }

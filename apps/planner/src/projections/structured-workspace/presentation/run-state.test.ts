@@ -52,6 +52,7 @@ describe('Run State presentation', () => {
         elementCounts: { Aether: 0, Air: 0, Earth: 0, Fire: 0, Water: 0 },
         godBoonRarityCounts: {},
         upgradableTraitCount: 1,
+        bannedTraitKeys: ['ApolloSpecialBoon'],
         minimumScalableGodTraitRarity: 'Rare',
       },
       counters: {
@@ -93,6 +94,7 @@ describe('Run State presentation', () => {
         },
       ],
     });
+    expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
     expect(state.bags[0]).toMatchObject({ label: 'Major Reward', technicalKey: 'RunProgress' });
     expect(state.bags[0]?.eligible.entries[0]).toMatchObject({
       label: 'Boon',

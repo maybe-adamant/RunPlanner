@@ -168,6 +168,8 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.traits.activeMinimumScalableRarity === undefined ? null : (
           <p>Active minimum scalable rarity: {state.traits.activeMinimumScalableRarity}</p>
         )}
+        <h4>Banned traits</h4>
+        <p>{state.traits.banned.map(({ label }) => label).join(' · ') || 'None'}</p>
       </section>
       <section>
         <h3>More Info</h3>

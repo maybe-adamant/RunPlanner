@@ -15,6 +15,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -765,6 +766,50 @@ describe('route-detour simulation', () => {
       expect(spacingFinding !== undefined).toBe(blocked);
     },
   );
+
+  it('settles a real Hermes room reward with effective Denial bans', () => {
+    const { anomaly, project: initial } = buildAnomalyProject(true);
+    const incoming = createIncomingRewardAddress(gBiome, anomaly);
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BanUnpickedBoonsShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: incoming,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(incoming, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const { snapshot, history } = prefix(project, gBiome);
+    const rewards = evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project, gBiome),
+    );
+    expect(rewards.branches[0]?.traitHistory?.events).toContainEqual(
+      expect.objectContaining({
+        giverKey: 'Hermes',
+        bannedTraitKeys: ['HermesSpecialBoon', 'HermesCastDiscountBoon'],
+      }),
+    );
+  });
 
   it('records the Chaos offer at source entry, then enters Chaos and generates a fresh host target', () => {
     const { project, opening, chaos, returned, additional } = buildNaturalChaosProject();

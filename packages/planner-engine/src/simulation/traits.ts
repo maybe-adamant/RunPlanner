@@ -33,6 +33,8 @@ export interface TraitOfferEvent {
   readonly options: AuthoredTraitOfferTraits['options'];
   readonly selectedOptionKey: TraitOptionKey;
   readonly acquisitionPoint: string;
+  /** Exact unselected materialized keys banned by an effective Vow of Denial. */
+  readonly bannedTraitKeys?: readonly string[];
   /** Derived from the pre-offer state; never persisted in authored state. */
   readonly replacementTransition?: TraitReplacementTransition;
   /** Exact declaration-owned acquisition mutation derived from pre-offer state. */
@@ -115,6 +117,8 @@ export interface TraitHistoryState {
   readonly highestBaseElementCount: number;
   readonly godBoonRarityCounts: Readonly<Record<string, number>>;
   readonly upgradableTraitCount: number;
+  /** Route-wide exact trait keys excluded from later offer eligibility. */
+  readonly bannedTraitKeys: readonly string[];
   /** Derived floor for fresh scalable god-trait offers. */
   readonly minimumScalableGodTraitRarity?: 'Rare';
 }
@@ -155,6 +159,7 @@ export function createTraitHistoryState(): TraitHistoryState {
     highestBaseElementCount: 0,
     godBoonRarityCounts: Object.freeze({}),
     upgradableTraitCount: 0,
+    bannedTraitKeys: Object.freeze([]),
   });
 }
 
@@ -266,6 +271,7 @@ export function foldTraitHistoryEvents(
   events: readonly TraitHistoryEvent[],
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
+  const bannedTraitKeys = new Set<string>();
   const pickupElements: Record<TraitElement, number> = {
     Aether: 0,
     Earth: 0,
@@ -302,6 +308,7 @@ export function foldTraitHistoryEvents(
         continue;
       }
       const option = event.options[optionIndex(event.selectedOptionKey)];
+      for (const traitKey of event.bannedTraitKeys ?? []) bannedTraitKeys.add(traitKey);
       if (option === undefined || equipped[option.traitKey] !== undefined) continue;
       const giver = catalog.traitGivers.byKey[event.giverKey];
       const declaration = catalog.traits.byKey[option.traitKey];
@@ -376,6 +383,7 @@ export function foldTraitHistoryEvents(
   const derived = combinedElementFacts(fromTraits, pickupElements);
   return Object.freeze({
     events: Object.freeze(ordered),
+    bannedTraitKeys: Object.freeze([...bannedTraitKeys]),
     equippedTraits: Object.freeze(equipped),
     ...derived,
     ...(activeSources.size === 0 ? {} : { minimumScalableGodTraitRarity: 'Rare' as const }),
@@ -790,6 +798,33 @@ export function assessTraitReplacementComposition(
   });
 }
 
+/**
+ * Denial is a post-selection history effect.  It deliberately consumes the
+ * already-materialized offer rather than participating in offer composition.
+ */
+function denialBannedTraitKeys(
+  catalog: Catalog,
+  evaluation: ReachedTraitOfferEvaluation,
+): readonly string[] | undefined {
+  if (evaluation.offer.kind !== 'traits') return undefined;
+  const offer = evaluation.offer;
+  const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
+  const effective = evaluation.arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
+  const giver = catalog.traitGivers.byKey[evaluation.offer.giverKey];
+  if (
+    denial?.effect?.kind !== 'banUnselectedTraits' ||
+    effective <= 0 ||
+    !giver?.denialParticipates
+  )
+    return undefined;
+  return Object.freeze(
+    offer.options
+      .filter((_, index) => index !== optionIndex(offer.selectedOptionKey))
+      .slice(0, denial.effect.count)
+      .map((option) => option.traitKey),
+  );
+}
+
 export function recordReachedTraitOffer(
   catalog: Catalog,
   evaluation: ReachedTraitOfferEvaluation,
@@ -817,6 +852,7 @@ export function recordReachedTraitOffer(
   }
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
+  const bannedTraitKeys = denialBannedTraitKeys(catalog, evaluation);
   const event: TraitOfferEvent = Object.freeze({
     kind: 'traitOffer',
     owner: evaluation.address,
@@ -826,6 +862,7 @@ export function recordReachedTraitOffer(
     options: evaluation.offer.options,
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
+    ...(bannedTraitKeys === undefined ? {} : { bannedTraitKeys }),
     ...(selectedAssessment?.replacementTransition === undefined
       ? {}
       : { replacementTransition: selectedAssessment.replacementTransition }),
@@ -1193,6 +1230,7 @@ export function assessTraitOption(
       findings: [{ code: 'missingPrerequisite', traitKey, detail: 'unknown trait' }],
     };
   const findings: TraitAssessmentFinding[] = [];
+  if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
   for (const requirement of trait.offerRequirements) {

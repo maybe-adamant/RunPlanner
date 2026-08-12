@@ -121,7 +121,23 @@ export function normalizeFearVows(
       requirePositiveInteger(point, `${path}.incrementalFear[${rank}]`),
     );
     requireBoolean(vow.circeRemovable, `${path}.circeRemovable`);
-    return Object.freeze({ ...vow, incrementalFear: Object.freeze([...vow.incrementalFear]) });
+    const isDenial = vow.key === 'BanUnpickedBoonsShrineUpgrade';
+    if (isDenial && vow.effect === undefined)
+      fail(`${path}.effect`, 'Vow of Denial must declare banUnselectedTraits');
+    if (!isDenial && vow.effect !== undefined)
+      fail(`${path}.effect`, 'only Vow of Denial may declare an effect');
+    if (
+      vow.effect !== undefined &&
+      (vow.effect.kind !== 'banUnselectedTraits' || vow.effect.count !== 2)
+    )
+      fail(`${path}.effect`, 'must be banUnselectedTraits with count 2');
+    return Object.freeze({
+      ...vow,
+      incrementalFear: Object.freeze([...vow.incrementalFear]),
+      ...(isDenial
+        ? { effect: Object.freeze({ kind: 'banUnselectedTraits' as const, count: 2 as const }) }
+        : {}),
+    });
   });
   if (values.length !== 17) fail('fearVows', 'must declare all 17 Vows');
   return createCollection(values, 'fearVows', (vow) => vow.key);

@@ -416,6 +416,7 @@ export const heraGiver = {
   key: 'Hera',
   label: 'Hera',
   providerKind: 'olympian',
+  denialParticipates: true,
   priorityTraitKeys: [
     'HeraWeaponBoon',
     'HeraSpecialBoon',

@@ -106,7 +106,14 @@ const vow = (
   label: string,
   incrementalFear: readonly number[],
   circeRemovable = true,
-): RawFearVowDeclaration => ({ key, label, incrementalFear, circeRemovable });
+  effect?: RawFearVowDeclaration['effect'],
+): RawFearVowDeclaration => ({
+  key,
+  label,
+  incrementalFear,
+  circeRemovable,
+  ...(effect === undefined ? {} : { effect }),
+});
 export const fearVows = [
   vow('HealingReductionShrineUpgrade', 'Vow of Scars', [1, 1, 2]),
   vow('ShopPricesShrineUpgrade', 'Vow of Debt', [1, 1]),
@@ -122,7 +129,10 @@ export const fearVows = [
   vow('BossDifficultyShrineUpgrade', 'Vow of Rivals', [2, 3, 3, 4], false),
   vow('BoonSkipShrineUpgrade', 'Vow of Forfeit', [3]),
   vow('BoonManaReserveShrineUpgrade', 'Vow of Hubris', [1, 1]),
-  vow('BanUnpickedBoonsShrineUpgrade', 'Vow of Denial', [2]),
+  vow('BanUnpickedBoonsShrineUpgrade', 'Vow of Denial', [2], true, {
+    kind: 'banUnselectedTraits',
+    count: 2,
+  }),
   vow('LimitGraspShrineUpgrade', 'Vow of Void', [1, 1, 1, 2]),
   vow('EnemyEliteShrineUpgrade', 'Vow of Fangs', [2, 3]),
 ] as const;

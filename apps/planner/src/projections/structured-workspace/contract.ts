@@ -1194,6 +1194,7 @@ export interface WorkspaceRunStatePresentation {
     readonly activeMinimumScalableRarity?: TraitRarity;
     readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
     readonly other: readonly WorkspaceRunStateTrait[];
+    readonly banned: readonly WorkspaceRunStateSource[];
   };
 }
 

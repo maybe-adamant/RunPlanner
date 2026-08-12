@@ -9,6 +9,7 @@ import {
   createExitSelectionAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRouteAddress,
   createProjectDocument,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
@@ -27,6 +28,7 @@ import {
   simulateProjectAssembly,
   simulateProject,
   type CompleteBiomeCompletenessResult,
+  type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -168,6 +170,15 @@ function evaluate(project: ProjectDocument) {
     history,
     rewards: evaluateBiomeRewards(catalog, snapshot, history, 1, traitContext(project)),
   };
+}
+
+function withDenial(project: ProjectDocument): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFearVowRank',
+    route: createRouteAddress('Underworld'),
+    vowKey: 'BanUnpickedBoonsShrineUpgrade',
+    rank: 1,
+  });
 }
 
 function firstBranch(result: ReturnType<typeof evaluate>['rewards']) {
@@ -682,6 +693,30 @@ function devotionProject(): ProjectDocument {
 }
 
 describe('F reward-history simulation', () => {
+  it('carries effective Denial through room, purchased Shop, and Devotion settlement', () => {
+    const room = firstBranch(evaluate(withDenial(sameRoomAcquisitionProject())).rewards);
+    const shop = firstBranch(evaluate(withDenial(shopTimingProject())).rewards);
+    const devotion = firstBranch(evaluate(withDenial(devotionProject())).rewards);
+
+    const bansFor = (branch: typeof room, giverKey: string, offeredKey?: string) => {
+      const event = branch.traitHistory?.events.find(
+        (candidate): candidate is TraitOfferEvent =>
+          candidate.kind === 'traitOffer' &&
+          candidate.giverKey === giverKey &&
+          (offeredKey === undefined ||
+            candidate.options.some((option) => option.traitKey === offeredKey)),
+      );
+      return event?.bannedTraitKeys;
+    };
+
+    expect(bansFor(room, 'Hestia')).toEqual(['HestiaSprintBoon', 'HestiaManaBoon']);
+    expect(bansFor(shop, 'Ares')).toEqual(['AresManaBoon', 'AresExCastBoon']);
+    expect(bansFor(devotion, 'Apollo', 'ApolloRetaliateBoon')).toEqual([
+      'ApolloManaBoon',
+      'ApolloRetaliateBoon',
+    ]);
+  });
+
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
     const start = createOccurrenceId('ratio-start');
     const project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });

@@ -521,6 +521,7 @@ export const apolloGiver = {
   key: 'Apollo',
   label: 'Apollo',
   providerKind: 'olympian',
+  denialParticipates: true,
   priorityTraitKeys: [
     'ApolloWeaponBoon',
     'ApolloSpecialBoon',

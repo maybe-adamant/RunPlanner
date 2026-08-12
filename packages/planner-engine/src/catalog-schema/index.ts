@@ -80,6 +80,7 @@ export interface FearVowDeclaration {
   readonly label: string;
   readonly incrementalFear: readonly number[];
   readonly circeRemovable: boolean;
+  readonly effect?: { readonly kind: 'banUnselectedTraits'; readonly count: 2 };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';

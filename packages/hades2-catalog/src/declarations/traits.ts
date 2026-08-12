@@ -74,6 +74,7 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'none' };
   readonly defaultOffer?: RawTraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, RawTraitOfferDefaults>>;
+  readonly denialParticipates?: boolean;
 }
 
 export interface RawTraitOfferContextDeclaration {

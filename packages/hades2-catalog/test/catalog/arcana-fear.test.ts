@@ -69,9 +69,71 @@ describe('Arcana and Fear catalog', () => {
       'LimitGraspShrineUpgrade|Vow of Void|1,1,1,2|true',
       'EnemyEliteShrineUpgrade|Vow of Fangs|2,3|true',
     ]);
+    expect(catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade?.effect).toEqual({
+      kind: 'banUnselectedTraits',
+      count: 2,
+    });
+    expect(
+      catalog.traitGivers.values
+        .filter((giver) => giver.denialParticipates)
+        .map((giver) => giver.key),
+    ).toEqual([
+      'Aphrodite',
+      'Apollo',
+      'Ares',
+      'Demeter',
+      'Hephaestus',
+      'Hera',
+      'Hestia',
+      'Poseidon',
+      'Zeus',
+      'Hermes',
+    ]);
   });
 
   it('rejects incomplete boards, unknown attached traits, and invalid Vow ranks', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: [...declarations.traitCatalog.givers].reverse(),
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === 'Hermes' ? { ...giver, denialParticipates: false } : giver,
+          ),
+        },
+      }),
+    ).toThrow(/missing: Hermes/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === 'Medea' ? { ...giver, denialParticipates: true } : giver,
+          ),
+        },
+      }),
+    ).toThrow(/unexpected: Medea/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === 'Hermes' ? { ...giver, denialParticipates: 'yes' } : giver,
+          ) as unknown as typeof declarations.traitCatalog.givers,
+        },
+      }),
+    ).toThrow(/denialParticipates.*boolean/);
     expect(() =>
       createCatalog({ ...declarations, arcanaCards: declarations.arcanaCards.slice(1) }),
     ).toThrow(/must declare all 25 cards/);
@@ -114,6 +176,26 @@ describe('Arcana and Fear catalog', () => {
         ),
       }),
     ).toThrow(/must be a positive integer/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        fearVows: declarations.fearVows.map((vow) =>
+          vow.key === 'BanUnpickedBoonsShrineUpgrade'
+            ? Object.fromEntries(Object.entries(vow).filter(([key]) => key !== 'effect'))
+            : vow,
+        ) as unknown as typeof declarations.fearVows,
+      }),
+    ).toThrow(/Denial must declare/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        fearVows: declarations.fearVows.map((vow) =>
+          vow.key === 'BoonSkipShrineUpgrade'
+            ? { ...vow, effect: { kind: 'banUnselectedTraits', count: 2 } }
+            : vow,
+        ),
+      }),
+    ).toThrow(/only Vow of Denial/);
     expect(() =>
       createCatalog({
         ...declarations,

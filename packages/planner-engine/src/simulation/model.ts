@@ -42,6 +42,7 @@ export type RewardGenerationFindingCode =
 
 export type TraitFindingCode =
   | 'alreadyEquipped'
+  | 'bannedTrait'
   | 'missingPrerequisite'
   | 'negativePrerequisite'
   | 'offerContext'

@@ -32,6 +32,7 @@ export interface DecisionTraitState {
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
   readonly godBoonRarityCounts: TraitHistoryState['godBoonRarityCounts'];
   readonly upgradableTraitCount: number;
+  readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
   readonly minimumScalableGodTraitRarity?: TraitHistoryState['minimumScalableGodTraitRarity'];
 }
 
@@ -234,6 +235,7 @@ function traitState(history: TraitHistoryState | undefined): DecisionTraitState 
       elementCounts: Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 }),
       godBoonRarityCounts: Object.freeze({}),
       upgradableTraitCount: 0,
+      bannedTraitKeys: Object.freeze([]),
     });
   }
   const source = history;
@@ -243,6 +245,7 @@ function traitState(history: TraitHistoryState | undefined): DecisionTraitState 
     elementCounts: Object.freeze({ ...source.elementCounts }),
     godBoonRarityCounts: Object.freeze({ ...source.godBoonRarityCounts }),
     upgradableTraitCount: source.upgradableTraitCount,
+    bannedTraitKeys: source.bannedTraitKeys,
     ...(source.minimumScalableGodTraitRarity === undefined
       ? {}
       : { minimumScalableGodTraitRarity: source.minimumScalableGodTraitRarity }),
