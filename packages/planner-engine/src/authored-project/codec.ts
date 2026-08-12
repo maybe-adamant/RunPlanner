@@ -36,7 +36,26 @@ function decodeBiomePlan(
     fail(`${path}.biomeKey`, `expected contiguous biome ${expectedBiomeKey}`);
   }
 
-  expectExactKeys(plan, ['biomeKey', 'state', 'topology'], path);
+  // This dormant child is optional in the authored model. Encoding can omit
+  // it, so decoding must accept that exact persisted representation too.
+  expectExactKeys(plan, ['biomeKey', 'state', 'topology', 'bossCompletionArcanaKeys'], path);
+  const rawBossKeys =
+    plan.bossCompletionArcanaKeys === undefined
+      ? []
+      : expectArray(plan.bossCompletionArcanaKeys, `${path}.bossCompletionArcanaKeys`);
+  if (rawBossKeys.length > catalog.arcanaCards.values.length) {
+    fail(`${path}.bossCompletionArcanaKeys`, 'exceeds Arcana card count');
+  }
+  const bossCompletionArcanaKeys = rawBossKeys.map((entry, index) =>
+    expectString(entry, `${path}.bossCompletionArcanaKeys[${index}]`),
+  );
+  const bossSet = new Set<string>();
+  for (const [index, key] of bossCompletionArcanaKeys.entries()) {
+    if (catalog.arcanaCards.byKey[key] === undefined)
+      fail(`${path}.bossCompletionArcanaKeys[${index}]`, `unknown Arcana ${key}`);
+    if (bossSet.has(key)) fail(`${path}.bossCompletionArcanaKeys[${index}]`, `duplicates ${key}`);
+    bossSet.add(key);
+  }
   const topology =
     plan.topology === null
       ? null
@@ -45,6 +64,15 @@ function decodeBiomePlan(
     biomeKey,
     state: decodeBiomeState(plan.state, layout, `${path}.state`),
     topology,
+    ...(plan.bossCompletionArcanaKeys === undefined
+      ? {}
+      : {
+          bossCompletionArcanaKeys: Object.freeze(
+            catalog.arcanaCards.values
+              .filter((card) => bossSet.has(card.key))
+              .map((card) => card.key),
+          ),
+        }),
   });
 }
 

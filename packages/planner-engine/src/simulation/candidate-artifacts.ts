@@ -4,6 +4,7 @@ import {
   type LevelResolutionAddress,
   type TraitOfferAddress,
   type TargetAddress,
+  type BossCompletionArcanaAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../authored-project/traits';
@@ -94,6 +95,25 @@ export interface LevelResolutionCandidateArtifacts {
   readonly at: (address: LevelResolutionAddress) => LevelResolutionCandidateCapability | undefined;
 }
 
+/** Atomic exact-set support captured immediately before one Boss completion effect. */
+export interface BossCompletionArcanaCandidateCapability {
+  readonly inactiveArcanaKeys: readonly string[];
+  readonly requiredCount: number;
+}
+export interface BossCompletionArcanaCandidateArtifacts {
+  readonly at: (
+    address: BossCompletionArcanaAddress,
+  ) => BossCompletionArcanaCandidateCapability | undefined;
+}
+export function createBossCompletionArcanaCandidateArtifacts(
+  contexts: ReadonlyMap<string, BossCompletionArcanaCandidateCapability>,
+): BossCompletionArcanaCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: BossCompletionArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
+  });
+}
+
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
   readonly roomTargets: RoomTargetCandidateArtifacts;
@@ -102,6 +122,7 @@ export interface BiomeCandidateArtifacts {
   readonly encounters: EncounterCandidateArtifacts;
   readonly traitOffers: TraitOfferCandidateArtifacts;
   readonly levelResolutions: LevelResolutionCandidateArtifacts;
+  readonly bossCompletionArcana: BossCompletionArcanaCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -146,6 +167,9 @@ export function createBiomeCandidateArtifacts(
   encounters: EncounterCandidateArtifacts = emptyEncounterCandidateArtifacts(),
   traitOffers: TraitOfferCandidateArtifacts = createEmptyTraitOfferCandidateArtifacts(),
   levelResolutions: LevelResolutionCandidateArtifacts = createEmptyLevelResolutionCandidateArtifacts(),
+  bossCompletionArcana: BossCompletionArcanaCandidateArtifacts = createBossCompletionArcanaCandidateArtifacts(
+    new Map(),
+  ),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -155,6 +179,7 @@ export function createBiomeCandidateArtifacts(
     encounters,
     traitOffers,
     levelResolutions,
+    bossCompletionArcana,
   });
 }
 

@@ -322,6 +322,7 @@ export interface CanonicalBiome {
   readonly decisions: readonly CanonicalDecision[];
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
+  readonly bossCompletionArcanaKeys: readonly string[];
 }
 
 export interface MaterializedExitDecisionFrontier {

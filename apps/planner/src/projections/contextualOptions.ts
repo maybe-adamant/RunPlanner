@@ -224,6 +224,13 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'room',
         message: 'This room is not among the rooms that can be offered for this door.',
       };
+    case 'judgmentOutcomeMissing':
+    case 'judgmentOutcomeWrongCardinality':
+    case 'judgmentOutcomeTargetUnavailable':
+      return {
+        kind: 'generic',
+        message: 'Repair the Judgment activation at this Boss completion.',
+      };
     case 'encounterUnavailable':
       return {
         kind: 'encounter',

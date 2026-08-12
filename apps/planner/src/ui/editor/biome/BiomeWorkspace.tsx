@@ -23,6 +23,7 @@ import {
   type WorkspaceAuthoringFrontier,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
@@ -323,13 +324,56 @@ function RailEntry({
   }
 }
 
-function CompletionWorkbench({ node }: { readonly node: WorkspaceCompletionNode }) {
+function CompletionWorkbench({
+  interactions,
+  node,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: WorkspaceCompletionNode;
+}) {
+  const dispatch = useAppDispatch();
+  const control =
+    node.judgment === undefined
+      ? undefined
+      : interactions.bossCompletionArcana.get(workspaceInteractionKey(node.judgment.address));
   return (
     <article className="biome-completion-workbench">
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
       <h3>{node.label}</h3>
       <SemanticOwnerMarker address={node.marker.address} />
       <p>This room is added automatically after the biome.</p>
+      {control === undefined || node.judgment === undefined ? null : (
+        <fieldset className="completion-judgment-control">
+          <legend>
+            Judgment — choose {node.judgment.requiredCount} inactive Arcana cards
+            <SemanticOwnerMarker address={control.owner} />
+          </legend>
+          {control.choices
+            .filter(
+              (choice) =>
+                node.judgment!.inactiveArcanaKeys.includes(choice.value) ||
+                control.value.includes(choice.value),
+            )
+            .map((choice) => {
+              const checked = control.value.includes(choice.value);
+              return (
+                <label key={choice.value}>
+                  <input
+                    checked={checked}
+                    onChange={() => {
+                      const next = checked
+                        ? control.value.filter((key) => key !== choice.value)
+                        : [...control.value, choice.value];
+                      dispatch(authoredProjectCommandDispatched(control.intentFor(next).command));
+                    }}
+                    type="checkbox"
+                  />
+                  {choice.label}
+                </label>
+              );
+            })}
+        </fieldset>
+      )}
     </article>
   );
 }
@@ -386,7 +430,7 @@ function InspectorNode({
         />
       );
     case 'completion':
-      return <CompletionWorkbench node={node} />;
+      return <CompletionWorkbench interactions={interactions} node={node} />;
     case 'hubDecision':
       return <HubDecisionWorkbench frontier={frontier} interactions={interactions} node={node} />;
   }

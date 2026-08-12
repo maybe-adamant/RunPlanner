@@ -8,6 +8,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
   type LevelResolutionAddress,
+  type BossCompletionArcanaAddress,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -53,6 +54,7 @@ import type {
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
+  WorkspaceBossCompletionArcanaInteraction,
   WorkspaceTraitOfferInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceRoomInteraction,
@@ -152,6 +154,10 @@ export interface WorkspaceInteractionBindingInput {
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
+  readonly bossCompletionArcanaControls?: ReadonlyMap<
+    string,
+    { readonly address: BossCompletionArcanaAddress; readonly value: readonly string[] }
+  >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
@@ -1232,6 +1238,7 @@ export function bindWorkspaceInteractions(
     rewardControls,
     traitControls,
     levelResolutionControls,
+    bossCompletionArcanaControls,
     roomControls,
     services,
     startInteractionRequirements,
@@ -1671,6 +1678,32 @@ export function bindWorkspaceInteractions(
       }),
     );
   }
+  const bossCompletionArcana = new Map<string, WorkspaceBossCompletionArcanaInteraction>();
+  for (const [key, control] of bossCompletionArcanaControls ?? []) {
+    bossCompletionArcana.set(
+      key,
+      Object.freeze({
+        choices: Object.freeze(
+          catalog.arcanaCards.values.map((card) =>
+            Object.freeze({ label: card.label, value: card.key }),
+          ),
+        ),
+        intentFor: (arcanaKeys: readonly string[]) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceBossCompletionArcana' as const,
+              completion: control.address,
+              arcanaKeys: Object.freeze([...arcanaKeys]),
+            }),
+          }),
+        key,
+        load: (arcanaKeys = control.value) =>
+          candidates.bossCompletionArcana(control.address, arcanaKeys),
+        owner: control.address,
+        value: control.value,
+      }),
+    );
+  }
 
   return Object.freeze({
     batchRewardStores,
@@ -1686,6 +1719,7 @@ export function bindWorkspaceInteractions(
     rewards,
     traitOffers,
     levelResolutions,
+    bossCompletionArcana,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,

@@ -21,6 +21,7 @@ import {
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type BiomeAddress,
+  type BossCompletionArcanaAddress,
   type ExitDecisionAddress,
   type EncounterPhaseAddress,
   type HubDecisionAddress,
@@ -216,6 +217,11 @@ export interface CandidateProjectionSession {
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
   ) => LevelResolutionCandidateProjection | undefined;
+  /** One atomic exact Judgment selection, assessed against its pre-effect domain. */
+  readonly bossCompletionArcana: (
+    owner: BossCompletionArcanaAddress,
+    arcanaKeys: readonly string[],
+  ) => CandidateProjectionEvaluation;
 }
 
 export interface LevelResolutionCandidateProjection {
@@ -849,6 +855,12 @@ export function createCandidateSessionFactory(
           ),
         });
       },
+      bossCompletionArcana: (owner: BossCompletionArcanaAddress, arcanaKeys: readonly string[]) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'bossCompletionArcana',
+          completion: owner,
+          arcanaKeys,
+        }),
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
@@ -907,6 +919,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'traitOfferFocusedOption':
     case 'traitAcquisitionTarget':
       return evaluation.result.supported;
+    case 'bossCompletionArcana':
+      return evaluation.result.selectedPossible;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -918,6 +932,8 @@ function candidateForced(
   switch (evaluation.kind) {
     case 'encounter':
       return evaluation.result.support === 'forced';
+    case 'bossCompletionArcana':
+      return false;
     case 'roomTarget':
       return (
         evaluation.result.pressure.selectedPossible &&

@@ -5,6 +5,7 @@ import type {
   AdditionalExitAddress,
   BatchRewardStoreAddress,
   BiomeAddress,
+  BossCompletionArcanaAddress,
   BiomeFieldAddress,
   ExitDecisionAddress,
   ExitSelectionAddress,
@@ -56,6 +57,12 @@ export type ProjectStateCommand =
       readonly field: BiomeFieldAddress;
       readonly value: AuthoredFieldValue;
     };
+
+export type BossCompletionCommand = {
+  readonly kind: 'ReplaceBossCompletionArcana';
+  readonly completion: BossCompletionArcanaAddress;
+  readonly arcanaKeys: readonly string[];
+};
 
 export type TopologyCommand =
   | {
@@ -294,6 +301,7 @@ export type OccurrenceLeafCommand =
 
 export type ProjectCommand =
   | ProjectStateCommand
+  | BossCompletionCommand
   | TopologyCommand
   | RoomReplacementCommand
   | RouteDetourCommand

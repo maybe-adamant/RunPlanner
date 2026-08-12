@@ -81,6 +81,11 @@ import {
 } from './takeover-hub';
 import type { CandidateContextUnavailable } from './availability';
 import {
+  evaluateBossCompletionArcanaCandidate,
+  type BossCompletionArcanaCandidateQuery,
+  type EvaluatedBossCompletionArcanaCandidate,
+} from './boss-completion-arcana';
+import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
@@ -115,7 +120,8 @@ export type ProjectCandidateQuery =
   | StartRoomCandidateQuery
   | TakeoverPrebossBatchCandidateQuery
   | HubTerminalTakeoverCandidateQuery
-  | TraitOfferCandidateQuery;
+  | TraitOfferCandidateQuery
+  | BossCompletionArcanaCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -143,7 +149,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedStartRoomCandidate
   | EvaluatedTakeoverPrebossBatchCandidate
   | EvaluatedHubTerminalTakeoverCandidate
-  | EvaluatedTraitOfferCandidate;
+  | EvaluatedTraitOfferCandidate
+  | EvaluatedBossCompletionArcanaCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -193,6 +200,16 @@ function evaluateCandidateQuery(
 ): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
+    case 'bossCompletionArcana':
+      return evaluateBossCompletionArcanaCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.completion.routeKey, query.completion.biomeKey),
+        )?.bossCompletionArcana,
+        query,
+      );
     case 'startRoom':
       return evaluateStartRoomCandidate(catalog, project, query);
     case 'roomTarget':

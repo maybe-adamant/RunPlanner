@@ -1083,6 +1083,7 @@ export function materializeBiome(
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
   loadout: RouteWeaponAspectLoadout,
+  bossCompletionArcanaKeys: readonly string[] = [],
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
@@ -1188,5 +1189,6 @@ export function materializeBiome(
     decisions: Object.freeze(decisions),
     completionRooms,
     biomeState,
+    bossCompletionArcanaKeys: Object.freeze([...bossCompletionArcanaKeys]),
   });
 }

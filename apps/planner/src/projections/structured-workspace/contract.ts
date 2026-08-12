@@ -26,6 +26,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
   type LevelResolutionAddress,
+  type BossCompletionArcanaAddress,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -252,6 +253,20 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly owner: LevelResolutionAddress;
   readonly traitLabel: (traitKey: string) => string;
   readonly value: AuthoredLevelResolution;
+}
+
+/** Atomic exact-set authoring at one reached Boss completion. */
+export interface WorkspaceBossCompletionArcanaInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly intentFor: (
+    arcanaKeys: readonly string[],
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceBossCompletionArcana' }>
+  >;
+  readonly key: string;
+  readonly load: (arcanaKeys?: readonly string[]) => CandidateProjectionEvaluation;
+  readonly owner: BossCompletionArcanaAddress;
+  readonly value: readonly string[];
 }
 
 interface WorkspaceRoomInteractionBase {
@@ -489,6 +504,7 @@ export interface WorkspaceInteractionCatalog {
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
+  readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -1207,6 +1223,13 @@ export interface WorkspaceCompletionNode {
   readonly role: CompletionRoomDescriptor['role'];
   readonly gameName: string;
   readonly label: string;
+  readonly judgment?: {
+    readonly address: BossCompletionArcanaAddress;
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly marker: WorkspaceMarker;
+    readonly requiredCount: number;
+    readonly value: readonly string[];
+  };
 }
 
 export type WorkspaceBiomeField =

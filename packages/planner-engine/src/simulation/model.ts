@@ -35,7 +35,10 @@ export type RewardGenerationFindingCode =
   | 'rewardPayloadInvalid'
   | 'rewardSourceUnavailable'
   | 'shopOfferUnavailable'
-  | 'shopPurchaseUnavailable';
+  | 'shopPurchaseUnavailable'
+  | 'judgmentOutcomeMissing'
+  | 'judgmentOutcomeWrongCardinality'
+  | 'judgmentOutcomeTargetUnavailable';
 
 export type TraitFindingCode =
   | 'alreadyEquipped'

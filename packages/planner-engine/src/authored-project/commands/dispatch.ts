@@ -11,6 +11,7 @@ import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand } from './acquisition-site';
+import { applyBossCompletionCommand } from './boss-completion';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -106,6 +107,13 @@ function applyUnchecked(
       );
     case 'ReplaceLevelResolution':
       return applyLevelResolutionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceBossCompletionArcana':
+      return applyBossCompletionCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

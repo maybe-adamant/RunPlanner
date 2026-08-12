@@ -170,6 +170,33 @@ const codecRejections: readonly {
 ];
 
 describe('project document codec', () => {
+  it('round-trips a canonical dormant Boss-completion Arcana set', () => {
+    const encoded = encodedFStart();
+    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const biome = (route.biomes as Array<Record<string, unknown>>)[0]!;
+    biome.bossCompletionArcanaKeys = ['CardDraw', 'CastCount'];
+
+    const decoded = decodeProjectDocument(encoded, catalog);
+    expect(decoded.routes[0]?.biomes[0]?.bossCompletionArcanaKeys).toEqual([
+      'CastCount',
+      'CardDraw',
+    ]);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
+      decoded,
+    );
+  });
+
+  it.each([
+    ['unknown', ['MissingArcana']],
+    ['duplicate', ['CardDraw', 'CardDraw']],
+  ] as const)('rejects an %s Boss-completion Arcana set', (_name, arcanaKeys) => {
+    const encoded = encodedFStart();
+    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const biome = (route.biomes as Array<Record<string, unknown>>)[0]!;
+    biome.bossCompletionArcanaKeys = arcanaKeys;
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
+  });
+
   it('round-trips the complete Arcana and Fear loadout', () => {
     const encoded = encodedFStart();
     const routes = encoded.routes as Array<Record<string, unknown>>;
