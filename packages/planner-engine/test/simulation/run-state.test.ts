@@ -567,7 +567,7 @@ describe('decision run-state snapshots', () => {
             { traitKey, rarity: 'Common' },
             { traitKey: giver.traitKeys[0]!, rarity: 'Common' },
             { traitKey: giver.traitKeys[1]!, rarity: 'Common' },
-          ]),
+          ]) as TraitOfferEvent['options'],
           selectedOptionKey: 'option1',
           acquisitionPoint: 'run-state-test',
         } satisfies TraitOfferEvent;

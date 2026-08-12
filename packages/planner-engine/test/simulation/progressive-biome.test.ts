@@ -391,13 +391,18 @@ describe('progressive biome evaluation', () => {
         ),
       );
     if (trace === undefined) throw new Error('fixture has no reached legal trait offer');
+    if (trace.offer.kind !== 'traits') throw new Error('fixture has no materialized trait offer');
     const owner = trace.address.owner;
     const first = trace.offer.options[0];
     const third = trace.offer.options[2];
+    if (first === undefined || third === undefined) {
+      throw new Error('fixture needs a complete trait offer');
+    }
     const result = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
       kind: 'traitOffer',
       trait: createTraitOfferAddress(owner, trace.acquisitionRole),
       value: Object.freeze({
+        kind: 'traits',
         giverKey: trace.offer.giverKey,
         options: Object.freeze([first, first, third] as const),
         selectedOptionKey: 'option1',

@@ -236,6 +236,13 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'circeResolutionTargetUnavailable':
     case 'circeOptionUnavailable':
       return { kind: 'generic', message: 'Repair the selected Circe outcome.' };
+    case 'fullTraitOfferWidthRequired':
+    case 'missingMandatoryOrdinary':
+    case 'missingForcedReplacement':
+    case 'unsupportedSparseTraitOffer':
+    case 'fallbackGoldUnavailable':
+    case 'traitOfferSelectionUnavailable':
+      return { kind: 'trait', message: 'Repair this exhausted trait offer.' };
     case 'encounterUnavailable':
       return {
         kind: 'encounter',

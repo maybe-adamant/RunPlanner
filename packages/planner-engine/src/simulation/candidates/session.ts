@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress } from '../../authored-project/addresses';
+import { createBiomeAddress, type TraitOfferAddress } from '../../authored-project/addresses';
+import type { AuthoredTraitOfferTraits } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
 import {
@@ -196,6 +197,15 @@ export interface ProjectCandidateSession {
       queries: readonly ProjectCandidateSessionQuery[],
     ): readonly ProjectCandidateSessionEvaluation[];
   };
+  /** Exact trait-outcome transitions retained behind the prepared session. */
+  readonly traitOfferStartingDraft: (
+    owner: TraitOfferAddress,
+    giverKey: string,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly nextTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
 }
 
 function assertNever(value: never): never {
@@ -430,5 +440,17 @@ export function createPreparedProjectCandidateSession(
       queries.map((query) => evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query)),
     );
   }
-  return Object.freeze({ project, evaluation, evaluate });
+  const traitCapability = (owner: TraitOfferAddress) =>
+    candidateArtifacts
+      .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+      ?.traitOffers.at(owner);
+  return Object.freeze({
+    project,
+    evaluation,
+    evaluate,
+    traitOfferStartingDraft: (owner: TraitOfferAddress, giverKey: string) =>
+      traitCapability(owner)?.traitsStartingDraft(giverKey),
+    nextTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>
+      traitCapability(owner)?.nextTraitOptionDraft(value),
+  });
 }

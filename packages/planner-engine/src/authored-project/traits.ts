@@ -19,15 +19,24 @@ export type AuthoredCirceResolution =
   | { readonly kind: 'promoteArcana'; readonly arcanaKeys: readonly string[] }
   | { readonly kind: 'disableFear'; readonly vowKey: string | null };
 
-export interface AuthoredTraitOffer {
+export type OneToThree<T> = readonly [T] | readonly [T, T] | readonly [T, T, T];
+
+export interface AuthoredTraitOfferTraits {
+  readonly kind: 'traits';
   readonly giverKey: string;
-  readonly options: readonly [AuthoredTraitOption, AuthoredTraitOption, AuthoredTraitOption];
-  readonly selectedOptionKey: 'option1' | 'option2' | 'option3';
+  readonly options: OneToThree<AuthoredTraitOption>;
+  readonly selectedOptionKey: TraitOptionKey;
   /** Present only when this giver's normalized offer requirements consume it. */
   readonly deathDefianceConditionMet?: boolean;
 }
 
-export type TraitOptionKey = AuthoredTraitOffer['selectedOptionKey'];
+export interface AuthoredTraitOfferFallbackGold {
+  readonly kind: 'fallbackGold';
+  readonly giverKey: string;
+}
+
+export type AuthoredTraitOffer = AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold;
+export type TraitOptionKey = 'option1' | 'option2' | 'option3';
 
 /** Makes the declaration-owned producer identity explicit at authored boundaries. */
 export function producerLevelEffectSource(binding: {
@@ -91,6 +100,19 @@ export interface TraitOfferDefaultsContext {
 
 export function optionIndex(key: TraitOptionKey): 0 | 1 | 2 {
   return key === 'option1' ? 0 : key === 'option2' ? 1 : 2;
+}
+
+export function traitOfferOption(
+  offer: AuthoredTraitOffer,
+  key: TraitOptionKey,
+): AuthoredTraitOption | undefined {
+  return offer.kind === 'traits' ? offer.options[optionIndex(key)] : undefined;
+}
+
+export function traitOfferSupportsExhaustion(giver: {
+  readonly providerKind: TraitProviderKind;
+}): boolean {
+  return giver.providerKind === 'olympian' || giver.providerKind === 'hermes';
 }
 
 function requirementUsesContext(
@@ -175,10 +197,11 @@ export function createDefaultTraitOffers(
       giver.defaultsByLoadout?.[`${loadout.weaponKey}:${loadout.aspectKey}`] ?? giver.defaultOffer;
     if (defaults === undefined) continue;
     result[role.key] = Object.freeze({
+      kind: 'traits',
       giverKey: giver.key,
       options: Object.freeze(
         defaults.options.map((option) => Object.freeze({ ...option })),
-      ) as AuthoredTraitOffer['options'],
+      ) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey:
         defaults.selectedOption === 0
           ? 'option1'
@@ -205,10 +228,11 @@ export function createDefaultEncounterTraitOffer(
   const defaults = giver?.defaultOffer;
   if (giver === undefined || defaults === undefined) return undefined;
   return Object.freeze({
+    kind: 'traits',
     giverKey: giver.key,
     options: Object.freeze(
       defaults.options.map((option) => Object.freeze({ ...option })),
-    ) as AuthoredTraitOffer['options'],
+    ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey:
       defaults.selectedOption === 0
         ? 'option1'
@@ -287,7 +311,10 @@ export function selectedPickupProducer(
   const producers = Object.values(encounters.traitOffersByPhase ?? {})
     .flatMap((offers) => Object.values(offers))
     .flatMap((offer) => {
-      const traitKey = offer.options[optionIndex(offer.selectedOptionKey)].traitKey;
+      if (offer.kind === 'fallbackGold') return [];
+      const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+      if (selected === undefined) return [];
+      const traitKey = selected.traitKey;
       const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
       return disposition?.kind === 'producePickups'
         ? [Object.freeze({ traitKey, disposition })]

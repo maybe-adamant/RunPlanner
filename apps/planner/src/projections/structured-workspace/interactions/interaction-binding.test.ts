@@ -23,7 +23,7 @@ import {
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
-  type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -156,6 +156,50 @@ function bind(
 }
 
 describe('structured workspace interaction binding', () => {
+  it('publishes immediate engine-backed whole-offer feedback for remove, add, and Fallback Gold', () => {
+    const { interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) =>
+        candidate.giver.providerKind === 'olympian' && candidate.value.kind === 'traits',
+    );
+    if (interaction === undefined || interaction.value.kind !== 'traits') {
+      throw new Error('Olympian trait interaction is missing');
+    }
+    const removed = Object.freeze({
+      ...interaction.value,
+      options: Object.freeze(
+        interaction.value.options.slice(0, -1),
+      ) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    const [removedCandidate] = interaction.load(removed);
+    if (removedCandidate?.evaluation.kind !== 'traitOffer') {
+      throw new Error('removed trait offer did not receive an engine evaluation');
+    }
+    expect(removedCandidate.evaluation.result.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'fullTraitOfferWidthRequired' })]),
+    );
+
+    const repaired = interaction.nextTraitOfferDraft?.(removed);
+    if (repaired === undefined) throw new Error('engine did not provide an append draft');
+    const [repairedCandidate] = interaction.load(repaired);
+    expect(repairedCandidate?.evaluation).toMatchObject({
+      kind: 'traitOffer',
+      result: { supported: true },
+    });
+
+    const [fallbackCandidate] = interaction.load({
+      kind: 'fallbackGold',
+      giverKey: interaction.value.giverKey,
+    });
+    if (fallbackCandidate?.evaluation.kind !== 'traitOffer') {
+      throw new Error('Fallback Gold did not receive an engine evaluation');
+    }
+    expect(fallbackCandidate.evaluation.result.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'fallbackGoldUnavailable' })]),
+    );
+  });
+
   it('binds Circe draft switches and the blocking finding to the exact resolution child', () => {
     let project = createRepresentativeNOProject();
     project = applyProjectCommand(project, catalog, {
@@ -172,7 +216,8 @@ describe('structured workspace interaction binding', () => {
       ),
       'selection',
     );
-    const directOffer: AuthoredTraitOffer = Object.freeze({
+    const directOffer: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
       giverKey: 'Circe',
       options: Object.freeze([
         Object.freeze({ traitKey: 'CirceShrinkTrait', rarity: 'Common' as const }),
@@ -192,7 +237,7 @@ describe('structured workspace interaction binding', () => {
             vowKey: 'EnemyDamageShrineUpgrade',
           }),
         }),
-      ]) as AuthoredTraitOffer['options'],
+      ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1',
     });
     project = applyProjectCommand(project, catalog, {
@@ -216,9 +261,10 @@ describe('structured workspace interaction binding', () => {
       kind: 'activateArcana',
       arcanaKeys: ['ChanneledCast'],
     });
-    expect(redIntent?.command.value.options[2]?.circeResolution).toEqual(
-      directOffer.options[2]?.circeResolution,
-    );
+    expect(
+      (redIntent?.command.value as AuthoredTraitOfferTraits | undefined)?.options[2]
+        ?.circeResolution,
+    ).toEqual(directOffer.options[2]?.circeResolution);
 
     const blackDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option3' as const });
     const black = interaction.optionDomain(blackDraft, 'option3').circeResolution;
@@ -234,7 +280,7 @@ describe('structured workspace interaction binding', () => {
         directOffer.options[0],
         Object.freeze({ traitKey: 'RandomArcanaTrait', rarity: 'Common' as const }),
         directOffer.options[2],
-      ]) as AuthoredTraitOffer['options'],
+      ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option2' as const,
     });
     const invalidProject = applyProjectCommand(project, catalog, {
@@ -265,7 +311,12 @@ describe('structured workspace interaction binding', () => {
     );
     const interaction = options[0];
     const sibling = options[1];
-    if (interaction === undefined || sibling === undefined) {
+    if (
+      interaction === undefined ||
+      sibling === undefined ||
+      interaction.value.kind !== 'traits' ||
+      sibling.value.kind !== 'traits'
+    ) {
       throw new Error('focused trait interaction fixtures are missing');
     }
     const prepared = services.traitDomain.prepare(interaction.giver, interaction.value, 'option1');
@@ -293,7 +344,7 @@ describe('structured workspace interaction binding', () => {
           rarity: secondOption.rarity === 'Common' ? 'Rare' : 'Common',
         }),
         interaction.value.options[2],
-      ]) as AuthoredTraitOffer['options'],
+      ]) as AuthoredTraitOfferTraits['options'],
     });
     const changed = interaction.optionDomain(changedDraft, 'option1');
     expect(changed).not.toBe(initial);
@@ -328,14 +379,15 @@ describe('structured workspace interaction binding', () => {
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
-    if (interaction === undefined) throw new Error('ranked trait interaction is missing');
+    if (interaction === undefined || interaction.value.kind !== 'traits')
+      throw new Error('ranked trait interaction is missing');
     const draft = Object.freeze({
       ...interaction.value,
       options: Object.freeze([
         Object.freeze({ traitKey: 'BoonDecayBoon', rarity: 'Common' as const }),
         interaction.value.options[1],
         interaction.value.options[2],
-      ]) as AuthoredTraitOffer['options'],
+      ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
 
@@ -852,6 +904,7 @@ describe('structured workspace interaction binding', () => {
         'selection',
       ),
       value: {
+        kind: 'traits',
         giverKey: 'Narcissus',
         options: [
           { traitKey: 'NarcissusI', rarity: 'Common' },

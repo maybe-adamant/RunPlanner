@@ -982,6 +982,7 @@ describe('route-detour simulation', () => {
         kind: 'ReplaceTraitOffer',
         trait: createTraitOfferAddress(incoming, acquisitionRole),
         value: {
+          kind: 'traits',
           giverKey,
           options: [
             { traitKey, rarity: 'Common' },

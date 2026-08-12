@@ -102,6 +102,29 @@ export function projectTraitOfferFeedback(
   candidate: CandidateOptionProjection<AuthoredTraitOffer> | undefined,
   traitLabel: (traitKey: string) => string = (traitKey) => traitKey,
 ): TraitOfferFeedback {
+  if (offer.kind === 'fallbackGold') {
+    if (candidate === undefined)
+      return Object.freeze({ options: Object.freeze([]), support: 'unavailable' });
+    const support = candidateSupport(candidate);
+    const evaluation = candidate.evaluation;
+    if (evaluation.kind === 'unavailable') {
+      return Object.freeze({
+        contextMessage: unavailableMessage(evaluation),
+        options: Object.freeze([]),
+        support,
+      });
+    }
+    if (evaluation.kind !== 'traitOffer')
+      return Object.freeze({ options: Object.freeze([]), support });
+    const messages = evaluation.result.findings.map((finding) =>
+      presentTraitCandidateReason(finding, traitLabel),
+    );
+    return Object.freeze({
+      ...(messages.length === 0 ? {} : { contextMessage: [...new Set(messages)].join(' ') }),
+      options: Object.freeze([]),
+      support,
+    });
+  }
   if (candidate === undefined) {
     return Object.freeze({ options: Object.freeze([]), support: 'unavailable' });
   }
@@ -365,6 +388,7 @@ export function projectRouteTraitOffers(
     const address = trace.address;
     const key = semanticAddressKey(address);
     const control = interactions.traitOffers.get(key);
+    if (trace.offer.kind === 'fallbackGold') continue;
     const option =
       trace.offer.options[
         trace.offer.selectedOptionKey === 'option1'

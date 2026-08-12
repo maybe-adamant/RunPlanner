@@ -62,6 +62,56 @@ describe('authored-project incoming reward commands', () => {
     ).toBe(project);
   });
 
+  it('rejects selecting an unmaterialized sparse trait option', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const trait = createTraitOfferAddress(reward, 'source');
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
+    const existing =
+      occurrence?.state.kind === 'counted'
+        ? occurrence.state.reward?.traitOffersByAcquisitionRole?.source
+        : undefined;
+    if (existing?.kind !== 'traits') throw new Error('missing Apollo trait offer');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: Object.freeze({
+        kind: 'traits',
+        giverKey: existing.giverKey,
+        options: Object.freeze([existing.options[0]!]) as readonly [
+          (typeof existing.options)[number],
+        ],
+        selectedOptionKey: 'option1',
+      }),
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitSelection',
+        trait,
+        selectedOptionKey: 'option3',
+      }),
+    ).toThrow('selected option is not materialized');
+    const fallback = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: Object.freeze({ kind: 'fallbackGold', giverKey: existing.giverKey }),
+    });
+    expect(() =>
+      applyProjectCommand(fallback, catalog, {
+        kind: 'ReplaceTraitSelection',
+        trait,
+        selectedOptionKey: 'option1',
+      }),
+    ).toThrow('selected option is not materialized');
+  });
+
   it('rejects a persisted Death Defiance field on an unsupported trait owner', () => {
     const document = JSON.parse(encodeProjectDocument(createGoldenFGHProject())) as {
       routes: Array<{
@@ -97,6 +147,7 @@ describe('authored-project incoming reward commands', () => {
       kind: 'ReplaceTraitOffer',
       trait,
       value: {
+        kind: 'traits',
         giverKey: 'Hera',
         options: [
           {
@@ -136,6 +187,7 @@ describe('authored-project incoming reward commands', () => {
         kind: 'ReplaceTraitOffer',
         trait,
         value: {
+          kind: 'traits',
           giverKey: 'Hera',
           options: [
             {

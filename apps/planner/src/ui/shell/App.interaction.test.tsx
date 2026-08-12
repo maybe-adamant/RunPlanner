@@ -252,7 +252,9 @@ describe('planner history interaction', () => {
     const savedInteraction = application
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
-    expect(savedInteraction?.value.selectedOptionKey).toBe('option2');
+    if (savedInteraction?.value.kind !== 'traits')
+      throw new Error('saved Artemis offer must contain traits');
+    expect(savedInteraction.value.selectedOptionKey).toBe('option2');
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeSave.past.length + 1,
     );
@@ -261,7 +263,10 @@ describe('planner history interaction', () => {
     const restoredInteraction = application
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
-    expect(restoredInteraction?.value.selectedOptionKey).toBe('option1');
+    if (restoredInteraction?.value.kind !== 'traits') {
+      throw new Error('restored Artemis offer must contain traits');
+    }
+    expect(restoredInteraction.value.selectedOptionKey).toBe('option1');
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {
@@ -344,6 +349,7 @@ describe('planner history interaction', () => {
     const target = traitInteraction.owner;
     if (target.owner.kind !== 'incomingReward') throw new Error('incoming trait owner is missing');
     const initialValue = traitInteraction.value;
+    if (initialValue.kind !== 'traits') throw new Error('incoming trait fixture must offer traits');
     const replacementSource = traitInteraction.giver.key === 'Ares' ? 'ZeusUpgrade' : 'AresUpgrade';
     const view = renderPlannerForInteraction({ application });
 
@@ -372,9 +378,12 @@ describe('planner history interaction', () => {
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
+    const replacementValue = replacement.value;
+    if (replacementValue.kind !== 'traits')
+      throw new Error('replacement trait interaction must offer traits');
     await waitFor(() =>
       expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[replacement.value.options[0]?.traitKey ?? '']?.label,
+        application.catalog.traits.byKey[replacementValue.options[0]?.traitKey ?? '']?.label,
       ),
     );
     expect(replacement.value).not.toEqual(initialValue);
@@ -387,9 +396,12 @@ describe('planner history interaction', () => {
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (restored === undefined) throw new Error('restored trait interaction is missing');
+    const restoredValue = restored.value;
+    if (restoredValue.kind !== 'traits')
+      throw new Error('restored trait interaction must offer traits');
     await waitFor(() =>
       expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[restored.value.options[0]?.traitKey ?? '']?.label,
+        application.catalog.traits.byKey[restoredValue.options[0]?.traitKey ?? '']?.label,
       ),
     );
     expect(restored.value).toEqual(initialValue);

@@ -1395,11 +1395,13 @@ export function decodeBiomeTopology(
     );
     const selectedPickupDispositions = Object.values(encounters.traitOffersByPhase ?? {})
       .flatMap((phase) => Object.values(phase))
-      .map(
-        (offer) =>
-          catalog.traits.byKey[offer.options[optionIndex(offer.selectedOptionKey)].traitKey]
-            ?.selectedDisposition,
-      )
+      .map((offer) => {
+        if (offer.kind === 'fallbackGold') return undefined;
+        const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+        return selected === undefined
+          ? undefined
+          : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+      })
       .filter(
         (
           disposition,

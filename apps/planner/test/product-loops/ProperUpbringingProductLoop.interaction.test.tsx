@@ -29,6 +29,8 @@ import {
 } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
+type AuthoredTraitsOffer = Extract<AuthoredTraitOffer, { kind: 'traits' }>;
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -128,12 +130,13 @@ function prepareProperUpbringingFixture() {
     | {
         readonly address: TraitOfferOwnerAddress;
         readonly trace: SelectedTraitOfferAssessment;
-        readonly options: AuthoredTraitOffer['options'];
+        readonly options: AuthoredTraitsOffer['options'];
       }
     | undefined;
   const staleSession = traitCandidateSession(authored);
   for (const trace of reachedTraitOffers(authored)) {
     if (semanticAddressKey(trace.address) === semanticAddressKey(activationTrace.address)) continue;
+    if (trace.offer.kind !== 'traits') continue;
     const repaired = supportedTraitOffer(
       authored,
       trace.address,
@@ -142,6 +145,7 @@ function prepareProperUpbringingFixture() {
       staleSession,
     );
     if (repaired === undefined) continue;
+    if (repaired.kind !== 'traits') continue;
     const repairedOptions = repaired.options;
     const commonIndex = repairedOptions.findIndex((option) => {
       const domain = application.catalog.traits.byKey[option.traitKey]?.rarityDomain;
@@ -150,11 +154,12 @@ function prepareProperUpbringingFixture() {
     if (commonIndex !== 0) continue;
     const staleOptions = repairedOptions.map((option, index) =>
       index === commonIndex ? { ...option, rarity: 'Common' as const } : option,
-    ) as unknown as AuthoredTraitOffer['options'];
+    ) as unknown as AuthoredTraitsOffer['options'];
     const repairedCandidate = staleSession.evaluate({
       kind: 'traitOffer',
       trait: trace.address,
       value: {
+        kind: 'traits',
         giverKey: trace.offer.giverKey,
         options: repairedOptions,
         selectedOptionKey: 'option1',
@@ -165,6 +170,7 @@ function prepareProperUpbringingFixture() {
       kind: 'ReplaceTraitOffer',
       trait: trace.address,
       value: {
+        kind: 'traits',
         giverKey: trace.offer.giverKey,
         options: staleOptions,
         selectedOptionKey: 'option1',
@@ -190,6 +196,7 @@ function prepareProperUpbringingFixture() {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(stale.address, stale.trace.acquisitionRole),
     value: {
+      kind: 'traits',
       giverKey: stale.trace.offer.giverKey,
       options: stale.options,
       selectedOptionKey: 'option1',
@@ -269,6 +276,8 @@ describe('Proper Upbringing product loop', () => {
           semanticAddressKey(offer.address) ===
           semanticAddressKey(createTraitOfferAddress(stale!.address, stale!.trace.acquisitionRole)),
       );
-    expect(repairedOffer?.offer.options[0]?.rarity).toBe('Rare');
+    if (repairedOffer?.offer.kind !== 'traits')
+      throw new Error('repaired offer must contain traits');
+    expect(repairedOffer.offer.options[0]?.rarity).toBe('Rare');
   });
 });

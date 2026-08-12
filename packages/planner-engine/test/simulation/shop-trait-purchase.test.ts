@@ -87,7 +87,7 @@ function pomTargetHistory() {
       { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
       { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
       { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-    ]),
+    ]) as TraitOfferEvent['options'],
     selectedOptionKey: 'option1',
     acquisitionPoint: 'seed',
   };
@@ -504,6 +504,7 @@ describe('Shop trait acquisition processing', () => {
                 }),
                 traitOffersByAcquisitionRole: Object.freeze({
                   source: Object.freeze({
+                    kind: 'traits',
                     giverKey: 'Zeus',
                     options: Object.freeze([
                       { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' as const },
@@ -745,10 +746,10 @@ describe('Shop trait acquisition processing', () => {
       }),
     );
     expect(purchasedBranch?.traitHistory?.events).toHaveLength(0);
+    const weaponUpgradeOffer = major.traitOffersByAcquisitionRole?.weaponUpgrade;
+    if (weaponUpgradeOffer?.kind !== 'traits') throw new Error('weapon upgrade must offer traits');
     expect(
-      purchasedBranch?.traitHistory?.equippedTraits[
-        major.traitOffersByAcquisitionRole?.weaponUpgrade?.options[0]?.traitKey ?? ''
-      ],
+      purchasedBranch?.traitHistory?.equippedTraits[weaponUpgradeOffer.options[0]?.traitKey ?? ''],
     ).toBeUndefined();
   });
 });

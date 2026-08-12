@@ -694,6 +694,7 @@ describe('surface product loop', () => {
       break;
     }
     if (target === undefined) throw new Error('No reached Olympian replacement candidate found');
+    if (target.trace.offer.kind !== 'traits') throw new Error('replacement must start from traits');
     const replacement = target.candidate;
     const transition = replacement.assessment.replacementTransition;
     if (transition === undefined || replacement.option.rarity === undefined) {
@@ -710,6 +711,7 @@ describe('surface product loop', () => {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(target.address, target.trace.acquisitionRole),
       value: Object.freeze({
+        kind: 'traits',
         giverKey: target.trace.offer.giverKey,
         options: Object.freeze(options) as typeof target.trace.offer.options,
         selectedOptionKey: 'option1',

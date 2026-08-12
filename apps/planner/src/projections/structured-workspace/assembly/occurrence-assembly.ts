@@ -13,6 +13,7 @@ import {
   createTraitOfferAddress,
   createCirceResolutionAddress,
   createLevelResolutionAddress,
+  traitOfferOption,
   traitGiverUsesOfferContext,
   semanticAddressKey,
   type BiomeAddress,
@@ -165,15 +166,13 @@ function traitOfferControls(
     if (giver === undefined) continue;
     const address = createTraitOfferAddress(owner.address, acquisitionRole);
     const selected =
-      offer.options[
-        offer.selectedOptionKey === 'option1' ? 0 : offer.selectedOptionKey === 'option2' ? 1 : 2
-      ];
+      offer.kind === 'traits' ? traitOfferOption(offer, offer.selectedOptionKey) : undefined;
     const selectedDisposition =
       selected === undefined
         ? undefined
         : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
     const circeResolution =
-      selectedDisposition?.kind !== 'circe'
+      offer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
         ? undefined
         : Object.freeze({
             address: createCirceResolutionAddress(address, offer.selectedOptionKey),
@@ -192,8 +191,13 @@ function traitOfferControls(
         offer,
         rewardOwner: owner.address,
         ...(circeResolution === undefined ? {} : { circeResolution }),
-        ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
-          ? { deathDefianceCondition: { value: offer.deathDefianceConditionMet ?? false } }
+        ...(offer.kind === 'traits' &&
+        traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
+          ? {
+              deathDefianceCondition: {
+                value: offer.deathDefianceConditionMet ?? false,
+              },
+            }
           : {}),
       }),
     );
@@ -564,19 +568,15 @@ function activeEncounterPhasesForOwner(
         ? (() => {
             const traitAddress = createTraitOfferAddress(address, 'selection');
             const selected =
-              authoredTraitOffer.options[
-                authoredTraitOffer.selectedOptionKey === 'option1'
-                  ? 0
-                  : authoredTraitOffer.selectedOptionKey === 'option2'
-                    ? 1
-                    : 2
-              ];
+              authoredTraitOffer.kind === 'traits'
+                ? traitOfferOption(authoredTraitOffer, authoredTraitOffer.selectedOptionKey)
+                : undefined;
             const selectedDisposition =
               selected === undefined
                 ? undefined
                 : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
             const circeResolution =
-              selectedDisposition?.kind !== 'circe'
+              authoredTraitOffer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
                 ? undefined
                 : Object.freeze({
                     address: createCirceResolutionAddress(
@@ -602,7 +602,8 @@ function activeEncounterPhasesForOwner(
               offer: authoredTraitOffer,
               rewardOwner: address,
               ...(circeResolution === undefined ? {} : { circeResolution }),
-              ...(traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
+              ...(authoredTraitOffer.kind === 'traits' &&
+              traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
                 ? {
                     deathDefianceCondition: {
                       value: authoredTraitOffer.deathDefianceConditionMet ?? false,

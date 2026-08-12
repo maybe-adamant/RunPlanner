@@ -61,6 +61,7 @@ function selectNarcissus(
       'selection',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Narcissus',
       options: traitKeys.map((traitKey) => ({ traitKey, rarity: 'Common' })) as [
         { traitKey: string; rarity: 'Common' },
@@ -283,6 +284,7 @@ describe('Narcissus pickup producer', () => {
         'selection',
       ),
       value: {
+        kind: 'traits',
         giverKey: 'Narcissus',
         options: [
           { traitKey: 'NarcissusA', rarity: 'Common' },
@@ -621,7 +623,7 @@ describe('Narcissus pickup producer', () => {
           : blindBoxOffer.selectedOptionKey === 'option2'
             ? 1
             : 2
-      ].traitKey;
+      ]!.traitKey;
     expect(blindBoxHistory?.equippedTraits[selectedBlindBoxTrait]).toBeDefined();
 
     let lastStand = selectNarcissus(
@@ -724,6 +726,7 @@ describe('Narcissus pickup producer', () => {
           traitOffersByPhase: Object.freeze({
             Other: Object.freeze({
               unrelated: Object.freeze({
+                kind: 'traits',
                 giverKey: 'Apollo',
                 options: [
                   { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },

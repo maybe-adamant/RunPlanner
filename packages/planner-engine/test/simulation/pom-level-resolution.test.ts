@@ -95,7 +95,7 @@ function equippedHistory() {
       { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
       { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
       { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-    ]),
+    ]) as TraitOfferEvent['options'],
     selectedOptionKey: 'option1',
     acquisitionPoint: 'seed',
   };
@@ -113,7 +113,7 @@ function twoTargetHistory() {
       { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
       { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
       { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-    ]),
+    ]) as TraitOfferEvent['options'],
     selectedOptionKey: 'option1',
     acquisitionPoint: 'seed',
   };
@@ -126,7 +126,7 @@ function twoTargetHistory() {
       { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
       { traitKey: 'HestiaSpecialBoon', rarity: 'Common' },
       { traitKey: 'HestiaCastBoon', rarity: 'Common' },
-    ]),
+    ]) as TraitOfferEvent['options'],
     selectedOptionKey: 'option2',
   };
   return foldTraitHistoryEvents(catalog, [first, second]);

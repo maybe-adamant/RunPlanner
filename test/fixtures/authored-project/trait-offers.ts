@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   type ProjectDocument,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
   type AuthoredLevelResolution,
 } from '@run-planner/engine/authored-project';
 import {
@@ -14,6 +15,12 @@ import {
 } from '@run-planner/engine/simulation';
 
 export type TraitCandidateSession = ReturnType<typeof createPreparedProjectCandidateSession>;
+
+/** Test-only assertion for fixture paths that intentionally require a trait outcome. */
+export function requireTraits(offer: AuthoredTraitOffer): AuthoredTraitOfferTraits {
+  if (offer.kind !== 'traits') throw new Error('fixture expected a trait outcome');
+  return offer;
+}
 
 interface PreparedTraitCandidateProject {
   readonly assembly: ReturnType<typeof simulateProjectAssembly>;
@@ -57,7 +64,7 @@ export function traitCandidateSession(project: ProjectDocument): TraitCandidateS
 }
 
 export interface TraitCandidateProbe {
-  readonly option: AuthoredTraitOffer['options'][number];
+  readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly assessment: TraitAssessment;
 }
 
@@ -84,10 +91,11 @@ export function traitCandidateOptions(
       const option = Object.freeze({
         traitKey,
         ...(rarity === undefined ? {} : { rarity }),
-      }) as AuthoredTraitOffer['options'][number];
+      }) as AuthoredTraitOfferTraits['options'][number];
       const value = Object.freeze({
+        kind: 'traits' as const,
         giverKey,
-        options: Object.freeze([option, option, option]) as AuthoredTraitOffer['options'],
+        options: Object.freeze([option, option, option]) as AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1' as const,
       });
       const evaluation = session.evaluate({ kind: 'traitOffer', trait: address, value });
@@ -134,12 +142,13 @@ export function supportedTraitOffer(
   for (let left = 0; left < remainder.length; left += 1) {
     for (let right = left + 1; right < remainder.length; right += 1) {
       const value = Object.freeze({
+        kind: 'traits' as const,
         giverKey,
         options: Object.freeze([
           first.option,
           remainder[left]!.option,
           remainder[right]!.option,
-        ]) as AuthoredTraitOffer['options'],
+        ]) as AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1' as const,
       });
       const evaluation = session.evaluate({ kind: 'traitOffer', trait: address, value });
@@ -165,8 +174,12 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
       route.biomes.flatMap((biome) =>
         'rewards' in biome
           ? biome.rewards.selectedTraitOffers.filter((offer) =>
-              offer.branches.some((branch) =>
-                branch.assessments.some((assessment) => !assessment.legal),
+              offer.branches.some(
+                (branch) =>
+                  branch.assessments.some((assessment) => !assessment.legal) ||
+                  !branch.composition.legal ||
+                  !branch.replacementComposition.legal ||
+                  !branch.targetedAcquisition.legal,
               ),
             )
           : [],
@@ -174,37 +187,12 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
     );
     let changed = false;
     for (const invalid of invalids) {
-      const giver = catalog.traitGivers.byKey[invalid.offer.giverKey];
-      if (giver === undefined) continue;
-      const probes = traitCandidateOptions(current, invalid.address, invalid.offer.giverKey, {
-        session,
-      });
-      const candidates = [
-        ...probes
-          .filter((candidate) => candidate.assessment.replacementTransition === undefined)
-          .map((candidate) => candidate.option),
-        ...probes
-          .filter((candidate) => candidate.assessment.replacementTransition !== undefined)
-          .map((candidate) => candidate.option),
-      ];
-      const unique = candidates.filter(
-        (candidate, index, all) =>
-          all.findIndex((other) => other.traitKey === candidate.traitKey) === index,
-      );
-      if (unique.length < 3) continue;
-      const replacement = Object.freeze([
-        unique[0]!,
-        unique[1]!,
-        unique[2]!,
-      ]) as AuthoredTraitOffer['options'];
+      const replacement = session.traitOfferStartingDraft(invalid.address, invalid.offer.giverKey);
+      if (replacement === undefined) continue;
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceTraitOffer',
         trait: invalid.address,
-        value: Object.freeze({
-          giverKey: invalid.offer.giverKey,
-          options: replacement,
-          selectedOptionKey: 'option1',
-        }),
+        value: replacement,
       });
       changed = true;
     }

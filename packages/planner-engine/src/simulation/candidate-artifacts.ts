@@ -7,7 +7,11 @@ import {
   type BossCompletionArcanaAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
-import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../authored-project/traits';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
+} from '../authored-project/traits';
 import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
@@ -23,6 +27,8 @@ import { circeResolutionDomain } from './arcana-fear';
 import {
   assessTraitOffer,
   assessTraitOfferComposition,
+  nextTraitOfferDraft,
+  traitOfferStartingDraft,
   assessTraitReplacementComposition,
   assessSelectedTargetedAcquisition,
   targetedAcquisitionTargetKeys,
@@ -55,6 +61,11 @@ export interface RoomTargetCandidateArtifacts {
  */
 export interface TraitOfferCandidateCapability {
   readonly evaluateOffer: (value: AuthoredTraitOffer) => readonly TraitOfferBranchAssessment[];
+  /** One exact supported traits draft for returning from Fallback Gold, if any. */
+  readonly traitsStartingDraft: (giverKey: string) => AuthoredTraitOfferTraits | undefined;
+  readonly nextTraitOptionDraft: (
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
   readonly targetedAcquisitionTargets: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
@@ -163,6 +174,7 @@ function traitOfferCandidateContext(
   context: TraitOfferContext,
   value: AuthoredTraitOffer,
 ): TraitOfferContext {
+  if (value.kind === 'fallbackGold') return context;
   return value.deathDefianceConditionMet === undefined
     ? context
     : Object.freeze({
@@ -288,9 +300,33 @@ export function createTraitOfferCandidateArtifacts(
               });
             }),
           ),
+        traitsStartingDraft: (giverKey: string) =>
+          branchContexts
+            .map((context) =>
+              traitOfferStartingDraft(catalog, giverKey, context.before, context.context),
+            )
+            .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
+        nextTraitOptionDraft: (value: AuthoredTraitOffer) => {
+          if (value.kind === 'fallbackGold') return undefined;
+          return branchContexts
+            .map((context) =>
+              nextTraitOfferDraft(
+                catalog,
+                value,
+                context.before,
+                traitOfferCandidateContext(context.context, value),
+              ),
+            )
+            .find((draft): draft is NonNullable<typeof draft> => draft !== undefined);
+        },
         targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.map((context) => {
+              if (value.kind === 'fallbackGold')
+                return Object.freeze({
+                  sourceSupported: false,
+                  targetTraitKeys: Object.freeze([]),
+                });
               const option = value.options[optionIndex(optionKey)];
               if (option === undefined) {
                 return Object.freeze({
@@ -323,6 +359,7 @@ export function createTraitOfferCandidateArtifacts(
               readonly vowKeys: readonly string[];
               readonly outerAvailable: boolean;
             }>((context) => {
+              if (value.kind === 'fallbackGold') return [];
               const option = value.options[optionIndex(optionKey)];
               const effect =
                 option === undefined

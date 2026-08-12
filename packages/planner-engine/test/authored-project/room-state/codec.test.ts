@@ -169,6 +169,7 @@ describe('persisted authored room-state codec', () => {
     reward.offer = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } };
     reward.traitOffersByAcquisitionRole = {
       source: {
+        kind: 'traits',
         giverKey: 'Apollo',
         options: [
           { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
@@ -368,12 +369,12 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('$.room.state.wheels.wheel1.pickedOfferIndex: must select an active offer');
   });
 
-  it('rejects trait offers with a non-three option cardinality during schema decoding', () => {
+  it('accepts sparse Olympian offers and rejects sparse fixed-provider offers during schema decoding', () => {
     const fixture = traitFixture();
     const offer = findTraitOffer(fixture.state);
     if (offer === undefined) throw new Error('trait fixture did not contain an offer');
     offer.options = (offer.options as unknown[]).slice(0, 2);
-    expect(() =>
+    expect(
       decodeRoomState(
         fixture.state,
         catalog,
@@ -381,7 +382,53 @@ describe('persisted authored room-state codec', () => {
         { role: 'ordinary', entryActive: true },
         path,
       ),
-    ).toThrow('must contain exactly 3 options');
+    ).toMatchObject({});
+  });
+
+  it('decodes one, two, and three Olympian options plus exact Fallback Gold shape', () => {
+    const fixture = traitFixture();
+    const offer = findTraitOffer(fixture.state);
+    if (offer === undefined) throw new Error('trait fixture did not contain an offer');
+    const options = offer.options as unknown[];
+    for (const width of [1, 2, 3]) {
+      const raw = mutable(fixture.state);
+      const candidate = findTraitOffer(raw)!;
+      candidate.options = options.slice(0, width);
+      candidate.selectedOptionKey = 'option1';
+      expect(
+        decodeRoomState(
+          raw,
+          catalog,
+          fixture.declaration,
+          { role: 'ordinary', entryActive: true },
+          path,
+        ),
+      ).toMatchObject({});
+    }
+    const fallback = mutable(fixture.state);
+    const fallbackOffer = findTraitOffer(fallback)!;
+    for (const key of Object.keys(fallbackOffer)) delete fallbackOffer[key];
+    fallbackOffer.kind = 'fallbackGold';
+    fallbackOffer.giverKey = offer.giverKey;
+    expect(
+      decodeRoomState(
+        fallback,
+        catalog,
+        fixture.declaration,
+        { role: 'ordinary', entryActive: true },
+        path,
+      ),
+    ).toMatchObject({});
+    fallbackOffer.options = [];
+    expect(() =>
+      decodeRoomState(
+        fallback,
+        catalog,
+        fixture.declaration,
+        { role: 'ordinary', entryActive: true },
+        path,
+      ),
+    ).toThrow('is not a project document field');
   });
 
   it('rejects duplicate trait keys across the three persisted options', () => {

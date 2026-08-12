@@ -306,6 +306,7 @@ describe('OccurrenceWorkbench', () => {
         'selection',
       ),
       value: {
+        kind: 'traits',
         giverKey: 'Narcissus',
         options: [
           { traitKey: 'NarcissusI', rarity: 'Common' },

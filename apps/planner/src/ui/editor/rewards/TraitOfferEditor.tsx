@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -57,6 +58,9 @@ function traitOfferLoadable(
 }
 
 function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
+  if (interaction.value.kind === 'fallbackGold') {
+    return `${interaction.giver.key}|fallbackGold`;
+  }
   return [
     interaction.giver.key,
     interaction.choices.map((choice) => choice.value).join(','),
@@ -69,15 +73,15 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
 }
 
 function replaceOption(
-  value: AuthoredTraitOffer,
+  value: AuthoredTraitOfferTraits,
   index: number,
-  next: AuthoredTraitOffer['options'][number],
-): AuthoredTraitOffer {
-  const options = [...value.options] as AuthoredTraitOffer['options'][number][];
+  next: AuthoredTraitOfferTraits['options'][number],
+): AuthoredTraitOfferTraits {
+  const options = [...value.options] as AuthoredTraitOfferTraits['options'][number][];
   options[index] = Object.freeze({ ...next });
   return Object.freeze({
     ...value,
-    options: Object.freeze(options) as AuthoredTraitOffer['options'],
+    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
   });
 }
 
@@ -86,16 +90,8 @@ function CirceResolutionEditor({
   option,
   onSelect,
 }: {
-  readonly domain: NonNullable<
-    ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>['circeResolution']
-  > extends infer Interaction
-    ? Interaction extends {
-        readonly forOffer: (offer: AuthoredTraitOffer) => { readonly load: () => infer Domain };
-      }
-      ? Exclude<Domain, undefined>
-      : never
-    : never;
-  readonly option: AuthoredTraitOffer['options'][number];
+  readonly domain: WorkspaceCirceResolutionDomain;
+  readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
   const current = option.circeResolution;
@@ -196,9 +192,9 @@ function TraitOfferOptionEditor({
 }: {
   readonly index: number;
   readonly interaction: WorkspaceTraitOfferInteraction;
-  readonly optionKey: AuthoredTraitOffer['selectedOptionKey'];
-  readonly value: AuthoredTraitOffer;
-  readonly onUpdate: (value: AuthoredTraitOffer) => void;
+  readonly optionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
+  readonly value: AuthoredTraitOfferTraits;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const option = value.options[index];
   if (option === undefined) throw new Error(`Trait offer is missing ${optionKey}`);
@@ -317,12 +313,17 @@ export function TraitOfferLauncher({
     interactions.traitOffers,
     workspaceInteractionKey(control.address),
   );
-  const selected = control.offer.options[OPTION_KEYS.indexOf(control.offer.selectedOptionKey)];
+  const selected =
+    control.offer.kind === 'traits'
+      ? control.offer.options[OPTION_KEYS.indexOf(control.offer.selectedOptionKey)]
+      : undefined;
   const label =
-    selected === undefined
-      ? 'Choose trait'
-      : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
-        selected.traitKey);
+    control.offer.kind === 'fallbackGold'
+      ? 'Fallback Gold'
+      : selected === undefined
+        ? 'Choose trait'
+        : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
+          selected.traitKey);
   const rarity = selected?.rarity === undefined ? '' : ` · ${selected.rarity}`;
   return (
     <button
@@ -368,7 +369,16 @@ export function TraitOfferEditor({
   const hasOptionFeedback = feedback.options.some(
     (option) => option.reasons.length > 0 || option.replacement !== undefined,
   );
-  const deathDefianceCondition = interaction.deathDefianceCondition;
+  const deathDefianceCondition =
+    value.kind === 'traits' ? interaction.deathDefianceCondition : undefined;
+  const traitsStartingDraft = useMemo(
+    () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
+    [interaction, value],
+  );
+  const nextTraitOfferDraft = useMemo(
+    () => (value.kind === 'traits' ? interaction.nextTraitOfferDraft?.(value) : undefined),
+    [interaction, value],
+  );
   const authoritativeInteractionRef = useRef(interaction);
   useEffect(() => {
     if (authoritativeInteractionRef.current === interaction) return;
@@ -391,7 +401,7 @@ export function TraitOfferEditor({
   };
   return (
     <div className="trait-offer-editor">
-      {deathDefianceCondition === undefined ? null : (
+      {value.kind === 'traits' && deathDefianceCondition !== undefined ? (
         <label className="trait-offer-condition">
           <input
             checked={value.deathDefianceConditionMet === true}
@@ -407,23 +417,86 @@ export function TraitOfferEditor({
           />
           Death Defiance condition met
         </label>
+      ) : null}
+      {value.kind === 'fallbackGold' ? (
+        <section className="trait-offer-fallback">
+          <p>Fallback Gold</p>
+          <button
+            disabled={traitsStartingDraft === undefined}
+            onClick={() => {
+              if (traitsStartingDraft !== undefined) updateValue(traitsStartingDraft);
+            }}
+            type="button"
+          >
+            Return to traits
+          </button>
+        </section>
+      ) : (
+        <>
+          {interaction.giver.providerKind !== 'olympian' &&
+          interaction.giver.providerKind !== 'hermes' ? null : (
+            <button
+              onClick={() =>
+                updateValue(Object.freeze({ kind: 'fallbackGold', giverKey: value.giverKey }))
+              }
+              type="button"
+            >
+              Select Fallback Gold
+            </button>
+          )}
+          <div className="trait-offer-options">
+            {value.options.map((_, index) => {
+              const optionKey = OPTION_KEYS[index]!;
+              const optionFeedback = feedback.options[index];
+              return (
+                <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
+                  <TraitOfferOptionEditor
+                    index={index}
+                    interaction={interaction}
+                    onUpdate={updateValue}
+                    optionKey={optionKey}
+                    value={value}
+                  />
+                </div>
+              );
+            })}
+            {value.options.length <= 1 ||
+            (interaction.giver.providerKind !== 'olympian' &&
+              interaction.giver.providerKind !== 'hermes') ? null : (
+              <button
+                onClick={() => {
+                  const options = value.options.slice(
+                    0,
+                    -1,
+                  ) as unknown as AuthoredTraitOfferTraits['options'];
+                  const selectedIndex = OPTION_KEYS.indexOf(value.selectedOptionKey);
+                  updateValue(
+                    Object.freeze({
+                      ...value,
+                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      selectedOptionKey: OPTION_KEYS[Math.min(selectedIndex, options.length - 1)]!,
+                    }),
+                  );
+                }}
+                type="button"
+              >
+                Remove last option
+              </button>
+            )}
+            {value.options.length >= OPTION_KEYS.length ? null : (
+              <button
+                disabled={nextTraitOfferDraft === undefined}
+                onClick={() => {
+                  if (nextTraitOfferDraft !== undefined) updateValue(nextTraitOfferDraft);
+                }}
+                type="button"
+              >
+                Add option
+              </button>
+            )}
+          </div>
+        </>
       )}
-      <div className="trait-offer-options">
-        {OPTION_KEYS.map((optionKey, index) => {
-          const optionFeedback = feedback.options[index];
-          return (
-            <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
-              <TraitOfferOptionEditor
-                index={index}
-                interaction={interaction}
-                onUpdate={updateValue}
-                optionKey={optionKey}
-                value={value}
-              />
-            </div>
-          );
-        })}
-      </div>
       <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
         <h3>Offer feedback</h3>
         {!hasOptionFeedback && offerMessage === undefined ? (

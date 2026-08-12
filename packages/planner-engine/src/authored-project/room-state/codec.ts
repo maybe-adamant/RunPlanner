@@ -40,7 +40,13 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { decodeRoomEncounterState } from './encounters';
-import type { AuthoredLevelResolution, AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
+import {
+  traitOfferSupportsExhaustion,
+  type AuthoredLevelResolution,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
+  type AuthoredTraitOption,
+} from '../traits';
 import {
   createDefaultLevelResolutions,
   TRAIT_OPTION_KEYS,
@@ -166,9 +172,24 @@ function decodeTraitOffers(
       giverKey,
       'deathDefianceConditionMet',
     );
+    if (expectString(record.giverKey, `${rolePath}.giverKey`) !== giverKey)
+      failProjectDocument(`${rolePath}.giverKey`, `expected ${giverKey}`);
+    const giver = catalog.traitGivers.byKey[giverKey];
+    if (giver === undefined) failProjectDocument(rolePath, `unknown giver ${giverKey}`);
+    const kind = expectString(record.kind, `${rolePath}.kind`);
+    if (kind === 'fallbackGold') {
+      expectExactKeys(record, ['kind', 'giverKey'], rolePath);
+      if (!traitOfferSupportsExhaustion(giver))
+        failProjectDocument(rolePath, 'Fallback Gold is not supported by this giver');
+      result[roleKey] = Object.freeze({ kind: 'fallbackGold', giverKey });
+      continue;
+    }
+    if (kind !== 'traits')
+      failProjectDocument(`${rolePath}.kind`, 'must be traits or fallbackGold');
     expectExactKeys(
       record,
       [
+        'kind',
         'giverKey',
         'options',
         'selectedOptionKey',
@@ -176,20 +197,18 @@ function decodeTraitOffers(
       ],
       rolePath,
     );
-    if (expectString(record.giverKey, `${rolePath}.giverKey`) !== giverKey)
-      failProjectDocument(`${rolePath}.giverKey`, `expected ${giverKey}`);
-    const giver = catalog.traitGivers.byKey[giverKey];
-    if (giver === undefined) failProjectDocument(rolePath, `unknown giver ${giverKey}`);
     const optionsRaw = expectArray(record.options, `${rolePath}.options`);
-    if (optionsRaw.length !== TRAIT_OPTION_KEYS.length)
+    if (optionsRaw.length < 1 || optionsRaw.length > TRAIT_OPTION_KEYS.length)
       failProjectDocument(
         `${rolePath}.options`,
-        `must contain exactly ${TRAIT_OPTION_KEYS.length} options`,
+        `must contain one to ${TRAIT_OPTION_KEYS.length} options`,
       );
+    if (!traitOfferSupportsExhaustion(giver) && optionsRaw.length !== TRAIT_OPTION_KEYS.length)
+      failProjectDocument(`${rolePath}.options`, 'this giver requires exactly three options');
     const options: AuthoredTraitOption[] = [];
     const traitKeys = new Set<string>();
-    for (const key of TRAIT_OPTION_KEYS) {
-      const index = TRAIT_OPTION_KEYS.indexOf(key);
+    for (const [index, key] of TRAIT_OPTION_KEYS.entries()) {
+      if (index >= optionsRaw.length) break;
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
       expectExactKeys(
         option,
@@ -337,15 +356,19 @@ function decodeTraitOffers(
       );
     }
     const selected = expectString(record.selectedOptionKey, `${rolePath}.selectedOptionKey`);
-    if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selected))
+    if (
+      !(TRAIT_OPTION_KEYS as readonly string[]).includes(selected) ||
+      options[TRAIT_OPTION_KEYS.indexOf(selected as never)] === undefined
+    )
       failProjectDocument(
         `${rolePath}.selectedOptionKey`,
         'must select option1, option2, or option3',
       );
     result[roleKey] = Object.freeze({
+      kind: 'traits',
       giverKey,
-      options: Object.freeze(options) as AuthoredTraitOffer['options'],
-      selectedOptionKey: selected as AuthoredTraitOffer['selectedOptionKey'],
+      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: selected as AuthoredTraitOfferTraits['selectedOptionKey'],
       ...(conditionApplicable
         ? {
             deathDefianceConditionMet: expectBoolean(

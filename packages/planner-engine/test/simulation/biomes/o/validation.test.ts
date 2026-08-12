@@ -249,7 +249,7 @@ describe('selected O validation', () => {
     );
     const chosen = selected.find((trace) => trace.acquisitionRole === 'chosenSource');
     const spurned = selected.find((trace) => trace.acquisitionRole === 'spurnedSource');
-    if (chosen === undefined || spurned === undefined) {
+    if (chosen === undefined || spurned === undefined || chosen.offer.kind !== 'traits') {
       throw new Error('Devotion capability fixture lost its legal trait roles');
     }
     const [first, second, third] = chosen.offer.options;
@@ -262,6 +262,7 @@ describe('selected O validation', () => {
       kind: 'ReplaceTraitOffer',
       trait: chosenAddress,
       value: {
+        kind: 'traits',
         giverKey: chosen.offer.giverKey,
         options: [{ ...first, rarity: 'Heroic' }, second, third],
         selectedOptionKey: 'option1',

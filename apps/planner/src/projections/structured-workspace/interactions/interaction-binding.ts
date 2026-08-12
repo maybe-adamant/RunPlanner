@@ -15,6 +15,7 @@ import type {
   AuthoredLevelResolution,
   AuthoredCirceResolution,
   AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -1586,6 +1587,11 @@ export function bindWorkspaceInteractions(
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
     >();
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
+      if (value.kind === 'fallbackGold') {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(control.address)} Fallback Gold has no trait option domain`,
+        );
+      }
       const prepared = services.traitDomain.prepare(control.giver, value, optionKey);
       const domainKey = `${optionKey}:${JSON.stringify(value)}:${prepared.variants
         .map((option) => `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`)
@@ -1618,7 +1624,10 @@ export function bindWorkspaceInteractions(
           : {
               circeResolution: Object.freeze({
                 control: circeControl,
-                intentFor: (offer: AuthoredTraitOffer, resolution: AuthoredCirceResolution) => {
+                intentFor: (
+                  offer: AuthoredTraitOfferTraits,
+                  resolution: AuthoredCirceResolution,
+                ) => {
                   const index = optionIndex(optionKey);
                   const existing = offer.options[index];
                   if (existing === undefined)
@@ -1631,11 +1640,11 @@ export function bindWorkspaceInteractions(
                     control.address,
                     Object.freeze({
                       ...offer,
-                      options: Object.freeze(options) as AuthoredTraitOffer['options'],
+                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                     }),
                   );
                 },
-                forOffer: (offer: AuthoredTraitOffer) =>
+                forOffer: (offer: AuthoredTraitOfferTraits) =>
                   Object.freeze({
                     load: () => {
                       const evaluated = candidates.circeResolution(
@@ -1712,7 +1721,7 @@ export function bindWorkspaceInteractions(
         owner: control.address,
         optionDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-        selectedIntent: (selectedOptionKey: AuthoredTraitOffer['selectedOptionKey']) =>
+        selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
           Object.freeze({
             command: Object.freeze({
               kind: 'ReplaceTraitSelection' as const,
@@ -1721,6 +1730,10 @@ export function bindWorkspaceInteractions(
             }),
           }),
         value: control.offer,
+        traitsStartingDraft: () =>
+          candidates.traitOfferStartingDraft(control.address, control.giver.key),
+        nextTraitOfferDraft: (value: AuthoredTraitOfferTraits) =>
+          candidates.nextTraitOfferDraft(control.address, value),
         ...(control.deathDefianceCondition === undefined
           ? {}
           : {

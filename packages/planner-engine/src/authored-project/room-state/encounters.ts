@@ -6,7 +6,13 @@ import type {
   EncounterSlotBinding,
   RoomDeclaration,
 } from '../../catalog-schema';
-import type { AuthoredTraitOffer, AuthoredTraitOption, AuthoredCirceResolution } from '../traits';
+import {
+  traitOfferSupportsExhaustion,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
+  type AuthoredTraitOption,
+  type AuthoredCirceResolution,
+} from '../traits';
 import {
   TRAIT_OPTION_KEYS,
   createDefaultEncounterTraitOffer,
@@ -182,9 +188,23 @@ function decodeEncounterTraitOffer(
     giverKey,
     'deathDefianceConditionMet',
   );
+  if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
+    failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
+  }
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined) failProjectDocument(path, `unknown giver ${giverKey}`);
+  const kind = expectString(record.kind, `${path}.kind`);
+  if (kind === 'fallbackGold') {
+    expectExactKeys(record, ['kind', 'giverKey'], path);
+    if (!traitOfferSupportsExhaustion(giver))
+      failProjectDocument(path, 'Fallback Gold is not supported by this giver');
+    return Object.freeze({ kind: 'fallbackGold', giverKey });
+  }
+  if (kind !== 'traits') failProjectDocument(`${path}.kind`, 'must be traits or fallbackGold');
   expectExactKeys(
     record,
     [
+      'kind',
       'giverKey',
       'options',
       'selectedOptionKey',
@@ -192,18 +212,15 @@ function decodeEncounterTraitOffer(
     ],
     path,
   );
-  if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
-    failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
-  }
-  const giver = catalog.traitGivers.byKey[giverKey];
-  if (giver === undefined) failProjectDocument(path, `unknown giver ${giverKey}`);
   const rawOptions = expectArray(record.options, `${path}.options`);
-  if (rawOptions.length !== TRAIT_OPTION_KEYS.length)
-    failProjectDocument(`${path}.options`, 'must contain exactly three options');
+  if (rawOptions.length < 1 || rawOptions.length > TRAIT_OPTION_KEYS.length)
+    failProjectDocument(`${path}.options`, 'must contain one to three options');
+  if (!traitOfferSupportsExhaustion(giver) && rawOptions.length !== TRAIT_OPTION_KEYS.length)
+    failProjectDocument(`${path}.options`, 'this giver requires exactly three options');
   const options: AuthoredTraitOption[] = [];
   const seen = new Set<string>();
-  for (const optionKey of TRAIT_OPTION_KEYS) {
-    const index = TRAIT_OPTION_KEYS.indexOf(optionKey);
+  for (const [index, optionKey] of TRAIT_OPTION_KEYS.entries()) {
+    if (index >= rawOptions.length) break;
     const option = expectRecord(rawOptions[index], `${path}.options.${optionKey}`);
     const hasRarity = option.rarity !== undefined;
     const hasTarget = option.targetTraitKey !== undefined;
@@ -349,12 +366,16 @@ function decodeEncounterTraitOffer(
     options.push(Object.freeze(decodedOption));
   }
   const selectedOptionKey = expectString(record.selectedOptionKey, `${path}.selectedOptionKey`);
-  if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey))
+  if (
+    !(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey) ||
+    options[TRAIT_OPTION_KEYS.indexOf(selectedOptionKey as never)] === undefined
+  )
     failProjectDocument(`${path}.selectedOptionKey`, 'must select option1, option2, or option3');
   return Object.freeze({
+    kind: 'traits',
     giverKey,
-    options: Object.freeze(options) as AuthoredTraitOffer['options'],
-    selectedOptionKey: selectedOptionKey as AuthoredTraitOffer['selectedOptionKey'],
+    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: selectedOptionKey as AuthoredTraitOfferTraits['selectedOptionKey'],
     ...(conditionApplicable
       ? {
           deathDefianceConditionMet: expectBoolean(

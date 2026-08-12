@@ -33,6 +33,7 @@ import {
   nOccurrenceIds,
   pBiome,
   pOccurrenceId,
+  requireTraits,
 } from '@run-planner/test-fixtures';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
@@ -66,9 +67,11 @@ function blockBiomeAtFirstBoon(
   const selected = evaluated.rewards.selectedTraitOffers.find(
     (trace) => trace.offer.giverKey !== 'WeaponUpgrade',
   );
-  const [first, second, third] = selected?.offer.options ?? [];
+  const offer = selected === undefined ? undefined : requireTraits(selected.offer);
+  const [first, second, third] = offer?.options ?? [];
   if (
     selected === undefined ||
+    offer === undefined ||
     first === undefined ||
     second === undefined ||
     third === undefined
@@ -79,7 +82,8 @@ function blockBiomeAtFirstBoon(
     kind: 'ReplaceTraitOffer',
     trait: selected.address,
     value: {
-      giverKey: selected.offer.giverKey,
+      kind: 'traits',
+      giverKey: offer.giverKey,
       options: [{ ...first, rarity: 'Heroic' }, second, third],
       selectedOptionKey: 'option1',
     },
