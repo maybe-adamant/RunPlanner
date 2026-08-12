@@ -58,7 +58,13 @@ export function applyLevelResolutionCommand(
     failCommand(command, 'level-resolution owner is outside its addressed biome');
   if (owner.kind === 'encounterPhase')
     failCommand(command, 'encounter phases do not own Pom level resolutions');
-  const occurrence = requireOccurrence(located.plan, owner.occurrenceId, command);
+  const occurrenceId =
+    owner.kind === 'acquisitionEntry'
+      ? owner.site.owner.kind === 'occurrence'
+        ? owner.site.owner.occurrenceId
+        : failCommand(command, 'acquisition entry is not occurrence-owned')
+      : owner.occurrenceId;
+  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const shim = {
     kind: 'ReplaceTraitOffer',
     trait: { ...command.levelResolution, kind: 'traitOffer' },
@@ -83,6 +89,34 @@ export function applyLevelResolutionCommand(
       command.levelResolution.acquisitionRole
     ];
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
+  if (owner.kind === 'acquisitionEntry') {
+    const site = occurrence.acquisitionSites?.roomExit;
+    const pickup = site?.pickupEntries?.[owner.entryKey];
+    if (site === undefined || pickup === undefined)
+      failCommand(command, `missing pickup entry ${owner.entryKey}`);
+    const nextPickup = updateLevelResolutionReward(
+      pickup,
+      command.levelResolution.acquisitionRole,
+      value,
+    );
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...occurrence,
+          acquisitionSites: Object.freeze({
+            ...(occurrence.acquisitionSites ?? {}),
+            roomExit: Object.freeze({
+              ...site,
+              pickupEntries: Object.freeze({ ...site.pickupEntries, [owner.entryKey]: nextPickup }),
+            }),
+          }),
+        }),
+      ),
+    );
+  }
   const state = updateTraitRewardState(
     catalog,
     located,

@@ -306,7 +306,8 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceIncomingReward'
         | 'ReplaceLocalReward'
         | 'ReplaceRewardWheelOffer'
-        | 'ReplaceShopOffer';
+        | 'ReplaceShopOffer'
+        | 'ReplaceAcquisitionEntryOffer';
     }
   >
 >;
@@ -710,9 +711,20 @@ export interface WorkspaceAcquisitionsWorkbench {
 }
 export interface WorkspaceAcquisitionEntryDescriptor {
   readonly key: string;
+  readonly address: AcquisitionEntryAddress;
   readonly label: string;
-  /** The producer-owned offer control with only acquisition-time children shown. */
-  readonly rewardControl: WorkspaceExplicitRewardControl;
+  /**
+   * The picked entry's producer-owned offer control, with only acquisition-time
+   * children shown. Dormant optional entries intentionally expose no payload
+   * editing surface.
+   */
+  readonly rewardControl?: WorkspaceExplicitRewardControl;
+  /** Optional site entry participation; Shop calls this Purchased, drops Picked up. */
+  readonly participation?: {
+    readonly label: 'Purchased' | 'Picked up';
+    readonly selected: boolean;
+    readonly toggleEntryKeys: readonly string[];
+  };
 }
 
 export interface WorkspaceEphyraSideRoomEntryOption {

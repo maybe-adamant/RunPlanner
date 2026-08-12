@@ -518,6 +518,7 @@ describe('reward-kernel declaration parity', () => {
       MaxManaDrop: 'Max Magick',
       MaxManaDropBig: 'Big Max Magick',
       MaxManaDropSmall: 'Small Max Magick',
+      Currency: 'Gold',
       RoomMoneyDrop: 'Gold',
       RoomMoneyTripleDrop: 'Triple Gold',
       RoomMoneyTinyDrop: 'Tiny Gold',
@@ -532,6 +533,7 @@ describe('reward-kernel declaration parity', () => {
       EarthBoost: 'Earth Essence',
       FireBoost: 'Fire Essence',
       WaterBoost: 'Water Essence',
+      ElementalBoost: 'Elemental Essence',
       StoreRewardRandomStack: 'Pom Slice',
       LastStandDrop: 'Death Defiance',
       ChaosWeaponUpgrade: 'Chaos Hammer',
@@ -736,6 +738,7 @@ describe('reward-kernel declaration parity', () => {
       'MaxManaDrop',
       'MaxManaDropBig',
       'MaxManaDropSmall',
+      'Currency',
       'RoomMoneyDrop',
       'RoomMoneyTripleDrop',
       'RoomMoneyTinyDrop',
@@ -750,6 +753,7 @@ describe('reward-kernel declaration parity', () => {
       'EarthBoost',
       'FireBoost',
       'WaterBoost',
+      'ElementalBoost',
       'StoreRewardRandomStack',
       'LastStandDrop',
       'ChaosWeaponUpgrade',
@@ -769,7 +773,7 @@ describe('reward-kernel declaration parity', () => {
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(50);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(52);
   });
 
   it('normalizes room-reward acquisition timing without reward-name dispatch', () => {

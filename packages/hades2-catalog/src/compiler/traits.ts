@@ -11,6 +11,7 @@ import type {
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   TargetedTraitAcquisition,
+  TraitSelectedDisposition,
   TraitElement,
   TraitRarity,
   WeaponDeclaration,
@@ -43,6 +44,7 @@ const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'deathDefianceConditionMet'] as const;
+const SELECTED_DISPOSITIONS = ['equip', 'producePickups', 'noOp'] as const;
 type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
@@ -65,6 +67,53 @@ function closedValue<const Values extends readonly string[]>(
     fail(path, `must be one of ${values.join(', ')}`);
   }
   return value as Values[number];
+}
+
+function normalizeSelectedDisposition(
+  raw: TraitSelectedDisposition | undefined,
+  path: string,
+): TraitSelectedDisposition {
+  if (raw === undefined) return Object.freeze({ kind: 'equip' });
+  const value = requireObject(raw, path) as {
+    readonly kind?: unknown;
+    readonly producerLifecycleKey?: unknown;
+    readonly pickups?: unknown;
+  };
+  const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind !== 'producePickups') {
+    if (Object.keys(value).length !== 1) fail(path, 'must contain only kind');
+    return Object.freeze({ kind });
+  }
+  const pickups = requireArray(value.pickups, `${path}.pickups`).map((pickup, index) => {
+    const entry = requireObject(pickup, `${path}.pickups[${index}]`) as {
+      readonly key?: unknown;
+      readonly rewardType?: unknown;
+    };
+    if (Object.keys(entry).length !== 2)
+      fail(`${path}.pickups[${index}]`, 'must contain key and rewardType');
+    if (typeof entry.key !== 'string' || typeof entry.rewardType !== 'string')
+      fail(`${path}.pickups[${index}]`, 'key and rewardType must be strings');
+    return Object.freeze({
+      key: requireNonEmpty(entry.key, `${path}.pickups[${index}].key`),
+      rewardType: requireNonEmpty(entry.rewardType, `${path}.pickups[${index}].rewardType`),
+    });
+  });
+  if (
+    pickups.length === 0 ||
+    new Set(pickups.map((pickup) => pickup.key)).size !== pickups.length ||
+    Object.keys(value).length !== 3
+  )
+    fail(path, 'producePickups requires a lifecycle and unique non-empty pickups');
+  if (typeof value.producerLifecycleKey !== 'string')
+    fail(`${path}.producerLifecycleKey`, 'must be a string');
+  return Object.freeze({
+    kind,
+    producerLifecycleKey: requireNonEmpty(
+      value.producerLifecycleKey,
+      `${path}.producerLifecycleKey`,
+    ),
+    pickups: Object.freeze(pickups),
+  });
 }
 
 function normalizeRequirement(
@@ -131,6 +180,7 @@ function normalizeRequirement(
         ...(requirement.maximum === undefined ? {} : { maximum: requirement.maximum }),
       });
     case 'rarifiableTrait':
+    case 'upgradableTrait':
       return Object.freeze({ kind: requirement.kind });
     case 'ordinaryBoonSlotOccupied':
       return Object.freeze({
@@ -569,6 +619,10 @@ function normalizeTraits(
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
+      selectedDisposition: normalizeSelectedDisposition(
+        trait.selectedDisposition,
+        `${path}.selectedDisposition`,
+      ),
     });
   });
   const collection = createCollection(values, 'traits', (trait) => trait.key);

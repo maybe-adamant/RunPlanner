@@ -728,7 +728,9 @@ describe('surface product loop', () => {
           semanticAddressKey(candidate.owner) === semanticAddressKey(target.address) &&
           candidate.acquisitionRole === target.trace.acquisitionRole,
       );
-    expect(event?.replacementTransition).toEqual(transition);
+    expect(event?.kind === 'traitOffer' ? event.replacementTransition : undefined).toEqual(
+      transition,
+    );
     const history = branches[0]?.traitHistory;
     expect(history?.equippedTraits[transition.replacedTraitKey]).toBeUndefined();
     expect(history?.equippedTraits[transition.newTraitKey]).toMatchObject({

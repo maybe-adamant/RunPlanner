@@ -21,6 +21,7 @@ interface RewardValueEditorProps {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly offer: ResolvedRewardOffer;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
+  readonly initialStep?: RewardPickerStep;
 }
 
 interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'candidateOwner'> {
@@ -47,6 +48,7 @@ export function RewardValueEditor({
   interactions,
   offer,
   onReplace,
+  initialStep = 'type',
 }: RewardValueEditorProps) {
   const authoredOfferKey = offerKey(offer);
   const resolver = requireWorkspaceInteraction(
@@ -74,7 +76,7 @@ export function RewardValueEditor({
   };
 
   const startInteraction = (): void => {
-    begin(offer, 'type');
+    begin(offer, initialStep);
   };
 
   const cancelInteraction = (): void => {
@@ -152,6 +154,7 @@ export function CountedRewardEditor({
   idPrefix,
   interactions,
   onReplace,
+  initialStep,
 }: CountedRewardEditorProps) {
   return (
     <RewardValueEditor
@@ -160,6 +163,7 @@ export function CountedRewardEditor({
       interactions={interactions}
       offer={offer}
       onReplace={onReplace}
+      {...(initialStep === undefined ? {} : { initialStep })}
     />
   );
 }

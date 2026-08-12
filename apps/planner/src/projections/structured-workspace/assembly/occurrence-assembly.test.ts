@@ -28,9 +28,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
+  createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  goldenGBiome,
   goldenHBiome,
   goldenIBiome,
 } from '@run-planner/test-fixtures';
@@ -648,6 +650,80 @@ describe('structured workspace occurrence assembly', () => {
     if (dormant.node.room.roomLocal.kind !== 'shop') throw new Error('dormant Shop is missing');
     expect(dormant.node.room.roomLocal.materialized).toBe(false);
     expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
+  });
+
+  it('projects the Narcissus pickup as an unpicked, dormant room-exit acquisition', () => {
+    const project = createGoldenFGHIProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
+    expect(result.node.room.acquisitions).toMatchObject({
+      placement: 'postOutgoing',
+      entries: [
+        {
+          key: 'pom',
+          participation: expect.objectContaining({ label: 'Picked up', selected: false }),
+        },
+      ],
+    });
+    expect(result.node.room.acquisitions?.entries[0]?.rewardControl).toBeUndefined();
+    expect(result.occurrenceInteractionRequirements).toContainEqual(
+      expect.objectContaining({ kind: 'acquisitionOrder' }),
+    );
+  });
+
+  it('projects one picked Narcissus pickup with its exact entry-owned payload control', () => {
+    let project = createCompleteFGProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusI', rarity: 'Common' },
+          { traitKey: 'NarcissusB', rarity: 'Common' },
+          { traitKey: 'NarcissusC', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+      'roomExit',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['mysteryBoon'],
+    });
+    const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
+    const entry = result.node.room.acquisitions?.entries.find(
+      (candidate) => candidate.key === 'mysteryBoon',
+    );
+    expect(entry?.rewardControl).toMatchObject({
+      owner: {
+        kind: 'acquisitionEntry',
+        address: createAcquisitionEntryAddress(site, 'mysteryBoon'),
+      },
+      offer: { rewardType: 'BlindBoxLoot' },
+    });
+    expect(entry?.rewardControl?.traitOffers).toHaveLength(1);
   });
 
   it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {

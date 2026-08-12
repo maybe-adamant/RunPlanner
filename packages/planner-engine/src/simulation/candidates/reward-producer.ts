@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   type IncomingRewardAddress,
+  type AcquisitionEntryAddress,
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
@@ -47,11 +48,18 @@ export interface ShopOfferCandidateQuery {
   readonly value: ResolvedRewardOffer;
 }
 
+export interface AcquisitionEntryOfferCandidateQuery {
+  readonly kind: 'acquisitionEntryOffer';
+  readonly entry: AcquisitionEntryAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
 export type RewardProducerCandidateQuery =
   | IncomingRewardCandidateQuery
   | LocalRewardCandidateQuery
   | RewardWheelOfferCandidateQuery
-  | ShopOfferCandidateQuery;
+  | ShopOfferCandidateQuery
+  | AcquisitionEntryOfferCandidateQuery;
 
 export interface EvaluatedIncomingRewardCandidate {
   readonly kind: 'incomingReward';
@@ -72,13 +80,18 @@ export interface EvaluatedShopOfferCandidate {
   readonly kind: 'shopOffer';
   readonly result: RewardProducerCandidateResult;
 }
+export interface EvaluatedAcquisitionEntryOfferCandidate {
+  readonly kind: 'acquisitionEntryOffer';
+  readonly result: RewardProducerCandidateResult;
+}
 
 export type RewardProducerCandidateEvaluation =
   | CandidateContextUnavailable
   | EvaluatedIncomingRewardCandidate
   | EvaluatedLocalRewardCandidate
   | EvaluatedRewardWheelOfferCandidate
-  | EvaluatedShopOfferCandidate;
+  | EvaluatedShopOfferCandidate
+  | EvaluatedAcquisitionEntryOfferCandidate;
 
 interface RewardProducerSource {
   readonly evaluation: CandidateBiomeEvaluation;
@@ -99,7 +112,9 @@ function selectedRewardProducerSource(
 function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddress {
   return query.kind === 'incomingReward' || query.kind === 'localReward'
     ? query.reward
-    : query.offer;
+    : query.kind === 'acquisitionEntryOffer'
+      ? query.entry
+      : query.offer;
 }
 
 function checkpointFor(query: RewardProducerCandidateQuery) {
@@ -145,5 +160,7 @@ export function evaluateRewardProducerCandidate(
       return Object.freeze({ kind: 'rewardWheelOffer', result });
     case 'shopOffer':
       return Object.freeze({ kind: 'shopOffer', result });
+    case 'acquisitionEntryOffer':
+      return Object.freeze({ kind: 'acquisitionEntryOffer', result });
   }
 }

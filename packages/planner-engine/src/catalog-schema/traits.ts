@@ -56,6 +56,22 @@ export type TargetedTraitAcquisition =
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
+/** Selection either equips, produces declared concrete pickups, or has no
+ * modeled run effect. Pickup detail remains owned by the acquisition entry. */
+export type TraitSelectedDisposition =
+  | { readonly kind: 'equip' }
+  | {
+      readonly kind: 'producePickups';
+      readonly producerLifecycleKey: string;
+      readonly pickups: readonly TraitPickupDeclaration[];
+    }
+  | { readonly kind: 'noOp' };
+
+export interface TraitPickupDeclaration {
+  readonly key: string;
+  readonly rewardType: string;
+}
+
 export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'deathDefianceConditionMet';
 
 export type TraitRequirementExpression =
@@ -88,6 +104,9 @@ export type TraitRequirementExpression =
     }
   | {
       readonly kind: 'rarifiableTrait';
+    }
+  | {
+      readonly kind: 'upgradableTrait';
     }
   | {
       /** Requires an occupied ordinary boon slot without naming its possible traits. */
@@ -134,6 +153,7 @@ export interface TraitDeclaration {
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
+  readonly selectedDisposition: TraitSelectedDisposition;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: HammerCompatibility;
 }

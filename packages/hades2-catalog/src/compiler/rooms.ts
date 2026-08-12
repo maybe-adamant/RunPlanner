@@ -719,6 +719,14 @@ export function normalizeRooms(
       roomSetKey,
       kind: room.kind,
       mode,
+      ...(room.lifecycleProfileKey === undefined
+        ? {}
+        : {
+            lifecycleProfileKey: requireNonEmpty(
+              room.lifecycleProfileKey,
+              `${path}.lifecycleProfileKey`,
+            ),
+          }),
       structuralTags: normalizeStructuralTags(room.structuralTags, `${path}.structuralTags`),
       exits: Object.freeze(exits),
       additionalExits,

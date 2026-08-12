@@ -152,6 +152,7 @@ The currently modeled examples expose the boundary clearly:
 | Selected choice | Produced supported pickup    | Pickup-owned consequence                                                  |
 | --------------- | ---------------------------- | ------------------------------------------------------------------------- |
 | `NarcissusA`    | `StoreRewardRandomStack`     | one random eligible trait gains `+1`                                      |
+| `NarcissusC`    | `Currency`                   | source-faithful Gold acquisition/history; quantity remains unmodeled      |
 | `NarcissusD`    | `MaxManaDrop`                | concrete acquisition/history                                              |
 | `NarcissusE`    | `MaxHealthDrop`              | concrete acquisition/history                                              |
 | `NarcissusG`    | two `ElementalBoost` pickups | each creates one all-element contribution                                 |

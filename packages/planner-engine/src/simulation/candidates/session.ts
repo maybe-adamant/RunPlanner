@@ -37,6 +37,8 @@ import {
   type EvaluatedLocalRewardCandidate,
   type EvaluatedRewardWheelOfferCandidate,
   type EvaluatedShopOfferCandidate,
+  type EvaluatedAcquisitionEntryOfferCandidate,
+  type AcquisitionEntryOfferCandidateQuery,
   type IncomingRewardCandidateQuery,
   type LocalRewardCandidateQuery,
   type RewardWheelOfferCandidateQuery,
@@ -106,6 +108,7 @@ export type ProjectCandidateQuery =
   | RoomTargetCandidateQuery
   | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
+  | AcquisitionEntryOfferCandidateQuery
   | AcquisitionOrderCandidateQuery
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
@@ -133,6 +136,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedRoomTargetCandidate
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
+  | EvaluatedAcquisitionEntryOfferCandidate
   | EvaluatedAcquisitionOrderCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
@@ -249,6 +253,15 @@ function evaluateCandidateQuery(
         project,
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.offer.routeKey, query.offer.biomeKey))
+          ?.rewardProducers,
+        query,
+      );
+    case 'acquisitionEntryOffer':
+      return evaluateRewardProducerCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.entry.routeKey, query.entry.biomeKey))
           ?.rewardProducers,
         query,
       );

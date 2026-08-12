@@ -295,7 +295,7 @@ function decodeCountedOffer(
   return offer;
 }
 
-function decodeRewardState(
+export function decodeRewardState(
   value: unknown,
   catalog: Catalog,
   path: string,

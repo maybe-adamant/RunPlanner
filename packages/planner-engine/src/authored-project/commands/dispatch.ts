@@ -87,6 +87,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceAcquisitionOrder':
+    case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(
         document,
         catalog,

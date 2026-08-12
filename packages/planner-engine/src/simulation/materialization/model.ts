@@ -122,6 +122,12 @@ export interface CanonicalAuthoredRoom {
   readonly localRewards?: readonly CanonicalLocalReward[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
+  readonly pickupSite?: {
+    readonly order: readonly string[];
+    readonly entries: Readonly<
+      Record<string, import('../../authored-project/model').AuthoredRewardState>
+    >;
+  };
 }
 
 export interface CanonicalCompletionRoom {

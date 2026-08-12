@@ -578,7 +578,13 @@ const authoredTemplateMaterializers = Object.freeze({
   Preboss: materializePreboss,
   ShipCombat: materializeShipCombat,
   StandardCombat: materializeCountedRoom,
-  Story: materializeFixedRoom,
+  Story: (context) =>
+    Object.freeze({
+      ...materializeFixedRoom(context),
+      ...(context.room.lifecycleProfileKey === undefined
+        ? {}
+        : { lifecycleProfileKey: context.room.lifecycleProfileKey }),
+    }),
 }) satisfies Readonly<Record<AuthoredTemplateKey, AuthoredTemplateMaterializer>>;
 
 function authoredMaterializer(
@@ -671,6 +677,14 @@ export function materializeAuthoredRoom(
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
+    ...(context.occurrence.acquisitionSites?.roomExit?.pickupEntries === undefined
+      ? {}
+      : {
+          pickupSite: Object.freeze({
+            order: context.occurrence.acquisitionSites.roomExit.order,
+            entries: context.occurrence.acquisitionSites.roomExit.pickupEntries,
+          }),
+        }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   });
 }

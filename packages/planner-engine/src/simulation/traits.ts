@@ -54,7 +54,19 @@ export interface TraitLevelMutationEvent {
   readonly targetedAcquisitionTransition?: never;
 }
 
-export type TraitHistoryEvent = TraitOfferEvent | TraitLevelMutationEvent;
+/** Concrete non-trait acquisition contribution, retained in the same ordered
+ * trait facts ledger so later offer requirements see it. */
+export interface TraitElementContributionEvent {
+  readonly kind: 'elementContribution';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly contributions: Readonly<Partial<Record<TraitElement, number>>>;
+}
+
+export type TraitHistoryEvent =
+  TraitOfferEvent | TraitLevelMutationEvent | TraitElementContributionEvent;
 
 export interface TraitReplacementTransition {
   readonly slot: string;
@@ -111,6 +123,25 @@ export function isPomEligibleTrait(catalog: Catalog, traitKey: string): boolean 
 }
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
+const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
+
+function combinedElementFacts(
+  fromTraits: ReturnType<typeof deriveFacts>,
+  pickupElements: Readonly<Record<TraitElement, number>>,
+) {
+  const elementCounts = Object.freeze({
+    Aether: fromTraits.elementCounts.Aether + pickupElements.Aether,
+    Earth: fromTraits.elementCounts.Earth + pickupElements.Earth,
+    Air: fromTraits.elementCounts.Air + pickupElements.Air,
+    Fire: fromTraits.elementCounts.Fire + pickupElements.Fire,
+    Water: fromTraits.elementCounts.Water + pickupElements.Water,
+  });
+  return Object.freeze({
+    ...fromTraits,
+    elementCounts,
+    highestBaseElementCount: Math.max(...BASE_ELEMENTS.map((element) => elementCounts[element])),
+  });
+}
 
 export function createTraitHistoryState(): TraitHistoryState {
   return Object.freeze({
@@ -232,6 +263,13 @@ export function foldTraitHistoryEvents(
   events: readonly TraitHistoryEvent[],
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
+  const pickupElements: Record<TraitElement, number> = {
+    Aether: 0,
+    Earth: 0,
+    Air: 0,
+    Fire: 0,
+    Water: 0,
+  };
   let activeSources: ReadonlySet<string> = new Set();
   // Stable ordering retains the producer/purchase chronology already encoded
   // by construction. A targeted acquisition appends its mutation immediately
@@ -251,6 +289,12 @@ export function foldTraitHistoryEvents(
           isPomEligibleTrait(catalog, event.targetTraitKey)
         ) {
           equipped[event.targetTraitKey] = Object.freeze({ ...target, level: event.newLevel });
+        }
+        continue;
+      }
+      if (event.kind === 'elementContribution') {
+        for (const [element, value] of Object.entries(event.contributions)) {
+          pickupElements[element as TraitElement] += value ?? 0;
         }
         continue;
       }
@@ -305,7 +349,8 @@ export function foldTraitHistoryEvents(
         }
       }
     }
-    const afterAcquisition = deriveFacts(catalog, equipped);
+    const fromTraits = deriveFacts(catalog, equipped);
+    const afterAcquisition = combinedElementFacts(fromTraits, pickupElements);
     const nextActiveSources = activeRarityFloorSources(
       catalog,
       equipped,
@@ -324,7 +369,8 @@ export function foldTraitHistoryEvents(
     );
     activeSources = nextActiveSources;
   }
-  const derived = deriveFacts(catalog, equipped);
+  const fromTraits = deriveFacts(catalog, equipped);
+  const derived = combinedElementFacts(fromTraits, pickupElements);
   return Object.freeze({
     events: Object.freeze(ordered),
     equippedTraits: Object.freeze(equipped),
@@ -599,6 +645,15 @@ export function recordReachedTraitOffer(
     evaluation.targetedAcquisition.legal &&
     evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
+  const selectedTraitKey =
+    evaluation.offer.options[optionIndex(evaluation.offer.selectedOptionKey)].traitKey;
+  // Every reached offer is assessed and retained in the evaluation trace.
+  // Only declarations that equip their selection may mutate the canonical
+  // equipped-trait history; descriptors and pickup producers remain
+  // observational at this boundary.
+  if (catalog.traits.byKey[selectedTraitKey]?.selectedDisposition.kind !== 'equip') {
+    return Object.freeze({ history: evaluation.before });
+  }
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
   const event: TraitOfferEvent = Object.freeze({
@@ -840,6 +895,10 @@ function checkRequirement(
       })
         ? undefined
         : { code: 'rarifiableTarget' };
+    case 'upgradableTrait':
+      return history.upgradableTraitCount > 0
+        ? undefined
+        : { code: 'missingPrerequisite', detail: 'upgradableTrait' };
     case 'ordinaryBoonSlotOccupied':
       return history.ordinaryBoonSlots[requirement.slot] !== undefined
         ? undefined

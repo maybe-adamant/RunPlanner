@@ -15,10 +15,18 @@ import {
 } from '../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
 import {
+  createDefaultPickupRewardState,
+  selectedPickupProducer,
+} from '../../authored-project/traits';
+import {
   encounterEnvelopeSlots,
   selectedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounters';
-import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
+import {
+  type ResolvedRewardOffer,
+  type RewardHistoryState,
+  type RewardKernelFacts,
+} from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
   EncounterHistoryEntry,
@@ -104,13 +112,17 @@ import {
   processRewardOffer,
   processShopInventory,
   settleShopAcquisitionSite,
+  settlePickupAcquisitionSite,
   publicRewardBranch,
   rewardFinding,
   type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
-import { prepareAcquisitionOrderCandidateContext } from './shop-candidates';
+import {
+  prepareAcquisitionOrderCandidateContext,
+  preparePickupAcquisitionOrderCandidateContext,
+} from './acquisition-order-candidates';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
@@ -865,6 +877,8 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
       return origin;
     case 'encounterPhase':
       return origin;
+    case 'acquisitionEntry':
+      return origin;
     default:
       return undefined;
   }
@@ -1244,6 +1258,102 @@ export function evaluateBiomeRewardsAssemblyInternal(
     historySequence: number,
     targetFindings: Map<string, FindingRegionEntry>,
   ): readonly RewardBranchState[] {
+    if (room.pickupSite !== undefined) {
+      const producer = selectedPickupProducer(catalog, room.encounters);
+      if (producer === undefined) fail('pickup site has no selected pickup producer');
+      const pickupFacts = (branchHistory: RewardHistoryState) =>
+        rewardFacts(
+          catalog,
+          room,
+          room,
+          declaration,
+          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          branchHistory,
+          enteredBiomeCount,
+        );
+      const findingChronology = rewardFindingChronologyForRoom(
+        snapshot,
+        room.origin,
+        historySequence,
+        'localRoomLifecycle',
+      );
+      const roomKey = semanticAddressKey(room.origin);
+      if (!acquisitionOrderContexts.has(roomKey)) {
+        acquisitionOrderContexts.set(
+          roomKey,
+          preparePickupAcquisitionOrderCandidateContext({
+            catalog,
+            room,
+            branchesBeforePickups: sourceBranches,
+            producerLifecycleKey: producer.disposition.producerLifecycleKey,
+            historySequence,
+            facts: pickupFacts,
+          }),
+        );
+      }
+      const settled = settlePickupAcquisitionSite(
+        catalog,
+        sourceBranches,
+        {
+          siteOwner: room.origin,
+          entries: room.pickupSite.entries,
+          order: room.pickupSite.order,
+          producerLifecycleKey: producer.disposition.producerLifecycleKey,
+          historySequence,
+          findingChronology,
+          facts: pickupFacts,
+        },
+        targetFindings,
+      );
+      for (const frontier of settled.pickupEntryFrontiers ?? []) {
+        const entryKey = semanticAddressKey(frontier.address);
+        indexRewardProducerFrontier(
+          producerFrontiers,
+          Object.freeze({
+            generationPolicy: 'sequential',
+            generationHistorySequence: historySequence,
+            reachableBranchCount: frontier.branchesBeforeEntry.length,
+            acquisitionHorizon: 'ownEnteredLifecycle',
+            owners: Object.freeze([frontier.address]),
+            evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+              if (semanticAddressKey(owner) !== entryKey) {
+                return fail('pickup reward frontier received a foreign owner');
+              }
+              // A pickup producer fixes its reward identity. Candidate editing
+              // may resolve only its declaration-compatible payload at this
+              // exact ordered pre-entry frontier.
+              if (offer.rewardType !== frontier.reward.offer.rewardType) {
+                return Object.freeze({ findings: Object.freeze([]), supported: false });
+              }
+              const candidateFindings = new Map<string, FindingRegionEntry>();
+              const candidateBranches = settlePickupAcquisitionSite(
+                catalog,
+                frontier.branchesBeforeEntry,
+                {
+                  siteOwner: room.origin,
+                  entries: Object.freeze({
+                    [frontier.address.entryKey]: createDefaultPickupRewardState(
+                      catalog,
+                      offer,
+                      routeLoadout,
+                      producer.disposition.producerLifecycleKey,
+                    ),
+                  }),
+                  order: Object.freeze([frontier.address.entryKey]),
+                  producerLifecycleKey: producer.disposition.producerLifecycleKey,
+                  historySequence,
+                  findingChronology,
+                  facts: pickupFacts,
+                },
+                candidateFindings,
+              ).branches;
+              return candidateResult(candidateFindings, candidateBranches);
+            },
+          }),
+        );
+      }
+      return settled.branches;
+    }
     const roomKey = semanticAddressKey(room.origin);
     if (!acquisitionOrderContexts.has(roomKey)) {
       acquisitionOrderContexts.set(

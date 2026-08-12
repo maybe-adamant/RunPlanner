@@ -17,6 +17,7 @@ import {
 import {
   semanticAddressKey,
   type AcquisitionSiteAddress,
+  type AcquisitionEntryAddress,
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type BiomeAddress,
@@ -59,11 +60,12 @@ export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
   | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
   | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
-  | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress };
+  | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress }
+  | { readonly kind: 'acquisitionEntry'; readonly address: AcquisitionEntryAddress };
 
 export type CountedRewardCandidateOwner = Exclude<
   RewardCandidateOwner,
-  { readonly kind: 'shopOffer' }
+  { readonly kind: 'shopOffer' | 'acquisitionEntry' }
 >;
 
 /**
@@ -296,6 +298,12 @@ function rewardQueries(
       return offers.map((value) => ({ kind: 'rewardWheelOffer', offer: owner.address, value }));
     case 'shopOffer':
       return offers.map((value) => ({ kind: 'shopOffer', offer: owner.address, value }));
+    case 'acquisitionEntry':
+      return offers.map((value) => ({
+        kind: 'acquisitionEntryOffer',
+        entry: owner.address,
+        value,
+      }));
   }
 }
 
@@ -887,6 +895,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'acquisitionEntryOffer':
     case 'acquisitionOrder':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
@@ -942,6 +951,7 @@ function candidateForced(
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'acquisitionEntryOffer':
     case 'acquisitionOrder':
       return false;
     case 'takeoverPrebossBatch':

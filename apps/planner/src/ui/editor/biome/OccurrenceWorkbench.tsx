@@ -632,7 +632,11 @@ export function AcquisitionsWorkbench({
         <SemanticOwnerMarker address={acquisitions.marker.address} />
       </div>
       {acquisitions.entries.map((entry, index) => {
-        const without = acquisitions.entries.filter((candidate) => candidate.key !== entry.key);
+        const participants = acquisitions.entries.filter(
+          (candidate) => candidate.participation === undefined || candidate.participation.selected,
+        );
+        const participantIndex = participants.findIndex((candidate) => candidate.key === entry.key);
+        const without = participants.filter((candidate) => candidate.key !== entry.key);
         const move = (nextIndex: number) => [
           ...without.slice(0, nextIndex).map((candidate) => candidate.key),
           entry.key,
@@ -642,32 +646,101 @@ export function AcquisitionsWorkbench({
           <div className="acquisition-entry" key={entry.key}>
             <div className="owner-markers">
               <span>{entry.label}</span>
-              <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
+              {entry.rewardControl === undefined ? null : (
+                <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
+              )}
             </div>
-            <AcquisitionMoveButton
-              disabled={index === 0}
-              entryKeys={move(index - 1)}
-              interactions={interactions}
-              label="Move earlier"
-              site={acquisitions.site}
-            />
-            <AcquisitionMoveButton
-              disabled={index === acquisitions.entries.length - 1}
-              entryKeys={move(index + 1)}
-              interactions={interactions}
-              label="Move later"
-              site={acquisitions.site}
-            />
-            <RewardControlEditor
-              control={entry.rewardControl}
-              idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
-              interactions={interactions}
-              showOffer={false}
-            />
+            {entry.participation?.selected === false ? null : (
+              <AcquisitionMoveButton
+                disabled={participantIndex === 0}
+                entryKeys={move(participantIndex - 1)}
+                interactions={interactions}
+                label="Move earlier"
+                site={acquisitions.site}
+              />
+            )}
+            {entry.participation?.selected === false ? null : (
+              <AcquisitionMoveButton
+                disabled={participantIndex === participants.length - 1}
+                entryKeys={move(participantIndex + 1)}
+                interactions={interactions}
+                label="Move later"
+                site={acquisitions.site}
+              />
+            )}
+            {entry.participation === undefined ? null : (
+              <PickupParticipationControl
+                entry={entry.address}
+                interactions={interactions}
+                label={entry.participation.label}
+                selected={entry.participation.selected}
+                toggleEntryKeys={entry.participation.toggleEntryKeys}
+              />
+            )}
+            {entry.rewardControl === undefined ? null : (
+              <RewardControlEditor
+                control={entry.rewardControl}
+                idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
+                interactions={interactions}
+                showOffer={entry.rewardControl.offer.payload !== undefined}
+                offerStartStep={
+                  entry.rewardControl.offer.payload?.kind === 'BoonSource' ? 'source' : 'chosen'
+                }
+              />
+            )}
           </div>
         );
       })}
     </section>
+  );
+}
+
+function PickupParticipationControl({
+  entry,
+  interactions,
+  label,
+  selected,
+  toggleEntryKeys,
+}: {
+  readonly entry: import('@run-planner/engine/authored-project').AcquisitionEntryAddress;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+  readonly selected: boolean;
+  readonly toggleEntryKeys: readonly string[];
+}) {
+  const dispatch = useAppDispatch();
+  const interaction = requireWorkspaceInteraction(
+    interactions.acquisitionOrders,
+    workspaceInteractionKey(entry.site),
+  );
+  const projection = useWorkspaceInteraction(interaction);
+  const apply = () => {
+    projection.activate();
+    // Membership is the repair surface for optional pickups in either
+    // direction: an invalid active entry must always be removable, just as a
+    // dormant entry must be activatable to expose its hidden children. Only
+    // chronological Move earlier/later proposals remain candidate-gated.
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAcquisitionOrder',
+        site: entry.site,
+        entryKeys: toggleEntryKeys,
+      }),
+    );
+  };
+  return (
+    <label className="purchase-control">
+      <input
+        aria-label={`${label} ${entry.entryKey}`}
+        checked={selected}
+        disabled={projection.pending}
+        onChange={apply}
+        onFocus={projection.activate}
+        onPointerDown={projection.activate}
+        type="checkbox"
+      />
+      {label}
+    </label>
   );
 }
 

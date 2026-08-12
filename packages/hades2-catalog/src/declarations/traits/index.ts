@@ -16,6 +16,7 @@ import { poseidonGiver, poseidonTraits } from './poseidon';
 import { zeusGiver, zeusTraits } from './zeus';
 import { hermesGiver, hermesTraits } from './hermes';
 import { medeaGiver, medeaTraits } from './medea';
+import { narcissusGiver, narcissusTraits } from './narcissus';
 import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
 
 const weapons = [
@@ -120,6 +121,7 @@ const traits = [
   ...zeusTraits,
   ...hermesTraits,
   ...medeaTraits,
+  ...narcissusTraits,
   ...weaponUpgradeTraits,
 ] as const;
 
@@ -141,6 +143,7 @@ const givers = [
   zeusGiver,
   hermesGiver,
   medeaGiver,
+  narcissusGiver,
   weaponUpgradeGiver,
 ] as const;
 

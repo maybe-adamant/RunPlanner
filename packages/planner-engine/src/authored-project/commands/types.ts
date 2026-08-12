@@ -1,6 +1,7 @@
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
   AcquisitionSiteAddress,
+  AcquisitionEntryAddress,
   AdditionalExitAddress,
   BatchRewardStoreAddress,
   BiomeAddress,
@@ -230,11 +231,18 @@ export type ShopOccurrenceCommand =
       readonly value: boolean;
     };
 
-export type AcquisitionSiteCommand = {
-  readonly kind: 'ReplaceAcquisitionOrder';
-  readonly site: AcquisitionSiteAddress;
-  readonly entryKeys: readonly string[];
-};
+export type AcquisitionSiteCommand =
+  | {
+      readonly kind: 'ReplaceAcquisitionOrder';
+      readonly site: AcquisitionSiteAddress;
+      readonly entryKeys: readonly string[];
+    }
+  | {
+      /** Replaces payload detail for one declaration-fixed site pickup. */
+      readonly kind: 'ReplaceAcquisitionEntryOffer';
+      readonly entry: AcquisitionEntryAddress;
+      readonly value: ResolvedRewardOffer;
+    };
 
 export type EncounterOccurrenceCommand =
   | {

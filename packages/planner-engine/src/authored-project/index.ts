@@ -78,6 +78,7 @@ export {
 export {
   TRAIT_OPTION_KEYS,
   optionIndex,
+  selectedPickupProducer,
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
   type AuthoredTraitOffer,

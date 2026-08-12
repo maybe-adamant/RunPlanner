@@ -20,6 +20,9 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly kind: AcquisitionKind;
   readonly historyProjection: HistoryProjectionKey;
   readonly levelResolutionEffect?: LevelResolutionEffect;
+  readonly elementContributions?: Readonly<
+    Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>
+  >;
 }
 
 export interface RawAcquisitionRoleDeclaration {

@@ -19,6 +19,7 @@ import {
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
@@ -703,6 +704,64 @@ describe('structured workspace interaction binding', () => {
       surfaceInteractions.P.rewards.get(semanticAddressKey(shop))?.intentFor(replacement),
     ).toEqual({
       command: { kind: 'ReplaceShopOffer', offer: shop, value: replacement },
+    });
+  });
+
+  it('binds a picked Narcissus pickup payload to its entry replacement command', () => {
+    let project = createCompleteFGProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusI', rarity: 'Common' },
+          { traitKey: 'NarcissusB', rarity: 'Common' },
+          { traitKey: 'NarcissusC', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+      'roomExit',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['mysteryBoon'],
+    });
+    const entry = createAcquisitionEntryAddress(site, 'mysteryBoon');
+    const interaction = bind(project, 'Underworld', 'G').interactions.rewards.get(
+      semanticAddressKey(entry),
+    );
+    expect(
+      interaction?.intentFor({
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      }),
+    ).toEqual({
+      command: {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry,
+        value: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+        },
+      },
     });
   });
 

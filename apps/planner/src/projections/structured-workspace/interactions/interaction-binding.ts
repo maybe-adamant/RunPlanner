@@ -98,6 +98,14 @@ function rewardIntentFor(
       return Object.freeze({
         command: Object.freeze({ kind: 'ReplaceShopOffer', offer: owner.address, value }),
       });
+    case 'acquisitionEntry':
+      return Object.freeze({
+        command: Object.freeze({
+          kind: 'ReplaceAcquisitionEntryOffer',
+          entry: owner.address,
+          value,
+        }),
+      });
   }
 }
 

@@ -137,7 +137,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.25.0-producer-sensitive-nectar');
+    expect(catalog.version).toBe('0.26.0-narcissus-pickups');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');

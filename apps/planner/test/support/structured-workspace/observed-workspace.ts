@@ -56,9 +56,9 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   if (room.acquisitions?.placement === 'afterProducer') {
     appendMarker(markers, room.acquisitions.marker);
     for (const entry of room.acquisitions.entries) {
-      for (const trait of entry.rewardControl.traitOffers ?? [])
+      for (const trait of entry.rewardControl?.traitOffers ?? [])
         appendMarker(markers, trait.marker);
-      for (const resolution of entry.rewardControl.levelResolutions ?? []) {
+      for (const resolution of entry.rewardControl?.levelResolutions ?? []) {
         appendMarker(markers, resolution.marker);
       }
     }

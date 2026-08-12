@@ -3,7 +3,11 @@ import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel'
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
 import type { AcquisitionOrderCandidateContext } from './lifecycle-artifacts';
-import { settleShopAcquisitionSite, type RewardBranchState } from './processing';
+import {
+  settlePickupAcquisitionSite,
+  settleShopAcquisitionSite,
+  type RewardBranchState,
+} from './processing';
 
 interface ShopPurchaseCandidateContextOptions {
   readonly catalog: Catalog;
@@ -64,6 +68,42 @@ export function prepareAcquisitionOrderCandidateContext({
       return Object.freeze({
         findings: Object.freeze([...candidateFindings.values()].map((entry) => entry.finding)),
         supported: branches.length > 0,
+      });
+    },
+  });
+}
+
+export function preparePickupAcquisitionOrderCandidateContext(options: {
+  readonly catalog: Catalog;
+  readonly room: CanonicalAuthoredRoom;
+  readonly branchesBeforePickups: readonly RewardBranchState[];
+  readonly producerLifecycleKey: string;
+  readonly historySequence: number;
+  readonly facts: (history: RewardHistoryState) => RewardKernelFacts;
+}): AcquisitionOrderCandidateContext {
+  const site = options.room.pickupSite;
+  if (site === undefined)
+    throw new Error(`${options.room.gameName} has no pickup acquisition state`);
+  return Object.freeze({
+    origin: options.room.origin,
+    evaluateOrder: (order: readonly string[]) => {
+      const findings = new Map<string, FindingRegionEntry>();
+      const result = settlePickupAcquisitionSite(
+        options.catalog,
+        options.branchesBeforePickups,
+        {
+          siteOwner: options.room.origin,
+          entries: site.entries,
+          order: Object.freeze([...order]),
+          producerLifecycleKey: options.producerLifecycleKey,
+          historySequence: options.historySequence,
+          facts: options.facts,
+        },
+        findings,
+      );
+      return Object.freeze({
+        findings: Object.freeze([...findings.values()].map((entry) => entry.finding)),
+        supported: result.branches.length > 0,
       });
     },
   });

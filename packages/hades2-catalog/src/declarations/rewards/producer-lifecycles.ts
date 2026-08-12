@@ -59,4 +59,17 @@ export const producerLifecycles = [
       },
     ],
   },
+  {
+    key: 'NarcissusPickup',
+    rewardTypes: [
+      'StoreRewardRandomStack',
+      'MaxManaDrop',
+      'MaxHealthDrop',
+      'Currency',
+      'LastStandDrop',
+      'BlindBoxLoot',
+      'ElementalBoost',
+    ],
+    defaultLifecyclePoint: 'roomExit',
+  },
 ] as const satisfies RawRewardKernelInput['producerLifecycles'];

@@ -1,6 +1,7 @@
 import {
   createEncounterPhaseAddress,
   createAcquisitionSiteAddress,
+  createAcquisitionEntryAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
@@ -175,7 +176,14 @@ export function expectedWorkspaceLeafRequirements(
     reward: AuthoredRewardState,
   ): void => {
     const occurrenceId =
-      address.kind === 'encounterPhase' ? address.owner.occurrenceId : address.occurrenceId;
+      address.kind === 'encounterPhase'
+        ? address.owner.occurrenceId
+        : address.kind === 'acquisitionEntry'
+          ? address.site.owner.kind === 'occurrence'
+            ? address.site.owner.occurrenceId
+            : undefined
+          : address.occurrenceId;
+    if (occurrenceId === undefined) return;
     if (!detailsActive.has(occurrenceId)) return;
     for (const acquisitionRole of Object.keys(reward.traitOffersByAcquisitionRole)) {
       const traitAddress = createTraitOfferAddress(address, acquisitionRole);
@@ -339,6 +347,17 @@ export function expectedWorkspaceLeafRequirements(
           );
         }
         break;
+      }
+    }
+    const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+    if (pickupEntries !== undefined && detailsActive.has(occurrence.occurrenceId)) {
+      const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
+      requireLeaf(site, expectedLeafInteraction('acquisitionOrder', workspaceTestOwnerKey(site)));
+      for (const entryKey of occurrence.acquisitionSites?.roomExit?.order ?? []) {
+        const reward = pickupEntries[entryKey];
+        if (reward === undefined) throw new Error(`pickup order has no entry ${entryKey}`);
+        const entry = createAcquisitionEntryAddress(site, entryKey);
+        requireRewardWithTraits(entry, reward);
       }
     }
   }

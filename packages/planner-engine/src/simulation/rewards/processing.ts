@@ -11,6 +11,7 @@ import {
   type SemanticAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
+import type { AuthoredRewardState } from '../../authored-project/model';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -57,6 +58,7 @@ import type { RewardBranch, RewardEvent } from './model';
 import {
   attachTraitHistory,
   createTraitHistoryState,
+  foldTraitHistoryEvents,
   evaluateReachedTraitOffer,
   evaluateReachedLevelResolution,
   recordReachedLevelResolution,
@@ -95,6 +97,18 @@ export interface AcquisitionSettlementProduct {
   readonly site: AcquisitionSiteAddress;
   readonly entries: readonly AcquisitionSettlementEntry[];
   readonly branches: readonly RewardBranchState[];
+  /**
+   * Exact pre-entry histories captured by one canonical ordered optional-pickup
+   * settlement. Candidate artifacts consume these products; they never replay
+   * the real settlement merely to rediscover an entry frontier.
+   */
+  readonly pickupEntryFrontiers?: readonly PickupAcquisitionEntryFrontier[];
+}
+
+export interface PickupAcquisitionEntryFrontier {
+  readonly address: AcquisitionEntryAddress;
+  readonly reward: AuthoredRewardState;
+  readonly branchesBeforeEntry: readonly RewardBranchState[];
 }
 
 export interface AcquisitionSettlementEntry {
@@ -478,6 +492,8 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'shopOffer':
       return origin;
     case 'encounterPhase':
+      return origin;
+    case 'acquisitionEntry':
       return origin;
     default:
       return undefined;
@@ -1514,6 +1530,101 @@ export function settleOwnedAcquisitionSite(
   });
 }
 
+/** Settles optional site-materialized pickups through the same role fold used
+ * by every other acquisition. The producer only supplies entries; it never
+ * gets a private outcome processor. */
+export function settlePickupAcquisitionSite(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  request: {
+    readonly siteOwner: AcquisitionSiteOwnerAddress;
+    readonly entries: Readonly<Record<string, AuthoredRewardState>>;
+    readonly order: readonly string[];
+    readonly producerLifecycleKey: string;
+    readonly historySequence: number;
+    readonly facts: RewardFactsFactory;
+    readonly findingChronology?: FindingChronology;
+  },
+  findings: Map<string, FindingRegionEntry>,
+): AcquisitionSettlementProduct {
+  const site = createAcquisitionSiteAddress(request.siteOwner, 'roomExit');
+  const definitions = new Map<
+    string,
+    {
+      readonly reward: AuthoredRewardState;
+      readonly roles: readonly AcquisitionSettlementRole[];
+      readonly address: AcquisitionEntryAddress;
+    }
+  >();
+  const entries: AcquisitionSettlementEntry[] = Object.keys(request.entries).map((key) => {
+    const reward = request.entries[key]!;
+    const entry = createAcquisitionEntryAddress(site, key);
+    const lifecycle =
+      catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]?.rewardTypes.byKey[
+        reward.offer.rewardType
+      ];
+    if (lifecycle === undefined)
+      throw new Error(`pickup ${reward.offer.rewardType} has no declared lifecycle`);
+    const roles = Object.freeze(
+      lifecycle.acquisitionLifecycle.map((binding) =>
+        Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
+      ),
+    );
+    definitions.set(key, Object.freeze({ reward, roles, address: entry }));
+    return Object.freeze({
+      address: entry,
+      source: entry,
+      acquisitionRoles: roles,
+      participation: request.order.includes(key) ? 'optional' : 'dormant',
+    });
+  });
+  if (new Set(request.order).size !== request.order.length)
+    throw new Error('pickup acquisition order contains a duplicate entry');
+  let current = branches;
+  const pickupEntryFrontiers: PickupAcquisitionEntryFrontier[] = [];
+  for (const key of request.order) {
+    const definition = definitions.get(key);
+    if (definition === undefined)
+      throw new Error(`pickup acquisition order has unknown entry ${key}`);
+    const { reward, address: entry } = definition;
+    pickupEntryFrontiers.push(
+      Object.freeze({ address: entry, reward, branchesBeforeEntry: current }),
+    );
+    const lifecycle =
+      catalog.rewards.producerLifecycles.byKey[request.producerLifecycleKey]!.rewardTypes.byKey[
+        reward.offer.rewardType
+      ]!;
+    for (const binding of lifecycle.acquisitionLifecycle) {
+      current = applyProducerRoleHistory(
+        catalog,
+        current,
+        Object.freeze({
+          origin: entry,
+          offer: reward.offer,
+          producerLifecycleKey: request.producerLifecycleKey,
+          traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+          ...(reward.levelResolutionsByAcquisitionRole === undefined
+            ? {}
+            : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+          traitContext: Object.freeze({}),
+        }),
+        Object.freeze({ ...binding, historySequence: request.historySequence }),
+        request.facts,
+        findings,
+        undefined,
+        request.findingChronology,
+        Object.freeze({ site, entry }),
+      );
+    }
+  }
+  return Object.freeze({
+    site,
+    entries: Object.freeze(entries),
+    branches: current,
+    pickupEntryFrontiers: Object.freeze(pickupEntryFrontiers),
+  });
+}
+
 function applyProducerRoleHistory(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
@@ -1541,14 +1652,36 @@ function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
-    const history = applyConcreteAcquisition(
+    let history = applyConcreteAcquisition(
       catalog.rewards,
       branch.history,
       acquisition.acquisition,
     );
+    const contributions =
+      catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
+    let acquisitionBranch: RewardBranchState = Object.freeze({ ...branch, history });
+    if (contributions !== undefined) {
+      const priorTraits = branch.traitHistory ?? createTraitHistoryState();
+      const traitHistory = foldTraitHistoryEvents(
+        catalog,
+        Object.freeze([
+          ...priorTraits.events,
+          Object.freeze({
+            kind: 'elementContribution' as const,
+            owner: incoming.origin,
+            acquisitionRole: resolution.role,
+            sequence: resolution.historySequence,
+            acquisitionPoint: resolution.lifecyclePoint,
+            contributions,
+          }),
+        ]),
+      );
+      history = attachTraitHistory(history, traitHistory);
+      acquisitionBranch = Object.freeze({ ...acquisitionBranch, history, traitHistory });
+    }
     const withTrait = applyTraitOfferForAcquisition(
       catalog,
-      Object.freeze({ ...branch, history }),
+      acquisitionBranch,
       incoming,
       resolution.role,
       resolution.lifecyclePoint,
