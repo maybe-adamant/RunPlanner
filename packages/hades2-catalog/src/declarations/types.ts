@@ -197,6 +197,7 @@ export interface RawRoomDeclaration {
   readonly roomSetKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
+  readonly lifecycleProfileKey?: string;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];

@@ -6,6 +6,7 @@ import type {
   TraitRarity,
   ScalableGodTraitRarityFloorEffect,
   TargetedTraitAcquisition,
+  TraitSelectedDisposition,
 } from '@run-planner/engine/catalog-schema';
 
 /** Raw catalog declarations intentionally remain separate from normalized
@@ -24,6 +25,8 @@ export interface RawTraitDeclaration {
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
+  /** Omitted declarations retain ordinary persistent-trait equip behavior. */
+  readonly selectedDisposition?: TraitSelectedDisposition;
   readonly selfExclusion?: string;
   /** Raw Hammer declarations receive the source-closed Rank II matrix below. */
   readonly hammerCompatibility?: Omit<

@@ -42,6 +42,7 @@ export const acquisitions = [
   { gameName: 'MaxManaDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'MaxManaDropBig', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'MaxManaDropSmall', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  { gameName: 'Currency', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'RoomMoneyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'RoomMoneyTripleDrop',
@@ -64,6 +65,12 @@ export const acquisitions = [
   { gameName: 'EarthBoost', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'FireBoost', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'WaterBoost', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  {
+    gameName: 'ElementalBoost',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    elementContributions: { Earth: 1, Air: 1, Fire: 1, Water: 1 },
+  },
   {
     gameName: 'StoreRewardRandomStack',
     kind: 'consumable',

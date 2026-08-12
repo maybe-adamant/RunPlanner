@@ -373,6 +373,19 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it('requires one generic Pom-eligible trait for Narcissus A', () => {
+    expect(
+      assessTraitOption(catalog, 'NarcissusA', createTraitHistoryState()).findings,
+    ).toContainEqual({
+      code: 'missingPrerequisite',
+      traitKey: 'NarcissusA',
+      detail: 'upgradableTrait',
+    });
+    expect(
+      assessTraitOption(catalog, 'NarcissusA', historyWith('Apollo', 'ApolloWeaponBoon', 'Common'))
+        .legal,
+    ).toBe(true);
+  });
   it('starts only eligible core-god traits at level 1 and uses one eligibility authority', () => {
     const god = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
     const hermes = historyWith('Hermes', 'HermesWeaponBoon', 'Common');
@@ -1015,7 +1028,10 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(deactivated.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
     expect(deactivated.equippedTraits.ApolloWeaponBoon).toBeUndefined();
     expect(deactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
-    expect(deactivated.events.at(-1)?.replacementTransition).toEqual({
+    const replacementEvent = deactivated.events.at(-1);
+    expect(
+      replacementEvent?.kind === 'traitOffer' ? replacementEvent.replacementTransition : undefined,
+    ).toEqual({
       slot: 'Melee',
       replacedTraitKey: 'ApolloWeaponBoon',
       oldRarity: 'Rare',
@@ -1491,6 +1507,7 @@ describe('reached trait offer chronology', () => {
     const laterTrace = f.rewards.selectedTraitOffers.find(
       (trace) =>
         trace.address.owner.kind !== 'encounterPhase' &&
+        trace.address.owner.kind !== 'acquisitionEntry' &&
         trace.address.owner.occurrenceId === goldenFOccurrenceId(2, 1) &&
         trace.acquisitionRole === 'source',
     );

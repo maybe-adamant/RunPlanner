@@ -58,6 +58,7 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
+  type WorkspaceExplicitRewardControl,
   type WorkspaceShopConditionControl,
   type WorkspaceTraitOfferControl,
   type WorkspaceLevelResolutionControl,
@@ -1054,6 +1055,29 @@ function occurrenceInteractionRequirements(
       Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
   }
+  const pickupAcquisitions = room.acquisitions?.entries.filter(
+    (entry) => entry.participation?.label === 'Picked up',
+  );
+  if (
+    pickupAcquisitions !== undefined &&
+    pickupAcquisitions.length > 0 &&
+    room.acquisitions !== undefined
+  ) {
+    const selectedEntryKeys = pickupAcquisitions
+      .filter((entry) => entry.participation?.selected)
+      .map((entry) => entry.key);
+    requirements.push(
+      Object.freeze({
+        kind: 'acquisitionOrder' as const,
+        owner: room.acquisitions.site,
+        proposalEntryKeys: acquisitionOrderProposals(
+          selectedEntryKeys,
+          pickupAcquisitions.map((entry) => entry.key),
+        ),
+        selectedEntryKeys: Object.freeze(selectedEntryKeys),
+      }),
+    );
+  }
 
   if (room.roomLocal.kind === 'ephyra' && room.roomLocal.sideRooms.kind === 'published') {
     for (const sideRoom of room.roomLocal.sideRooms.group.slots) {
@@ -1252,6 +1276,54 @@ export function assembleWorkspaceOccurrence(
             owner,
           });
         })();
+  const pickupSite = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+  const pickupAcquisitions =
+    !input.facts.detailsActive || pickupSite === undefined
+      ? undefined
+      : (() => {
+          const site = createAcquisitionSiteAddress(address, 'roomExit');
+          const order = occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]);
+          return Object.freeze({
+            site,
+            marker: input.markerDestinations.marker(site),
+            placement: 'postOutgoing' as const,
+            entries: Object.freeze(
+              [...order, ...Object.keys(pickupSite).filter((key) => !order.includes(key))].map(
+                (key) => {
+                  const reward = pickupSite[key]!;
+                  const entry = createAcquisitionEntryAddress(site, key);
+                  const selected = order.includes(key);
+                  const toggleEntryKeys = Object.freeze(
+                    selected ? order.filter((candidate) => candidate !== key) : [...order, key],
+                  );
+                  return Object.freeze({
+                    key,
+                    address: entry,
+                    label:
+                      input.catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.label ??
+                      reward.offer.rewardType,
+                    ...(selected
+                      ? {
+                          rewardControl: rewardControl(
+                            input,
+                            { kind: 'acquisitionEntry' as const, address: entry },
+                            undefined,
+                            reward.offer,
+                            reward,
+                          ) as WorkspaceExplicitRewardControl,
+                        }
+                      : {}),
+                    participation: Object.freeze({
+                      label: 'Picked up' as const,
+                      selected,
+                      toggleEntryKeys,
+                    }),
+                  });
+                },
+              ),
+            ),
+          });
+        })();
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
@@ -1287,34 +1359,40 @@ export function assembleWorkspaceOccurrence(
     label: room.label,
     localDetailMarkers,
     marker: input.markerDestinations.marker(address),
-    ...(roomLocal.kind === 'shop' && roomLocal.materialized
-      ? {
-          acquisitions: Object.freeze({
-            site: createAcquisitionSiteAddress(address, 'roomExit'),
-            marker: input.markerDestinations.marker(
-              createAcquisitionSiteAddress(address, 'roomExit'),
-            ),
-            placement:
-              room.kind === 'Preboss' || !input.facts.postOutgoingSettlement
-                ? ('afterProducer' as const)
-                : ('postOutgoing' as const),
-            entries: Object.freeze(
-              roomLocal.acquisitionOrder.flatMap((entryKey) => {
-                const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
-                return offer === undefined
-                  ? []
-                  : [
-                      Object.freeze({
-                        key: offer.key,
-                        label: offer.label,
-                        rewardControl: offer.rewardControl,
-                      }),
-                    ];
-              }),
-            ),
-          }),
-        }
-      : {}),
+    ...(pickupAcquisitions !== undefined
+      ? { acquisitions: pickupAcquisitions }
+      : roomLocal.kind === 'shop' && roomLocal.materialized
+        ? {
+            acquisitions: Object.freeze({
+              site: createAcquisitionSiteAddress(address, 'roomExit'),
+              marker: input.markerDestinations.marker(
+                createAcquisitionSiteAddress(address, 'roomExit'),
+              ),
+              placement:
+                room.kind === 'Preboss' || !input.facts.postOutgoingSettlement
+                  ? ('afterProducer' as const)
+                  : ('postOutgoing' as const),
+              entries: Object.freeze(
+                roomLocal.acquisitionOrder.flatMap((entryKey) => {
+                  const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
+                  return offer === undefined
+                    ? []
+                    : [
+                        Object.freeze({
+                          key: offer.key,
+                          address: createAcquisitionEntryAddress(
+                            createAcquisitionSiteAddress(address, 'roomExit'),
+                            offer.key,
+                          ),
+                          label: offer.label,
+                          rewardControl: offer.rewardControl,
+                        }),
+                      ];
+                }),
+              ),
+            }),
+          }
+        : {}),
     occurrenceId: occurrence.occurrenceId,
     ...(occurrence.state.kind !== 'anomaly'
       ? {}
@@ -1352,6 +1430,11 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
     rewardControls,
   });
+  const pickupRewardControls = Object.freeze(
+    (pickupAcquisitions?.entries ?? []).flatMap((entry) =>
+      entry.rewardControl === undefined ? [] : [entry.rewardControl],
+    ),
+  );
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
@@ -1369,6 +1452,6 @@ export function assembleWorkspaceOccurrence(
     node,
     occurrenceInteractionRequirements: localInteractionRequirements,
     roomControls,
-    rewardControls,
+    rewardControls: Object.freeze([...rewardControls, ...pickupRewardControls]),
   });
 }

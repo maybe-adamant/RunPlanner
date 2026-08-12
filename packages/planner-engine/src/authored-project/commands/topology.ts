@@ -24,6 +24,7 @@ import type {
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
+import { createDefaultSelectedPickupEntries, selectedPickupProducer } from '../traits';
 import {
   admitsTerminalTakeoverEnvelope,
   hostContinuationExitForDetourRoom,
@@ -192,6 +193,16 @@ function defaultOccurrence(
     ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
     loadout,
   });
+  const encounters = createDefaultRoomEncounterState(
+    catalog,
+    room,
+    `occurrences.${occurrenceId}.encounters`,
+  );
+  const pickupProducer = selectedPickupProducer(catalog, encounters);
+  const pickupEntries =
+    pickupProducer === undefined
+      ? Object.freeze({})
+      : createDefaultSelectedPickupEntries(catalog, pickupProducer.traitKey, loadout);
   return Object.freeze({
     occurrenceId,
     gameName: room.gameName,
@@ -202,12 +213,14 @@ function defaultOccurrence(
             roomExit: Object.freeze({ order: Object.freeze([]) }),
           }),
         }
-      : {}),
-    encounters: createDefaultRoomEncounterState(
-      catalog,
-      room,
-      `occurrences.${occurrenceId}.encounters`,
-    ),
+      : Object.keys(pickupEntries).length > 0
+        ? {
+            acquisitionSites: Object.freeze({
+              roomExit: Object.freeze({ order: Object.freeze([]), pickupEntries }),
+            }),
+          }
+        : {}),
+    encounters,
     additionalExits: Object.freeze([]),
   });
 }

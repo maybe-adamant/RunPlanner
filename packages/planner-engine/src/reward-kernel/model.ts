@@ -6,7 +6,7 @@ export type AcquisitionKind = 'consumable' | 'loot' | 'resource';
 export type HistoryProjectionKey = 'consumableAndUse' | 'lootAndUse';
 export type OfferProjectionKey = 'devotionSpacing' | 'none';
 export type ProducerLifecyclePointKey =
-  'afterCombat' | 'afterUnwrap' | 'beforeCombat' | 'purchase' | 'roomRewardPickup';
+  'afterCombat' | 'afterUnwrap' | 'beforeCombat' | 'purchase' | 'roomRewardPickup' | 'roomExit';
 export type SourceSupportPolicyKey = 'devotionAcquiredPair' | 'ordinaryBoonPeer' | 'ordinaryNoPeer';
 
 export type LevelResolutionEffect =
@@ -52,6 +52,10 @@ export interface ConcreteAcquisitionAddress {
 export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddress {
   readonly historyProjection: HistoryProjectionKey;
   readonly levelResolutionEffect?: LevelResolutionEffect;
+  /** A concrete pickup can contribute base elements without becoming a trait. */
+  readonly elementContributions?: Readonly<
+    Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>
+  >;
 }
 
 export type AcquisitionRoleResolution =

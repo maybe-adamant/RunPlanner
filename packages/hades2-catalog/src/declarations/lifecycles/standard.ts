@@ -104,6 +104,35 @@ export const standardRoomLifecycleProfiles = [
 
 export const specializedRewardRoomLifecycleProfiles = [
   {
+    key: 'NarcissusStoryRoom',
+    encounterEnvelopeKeys: ['SingleEncounter'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      { kind: 'advanceProducer', point: 'beforeCombat', effects: ['recordProducerPoint'] },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      { kind: 'advanceProducer', point: 'afterCombat', effects: ['recordProducerPoint'] },
+      { kind: 'advanceProducer', point: 'roomRewardPickup', effects: ['recordProducerPoint'] },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      { kind: 'settleAcquisitionPoint', point: 'roomExit', effects: ['recordAcquisitionPoint'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
     key: 'RewardlessRoom',
     encounterEnvelopeKeys: ['EmptyEncounter'],
     producer: { kind: 'none' },

@@ -207,7 +207,7 @@ describe('authored-project Shop occurrence commands', () => {
     ).toThrowError(
       expect.objectContaining({
         commandKind: 'ReplaceAcquisitionOrder',
-        detail: 'does not own a materialized Shop acquisition site',
+        detail: 'does not own a materialized authorable acquisition site',
       }),
     );
   });

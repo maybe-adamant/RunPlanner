@@ -49,6 +49,7 @@ const PRODUCER_LIFECYCLE_POINTS = [
   'beforeCombat',
   'purchase',
   'roomRewardPickup',
+  'roomExit',
 ] as const;
 const LEVEL_RESOLUTION_EFFECT_KINDS = [
   'visibleChoice',
@@ -194,6 +195,9 @@ function normalizeAcquisitions(
         ...(acquisition.levelResolutionEffect === undefined
           ? {}
           : { levelResolutionEffect: Object.freeze(acquisition.levelResolutionEffect) }),
+        ...(acquisition.elementContributions === undefined
+          ? {}
+          : { elementContributions: Object.freeze(acquisition.elementContributions) }),
       }),
     ),
     'acquisitions',

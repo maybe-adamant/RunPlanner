@@ -34,8 +34,8 @@ function workspacePostOutgoingAcquisitionMarkers(
   return Object.freeze([
     acquisitions.marker,
     ...acquisitions.entries.flatMap((entry) => [
-      ...(entry.rewardControl.traitOffers ?? []).map((trait) => trait.marker),
-      ...(entry.rewardControl.levelResolutions ?? []).map((resolution) => resolution.marker),
+      ...(entry.rewardControl?.traitOffers ?? []).map((trait) => trait.marker),
+      ...(entry.rewardControl?.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
   ]);
 }

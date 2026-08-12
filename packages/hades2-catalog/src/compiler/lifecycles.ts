@@ -42,6 +42,7 @@ const producerLifecyclePoints = {
   beforeCombat: true,
   purchase: true,
   roomRewardPickup: true,
+  roomExit: true,
 } as const satisfies Readonly<Record<ProducerLifecyclePointKey, true>>;
 
 const expectedEffects = {

@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type IncomingRewardAddress,
+  type AcquisitionEntryAddress,
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
@@ -16,7 +17,11 @@ export interface RewardProducerCandidateResult {
 }
 
 export type RewardProducerOwnerAddress =
-  IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress | ShopOfferAddress;
+  | IncomingRewardAddress
+  | LocalRewardAddress
+  | RewardWheelOfferAddress
+  | ShopOfferAddress
+  | AcquisitionEntryAddress;
 
 export interface RewardProducerCandidateCapability {
   /** The farthest lifecycle point candidate evaluation is allowed to model. */

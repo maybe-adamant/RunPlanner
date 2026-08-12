@@ -2,6 +2,9 @@ import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
+  createDefaultSelectedPickupEntries,
+  optionIndex,
+  selectedPickupProducer,
   type AuthoredTraitOffer,
 } from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
@@ -16,9 +19,81 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import type { TraitOfferCommand } from './types';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 
+function reconcileSelectedPickupEntries(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  loadout: { readonly weaponKey: string; readonly aspectKey: string },
+): RoomOccurrence {
+  const producer = selectedPickupProducer(catalog, occurrence.encounters);
+  const defaults: Readonly<Record<string, AuthoredRewardState>> =
+    producer === undefined
+      ? Object.freeze({})
+      : createDefaultSelectedPickupEntries(catalog, producer.traitKey, loadout);
+  const current = occurrence.acquisitionSites?.roomExit;
+  const existing = current?.pickupEntries ?? {};
+  const pickupEntries = Object.freeze(
+    Object.fromEntries(
+      Object.entries(defaults).map(([key, fallback]) => {
+        const retained = existing[key];
+        return [
+          key,
+          retained?.offer.rewardType === fallback.offer.rewardType ? retained : fallback,
+        ];
+      }),
+    ),
+  );
+  if (Object.keys(pickupEntries).length === 0) {
+    if (current?.pickupEntries === undefined) return occurrence;
+    const { roomExit, ...otherSites } = occurrence.acquisitionSites ?? {};
+    const nextSites =
+      roomExit === undefined
+        ? otherSites
+        : roomExit.order.length === 0
+          ? otherSites
+          : { ...otherSites, roomExit: Object.freeze({ order: roomExit.order }) };
+    const without = { ...occurrence };
+    delete without.acquisitionSites;
+    return Object.freeze({
+      ...without,
+      ...(Object.keys(nextSites).length === 0
+        ? {}
+        : { acquisitionSites: Object.freeze(nextSites) }),
+    });
+  }
+  const order = Object.freeze(
+    (current?.order ?? []).filter((key) => pickupEntries[key] !== undefined),
+  );
+  return Object.freeze({
+    ...occurrence,
+    acquisitionSites: Object.freeze({
+      ...(occurrence.acquisitionSites ?? {}),
+      roomExit: Object.freeze({ order, pickupEntries }),
+    }),
+  });
+}
+
 export interface LocatedTraitReward {
   readonly reward: AuthoredRewardState;
   readonly levelEffectSource: LevelResolutionEffectSource;
+}
+
+function pickupEntrySource(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  entryKey: string,
+  command: TraitOfferCommand,
+): LocatedTraitReward {
+  const entry = occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey];
+  if (entry === undefined) failCommand(command, `missing pickup entry ${entryKey}`);
+  const producer = selectedPickupProducer(catalog, occurrence.encounters);
+  if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
+  return Object.freeze({
+    reward: entry,
+    levelEffectSource: {
+      kind: 'producerLifecycle' as const,
+      key: producer.disposition.producerLifecycleKey,
+    },
+  });
 }
 
 function validateOffer(
@@ -116,6 +191,8 @@ export function locateTraitReward(
 ): LocatedTraitReward | undefined {
   const owner = command.trait.owner;
   switch (owner.kind) {
+    case 'acquisitionEntry':
+      return pickupEntrySource(catalog, occurrence, owner.entryKey, command);
     case 'incomingReward':
       switch (state.kind) {
         case 'counted':
@@ -256,6 +333,8 @@ export function updateTraitRewardState(
 ): RoomOccurrence['state'] {
   const owner = command.trait.owner;
   switch (owner.kind) {
+    case 'acquisitionEntry':
+      return failCommand(command, 'site pickup entries are updated on their occurrence overlay');
     case 'incomingReward':
       switch (state.kind) {
         case 'counted':
@@ -385,7 +464,13 @@ export function applyTraitOfferCommand(
   const topology = requireTopology(located.plan, command);
   const owner = command.trait.owner;
   const occurrenceId =
-    owner.kind === 'encounterPhase' ? owner.owner.occurrenceId : owner.occurrenceId;
+    owner.kind === 'encounterPhase'
+      ? owner.owner.occurrenceId
+      : owner.kind === 'acquisitionEntry'
+        ? owner.site.owner.kind === 'occurrence'
+          ? owner.site.owner.occurrenceId
+          : failCommand(command, 'acquisition entry is not occurrence-owned')
+        : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   if (owner.routeKey !== command.trait.routeKey || owner.biomeKey !== command.trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
@@ -455,11 +540,12 @@ export function applyTraitOfferCommand(
       }),
     });
     if (encounterOwner.kind === 'occurrence') {
-      return updateOccurrenceTopology(
-        document,
-        located,
-        replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: nextEncounters })),
+      const reconciled = reconcileSelectedPickupEntries(
+        catalog,
+        Object.freeze({ ...occurrence, encounters: nextEncounters }),
+        located.loadout,
       );
+      return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
     }
     if (encounterOwner.kind !== 'localChild' || localSide === undefined)
       failCommand(command, 'encounter owner must be a local child');
@@ -515,6 +601,30 @@ export function applyTraitOfferCommand(
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
   if (sameOccurrenceValue(value, existing)) return document;
+  if (owner.kind === 'acquisitionEntry') {
+    const site = occurrence.acquisitionSites?.roomExit;
+    const pickup = site?.pickupEntries?.[owner.entryKey];
+    if (site === undefined || pickup === undefined)
+      failCommand(command, `missing pickup entry ${owner.entryKey}`);
+    const nextPickup = updateReward(pickup, command.trait.acquisitionRole, value);
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...occurrence,
+          acquisitionSites: Object.freeze({
+            ...(occurrence.acquisitionSites ?? {}),
+            roomExit: Object.freeze({
+              ...site,
+              pickupEntries: Object.freeze({ ...site.pickupEntries, [owner.entryKey]: nextPickup }),
+            }),
+          }),
+        }),
+      ),
+    );
+  }
   const state = updateTraitRewardState(
     catalog,
     located,

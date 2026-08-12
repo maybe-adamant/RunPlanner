@@ -41,6 +41,8 @@ export interface ShopState {
  */
 export interface AuthoredAcquisitionSiteState {
   readonly order: readonly string[];
+  /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
+  readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
 }
 
 export interface FieldsCombatState {

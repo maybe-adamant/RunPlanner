@@ -581,7 +581,7 @@ Supported output mapping:
 | ------------ | ------------------------------------- | ---------------------------------------------------------- |
 | `NarcissusA` | one `StoreRewardRandomStack`          | optional pickup with exact random-Pom target               |
 | `NarcissusB` | none                                  | supported no-op                                            |
-| `NarcissusC` | none                                  | supported no-op                                            |
+| `NarcissusC` | one `Currency` pickup                 | source-faithful Gold history; quantity remains unmodeled   |
 | `NarcissusD` | one `MaxManaDrop`                     | optional concrete pickup                                   |
 | `NarcissusE` | one `MaxHealthDrop`                   | optional concrete pickup                                   |
 | `NarcissusF` | none                                  | supported no-op                                            |
@@ -589,8 +589,9 @@ Supported output mapping:
 | `NarcissusH` | one `LastStandDrop`                   | optional; source-local Death Defiance condition remains    |
 | `NarcissusI` | one `BlindBoxLoot`                    | optional pickup owning hidden source and fresh trait offer |
 
-Unsupported money, resource quantity, healing, reroll, and story-progression
-effects create no placeholder entries.
+Unsupported resource quantity, healing, reroll, and story-progression effects
+create no placeholder entries. `Currency` remains a concrete pickup even
+though Gold quantity and affordability are not simulated.
 
 Changing the descriptor reconciles active site-owned pickup payloads
 atomically:

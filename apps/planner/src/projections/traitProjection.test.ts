@@ -215,7 +215,10 @@ describe('route trait projection', () => {
         candidate.biomeKey === 'G' &&
         (candidate.address.owner.kind === 'encounterPhase'
           ? candidate.address.owner.owner.occurrenceId
-          : candidate.address.owner.occurrenceId) === traceAddress.occurrenceId,
+          : candidate.address.owner.kind === 'acquisitionEntry'
+            ? candidate.address.owner.site.owner.kind === 'occurrence' &&
+              candidate.address.owner.site.owner.occurrenceId
+            : candidate.address.owner.occurrenceId) === traceAddress.occurrenceId,
     );
     if (row === undefined) throw new Error('G trait row is missing');
     expect(row.biomeKey).toBe('G');

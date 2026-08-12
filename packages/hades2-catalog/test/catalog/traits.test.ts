@@ -545,6 +545,17 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'DeathDefianceRetaliateCurse',
     'NewStatusDamage',
   ],
+  Narcissus: [
+    'NarcissusA',
+    'NarcissusB',
+    'NarcissusC',
+    'NarcissusD',
+    'NarcissusE',
+    'NarcissusF',
+    'NarcissusG',
+    'NarcissusH',
+    'NarcissusI',
+  ],
   Artemis: [
     'SupportingFireBoon',
     'CritBonusBoon',
@@ -692,6 +703,8 @@ const expectedDeferredTraitKeys = [
 ] as const;
 
 const expectedOfferRequirements: Readonly<Record<string, string>> = {
+  NarcissusA: '[{"kind":"upgradableTrait"}]',
+  NarcissusH: '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRefillBoon:
     '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRetaliateCurse:
@@ -893,7 +906,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(325);
+    expect(traits?.traits.values).toHaveLength(334);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -912,6 +925,7 @@ describe('trait offer catalog closure', () => {
       ['Zeus', 22],
       ['Hermes', 13],
       ['Medea', 8],
+      ['Narcissus', 9],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -1697,6 +1711,82 @@ describe('trait offer catalog closure', () => {
     expect(normalized.traits.byKey.CastAnywhereBoon).toBeDefined();
     expect(normalized.traits.byKey.SelfCastBoon).toBeDefined();
     expect('deferredTraitKeys' in normalized).toBe(false);
+  });
+
+  it('declares the complete Narcissus disposition table without modeled outer effects', () => {
+    const table = Object.fromEntries(
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((suffix) => {
+        const trait = catalog.traits.byKey[`Narcissus${suffix}`];
+        if (trait === undefined) throw new Error(`missing Narcissus${suffix}`);
+        return [suffix, trait.selectedDisposition];
+      }),
+    );
+    expect(table).toEqual({
+      A: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'pom', rewardType: 'StoreRewardRandomStack' }],
+      }),
+      B: { kind: 'noOp' },
+      C: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'currency', rewardType: 'Currency' }],
+      }),
+      D: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'maxMana', rewardType: 'MaxManaDrop' }],
+      }),
+      E: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'maxHealth', rewardType: 'MaxHealthDrop' }],
+      }),
+      F: { kind: 'noOp' },
+      G: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [
+          { key: 'elementalBoost1', rewardType: 'ElementalBoost' },
+          { key: 'elementalBoost2', rewardType: 'ElementalBoost' },
+        ],
+      }),
+      H: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'lastStand', rewardType: 'LastStandDrop' }],
+      }),
+      I: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'mysteryBoon', rewardType: 'BlindBoxLoot' }],
+      }),
+    });
+  });
+
+  it.each([
+    [
+      'unknown pickup lifecycle',
+      { producerLifecycleKey: 'MissingLifecycle' },
+      /unknown producer lifecycle/,
+    ],
+    [
+      'unknown pickup reward',
+      { pickups: [{ key: 'pom', rewardType: 'MissingReward' }] },
+      /unknown reward type/,
+    ],
+    [
+      'lifecycle reward mismatch',
+      { producerLifecycleKey: 'RoomReward' },
+      /not supported by producer lifecycle/,
+    ],
+  ] as const)('rejects Narcissus pickup declaration with %s', (_name, patch, message) => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'NarcissusA'
+            ? { ...trait, selectedDisposition: { ...trait.selectedDisposition, ...patch } as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(message);
   });
 
   it.each([

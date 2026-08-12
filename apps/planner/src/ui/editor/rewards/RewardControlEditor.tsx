@@ -8,6 +8,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { TraitOfferLauncher } from './TraitOfferEditor';
 import { PomResolutionLauncher } from './PomResolutionEditor';
+import type { RewardPickerStep } from '@planner/projections/rewardPicker';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -16,12 +17,15 @@ export function RewardControlEditor({
   interactions,
   showOffer = true,
   showAcquisitionChildren = true,
+  offerStartStep,
 }: {
   readonly control: WorkspaceRewardControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly showOffer?: boolean;
   readonly showAcquisitionChildren?: boolean;
+  /** A fixed-type producer can expose its payload directly without a redundant type step. */
+  readonly offerStartStep?: RewardPickerStep;
 }) {
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
@@ -39,6 +43,7 @@ export function RewardControlEditor({
           interactions={interactions}
           offer={control.offer}
           onReplace={onReplace}
+          {...(offerStartStep === undefined ? {} : { initialStep: offerStartStep })}
         />
       ) : (
         <RewardValueEditor
@@ -47,6 +52,7 @@ export function RewardControlEditor({
           interactions={interactions}
           offer={control.offer}
           onReplace={onReplace}
+          {...(offerStartStep === undefined ? {} : { initialStep: offerStartStep })}
         />
       )}
       {!showAcquisitionChildren ? null : (

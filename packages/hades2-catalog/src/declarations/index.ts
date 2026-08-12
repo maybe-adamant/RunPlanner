@@ -34,7 +34,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.25.0-producer-sensitive-nectar',
+  version: '0.26.0-narcissus-pickups',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

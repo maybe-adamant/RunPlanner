@@ -796,6 +796,7 @@ export const gRooms = [
     roomSetKey: 'G',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
+    lifecycleProfileKey: 'NarcissusStoryRoom',
     additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],

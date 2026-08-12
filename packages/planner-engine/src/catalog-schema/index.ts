@@ -25,6 +25,8 @@ export type {
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   TargetedTraitAcquisition,
+  TraitSelectedDisposition,
+  TraitPickupDeclaration,
   WeaponDeclaration,
 } from './traits';
 import type {
@@ -359,6 +361,8 @@ export interface RoomDeclaration {
   readonly roomSetKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
+  /** Optional declaration-owned lifecycle specialization for this room. */
+  readonly lifecycleProfileKey?: string;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];

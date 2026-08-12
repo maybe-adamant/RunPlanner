@@ -203,6 +203,10 @@ function ownerLocationForAddress(
       occurrenceId: owner.owner.occurrenceId,
     });
   }
+  if (owner.kind === 'acquisitionEntry') {
+    if (owner.site.owner.kind !== 'occurrence') return 'Acquisition';
+    return ownerLocation(project, owner.site.owner);
+  }
   return ownerLocation(project, owner);
 }
 

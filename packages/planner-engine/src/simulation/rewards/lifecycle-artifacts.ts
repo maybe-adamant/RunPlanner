@@ -42,7 +42,7 @@ export interface RoomLifecycleCandidateArtifacts {
 
 export function createRoomLifecycleCandidateArtifacts(
   shipsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>,
-  shopsByOwner: ReadonlyMap<string, AcquisitionOrderCandidateContext>,
+  acquisitionOrdersByOwner: ReadonlyMap<string, AcquisitionOrderCandidateContext>,
 ): RoomLifecycleCandidateArtifacts {
   const ships = new Map<string, ShipLifecycleCandidateCapability>();
   for (const [key, context] of shipsByOwner) {
@@ -54,13 +54,14 @@ export function createRoomLifecycleCandidateArtifacts(
       }),
     );
   }
-  const shops = new Map<string, AcquisitionOrderCandidateCapability>();
-  for (const [key, context] of shopsByOwner) {
-    shops.set(key, Object.freeze({ evaluateOrder: context.evaluateOrder }));
+  const acquisitionOrders = new Map<string, AcquisitionOrderCandidateCapability>();
+  for (const [key, context] of acquisitionOrdersByOwner) {
+    acquisitionOrders.set(key, Object.freeze({ evaluateOrder: context.evaluateOrder }));
   }
   return Object.freeze({
     shipAt: (owner: OccurrenceAddress) => ships.get(semanticAddressKey(owner)),
-    acquisitionOrderAt: (owner: OccurrenceAddress) => shops.get(semanticAddressKey(owner)),
+    acquisitionOrderAt: (owner: OccurrenceAddress) =>
+      acquisitionOrders.get(semanticAddressKey(owner)),
   });
 }
 

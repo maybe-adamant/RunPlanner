@@ -103,6 +103,7 @@ export const gEncounterDefinitions = [
     label: 'Narcissus story',
     kind: 'story',
     countsEncounterDepth: false,
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Narcissus' },
   },
   {
     key: 'MiniBossWaterUnit',

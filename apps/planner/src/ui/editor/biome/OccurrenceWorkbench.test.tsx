@@ -9,6 +9,7 @@ import {
   createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
@@ -18,6 +19,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
   type OccurrenceId,
@@ -30,7 +32,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import type {
   WorkspaceBiome,
+  WorkspaceMixedBatchNode,
   WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceOrdinaryBatchNode,
 } from '@planner/projections/structured-workspace';
 import {
   authoredProjectCommandDispatched,
@@ -41,10 +45,12 @@ import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
+  createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
   goldenHStartId,
+  goldenGBiome,
 } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNProject,
@@ -59,6 +65,7 @@ import {
 } from '@run-planner/test-fixtures';
 import {
   renderOccurrenceWorkbench,
+  renderDecisionWorkbench,
   renderStaticOccurrenceWorkbench,
   workspaceBiome,
   workspaceProjection,
@@ -259,6 +266,104 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('activates a context-invalid dormant Blind Box, then repairs its source on the pickup row', async () => {
+    let project = createCompleteFGProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    const decision = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          candidate.normal.targets.some(
+            (target) => target.occurrenceId === occurrence.occurrenceId,
+          ),
+      );
+    if (decision === undefined || decision.kind !== 'exit') {
+      throw new Error('Narcissus story has no owning door decision');
+    }
+    const target = decision.normal.targets.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    );
+    if (target === undefined) throw new Error('Narcissus target is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, decision.source),
+      value: { kind: 'normal', exitKey: target.exitKey },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusI', rarity: 'Common' },
+          { traitKey: 'NarcissusB', rarity: 'Common' },
+          { traitKey: 'NarcissusC', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    expect(
+      project.routes
+        .flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon,
+    ).toBeDefined();
+    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
+      const node = biome.nodes.find(
+        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
+          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === occurrence.occurrenceId,
+      );
+      return node === undefined ? undefined : { kind: 'node', node };
+    });
+    const pickedUp = screen.getByRole('checkbox', { name: 'Picked up mysteryBoon' });
+    expect((pickedUp as HTMLInputElement).disabled).toBe(false);
+    const acquisitions = screen.getByText('Acquisitions').closest('section');
+    if (acquisitions === null) throw new Error('Narcissus acquisitions workbench is missing');
+    expect(within(acquisitions).queryByRole('button', { name: 'Reward' })).toBeNull();
+
+    await view.user.click(pickedUp);
+    const reward = await within(acquisitions).findByRole('button', { name: 'Reward' });
+    await view.user.click(reward);
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Hestia'));
+
+    const entry = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon;
+    expect(entry).toMatchObject({
+      offer: { payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+      traitOffersByAcquisitionRole: { hiddenSource: { giverKey: 'Hestia' } },
+    });
+    expect(
+      (
+        within(acquisitions).getByRole('checkbox', {
+          name: 'Picked up mysteryBoon',
+        }) as HTMLInputElement
+      ).disabled,
+    ).toBe(false);
+  });
+
   it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();

@@ -16,8 +16,10 @@ import type {
   NextRoomDecision,
   OccurrenceId,
   RoomOccurrence,
+  AuthoredRewardState,
 } from '../model';
-import { decodeRoomState } from '../room-state/codec';
+import { decodeRewardState, decodeRoomState } from '../room-state/codec';
+import { optionIndex } from '../traits';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
@@ -242,12 +244,33 @@ function decodeAnomalyReplacementProvenance(
 function decodeAcquisitionSites(
   value: unknown,
   occurrence: RawOccurrence,
-): Readonly<Record<string, { readonly order: readonly string[] }>> {
+  catalog: Catalog,
+  pickupProducerLifecycleKey: string | undefined,
+): Readonly<
+  Record<
+    string,
+    {
+      readonly order: readonly string[];
+      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
+    }
+  >
+> {
   const sites = expectRecord(value, `${occurrence.path}.acquisitionSites`);
-  const decoded: Record<string, { readonly order: readonly string[] }> = {};
+  const decoded: Record<
+    string,
+    {
+      readonly order: readonly string[];
+      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
+    }
+  > = {};
   for (const [pointKey, rawSite] of Object.entries(sites)) {
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
-    expectExactKeys(site, ['order'], `${occurrence.path}.acquisitionSites.${pointKey}`);
+    const hasPickups = site.pickupEntries !== undefined;
+    expectExactKeys(
+      site,
+      ['order', ...(hasPickups ? ['pickupEntries'] : [])],
+      `${occurrence.path}.acquisitionSites.${pointKey}`,
+    );
     const order = expectArray(
       site.order,
       `${occurrence.path}.acquisitionSites.${pointKey}.order`,
@@ -260,7 +283,35 @@ function decodeAcquisitionSites(
         'contains a duplicate entry',
       );
     }
-    decoded[pointKey] = Object.freeze({ order: Object.freeze(order) });
+    if (hasPickups && pickupProducerLifecycleKey === undefined)
+      failProjectDocument(
+        `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
+        'has no selected pickup producer',
+      );
+    const pickupEntries = hasPickups
+      ? Object.freeze(
+          Object.fromEntries(
+            Object.entries(
+              expectRecord(
+                site.pickupEntries,
+                `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
+              ),
+            ).map(([key, raw]) => [
+              key,
+              decodeRewardState(
+                raw,
+                catalog,
+                `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
+                { kind: 'producerLifecycle', key: pickupProducerLifecycleKey! },
+              ),
+            ]),
+          ),
+        )
+      : undefined;
+    decoded[pointKey] = Object.freeze({
+      order: Object.freeze(order),
+      ...(pickupEntries === undefined ? {} : { pickupEntries }),
+    });
   }
   return Object.freeze(decoded);
 }
@@ -1336,8 +1387,40 @@ export function decodeBiomeTopology(
       owner,
       `${rawOccurrence.path}.state`,
     );
+    const encounters = decodeRoomEncounterState(
+      rawOccurrence.encounters,
+      catalog,
+      room,
+      `${rawOccurrence.path}.encounters`,
+    );
+    const selectedPickupDispositions = Object.values(encounters.traitOffersByPhase ?? {})
+      .flatMap((phase) => Object.values(phase))
+      .map(
+        (offer) =>
+          catalog.traits.byKey[offer.options[optionIndex(offer.selectedOptionKey)].traitKey]
+            ?.selectedDisposition,
+      )
+      .filter(
+        (
+          disposition,
+        ): disposition is Extract<
+          NonNullable<typeof disposition>,
+          { readonly kind: 'producePickups' }
+        > => disposition?.kind === 'producePickups',
+      );
+    if (selectedPickupDispositions.length > 1)
+      failProjectDocument(
+        `${rawOccurrence.path}.encounters`,
+        'has more than one active pickup producer',
+      );
+    const pickupDisposition = selectedPickupDispositions[0];
     const acquisitionSites = rawOccurrence.hasAcquisitionSites
-      ? decodeAcquisitionSites(rawOccurrence.acquisitionSites, rawOccurrence)
+      ? decodeAcquisitionSites(
+          rawOccurrence.acquisitionSites,
+          rawOccurrence,
+          catalog,
+          pickupDisposition?.producerLifecycleKey,
+        )
       : undefined;
     if (state.kind === 'shop' && state.shop !== undefined) {
       if (acquisitionSites === undefined || acquisitionSites.roomExit === undefined) {
@@ -1352,6 +1435,12 @@ export function decodeBiomeTopology(
           'Shop only authors roomExit state',
         );
       }
+      if (acquisitionSites.roomExit.pickupEntries !== undefined) {
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
+          'Shop offers are producer-owned and cannot be copied into pickupEntries',
+        );
+      }
       for (const entryKey of acquisitionSites.roomExit.order) {
         if (state.shop.offers[entryKey] === undefined) {
           failProjectDocument(
@@ -1360,11 +1449,45 @@ export function decodeBiomeTopology(
           );
         }
       }
-    } else if (acquisitionSites !== undefined) {
-      failProjectDocument(
-        `${rawOccurrence.path}.acquisitionSites`,
-        'has no authorable acquisition site',
-      );
+    } else {
+      if (
+        acquisitionSites !== undefined &&
+        Object.keys(acquisitionSites).some((pointKey) => pointKey !== 'roomExit')
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites`,
+          'pickup producers author only roomExit',
+        );
+      const expected = pickupDisposition?.pickups ?? [];
+      if (expected.length === 0 && acquisitionSites !== undefined) {
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites`,
+          'has no authorable acquisition site',
+        );
+      }
+      if (expected.length > 0 && acquisitionSites?.roomExit?.pickupEntries === undefined)
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.roomExit`,
+          'selected pickup producer requires pickupEntries',
+        );
+      if (expected.length > 0) {
+        const entries = acquisitionSites?.roomExit?.pickupEntries ?? {};
+        if (
+          Object.keys(entries).length !== expected.length ||
+          expected.some((pickup) => entries[pickup.key]?.offer.rewardType !== pickup.rewardType)
+        )
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
+            'does not match selected descriptor pickups',
+          );
+        for (const key of acquisitionSites?.roomExit?.order ?? []) {
+          if (entries[key] === undefined)
+            failProjectDocument(
+              `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
+              `${key} is not an active pickup`,
+            );
+        }
+      }
     }
     return Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
@@ -1373,12 +1496,7 @@ export function decodeBiomeTopology(
         ? {}
         : { anomalyReplacement: owner.anomalyReplacement }),
       state,
-      encounters: decodeRoomEncounterState(
-        rawOccurrence.encounters,
-        catalog,
-        room,
-        `${rawOccurrence.path}.encounters`,
-      ),
+      encounters,
       ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,

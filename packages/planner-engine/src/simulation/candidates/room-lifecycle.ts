@@ -383,17 +383,16 @@ export function evaluateAcquisitionOrderCandidate(
   const occurrence = plan.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === shop.occurrenceId,
   );
-  if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
-    throw new CandidateEvaluationContractError(
-      'Shop acquisition-site owner has no materialized Shop state',
-    );
-  }
+  const shopOffers = occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers : undefined;
+  const pickupEntries = occurrence?.acquisitionSites?.roomExit?.pickupEntries;
+  if (shopOffers === undefined && pickupEntries === undefined)
+    throw new CandidateEvaluationContractError('acquisition-site owner has no active entry domain');
   if (!Array.isArray(query.entryKeys) || !query.entryKeys.every((key) => typeof key === 'string')) {
     throw new CandidateEvaluationContractError('acquisition order must contain entry keys');
   }
   const seen = new Set<string>();
   for (const offerKey of query.entryKeys) {
-    if (occurrence.state.shop.offers[offerKey] === undefined) {
+    if (shopOffers?.[offerKey] === undefined && pickupEntries?.[offerKey] === undefined) {
       throw new CandidateEvaluationContractError(
         `acquisition order has no declared entry ${offerKey}`,
       );

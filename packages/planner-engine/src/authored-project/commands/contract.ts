@@ -103,6 +103,8 @@ export function projectCommandAddress(
       return command.shop;
     case 'ReplaceAcquisitionOrder':
       return command.site;
+    case 'ReplaceAcquisitionEntryOffer':
+      return command.entry;
     case 'SelectEncounter':
     case 'ResetEncounter':
       return command.phase;

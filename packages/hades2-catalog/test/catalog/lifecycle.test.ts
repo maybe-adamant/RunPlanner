@@ -7,6 +7,22 @@ function malformedCatalog(value: unknown): RawCatalogInput {
 }
 
 describe('room lifecycle catalog', () => {
+  it.each([
+    ['unknown profile', 'MissingLifecycle', /unknown room lifecycle profile/],
+    ['incompatible envelope', 'PCombatRoom', /does not support the room encounter envelope/],
+  ])('rejects Narcissus room lifecycle with %s', (_name, lifecycleProfileKey, message) => {
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          rooms: declarations.rooms.map((room) =>
+            room.gameName === 'G_Story01' ? { ...room, lifecycleProfileKey } : room,
+          ),
+        }),
+      ),
+    ).toThrow(message);
+  });
+
   it('normalizes reusable lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
@@ -17,6 +33,7 @@ describe('room lifecycle catalog', () => {
       'EphyraSideRoom',
       'EphyraHubRoom',
       'ClockworkGoalRoom',
+      'NarcissusStoryRoom',
       'RewardlessRoom',
       'DevotionRoom',
       'FieldsCombatRoom',

@@ -1363,6 +1363,15 @@ describe('field NPC encounter requirements', () => {
       giverKey: 'Athena',
       providerKind: 'npc',
     });
+    expect(
+      traitHistory.events.some(
+        (event) =>
+          event.kind === 'traitOffer' &&
+          event.owner.kind === 'encounterPhase' &&
+          event.owner.phaseKey === 'Combat' &&
+          event.giverKey === 'Athena',
+      ),
+    ).toBe(true);
     expect(traitHistory?.elementCounts.Fire).toBeGreaterThan(0);
     expect(
       traitCandidates(catalog, 'Athena', traitHistory).find(

@@ -1,5 +1,6 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
+import type { RoomEncounterState } from './model';
 import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
@@ -211,4 +212,81 @@ export function createDefaultEncounterTraitOffer(
       ? { deathDefianceConditionMet: false }
       : {}),
   });
+}
+
+/** Complete entry-owned defaults for one selected pickup-producing descriptor.
+ * This is intentionally generic over the declaration disposition; no caller
+ * needs a provider-name switch. */
+export function createDefaultSelectedPickupEntries(
+  catalog: Catalog,
+  selectedTraitKey: string,
+  loadout: TraitOfferDefaultsContext,
+): Readonly<Record<string, import('./model').AuthoredRewardState>> {
+  const disposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'producePickups') return Object.freeze({});
+  const entries: Record<string, import('./model').AuthoredRewardState> = {};
+  for (const pickup of disposition.pickups) {
+    const declaration = catalog.rewards.rewardTypes.byKey[pickup.rewardType];
+    if (declaration === undefined) throw new Error(`unknown pickup reward ${pickup.rewardType}`);
+    const offer = Object.freeze({
+      rewardType: pickup.rewardType,
+      ...(declaration.defaultPayload === undefined ? {} : { payload: declaration.defaultPayload }),
+    });
+    entries[pickup.key] = createDefaultPickupRewardState(
+      catalog,
+      offer,
+      loadout,
+      disposition.producerLifecycleKey,
+    );
+  }
+  return Object.freeze(entries);
+}
+
+/** One command-complete pickup entry for a fixed reward identity and payload. */
+export function createDefaultPickupRewardState(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  loadout: TraitOfferDefaultsContext,
+  producerLifecycleKey: string,
+): import('./model').AuthoredRewardState {
+  const levels = createDefaultLevelResolutions(
+    catalog,
+    offer,
+    producerLevelEffectSource({ producerLifecycleKey }),
+  );
+  return Object.freeze({
+    offer,
+    traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+    ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
+  });
+}
+
+export interface SelectedPickupProducer {
+  readonly traitKey: string;
+  readonly disposition: Extract<
+    import('../catalog-schema').TraitSelectedDisposition,
+    { readonly kind: 'producePickups' }
+  >;
+}
+
+/**
+ * A pickup site belongs to the one selected descriptor across the occurrence's
+ * complete encounter state, never to whichever phase happened to be edited.
+ */
+export function selectedPickupProducer(
+  catalog: Catalog,
+  encounters: RoomEncounterState,
+): SelectedPickupProducer | undefined {
+  const producers = Object.values(encounters.traitOffersByPhase ?? {})
+    .flatMap((offers) => Object.values(offers))
+    .flatMap((offer) => {
+      const traitKey = offer.options[optionIndex(offer.selectedOptionKey)].traitKey;
+      const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
+      return disposition?.kind === 'producePickups'
+        ? [Object.freeze({ traitKey, disposition })]
+        : [];
+    });
+  if (producers.length > 1)
+    throw new Error('occurrence has more than one selected pickup producer');
+  return producers[0];
 }
