@@ -1189,6 +1189,7 @@ export interface WorkspaceRunStatePresentation {
       readonly label: string;
       readonly rank: number;
     }[];
+    readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   };
   readonly traits: {
     readonly activeMinimumScalableRarity?: TraitRarity;

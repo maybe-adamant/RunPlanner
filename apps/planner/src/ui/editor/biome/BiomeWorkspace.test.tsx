@@ -202,7 +202,12 @@ describe('BiomeWorkspace', () => {
     expect(within(traitSection).getByText('Solar Ring · Common · Lv. 1')).toBeTruthy();
     expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
     expect(within(traitSection).getByText('Wicked Thrasher · Rank I')).toBeTruthy();
-    expect(within(traitSection).getAllByText('None')).toHaveLength(2);
+    expect(within(traitSection).getByText('Sprint:').nextElementSibling?.textContent).toBe('None');
+    expect(within(traitSection).getByText('Magick:').nextElementSibling?.textContent).toBe('None');
+    expect(
+      within(traitSection).getByRole('heading', { name: 'Banned traits' }).nextElementSibling
+        ?.textContent,
+    ).toBe('None');
     expect(traitSection.textContent).not.toContain('ApolloWeaponBoon');
     expect(traitSection.textContent).not.toContain('WeaponUpgrade');
     expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();

@@ -73,7 +73,15 @@ export interface DecisionRunStateSnapshot {
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
   readonly arcanaFear: RewardBranchState['arcanaFear'];
+  readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   readonly bags: readonly DecisionRewardBagState[];
+}
+
+export function forfeitStatus(
+  state: RewardBranchState['arcanaFear'],
+): 'inactive' | 'available' | 'consumed' {
+  if (state.fear.forfeitConsumed) return 'consumed';
+  return (state.fear.effectiveRanks.BoonSkipShrineUpgrade ?? 0) > 0 ? 'available' : 'inactive';
 }
 
 export interface DecisionRunStateAvailability {
@@ -310,6 +318,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
       traits: traitState(branch.traitHistory),
       counters: historyCounters(context.historyView, branch.history, context.enteredBiomeCount),
       arcanaFear: branch.arcanaFear,
+      forfeitStatus: forfeitStatus(branch.arcanaFear),
     });
   });
   const first = branchStates[0];
@@ -329,6 +338,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
     traits: first.traits,
     counters: first.counters,
     arcanaFear: first.arcanaFear,
+    forfeitStatus: first.forfeitStatus,
     bags: Object.freeze(
       context.catalog.rewards.stores.values.map((store) =>
         aggregateDecisionRewardBag(store, context.branches, factsByBranch),

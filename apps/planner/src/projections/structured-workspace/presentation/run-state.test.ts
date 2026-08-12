@@ -71,9 +71,11 @@ describe('Run State presentation', () => {
           configuredTotal: 4,
           disabledVowKeys: ['EnemyDamageShrineUpgrade'],
           effectiveRanks: { EnemyDamageShrineUpgrade: 0, EnemyHealthShrineUpgrade: 1 },
+          forfeitConsumed: true,
         },
         events: [],
       },
+      forfeitStatus: 'consumed',
       bags: [
         {
           storeKey: 'RunProgress',
@@ -111,6 +113,7 @@ describe('Run State presentation', () => {
     expect(state.arcana).toEqual([
       { key: 'ChanneledCast', label: 'The Sorceress', origin: 'temporary', rarity: 'Heroic' },
     ]);
+    expect(state.fear.forfeitStatus).toBe('consumed');
     expect(state.fear).toMatchObject({
       configuredTotal: 4,
       active: [{ key: 'EnemyHealthShrineUpgrade', label: 'Vow of Grit', rank: 1 }],

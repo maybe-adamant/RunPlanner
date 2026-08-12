@@ -127,7 +127,11 @@ export const fearVows = [
   vow('BiomeSpeedShrineUpgrade', 'Vow of Time', [1, 2, 3]),
   vow('MinibossCountShrineUpgrade', 'Vow of Shadow', [2]),
   vow('BossDifficultyShrineUpgrade', 'Vow of Rivals', [2, 3, 3, 4], false),
-  vow('BoonSkipShrineUpgrade', 'Vow of Forfeit', [3]),
+  vow('BoonSkipShrineUpgrade', 'Vow of Forfeit', [3], true, {
+    kind: 'preventOrdinaryRoomAcquisition',
+    maximumPerBiome: 1,
+    qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+  }),
   vow('BoonManaReserveShrineUpgrade', 'Vow of Hubris', [1, 1]),
   vow('BanUnpickedBoonsShrineUpgrade', 'Vow of Denial', [2], true, {
     kind: 'banUnselectedTraits',

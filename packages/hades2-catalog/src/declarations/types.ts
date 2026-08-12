@@ -62,7 +62,13 @@ export interface RawFearVowDeclaration {
   readonly label: string;
   readonly incrementalFear: readonly number[];
   readonly circeRemovable: boolean;
-  readonly effect?: { readonly kind: 'banUnselectedTraits'; readonly count: 2 };
+  readonly effect?:
+    | { readonly kind: 'banUnselectedTraits'; readonly count: 2 }
+    | {
+        readonly kind: 'preventOrdinaryRoomAcquisition';
+        readonly maximumPerBiome: 1;
+        readonly qualifyingRewardTypes: readonly ['Boon', 'HermesUpgrade'];
+      };
 }
 
 export interface RawEncounterLocalRewardAttachment {

@@ -3,6 +3,8 @@ export {
   activateTemporaryArcana,
   promoteArcana,
   suppressFearVow,
+  beginBiomeArcanaFearState,
+  consumeOrdinaryRoomForfeit,
   type ActiveArcanaState,
   type ArcanaActivationOrigin,
   type ArcanaFearState,

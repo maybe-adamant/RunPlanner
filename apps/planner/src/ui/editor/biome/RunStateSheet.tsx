@@ -119,6 +119,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
           Active:{' '}
           {state.fear.active.map((vow) => `${vow.label} · Rank ${vow.rank}`).join(' · ') || 'None'}
         </p>
+        <p>Vow of Forfeit: {state.fear.forfeitStatus}</p>
         {state.fear.disabled.length === 0 ? null : (
           <p>
             Circe-disabled:{' '}

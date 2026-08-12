@@ -73,7 +73,9 @@ import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { ArcanaFearState } from '../arcana-fear';
 import {
   activateTemporaryArcana,
+  beginBiomeArcanaFearState,
   circeResolutionDomain,
+  consumeOrdinaryRoomForfeit,
   manualArcanaGraspCost,
   promoteArcana,
   suppressFearVow,
@@ -794,7 +796,7 @@ export function initializeRewardBranches(
         processedThroughHistorySequence: 0,
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
-        arcanaFear: branch.arcanaFear,
+        arcanaFear: beginBiomeArcanaFearState(branch.arcanaFear),
       }),
     ),
   );
@@ -1634,6 +1636,72 @@ export function settleProducerAcquisitionSite(
     ]),
     participation: 'mandatory' as const,
   });
+  // Forfeit is deliberately decided by the enclosing ordinary Room Occurrence,
+  // before this shared role fold turns the room's authored Boon/Hermes reward
+  // into a concrete acquisition. Local children, Shops, pickups, and all
+  // other owners never enter this branch.
+  const qualifyingRewardType =
+    incoming.offer.rewardType === 'Boon' || incoming.offer.rewardType === 'HermesUpgrade'
+      ? incoming.offer.rewardType
+      : undefined;
+  if (room.kind === 'authored' && qualifyingRewardType !== undefined) {
+    const vetoed: RewardBranchState[] = [];
+    const remaining: RewardBranchState[] = [];
+    for (const branch of branches) {
+      const supported = isOfferSupportedAtResolutionPoint(
+        catalog.rewards,
+        incoming.offer,
+        facts(branch.history),
+        { acquisitionRole: event.role },
+      );
+      if (!supported) {
+        remaining.push(branch);
+        continue;
+      }
+      const forfeit = consumeOrdinaryRoomForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+        owner: incoming.origin,
+        sequence: event.sequence,
+      });
+      if (!forfeit.consumed) {
+        remaining.push(branch);
+        continue;
+      }
+      vetoed.push(
+        advanceRewardBranch(
+          Object.freeze({
+            ...branch,
+            arcanaFear: forfeit.state,
+          }),
+          event.sequence,
+        ),
+      );
+    }
+    if (vetoed.length > 0) {
+      const settled =
+        remaining.length === 0
+          ? Object.freeze([])
+          : applyProducerRoleHistory(
+              catalog,
+              Object.freeze(remaining),
+              incoming,
+              {
+                role: event.role,
+                lifecyclePoint: event.lifecyclePoint,
+                historySequence: event.sequence,
+              },
+              facts,
+              findings,
+              atomicRegion,
+              findingChronology,
+              Object.freeze({ site, entry: entry.address }),
+            );
+      return Object.freeze({
+        site,
+        entries: Object.freeze([entry]),
+        branches: mergeEquivalentRewardBranches(Object.freeze([...vetoed, ...settled])),
+      });
+    }
+  }
   const settled = applyProducerRoleHistory(
     catalog,
     branches,

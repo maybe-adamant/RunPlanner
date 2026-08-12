@@ -787,7 +787,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     };
     const branches = settleOwnedAcquisitionSite(
       catalog,
-      initializeRewardBranches(undefined, createTestArcanaFearState()),
+      initializeRewardBranches(undefined, createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 })),
       {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',
@@ -806,6 +806,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(branch.events).toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: incoming.origin }),
     );
+    expect(branch.arcanaFear.fear.forfeitConsumed).toBe(false);
     expect(branch.traitHistory?.equippedTraits[expectedOffer.options[0]!.traitKey]).toBeDefined();
     expect(findings).toHaveLength(0);
   });
