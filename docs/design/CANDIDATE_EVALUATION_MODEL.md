@@ -48,6 +48,9 @@ Production now prepares one semantic context per contacted owner:
 - N controls use joint-board, ordered-visit, or parent-local regions;
 - shops use joint inventory or ordered purchase contexts;
 - batch-level controls consume their typed selected-simulation contexts.
+- reached Boss completions expose their exact inactive-Arcana outcome domain;
+- selected Circe effect options expose their exact pre-effect Arcana or Fear
+  target domain.
 
 The structured workspace owns every declaration-derived interaction domain.
 React activates one zero-argument loader through a shared adapter and cannot
@@ -115,6 +118,16 @@ field must not conceal the actual invalid frontier.
 
 The application may avoid requesting an unassessed control, but the engine
 remains the contact boundary and must independently enforce coverage.
+
+Arcana/Fear candidates never receive the raw mutable ledger. A Boss-completion
+capability exposes only its ordered inactive Arcana domain and required count.
+A selected Circe option exposes only the domain its declaration needs: inactive
+cards for Red, active non-Heroic cards plus the clamped cardinality for Lapis,
+or effectively active removable Vows for Black Night. Candidate grouping may
+merge branch products only when those exact domains agree; otherwise it
+withholds a false unified domain. The exact resolution/completion owner retains
+its repair domain at the first blocking point, while later state remains
+unassessed.
 
 The decision point immediately before a selected invalid value is covered. Its
 pre-decision state must remain available so the user can evaluate replacements,

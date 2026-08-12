@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 20 Boundary
+## Schema 21 Boundary
 
-Schema 20 is the sole persisted authored-project contract. The codec rejects
+Schema 21 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -101,6 +101,34 @@ Surface:    [] -> [N] -> [N, O] -> [N, O, P] -> [N, O, P, Q]
 ```
 
 Configured scope is not a claim that a biome is complete or simulation-valid.
+
+### Route Loadout
+
+Each route persists its weapon/aspect choice, an unordered canonical selection
+of manually active Arcana cards, and one declaration-bounded rank for every
+Fear Vow. The catalog owns card order, ordinary automatic-activation rules,
+Vow maxima, and Fear increments. The authored model owns only the player's
+starting selections; derived automatic cards and the configured Fear total are
+not persisted independently.
+
+The closed route commands replace the complete manual Arcana selection or one
+Vow rank. They validate catalog membership and static rank bounds, preserve all
+topology and downstream authored state, and participate normally in undo/redo.
+They do not validate Grasp capacity or ordinary Vow gameplay effects.
+
+Circe's selected effect-backed offer detail is authored beneath its exact trait
+option. `activateArcana` stores zero or one canonical card key, `promoteArcana`
+stores a canonical distinct card set, and `disableFear` stores one Vow key.
+The valid exhausted-domain empty result belongs to `activateArcana`. The codec
+checks shape, catalog membership, option disposition, and canonical declaration
+order, but does not evaluate current run eligibility. Dormant resolution detail
+remains persisted when a user switches away from its owning option, so a later
+switch can restore it.
+
+Judgment stores one canonical distinct Arcana-card set on the exact derived
+Boss-completion address for each authored biome. It is dormant unless Judgment
+is active at that completion. This is a completion-local authored outcome, not
+a synthetic room, reward, or topology edge.
 
 ## Common Decision Model
 
@@ -435,7 +463,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 20;
+  schemaVersion: 21;
   projectId: string;
   name: string;
   catalogVersion: string;

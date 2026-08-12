@@ -119,7 +119,12 @@ import {
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
-import { createArcanaFearState, activateTemporaryArcana } from '../arcana-fear';
+import {
+  activateTemporaryArcana,
+  createArcanaFearState,
+  inactiveArcanaKeys,
+  judgmentRequiredCount,
+} from '../arcana-fear';
 import { createBossCompletionArcanaAddress } from '../../authored-project/addresses';
 import { createBossCompletionArcanaCandidateArtifacts } from '../candidate-artifacts';
 import {
@@ -2551,34 +2556,25 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss') {
           const owner = createBossCompletionArcanaAddress(event.origin);
           const activeArcana = attestJudgmentArcanaFrontier(branches);
-          const judgment = activeArcana?.find((card) => card.key === 'CardDraw');
-          if (judgment !== undefined && activeArcana !== undefined) {
-            const active = new Set(activeArcana.map((card) => card.key));
+          const firstArcanaFear = branches[0]?.arcanaFear;
+          const requiredCount =
+            activeArcana === undefined || firstArcanaFear === undefined
+              ? undefined
+              : judgmentRequiredCount(catalog, firstArcanaFear);
+          if (requiredCount !== undefined && firstArcanaFear !== undefined) {
             bossCompletionArcanaContexts.set(
               semanticAddressKey(owner),
               Object.freeze({
-                inactiveArcanaKeys: Object.freeze(
-                  catalog.arcanaCards.values
-                    .filter((card) => !active.has(card.key))
-                    .map((card) => card.key),
-                ),
-                requiredCount: Math.min(
-                  judgment.rarity === 'Heroic' ? 6 : 5,
-                  catalog.arcanaCards.values.length - active.size,
-                ),
+                inactiveArcanaKeys: inactiveArcanaKeys(catalog, firstArcanaFear),
+                requiredCount,
               }),
             );
           }
           branches = Object.freeze(
             branches.flatMap((branch) => {
-              const judgment = branch.arcanaFear.arcana.active.find(
-                (card) => card.key === 'CardDraw',
-              );
-              if (judgment === undefined)
+              const required = judgmentRequiredCount(catalog, branch.arcanaFear);
+              if (required === undefined)
                 return [advanceRewardBranches([branch], event.sequence)[0]!];
-              const inactiveCount =
-                catalog.arcanaCards.values.length - branch.arcanaFear.arcana.active.length;
-              const required = Math.min(judgment.rarity === 'Heroic' ? 6 : 5, inactiveCount);
               const selected = snapshot.kind === 'biome' ? snapshot.bossCompletionArcanaKeys : [];
               if (selected.length !== required) {
                 addRewardFinding(

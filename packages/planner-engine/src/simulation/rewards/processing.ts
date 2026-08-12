@@ -71,7 +71,13 @@ import {
 import { optionIndex, type AuthoredTraitOffer } from '../../authored-project/traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { ArcanaFearState } from '../arcana-fear';
-import { activateTemporaryArcana, promoteArcana, suppressFearVow } from '../arcana-fear';
+import {
+  activateTemporaryArcana,
+  circeResolutionDomain,
+  manualArcanaGraspCost,
+  promoteArcana,
+  suppressFearVow,
+} from '../arcana-fear';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -525,17 +531,16 @@ export function processEncounterTraitOffer(
       : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
   const resolution = selected?.circeResolution;
   const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, 'selection');
-  const circeRemovableFearVow = catalog.fearVows.values.some(
-    (vow) => vow.circeRemovable && (branch.arcanaFear.fear.effectiveRanks[vow.key] ?? 0) > 0,
-  );
+  const circeDomain =
+    disposition?.kind === 'circe'
+      ? circeResolutionDomain(catalog, branch.arcanaFear, disposition.effect)
+      : undefined;
   const source = {
     origin,
     traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
     traitContext: Object.freeze({
-      manualArcanaGraspCost: branch.arcanaFear.arcana.active
-        .filter((card) => card.origin === 'manual')
-        .reduce((total, card) => total + (catalog.arcanaCards.byKey[card.key]?.graspCost ?? 0), 0),
-      circeRemovableFearVow,
+      manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
+      circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
     }),
   } as const;
   // Record the exact pre-effect frontier before validating Circe's authored
@@ -580,37 +585,28 @@ export function processEncounterTraitOffer(
   };
   if (disposition?.kind === 'circe') {
     if (disposition.effect === 'activateArcana') {
-      const inactive = catalog.arcanaCards.values.filter(
-        (card) => !branch.arcanaFear.arcana.active.some((active) => active.key === card.key),
-      );
       if (resolution?.kind !== 'activateArcana') return rejectCirce('circeResolutionMissing');
-      const required = inactive.length === 0 ? 0 : 1;
-      if (resolution.arcanaKeys.length !== required)
+      if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
         return rejectCirce(
           'circeResolutionWrongCardinality',
-          `${required}:${resolution.arcanaKeys.length}`,
+          `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
         );
-      if (resolution.arcanaKeys.some((key) => !inactive.some((card) => card.key === key)))
+      if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
         return rejectCirce('circeResolutionTargetUnavailable');
     } else if (disposition.effect === 'promoteArcana') {
-      const eligible = branch.arcanaFear.arcana.active.filter((card) => card.rarity === 'Epic');
       if (resolution?.kind !== 'promoteArcana') return rejectCirce('circeResolutionMissing');
-      const required = Math.min(2, eligible.length);
-      if (resolution.arcanaKeys.length !== required)
+      if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
         return rejectCirce(
           'circeResolutionWrongCardinality',
-          `${required}:${resolution.arcanaKeys.length}`,
+          `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
         );
-      if (resolution.arcanaKeys.some((key) => !eligible.some((card) => card.key === key)))
+      if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
         return rejectCirce('circeResolutionTargetUnavailable');
     } else {
-      const eligible = catalog.fearVows.values.filter(
-        (vow) => vow.circeRemovable && (branch.arcanaFear.fear.effectiveRanks[vow.key] ?? 0) > 0,
-      );
-      if (eligible.length === 0) return rejectCirce('circeOptionUnavailable');
+      if (!circeDomain!.outerAvailable) return rejectCirce('circeOptionUnavailable');
       if (resolution?.kind !== 'disableFear' || resolution.vowKey === null)
         return rejectCirce('circeResolutionMissing');
-      if (!eligible.some((vow) => vow.key === resolution.vowKey))
+      if (!circeDomain!.vowKeys.includes(resolution.vowKey))
         return rejectCirce('circeResolutionTargetUnavailable');
     }
   }
@@ -631,14 +627,10 @@ export function processEncounterTraitOffer(
     sequence,
   };
   if (disposition.effect === 'activateArcana') {
-    const inactive = catalog.arcanaCards.values.filter(
-      (card) => !applied.arcanaFear.arcana.active.some((active) => active.key === card.key),
-    );
+    const domain = circeResolutionDomain(catalog, applied.arcanaFear, disposition.effect);
     if (
       resolution?.kind !== 'activateArcana' ||
-      (inactive.length === 0
-        ? resolution.arcanaKeys.length !== 0
-        : resolution.arcanaKeys.length !== 1)
+      resolution.arcanaKeys.length !== domain.requiredCount
     )
       return applied;
     if (resolution.arcanaKeys.length === 0) return applied;
@@ -651,9 +643,11 @@ export function processEncounterTraitOffer(
     return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
   }
   if (disposition.effect === 'promoteArcana') {
-    const eligible = applied.arcanaFear.arcana.active.filter((card) => card.rarity === 'Epic');
-    const required = Math.min(2, eligible.length);
-    if (resolution?.kind !== 'promoteArcana' || resolution.arcanaKeys.length !== required)
+    const domain = circeResolutionDomain(catalog, applied.arcanaFear, disposition.effect);
+    if (
+      resolution?.kind !== 'promoteArcana' ||
+      resolution.arcanaKeys.length !== domain.requiredCount
+    )
       return applied;
     const outcome = promoteArcana(catalog, applied.arcanaFear, resolution.arcanaKeys, evidence);
     return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;

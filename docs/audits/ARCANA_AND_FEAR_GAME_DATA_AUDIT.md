@@ -277,3 +277,16 @@ The two domains otherwise remain separate until Circe:
    loadout and to calculate its Fear total.
 6. Black Night disables one eligible active Vow for the run without altering
    its configured rank. Vow of Rivals is the sole excluded target.
+
+## Planner Disposition
+
+The schema-21 Arcana/Fear and Circe delivery implements this audit's supported
+run-level subset: rank-III card baselines, ordinary automatic activation,
+manual Arcana and ranked Fear loadouts, configured versus effective Fear,
+temporary Arcana activation, Lapis promotion, Black Night suppression,
+Judgment's exact post-Boss draws, and Circe's nine fixed-Common choices.
+Catalog declarations own card/Vow data and Judgment's rarity-scaled count;
+the engine owns the progressive state, target domains, and exact authored
+outcomes. Grasp capacity, Vow of Void's capacity effect, Fated mode, permanent
+card advancement, and ordinary Vow gameplay effects remain deliberately out of
+scope.

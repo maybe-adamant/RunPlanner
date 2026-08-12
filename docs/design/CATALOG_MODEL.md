@@ -699,9 +699,11 @@ and port-verification history.
 ## Trait Offer Catalog
 
 The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 293 included trait
-declarations, and 14 giver declarations: the nine Olympians, Hermes,
-`WeaponUpgrade`, Artemis, Athena, and Icarus. Trait declarations are
+six weapon declarations, their 24 aspect declarations, 368 included trait
+declarations, and 20 giver declarations: the nine Olympians, Hermes,
+`WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
+Narcissus, and Circe. Arcana card traits are declaration-backed run-state
+traits rather than a giver pool. Trait declarations are
 giver-neutral facts: fresh and equipped rarity domains, exact offer
 requirements, ordinary boon slot, element contributions, boon-rarity and
 core-god classification, stacking and in-run rarify flags, rarity-count exclusion,
@@ -726,6 +728,14 @@ Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
 not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
+
+Arcana cards and Fear Vows are separate normalized catalog collections. Card
+declarations own their board location, permanent rank-III baseline, Grasp cost,
+and ordinary activation rule; Judgment additionally declares its Epic and
+Heroic post-Boss activation counts. Vows own bounded incremental Fear ranks
+and whether Circe may suppress them. Circe's three effect-backed traits carry
+one closed selected-disposition descriptor only; their live target domains and
+effects remain simulation-owned.
 
 `ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
 product. Its activation minimums are the four base elements at `2`, and its

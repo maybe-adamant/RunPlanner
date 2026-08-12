@@ -19,6 +19,7 @@ import {
   type RoomLifecycleCandidateArtifacts,
 } from './rewards/lifecycle-artifacts';
 import type { EncounterCandidateArtifacts } from './encounters';
+import { circeResolutionDomain } from './arcana-fear';
 import {
   assessTraitOffer,
   assessTraitOfferComposition,
@@ -328,58 +329,7 @@ export function createTraitOfferCandidateArtifacts(
                   ? undefined
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
-              const active = context.arcanaFear.arcana.active;
-              if (effect.effect === 'activateArcana') {
-                const keys = catalog.arcanaCards.values
-                  .filter((card) => !active.some((entry) => entry.key === card.key))
-                  .map((card) => card.key);
-                return [
-                  Object.freeze({
-                    effect: effect.effect,
-                    requiredCount: keys.length === 0 ? 0 : 1,
-                    arcanaKeys: Object.freeze(keys),
-                    vowKeys: Object.freeze([]),
-                    outerAvailable: true,
-                  }),
-                ];
-              }
-              if (effect.effect === 'promoteArcana') {
-                const keys = active
-                  .filter((entry) => entry.rarity === 'Epic')
-                  .map((entry) => entry.key);
-                return [
-                  Object.freeze({
-                    effect: effect.effect,
-                    requiredCount: Math.min(2, keys.length),
-                    arcanaKeys: Object.freeze(keys),
-                    vowKeys: Object.freeze([]),
-                    outerAvailable:
-                      active
-                        .filter((entry) => entry.origin === 'manual')
-                        .reduce(
-                          (total, entry) =>
-                            total + (catalog.arcanaCards.byKey[entry.key]?.graspCost ?? 0),
-                          0,
-                        ) > 0,
-                  }),
-                ];
-              }
-              const keys = catalog.fearVows.values
-                .filter(
-                  (vow) =>
-                    vow.circeRemovable &&
-                    (context.arcanaFear!.fear.effectiveRanks[vow.key] ?? 0) > 0,
-                )
-                .map((vow) => vow.key);
-              return [
-                Object.freeze({
-                  effect: effect.effect,
-                  requiredCount: 1,
-                  arcanaKeys: Object.freeze([]),
-                  vowKeys: Object.freeze(keys),
-                  outerAvailable: keys.length > 0,
-                }),
-              ];
+              return [circeResolutionDomain(catalog, context.arcanaFear, effect.effect)];
             }),
           ),
       });

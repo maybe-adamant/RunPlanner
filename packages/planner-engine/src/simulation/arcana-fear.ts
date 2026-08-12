@@ -38,6 +38,96 @@ export interface ArcanaFearState {
   readonly events: readonly ArcanaFearEvent[];
 }
 
+export type CirceResolutionEffect = 'activateArcana' | 'promoteArcana' | 'disableFear';
+
+/** Complete declaration-independent target product for one selected Circe effect. */
+export interface CirceResolutionDomain {
+  readonly effect: CirceResolutionEffect;
+  readonly requiredCount: number;
+  readonly arcanaKeys: readonly string[];
+  readonly vowKeys: readonly string[];
+  readonly outerAvailable: boolean;
+}
+
+/** The one ordered domain used by Arcana effects and their candidate capabilities. */
+export function inactiveArcanaKeys(catalog: Catalog, state: ArcanaFearState): readonly string[] {
+  const active = new Set(state.arcana.active.map((card) => card.key));
+  return Object.freeze(
+    catalog.arcanaCards.values.filter((card) => !active.has(card.key)).map((card) => card.key),
+  );
+}
+
+export function promotableArcanaKeys(state: ArcanaFearState): readonly string[] {
+  return Object.freeze(
+    state.arcana.active.filter((card) => card.rarity === 'Epic').map((card) => card.key),
+  );
+}
+
+export function circeRemovableFearVowKeys(
+  catalog: Catalog,
+  state: ArcanaFearState,
+): readonly string[] {
+  return Object.freeze(
+    catalog.fearVows.values
+      .filter((vow) => vow.circeRemovable && (state.fear.effectiveRanks[vow.key] ?? 0) > 0)
+      .map((vow) => vow.key),
+  );
+}
+
+export function manualArcanaGraspCost(catalog: Catalog, state: ArcanaFearState): number {
+  return state.arcana.active
+    .filter((card) => card.origin === 'manual')
+    .reduce((total, card) => total + (catalog.arcanaCards.byKey[card.key]?.graspCost ?? 0), 0);
+}
+
+export function circeResolutionDomain(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  effect: CirceResolutionEffect,
+): CirceResolutionDomain {
+  if (effect === 'activateArcana') {
+    const arcanaKeys = inactiveArcanaKeys(catalog, state);
+    return Object.freeze({
+      effect,
+      requiredCount: arcanaKeys.length === 0 ? 0 : 1,
+      arcanaKeys,
+      vowKeys: Object.freeze([]),
+      outerAvailable: true,
+    });
+  }
+  if (effect === 'promoteArcana') {
+    const arcanaKeys = promotableArcanaKeys(state);
+    return Object.freeze({
+      effect,
+      requiredCount: Math.min(2, arcanaKeys.length),
+      arcanaKeys,
+      vowKeys: Object.freeze([]),
+      outerAvailable: manualArcanaGraspCost(catalog, state) > 0,
+    });
+  }
+  const vowKeys = circeRemovableFearVowKeys(catalog, state);
+  return Object.freeze({
+    effect,
+    requiredCount: 1,
+    arcanaKeys: Object.freeze([]),
+    vowKeys,
+    outerAvailable: vowKeys.length > 0,
+  });
+}
+
+export function judgmentRequiredCount(
+  catalog: Catalog,
+  state: ArcanaFearState,
+): number | undefined {
+  const judgment = state.arcana.active.find((card) => card.key === 'CardDraw');
+  if (judgment === undefined) return undefined;
+  const count =
+    catalog.arcanaCards.byKey[judgment.key]?.postBossActivationCounts?.[judgment.rarity];
+  return count === undefined
+    ? undefined
+    : Math.min(count, inactiveArcanaKeys(catalog, state).length);
+}
+
 export type ArcanaTransitionReason =
   | 'staleChronology'
   | 'emptyTargetSet'
@@ -94,7 +184,7 @@ export function createArcanaFearState(catalog: Catalog, loadout: RouteLoadout): 
   });
 }
 
-/** Closed declared-effect transitions; Circe and Judgment ownership arrives in later gates. */
+/** Closed state transitions consumed by selected Circe and Judgment effects. */
 function rejected<T extends ArcanaTransitionReason | FearTransitionReason>(
   state: ArcanaFearState,
   reason: T,

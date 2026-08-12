@@ -1107,19 +1107,21 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                                                                            |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
 
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 325
-unique included trait declarations, 268 memberships across 17 non-Hammer
-givers, 92 Hammer memberships under the eighteenth giver, and one
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 368
+unique included trait declarations, 286 memberships across 19 non-Hammer
+givers, 92 Hammer memberships under the twentieth giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
 spell/talent operands remain exact keys
 only. Artemis, Athena, and Icarus are the modeled field-NPC providers;
-Arachne, Medea, Hades, and Dionysus are the modeled persistent Story providers.
-Narcissus's nine choices are audited above as the active effect-backed
-follow-up and are not counted as current persistent-trait inventory. All eight
+Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
+providers. Narcissus's nine choices remain effect-backed rather than persistent
+inventory. Circe's nine fixed-Common choices are production catalog entries;
+its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
+simulation contract. All eight
 Echo choices remain audited future evidence; the complete Echo provider stays
 outside production until its replay, prior-run, pending-Shop, and keepsake
-authorities are deliberately added. Circe, Spell, and Talent providers also
-remain outside the production trait catalog. Other source
+authorities are deliberately added. Spell and Talent providers remain outside
+the production trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline and mechanical-effect deferrals. Newly discovered
 predicates are explicitly listed above rather than covered by a no-unlisted

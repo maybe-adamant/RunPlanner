@@ -843,6 +843,21 @@ trait model. Dormant descendants remain withheld until their parent lifecycle
 reaches the role, and invalid reached offers stay editable with their exact
 finding.
 
+Circe uses the same trait dialog and one selected-option child control. Red
+Citrine shows one engine-derived inactive Arcana picker, Lapis shows an
+engine-derived unordered bounded multi-select of active non-Heroic cards, and
+Black Night shows one engine-derived removable active Vow picker. Switching a
+draft between direct and effect-backed options must immediately project the
+corresponding child without reopening the dialog; dormant authored detail is
+preserved by the engine. React does not calculate target eligibility, manually
+active Arcana cost, Fear totals, or Circe removal policy.
+
+Route settings own the starting loadout controls: manual Arcana toggles and
+declaration-bounded Fear ranks. Ordinary automatic Arcana indicators and the
+derived Fear total are read-only engine products. The same workspace exposes a
+reached Judgment completion control only at its exact derived completion owner;
+there is no route-level Judgment editor.
+
 The existing trait-offer surface also presents the engine's
 `rarityBelowActiveFloor` finding as ordinary option feedback. A retained
 authored Common option remains visible and repairable after an upstream

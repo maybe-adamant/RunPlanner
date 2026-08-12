@@ -55,6 +55,7 @@ export interface RawArcanaCardDeclaration {
     | { readonly kind: 'manual' }
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
+  readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
 }
 export interface RawFearVowDeclaration {
   readonly key: string;

@@ -352,6 +352,30 @@ producer reuses existing source support, trait folds, counter projections, and
 requirement evaluation; it neither reconstructs history backwards nor creates a
 second diagnostic policy.
 
+Arcana/Fear state is one further progressive ledger in that same snapshot. It
+starts from the route's catalog-derived manual and ordinary automatic Arcana
+set, with every active card at the supported rank-III/Epic baseline, plus the
+configured Vow ranks and derived Fear total. A run-local temporary activation
+adds one or more active Epic cards; an Arcana promotion changes an active Epic
+card to Heroic; Vow suppression leaves configured rank and configured total
+intact but makes that Vow effectively inactive. Every transition carries its
+exact lifecycle evidence, so stale or duplicate effects fail rather than being
+silently replayed. Branch equivalence includes this whole state: alternative
+frontiers with different active cards, rarities, or disabled Vows never merge.
+
+Judgment is a repeated transition at each reached Boss
+`encounterCompleted` point. Its selected canonical inactive-card set is
+validated and applied after the Boss and before Postboss or later-biome state;
+Epic Judgment requests five cards and Heroic Judgment requests six, each
+clamped by the then-inactive domain. Red Citrine, Lapis Lazuli Insight, and
+Black Night Banishment apply through the ordinary selected trait-acquisition
+fold: Red activates its selected inactive card (or a valid empty result),
+Lapis promotes its selected active non-Heroic cards up to the declaration-owned
+cardinality, and Black Night suppresses its selected effectively active,
+Circe-removable Vow. An invalid exact outcome blocks at its child address,
+does not equip the effect-backed trait, and retains its pre-effect candidate
+context for repair.
+
 If a covered selected value has no supporting pre-state, alternatives at that
 owner may still use its last valid pre-decision view for repair. Contextual
 claims after an unsupported upstream state remain unavailable; materialized

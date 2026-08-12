@@ -27,6 +27,32 @@ export function normalizeArcanaCards(
     if (cells.has(cell)) fail(path, `duplicates board cell ${cell}`);
     cells.add(cell);
     if (card.permanentRank !== 3) fail(`${path}.permanentRank`, 'must be rank III');
+    const postBossActivationCounts = card.postBossActivationCounts;
+    if (card.key === 'CardDraw') {
+      if (
+        postBossActivationCounts === undefined ||
+        Object.keys(postBossActivationCounts).length !== 2
+      )
+        fail(
+          `${path}.postBossActivationCounts`,
+          'Judgment must declare only Epic and Heroic counts',
+        );
+      requirePositiveInteger(
+        postBossActivationCounts.Epic,
+        `${path}.postBossActivationCounts.Epic`,
+      );
+      requirePositiveInteger(
+        postBossActivationCounts.Heroic,
+        `${path}.postBossActivationCounts.Heroic`,
+      );
+      if (postBossActivationCounts.Heroic < postBossActivationCounts.Epic)
+        fail(`${path}.postBossActivationCounts`, 'Heroic count must not be lower than Epic');
+    } else if (postBossActivationCounts !== undefined) {
+      fail(
+        `${path}.postBossActivationCounts`,
+        'only Judgment may declare post-Boss activation counts',
+      );
+    }
     if (traits.byKey[card.traitKey] === undefined) {
       fail(`${path}.traitKey`, `unknown trait ${card.traitKey}`);
     }
@@ -72,7 +98,13 @@ export function normalizeArcanaCards(
             kind: 'automatic' as const,
             rule: Object.freeze({ ...card.activation.rule }),
           });
-    return Object.freeze({ ...card, activation });
+    return Object.freeze({
+      ...card,
+      activation,
+      ...(postBossActivationCounts === undefined
+        ? {}
+        : { postBossActivationCounts: Object.freeze({ ...postBossActivationCounts }) }),
+    });
   });
   if (values.length !== 25) fail('arcanaCards', 'must declare all 25 cards');
   return createCollection(values, 'arcanaCards', (card) => card.key);

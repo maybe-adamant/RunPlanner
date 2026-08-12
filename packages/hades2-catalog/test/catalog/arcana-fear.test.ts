@@ -42,6 +42,10 @@ describe('Arcana and Fear catalog', () => {
       new Set(catalog.arcanaCards.values.map((card) => `${card.row}:${card.column}`)).size,
     ).toBe(25);
     expect(catalog.arcanaCards.values.every((card) => card.permanentRank === 3)).toBe(true);
+    expect(catalog.arcanaCards.byKey.CardDraw?.postBossActivationCounts).toEqual({
+      Epic: 5,
+      Heroic: 6,
+    });
     expect(
       catalog.fearVows.values.map(
         (vow) => `${vow.key}|${vow.label}|${vow.incrementalFear.join(',')}|${vow.circeRemovable}`,
@@ -79,6 +83,47 @@ describe('Arcana and Fear catalog', () => {
         ),
       }),
     ).toThrow(/unknown trait MissingArcanaTrait/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) => {
+          if (card.key !== 'CardDraw') return card;
+          return Object.fromEntries(
+            Object.entries(card).filter(([key]) => key !== 'postBossActivationCounts'),
+          ) as unknown as typeof card;
+        }),
+      }),
+    ).toThrow(/Judgment must declare only Epic and Heroic counts/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === 'CastCount'
+            ? { ...card, postBossActivationCounts: { Epic: 5, Heroic: 6 } }
+            : card,
+        ),
+      }),
+    ).toThrow(/only Judgment may declare post-Boss activation counts/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === 'CardDraw'
+            ? { ...card, postBossActivationCounts: { Epic: 0, Heroic: 6 } }
+            : card,
+        ),
+      }),
+    ).toThrow(/must be a positive integer/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === 'CardDraw'
+            ? { ...card, postBossActivationCounts: { Epic: 6, Heroic: 5 } }
+            : card,
+        ),
+      }),
+    ).toThrow(/Heroic count must not be lower than Epic/);
     expect(() =>
       createCatalog({
         ...declarations,
