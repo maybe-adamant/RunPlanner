@@ -109,13 +109,20 @@ and Attack (`Melee`) or Special (`Secondary`). Replacement,
 weighted probability, and `PriorityChance` remain deferred rather than being
 inferred from this guarantee.
 
-## In-Scope Offer Shape
+## Original In-Scope Offer Shape
+
+This section records the original first-slice baseline; it is not the complete
+game offer-composition contract. The source-backed exhaustion, replacement,
+Fallback Gold, and Fear-pressure rules are audited separately in
+[`TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
 
 `ScreenData.UpgradeChoice.MaxChoices` is three. `CalcNumLootChoices` can reduce
 an ordinary god screen by one when an acquired effect supplies
 `RestrictBoonChoices`; no trait in this audit's first Olympian, Hermes, and
-Hammer implementation slice supplies that effect. The supported baseline may
-therefore author exactly three distinct options and one selected option.
+Hammer implementation slice supplies that effect. The original supported
+baseline therefore authored exactly three distinct options and one selected
+option. That was a delivery constraint, not evidence that every reachable game
+offer materializes three trait choices.
 
 The three options are alternatives against the same pre-selection state.
 `SetTraitsOnLoot` removes a selected trait from every rarity table before
