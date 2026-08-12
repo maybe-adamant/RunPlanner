@@ -2,7 +2,9 @@
 
 ## Status
 
-**Draft implementation plan.** The game facts are owned by
+**Active implementation plan.** Gate A completed at `04de8cb`; Gate B
+completed at `9c19b49`. Gate C is the remaining behavior gate before closure.
+The game facts are owned by
 `docs/audits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`; giver
 membership, requirements, rarity domains, and replacement targets remain
 owned by `docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`.
@@ -24,8 +26,8 @@ effects that exercise it:
    participation from the exact pre-offer state;
 4. apply Vow of Denial by banning displayed unselected traits from later
    offers; and
-5. apply Vow of Forfeit by substituting the first qualifying room Boon or
-   Hermes acquisition in each biome.
+5. apply Vow of Forfeit by preventing the first qualifying ordinary room Boon
+   or Hermes acquisition in each biome.
 
 This is not a probability simulator. The user authors the exact offer outcome
 that occurred; the engine decides whether that outcome has positive support
@@ -41,8 +43,7 @@ from the current route state.
 - one-to-three materialized trait choices and Fallback Gold;
 - route-wide exact banned-trait history;
 - Circe suppression of Denial and Forfeit;
-- one room-reward Forfeit substitution per biome;
-- exact `RoomRewardConsolationPrize` acquisition identity; and
+- one ordinary-room Forfeit acquisition veto per biome; and
 - progressive candidates, findings, workspace binding, dialog authoring, Run
   State, persistence, undo/redo, and profile round-trip.
 
@@ -53,8 +54,11 @@ from the current route state.
 - Double Boon Chance and any two-selection offer lifecycle;
 - Keepsake, Fated-mode, or external save-state modifiers;
 - Denial on Hammer, Pom, field-NPC, or Story offers;
-- Forfeit on Shops, Devotion, Hammer, Pom, field-NPC, or Story acquisitions;
-- numeric healing or currency simulation for the consolation prize; and
+- Forfeit on Shops, Devotion, Hub-owned/local rewards, pickups, Hammer, Pom,
+  field-NPC, or Story acquisitions;
+- production modeling of the game's `RoomRewardConsolationPrize`, including
+  its healing/value or acquisition history;
+- a generic reward replacement or acquisition-substitution framework; and
 - a generic Fear-effect interpreter or callback registry.
 
 ## Current Live Shape
@@ -75,27 +79,19 @@ from the current route state.
   commits one complete semantic `ReplaceTraitOffer` command.
 - `ArcanaFearState` already carries configured/effective Fear ranks and Circe's
   route-local disabled Vows through every reward branch.
-- reward settlement resolves a concrete acquisition before applying the trait
-  offer attached to that role.
+- ordinary room-reward settlement resolves a concrete acquisition before
+  applying the trait offer attached to that role;
 - `beginBiomeRewardHistory` and branch initialization already define the
   biome-reset boundary.
-- Run State already presents equipped traits and configured/effective Fear at
-  the exact pre-decision frontier.
+- Run State already presents equipped traits, banned traits, and
+  configured/effective Fear at the exact pre-decision frontier.
 
 ### Current gaps
 
-- authored and catalog defaults use an exact three-item tuple;
-- option keys and selected-option lookup assume all three rows exist;
-- replacement assessment counts every fresh ranked trait as ordinary and does
-  not distinguish dependable Common-capable candidates from optional
-  Duo/Legendary candidates;
-- Fallback Gold has no authored or evaluated representation;
-- trait history has no banned-trait fact;
-- Fear declarations retain rank and Circe eligibility but not their two
-  supported run effects;
-- reward settlement cannot substitute a concrete acquisition before its trait
-  child is applied; and
-- Run State cannot show bans or per-biome Forfeit usage.
+- Forfeit has no explicit per-biome runtime usage;
+- an ordinary incoming room reward always applies its concrete Boon/Hermes
+  acquisition and then evaluates its trait child; and
+- Run State cannot show per-biome Forfeit usage.
 
 ## Locked Modeling Contract
 
@@ -253,39 +249,45 @@ parallel ban set to reward history, Redux, or React.
 If Circe later suppresses Denial, new offers stop adding bans. Existing event
 evidence and the folded banned set remain unchanged for the rest of the route.
 
-### 8. Forfeit substitutes before acquisition
+### 8. Forfeit vetoes one ordinary room acquisition
 
 The catalog declares a closed Forfeit effect:
 
 - maximum one trigger per biome;
-- qualifying lifecycle point `roomRewardPickup`;
-- qualifying resolved reward types `Boon` and `HermesUpgrade`; and
-- substitute concrete consumable `RoomRewardConsolationPrize`.
+- qualifying authored reward types `Boon` and `HermesUpgrade`; and
+- behavior `preventOrdinaryRoomAcquisition`.
 
-At a qualifying producer role, reward settlement checks the authored resolved
-reward type and effective Fear state before resolving/applying its concrete
-acquisition history. This matters for `Boon`: its concrete acquisition is the
-selected source such as `ApolloUpgrade`, while Forfeit qualifies the enclosing
-`Boon` room reward rather than a hard-coded list of god source keys. If
-Forfeit is active and unused in the biome, settlement:
+The engine applies this effect only at the existing ordinary Room Occurrence's
+incoming room-reward settlement boundary. Room ownership is the provenance;
+do not pass a Forfeit-eligibility flag into generic acquisition settlement or
+infer participation from a concrete source key. This matters for `Boon`: its
+concrete acquisition would be a selected source such as `ApolloUpgrade`, but
+Forfeit qualifies the enclosing authored `Boon` room reward. If Forfeit is
+active and unused in the biome, ordinary room settlement:
 
 1. retains the already-authored/consumed door reward and bag outcome;
 2. records Forfeit as consumed for that biome;
-3. applies the exact consolation-prize concrete acquisition instead of the
-   Boon/Hermes acquisition;
-4. skips the authored trait offer for that role; and
-5. publishes derived substitution evidence for evaluation and Run State.
+3. emits no concrete Boon/Hermes acquisition;
+4. does not evaluate or apply the authored trait offer for that role; and
+5. publishes narrow room-reward-veto evidence for evaluation and Run State.
+
+The game creates `RoomRewardConsolationPrize`, but its value has no supported
+downstream effect in the planner. Keep that fact in the audit; do not declare,
+apply, or record a substitute acquisition in production merely to mirror an
+otherwise inert implementation detail.
 
 The authored trait child remains persisted under its reward owner. It is
-dormant for that substituted acquisition rather than deleted or rewritten.
+dormant for that vetoed acquisition rather than deleted or rewritten.
 This preserves undo/redo and permits the same authored reward to become a real
 trait offer after an upstream Fear/Circe change.
 
 Shop purchases and Devotion use non-qualifying acquisition paths. They neither
-trigger nor consume Forfeit. A later qualifying room reward in the same biome
+trigger nor consume Forfeit. Other non-qualifying acquisition owners likewise
+do not participate. A later qualifying ordinary room reward in the same biome
 still triggers it. The per-biome usage resets at the existing biome branch
 initialization boundary. Circe suppression prevents later triggers but does
-not restore an already substituted reward.
+not restore a vetoed acquisition. If Forfeit was already consumed, Run State
+continues to report `consumed` even after later Circe suppression.
 
 ### 9. Fear runtime usage stays with progressive Fear state
 
@@ -319,7 +321,7 @@ Simulation owns:
 - forced replacement fill and maximum replacement count;
 - Fallback Gold availability;
 - banned-trait rejection; and
-- Fear timing and substitution.
+- Fear timing and the ordinary room-acquisition veto.
 
 An upstream edit may leave an authored trait outcome invalid. The exact value
 remains persisted and receives a finding; it is not silently refilled,
@@ -347,9 +349,8 @@ Run State adds:
 
 The route Traits tab continues showing only real equipped trait acquisitions.
 Fallback Gold and a forfeited authored offer do not appear as equipped traits.
-The exact substituted acquisition may appear in technical acquisition history
-where that history is already exposed; no new global reward timeline belongs
-to this slice.
+No replacement acquisition appears in technical acquisition history; no new
+global reward timeline belongs to this slice.
 
 ## Catalog and Persisted Contract
 
@@ -360,8 +361,7 @@ data:
 
 - a closed optional Fear runtime effect on `FearVowDeclaration`;
 - Denial participation on `TraitGiverDeclaration` (absent/false outside the ten
-  supported givers); and
-- the exact `RoomRewardConsolationPrize` concrete consumable acquisition.
+  supported givers).
 
 The Fear effect union contains only the two supported source-backed cases. It
 is not a string-dispatched interpreter and does not reserve generic effect
@@ -387,9 +387,9 @@ on trait outcomes.
 
 ### Hades II catalog
 
-Owns source-backed Fear effect declarations, giver participation, the
-consolation acquisition, and normalization validation. It does not calculate
-current bans, offer cardinality, or per-biome usage.
+Owns source-backed Fear effect declarations, giver participation, and
+normalization validation. It does not calculate current bans, offer
+cardinality, or per-biome usage.
 
 ### Planner engine authored project
 
@@ -401,8 +401,8 @@ kinds.
 ### Planner engine simulation
 
 Owns `O/H/R` derivation, offer support, fallback legality, banned-trait folding,
-Fear effect timing, concrete Forfeit substitution, findings, progressive
-candidate capabilities, and Run State source products.
+Fear effect timing, the ordinary room-reward acquisition veto, findings,
+progressive candidate capabilities, and Run State source products.
 
 ### Planner application and React
 
@@ -465,15 +465,14 @@ feat(engine): model Vow of Denial trait bans
 
 ### Gate C — Vow of Forfeit
 
-1. normalize the closed Forfeit effect and consolation acquisition;
+1. normalize the closed Forfeit ordinary-room acquisition-veto effect;
 2. extend progressive Fear state with explicit current-biome usage and a
    biome-reset transition;
-3. intercept qualifying room-reward settlement before concrete Boon/Hermes
-   history and trait acquisition;
-4. retain bag/offer history while applying only the substitute concrete
-   acquisition history;
-5. keep the persisted trait child dormant and publish no trait finding for the
-   substituted role;
+3. intercept only the qualifying ordinary incoming room-reward boundary before
+   concrete Boon/Hermes history and trait acquisition;
+4. retain bag/offer history while emitting no concrete acquisition;
+5. keep the persisted trait child dormant and publish no trait evaluation or
+   finding for the vetoed role;
 6. prove that Shop and Devotion offers do not trigger or consume Forfeit;
 7. prove Circe-before-trigger, Circe-after-trigger, and next-biome reset; and
 8. present available/consumed Forfeit status in Run State.
@@ -481,7 +480,7 @@ feat(engine): model Vow of Denial trait bans
 Default commit:
 
 ```text
-feat(engine): model Vow of Forfeit substitution
+feat(engine): model Vow of Forfeit acquisition veto
 ```
 
 ### Gate D — Closure and absorption
@@ -512,8 +511,8 @@ Primary owners:
 - `packages/hades2-catalog/test/catalog/traits.test.ts`
 - `packages/hades2-catalog/test/catalog/arcana-fear.test.ts`
 
-Prove exact Denial participation, exact Fear effect payloads, exact
-consolation acquisition identity, and rejection of malformed declarations.
+Prove exact Denial participation, exact Fear effect payloads, and rejection of
+malformed declarations.
 
 ### Authored contract
 
@@ -578,18 +577,22 @@ Required witnesses:
 
 Primary owner:
 
-- a focused engine reward-processing test file for Fear substitutions
+- a focused engine reward-processing test file for the Forfeit room-reward
+  veto
 
 Required witnesses:
 
-- first room Boon and first room Hermes each qualify;
-- only the first qualifying reward in a biome is substituted;
+- first qualifying ordinary room Boon and first qualifying ordinary room
+  Hermes each qualify;
+- a preceding non-qualifying room reward does not consume Forfeit;
+- only the first qualifying reward in a biome is vetoed;
 - authored offer/bag consumption remains while Boon/Hermes acquisition and
   trait history do not advance;
-- consolation acquisition history advances exactly once;
+- no replacement/consolation acquisition is recorded;
+- the dormant authored trait child publishes no trait evaluation or finding;
 - Shop and Devotion neither trigger nor consume the effect;
-- Circe before the qualifying reward prevents substitution;
-- Circe after substitution does not restore it; and
+- Circe before the qualifying reward prevents the veto;
+- Circe after the veto does not restore it and status remains consumed; and
 - entering the next biome resets usage.
 
 ### Application and product contact
@@ -631,8 +634,8 @@ The delivery is complete only when:
 3. all non-Olympian/non-Hermes providers retain their current exact shape;
 4. Denial only adds bans and never selects a separate composition algorithm;
 5. Circe preserves existing bans while stopping future ones;
-6. Forfeit substitutes exactly one qualifying room acquisition per biome and
-   never consumes on Shop or Devotion;
+6. Forfeit vetoes exactly one qualifying ordinary room acquisition per biome,
+   records no substitute acquisition, and never consumes on Shop or Devotion;
 7. progressive candidates, selected simulation, findings, Run State, and React
    agree on the same exact frontier;
 8. schema-22 persistence and all current product loops pass;
