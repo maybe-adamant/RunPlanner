@@ -119,7 +119,9 @@ import {
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
-import { createArcanaFearState } from '../arcana-fear';
+import { createArcanaFearState, activateTemporaryArcana } from '../arcana-fear';
+import { createBossCompletionArcanaAddress } from '../../authored-project/addresses';
+import { createBossCompletionArcanaCandidateArtifacts } from '../candidate-artifacts';
 import {
   prepareAcquisitionOrderCandidateContext,
   preparePickupAcquisitionOrderCandidateContext,
@@ -866,6 +868,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
   readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
   readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
+  readonly bossCompletionArcanaArtifacts: import('../candidate-artifacts').BossCompletionArcanaCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -1089,6 +1092,36 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const batchesByParent = new Map(
     batches(snapshot).map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
   );
+  const bossCompletionArcanaContexts = new Map<
+    string,
+    import('../candidate-artifacts').BossCompletionArcanaCandidateCapability
+  >();
+
+  /**
+   * Judgment is one authored exact set, so its pre-effect domain cannot be
+   * picked from an arbitrary reward branch. Branches may still differ in
+   * reward bags and history, but they must agree on the complete Arcana
+   * frontier consumed by this transition. The branch merge authority keeps
+   * Arcana/Fear in its identity key; this is the local assertion at the point
+   * where one public capability is published.
+   */
+  function attestJudgmentArcanaFrontier(
+    branchesAtFrontier: readonly RewardBranchState[],
+  ): readonly { readonly key: string; readonly rarity: 'Epic' | 'Heroic' }[] | undefined {
+    const first = branchesAtFrontier[0]?.arcanaFear.arcana.active;
+    if (first === undefined) return undefined;
+    const identity = JSON.stringify(first);
+    if (
+      !branchesAtFrontier.every(
+        (branch) => JSON.stringify(branch.arcanaFear.arcana.active) === identity,
+      )
+    ) {
+      throw new BiomeRewardSimulationContractError(
+        'Judgment candidate frontier has divergent Arcana state across surviving branches',
+      );
+    }
+    return first;
+  }
   // A Hub replaces its source's zero-target terminal envelope. Its source
   // still reaches an outgoing lifecycle checkpoint, but that checkpoint
   // creates the Hub rather than a normal reward batch.
@@ -2507,6 +2540,81 @@ export function evaluateBiomeRewardsAssemblyInternal(
         break;
       }
       case 'encounterCompleted': {
+        if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss') {
+          const owner = createBossCompletionArcanaAddress(event.origin);
+          const activeArcana = attestJudgmentArcanaFrontier(branches);
+          const judgment = activeArcana?.find((card) => card.key === 'CardDraw');
+          if (judgment !== undefined && activeArcana !== undefined) {
+            const active = new Set(activeArcana.map((card) => card.key));
+            bossCompletionArcanaContexts.set(
+              semanticAddressKey(owner),
+              Object.freeze({
+                inactiveArcanaKeys: Object.freeze(
+                  catalog.arcanaCards.values
+                    .filter((card) => !active.has(card.key))
+                    .map((card) => card.key),
+                ),
+                requiredCount: Math.min(
+                  judgment.rarity === 'Heroic' ? 6 : 5,
+                  catalog.arcanaCards.values.length - active.size,
+                ),
+              }),
+            );
+          }
+          branches = Object.freeze(
+            branches.flatMap((branch) => {
+              const judgment = branch.arcanaFear.arcana.active.find(
+                (card) => card.key === 'CardDraw',
+              );
+              if (judgment === undefined)
+                return [advanceRewardBranches([branch], event.sequence)[0]!];
+              const inactiveCount =
+                catalog.arcanaCards.values.length - branch.arcanaFear.arcana.active.length;
+              const required = Math.min(judgment.rarity === 'Heroic' ? 6 : 5, inactiveCount);
+              const selected = snapshot.kind === 'biome' ? snapshot.bossCompletionArcanaKeys : [];
+              if (selected.length !== required) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding(
+                    selected.length === 0
+                      ? 'judgmentOutcomeMissing'
+                      : 'judgmentOutcomeWrongCardinality',
+                    owner,
+                    Object.freeze({ required, selected: selected.length }),
+                  ),
+                  ownerRegion(owner),
+                  historyFindingChronology(event.sequence),
+                );
+                return [];
+              }
+              const assessed = activateTemporaryArcana(catalog, branch.arcanaFear, selected, {
+                owner,
+                sequence: event.sequence,
+              });
+              if (!assessed.legal) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding(
+                    'judgmentOutcomeTargetUnavailable',
+                    owner,
+                    Object.freeze({ reason: assessed.reason }),
+                  ),
+                  ownerRegion(owner),
+                  historyFindingChronology(event.sequence),
+                );
+                return [];
+              }
+              return [
+                Object.freeze({
+                  ...branch,
+                  arcanaFear: assessed.state,
+                  processedThroughHistorySequence: event.sequence,
+                }),
+              ];
+            }),
+          );
+          break;
+        }
         const room = rooms.get(semanticAddressKey(event.origin));
         const declaration = room && catalog.rooms.byKey[room.gameName];
         const roomView = views.get(semanticAddressKey(event.origin));
@@ -2691,6 +2799,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,
       traitProducts.levelCandidateContexts,
+    ),
+    bossCompletionArcanaArtifacts: createBossCompletionArcanaCandidateArtifacts(
+      bossCompletionArcanaContexts,
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
   });

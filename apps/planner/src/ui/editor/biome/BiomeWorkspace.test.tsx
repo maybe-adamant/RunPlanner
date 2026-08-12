@@ -5,6 +5,8 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBossCompletionArcanaAddress,
+  createCompletionRoomAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
@@ -15,6 +17,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -1201,5 +1204,47 @@ describe('BiomeWorkspace', () => {
     const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
     if (workbench === null) throw new Error('P target finding decision is missing');
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+
+  it('publishes and navigates the exact Judgment control only for a reached active Boss capability', () => {
+    const dormant = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
+        node.kind === 'completion' && node.role === 'boss',
+    );
+    if (dormantBoss === undefined) throw new Error('N Boss completion is missing');
+    expect(dormantBoss.judgment).toBeUndefined();
+    cleanup();
+    dormant.application.dispose();
+
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Surface'),
+      arcanaKeys: ['CastCount'],
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const workspace = workspaceProjection(view.application);
+    const owner = createBossCompletionArcanaAddress(createCompletionRoomAddress(nBiome, 'boss'));
+    const boss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
+        node.kind === 'completion' && node.role === 'boss',
+    );
+    if (boss?.judgment === undefined)
+      throw new Error('active Judgment completion control is missing');
+    expect(workspace.interactions.bossCompletionArcana.has(semanticAddressKey(owner))).toBe(true);
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(within(inspector).getByText('Judgment — choose 5 inactive Arcana cards')).toBeTruthy();
+    const firstChoice = within(inspector).getAllByRole<HTMLInputElement>('checkbox')[0];
+    if (firstChoice === undefined) throw new Error('Judgment picker has no inactive card');
+    act(() => firstChoice.click());
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')?.bossCompletionArcanaKeys,
+    ).toHaveLength(1);
   });
 });

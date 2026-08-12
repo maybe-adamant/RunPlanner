@@ -1,5 +1,6 @@
 import {
   createBiomeFieldAddress,
+  createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -409,6 +410,10 @@ function enrichFrontierPredecessor(
 export function assembleWorkspaceBiomeSemantics(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
+  bossCompletionArcanaCapability?: {
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly requiredCount: number;
+  },
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -628,6 +633,16 @@ export function assembleWorkspaceBiomeSemantics(
   const completion = Object.freeze(
     layout.completion.rooms.map((descriptor) => {
       const address = createCompletionRoomAddress(biome, descriptor.role);
+      const judgment =
+        descriptor.role !== 'boss' || bossCompletionArcanaCapability === undefined
+          ? undefined
+          : Object.freeze({
+              address: createBossCompletionArcanaAddress(address),
+              inactiveArcanaKeys: bossCompletionArcanaCapability.inactiveArcanaKeys,
+              marker: markerDestinations.marker(createBossCompletionArcanaAddress(address)),
+              requiredCount: bossCompletionArcanaCapability.requiredCount,
+              value: plan.bossCompletionArcanaKeys ?? Object.freeze([]),
+            });
       const node: WorkspaceCompletionNode = Object.freeze({
         kind: 'completion' as const,
         key: `completion:${semanticAddressKey(address)}`,
@@ -635,8 +650,12 @@ export function assembleWorkspaceBiomeSemantics(
         role: descriptor.role,
         gameName: descriptor.roomGameName,
         label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
+        ...(judgment === undefined ? {} : { judgment }),
       });
-      markerDestinations.redirect(Object.freeze([node.marker]), node.key);
+      markerDestinations.redirect(
+        Object.freeze([node.marker, ...(judgment === undefined ? [] : [judgment.marker])]),
+        node.key,
+      );
       return node;
     }),
   );

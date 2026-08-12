@@ -229,6 +229,8 @@ export interface AuthoredBiomePlan {
   readonly biomeKey: string;
   readonly state: AuthoredBiomeState;
   readonly topology: BiomeTopology | null;
+  /** Dormant unless Judgment is active at this biome's Boss completion. */
+  readonly bossCompletionArcanaKeys?: readonly string[];
 }
 
 export interface AuthoredRoutePlan {

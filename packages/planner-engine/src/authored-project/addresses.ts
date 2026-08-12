@@ -31,6 +31,11 @@ export interface CompletionRoomAddress extends BiomeOwnedAddress {
   readonly kind: 'completionRoom';
   readonly role: 'boss' | 'postboss';
 }
+/** The exact post-encounter Arcana draw owned by a derived Boss completion room. */
+export interface BossCompletionArcanaAddress extends BiomeOwnedAddress {
+  readonly kind: 'bossCompletionArcana';
+  readonly completion: CompletionRoomAddress & { readonly role: 'boss' };
+}
 
 export type ExitDecisionSourceAddress =
   | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
@@ -181,6 +186,7 @@ export type SemanticAddress =
   | OccurrenceAddress
   | IncomingRewardAddress
   | CompletionRoomAddress
+  | BossCompletionArcanaAddress
   | ExitDecisionAddress
   | ExitSelectionAddress
   | BatchRewardStoreAddress
@@ -273,6 +279,22 @@ export function createCompletionRoomAddress(
   role: CompletionRoomAddress['role'],
 ): CompletionRoomAddress {
   return Object.freeze({ kind: 'completionRoom', ...owner(biome), role });
+}
+export function createBossCompletionArcanaAddress(
+  completion: CompletionRoomAddress,
+): BossCompletionArcanaAddress {
+  if (completion.role !== 'boss')
+    throw new SemanticAddressContractError(
+      'completion.role',
+      'Boss-completion Arcana must be owned by the Boss completion room',
+    );
+  const bossCompletion = Object.freeze({ ...completion, role: 'boss' as const });
+  return Object.freeze({
+    kind: 'bossCompletionArcana',
+    routeKey: completion.routeKey,
+    biomeKey: completion.biomeKey,
+    completion: bossCompletion,
+  });
 }
 export function createExitDecisionAddress(
   biome: BiomeAddress,
@@ -534,6 +556,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId]);
     case 'completionRoom':
       return JSON.stringify([...base, address.role]);
+    case 'bossCompletionArcana':
+      return JSON.stringify([...base, semanticAddressKey(address.completion)]);
     case 'exitDecision':
     case 'exitSelection':
     case 'batchRewardStore':

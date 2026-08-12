@@ -247,6 +247,18 @@ const findingCopy = {
     title: 'Pom target is unavailable',
     description: 'This trait cannot receive the Pom at this point in the route.',
   },
+  judgmentOutcomeMissing: {
+    title: 'Choose Judgment cards',
+    description: 'Record the exact inactive Arcana cards activated after this Boss.',
+  },
+  judgmentOutcomeWrongCardinality: {
+    title: 'Judgment card count is incorrect',
+    description: 'Choose the complete number of inactive Arcana cards for Judgment.',
+  },
+  judgmentOutcomeTargetUnavailable: {
+    title: 'Judgment target is unavailable',
+    description: 'Choose distinct Arcana cards that were inactive before this Boss completed.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -523,5 +535,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Pom`;
     case 'completionRoom':
       return `${biomeLabel} · ${origin.role === 'boss' ? 'Boss' : 'Postboss'}`;
+    case 'bossCompletionArcana':
+      return `${biomeLabel} · Boss Judgment`;
   }
 }

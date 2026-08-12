@@ -612,7 +612,13 @@ function evaluateBiomeAssembly(
       candidateArtifacts: progressive.candidateArtifacts,
     });
   }
-  const snapshot = materializeBiome(catalog, origin, completeness, context.loadout);
+  const snapshot = materializeBiome(
+    catalog,
+    origin,
+    completeness,
+    context.loadout,
+    plan.bossCompletionArcanaKeys,
+  );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
   const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
   if (composed.kind === 'blocked') {
@@ -691,7 +697,16 @@ function evaluateBiomeAssembly(
         rewards: rewards.simulation,
         findings,
       }),
-      candidateArtifacts: roomGeneration.candidateArtifacts,
+      candidateArtifacts: createBiomeCandidateArtifacts(
+        roomGeneration.candidateArtifacts.origin,
+        roomGeneration.candidateArtifacts.roomTargets,
+        roomGeneration.candidateArtifacts.rewardProducers,
+        roomGeneration.candidateArtifacts.roomLifecycles,
+        roomGeneration.candidateArtifacts.encounters,
+        roomGeneration.candidateArtifacts.traitOffers,
+        roomGeneration.candidateArtifacts.levelResolutions,
+        rewards.bossCompletionArcanaArtifacts,
+      ),
     });
   }
   const selectedFindingRegions = Object.freeze([
@@ -705,7 +720,16 @@ function evaluateBiomeAssembly(
     context,
     Object.freeze({
       rewards: rewards.simulation,
-      candidateArtifacts: roomGeneration.candidateArtifacts,
+      candidateArtifacts: createBiomeCandidateArtifacts(
+        roomGeneration.candidateArtifacts.origin,
+        roomGeneration.candidateArtifacts.roomTargets,
+        roomGeneration.candidateArtifacts.rewardProducers,
+        roomGeneration.candidateArtifacts.roomLifecycles,
+        roomGeneration.candidateArtifacts.encounters,
+        roomGeneration.candidateArtifacts.traitOffers,
+        roomGeneration.candidateArtifacts.levelResolutions,
+        rewards.bossCompletionArcanaArtifacts,
+      ),
       findingRegions: selectedFindingRegions,
     }),
   );

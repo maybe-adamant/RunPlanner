@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createOccurrenceAddress,
   createBiomeAddress,
+  type BossCompletionArcanaAddress,
   semanticAddressKey,
   type BiomeAddress,
   type OccurrenceAddress,
@@ -412,6 +413,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'traitOffer' ? blockedAt : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
+  const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
+    blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
@@ -524,6 +527,20 @@ function retainBlockedRegionProducts(
       );
     },
   });
+  const blockedBossCapability =
+    blockedBossCompletionAt === undefined
+      ? undefined
+      : (selectedArtifacts.bossCompletionArcana.at(blockedBossCompletionAt) ??
+        blockedArtifacts.bossCompletionArcana.at(blockedBossCompletionAt));
+  const bossCompletionArcana =
+    blockedBossCompletionAt === undefined || blockedBossCapability === undefined
+      ? retainedArtifacts.bossCompletionArcana
+      : Object.freeze({
+          at: (address: BossCompletionArcanaAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedBossCompletionAt)
+              ? blockedBossCapability
+              : retainedArtifacts.bossCompletionArcana.at(address),
+        });
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
     rewardOwner === undefined
@@ -609,6 +626,7 @@ function retainBlockedRegionProducts(
     encounters,
     traitOffers,
     levelResolutions,
+    bossCompletionArcana,
   );
   return Object.freeze({
     rewards:
@@ -1024,6 +1042,27 @@ function locateFinding(
       : chronology?.kind === 'hubBoard' || chronology?.kind === 'hubVisit'
         ? chronology.history
         : undefined;
+  // Boss completion is a terminal lifecycle child, not an authored Preboss
+  // occurrence. It follows every decision in the materialized biome and has
+  // no room occurrence to use for ordinary ownership lookup.
+  if (
+    finding.origin.kind === 'bossCompletionArcana' &&
+    finding.origin.routeKey === prefix.routeKey &&
+    finding.origin.biomeKey === prefix.biomeKey
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: prefix.decisions.length - 1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
   if (
     prefix.entryRoom !== undefined &&
     ownsOccurrence(finding.origin, prefix.entryRoom.occurrenceId)
@@ -1252,6 +1291,11 @@ function clampPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
 ): MaterializedBiomePrefix {
+  // A Judgment finding occurs only after the terminal Boss encounter. The
+  // authored prefix is already the exact pre-completion state; trimming its
+  // Preboss decision would falsely erase that state rather than merely
+  // suppressing the Postboss and later-biome consequences.
+  if (located.finding.origin.kind === 'bossCompletionArcana') return prefix;
   if (located.decisionIndex < 0) {
     return Object.freeze({
       kind: 'biomePrefix',
@@ -1521,6 +1565,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.encounters,
       evaluated.candidateArtifacts.traitOffers,
       evaluated.candidateArtifacts.levelResolutions,
+      evaluated.candidateArtifacts.bossCompletionArcana,
     ),
   });
 }
@@ -1632,6 +1677,7 @@ function clampSelectedProducts(
       retainedInteractions.encounters,
       retainedInteractions.traitOffers,
       retainedInteractions.levelResolutions,
+      retainedInteractions.bossCompletionArcana,
     ),
   });
 }

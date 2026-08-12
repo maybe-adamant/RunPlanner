@@ -44,6 +44,8 @@ export function projectCommandAddress(
       return command.route;
     case 'ReplaceBiomeField':
       return command.field;
+    case 'ReplaceBossCompletionArcana':
+      return command.completion;
     case 'CreateStart':
     case 'ClearTopology':
       return command.biome;

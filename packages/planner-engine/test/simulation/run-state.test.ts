@@ -3,6 +3,8 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createBossCompletionArcanaAddress,
+  createCompletionRoomAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -22,6 +24,7 @@ import {
   oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
+import { deriveRouteLoadout } from '../../src/authored-project/loadout';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
@@ -335,6 +338,32 @@ describe('decision run-state snapshots', () => {
       vowKey: 'EnemyDamageShrineUpgrade',
       rank: 2,
     });
+    const active = deriveRouteLoadout(
+      catalog,
+      project.routes.find((candidate) => candidate.routeKey === 'Underworld')!.loadout,
+    ).activeArcanaKeys;
+    const fJudgment = catalog.arcanaCards.values
+      .filter((card) => !active.includes(card.key))
+      .slice(0, 5)
+      .map((card) => card.key);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBossCompletionArcana',
+      completion: createBossCompletionArcanaAddress(
+        createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'boss'),
+      ),
+      arcanaKeys: fJudgment,
+    });
+    const gJudgment = catalog.arcanaCards.values
+      .filter((card) => !active.includes(card.key) && !fJudgment.includes(card.key))
+      .slice(0, 5)
+      .map((card) => card.key);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBossCompletionArcana',
+      completion: createBossCompletionArcanaAddress(
+        createCompletionRoomAddress(createBiomeAddress('Underworld', 'G'), 'boss'),
+      ),
+      arcanaKeys: gJudgment,
+    });
     const evaluation = simulateProject(catalog, project).routes.find(
       (entry) => entry.routeKey === 'Underworld',
     );
@@ -351,7 +380,9 @@ describe('decision run-state snapshots', () => {
     const fSnapshot = f.rewards.runStateSnapshots[0];
     const gSnapshot = g.rewards.runStateSnapshots[0];
     expect(expected).toBeDefined();
-    expect(fSnapshot?.arcanaFear).toEqual(expected);
+    // Judgment evolves state after F's Boss completion; F's decision snapshots
+    // remain its exact pre-decision state while G sees the completed draw.
+    expect(fSnapshot?.arcanaFear.arcana.active).not.toEqual(expected?.arcana.active);
     expect(gSnapshot?.arcanaFear).toEqual(expected);
     expect(expected?.arcana.active).toContainEqual(
       expect.objectContaining({ key: 'ChanneledCast', origin: 'manual', rarity: 'Epic' }),

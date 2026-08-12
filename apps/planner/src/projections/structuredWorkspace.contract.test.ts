@@ -96,6 +96,8 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
   return {
     ...actual,
     assertProjectEvaluationAssembly: () => undefined,
+    candidateArtifactsForProjectEvaluationAssembly: () =>
+      Object.freeze({ biomeAt: () => undefined }),
     encounterPhaseCandidateSupportForProjectEvaluationAssembly: (
       ...args: Parameters<typeof actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly>
     ) => {

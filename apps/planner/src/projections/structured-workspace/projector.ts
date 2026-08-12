@@ -1,4 +1,8 @@
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  createBossCompletionArcanaAddress,
+  createCompletionRoomAddress,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
@@ -44,6 +48,7 @@ import type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
+  WorkspaceCompletionNode,
   WorkspaceRoomPickerControl,
   WorkspaceStatus,
 } from './contract';
@@ -69,6 +74,10 @@ function appendEncounterTraitControls(
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
+  bossCompletionArcanaCapability?: {
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly requiredCount: number;
+  },
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -98,7 +107,7 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
+  const semantic = assembleWorkspaceBiomeSemantics(catalog, source, bossCompletionArcanaCapability);
   const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
@@ -160,12 +169,28 @@ export function createStructuredWorkspaceProjection(
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const traitControls = new Map<string, WorkspaceTraitOfferControl>();
       const levelResolutionControls = new Map<string, WorkspaceLevelResolutionControl>();
+      const bossCompletionArcanaControls = new Map<
+        string,
+        NonNullable<WorkspaceCompletionNode['judgment']>
+      >();
+      const candidates = services.candidateSessions.bind(assembly);
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
         encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
       );
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
-          const projected = projectBiome(catalog, biomeSource);
+          const bossCompletionAddress = createBossCompletionArcanaAddress(
+            createCompletionRoomAddress(biomeSource.biome, 'boss'),
+          );
+          const bossCompletion = candidates.bossCompletionArcana(
+            bossCompletionAddress,
+            biomeSource.plan.bossCompletionArcanaKeys ?? Object.freeze([]),
+          );
+          const projected = projectBiome(
+            catalog,
+            biomeSource,
+            bossCompletion.kind === 'bossCompletionArcana' ? bossCompletion.result : undefined,
+          );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueOccurrenceInteractionRequirements(
             occurrenceInteractionRequirements,
@@ -218,6 +243,12 @@ export function createStructuredWorkspaceProjection(
             }
           }
           for (const node of projected.biome.nodes) {
+            if (node.kind === 'completion' && node.judgment !== undefined) {
+              bossCompletionArcanaControls.set(
+                semanticAddressKey(node.judgment.address),
+                node.judgment,
+              );
+            }
             if (node.kind === 'occurrenceWorkbench') {
               appendEncounterTraitControls(traitControls, [node.room]);
             } else if (
@@ -296,6 +327,7 @@ export function createStructuredWorkspaceProjection(
         rewardControls,
         traitControls,
         levelResolutionControls,
+        bossCompletionArcanaControls,
         roomControls,
         services,
         startInteractionRequirements,

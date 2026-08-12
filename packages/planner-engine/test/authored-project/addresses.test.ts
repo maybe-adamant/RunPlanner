@@ -5,6 +5,7 @@ import {
   createAdditionalExitAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
+  createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -44,6 +45,10 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
   { name: 'occurrence', address: createOccurrenceAddress(fBiome, fOccurrenceId) },
   { name: 'incoming reward', address: createIncomingRewardAddress(fBiome, fOccurrenceId) },
   { name: 'boss completion', address: createCompletionRoomAddress(fBiome, 'boss') },
+  {
+    name: 'boss completion Arcana child',
+    address: createBossCompletionArcanaAddress(createCompletionRoomAddress(fBiome, 'boss')),
+  },
   { name: 'postboss completion', address: createCompletionRoomAddress(fBiome, 'postboss') },
   { name: 'occurrence exit decision', address: createExitDecisionAddress(fBiome, fSource) },
   { name: 'Hub exit decision', address: createExitDecisionAddress(nBiome, nHubSource) },
@@ -108,5 +113,15 @@ describe('semantic addresses', () => {
     expect(semanticAddressKey(createExitDecisionAddress(nBiome, nHubSource))).toBe(
       '["exitDecision","Surface","N",{"kind":"hubDecision","decisionKey":"hub"}]',
     );
+  });
+
+  it('owns Boss-completion Arcana beneath the Boss completion room only', () => {
+    const boss = createCompletionRoomAddress(fBiome, 'boss');
+    const child = createBossCompletionArcanaAddress(boss);
+    expect(child.completion).toEqual(boss);
+    expect(JSON.parse(semanticAddressKey(child)).at(-1)).toBe(semanticAddressKey(boss));
+    expect(() =>
+      createBossCompletionArcanaAddress(createCompletionRoomAddress(fBiome, 'postboss')),
+    ).toThrow('Boss-completion Arcana must be owned by the Boss completion room');
   });
 });
