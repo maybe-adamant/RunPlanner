@@ -300,6 +300,10 @@ const findingCopy = {
     title: 'Choose a materialized trait',
     description: 'The selected trait must be one of this offer’s displayed choices.',
   },
+  bannedTrait: {
+    title: 'Trait banned by Vow of Denial',
+    description: 'This trait was left unselected in an earlier Denial offer.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

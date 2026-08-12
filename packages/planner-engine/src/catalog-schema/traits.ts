@@ -194,6 +194,7 @@ export interface TraitGiverDeclaration {
   readonly rarityPolicy: TraitGiverRarityPolicy;
   readonly defaultOffer?: TraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, TraitOfferDefaults>>;
+  readonly denialParticipates?: boolean;
 }
 
 export interface TraitOfferContextDeclaration {

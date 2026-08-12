@@ -694,6 +694,8 @@ function normalizeGivers(
   );
   const values = declarations.map((giver, index) => {
     const path = `givers[${index}]`;
+    if (giver.denialParticipates !== undefined)
+      requireBoolean(giver.denialParticipates, `${path}.denialParticipates`);
     const priorityTraitKeys = freezeUniqueStrings(
       requireArray(giver.priorityTraitKeys, `${path}.priorityTraitKeys`) as readonly string[],
       `${path}.priorityTraitKeys`,
@@ -896,12 +898,47 @@ function normalizeGivers(
       traitKeys,
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
+      ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
       ...(defaultOffer === undefined ? {} : { defaultOffer }),
       ...(Object.keys(defaultsByLoadout).length === 0
         ? {}
         : { defaultsByLoadout: Object.freeze(defaultsByLoadout) }),
     });
   });
+  const denialKeys = values.filter((giver) => giver.denialParticipates).map((giver) => giver.key);
+  const expectedDenialKeys = [
+    'Aphrodite',
+    'Apollo',
+    'Ares',
+    'Demeter',
+    'Hephaestus',
+    'Hera',
+    'Hestia',
+    'Poseidon',
+    'Zeus',
+    'Hermes',
+  ];
+  const expectedDenialKeySet = new Set(expectedDenialKeys);
+  const actualDenialKeySet = new Set(denialKeys);
+  const missingDenialKeys = expectedDenialKeys.filter((key) => !actualDenialKeySet.has(key));
+  const unexpectedDenialKeys = denialKeys.filter((key) => !expectedDenialKeySet.has(key));
+  if (
+    denialKeys.length !== expectedDenialKeys.length ||
+    missingDenialKeys.length > 0 ||
+    unexpectedDenialKeys.length > 0
+  )
+    fail(
+      'givers',
+      `Denial participants must be exactly the nine Olympians and Hermes (missing: ${missingDenialKeys.join(',') || 'none'}; unexpected: ${unexpectedDenialKeys.join(',') || 'none'})`,
+    );
+  for (const giver of values) {
+    if (
+      giver.denialParticipates &&
+      giver.providerKind !== 'olympian' &&
+      giver.providerKind !== 'hermes'
+    )
+      fail(`givers.${giver.key}.denialParticipates`, 'requires an Olympian or Hermes giver');
+  }
   return createCollection(values, 'givers', (giver) => giver.key);
 }
 

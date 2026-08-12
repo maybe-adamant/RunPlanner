@@ -517,6 +517,7 @@ export const aphroditeGiver = {
   key: 'Aphrodite',
   label: 'Aphrodite',
   providerKind: 'olympian',
+  denialParticipates: true,
   priorityTraitKeys: [
     'AphroditeWeaponBoon',
     'AphroditeSpecialBoon',

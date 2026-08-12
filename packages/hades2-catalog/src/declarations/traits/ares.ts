@@ -484,6 +484,7 @@ export const aresGiver = {
   key: 'Ares',
   label: 'Ares',
   providerKind: 'olympian',
+  denialParticipates: true,
   priorityTraitKeys: [
     'AresWeaponBoon',
     'AresSpecialBoon',

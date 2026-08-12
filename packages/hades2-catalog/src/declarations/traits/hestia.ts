@@ -314,6 +314,7 @@ export const hestiaGiver = {
   key: 'Hestia',
   label: 'Hestia',
   providerKind: 'olympian',
+  denialParticipates: true,
   priorityTraitKeys: [
     'HestiaWeaponBoon',
     'HestiaSpecialBoon',
