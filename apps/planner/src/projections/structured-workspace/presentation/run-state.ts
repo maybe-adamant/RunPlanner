@@ -209,6 +209,7 @@ export function presentRunState(
             : [];
         }),
       ),
+      forfeitStatus: snapshot.forfeitStatus,
     }),
     traits: Object.freeze({
       ...(snapshot.traits.minimumScalableGodTraitRarity === undefined

@@ -550,16 +550,17 @@ describe('Shop trait acquisition processing', () => {
           history,
           new Set(),
         );
-      const seeded = initializeRewardBranches(undefined, createTestArcanaFearState()).map(
-        (branch) => {
-          const traitHistory = pomTargetHistory();
-          return Object.freeze({
-            ...branch,
-            history: attachTraitHistory(branch.history, traitHistory),
-            traitHistory,
-          });
-        },
-      );
+      const seeded = initializeRewardBranches(
+        undefined,
+        createTestArcanaFearState({ BoonSkipShrineUpgrade: 1 }),
+      ).map((branch) => {
+        const traitHistory = pomTargetHistory();
+        return Object.freeze({
+          ...branch,
+          history: attachTraitHistory(branch.history, traitHistory),
+          traitHistory,
+        });
+      });
       const inventory = processShopInventory(
         seeded,
         {
@@ -591,6 +592,7 @@ describe('Shop trait acquisition processing', () => {
       const result = purchased[0]?.traitHistory;
       expect(result?.equippedTraits[expectedTraitKey]).toMatchObject({ level: expectedLevel });
       expect(result?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+      expect(purchased[0]?.arcanaFear.fear.forfeitConsumed).toBe(false);
     },
   );
 

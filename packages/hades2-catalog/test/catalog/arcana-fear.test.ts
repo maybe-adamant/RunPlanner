@@ -73,6 +73,11 @@ describe('Arcana and Fear catalog', () => {
       kind: 'banUnselectedTraits',
       count: 2,
     });
+    expect(catalog.fearVows.byKey.BoonSkipShrineUpgrade?.effect).toEqual({
+      kind: 'preventOrdinaryRoomAcquisition',
+      maximumPerBiome: 1,
+      qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+    });
     expect(
       catalog.traitGivers.values
         .filter((giver) => giver.denialParticipates)
@@ -195,7 +200,60 @@ describe('Arcana and Fear catalog', () => {
             : vow,
         ),
       }),
-    ).toThrow(/only Vow of Denial/);
+    ).toThrow(/must prevent one ordinary Boon or Hermes acquisition per biome/);
+    for (const effect of [
+      undefined,
+      {
+        kind: 'preventOrdinaryRoomAcquisition',
+        maximumPerBiome: 2,
+        qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+      },
+      {
+        kind: 'preventOrdinaryRoomAcquisition',
+        maximumPerBiome: 1,
+        qualifyingRewardTypes: ['Boon'],
+      },
+      {
+        kind: 'preventOrdinaryRoomAcquisition',
+        maximumPerBiome: 1,
+        qualifyingRewardTypes: ['HermesUpgrade', 'Boon'],
+      },
+      {
+        kind: 'preventOrdinaryRoomAcquisition',
+        maximumPerBiome: 1,
+        qualifyingRewardTypes: ['Boon', 'HermesUpgrade', 'Pom'],
+      },
+    ]) {
+      expect(() =>
+        createCatalog({
+          ...declarations,
+          fearVows: declarations.fearVows.map((vow) =>
+            vow.key === 'BoonSkipShrineUpgrade'
+              ? { ...vow, ...(effect === undefined ? { effect: undefined } : { effect }) }
+              : vow,
+          ) as unknown as typeof declarations.fearVows,
+        }),
+      ).toThrow(
+        /Forfeit must declare|must prevent one ordinary Boon or Hermes acquisition per biome/,
+      );
+    }
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        fearVows: declarations.fearVows.map((vow) =>
+          vow.key === 'EnemyDamageShrineUpgrade'
+            ? {
+                ...vow,
+                effect: {
+                  kind: 'preventOrdinaryRoomAcquisition',
+                  maximumPerBiome: 1,
+                  qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+                },
+              }
+            : vow,
+        ),
+      }),
+    ).toThrow(/only Vow of Denial or Forfeit may declare an effect/);
     expect(() =>
       createCatalog({
         ...declarations,
@@ -222,5 +280,37 @@ describe('Arcana and Fear catalog', () => {
         ),
       }),
     ).toThrow(/manual cards must have a positive Grasp cost/);
+  });
+
+  it('copies and freezes the normalized Forfeit effect without retaining caller-owned values', () => {
+    const qualifyingRewardTypes = ['Boon', 'HermesUpgrade'] as ['Boon', 'HermesUpgrade'];
+    const source = {
+      ...declarations,
+      fearVows: declarations.fearVows.map((vow) =>
+        vow.key === 'BoonSkipShrineUpgrade'
+          ? {
+              ...vow,
+              effect: {
+                kind: 'preventOrdinaryRoomAcquisition' as const,
+                maximumPerBiome: 1 as const,
+                qualifyingRewardTypes,
+              },
+            }
+          : vow,
+      ),
+    };
+    const normalized = createCatalog(source).fearVows.byKey.BoonSkipShrineUpgrade!.effect!;
+    if (normalized.kind !== 'preventOrdinaryRoomAcquisition') {
+      throw new Error('expected normalized Forfeit effect');
+    }
+    (qualifyingRewardTypes as unknown as string[])[0] = 'HermesUpgrade';
+    expect(normalized).toEqual({
+      kind: 'preventOrdinaryRoomAcquisition',
+      maximumPerBiome: 1,
+      qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+    });
+    expect(Object.isFrozen(normalized)).toBe(true);
+    expect(Object.isFrozen(normalized.qualifyingRewardTypes)).toBe(true);
+    expect(normalized.qualifyingRewardTypes).not.toBe(qualifyingRewardTypes);
   });
 });

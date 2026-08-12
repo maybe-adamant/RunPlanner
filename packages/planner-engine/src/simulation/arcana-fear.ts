@@ -17,6 +17,8 @@ export interface FearState {
   readonly configuredTotal: number;
   readonly disabledVowKeys: readonly string[];
   readonly effectiveRanks: Readonly<Record<string, number>>;
+  /** Derived current-biome usage; it is deliberately not persisted in the loadout. */
+  readonly forfeitConsumed: boolean;
 }
 export type ArcanaFearEvent =
   | ({
@@ -27,7 +29,11 @@ export type ArcanaFearEvent =
       readonly kind: 'arcanaPromoted';
       readonly arcanaKeys: readonly string[];
     } & ArcanaFearEvidence)
-  | ({ readonly kind: 'fearVowSuppressed'; readonly vowKey: string } & ArcanaFearEvidence);
+  | ({ readonly kind: 'fearVowSuppressed'; readonly vowKey: string } & ArcanaFearEvidence)
+  | ({
+      readonly kind: 'ordinaryRoomRewardForfeited';
+      readonly rewardType: 'Boon' | 'HermesUpgrade';
+    } & ArcanaFearEvidence);
 export interface ArcanaFearEvidence {
   readonly owner: SemanticAddress;
   readonly sequence: number;
@@ -179,8 +185,45 @@ export function createArcanaFearState(catalog: Catalog, loadout: RouteLoadout): 
       configuredTotal: derived.fearTotal,
       disabledVowKeys: Object.freeze([]),
       effectiveRanks: Object.freeze({ ...loadout.fearRanks }),
+      forfeitConsumed: false,
     }),
     events: Object.freeze([]),
+  });
+}
+
+/** Starts the next biome without changing configured ranks or Circe suppression. */
+export function beginBiomeArcanaFearState(state: ArcanaFearState): ArcanaFearState {
+  return state.fear.forfeitConsumed
+    ? Object.freeze({ ...state, fear: Object.freeze({ ...state.fear, forfeitConsumed: false }) })
+    : state;
+}
+
+/** Records the one source-backed Forfeit trigger at its ordinary-room owner. */
+export function consumeOrdinaryRoomForfeit(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  rewardType: 'Boon' | 'HermesUpgrade',
+  evidence: ArcanaFearEvidence,
+): { readonly consumed: boolean; readonly state: ArcanaFearState } {
+  const forfeit = catalog.fearVows.byKey.BoonSkipShrineUpgrade;
+  if (
+    forfeit?.effect?.kind !== 'preventOrdinaryRoomAcquisition' ||
+    (state.fear.effectiveRanks[forfeit.key] ?? 0) <= 0 ||
+    state.fear.forfeitConsumed ||
+    !canAppendEvidence(state, evidence) ||
+    !forfeit.effect.qualifyingRewardTypes.includes(rewardType)
+  )
+    return Object.freeze({ consumed: false, state });
+  return Object.freeze({
+    consumed: true,
+    state: Object.freeze({
+      ...state,
+      fear: Object.freeze({ ...state.fear, forfeitConsumed: true }),
+      events: Object.freeze([
+        ...state.events,
+        Object.freeze({ kind: 'ordinaryRoomRewardForfeited' as const, rewardType, ...evidence }),
+      ]),
+    }),
   });
 }
 

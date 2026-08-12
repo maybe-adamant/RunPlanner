@@ -4,6 +4,8 @@ import {
   createArcanaFearState,
   promoteArcana,
   suppressFearVow,
+  beginBiomeArcanaFearState,
+  consumeOrdinaryRoomForfeit,
 } from '@run-planner/engine/simulation';
 import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -13,9 +15,72 @@ import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulati
 import {
   initializeRewardBranches,
   mergeEquivalentRewardBranches,
+  publicRewardBranch,
 } from '../../src/simulation/rewards/processing';
+import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
 describe('progressive Arcana and Fear state', () => {
+  it('consumes Forfeit once per biome only while effective, retaining chronology evidence', () => {
+    const loadout = createDefaultRouteLoadout(catalog);
+    const state = createArcanaFearState(catalog, {
+      ...loadout,
+      fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 },
+    });
+    const owner = createBiomeAddress('Underworld', 'F');
+    const consumed = consumeOrdinaryRoomForfeit(catalog, state, 'Boon', { owner, sequence: 1 });
+    expect(consumed).toMatchObject({ consumed: true, state: { fear: { forfeitConsumed: true } } });
+    expect(
+      consumeOrdinaryRoomForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 2 }),
+    ).toMatchObject({ consumed: false });
+    expect(
+      consumeOrdinaryRoomForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 1 }),
+    ).toMatchObject({ consumed: false });
+    expect(beginBiomeArcanaFearState(consumed.state).fear.forfeitConsumed).toBe(false);
+    expect(
+      consumeOrdinaryRoomForfeit(catalog, createArcanaFearState(catalog, loadout), 'Boon', {
+        owner,
+        sequence: 1,
+      }),
+    ).toMatchObject({ consumed: false });
+  });
+
+  it('keeps consumed status after Circe suppression and resets usage only at biome handoff', () => {
+    const loadout = createDefaultRouteLoadout(catalog);
+    const state = createArcanaFearState(catalog, {
+      ...loadout,
+      fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 },
+    });
+    const owner = createBiomeAddress('Underworld', 'F');
+    expect(forfeitStatus(state)).toBe('available');
+    const consumed = consumeOrdinaryRoomForfeit(catalog, state, 'Boon', {
+      owner,
+      sequence: 1,
+    });
+    expect(consumed.consumed).toBe(true);
+    expect(forfeitStatus(consumed.state)).toBe('consumed');
+    const suppressed = suppressFearVow(catalog, consumed.state, 'BoonSkipShrineUpgrade', {
+      owner,
+      sequence: 2,
+    });
+    expect(suppressed.legal).toBe(true);
+    if (!suppressed.legal) throw new Error('Forfeit suppression should be legal');
+    expect(suppressed.state.fear.effectiveRanks.BoonSkipShrineUpgrade).toBe(0);
+    expect(forfeitStatus(suppressed.state)).toBe('consumed');
+
+    const branch = Object.freeze({
+      ...initializeRewardBranches(undefined, consumed.state)[0]!,
+      arcanaFear: consumed.state,
+    });
+    const nextBiome = initializeRewardBranches([publicRewardBranch(branch)])[0]!;
+    expect(nextBiome.arcanaFear.fear.forfeitConsumed).toBe(false);
+    expect(forfeitStatus(nextBiome.arcanaFear)).toBe('available');
+    expect(
+      consumeOrdinaryRoomForfeit(catalog, nextBiome.arcanaFear, 'HermesUpgrade', {
+        owner: createBiomeAddress('Underworld', 'G'),
+        sequence: 3,
+      }),
+    ).toMatchObject({ consumed: true });
+  });
   it('seeds manual and automatic origins at Epic, then retains chronological closed transitions', () => {
     const initial = createDefaultRouteLoadout(catalog);
     const state = createArcanaFearState(catalog, {
