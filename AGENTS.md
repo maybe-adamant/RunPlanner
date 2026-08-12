@@ -159,6 +159,56 @@ TypeScript, ESLint, or an architecture test in addition to documenting it.
   evidence only. The acceptance target is a smaller, explicit change
   neighborhood with no parallel path or unexplained production growth.
 
+## Delivery Workflow and Agent Roles
+
+Use the multi-agent gate routine for substantial cross-lane features,
+foundational model corrections, schema changes, and explicitly gated plans.
+Do not add this ceremony to a small focused fix that one agent can safely
+implement and review directly.
+
+The main session is the delivery orchestrator. It owns scope, authority
+selection, the locked plan, task decomposition, finding dispositions, final
+bird's-eye review, Git operations, and user communication. It must retain
+enough live-code context to challenge both the implementation and the review;
+delegation is not a substitute for understanding the resulting diff.
+
+For each implementation gate:
+
+1. Start from a clean or explicitly inventoried base commit and record the
+   exact gate, authorities, deliverables, exclusions, and acceptance tests.
+2. Spawn a fresh executor for that gate. Give it ownership of the complete
+   vertical slice, tell it that other agents may share the worktree, and
+   prohibit unrelated cleanup or contract reinterpretation.
+3. Let the executor use narrow owning-lane tests while implementing. Do not run
+   the complete repository suite after every adjustment.
+4. After the implementation is stable, spawn a fresh independent adversarial
+   reviewer as a sibling of the executor under the main session. The executor
+   must not review itself or own the review agent.
+5. Give the reviewer the base commit, exact diff, locked plan or gate, named
+   source audits and stable authorities, explicit exclusions, and validation
+   results. The reviewer remains read-only and reports only actionable,
+   evidence-backed findings.
+6. Route accepted findings back to the executor or a narrowly owned remediation
+   worker. Use one bounded verification pass after material review fixes; do
+   not create an open-ended reviewer loop.
+7. The main session performs the final holistic diff review: contract fidelity,
+   cross-lane ownership, deletion of superseded paths, test ownership,
+   production growth, and documentation disposition.
+8. Commit only after that final review and only when authorized. Use one
+   coherent Conventional Commit per delivery gate unless the locked plan names
+   a different intentional boundary.
+
+Use fresh executor and reviewer instances for each gate; stale agent context is
+not an authority. Prefer the repository's configured specialized agent roles
+or the model/effort setup explicitly requested for the task. Keep the workflow
+role-based in repository guidance so later model changes do not alter the
+ownership contract.
+
+An executor or reviewer must stop and return a concrete blocker when the live
+code contradicts the locked contract or a material product decision remains.
+The main session decides whether to amend the plan, narrow the gate, or ask the
+user. Agents must not quietly broaden the slice to satisfy an acceptance row.
+
 ## Modeling Rules
 
 - Use game-domain language in catalog, authored state, history, and findings.
@@ -246,6 +296,58 @@ tracker is introduced.
 Unknown game behavior belongs in focused audit notes or failing/skipped
 research fixtures. Do not add generic `unsupported` values to production
 models merely to remember unfinished research.
+
+### Audit and Plan Lifecycle
+
+Use `docs/audits/` for durable evidence. A source audit records game facts,
+source locations, uncertainties, discrepancies, and the final planner
+disposition. It must not become an implementation checklist or prescribe React
+layout, module names, commit sequencing, or temporary delivery mechanics.
+When the facts are not yet settled, finish or explicitly bound the audit before
+locking an implementation plan.
+
+Use a focused document under `docs/progress/` when a change is cross-lane,
+schema-affecting, lifecycle-sensitive, foundational, or large enough to need
+multiple reviewable gates. Ground it in the current code before locking it. A
+locked plan should state:
+
+- objective and user-visible outcome;
+- included and excluded scope;
+- source facts versus chosen planner simplifications;
+- exact authored, catalog, simulation, application, and UI ownership;
+- delivery gates and intended commit boundaries;
+- primary test owners, representative product witnesses, and audit-againsts;
+- deletion/retirement expectations and explicit non-goals.
+
+Challenge the plan adversarially before execution. Measure each gate against
+the problem it solves and remove speculative scaffolding, duplicated policy,
+and acceptance demands that require impossible or fabricated states. If the
+underlying model changes materially during discussion, rewrite the affected
+section cleanly rather than accumulating revision-scarring caveats.
+
+Temporary implementation plans are intentionally isolated:
+
+- do not add them to `README.md` or link them from stable design, biome, or
+  audit authorities;
+- do not make unrelated progress documents depend on them;
+- keep their status, base commit, locked decisions, gates, and verification
+  requirements self-contained;
+- commit a locked audit/plan before implementation when it is the execution
+  contract.
+
+At completion of the final slice, absorb institutional knowledge into the
+smallest stable owning documents under `docs/design/`, `docs/biomes/`, and
+`docs/audits/`; update the durable delivery record in `docs/progress/`; remove
+gate language from production comments; and delete the temporary plan in the
+same closure change. Update an audit's planner disposition without erasing
+source facts or documented source/model discrepancies. `README.md` should link
+only durable authorities and long-lived project trackers that remain useful
+after the delivery branch is gone.
+
+Run one complete repository gate at phase closure, after narrow implementation
+tests and review fixes are stable. Record the truthful result in the durable
+progress history. Do not repeatedly run the full suite merely to generate
+review evidence.
 
 ## Git
 

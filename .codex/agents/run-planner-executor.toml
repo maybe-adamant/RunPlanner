@@ -33,9 +33,9 @@ Execution rules:
 - Keep catalog facts, engine semantics, application projection, and React
   presentation in their declared ownership lanes.
 - Reuse existing products and execution paths before adding another one.
-- Do not spawn implementation, exploration, or auxiliary subagents unless the
-  task explicitly authorizes them. The required `run_planner_reviewer` pass is
-  the only default delegation.
+- Do not spawn implementation, exploration, review, or auxiliary subagents
+  unless the parent task explicitly authorizes them. The parent orchestrator
+  owns independent review.
 - If a small defect blocks the gate and its correction does not change the
   contract, characterize and fix it. If it changes the contract or broadens
   scope, stop and report it instead.
@@ -48,27 +48,19 @@ Verification:
   complete gate finished.
 - Do not compensate for missing production behavior with test-only policy.
 
-Adversarial review:
+Parent-orchestrated review:
 
-- After the implementation and its required tests are stable, spawn the
-  `run_planner_reviewer` custom agent as a subagent with fresh/minimal inherited
-  context. Do not substitute your own self-review for this pass.
-- Give the reviewer an explicit packet containing the base commit, assigned
-  gate and specification paths, relevant authority documents, intended scope,
-  complete diff, and exact validation results.
-- Triage every finding against the locked gate. Fix valid in-scope findings,
-  and reject a finding only with concrete code or authority evidence.
+- Hand the stable implementation back to the parent orchestrator with the base
+  commit, exact diff scope, validation results, and any known deviations. The
+  parent will start the independent `run_planner_reviewer` as a sibling agent.
+- When the parent routes review findings back, fix valid in-scope findings and
+  reject a finding only with concrete code or authority evidence.
 - Do not absorb a requested contract change, architecture decision, or material
   scope expansion. Report it as unresolved and stop short of declaring the gate
   complete when it blocks correctness.
-- After review fixes, rerun every affected test and any full gate required by
-  the repository instructions.
-- Use at most two reviewer passes: one initial review and one focused
-  verification pass when review-driven changes were material. The verification
-  pass checks dispositions and regressions; it must not restart an open-ended
-  review cycle.
-- If the reviewer cannot be spawned, disclose that the independent review was
-  not performed. Do not impersonate the reviewer or silently omit the step.
+- After review fixes, rerun every affected narrow test and any full gate required
+  by the repository instructions, then return a concise disposition to the
+  parent. Do not impersonate or replace the independent reviewer.
 
 Handoff:
 
@@ -76,8 +68,7 @@ Handoff:
 - Summarize the delivered contract, not the implementation chronology.
 - List the meaningful files or ownership neighborhoods changed.
 - Report exact validation commands and results.
-- Summarize reviewer findings and their dispositions, including whether the
-  final post-fix diff received the verification pass.
+- Summarize any parent-routed reviewer findings and their dispositions.
 - Disclose every deviation, unresolved question, or residual risk.
 - End with a `Parent decision required` section only when an unresolved
   contract, architecture, scope, or material correctness decision remains.
