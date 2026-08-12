@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
+import { createTestArcanaFearState } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
@@ -158,7 +159,7 @@ describe('Shop trait acquisition processing', () => {
         new Set(),
       );
     const traitHistory = pomTargetHistory();
-    const seeded = initializeRewardBranches().map((branch) =>
+    const seeded = initializeRewardBranches(undefined, createTestArcanaFearState()).map((branch) =>
       Object.freeze({
         ...branch,
         history: attachTraitHistory(branch.history, traitHistory),
@@ -378,14 +379,16 @@ describe('Shop trait acquisition processing', () => {
         history,
         new Set(),
       );
-    const seeded = initializeRewardBranches().map((branch) => {
-      const traitHistory = pomTargetHistory();
-      return Object.freeze({
-        ...branch,
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
-      });
-    });
+    const seeded = initializeRewardBranches(undefined, createTestArcanaFearState()).map(
+      (branch) => {
+        const traitHistory = pomTargetHistory();
+        return Object.freeze({
+          ...branch,
+          history: attachTraitHistory(branch.history, traitHistory),
+          traitHistory,
+        });
+      },
+    );
     const inventory = processShopInventory(
       seeded,
       {
@@ -546,14 +549,16 @@ describe('Shop trait acquisition processing', () => {
           history,
           new Set(),
         );
-      const seeded = initializeRewardBranches().map((branch) => {
-        const traitHistory = pomTargetHistory();
-        return Object.freeze({
-          ...branch,
-          history: attachTraitHistory(branch.history, traitHistory),
-          traitHistory,
-        });
-      });
+      const seeded = initializeRewardBranches(undefined, createTestArcanaFearState()).map(
+        (branch) => {
+          const traitHistory = pomTargetHistory();
+          return Object.freeze({
+            ...branch,
+            history: attachTraitHistory(branch.history, traitHistory),
+            traitHistory,
+          });
+        },
+      );
       const inventory = processShopInventory(
         seeded,
         {
@@ -701,7 +706,7 @@ describe('Shop trait acquisition processing', () => {
       factsWithHistory(baseFacts(), history, new Set());
     const inventoryFindings = new Map();
     const inventory = processShopInventory(
-      initializeRewardBranches(),
+      initializeRewardBranches(undefined, createTestArcanaFearState()),
       {
         catalog,
         room: canonical,

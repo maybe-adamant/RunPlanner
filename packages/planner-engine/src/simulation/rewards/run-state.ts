@@ -71,6 +71,7 @@ export interface DecisionRunStateSnapshot {
   readonly godPool: DecisionGodPoolState;
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
+  readonly arcanaFear: RewardBranchState['arcanaFear'];
   readonly bags: readonly DecisionRewardBagState[];
 }
 
@@ -305,6 +306,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
       godPool: sourcePool(context.catalog, facts),
       traits: traitState(branch.traitHistory),
       counters: historyCounters(context.historyView, branch.history, context.enteredBiomeCount),
+      arcanaFear: branch.arcanaFear,
     });
   });
   const first = branchStates[0];
@@ -323,6 +325,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
     godPool: first.godPool,
     traits: first.traits,
     counters: first.counters,
+    arcanaFear: first.arcanaFear,
     bags: Object.freeze(
       context.catalog.rewards.stores.values.map((store) =>
         aggregateDecisionRewardBag(store, context.branches, factsByBranch),

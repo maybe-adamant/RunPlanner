@@ -35,7 +35,11 @@ import type {
   TraitRarity,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import type {
+  ArcanaActivationOrigin,
+  CanonicalBatch,
+  ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import type { LevelResolutionCandidateProjection } from '../candidateProjection';
 
 import type {
@@ -1105,11 +1109,30 @@ export type WorkspaceRunStateLauncher =
     };
 
 export interface WorkspaceRunStatePresentation {
+  readonly arcana: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly origin: ArcanaActivationOrigin;
+    readonly rarity: TraitRarity;
+  }[];
   readonly bags: readonly WorkspaceRunStateBagPresentation[];
   readonly counters: readonly { readonly key: string; readonly value: number }[];
   readonly elements: readonly { readonly key: string; readonly value: number }[];
   readonly godPool: {
     readonly inPool: readonly WorkspaceRunStateSource[];
+  };
+  readonly fear: {
+    readonly configuredTotal: number;
+    readonly active: readonly {
+      readonly key: string;
+      readonly label: string;
+      readonly rank: number;
+    }[];
+    readonly disabled: readonly {
+      readonly key: string;
+      readonly label: string;
+      readonly rank: number;
+    }[];
   };
   readonly traits: {
     readonly activeMinimumScalableRarity?: TraitRarity;

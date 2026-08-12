@@ -6,6 +6,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createRouteAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -21,6 +22,7 @@ import {
   oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
+import { createTestArcanaFearState } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
 import { aggregateDecisionRewardBag, createRunState } from '../../src/simulation/rewards/run-state';
@@ -255,7 +257,19 @@ describe('decision run-state snapshots', () => {
 
   it('publishes complete-invalid snapshots only through progressive coverage', () => {
     const biomeAddress = createBiomeAddress('Underworld', 'F');
-    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    const route = createRouteAddress('Underworld');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route,
+      arcanaKeys: ['ChanneledCast'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route,
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biomeAddress, goldenFOccurrenceId(1, 1)),
       value: {
@@ -279,6 +293,13 @@ describe('decision run-state snapshots', () => {
     });
     expect('snapshot' in biome).toBe(false);
     expect(biome.rewards.runStateSnapshots).toHaveLength(1);
+    expect(biome.rewards.runStateSnapshots[0]?.arcanaFear.arcana.active).toContainEqual(
+      expect.objectContaining({ key: 'ChanneledCast', origin: 'manual', rarity: 'Epic' }),
+    );
+    expect(biome.rewards.runStateSnapshots[0]?.arcanaFear.fear).toMatchObject({
+      configuredTotal: 3,
+      effectiveRanks: { EnemyDamageShrineUpgrade: 2 },
+    });
     expect(biome.rewards.runStateAvailability).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ availability: 'available' }),
@@ -299,6 +320,46 @@ describe('decision run-state snapshots', () => {
         reason: 'coverageNotReached',
       }),
     );
+  });
+
+  it('seeds Arcana/Fear at F, retains it in public branches and G, and snapshots the exact pre-decision state', () => {
+    const route = createRouteAddress('Underworld');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route,
+      arcanaKeys: ['ChanneledCast'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route,
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank: 2,
+    });
+    const evaluation = simulateProject(catalog, project).routes.find(
+      (entry) => entry.routeKey === 'Underworld',
+    );
+    const f = evaluation?.biomes.find((biome) => biome.biomeKey === 'F');
+    const g = evaluation?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (
+      f?.authoring !== 'complete' ||
+      g?.authoring !== 'complete' ||
+      f.validity !== 'valid' ||
+      g.validity !== 'valid'
+    )
+      throw new Error('expected valid FG route');
+    const expected = f.rewards.branches[0]?.arcanaFear;
+    const fSnapshot = f.rewards.runStateSnapshots[0];
+    const gSnapshot = g.rewards.runStateSnapshots[0];
+    expect(expected).toBeDefined();
+    expect(fSnapshot?.arcanaFear).toEqual(expected);
+    expect(gSnapshot?.arcanaFear).toEqual(expected);
+    expect(expected?.arcana.active).toContainEqual(
+      expect.objectContaining({ key: 'ChanneledCast', origin: 'manual', rarity: 'Epic' }),
+    );
+    expect(expected?.fear).toMatchObject({
+      configuredTotal: 3,
+      effectiveRanks: { EnemyDamageShrineUpgrade: 2 },
+    });
   });
 
   it('publishes encounter-blocked decision availability through the canonical frontier', () => {
@@ -395,7 +456,10 @@ describe('decision run-state snapshots', () => {
         ZeusUpgrade: 1,
       }),
     });
-    const branch = Object.freeze({ ...initializeRewardBranches()[0]!, history });
+    const branch = Object.freeze({
+      ...initializeRewardBranches(undefined, createTestArcanaFearState())[0]!,
+      history,
+    });
     const snapshot = createRunState({
       catalog,
       owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
@@ -479,7 +543,7 @@ describe('decision run-state snapshots', () => {
       }),
     );
     const branch = Object.freeze({
-      ...initializeRewardBranches()[0]!,
+      ...initializeRewardBranches(undefined, createTestArcanaFearState())[0]!,
       history: attachTraitHistory(createRewardHistoryState(), traits),
       traitHistory: traits,
     });
