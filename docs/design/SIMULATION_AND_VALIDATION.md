@@ -1001,6 +1001,22 @@ lifecycle at a specific point.
 `Shop profile`
 : Shop option domain; it is not a counted reward bag.
 
+`Settlement site`
+: One reached instance of a declaration-owned acquisition point, addressed by
+its exact occurrence or local owner and point key.
+
+`Acquisition entry`
+: One atomic concrete acquisition at a settlement site. It retains the
+producer-owned source and may own acquisition-time trait or level detail.
+
+Canonical simulation settles all current acquisition families through that
+one product. Ordinary room, Devotion, O wheel, H cage, and entered N main/side
+rewards have derived mandatory participation. Shop offers and declaration-
+produced pickups participate and run in their one authored site order. Each
+entry receives the branches produced by its predecessor, so legality and
+effects are progressive within the site; the simulator never searches another
+ordering to rescue an invalid authored sequence.
+
 For an entered shop, evaluate ordered groups against the pre-generation fact
 snapshot, validate every authored offer against an eligible option entry, and
 enforce each group's `offerCount` without replacement. Positive weights do not
@@ -1032,6 +1048,13 @@ level-resolution capabilities immediately; without a selected continuation,
 that history has no later room to evaluate yet. Unpurchased offer children
 remain dormant. Consequently a purchased Pom can be repaired before the next
 room is authored without moving Shop purchases earlier in the game lifecycle.
+
+A selected Narcissus descriptor that produces pickups materializes the exact
+`roomExit` entries declared by that descriptor. The current outgoing batch is
+generated first and remains unchanged. Participating pickups then fold in
+authored order, and their post-settlement history becomes visible to later
+rooms. An unselected descriptor, skipped pickup, or dormant pickup child emits
+no history, finding, trait, or level effect.
 
 For each generated batch:
 

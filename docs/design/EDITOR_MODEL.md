@@ -392,6 +392,13 @@ remains AcquisitionEntryAddress-owned when that is the semantic repair context.
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.
 
+A declaration-produced optional pickup uses the same Acquisitions workbench as
+a Shop purchase: membership and position come from the exact settlement-site
+order, while the pickup row owns any reward, trait, or Pom repair controls.
+The Story or other producer control owns only the source choice. React never
+derives produced items from a selected trait key and never nests acquisition
+children inside the producer's trait dialog.
+
 An I combat target renders its derived Goal marker instead of a reward editor
 when the current simulation resolves Goal. Its complete potential Tartarus
 reward remains dormant in authored state. When an upstream edit makes that

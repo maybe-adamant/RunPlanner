@@ -788,6 +788,20 @@ picked shop room enters           -> resolved shop offers become active
 purchased shop slot               -> purchase-time concrete acquisition(s)
 ```
 
+Every reached concrete acquisition is applied through one canonical settlement
+product. A settlement site is the exact lifecycle point inside its occurrence,
+local reward, wheel, Hub visit, or completion room. Each entry retains its
+producer-owned source, declaration-owned acquisition roles, participation, and
+chronological address. The reward kernel remains the sole authority that turns
+those roles into loot/use history, trait acquisition, and level effects.
+
+Mandatory ordinary entries use derived participation and chronology. Optional
+Shop purchases and spawned pickups use one authored site order, where presence
+is participation and position is chronology. Shop inventory continues to own
+the purchased offers; a spawned pickup instead owns its exact authored reward
+and acquisition-time children at the site. No producer owns a parallel
+purchase or pickup order.
+
 The lifecycle point is producer-specific. A normal room reward emits its
 concrete acquisition on pickup, a Devotion emits its chosen and spurned source
 at distinct points, and a purchased Blind Box first emits its box use and then
@@ -803,6 +817,13 @@ resolve zero concrete acquisitions, as for Story and Shop, or several at
 different points, as for Devotion. A shop exposes its resolved offers only on
 entry and advances exactly its purchased slots through purchase-time
 acquisition.
+
+Narcissus demonstrates the producer/acquisition distinction. The selected
+fixed-Common descriptor may emit zero or more declaration-owned pickups at the
+Story room's post-outgoing `roomExit` site. The descriptor never enters
+equipped-trait history. A random Pom target or Mystery Boon offer belongs to
+the concrete produced pickup and is evaluated only when that entry participates
+in the site's exact order.
 
 Fixed and forced producers do not borrow requirements from a same-named
 counted bag entry. A forced Devotion is validated as a fixed Devotion producer,

@@ -10,7 +10,6 @@ import {
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
-  createLocalRewardAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
   createTraitOfferAddress,

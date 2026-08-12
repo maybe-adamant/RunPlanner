@@ -361,6 +361,35 @@ The incoming offer was resolved by the predecessor. Its concrete acquisition
 updates history before the outgoing batch is evaluated, so the next rooms and
 rewards observe it.
 
+The reward pickup is also represented by the canonical acquisition-settlement
+product for its exact producer point. Its participation and order are derived;
+the lifecycle does not persist or render a second control for an unavoidable
+singleton reward.
+
+### Narcissus Story Room
+
+```text
+prepareRoom
+enterRoom
+advanceProducer(beforeCombat)
+startEncounter(main)
+completeEncounter(main)
+advanceProducer(afterCombat)
+advanceProducer(roomRewardPickup)
+generateOutgoingBatch
+settleAcquisitionPoint(roomExit)
+commitRoom
+exitRoom
+```
+
+The selected Narcissus descriptor is resolved during the encounter-owned trait
+choice. It is not itself an equipped trait or concrete reward. Any declared
+pickups it produces settle at the occurrence-owned `roomExit` point after the
+outgoing batch is frozen. Their authored order therefore affects later route
+state without regenerating the current doors. A pickup owns its exact reward,
+trait offer, or level-resolution child; those children are not nested under
+the outer Narcissus option.
+
 ### Ephyra Opening
 
 ```text

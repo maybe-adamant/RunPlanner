@@ -3,11 +3,10 @@
 ## Status and scope
 
 **Complete for the game facts needed to canonicalize currently modeled reward
-acquisitions and correct Shop-backed settlement.** The archived Narcissus
-prototype remains useful evidence for the next consumer of this boundary, not
-current planner behavior. Shrine delivery, Well behavior, composite-room
-delivery additions, and other dropped-item families remain explicitly scoped
-future audits rather than blockers for the accompanying implementation plan.
+acquisitions, correct Shop-backed settlement, and model Narcissus pickups.**
+Schema 20 now delivers that boundary. Shrine delivery, Well behavior,
+composite-room delivery additions, Echo, and other dropped-item families remain
+explicitly scoped follow-up work rather than gaps in the current contract.
 
 This is a source-backed audit of the boundary between an action that produces
 an item and the later acquisition that changes run history. It was prompted by
@@ -15,9 +14,10 @@ Narcissus's dropped benefits, but the same boundary is also visible in World
 Shops, Wells of Charon, and Shrines of Hermes.
 
 The audit records game facts, the planner's current representations, and the
-smallest shared semantic pressure exposed by those facts. It does **not** lock
-an authored schema, TypeScript product, lifecycle-operation name, UI, Well
-pool, or implementation gate. Those belong in a later implementation plan.
+smallest shared semantic pressure exposed by those facts. It does **not** own
+the authored schema, TypeScript product, lifecycle-operation name, UI, or Well
+pool. Current product contracts live in the stable design documents; temporary
+delivery sequencing lives in isolated progress plans.
 
 The game evidence was checked on 2026-08-11 against the installed Hades II
 scripts. Primary sources are:
@@ -38,7 +38,10 @@ scripts. Primary sources are:
 - `RoomDataN.lua`, especially `BaseN_SubRooms`, its
   `IgnoreEncounterUses`, and its `SurfaceShopSpawnChance`;
 - `TraitData.lua` and `TraitLogic.lua`, especially
-  `StorePendingDeliveryItem` and its expiration action; and
+  `StorePendingDeliveryItem` and its expiration action;
+- `TraitData_Echo.lua`, `EventLogic.lua`, and `StoreLogic.lua`, especially
+  Echo's exact last-reward recreation, prior-run trait offer, and one-use World
+  Shop duplication paths; and
 - `EncounterSets.lua`, especially forced completion of pending Surface Shop
   items.
 
@@ -699,15 +702,43 @@ delivery room and without retaining an invented permanent parent link to its
 producer.
 
 The earlier Shop/Well audit deliberately postponed a shared interaction
-frontier until a second concrete consumer existed. Gate C has now extracted
-the narrower ordered-settlement seam for Shops, including bounded incomplete
-Midshop publication. Narcissus is the next consumer for **acquisition
-settlement**, but not for Well inventory, spawn, or purchase policy. The
-Well-specific interaction frontier remains part of the first Well
-implementation, which should extend the existing seam rather than introduce a
-parallel path.
+frontier until a second concrete consumer existed. Schema 20 now uses the same
+ordered-settlement seam for Shops, bounded incomplete Midshop publication, and
+Narcissus pickups. Narcissus is not a consumer of Well inventory, spawn, or
+purchase policy. The Well-specific interaction frontier remains part of the
+first Well implementation, which should extend the existing seam rather than
+introduce a parallel path.
 
-## Required invariants for a future implementation plan
+### Echo reassessment after current settlement delivery
+
+Echo confirms three distinct consumers of the delivered boundary rather than
+one generic trait-outcome mechanism:
+
+- Reward Reward Reward recreates the exact latest effective
+  `LastRewardEligible` source. A consumable becomes a required Echo-room pickup;
+  a loot source opens a fresh offer owned by that recreated acquisition. This
+  requires canonical history to retain the exact replayable source identity,
+  not merely the latest reward-history event. The recreated item settles before
+  Echo's exits become usable.
+- Boon Boon Boon directly equips one selected trait. It does not spawn a
+  pickup and therefore remains in trait-offer authority. Because the real game
+  reads the previous run's rarity cache, the planner may use an explicit
+  cross-provider authored approximation without manufacturing prior-run state.
+- Gold Gold Gold equips `EchoDoubleShop`, whose one remaining use is itself the
+  pending state. During later World Shop settlement, the first eligible
+  purchased entry recreates a mandatory acquisition immediately after itself
+  and consumes that equipped trait. `SpellDrop` is skipped without consuming
+  the use. A recreated loot source owns a fresh offer; a recreated consumable
+  owns its exact pickup behavior.
+
+Gold therefore extends one reached Shop site with a supplemental pickup; it
+does not justify a Shop-private duplicate order or a separate Echo pending map.
+The equipped-trait history must expose explicit one-use consumption so later
+shops no longer observe the effect. Once the duplicate materializes, its exact
+acquisition entry owns its child state and does not retain an invented permanent
+link to Echo.
+
+## Durable boundary invariants
 
 1. Selecting a direct equipped trait does not manufacture a scheduled pickup.
 2. Selecting a drop-producing benefit emits only its declared supported
@@ -756,13 +787,10 @@ parallel path.
     checkpoint order where chronology is observable and removes the superseded
     direct trait/Pom editor in the same vertical slice.
 
-## Explicit simplifications and unresolved facts
+## Explicit simplifications and remaining follow-up facts
 
-The following remain open for an implementation plan or focused follow-up
-probe:
+The following remain open for focused follow-up work:
 
-- the exact treatment of multiple spawned pickups when pickup order could
-  alter supported history;
 - the default insertion position when a newly purchased or picked-up item joins
   an existing authored settlement order;
 - the exact encounter countdown for every Shrine item, including rooms that
@@ -770,12 +798,11 @@ probe:
   completion rooms;
 - ordering when several pending Shrine items expire together;
 - temporary Well traits and their own use/expiry ledgers;
-- dropped-item families outside the planned Narcissus slice.
+- dropped-item families outside the current Narcissus slice.
 
-These gaps do not weaken the core conclusion: producer selection and concrete
-acquisition are already separate in the game. Gate C established the
-first-class ordered settlement seam for Shop `roomExit` acquisition. Extending
-that seam can replace the historical Narcissus prototype's nesting and enable
-faithful Shrine delivery later. It must preserve multiple lifecycle
-checkpoints; it must not move every acquisition to one universal end-of-room
-phase.
+These gaps do not weaken the delivered conclusion: producer selection and
+concrete acquisition are already separate in the game. The first-class ordered
+settlement seam now owns Shop `roomExit` acquisition and Narcissus pickups
+without the historical prototype's nesting. Later Shrine delivery must extend
+that seam while preserving multiple lifecycle checkpoints; it must not move
+every acquisition to one universal end-of-room phase.

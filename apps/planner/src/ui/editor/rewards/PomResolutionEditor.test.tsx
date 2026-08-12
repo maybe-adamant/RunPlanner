@@ -306,6 +306,42 @@ describe('Pom resolution editor', () => {
     expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: 'A' });
   });
 
+  it('reconciles its draft when the authoritative interaction changes', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const supportedInteraction = (targetTraitKey: string) =>
+      interaction({
+        value: { kind: 'random', targetTraitKey },
+        load: (value) =>
+          Object.freeze({
+            groups: Object.freeze([
+              group(
+                'branch-0',
+                'random',
+                [targetTraitKey],
+                value.kind === 'random' && value.targetTraitKey === targetTraitKey,
+              ),
+            ]),
+          }),
+      });
+    const view = render(
+      <PomResolutionEditor interaction={supportedInteraction('A')} onCommit={onCommit} />,
+    );
+    expect(await screen.findByText('Trait A')).not.toBeNull();
+
+    view.rerender(
+      <PomResolutionEditor interaction={supportedInteraction('B')} onCommit={onCommit} />,
+    );
+    expect(await screen.findByText('Trait B')).not.toBeNull();
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save Pom' }));
+    expect(onCommit).toHaveBeenLastCalledWith({ kind: 'random', targetTraitKey: 'B' });
+  });
+
   it('presents a supported empty random domain as a no-op without a picker', () => {
     const editorInteraction = interaction({
       value: { kind: 'random', targetTraitKey: null },
