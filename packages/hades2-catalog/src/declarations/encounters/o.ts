@@ -96,6 +96,7 @@ export const oEncounterDefinitions = [
     label: 'Circe story',
     kind: 'story',
     countsEncounterDepth: false,
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Circe' },
   },
   {
     key: 'DevotionTestO',

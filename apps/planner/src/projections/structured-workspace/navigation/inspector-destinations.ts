@@ -75,7 +75,10 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
     ...room.localDetailMarkers.map((marker) => marker.focusKey),
     ...room.rewardControls.flatMap((control) => [
       control.marker.focusKey,
-      ...(control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+      ...(control.traitOffers ?? []).flatMap((trait) => [
+        trait.marker.focusKey,
+        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker.focusKey]),
+      ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker.focusKey),
     ]),
   ];
@@ -98,7 +101,12 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
             ...(slot.generation === 'generated'
               ? [
                   slot.rewardControl.marker.focusKey,
-                  ...(slot.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+                  ...(slot.rewardControl.traitOffers ?? []).flatMap((trait) => [
+                    trait.marker.focusKey,
+                    ...(trait.circeResolution === undefined
+                      ? []
+                      : [trait.circeResolution.marker.focusKey]),
+                  ]),
                   ...(slot.rewardControl.levelResolutions ?? []).map(
                     (resolution) => resolution.marker.focusKey,
                   ),
@@ -118,7 +126,12 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
           wheel.marker.focusKey,
           ...wheel.offers.flatMap((offer) => [
             offer.control.marker.focusKey,
-            ...(offer.control.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+            ...(offer.control.traitOffers ?? []).flatMap((trait) => [
+              trait.marker.focusKey,
+              ...(trait.circeResolution === undefined
+                ? []
+                : [trait.circeResolution.marker.focusKey]),
+            ]),
             ...(offer.control.levelResolutions ?? []).map(
               (resolution) => resolution.marker.focusKey,
             ),
@@ -131,7 +144,10 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
         ...room.roomLocal.offers.flatMap((offer) => [
           offer.purchase.marker.focusKey,
           offer.rewardControl.marker.focusKey,
-          ...(offer.rewardControl.traitOffers ?? []).map((trait) => trait.marker.focusKey),
+          ...(offer.rewardControl.traitOffers ?? []).flatMap((trait) => [
+            trait.marker.focusKey,
+            ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker.focusKey]),
+          ]),
           ...(offer.rewardControl.levelResolutions ?? []).map(
             (resolution) => resolution.marker.focusKey,
           ),

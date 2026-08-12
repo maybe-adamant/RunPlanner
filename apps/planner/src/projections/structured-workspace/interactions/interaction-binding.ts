@@ -1,5 +1,6 @@
 import {
   createOccurrenceAddress,
+  createCirceResolutionAddress,
   optionIndex,
   semanticAddressKey,
   type OccurrenceId,
@@ -12,6 +13,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
+  AuthoredCirceResolution,
   AuthoredTraitOffer,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
@@ -1596,9 +1598,78 @@ export function bindWorkspaceInteractions(
         option !== undefined &&
         value.selectedOptionKey === optionKey &&
         declaration?.targetedAcquisition !== undefined;
+      const circeControl =
+        value.selectedOptionKey === optionKey && declaration?.selectedDisposition.kind === 'circe'
+          ? Object.freeze({
+              // The draft selection owns this exact child even before a save
+              // republishes workspace controls. Retain the persisted marker
+              // only as presentation fallback; the semantic address is exact.
+              address: createCirceResolutionAddress(control.address, optionKey),
+              marker: control.circeResolution?.marker ?? control.marker,
+              optionKey,
+              ...(option?.circeResolution === undefined ? {} : { value: option.circeResolution }),
+            })
+          : undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
         hasTargetPicker,
+        ...(circeControl === undefined
+          ? {}
+          : {
+              circeResolution: Object.freeze({
+                control: circeControl,
+                intentFor: (offer: AuthoredTraitOffer, resolution: AuthoredCirceResolution) => {
+                  const index = optionIndex(optionKey);
+                  const existing = offer.options[index];
+                  if (existing === undefined)
+                    throw new StructuredWorkspaceProjectionContractError(
+                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
+                    );
+                  const options = [...offer.options];
+                  options[index] = Object.freeze({ ...existing, circeResolution: resolution });
+                  return traitOfferIntentFor(
+                    control.address,
+                    Object.freeze({
+                      ...offer,
+                      options: Object.freeze(options) as AuthoredTraitOffer['options'],
+                    }),
+                  );
+                },
+                forOffer: (offer: AuthoredTraitOffer) =>
+                  Object.freeze({
+                    load: () => {
+                      const evaluated = candidates.circeResolution(
+                        control.address,
+                        offer,
+                        optionKey,
+                      );
+                      if (evaluated.kind !== 'circeResolutionDomain') return undefined;
+                      const result = evaluated.result;
+                      return Object.freeze({
+                        arcanaChoices: Object.freeze(
+                          result.arcanaKeys.map((key) =>
+                            Object.freeze({
+                              label: catalog.arcanaCards.byKey[key]?.label ?? key,
+                              value: key,
+                            }),
+                          ),
+                        ),
+                        effect: result.effect,
+                        outerAvailable: result.outerAvailable,
+                        requiredCount: result.requiredCount,
+                        vowChoices: Object.freeze(
+                          result.vowKeys.map((key) =>
+                            Object.freeze({
+                              label: catalog.fearVows.byKey[key]?.label ?? key,
+                              value: key,
+                            }),
+                          ),
+                        ),
+                      });
+                    },
+                  }),
+              }),
+            }),
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(

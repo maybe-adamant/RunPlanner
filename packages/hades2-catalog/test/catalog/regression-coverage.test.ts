@@ -153,7 +153,7 @@ const normalizedBiomeSnapshotHashes = [
   ['H', '88d4249b41a1d25c'],
   ['I', '3d4eb212fe89cca1'],
   ['N', '8f9eb49a1d7aa929'],
-  ['O', 'ec146b727e1458d4'],
+  ['O', '0110c42145ae48bc'],
   ['P', '095719a9b3955bc1'],
   ['Q', 'b38143a2c27dac6e'],
 ] as const;

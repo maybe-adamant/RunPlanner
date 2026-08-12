@@ -9,11 +9,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
+import type { AuthoredCirceResolution } from '@run-planner/engine/authored-project';
 import { projectTraitOfferFeedback } from '@planner/projections/traitProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
+  type WorkspaceCirceResolutionDomain,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -79,6 +81,112 @@ function replaceOption(
   });
 }
 
+function CirceResolutionEditor({
+  domain,
+  option,
+  onSelect,
+}: {
+  readonly domain: NonNullable<
+    ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>['circeResolution']
+  > extends infer Interaction
+    ? Interaction extends {
+        readonly forOffer: (offer: AuthoredTraitOffer) => { readonly load: () => infer Domain };
+      }
+      ? Exclude<Domain, undefined>
+      : never
+    : never;
+  readonly option: AuthoredTraitOffer['options'][number];
+  readonly onSelect: (resolution: AuthoredCirceResolution) => void;
+}) {
+  const current = option.circeResolution;
+  if (!domain.outerAvailable) {
+    return <p className="feedback-text">This Circe trait has no available outcome here.</p>;
+  }
+  if (domain.effect === 'disableFear') {
+    return (
+      <label className="trait-circe-resolution">
+        Black Night Vow
+        <select
+          aria-label="Black Night Vow"
+          onChange={(event) =>
+            onSelect(
+              Object.freeze({
+                kind: 'disableFear',
+                vowKey: event.target.value === '' ? null : event.target.value,
+              }),
+            )
+          }
+          value={current?.kind === 'disableFear' ? (current.vowKey ?? '') : ''}
+        >
+          <option value="">Choose a Vow</option>
+          {domain.vowChoices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+  const selected =
+    current?.kind === domain.effect ? current.arcanaKeys : (Object.freeze([]) as readonly string[]);
+  if (domain.effect === 'activateArcana') {
+    return (
+      <label className="trait-circe-resolution">
+        Red Citrine Arcana
+        <select
+          aria-label="Red Citrine Arcana"
+          onChange={(event) =>
+            onSelect(
+              Object.freeze({
+                kind: 'activateArcana',
+                arcanaKeys:
+                  event.target.value === ''
+                    ? Object.freeze([])
+                    : Object.freeze([event.target.value]),
+              }),
+            )
+          }
+          value={selected[0] ?? ''}
+        >
+          <option value="">
+            {domain.requiredCount === 0 ? 'No activation available' : 'Choose Arcana'}
+          </option>
+          {domain.arcanaChoices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+  return (
+    <fieldset className="trait-circe-resolution">
+      <legend>Lapis Arcana ({domain.requiredCount})</legend>
+      {domain.arcanaChoices.map((choice) => {
+        const checked = selected.includes(choice.value);
+        return (
+          <label key={choice.value}>
+            <input
+              checked={checked}
+              disabled={!checked && selected.length >= domain.requiredCount}
+              onChange={() => {
+                const next = checked
+                  ? selected.filter((key) => key !== choice.value)
+                  : [...selected, choice.value];
+                onSelect(Object.freeze({ kind: 'promoteArcana', arcanaKeys: Object.freeze(next) }));
+              }}
+              type="checkbox"
+            />
+            {choice.label}
+          </label>
+        );
+      })}
+    </fieldset>
+  );
+}
+
 function TraitOfferOptionEditor({
   index,
   interaction,
@@ -117,6 +225,16 @@ function TraitOfferOptionEditor({
   const selectTarget = (targetTraitKey: string): void => {
     onUpdate(replaceOption(value, index, { ...option, targetTraitKey }));
   };
+  const circe = loadable.circeResolution;
+  const circeLoadable = useMemo(() => circe?.forOffer(value), [circe, value]);
+  const circeController = useWorkspaceInteractionController<
+    WorkspaceCirceResolutionDomain | undefined
+  >();
+  const circeLoaded = circeController.observe(circeLoadable);
+  useEffect(() => {
+    if (circeLoadable !== undefined) circeController.activate(circeLoadable);
+  }, [circeController, circeLoadable]);
+  const circeDomain = circeLoaded.result;
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -163,6 +281,15 @@ function TraitOfferOptionEditor({
           {...(option.targetTraitKey === undefined
             ? {}
             : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
+        />
+      )}
+      {circe === undefined || circeDomain === undefined ? null : (
+        <CirceResolutionEditor
+          domain={circeDomain}
+          option={option}
+          onSelect={(resolution) =>
+            onUpdate(replaceOption(value, index, { ...option, circeResolution: resolution }))
+          }
         />
       )}
       <label className="trait-option-selected">

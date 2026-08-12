@@ -43,8 +43,13 @@ const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
-const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'deathDefianceConditionMet'] as const;
-const SELECTED_DISPOSITIONS = ['equip', 'producePickups', 'noOp'] as const;
+const CONTEXTS = [
+  'devotionNoDuo',
+  'blockGiftBoons',
+  'deathDefianceConditionMet',
+  'circeRemovableFearVow',
+] as const;
+const SELECTED_DISPOSITIONS = ['equip', 'producePickups', 'noOp', 'circe'] as const;
 type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
@@ -78,8 +83,20 @@ function normalizeSelectedDisposition(
     readonly kind?: unknown;
     readonly producerLifecycleKey?: unknown;
     readonly pickups?: unknown;
+    readonly effect?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'circe') {
+    if (Object.keys(value).length !== 2) fail(path, 'circe requires only kind and effect');
+    return Object.freeze({
+      kind,
+      effect: closedValue(
+        value.effect,
+        ['activateArcana', 'promoteArcana', 'disableFear'] as const,
+        `${path}.effect`,
+      ),
+    });
+  }
   if (kind !== 'producePickups') {
     if (Object.keys(value).length !== 1) fail(path, 'must contain only kind');
     return Object.freeze({ kind });
@@ -195,6 +212,11 @@ function normalizeRequirement(
           typeof requirement.required === 'boolean'
             ? requirement.required
             : fail(`${path}.required`, 'must be boolean'),
+      });
+    case 'manualArcanaGraspCost':
+      return Object.freeze({
+        kind: 'manualArcanaGraspCost',
+        minimum: requirePositiveInteger(requirement.minimum, `${path}.minimum`),
       });
     default:
       fail(`${path}.kind`, `unknown requirement kind ${String(requirement.kind)}`);
@@ -912,6 +934,12 @@ function normalizeContexts(
         context.authoredCondition !== 'deathDefianceConditionMet')
     )
       fail(path, 'must be an authored condition context');
+    if (
+      key === 'circeRemovableFearVow' &&
+      (context.kind !== 'authoredCondition' ||
+        context.authoredCondition !== 'circeRemovableFearVow')
+    )
+      fail(path, 'must be the Circe removable-Fear context');
     return Object.freeze({
       key,
       kind: context.kind,

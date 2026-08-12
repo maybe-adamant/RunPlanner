@@ -259,6 +259,22 @@ const findingCopy = {
     title: 'Judgment target is unavailable',
     description: 'Choose distinct Arcana cards that were inactive before this Boss completed.',
   },
+  circeResolutionMissing: {
+    title: 'Choose the Circe outcome',
+    description: 'Record the exact Arcana or Vow outcome for the selected Circe trait.',
+  },
+  circeResolutionWrongCardinality: {
+    title: 'Circe outcome count is incorrect',
+    description: 'Choose the complete number of targets for this Circe trait.',
+  },
+  circeResolutionTargetUnavailable: {
+    title: 'Circe target is unavailable',
+    description: 'Choose a target available before this Circe acquisition.',
+  },
+  circeOptionUnavailable: {
+    title: 'Circe trait is unavailable',
+    description: 'This Circe trait has no removable configured Vow at this point.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -531,6 +547,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Acquisition`;
     case 'traitOffer':
       return `${biomeLabel} · Trait offer`;
+    case 'circeResolution':
+      return `${biomeLabel} · Circe outcome`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
     case 'completionRoom':

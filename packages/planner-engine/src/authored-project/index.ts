@@ -37,6 +37,7 @@ export {
   createRouteAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
+  createCirceResolutionAddress,
   createLevelResolutionAddress,
   createTargetAddress,
   createHubDecisionAddress,
@@ -72,6 +73,7 @@ export {
   type SemanticAddress,
   type ShopOfferAddress,
   type TraitOfferAddress,
+  type CirceResolutionAddress,
   type LevelResolutionAddress,
   type TraitOfferOwnerAddress,
   type TargetAddress,
@@ -86,6 +88,7 @@ export {
   type AuthoredTraitOffer,
   type AuthoredLevelResolution,
   type AuthoredTraitOption,
+  type AuthoredCirceResolution,
   type EquippedTrait,
   type TraitOptionKey,
 } from './traits';

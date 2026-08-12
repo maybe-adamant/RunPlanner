@@ -207,6 +207,8 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'traitOffer':
     case 'levelResolution':
       return rewardOwnerAddress(address.owner);
+    case 'circeResolution':
+      return rewardOwnerAddress(address.trait);
     default:
       return undefined;
   }
@@ -221,8 +223,14 @@ function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | u
   // remains available for repairing the authored order.
   if (address.kind === 'acquisitionEntry') return occurrenceOwnerAddress(address.site);
   if (address.kind === 'acquisitionSite') return occurrenceOwnerAddress(address.owner);
-  if (address.kind === 'traitOffer' || address.kind === 'levelResolution')
-    return occurrenceOwnerAddress(address.owner);
+  if (
+    address.kind === 'traitOffer' ||
+    address.kind === 'levelResolution' ||
+    address.kind === 'circeResolution'
+  )
+    return occurrenceOwnerAddress(
+      address.kind === 'circeResolution' ? address.trait : address.owner,
+    );
   if (address.kind === 'encounterPhase' && address.owner.kind === 'occurrence') {
     return createOccurrenceAddress(
       createBiomeAddress(address.routeKey, address.biomeKey),
@@ -410,7 +418,11 @@ function retainBlockedRegionProducts(
   frontierSettlementOwner: OccurrenceAddress | undefined,
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
   const blockedTraitAt: TraitOfferAddress | undefined =
-    blockedAt.kind === 'traitOffer' ? blockedAt : undefined;
+    blockedAt.kind === 'traitOffer'
+      ? blockedAt
+      : blockedAt.kind === 'circeResolution'
+        ? blockedAt.trait
+        : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
@@ -722,6 +734,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   while (
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
+    origin.kind === 'circeResolution' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -730,7 +743,9 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
         ? origin.site
         : origin.kind === 'acquisitionSite'
           ? origin.owner
-          : origin.owner;
+          : origin.kind === 'circeResolution'
+            ? origin.trait
+            : origin.owner;
   }
   return origin;
 }
@@ -739,6 +754,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
   if (
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
+    origin.kind === 'circeResolution' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
@@ -747,7 +763,9 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
         ? origin.site
         : origin.kind === 'acquisitionSite'
           ? origin.owner
-          : origin.owner,
+          : origin.kind === 'circeResolution'
+            ? origin.trait
+            : origin.owner,
       occurrenceId,
     );
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;

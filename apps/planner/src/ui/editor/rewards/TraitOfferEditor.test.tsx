@@ -5,7 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyProjectCommand, type AuthoredTraitOffer } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createCirceResolutionAddress,
+  type AuthoredTraitOffer,
+} from '@run-planner/engine/authored-project';
 
 import {
   createApplication,
@@ -23,6 +27,110 @@ import { createGoldenFGHIProject, createRepresentativeNProject } from '@run-plan
 afterEach(cleanup);
 
 describe('trait offer editor', () => {
+  it.each([
+    ['activateArcana', 'Red Citrine Arcana', 'The Sorceress'],
+    ['promoteArcana', 'Lapis Arcana (2)', 'The Sorceress'],
+    ['disableFear', 'Black Night Vow', 'Vow of Rivals'],
+  ] as const)(
+    'renders and atomically retains the selected Circe %s resolution only',
+    async (effect, label, choiceLabel) => {
+      const application = createApplication();
+      application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+      const workspace = application.selectStructuredWorkspace(application.store.getState());
+      const base = [...workspace.interactions.traitOffers.values()].find(
+        (candidate) => candidate.giver.providerKind !== 'hammer',
+      );
+      if (base === undefined) throw new Error('trait offer interaction is missing');
+      const control = Object.freeze({
+        address: createCirceResolutionAddress(base.owner, 'option1'),
+        marker: Object.freeze({
+          address: createCirceResolutionAddress(base.owner, 'option1'),
+          assessment: 'assessed' as const,
+          findingCount: 0,
+          focusKey: 'test-circe-resolution',
+        }),
+        optionKey: 'option1' as const,
+      });
+      const domain = Object.freeze({
+        arcanaChoices: Object.freeze([
+          Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
+          Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
+        ]),
+        effect,
+        outerAvailable: true,
+        requiredCount: effect === 'promoteArcana' ? 2 : 1,
+        vowChoices: Object.freeze([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
+      });
+      const interaction = Object.freeze({
+        ...base,
+        optionDomain: (
+          value: AuthoredTraitOffer,
+          optionKey: AuthoredTraitOffer['selectedOptionKey'],
+        ) =>
+          Object.freeze({
+            hasTargetPicker: false,
+            load: () =>
+              Object.freeze({
+                candidates: Object.freeze([]),
+                preferredOptionFor: () => undefined,
+                rarityPickerFor: () => undefined,
+                traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+              }),
+            ...(value.selectedOptionKey !== optionKey
+              ? {}
+              : {
+                  circeResolution: Object.freeze({
+                    control,
+                    intentFor: () => base.intentFor(value),
+                    forOffer: () => Object.freeze({ load: () => domain }),
+                  }),
+                }),
+          }),
+      });
+      const interactions = Object.freeze({
+        ...workspace.interactions,
+        traitOffers: new Map([[interaction.key, interaction]]),
+      });
+      const commit = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <Provider store={application.store}>
+          <TraitOfferEditor
+            address={interaction.owner}
+            interactions={interactions}
+            onCommit={commit}
+          />
+        </Provider>,
+      );
+
+      expect(screen.getByText(label)).toBeTruthy();
+      expect(screen.queryAllByText(label)).toHaveLength(1);
+      if (effect === 'disableFear') {
+        await user.selectOptions(screen.getByLabelText(label), 'VowRivals');
+      } else if (effect === 'activateArcana') {
+        await user.selectOptions(screen.getByLabelText(label), 'ArcanaSorceress');
+      } else {
+        await user.click(screen.getByLabelText('The Sorceress'));
+        await user.click(screen.getByLabelText('The Titan'));
+      }
+      await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+      const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOffer;
+      const resolution = saved.options[0]?.circeResolution;
+      expect(resolution).toBeDefined();
+      if (effect === 'disableFear') {
+        expect(resolution).toEqual({ kind: 'disableFear', vowKey: 'VowRivals' });
+      } else {
+        expect(resolution).toEqual(
+          effect === 'activateArcana'
+            ? { kind: 'activateArcana', arcanaKeys: ['ArcanaSorceress'] }
+            : { kind: 'promoteArcana', arcanaKeys: ['ArcanaSorceress', 'ArcanaTitan'] },
+        );
+      }
+      expect(choiceLabel).toBeTruthy();
+      application.dispose();
+    },
+  );
+
   it('does not evaluate trait eligibility during render', () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({

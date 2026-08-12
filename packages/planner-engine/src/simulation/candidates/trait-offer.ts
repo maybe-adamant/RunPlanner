@@ -63,6 +63,26 @@ export interface TraitAcquisitionTargetDomainQuery {
   readonly retainedTargetTraitKey?: string;
 }
 
+/** One selected Circe option's atomic exact-outcome frontier. */
+export interface CirceResolutionDomainQuery {
+  readonly kind: 'circeResolutionDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+}
+export interface EvaluatedCirceResolutionDomain {
+  readonly kind: 'circeResolutionDomain';
+  readonly result: {
+    readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+    readonly requiredCount: number;
+    readonly arcanaKeys: readonly string[];
+    readonly vowKeys: readonly string[];
+    readonly outerAvailable: boolean;
+  };
+}
+export type CirceResolutionDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedCirceResolutionDomain;
+
 export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly kind: 'traitAcquisitionTarget';
   readonly result: {
@@ -458,4 +478,32 @@ export function evaluateTraitAcquisitionTargetDomain(
       ),
     }),
   });
+}
+
+export function evaluateCirceResolutionDomain(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: CirceResolutionDomainQuery,
+): CirceResolutionDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const values = capability.circeResolution(query.value, query.optionKey);
+  const first = values[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  // A complete authored outcome must be legal at every surviving simulation
+  // branch. Never let presentation inherit one arbitrary branch's frontier.
+  const equivalent = values.every(
+    (value) =>
+      value.effect === first.effect &&
+      value.requiredCount === first.requiredCount &&
+      value.outerAvailable === first.outerAvailable &&
+      value.arcanaKeys.length === first.arcanaKeys.length &&
+      value.arcanaKeys.every((key, index) => key === first.arcanaKeys[index]) &&
+      value.vowKeys.length === first.vowKeys.length &&
+      value.vowKeys.every((key, index) => key === first.vowKeys[index]),
+  );
+  if (!equivalent) return unavailableForTraitOffer(evaluation, query.trait);
+  return Object.freeze({ kind: 'circeResolutionDomain', result: first });
 }

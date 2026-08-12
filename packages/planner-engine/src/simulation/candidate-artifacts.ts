@@ -61,6 +61,17 @@ export interface TraitOfferCandidateCapability {
     readonly sourceSupported: boolean;
     readonly targetTraitKeys: readonly string[];
   }[];
+  /** Exact selected-Circe pre-effect domains; no consumer receives Arcana/Fear state. */
+  readonly circeResolution: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => readonly {
+    readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+    readonly requiredCount: number;
+    readonly arcanaKeys: readonly string[];
+    readonly vowKeys: readonly string[];
+    readonly outerAvailable: boolean;
+  }[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -300,6 +311,75 @@ export function createTraitOfferCandidateArtifacts(
                   context.before,
                 ),
               });
+            }),
+          ),
+        circeResolution: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+          Object.freeze(
+            branchContexts.flatMap<{
+              readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+              readonly requiredCount: number;
+              readonly arcanaKeys: readonly string[];
+              readonly vowKeys: readonly string[];
+              readonly outerAvailable: boolean;
+            }>((context) => {
+              const option = value.options[optionIndex(optionKey)];
+              const effect =
+                option === undefined
+                  ? undefined
+                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
+              const active = context.arcanaFear.arcana.active;
+              if (effect.effect === 'activateArcana') {
+                const keys = catalog.arcanaCards.values
+                  .filter((card) => !active.some((entry) => entry.key === card.key))
+                  .map((card) => card.key);
+                return [
+                  Object.freeze({
+                    effect: effect.effect,
+                    requiredCount: keys.length === 0 ? 0 : 1,
+                    arcanaKeys: Object.freeze(keys),
+                    vowKeys: Object.freeze([]),
+                    outerAvailable: true,
+                  }),
+                ];
+              }
+              if (effect.effect === 'promoteArcana') {
+                const keys = active
+                  .filter((entry) => entry.rarity === 'Epic')
+                  .map((entry) => entry.key);
+                return [
+                  Object.freeze({
+                    effect: effect.effect,
+                    requiredCount: Math.min(2, keys.length),
+                    arcanaKeys: Object.freeze(keys),
+                    vowKeys: Object.freeze([]),
+                    outerAvailable:
+                      active
+                        .filter((entry) => entry.origin === 'manual')
+                        .reduce(
+                          (total, entry) =>
+                            total + (catalog.arcanaCards.byKey[entry.key]?.graspCost ?? 0),
+                          0,
+                        ) > 0,
+                  }),
+                ];
+              }
+              const keys = catalog.fearVows.values
+                .filter(
+                  (vow) =>
+                    vow.circeRemovable &&
+                    (context.arcanaFear!.fear.effectiveRanks[vow.key] ?? 0) > 0,
+                )
+                .map((vow) => vow.key);
+              return [
+                Object.freeze({
+                  effect: effect.effect,
+                  requiredCount: 1,
+                  arcanaKeys: Object.freeze([]),
+                  vowKeys: Object.freeze(keys),
+                  outerAvailable: keys.length > 0,
+                }),
+              ];
             }),
           ),
       });

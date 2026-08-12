@@ -54,6 +54,7 @@ export type {
   WorkspaceRailSelectedTarget,
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
+  WorkspaceCirceResolutionDomain,
   WorkspaceLevelResolutionControl,
   WorkspaceTraitOfferInteraction,
   WorkspaceLevelResolutionInteraction,

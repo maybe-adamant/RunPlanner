@@ -6,7 +6,7 @@ import type {
   EncounterSlotBinding,
   RoomDeclaration,
 } from '../../catalog-schema';
-import type { AuthoredTraitOffer, AuthoredTraitOption } from '../traits';
+import type { AuthoredTraitOffer, AuthoredTraitOption, AuthoredCirceResolution } from '../traits';
 import {
   TRAIT_OPTION_KEYS,
   createDefaultEncounterTraitOffer,
@@ -207,9 +207,15 @@ function decodeEncounterTraitOffer(
     const option = expectRecord(rawOptions[index], `${path}.options.${optionKey}`);
     const hasRarity = option.rarity !== undefined;
     const hasTarget = option.targetTraitKey !== undefined;
+    const hasCirceResolution = option.circeResolution !== undefined;
     expectExactKeys(
       option,
-      ['traitKey', ...(hasRarity ? ['rarity'] : []), ...(hasTarget ? ['targetTraitKey'] : [])],
+      [
+        'traitKey',
+        ...(hasRarity ? ['rarity'] : []),
+        ...(hasTarget ? ['targetTraitKey'] : []),
+        ...(hasCirceResolution ? ['circeResolution'] : []),
+      ],
       `${path}.options.${optionKey}`,
     );
     const traitKey = expectString(option.traitKey, `${path}.options.${optionKey}.traitKey`);
@@ -243,6 +249,78 @@ function decodeEncounterTraitOffer(
     const targetTraitKey = hasTarget
       ? expectString(option.targetTraitKey, `${path}.options.${optionKey}.targetTraitKey`)
       : undefined;
+    let circeResolution: AuthoredCirceResolution | undefined;
+    if (hasCirceResolution) {
+      const resolution = expectRecord(
+        option.circeResolution,
+        `${path}.options.${optionKey}.circeResolution`,
+      );
+      const kind = expectString(
+        resolution.kind,
+        `${path}.options.${optionKey}.circeResolution.kind`,
+      );
+      if (kind === 'disableFear') {
+        expectExactKeys(
+          resolution,
+          ['kind', 'vowKey'],
+          `${path}.options.${optionKey}.circeResolution`,
+        );
+        if (resolution.vowKey !== null && typeof resolution.vowKey !== 'string')
+          failProjectDocument(
+            `${path}.options.${optionKey}.circeResolution.vowKey`,
+            'must be a Vow key or null',
+          );
+        if (
+          typeof resolution.vowKey === 'string' &&
+          catalog.fearVows.byKey[resolution.vowKey] === undefined
+        )
+          failProjectDocument(`${path}.options.${optionKey}.circeResolution.vowKey`, 'unknown Vow');
+        circeResolution = Object.freeze({ kind, vowKey: resolution.vowKey as string | null });
+      } else if (kind === 'activateArcana' || kind === 'promoteArcana') {
+        expectExactKeys(
+          resolution,
+          ['kind', 'arcanaKeys'],
+          `${path}.options.${optionKey}.circeResolution`,
+        );
+        const keys = expectArray(
+          resolution.arcanaKeys,
+          `${path}.options.${optionKey}.circeResolution.arcanaKeys`,
+        ).map((entry, keyIndex) =>
+          expectString(
+            entry,
+            `${path}.options.${optionKey}.circeResolution.arcanaKeys[${keyIndex}]`,
+          ),
+        );
+        if (
+          keys.length > catalog.arcanaCards.values.length ||
+          new Set(keys).size !== keys.length ||
+          keys.some((key) => catalog.arcanaCards.byKey[key] === undefined)
+        )
+          failProjectDocument(
+            `${path}.options.${optionKey}.circeResolution`,
+            'must contain distinct known Arcana keys',
+          );
+        circeResolution = Object.freeze({
+          kind,
+          arcanaKeys: Object.freeze(
+            catalog.arcanaCards.values
+              .filter((card) => keys.includes(card.key))
+              .map((card) => card.key),
+          ),
+        });
+      } else
+        failProjectDocument(
+          `${path}.options.${optionKey}.circeResolution.kind`,
+          'unknown Circe resolution',
+        );
+      const expected =
+        trait.selectedDisposition.kind === 'circe' ? trait.selectedDisposition.effect : undefined;
+      if (expected === undefined || circeResolution!.kind !== expected)
+        failProjectDocument(
+          `${path}.options.${optionKey}.circeResolution`,
+          'does not match the selected Circe trait policy',
+        );
+    }
     if (targetTraitKey !== undefined) {
       if (trait.targetedAcquisition === undefined)
         failProjectDocument(
@@ -257,11 +335,16 @@ function decodeEncounterTraitOffer(
     }
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
-        ? { traitKey, ...(targetTraitKey === undefined ? {} : { targetTraitKey }) }
+        ? {
+            traitKey,
+            ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+            ...(circeResolution === undefined ? {} : { circeResolution }),
+          }
         : {
             traitKey,
             rarity: rarity as NonNullable<AuthoredTraitOption['rarity']>,
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+            ...(circeResolution === undefined ? {} : { circeResolution }),
           };
     options.push(Object.freeze(decodedOption));
   }

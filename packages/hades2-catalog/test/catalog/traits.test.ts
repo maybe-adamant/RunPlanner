@@ -5,6 +5,7 @@ import { declarations } from '../../src/declarations';
 import type { ScalableGodTraitRarityFloorEffect } from '@run-planner/engine/catalog-schema';
 
 const expectedPositiveRequirementOwners = [
+  'CirceSorceryDamageBoon',
   'DoorHealToFullBoon',
   'WeakPotencyBoon',
   'WeakVulnerabilityBoon',
@@ -274,6 +275,17 @@ const expectedHammerRestrictions: Readonly<Record<string, readonly string[]>> = 
 };
 
 const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
+  Circe: [
+    'CirceShrinkTrait',
+    'CirceEnlargeTrait',
+    'ArcanaRarityTrait',
+    'HealAmplifyTrait',
+    'DoubleFamiliarTrait',
+    'RemoveShrineTrait',
+    'RandomArcanaTrait',
+    'CirceSorceryDamageBoon',
+    'ExPolymorphBoon',
+  ],
   Aphrodite: [
     'AphroditeWeaponBoon',
     'AphroditeSpecialBoon',
@@ -703,6 +715,10 @@ const expectedDeferredTraitKeys = [
 ] as const;
 
 const expectedOfferRequirements: Readonly<Record<string, string>> = {
+  ArcanaRarityTrait: '[{"kind":"manualArcanaGraspCost","minimum":1}]',
+  RemoveShrineTrait: '[{"kind":"offerContext","context":"circeRemovableFearVow","required":true}]',
+  CirceSorceryDamageBoon:
+    '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   NarcissusA: '[{"kind":"upgradableTrait"}]',
   NarcissusH: '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRefillBoon:
@@ -906,7 +922,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(359);
+    expect(traits?.traits.values).toHaveLength(368);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -926,6 +942,7 @@ describe('trait offer catalog closure', () => {
       ['Hermes', 13],
       ['Medea', 8],
       ['Narcissus', 9],
+      ['Circe', 9],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -937,6 +954,29 @@ describe('trait offer catalog closure', () => {
     }
     expect(traits.givers.byKey.Hermes?.priorityTraitKeys).toEqual([]);
     expect(traits.givers.byKey.WeaponUpgrade?.priorityTraitKeys).toEqual([]);
+  });
+
+  it('declares Circe as a fixed-Common nine-trait provider', () => {
+    const giver = traits.givers.byKey.Circe;
+    expect(giver?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
+    expect(giver?.traitKeys).toEqual([
+      'CirceShrinkTrait',
+      'CirceEnlargeTrait',
+      'ArcanaRarityTrait',
+      'HealAmplifyTrait',
+      'DoubleFamiliarTrait',
+      'RemoveShrineTrait',
+      'RandomArcanaTrait',
+      'CirceSorceryDamageBoon',
+      'ExPolymorphBoon',
+    ]);
+    expect(giver?.traitKeys.map((key) => traits.traits.byKey[key]?.rarityDomain)).toEqual(
+      Array.from({ length: 9 }, () => ({
+        kind: 'ranked',
+        freshOfferRarities: ['Common'],
+        equippedRarities: ['Common'],
+      })),
+    );
   });
 
   it('keeps shared traits giver-neutral and closes deferred operands without placeholders', () => {

@@ -197,6 +197,7 @@ function decodeTraitOffers(
           'traitKey',
           ...(option.rarity === undefined ? [] : ['rarity']),
           ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
+          ...(option.circeResolution === undefined ? [] : ['circeResolution']),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -251,11 +252,87 @@ function decodeTraitOffers(
             `unknown trait ${targetTraitKey}`,
           );
       }
+      let circeResolution: AuthoredTraitOption['circeResolution'];
+      if (option.circeResolution !== undefined) {
+        const resolution = expectRecord(
+          option.circeResolution,
+          `${rolePath}.options.${key}.circeResolution`,
+        );
+        const kind = expectString(
+          resolution.kind,
+          `${rolePath}.options.${key}.circeResolution.kind`,
+        );
+        if (kind === 'disableFear') {
+          expectExactKeys(
+            resolution,
+            ['kind', 'vowKey'],
+            `${rolePath}.options.${key}.circeResolution`,
+          );
+          if (resolution.vowKey !== null && typeof resolution.vowKey !== 'string')
+            failProjectDocument(
+              `${rolePath}.options.${key}.circeResolution.vowKey`,
+              'must be a Vow key or null',
+            );
+          if (
+            typeof resolution.vowKey === 'string' &&
+            catalog.fearVows.byKey[resolution.vowKey] === undefined
+          )
+            failProjectDocument(`${rolePath}.options.${key}.circeResolution.vowKey`, 'unknown Vow');
+          circeResolution = Object.freeze({ kind, vowKey: resolution.vowKey as string | null });
+        } else if (kind === 'activateArcana' || kind === 'promoteArcana') {
+          expectExactKeys(
+            resolution,
+            ['kind', 'arcanaKeys'],
+            `${rolePath}.options.${key}.circeResolution`,
+          );
+          const keys = expectArray(
+            resolution.arcanaKeys,
+            `${rolePath}.options.${key}.circeResolution.arcanaKeys`,
+          ).map((entry, keyIndex) =>
+            expectString(
+              entry,
+              `${rolePath}.options.${key}.circeResolution.arcanaKeys[${keyIndex}]`,
+            ),
+          );
+          if (
+            new Set(keys).size !== keys.length ||
+            keys.some((arcanaKey) => catalog.arcanaCards.byKey[arcanaKey] === undefined)
+          )
+            failProjectDocument(
+              `${rolePath}.options.${key}.circeResolution`,
+              'must contain distinct known Arcana keys',
+            );
+          circeResolution = Object.freeze({
+            kind,
+            arcanaKeys: Object.freeze(
+              catalog.arcanaCards.values
+                .filter((card) => keys.includes(card.key))
+                .map((card) => card.key),
+            ),
+          });
+        } else
+          failProjectDocument(
+            `${rolePath}.options.${key}.circeResolution.kind`,
+            'unknown Circe resolution',
+          );
+        const expected =
+          trait.selectedDisposition.kind === 'circe' ? trait.selectedDisposition.effect : undefined;
+        if (
+          expected === undefined ||
+          circeResolution === undefined ||
+          circeResolution.kind !== expected
+        )
+          failProjectDocument(
+            `${rolePath}.options.${key}.circeResolution`,
+            'does not match the Circe trait policy',
+          );
+      }
       options.push(
         Object.freeze({
           traitKey,
           ...(rarity === undefined ? {} : { rarity }),
           ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+          ...(circeResolution === undefined ? {} : { circeResolution }),
         }),
       );
     }

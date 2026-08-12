@@ -60,7 +60,11 @@ export type TraitFindingCode =
   | 'replacementCompositionExceeded'
   | 'wrongHammerLoadout'
   | 'nonPriorityTrait'
-  | 'missingAttackOrSpecial';
+  | 'missingAttackOrSpecial'
+  | 'circeResolutionMissing'
+  | 'circeResolutionWrongCardinality'
+  | 'circeResolutionTargetUnavailable'
+  | 'circeOptionUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

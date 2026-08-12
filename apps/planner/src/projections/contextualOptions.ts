@@ -231,6 +231,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Repair the Judgment activation at this Boss completion.',
       };
+    case 'circeResolutionMissing':
+    case 'circeResolutionWrongCardinality':
+    case 'circeResolutionTargetUnavailable':
+    case 'circeOptionUnavailable':
+      return { kind: 'generic', message: 'Repair the selected Circe outcome.' };
     case 'encounterUnavailable':
       return {
         kind: 'encounter',

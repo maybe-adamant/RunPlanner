@@ -133,6 +133,26 @@ function validateOffer(
       if (catalog.traits.byKey[option.targetTraitKey] === undefined)
         failCommand(command, `unknown target trait ${option.targetTraitKey}`);
     }
+    if (option.circeResolution !== undefined) {
+      const expected =
+        trait.selectedDisposition.kind === 'circe' ? trait.selectedDisposition.effect : undefined;
+      if (expected === undefined || option.circeResolution.kind !== expected)
+        failCommand(command, `${option.traitKey} has an incompatible Circe resolution`);
+      if (option.circeResolution.kind === 'disableFear') {
+        if (
+          option.circeResolution.vowKey !== null &&
+          catalog.fearVows.byKey[option.circeResolution.vowKey] === undefined
+        )
+          failCommand(command, `unknown Circe Vow ${option.circeResolution.vowKey}`);
+      } else {
+        const keys = option.circeResolution.arcanaKeys;
+        if (
+          new Set(keys).size !== keys.length ||
+          keys.some((key) => catalog.arcanaCards.byKey[key] === undefined)
+        )
+          failCommand(command, `${option.traitKey} requires distinct known Arcana keys`);
+      }
+    }
   }
   const conditionApplicable = traitGiverUsesOfferContext(
     catalog,
@@ -146,7 +166,27 @@ function validateOffer(
   return Object.freeze({
     giverKey: value.giverKey,
     options: Object.freeze(
-      value.options.map((option) => Object.freeze({ ...option })),
+      value.options.map((option) => {
+        const resolution = option.circeResolution;
+        if (resolution === undefined) return Object.freeze({ ...option });
+        if (resolution.kind === 'disableFear')
+          return Object.freeze({
+            ...option,
+            circeResolution: Object.freeze({ kind: resolution.kind, vowKey: resolution.vowKey }),
+          });
+        return Object.freeze({
+          ...option,
+          circeResolution: Object.freeze({
+            kind: resolution.kind,
+            // Persist exact Arcana sets in declaration order, matching decode.
+            arcanaKeys: Object.freeze(
+              catalog.arcanaCards.values
+                .filter((card) => resolution.arcanaKeys.includes(card.key))
+                .map((card) => card.key),
+            ),
+          }),
+        });
+      }),
     ) as AuthoredTraitOffer['options'],
     selectedOptionKey: value.selectedOptionKey,
     ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),

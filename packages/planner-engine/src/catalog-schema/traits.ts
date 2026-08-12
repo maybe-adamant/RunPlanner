@@ -60,6 +60,7 @@ export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 
  * modeled run effect. Pickup detail remains owned by the acquisition entry. */
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
+  | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
   | {
       readonly kind: 'producePickups';
       readonly producerLifecycleKey: string;
@@ -72,7 +73,8 @@ export interface TraitPickupDeclaration {
   readonly rewardType: string;
 }
 
-export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'deathDefianceConditionMet';
+export type TraitOfferContextKey =
+  'devotionNoDuo' | 'blockGiftBoons' | 'deathDefianceConditionMet' | 'circeRemovableFearVow';
 
 export type TraitRequirementExpression =
   | {
@@ -117,6 +119,10 @@ export type TraitRequirementExpression =
       readonly kind: 'offerContext';
       readonly context: TraitOfferContextKey;
       readonly required: boolean;
+    }
+  | {
+      readonly kind: 'manualArcanaGraspCost';
+      readonly minimum: number;
     };
 
 export interface WeaponDeclaration {
@@ -195,7 +201,7 @@ export interface TraitOfferContextDeclaration {
   readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
   readonly blockedRarity?: TraitRarity;
   readonly roomFlag?: 'BlockGiftBoons';
-  readonly authoredCondition?: 'deathDefianceConditionMet';
+  readonly authoredCondition?: 'deathDefianceConditionMet' | 'circeRemovableFearVow';
 }
 
 export interface TraitCatalog {

@@ -10,7 +10,14 @@ export interface AuthoredTraitOption {
   readonly rarity?: TraitRarity;
   /** Exact random equipped-trait outcome for a targeted acquisition. */
   readonly targetTraitKey?: string;
+  /** Circe's closed exact Arcana/Fear outcome. Detail may remain dormant on an unselected option. */
+  readonly circeResolution?: AuthoredCirceResolution;
 }
+
+export type AuthoredCirceResolution =
+  | { readonly kind: 'activateArcana'; readonly arcanaKeys: readonly string[] }
+  | { readonly kind: 'promoteArcana'; readonly arcanaKeys: readonly string[] }
+  | { readonly kind: 'disableFear'; readonly vowKey: string | null };
 
 export interface AuthoredTraitOffer {
   readonly giverKey: string;
