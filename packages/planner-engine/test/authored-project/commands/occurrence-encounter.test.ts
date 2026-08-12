@@ -98,6 +98,7 @@ function enteredNLocalProject(): ProjectDocument {
       'source',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },

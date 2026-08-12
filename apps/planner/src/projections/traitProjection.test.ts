@@ -1,5 +1,8 @@
 import { simulateProjectAssembly, type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type AuthoredTraitOfferTraits,
+} from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
@@ -26,6 +29,7 @@ describe('route trait projection', () => {
     if (firstTrace === undefined || secondTrace === undefined || route === undefined) {
       throw new Error('F branch trait traces are missing');
     }
+    if (firstTrace.offer.kind !== 'traits') throw new Error('fixture offer is not traits');
     const selectedIndex =
       firstTrace.offer.selectedOptionKey === 'option1'
         ? 0
@@ -232,7 +236,8 @@ describe('route trait projection', () => {
   });
 
   it('presents first-Olympian composition findings without inventing option prerequisites', () => {
-    const offer = {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
@@ -271,7 +276,8 @@ describe('route trait projection', () => {
   });
 
   it('projects an active rarity-floor finding as repairable option copy', () => {
-    const offer = {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
@@ -306,8 +312,31 @@ describe('route trait projection', () => {
     expect(feedback.options[2]?.reasons).toEqual([]);
   });
 
+  it('presents an unavailable selected trait as offer-level feedback', () => {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }],
+      selectedOptionKey: 'option1',
+    };
+    const feedback = projectTraitOfferFeedback(offer, {
+      value: offer,
+      evaluation: {
+        kind: 'traitOffer',
+        result: {
+          supported: false,
+          branches: [],
+          assessments: [],
+          findings: [{ code: 'traitOfferSelectionUnavailable' }],
+        },
+      },
+    });
+    expect(feedback.contextMessage).toContain('Choose a materialized trait');
+  });
+
   it('presents prerequisite evidence with player-facing trait labels', () => {
-    const offer = {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
       giverKey: 'Demeter',
       options: [
         { traitKey: 'SlowExAttackBoon', rarity: 'Common' as const },
@@ -349,7 +378,8 @@ describe('route trait projection', () => {
   });
 
   it('presents an invalid acquisition target with its player-facing label', () => {
-    const offer = {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
       giverKey: 'Hera',
       options: [
         {

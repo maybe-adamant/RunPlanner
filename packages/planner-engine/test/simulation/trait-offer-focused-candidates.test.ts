@@ -34,8 +34,11 @@ const offerOwner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
 const trait = createTraitOfferAddress(offerOwner, 'source');
 const historyOwner = { kind: 'project' } as SemanticAddress;
 
-function offer(giverKey: string, options: AuthoredTraitOffer['options']): AuthoredTraitOffer {
-  return Object.freeze({ giverKey, options, selectedOptionKey: 'option1' });
+function offer(
+  giverKey: string,
+  options: Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+): AuthoredTraitOffer {
+  return Object.freeze({ kind: 'traits', giverKey, options, selectedOptionKey: 'option1' });
 }
 
 function historyWith(giverKey: string, traitKey: string, rarity: string) {
@@ -103,7 +106,7 @@ describe('focused trait offer candidates', () => {
             { traitKey: 'BoonDecayBoon', rarity: 'Common' },
             { traitKey: 'HeraWeaponBoon', rarity: 'Common' },
             { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
-          ]) as AuthoredTraitOffer['options'],
+          ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
         ),
         optionKey: 'option1',
         retainedTargetTraitKey: 'ZeusWeaponBoon',
@@ -132,7 +135,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
         { traitKey: 'DoorHealToFullBoon', rarity: 'Common' },
         { traitKey: 'AphroditeSpecialBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
 
     const unaffected = focused(value, 'option1', [reachedContext()]);
@@ -186,7 +189,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const blocked = focused(focusedDuplicate, 'option1', [reachedContext()]);
     if (blocked.kind !== 'traitOfferFocusedOption') {
@@ -210,7 +213,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const unaffected = focused(siblingDuplicate, 'option1', [reachedContext()]);
     if (unaffected.kind !== 'traitOfferFocusedOption') {
@@ -234,7 +237,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const focusedResult = focused(value, 'option1', undefined);
     if (focusedResult.kind !== 'traitOfferFocusedOption') {
@@ -266,7 +269,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const unavailableFocused = focused(unique, 'option1', undefined);
     const unavailableComplete = evaluateTraitOfferCandidate(
@@ -290,7 +293,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const missingAttack = focused(noAttackOrSpecial, 'option1', [reachedContext()]);
     if (missingAttack.kind !== 'traitOfferFocusedOption') {
@@ -325,7 +328,7 @@ describe('focused trait offer candidates', () => {
           { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
           { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
           { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-        ]) as AuthoredTraitOffer['options'],
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
       'option1',
       [reachedContext()],
@@ -342,7 +345,7 @@ describe('focused trait offer candidates', () => {
           { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
           { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
           { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-        ]) as AuthoredTraitOffer['options'],
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
       'option1',
       [reachedContext()],
@@ -412,7 +415,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
         { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
 
     const replacement = focused(value, 'option1', [reachedContext(before)]);
@@ -445,7 +448,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const occupiedFocus = historyWith('Apollo', 'ApolloCastBoon', 'Common');
     const result = focused(value, 'option1', [reachedContext(), reachedContext(occupiedFocus)]);
@@ -478,7 +481,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const occupied = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
     const result = focused(value, 'option1', [reachedContext(occupied), reachedContext()]);
@@ -508,7 +511,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'LobPulseAmmoTrait' },
         { traitKey: 'LobAmmoMagnetismTrait' },
         { traitKey: 'LobAmmoTrait' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const before = historyWith('WeaponUpgrade', 'LobAmmoMagnetismTrait', 'Common');
     const result = focused(value, 'option1', [
@@ -546,7 +549,7 @@ describe('focused trait offer candidates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     const session = createPreparedProjectCandidateSession(
       catalog,

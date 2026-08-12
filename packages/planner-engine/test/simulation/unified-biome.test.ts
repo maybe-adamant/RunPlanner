@@ -115,6 +115,7 @@ function legalIProject() {
       'self',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'WeaponUpgrade',
       options: [
         { traitKey: 'StaffTripleShotTrait' },

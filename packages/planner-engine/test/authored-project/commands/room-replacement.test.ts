@@ -98,6 +98,7 @@ describe('authored-project room replacement commands', () => {
         `${loadout.weaponKey}:${loadout.aspectKey}`
       ];
     const authoredHammer = Object.values(hammer?.traitOffersByAcquisitionRole ?? {})[0];
+    if (authoredHammer?.kind !== 'traits') throw new Error('expected a trait offer');
     expect(hammer?.offer.rewardType).toBe('WeaponUpgradeDrop');
     expect(authoredHammer?.giverKey).toBe('WeaponUpgrade');
     expect(authoredHammer?.options).toEqual(expected?.options);

@@ -275,6 +275,31 @@ const findingCopy = {
     title: 'Circe trait is unavailable',
     description: 'This Circe trait has no removable configured Vow at this point.',
   },
+  fullTraitOfferWidthRequired: {
+    title: 'Three choices are required',
+    description: 'This offer still has enough ordinary traits to fill all three choices.',
+  },
+  missingMandatoryOrdinary: {
+    title: 'Include every remaining ordinary trait',
+    description: 'This exhausted offer must show each legal Common-capable ordinary trait.',
+  },
+  missingForcedReplacement: {
+    title: 'Include the required replacement',
+    description: 'A legal replacement must fill this exhausted offer’s remaining position.',
+  },
+  unsupportedSparseTraitOffer: {
+    title: 'This reduced offer cannot occur',
+    description:
+      'The remaining legal traits and replacements do not support this number of choices.',
+  },
+  fallbackGoldUnavailable: {
+    title: 'Fallback Gold cannot occur here',
+    description: 'A trait outcome is still available for this offer.',
+  },
+  traitOfferSelectionUnavailable: {
+    title: 'Choose a materialized trait',
+    description: 'The selected trait must be one of this offer’s displayed choices.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -337,6 +362,36 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
  * SemanticFinding origin to pass through `presentFinding`.
  */
 export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): FindingPresentation {
+  switch (code) {
+    case 'fullTraitOfferWidthRequired':
+      return {
+        title: 'Three choices are required',
+        description: 'This offer still has enough ordinary traits to fill all three choices.',
+      };
+    case 'missingMandatoryOrdinary':
+      return {
+        title: 'Include every remaining ordinary trait',
+        description: 'This exhausted offer must show each legal Common-capable ordinary trait.',
+      };
+    case 'missingForcedReplacement':
+      return {
+        title: 'Include the required replacement',
+        description: 'A legal replacement must fill this exhausted offer’s remaining position.',
+      };
+    case 'unsupportedSparseTraitOffer':
+      return {
+        title: 'This reduced offer cannot occur',
+        description:
+          'The remaining legal traits and replacements do not support this number of choices.',
+      };
+    case 'fallbackGoldUnavailable':
+      return {
+        title: 'Fallback Gold cannot occur here',
+        description: 'A trait outcome is still available for this offer.',
+      };
+    default:
+      break;
+  }
   if (code === 'duplicateOfferedTrait') {
     return {
       title: 'Trait is offered more than once',

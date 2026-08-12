@@ -87,6 +87,7 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(nBiome, preHub), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },

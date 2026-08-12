@@ -9,6 +9,7 @@ import {
   applyProjectCommand,
   createCirceResolutionAddress,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 
 import {
@@ -20,7 +21,10 @@ import {
   prepareTraitOptionDomain,
   type TraitOptionDomainProjection,
 } from '@planner/projections/traitDomainProjection';
-import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceInteractionCatalog,
+  WorkspaceTraitOfferInteraction,
+} from '@planner/projections/structured-workspace';
 import { TraitOfferEditor } from './TraitOfferEditor';
 import { createGoldenFGHIProject, createRepresentativeNProject } from '@run-planner/test-fixtures';
 
@@ -63,10 +67,7 @@ describe('trait offer editor', () => {
       });
       const interaction = Object.freeze({
         ...base,
-        optionDomain: (
-          value: AuthoredTraitOffer,
-          optionKey: AuthoredTraitOffer['selectedOptionKey'],
-        ) =>
+        optionDomain: (value: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
           Object.freeze({
             hasTargetPicker: false,
             load: () =>
@@ -76,7 +77,7 @@ describe('trait offer editor', () => {
                 rarityPickerFor: () => undefined,
                 traitPicker: Object.freeze({ sections: Object.freeze([]) }),
               }),
-            ...(value.selectedOptionKey !== optionKey
+            ...(value.kind !== 'traits' || value.selectedOptionKey !== optionKey
               ? {}
               : {
                   circeResolution: Object.freeze({
@@ -114,7 +115,7 @@ describe('trait offer editor', () => {
         await user.click(screen.getByLabelText('The Titan'));
       }
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-      const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOffer;
+      const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
       const resolution = saved.options[0]?.circeResolution;
       expect(resolution).toBeDefined();
       if (effect === 'disableFear') {
@@ -169,7 +170,7 @@ describe('trait offer editor', () => {
     const interactions = Object.freeze({
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
-    });
+    }) as WorkspaceInteractionCatalog;
     const onCommit = vi.fn();
     const user = userEvent.setup();
     render(
@@ -213,7 +214,8 @@ describe('trait offer editor', () => {
     const initial = [...initialWorkspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.key === 'Medea',
     );
-    if (initial === undefined) throw new Error('Medea trait offer interaction is missing');
+    if (initial === undefined || initial.value.kind !== 'traits')
+      throw new Error('Medea trait offer interaction is missing');
     const invalidProject = applyProjectCommand(project, application.catalog, {
       kind: 'ReplaceTraitOffer',
       trait: initial.owner,
@@ -221,9 +223,9 @@ describe('trait offer editor', () => {
         ...initial.value,
         options: [
           { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' },
-          initial.value.options[1],
-          initial.value.options[2],
-        ],
+          initial.value.options[1]!,
+          initial.value.options[2]!,
+        ] as AuthoredTraitOfferTraits['options'],
         deathDefianceConditionMet: false,
       },
     });
@@ -295,7 +297,8 @@ describe('trait offer editor', () => {
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
-    if (interaction === undefined) throw new Error('ranked trait interaction is missing');
+    if (interaction === undefined || interaction.value.kind !== 'traits')
+      throw new Error('ranked trait interaction is missing');
     const trait = interaction.value.options[0]?.traitKey;
     if (trait === undefined) throw new Error('trait offer fixture is missing option1');
     const domain = (label: string): TraitOptionDomainProjection =>
@@ -344,10 +347,12 @@ describe('trait offer editor', () => {
                 key,
                 Object.freeze({
                   ...candidate,
-                  optionDomain: (value: typeof candidate.value) =>
+                  optionDomain: (value: AuthoredTraitOffer) =>
                     Object.freeze({
                       load: () =>
-                        value.selectedOptionKey === 'option1' ? staleResult : currentResult,
+                        value.kind === 'traits' && value.selectedOptionKey === 'option1'
+                          ? staleResult
+                          : currentResult,
                       hasTargetPicker: false,
                     }),
                 }),
@@ -358,7 +363,10 @@ describe('trait offer editor', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions as WorkspaceInteractionCatalog}
+        />
       </Provider>,
     );
 
@@ -387,12 +395,13 @@ describe('trait offer editor', () => {
       throw new Error('targeted trait editor fixtures are missing');
     }
     const authored = Object.freeze({
+      kind: 'traits',
       giverKey: 'Hera',
       options: Object.freeze([
         Object.freeze({ traitKey: 'BoonDecayBoon', rarity: 'Common' as const }),
         Object.freeze({ traitKey: 'HeraWeaponBoon', rarity: 'Common' as const }),
         Object.freeze({ traitKey: 'HeraSpecialBoon', rarity: 'Common' as const }),
-      ]) as typeof base.value.options,
+      ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
     const interaction = Object.freeze({
@@ -416,7 +425,7 @@ describe('trait offer editor', () => {
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
                 findings: Object.freeze(
-                  value.options[0]?.targetTraitKey === undefined
+                  value.kind === 'traits' && value.options[0]?.targetTraitKey === undefined
                     ? [
                         Object.freeze({
                           code: 'targetedAcquisitionTargetMissing' as const,
@@ -425,15 +434,14 @@ describe('trait offer editor', () => {
                       ]
                     : [],
                 ),
-                supported: value.options[0]?.targetTraitKey !== undefined,
+                supported:
+                  value.kind === 'traits' && value.options[0]?.targetTraitKey !== undefined,
               }),
             }),
           }),
         ]),
-      optionDomain: (
-        value: AuthoredTraitOffer,
-        optionKey: AuthoredTraitOffer['selectedOptionKey'],
-      ) => {
+      optionDomain: (value: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') => {
+        if (value.kind === 'fallbackGold') throw new Error('traits expected');
         const option = value.options[0]!;
         const ownsTarget = optionKey === 'option1' && option.traitKey === 'BoonDecayBoon';
         return Object.freeze({
@@ -478,7 +486,7 @@ describe('trait offer editor', () => {
     const interactions = Object.freeze({
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
-    });
+    }) as WorkspaceInteractionCatalog;
     const onCommit = vi.fn();
     const user = userEvent.setup();
     render(
@@ -523,13 +531,14 @@ describe('trait offer editor', () => {
     if (base === undefined || icarus === undefined) {
       throw new Error('Icarus trait editor fixtures are missing');
     }
-    const value: AuthoredTraitOffer = Object.freeze({
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
       giverKey: 'Icarus',
       options: Object.freeze([
         Object.freeze({ traitKey: 'FocusAttackDamageTrait', rarity: 'Common' as const }),
         Object.freeze({ traitKey: 'FocusSpecialDamageTrait', rarity: 'Common' as const }),
         Object.freeze({ traitKey: 'OmegaExplodeBoon', rarity: 'Common' as const }),
-      ]) as AuthoredTraitOffer['options'],
+      ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
     const interaction = Object.freeze({
@@ -571,11 +580,56 @@ describe('trait offer editor', () => {
         }),
       value,
     }) satisfies WorkspaceTraitOfferInteraction;
-    const interactions = Object.freeze({
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
-    });
+    }) as unknown as WorkspaceInteractionCatalog;
 
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions as WorkspaceInteractionCatalog}
+        />
+      </Provider>,
+    );
+
+    expect(screen.getByLabelText('option1 trait')).toBeTruthy();
+    expect(screen.queryByLabelText('option1 rarity')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove last option' })).toBeNull();
+    application.dispose();
+  });
+
+  it('renders only materialized rows and clamps the selected key when removing the trailing row', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value.kind === 'traits',
+    );
+    if (base === undefined || base.value.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const value = Object.freeze({
+      ...base.value,
+      options: Object.freeze([
+        base.value.options[0]!,
+        base.value.options[1]!,
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option2' as const,
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      load: (draft = value) => base.load(draft),
+      nextTraitOfferDraft: () => undefined,
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as unknown as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
     render(
       <Provider store={application.store}>
         <TraitOfferEditor address={interaction.owner} interactions={interactions} />
@@ -583,7 +637,76 @@ describe('trait offer editor', () => {
     );
 
     expect(screen.getByLabelText('option1 trait')).toBeTruthy();
-    expect(screen.queryByLabelText('option1 rarity')).toBeNull();
+    expect(screen.getByLabelText('option2 trait')).toBeTruthy();
+    expect(screen.queryByLabelText('option3 trait')).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Remove last option' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    expect((screen.getByRole('button', { name: 'Add option' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    expect((screen.getByLabelText('Selected') as HTMLInputElement).checked).toBe(true);
+    application.dispose();
+  });
+
+  it('uses engine-backed append and fallback drafts without rendering fallback child controls', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value.kind === 'traits',
+    );
+    if (base === undefined || base.value.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const one = Object.freeze({
+      ...base.value,
+      options: Object.freeze([base.value.options[0]!]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    const two = Object.freeze({
+      ...one,
+      options: Object.freeze([
+        one.options[0]!,
+        base.value.options[1]!,
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const append = vi.fn(() => two);
+    const starting = vi.fn(() => one);
+    const interaction = Object.freeze({
+      ...base,
+      value: one,
+      load: (draft = one) => base.load(draft),
+      nextTraitOfferDraft: append,
+      traitsStartingDraft: starting,
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as unknown as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+      </Provider>,
+    );
+
+    const fallback = screen.getByRole('button', { name: 'Select Fallback Gold' });
+    const firstTrait = screen.getByLabelText('option1 trait');
+    expect(
+      fallback.compareDocumentPosition(firstTrait) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(append).toHaveBeenCalledWith(one);
+    expect(screen.getByLabelText('option2 trait')).toBeTruthy();
+    await user.click(fallback);
+    expect(screen.getByText('Fallback Gold')).toBeTruthy();
+    expect(screen.queryByLabelText('option1 trait')).toBeNull();
+    expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Return to traits' }));
+    expect(starting).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('option1 trait')).toBeTruthy();
     application.dispose();
   });
 });

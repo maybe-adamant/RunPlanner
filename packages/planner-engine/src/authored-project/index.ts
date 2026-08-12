@@ -86,11 +86,13 @@ export {
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
   type AuthoredLevelResolution,
   type AuthoredTraitOption,
   type AuthoredCirceResolution,
   type EquippedTrait,
   type TraitOptionKey,
+  traitOfferOption,
 } from './traits';
 export { shopProfileUsesDeathDefianceCondition } from './shop';
 export {

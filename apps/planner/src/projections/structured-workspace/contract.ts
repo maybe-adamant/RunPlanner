@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type AcquisitionSiteAddress,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
   type AuthoredLevelResolution,
   type AuthoredBatchState,
   type AdditionalExitAddress,
@@ -237,11 +238,11 @@ export interface WorkspaceCirceResolutionDomain {
 export interface WorkspaceCirceResolutionInteraction {
   readonly control: WorkspaceCirceResolutionControl;
   readonly intentFor: (
-    offer: AuthoredTraitOffer,
+    offer: AuthoredTraitOfferTraits,
     resolution: AuthoredCirceResolution,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   /** Binds the current draft before handing its loader to the sole React adapter. */
-  readonly forOffer: (offer: AuthoredTraitOffer) => {
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceCirceResolutionDomain | undefined;
   };
 }
@@ -265,9 +266,14 @@ export interface WorkspaceTraitOfferInteraction {
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
   readonly selectedIntent: (
-    selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
+    selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;
   readonly value: AuthoredTraitOffer;
+  /** Exact engine-backed traits draft for returning from Fallback Gold. */
+  readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
+  readonly nextTraitOfferDraft?: (
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };

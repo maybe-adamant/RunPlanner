@@ -693,6 +693,7 @@ describe('structured workspace occurrence assembly', () => {
         'selection',
       ),
       value: {
+        kind: 'traits',
         giverKey: 'Narcissus',
         options: [
           { traitKey: 'NarcissusI', rarity: 'Common' },

@@ -148,6 +148,7 @@ describe('authored-project local reward commands', () => {
                                         },
                                         traitOffersByAcquisitionRole: {
                                           source: {
+                                            kind: 'traits',
                                             giverKey: 'Demeter',
                                             options: [
                                               { traitKey: 'DemeterWeaponBoon', rarity: 'Common' },

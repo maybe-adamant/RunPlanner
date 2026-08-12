@@ -4,7 +4,11 @@ import {
   traitGiverUsesOfferContext,
   createDefaultSelectedPickupEntries,
   selectedPickupProducer,
+  traitOfferSupportsExhaustion,
+  traitOfferOption,
+  optionIndex,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
 } from '../traits';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
@@ -102,11 +106,21 @@ function validateOffer(
 ): AuthoredTraitOffer {
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) failCommand(command, `unknown trait giver ${value.giverKey}`);
-  if (value.options.length !== 3)
-    failCommand(command, 'trait offers require exactly three options');
-  if (new Set(value.options.map((option) => option.traitKey)).size !== 3)
+  if (value.kind === 'fallbackGold') {
+    if (!traitOfferSupportsExhaustion(giver))
+      failCommand(command, `Fallback Gold is not supported by ${value.giverKey}`);
+    return Object.freeze({ kind: 'fallbackGold', giverKey: value.giverKey });
+  }
+  if (value.options.length < 1 || value.options.length > 3)
+    failCommand(command, 'trait offers require one to three options');
+  if (!traitOfferSupportsExhaustion(giver) && value.options.length !== 3)
+    failCommand(command, 'this trait giver requires exactly three options');
+  if (new Set(value.options.map((option) => option.traitKey)).size !== value.options.length)
     failCommand(command, 'trait option keys must be distinct');
-  if (!['option1', 'option2', 'option3'].includes(value.selectedOptionKey))
+  if (
+    !['option1', 'option2', 'option3'].includes(value.selectedOptionKey) ||
+    value.options[optionIndex(value.selectedOptionKey)] === undefined
+  )
     failCommand(command, 'selected option must be option1, option2, or option3');
   for (const [index, option] of value.options.entries()) {
     const trait = catalog.traits.byKey[option.traitKey];
@@ -164,6 +178,7 @@ function validateOffer(
   if (!conditionApplicable && value.deathDefianceConditionMet !== undefined)
     failCommand(command, 'Death Defiance condition is not supported by this trait giver');
   return Object.freeze({
+    kind: 'traits',
     giverKey: value.giverKey,
     options: Object.freeze(
       value.options.map((option) => {
@@ -187,7 +202,7 @@ function validateOffer(
           }),
         });
       }),
-    ) as AuthoredTraitOffer['options'],
+    ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: value.selectedOptionKey,
     ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),
   });
@@ -563,6 +578,12 @@ export function applyTraitOfferCommand(
     ) {
       failCommand(command, 'selected option must be option1, option2, or option3');
     }
+    if (
+      command.kind === 'ReplaceTraitSelection' &&
+      (existing.kind !== 'traits' ||
+        traitOfferOption(existing, command.selectedOptionKey) === undefined)
+    )
+      failCommand(command, 'selected option is not materialized by this trait offer');
     const value =
       command.kind === 'ReplaceTraitSelection'
         ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
@@ -632,6 +653,12 @@ export function applyTraitOfferCommand(
   ) {
     failCommand(command, 'selected option must be option1, option2, or option3');
   }
+  if (
+    command.kind === 'ReplaceTraitSelection' &&
+    (existing.kind !== 'traits' ||
+      traitOfferOption(existing, command.selectedOptionKey) === undefined)
+  )
+    failCommand(command, 'selected option is not materialized by this trait offer');
   const value =
     command.kind === 'ReplaceTraitSelection'
       ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })

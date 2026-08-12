@@ -248,6 +248,7 @@ function refillProject(): ProjectDocument {
       'source',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Hestia',
       options: [
         { traitKey: 'HestiaCastBoon', rarity: 'Common' },
@@ -264,6 +265,7 @@ function refillProject(): ProjectDocument {
       'source',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Zeus',
       options: [
         { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
@@ -280,6 +282,7 @@ function refillProject(): ProjectDocument {
       'source',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
@@ -317,6 +320,7 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, boon), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Hestia',
       options: [
         { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
@@ -422,6 +426,7 @@ function shopTimingProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, third), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Hestia',
       options: [
         { traitKey: 'HestiaCastBoon', rarity: 'Common' },
@@ -435,6 +440,7 @@ function shopTimingProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Ares',
       options: [
         { traitKey: 'AresSprintBoon', rarity: 'Common' },
@@ -448,6 +454,7 @@ function shopTimingProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, fifth), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Zeus',
       options: [
         { traitKey: 'ZeusManaBoon', rarity: 'Common' },
@@ -619,6 +626,7 @@ function devotionProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, run1), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Poseidon',
       options: [
         { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
@@ -632,6 +640,7 @@ function devotionProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, run2), 'source'),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
@@ -645,6 +654,7 @@ function devotionProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, devotion), 'chosenSource'),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
@@ -658,6 +668,7 @@ function devotionProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(biome, devotion), 'spurnedSource'),
     value: {
+      kind: 'traits',
       giverKey: 'Poseidon',
       options: [
         { traitKey: 'PoseidonManaBoon', rarity: 'Common' },
@@ -900,6 +911,7 @@ describe('F reward-history simulation', () => {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'source'),
       value: {
+        kind: 'traits',
         giverKey: 'Ares',
         options: [
           { traitKey: 'AresSprintBoon', rarity: 'Common' },
@@ -1083,6 +1095,7 @@ describe('F reward-history simulation', () => {
     const preShopOffers = [
       {
         owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(2, 1)),
+        kind: 'traits',
         giverKey: 'Poseidon',
         options: [
           { traitKey: 'PoseidonWeaponBoon', rarity: 'Rare' },
@@ -1093,6 +1106,7 @@ describe('F reward-history simulation', () => {
       },
       {
         owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(3, 1)),
+        kind: 'traits',
         giverKey: 'Hestia',
         options: [
           { traitKey: 'HestiaWeaponBoon', rarity: 'Rare' },
@@ -1103,6 +1117,7 @@ describe('F reward-history simulation', () => {
       },
       {
         owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(4, 1)),
+        kind: 'traits',
         giverKey: 'Zeus',
         options: [
           { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
@@ -1117,6 +1132,7 @@ describe('F reward-history simulation', () => {
         kind: 'ReplaceTraitOffer',
         trait: createTraitOfferAddress(authored.owner, 'source'),
         value: {
+          kind: 'traits',
           giverKey: authored.giverKey,
           options: authored.options,
           selectedOptionKey: authored.selectedOptionKey,
@@ -1127,6 +1143,7 @@ describe('F reward-history simulation', () => {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(createShopOfferAddress(biome, shopId, 'Boon'), 'hiddenSource'),
       value: {
+        kind: 'traits',
         giverKey: 'Demeter',
         options: [
           { traitKey: 'DemeterWeaponBoon', rarity: 'Rare' },

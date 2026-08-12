@@ -85,13 +85,13 @@ function arachneStoryProject(): ProjectDocument {
   });
 }
 
-describe('schema-21 occurrence-owned additional-exit persistence', () => {
+describe('schema-22 occurrence-owned additional-exit persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(21);
+    expect(decoded.schemaVersion).toBe(22);
   });
 
   it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
@@ -109,6 +109,33 @@ describe('schema-21 occurrence-owned additional-exit persistence', () => {
       selectedOptionKey: 'option2',
     });
     expect(decoded).toEqual(project);
+  });
+
+  it('requires fixed Story encounter offers to retain their exact triple traits shape', () => {
+    const document = encoded(arachneStoryProject());
+    const state = occurrence(document, 'F', goldenFOccurrenceId(7, 1)).encounters as JsonRecord;
+    const byPhase = state.traitOffersByPhase as JsonRecord;
+    const byEncounter = byPhase.Encounter as JsonRecord;
+    const offer = byEncounter.Story_Arachne_01 as JsonRecord;
+    expect(offer.options as unknown[]).toHaveLength(3);
+
+    (offer.options as unknown[]).pop();
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(
+      'requires exactly three options',
+    );
+  });
+
+  it('rejects Fallback Gold for a fixed Story encounter offer', () => {
+    const document = encoded(arachneStoryProject());
+    const state = occurrence(document, 'F', goldenFOccurrenceId(7, 1)).encounters as JsonRecord;
+    const offer = ((state.traitOffersByPhase as JsonRecord).Encounter as JsonRecord)
+      .Story_Arachne_01 as JsonRecord;
+    for (const key of Object.keys(offer)) delete offer[key];
+    offer.kind = 'fallbackGold';
+    offer.giverKey = 'Arachne';
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(
+      'Fallback Gold is not supported by this giver',
+    );
   });
 
   it('rejects a fixed Story offer moved to a different encounter owner', () => {
@@ -129,7 +156,14 @@ describe('schema-21 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 21, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 22, received 18');
+  });
+
+  it('rejects schema 21 rather than inventing a trait-offer migration', () => {
+    const document = encoded(createRepresentativeNOPProject());
+    document.schemaVersion = 21;
+
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 22, received 21');
   });
 
   it.each([

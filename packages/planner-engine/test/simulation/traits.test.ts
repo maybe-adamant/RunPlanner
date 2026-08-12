@@ -418,7 +418,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
         { traitKey: 'ApolloWeaponBoon', rarity: 'Epic' },
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ]),
+      ]) as TraitOfferEvent['options'],
       selectedOptionKey: 'option1',
       acquisitionPoint: 'test',
       replacementTransition: {
@@ -450,7 +450,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
         { traitKey: 'HephaestusManaBoon', rarity: 'Epic' },
         { traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
         { traitKey: 'HephaestusSpecialBoon', rarity: 'Common' },
-      ]),
+      ]) as TraitOfferEvent['options'],
       selectedOptionKey: 'option1',
       acquisitionPoint: 'test',
       replacementTransition: {
@@ -490,7 +490,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
               { traitKey, rarity },
               { traitKey: 'MassiveDamageBoon', rarity: 'Common' },
               { traitKey: 'AntiArmorBoon', rarity: 'Common' },
-            ]),
+            ]) as TraitOfferEvent['options'],
             selectedOptionKey: 'option1',
             acquisitionPoint: 'test',
           },
@@ -576,12 +576,13 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       { giverKey: 'Apollo', traitKey: 'ApolloCastBoon', rarity: 'Rare' },
     ]);
     const baseOffer: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
       giverKey: 'Hera',
       options: Object.freeze([
         { traitKey: 'BoonDecayBoon', rarity: 'Common' },
         { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
         { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     });
     expect(assessSelectedTargetedAcquisition(catalog, baseOffer, before)).toMatchObject({
@@ -596,7 +597,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
         { ...baseOffer.options[0], targetTraitKey: 'ApolloCastBoon' },
         baseOffer.options[1],
         baseOffer.options[2],
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     });
     const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
     expect(assessment).toMatchObject({
@@ -634,12 +635,13 @@ describe('Boon Growth and Boon Decay target predicates', () => {
   ] as const)('records Bridal Glow %s rarity as a %i-level target mutation', (rarity, added) => {
     const before = historyWith('Demeter', 'DemeterWeaponBoon', 'Common');
     const offer: AuthoredTraitOffer = {
+      kind: 'traits',
       giverKey: 'Hera',
       options: Object.freeze([
         { traitKey: 'BoonDecayBoon', rarity, targetTraitKey: 'DemeterWeaponBoon' },
         { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
         { traitKey: 'HeraCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     };
     const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
@@ -670,12 +672,13 @@ describe('Boon Growth and Boon Decay target predicates', () => {
 
 describe('Latest Model Hammer Rank II target predicate', () => {
   const latestModelOffer: AuthoredTraitOffer = Object.freeze({
+    kind: 'traits',
     giverKey: 'Icarus',
     options: Object.freeze([
       { traitKey: 'UpgradeHammerBoon', rarity: 'Common' },
       { traitKey: 'OmegaExplodeBoon', rarity: 'Common' },
       { traitKey: 'CastHazardBoon', rarity: 'Common' },
-    ]) as AuthoredTraitOffer['options'],
+    ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     selectedOptionKey: 'option1',
   });
 
@@ -696,7 +699,7 @@ describe('Latest Model Hammer Rank II target predicate', () => {
         { ...latestModelOffer.options[0], targetTraitKey: 'StaffDoubleAttackTrait' },
         latestModelOffer.options[1],
         latestModelOffer.options[2],
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     });
     const assessment = assessSelectedTargetedAcquisition(catalog, withTarget, before);
     expect(assessment).toMatchObject({
@@ -777,7 +780,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     if (firstAlternative === undefined || secondAlternative === undefined) {
       throw new Error(`Insufficient legal ${giverKey} alternatives`);
     }
-    const options: AuthoredTraitOffer['options'] = [
+    const options: Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'] = [
       {
         traitKey: selected.traitKey,
         ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
@@ -796,6 +799,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       owner,
       `proper-${before.events.length + 1}`,
       {
+        kind: 'traits',
         giverKey,
         options,
         selectedOptionKey: 'option1',
@@ -848,12 +852,13 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const proper = acquireLegalTrait(before, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
     expect(proper.minimumScalableGodTraitRarity).toBeUndefined();
     const offer: AuthoredTraitOffer = {
+      kind: 'traits',
       giverKey: 'Hera',
       options: Object.freeze([
         { traitKey: 'BoonDecayBoon', rarity: 'Common', targetTraitKey: 'ApolloWeaponBoon' },
         { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
         { traitKey: 'HeraCastBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     };
     const evaluation = evaluateReachedTraitOffer(
@@ -886,7 +891,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
         { traitKey: 'BoonDecayBoon', rarity: 'Common' },
         { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
         { traitKey: 'SpawnCastDamageBoon', rarity: 'Common' },
-      ]),
+      ]) as TraitOfferEvent['options'],
       selectedOptionKey: 'option1',
       acquisitionPoint: 'test',
       targetedAcquisitionTransition: {
@@ -1082,6 +1087,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       owner,
       'proper-invalid',
       {
+        kind: 'traits',
         giverKey: 'Hera',
         options: [
           { traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' },
@@ -1356,6 +1362,7 @@ describe('trait legality and derived facts', () => {
 describe('reached trait offer chronology', () => {
   const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
     Object.freeze({
+      kind: 'traits',
       giverKey,
       options: Object.freeze(traitKeys.map((traitKey) => Object.freeze({ traitKey }))) as [
         { readonly traitKey: string },
@@ -1473,6 +1480,7 @@ describe('reached trait offer chronology', () => {
     const owner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const traitAddress = createTraitOfferAddress(owner, 'source');
     const invalidFirstOffer = Object.freeze({
+      kind: 'traits',
       giverKey: 'Apollo',
       options: Object.freeze([
         { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
@@ -1527,6 +1535,7 @@ describe('reached trait offer chronology', () => {
         kind: 'traitOffer',
         trait: traitAddress,
         value: {
+          kind: 'traits',
           giverKey: 'Apollo',
           options: [
             { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
@@ -1545,12 +1554,13 @@ describe('reached trait offer chronology', () => {
     const owner = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const trait = createTraitOfferAddress(owner, 'source');
     const value: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
       giverKey: 'Apollo',
       options: Object.freeze([
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
         { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     });
     const occupiedBefore = foldTraitHistoryEvents(catalog, [
@@ -1681,12 +1691,13 @@ describe('reached trait offer chronology', () => {
     expect(trueCandidate?.available).toBe(true);
 
     const retained = Object.freeze({
+      kind: 'traits',
       giverKey: 'Athena',
       options: Object.freeze([
         { traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' as const },
         { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
         { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
-      ]) as AuthoredTraitOffer['options'],
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1' as const,
       deathDefianceConditionMet: false,
     });
@@ -1768,7 +1779,7 @@ describe('reached trait offer chronology', () => {
 
     const branch = branches[0];
     const expectedOffer = Object.values(createDefaultTraitOffers(catalog, boon, activeLoadout))[0];
-    if (expectedOffer === undefined) throw new Error('valid boon trait offer is missing');
+    if (expectedOffer?.kind !== 'traits') throw new Error('valid boon trait offer is missing');
     expect(branch?.events).toContainEqual(
       expect.objectContaining({
         kind: 'concreteAcquisition',

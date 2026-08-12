@@ -405,7 +405,7 @@ function applyTraitOfferForAcquisition(
     {
       ...(reward.traitContext ?? {}),
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-      ...(authored.deathDefianceConditionMet === undefined
+      ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
         ? {}
         : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
       resolvedProviderKey: authored.giverKey,
@@ -524,6 +524,21 @@ export function processEncounterTraitOffer(
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
 ): RewardBranchState {
+  if (offer.kind === 'fallbackGold') {
+    return applyTraitOfferForAcquisition(
+      catalog,
+      branch,
+      {
+        origin,
+        traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
+      },
+      'selection',
+      lifecyclePoint,
+      sequence,
+      findings,
+      findingChronology,
+    );
+  }
   const selected = offer.options[optionIndex(offer.selectedOptionKey)];
   const disposition =
     selected === undefined

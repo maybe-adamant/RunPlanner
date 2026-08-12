@@ -1,4 +1,7 @@
-import type { AuthoredTraitOffer, AuthoredTraitOption } from '@run-planner/engine/authored-project';
+import type {
+  AuthoredTraitOfferTraits,
+  AuthoredTraitOption,
+} from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { TraitOfferFocusedOptionEvidence } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -21,8 +24,11 @@ function rankedOption(traitKey: string, rarity: 'Common' | 'Rare' | 'Epic' | 'He
   return Object.freeze({ traitKey, rarity });
 }
 
-function offer(giverKey: string, options: AuthoredTraitOffer['options']): AuthoredTraitOffer {
-  return Object.freeze({ giverKey, options, selectedOptionKey: 'option1' });
+function offer(
+  giverKey: string,
+  options: AuthoredTraitOfferTraits['options'],
+): AuthoredTraitOfferTraits {
+  return Object.freeze({ kind: 'traits', giverKey, options, selectedOptionKey: 'option1' });
 }
 
 function focused(

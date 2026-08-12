@@ -14,9 +14,17 @@ import {
   createOccurrenceAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type AuthoredTraitOffer,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+
+function authoredTraits(
+  offer: AuthoredTraitOffer | undefined,
+): Extract<AuthoredTraitOffer, { kind: 'traits' }> {
+  if (offer?.kind !== 'traits') throw new Error('expected a materialized trait offer');
+  return offer;
+}
 import type {
   Catalog,
   CatalogCollection,
@@ -422,6 +430,7 @@ function enteredNLocalProjectForArtemis(): ProjectDocument {
       'source',
     ),
     value: {
+      kind: 'traits',
       giverKey: 'Apollo',
       options: [
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
@@ -545,6 +554,7 @@ describe('field NPC encounter requirements', () => {
     project = select(project, fNpcPhase, 'ArtemisCombatF');
     const selected = authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1));
     const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatF;
+    if (initialOffer?.kind !== 'traits') throw new Error('Artemis encounter must offer traits');
     expect(initialOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
     expect(initialOffer?.options.map((option) => option.traitKey)).toEqual([
       'SupportingFireBoon',
@@ -559,19 +569,25 @@ describe('field NPC encounter requirements', () => {
       selectedOptionKey: 'option2',
     });
     expect(
-      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
-        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+          ?.Encounter?.ArtemisCombatF,
+      ).selectedOptionKey,
     ).toBe('option2');
 
     project = select(project, fNpcPhase, 'GeneratedF');
     expect(
-      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
-        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+          ?.Encounter?.ArtemisCombatF,
+      ).selectedOptionKey,
     ).toBe('option2');
     project = select(project, fNpcPhase, 'ArtemisCombatF');
     expect(
-      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
-        ?.Encounter?.ArtemisCombatF?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+          ?.Encounter?.ArtemisCombatF,
+      ).selectedOptionKey,
     ).toBe('option2');
 
     const { result, biome } = evaluatedBiome(project, 'F');
@@ -789,6 +805,7 @@ describe('field NPC encounter requirements', () => {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(storyPhase, 'selection'),
       value: {
+        kind: 'traits',
         giverKey: 'Dionysus',
         options: [
           { traitKey: 'CastLobBoon', rarity: 'Rare' },
@@ -824,6 +841,7 @@ describe('field NPC encounter requirements', () => {
       kind: 'ReplaceTraitOffer',
       trait: traitAddress,
       value: {
+        kind: 'traits',
         giverKey: 'Artemis',
         options: [
           { traitKey: 'SupportingFireBoon', rarity: 'Common' },
@@ -865,6 +883,7 @@ describe('field NPC encounter requirements', () => {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(nLocalPhase, 'selection'),
       value: {
+        kind: 'traits',
         giverKey: 'Artemis',
         options: [
           { traitKey: 'SupportingFireBoon', rarity: 'Common' },
@@ -881,10 +900,10 @@ describe('field NPC encounter requirements', () => {
     });
     const edited = authoredOccurrence(project, 'N', nCombatId);
     if (edited.state.kind !== 'ephyraCombat') throw new Error('N side-room edit lost its state');
-    expect(
-      edited.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN
-        ?.selectedOptionKey,
-    ).toBe('option2');
+    const editedOffer =
+      edited.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    if (editedOffer?.kind !== 'traits') throw new Error('Artemis side-room must offer traits');
+    expect(editedOffer.selectedOptionKey).toBe('option2');
 
     const evaluation = simulateProject(sideCatalog, project);
     const biome = evaluation.routes
@@ -1236,13 +1255,17 @@ describe('field NPC encounter requirements', () => {
     });
     project = select(project, fixture.encounter, 'GeneratedP');
     expect(
-      authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
-        ?.IcarusCombatP?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
+          ?.IcarusCombatP,
+      ).selectedOptionKey,
     ).toBe('option3');
     project = select(project, fixture.encounter, 'IcarusCombatP');
     expect(
-      authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
-        ?.IcarusCombatP?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase?.Combat
+          ?.IcarusCombatP,
+      ).selectedOptionKey,
     ).toBe('option3');
 
     const pEvaluation = evaluatedSurfaceBiome(project, 'P').biome;
@@ -1271,6 +1294,7 @@ describe('field NPC encounter requirements', () => {
       kind: 'ReplaceTraitOffer',
       trait: traitAddress,
       value: {
+        kind: 'traits',
         giverKey: 'Icarus',
         options: [
           {
@@ -1332,20 +1356,25 @@ describe('field NPC encounter requirements', () => {
     expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
     project = select(project, athenaPhase, 'AthenaCombatP');
     const selected = authoredOccurrence(project, 'P', occurrenceId);
+    const athenaOffer = authoredTraits(
+      selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP,
+    );
     expect(selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP).toMatchObject({
       giverKey: 'Athena',
       selectedOptionKey: 'option1',
     });
-    expect(
-      selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP?.options.map(
-        (option) => option.traitKey,
-      ),
-    ).toEqual(['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon']);
+    expect(athenaOffer.options.map((option) => option.traitKey)).toEqual([
+      'InvulnerabilityDashBoon',
+      'RetaliateInvulnerabilityBoon',
+      'FocusLastStandBoon',
+    ]);
 
     project = select(project, athenaPhase, 'GeneratedP');
     expect(
-      authoredOccurrence(project, 'P', occurrenceId).encounters.traitOffersByPhase?.Combat
-        ?.AthenaCombatP?.selectedOptionKey,
+      authoredTraits(
+        authoredOccurrence(project, 'P', occurrenceId).encounters.traitOffersByPhase?.Combat
+          ?.AthenaCombatP,
+      ).selectedOptionKey,
     ).toBe('option1');
     expect(support(project, athenaPhase)).toMatchObject({
       selectedEncounterKey: 'GeneratedP',

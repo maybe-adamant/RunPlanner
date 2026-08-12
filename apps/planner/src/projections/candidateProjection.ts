@@ -46,6 +46,7 @@ import {
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
+  AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -194,6 +195,14 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
+  readonly traitOfferStartingDraft: (
+    owner: TraitOfferAddress,
+    giverKey: string,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly nextTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
   /**
    * Evaluates one declaration-compatible concrete domain at one focused offer
    * position. Every query still carries the complete draft into Gate A.
@@ -280,12 +289,13 @@ function offerWithFocusedOption(
   optionKey: TraitOptionKey,
   option: AuthoredTraitOption,
 ): AuthoredTraitOffer {
+  if (value.kind === 'fallbackGold') return value;
   const index = optionKey === 'option1' ? 0 : optionKey === 'option2' ? 1 : 2;
   const options = [...value.options] as AuthoredTraitOption[];
   options[index] = Object.freeze({ ...option });
   return Object.freeze({
     ...value,
-    options: Object.freeze(options) as AuthoredTraitOffer['options'],
+    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
   });
 }
 
@@ -770,6 +780,24 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      traitOfferStartingDraft: (owner: TraitOfferAddress, giverKey: string) => {
+        const draft = requireProjectCache(
+          cache,
+          assembly,
+          catalog,
+          options,
+        ).evaluator.traitOfferStartingDraft(owner, giverKey);
+        return draft?.kind === 'traits' ? draft : undefined;
+      },
+      nextTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) => {
+        const draft = requireProjectCache(
+          cache,
+          assembly,
+          catalog,
+          options,
+        ).evaluator.nextTraitOfferDraft(owner, value);
+        return draft?.kind === 'traits' ? draft : undefined;
+      },
       traitOfferFocusedOptions: (
         owner: TraitOfferAddress,
         value: AuthoredTraitOffer,

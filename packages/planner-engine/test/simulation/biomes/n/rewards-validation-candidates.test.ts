@@ -800,7 +800,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).branches;
     const branch = branches[0];
     const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];
-    if (branch === undefined || expectedOffer === undefined) {
+    if (branch === undefined || expectedOffer === undefined || expectedOffer.kind !== 'traits') {
       throw new Error('trait event was not reached');
     }
     expect(branch.events).toContainEqual(

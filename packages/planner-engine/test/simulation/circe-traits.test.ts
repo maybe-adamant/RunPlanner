@@ -41,10 +41,10 @@ const circeOwner = createTraitOfferAddress(
 );
 
 function circeOffer(
-  selectedOptionKey: AuthoredTraitOffer['selectedOptionKey'],
-  options: AuthoredTraitOffer['options'],
+  selectedOptionKey: Extract<AuthoredTraitOffer, { kind: 'traits' }>['selectedOptionKey'],
+  options: Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
 ): AuthoredTraitOffer {
-  return Object.freeze({ giverKey: 'Circe', options, selectedOptionKey });
+  return Object.freeze({ kind: 'traits', giverKey: 'Circe', options, selectedOptionKey });
 }
 
 function withCirce(
@@ -84,13 +84,16 @@ function oEvaluation(project: ProjectDocument) {
   return { assembly, biome };
 }
 
-function authoredCirceOffer(project: ProjectDocument): AuthoredTraitOffer {
+function authoredCirceOffer(
+  project: ProjectDocument,
+): Extract<AuthoredTraitOffer, { kind: 'traits' }> {
   const value = project.routes
     .find((route) => route.routeKey === 'Surface')!
     .biomes.find((biome) => biome.biomeKey === 'O')!
     .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === oOccurrenceIds.story)!
     .encounters.traitOffersByPhase!.Encounter!.Story_Circe_01;
   if (value === undefined) throw new Error('Circe offer must be authored');
+  if (value?.kind !== 'traits') throw new Error('Circe offer must contain traits');
   return value;
 }
 

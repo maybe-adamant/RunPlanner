@@ -28,6 +28,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  requireTraits,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
 import { noEncounterPhaseStatusCoverage } from '@planner-test/support/structured-workspace/encounter-phase-status';
@@ -265,9 +266,11 @@ describe('structured workspace source index', () => {
     const selected = validF.rewards.selectedTraitOffers.find(
       (trace) => trace.offer.giverKey !== 'WeaponUpgrade',
     );
-    const [first, second, third] = selected?.offer.options ?? [];
+    const offer = selected === undefined ? undefined : requireTraits(selected.offer);
+    const [first, second, third] = offer?.options ?? [];
     if (
       selected === undefined ||
+      offer === undefined ||
       first === undefined ||
       second === undefined ||
       third === undefined
@@ -278,7 +281,8 @@ describe('structured workspace source index', () => {
       kind: 'ReplaceTraitOffer',
       trait: selected.address,
       value: {
-        giverKey: selected.offer.giverKey,
+        kind: 'traits',
+        giverKey: offer.giverKey,
         options: [{ ...first, rarity: 'Heroic' }, second, third],
         selectedOptionKey: 'option1',
       },
