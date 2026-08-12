@@ -205,7 +205,8 @@ export interface CandidateProjectionSession {
   ) => AuthoredTraitOfferTraits | undefined;
   /**
    * Evaluates one declaration-compatible concrete domain at one focused offer
-   * position. Every query still carries the complete draft into Gate A.
+   * position. Every query still carries the complete draft into engine offer
+   * assessment.
    */
   readonly traitOfferFocusedOptions: (
     owner: TraitOfferAddress,

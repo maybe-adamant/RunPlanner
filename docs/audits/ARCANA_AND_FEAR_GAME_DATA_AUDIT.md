@@ -280,13 +280,20 @@ The two domains otherwise remain separate until Circe:
 
 ## Planner Disposition
 
-The schema-21 Arcana/Fear and Circe delivery implements this audit's supported
-run-level subset: rank-III card baselines, ordinary automatic activation,
-manual Arcana and ranked Fear loadouts, configured versus effective Fear,
-temporary Arcana activation, Lapis promotion, Black Night suppression,
-Judgment's exact post-Boss draws, and Circe's nine fixed-Common choices.
-Catalog declarations own card/Vow data and Judgment's rarity-scaled count;
-the engine owns the progressive state, target domains, and exact authored
-outcomes. Grasp capacity, Vow of Void's capacity effect, Fated mode, permanent
-card advancement, and ordinary Vow gameplay effects remain deliberately out of
-scope.
+Schema 21 established the Arcana/Fear and Circe subset: rank-III card
+baselines, ordinary automatic activation, manual Arcana and ranked Fear
+loadouts, configured versus effective Fear, temporary Arcana activation,
+Lapis promotion, Black Night suppression, Judgment's exact post-Boss draws,
+and Circe's nine fixed-Common choices. Schema 22 adds the two supported
+reward-facing Vow effects without introducing a generic Fear interpreter:
+Denial records exact displayed unselected Olympian/Hermes traits in the folded
+route history, and Forfeit records one ordinary-room acquisition veto per
+biome. Black Night stops future effects but does not erase prior bans or
+restore an already vetoed acquisition.
+
+Catalog declarations own card/Vow data, the two closed effect payloads, exact
+Denial participation, and Judgment's rarity-scaled count; the engine owns the
+progressive state, target domains, exact authored outcomes, banned history, and
+Forfeit usage. Grasp capacity, Vow of Void's capacity effect, Fated mode,
+permanent card advancement, and every other ordinary Vow gameplay effect remain
+deliberately out of scope.

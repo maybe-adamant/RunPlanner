@@ -650,6 +650,16 @@ plus acquisition role or an exact encounter phase plus the `selection` role;
 option keys are evidence within that offer's assessment and never semantic
 owners or finding addresses.
 
+The authored offer at that owner is a closed schema-22 outcome: either one to
+three materialized trait options with one selected option, or mutually
+exclusive Fallback Gold. The engine alone derives ordinary, optional
+high-tier, and replacement domains; folds Denial's exact unselected bans into
+trait history after a valid selection; and vetoes Forfeit's first qualifying
+ordinary room acquisition before concrete Boon/Hermes and trait settlement.
+Catalog declarations provide only the closed effect facts and exact Denial
+participant set. Redux and React own no shadow offer-composition,
+banned-trait, or Forfeit-usage model.
+
 Reached selected-offer assessments are biome-level, data-only reward products.
 The exact assembly separately retains opaque address-indexed alternative
 capabilities backed by private branch-local pre-offer history and context.

@@ -795,13 +795,15 @@ groups, menus, and tooltips. The editor should support:
 Trait offers are projected from reached engine evaluations, never recomputed
 in React. A room/reward summary, the chronological route Traits panel, and a
 finding destination all reference the same `TraitOfferAddress` and bound
-interaction. The shared modal renders three stable option rows, the selected
-option, and contextual trait pickers. Selectable-rarity givers receive a
-contextual rarity picker; fixed-rarity providers such as Icarus retain rarity
-in the authored value and summary but expose no rarity control, and Hammer rows
-intentionally expose no rarity field. Giver labels, selected trait labels,
-contextual support, and findings are presentation products derived from catalog
-and engine outputs.
+interaction. The shared modal renders the one to three materialized option
+rows, their selected option, and contextual trait pickers, or the mutually
+exclusive Fallback Gold outcome. Engine-projected controls add the next
+supported row, remove only a trailing row, select fallback, or return to one
+supported trait draft. Selectable-rarity givers receive a contextual rarity
+picker; fixed-rarity providers such as Icarus retain rarity in the authored
+value and summary but expose no rarity control, and Hammer rows intentionally
+expose no rarity field. Giver labels, selected trait labels, contextual support,
+and findings are presentation products derived from catalog and engine outputs.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:
@@ -824,14 +826,19 @@ target domain; a missing or stale selected target remains visible for repair
 and keeps Save disabled. React does not infer a target, traverse equipped
 history, or switch on Bridal Glow, Latest Model, Icarus, or Hammer names.
 
-Picker activation evaluates one focused option domain with the other two draft
-options held fixed. Sibling findings therefore remain visible in the complete
+Picker activation evaluates one focused option domain with every materialized
+sibling held fixed. Sibling findings therefore remain visible in the complete
 feedback panel without falsely disabling unrelated focused repairs. Trait and
 rarity selection changes only the local complete draft; Save still dispatches
 one `ReplaceTraitOffer` command and creates one authored undo entry. An
 unassessed option remains selectable, an impossible alternative remains
 inspectable but disabled, and a selected impossible value remains pinned until
 the user repairs it.
+
+The editor never derives the ordinary/high-tier/replacement domains, sparse
+fill, or Fallback Gold availability. A fallback outcome has no rarity,
+targeted-acquisition, Circe, Death Defiance, or selected-option child, and the
+modal does not render those controls until the engine supplies a trait draft.
 
 Trait dialog visibility and focus handoff are UI-session state. Opening from a
 room, Shop, route Traits row, or semantic finding does not enter authored
@@ -857,6 +864,10 @@ declaration-bounded Fear ranks. Ordinary automatic Arcana indicators and the
 derived Fear total are read-only engine products. The same workspace exposes a
 reached Judgment completion control only at its exact derived completion owner;
 there is no route-level Judgment editor.
+
+Run State presents the engine-folded banned-trait labels and Forfeit's
+current-biome inactive, available, or consumed status. React neither accumulates
+unselected Denial options nor infers Forfeit eligibility from rendered rooms.
 
 The existing trait-offer surface also presents the engine's
 `rarityBelowActiveFloor` finding as ordinary option feedback. A retained

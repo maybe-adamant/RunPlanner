@@ -497,14 +497,15 @@ allowing room and reward controls to share one accessible component.
 
 ### Trait offer domains
 
-Each of the three trait-option cards uses that same contextual-picker
+Each materialized trait-option card uses that same contextual-picker
 vocabulary for its trait and, when the giver's catalog policy is selectable,
-rarity.
+rarity. Olympian and Hermes outcomes may contain one to three cards; the other
+supported givers retain their declaration-owned three-card shape.
 The application prepares declaration- and schema-compatible concrete
 `{ traitKey, rarity }` variants and evaluates them lazily through the exact
-trait-offer interaction. React passes the complete local three-option draft and
-focused option key to the bound interaction; it never constructs engine
-queries or evaluates trait rules.
+trait-offer interaction. React passes the complete local outcome and focused
+option key to the bound interaction; it never constructs engine queries or
+evaluates trait rules.
 
 The trait picker aggregates concrete variants by trait. A trait is available
 when at least one visible rarity is supported, unassessed when exact lifecycle
@@ -519,6 +520,15 @@ batch. Fixed-rarity givers such as Icarus retain their authored rarity without
 a picker; Hammers expose no rarity control. Heroic remains hidden as a fresh
 technical probe and appears only for a retained authored value or an
 engine-supported Epic-to-Heroic replacement.
+
+The same modal renders engine-backed shape controls for exhausted Olympian and
+Hermes offers. Adding a position consumes an exact engine-produced next draft;
+returning from Fallback Gold consumes an exact engine-produced starting draft.
+Removing a trailing position and selecting Fallback Gold still run complete
+candidate assessment before Save. Fallback Gold occupies the whole offer and
+therefore renders no option-local rarity, target, Circe, or Death Defiance
+control. The application never counts ordinary, high-tier, or replacement
+candidates to decide which control is available.
 
 A declaration-owned targeted option adds one target picker backed by the exact
 trait-offer capability. It uses the same lazy boundary and catalog labels as

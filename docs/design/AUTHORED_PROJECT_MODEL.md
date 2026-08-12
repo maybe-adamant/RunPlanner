@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 21 Boundary
+## Schema 22 Boundary
 
-Schema 21 is the sole persisted authored-project contract. The codec rejects
+Schema 22 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -364,6 +364,17 @@ They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, Shop offers, and exact acquisition-site order. Leaf
 edits do not rewrite topology.
 
+### Trait Offer Outcomes
+
+Every reward- or encounter-owned trait role persists one closed
+`AuthoredTraitOffer` at its exact `TraitOfferAddress`. A `traits` outcome owns a
+one-to-three tuple of distinct options and a selected key that addresses a
+materialized position. A `fallbackGold` outcome owns only its giver; it has no
+selected key, rarity, target, Circe resolution, or Death Defiance condition.
+Only Olympian and Hermes givers support sparse or fallback outcomes. Defaults
+for every giver remain complete three-option trait outcomes, and an upstream
+edit may retain a context-invalid outcome for explicit repair.
+
 ### Concrete Encounter Selections
 
 `RoomOccurrence.encounters.encounterKeyByPhase` persists the exact normalized
@@ -392,12 +403,16 @@ default is dormant or currently invalid; it is a reset, not an automatic
 repair.
 
 An Encounter Definition may additionally declare one `traitOfferProducer`.
-The owning room or local child then persists its complete three-option offer
-sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`. Selecting
-that encounter installs its declaration-owned default when no retained offer
-exists; selecting another definition makes the prior offer dormant, and
-reselecting it restores the retained value. Only the selected, active, entered
-definition publishes, validates, or acquires its offer.
+The owning room or local child then persists its complete offer outcome
+sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`. A trait
+outcome contains one to three materialized options and a selected key that
+addresses one of them; a `fallbackGold` outcome instead owns only the giver
+and has no selected key or option-local children. Declaration defaults remain
+complete three-option trait outcomes. Selecting that encounter installs its
+declaration-owned default when no retained offer exists; selecting another
+definition makes the prior offer dormant, and reselecting it restores the
+retained value. Only the selected, active, entered definition publishes,
+validates, or acquires its offer.
 
 The exact encounter phase owns the offer's `TraitOfferAddress` with child role
 `selection`. An option may retain an exact `targetTraitKey` only when its trait
@@ -463,7 +478,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 21;
+  schemaVersion: 22;
   projectId: string;
   name: string;
   catalogVersion: string;

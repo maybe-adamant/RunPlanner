@@ -1133,3 +1133,15 @@ predicates retain the dispositions above or the previously recorded
 progressed-baseline and mechanical-effect deferrals. Newly discovered
 predicates are explicitly listed above rather than covered by a no-unlisted
 claim.
+
+## Implemented Offer Disposition
+
+Schema 22 retains this audit's giver membership, requirements, rarity domains,
+priority sets, and exact replacement targets. The earlier fixed-triple text is
+historical baseline only: Olympian and Hermes outcomes now support one to three
+materialized traits or Fallback Gold according to the source-backed exhaustion
+contract in
+[`TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
+The catalog adds only the exact ten-giver Denial participation fact; ordinary,
+high-tier, replacement, banned, and fallback membership remain derived from
+the progressive engine state rather than copied into these declarations.

@@ -362,6 +362,10 @@ intact but makes that Vow effectively inactive. Every transition carries its
 exact lifecycle evidence, so stale or duplicate effects fail rather than being
 silently replayed. Branch equivalence includes this whole state: alternative
 frontiers with different active cards, rarities, or disabled Vows never merge.
+The snapshot also carries the folded route-wide banned-trait keys and derives
+Forfeit's current-biome status as inactive, available, or consumed. Consumed
+takes precedence over later Circe suppression because suppression cannot
+restore the skipped acquisition.
 
 Judgment is a repeated transition at each reached Boss
 `encounterCompleted` point. Its selected canonical inactive-card set is
@@ -1397,13 +1401,15 @@ the validated F prefix.
 Trait-bearing acquisition roles now fold an explicit equipped-trait ledger
 beside the existing loot/use history. Each reached offer records its semantic
 owner, provider, options, selected option, acquisition point, and pre-offer
-state. All three alternatives must be legal against the same state; an invalid
-reached offer remains repairable in the trace but emits no equipped event.
-Only the selected option of a valid role folds, immediately after that role's
-exact loot/use projection. The ledger carries concrete ranked rarity (including
-equipped `Heroic`) and an independent Rank I/II value instead of rarity for
-Hammers, then derives ordinary slot occupancy, element totals, highest
-base-element count, god-boon rarity counts, and `upgradableTraitCount`.
+state. Every materialized alternative must be legal against the same state; an
+invalid reached offer remains repairable in the trace but emits no equipped
+event. Only the selected option of a valid trait outcome folds, immediately
+after that role's exact loot/use projection. A valid Fallback Gold outcome
+publishes a reached assessment but emits no trait event and changes no equipped
+state. The ledger carries concrete ranked rarity (including equipped `Heroic`)
+and an independent Rank I/II value instead of rarity for Hammers, then derives
+ordinary slot occupancy, element totals, highest base-element count, god-boon
+rarity counts, and `upgradableTraitCount`.
 
 `upgradableTraitCount` is no longer an ordinary-source increment and is never
 used as a shadow eligibility model. It and the distinct Boon Growth and Boon
@@ -1458,6 +1464,34 @@ retains earlier acquisition events, and recomputes every ledger-derived fact.
 Unselected alternatives do not mutate state. Replacement identity is derived
 and absent from authored JSON; source probability, force/progression gates,
 counters, and `ExchangeLevelBonus` stay deferred.
+
+Olympian and Hermes offer composition uses one exact pre-offer partition:
+`O` contains legal dependable ordinary/infusion candidates, `H` contains legal
+optional Duo/Legendary candidates, and `R` contains legal exact replacement
+transitions. At least three members of `O` require three materialized options
+and permit at most one replacement. With one or two members, every member of
+`O` must appear, authored `H` outcomes may occupy vacancies, and `R` fills as
+many remaining positions as possible. With no `O`, optional `H` outcomes and
+`R` may still materialize; Fallback Gold is supported only when neither does.
+One or two trait options are therefore valid exhaustion outcomes inside the
+fixed three-position game envelope. Denial never selects a separate
+composition algorithm.
+
+After a valid participating Olympian or Hermes selection, effective Denial
+adds up to two exact unselected materialized trait keys to that event. Folding
+the event carries the route-wide banned set into every later eligibility and
+candidate query. Circe suppression stops new Denial evidence but leaves prior
+bans intact. Fallback Gold and nonparticipating providers emit no bans.
+
+Effective Forfeit is evaluated earlier and at a narrower provenance boundary.
+The first supported incoming `Boon` or `HermesUpgrade` reward on an ordinary
+authored room in each biome records `ordinaryRoomRewardForfeited`, advances the
+processed frontier, and skips concrete acquisition and trait-child evaluation.
+The already-resolved offer and bag consumption remain. Shop, Devotion, local
+children, and pickups do not enter this veto; no substitute acquisition is
+recorded. Per-biome usage resets when carried reward branches initialize the
+next biome, while configured/effective Fear and Circe suppression remain
+route-wide.
 
 The same replay folds the normalized Proper Upbringing rarity floor. After
 each reached acquisition or replacement it derives the post-selection element

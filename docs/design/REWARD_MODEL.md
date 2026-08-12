@@ -975,24 +975,27 @@ complete replacement values. Simulation validates:
 ### Trait-bearing reward leaves
 
 Trait authoring is additive to reward identity. Every in-scope acquisition role
-may own one `AuthoredTraitOffer` child with three distinct options and one
-selected option. An exact encounter phase may own the same child when its
-selected Encounter Definition declares a `traitOfferProducer`. The reward
-kernel resolves reward providers from the concrete acquisition role (including
-payload-source, fixed, Devotion chosen/spurned, and purchased Shop roles);
-encounter providers resolve from their declaration. Neither path switches on a
-room, Shop, component, or rendered trait name. An unpicked room, dormant local
-child, unselected encounter definition or wheel result, or unpurchased Shop
-option owns no reached trait event.
+may own one `AuthoredTraitOffer` child. Its closed outcome is either one to
+three distinct materialized trait options with one selected option, or
+mutually exclusive Fallback Gold with no option-local child. An exact encounter
+phase may own the same child when its selected Encounter Definition declares a
+`traitOfferProducer`. The reward kernel resolves reward providers from the
+concrete acquisition role (including payload-source, fixed, Devotion
+chosen/spurned, and purchased Shop roles); encounter providers resolve from
+their declaration. Neither path switches on a room, Shop, component, or
+rendered trait name. An unpicked room, dormant local child, unselected
+encounter definition or wheel result, or unpurchased Shop option owns no
+reached trait event.
 
 At the role's declared lifecycle point, the kernel first applies the existing
-exact loot/use projection and then evaluates all three alternatives against
-one pre-selection equipped-trait snapshot. A reached invalid offer remains in
-the trace and receives semantic findings, but its selected option does not
-enter equipped state. A valid offer folds only its selected trait. Devotion's
-chosen role therefore equips before combat and its spurned role observes that
-state after combat; Shop purchases fold in their occurrence-owned `roomExit`
-acquisition-site order.
+exact loot/use projection and then evaluates every materialized alternative
+against one pre-selection equipped-trait snapshot. A reached invalid offer
+remains in the trace and receives semantic findings, but its selected option
+does not enter equipped state. A valid trait outcome folds only its selected
+trait; valid Fallback Gold publishes its reached evaluation but emits no trait
+event or modeled acquisition. Devotion's chosen role therefore equips before
+combat and its spurned role observes that state after combat; Shop purchases
+fold in their occurrence-owned `roomExit` acquisition-site order.
 
 The first reached Olympian offer is a complete-offer composition point when
 the pre-offer `ordinaryBoonSlots` projection is empty. Its three alternatives
@@ -1011,6 +1014,26 @@ occupied-slot failure; all other requirements remain authoritative. The 10
 percent roll, force flags, progression gates, counters, and
 `ExchangeLevelBonus` remain deferred. Replacement transfers the displaced
 trait's folded level, including into a non-Pom-eligible replacement.
+
+For Olympian and Hermes offers, one engine-owned composition domain separates
+dependable ordinary/infusion candidates, optional Duo/Legendary candidates,
+and exact slot-replacement transitions. Three or more dependable ordinary
+candidates require three materialized options and permit at most one
+replacement. With one or two dependable ordinary candidates, all must appear;
+optional high-tier outcomes may appear and replacements fill every remaining
+position they can. With none, optional high-tier outcomes and replacements may
+still materialize; if neither does, the only supported outcome is Fallback
+Gold. Denial does not select another composition algorithm.
+
+After a valid participating Olympian or Hermes trait selection, effective Vow
+of Denial records up to two exact unselected materialized keys on that same
+trait event. The folded banned set is route-wide eligibility history;
+suppressing Denial stops new bans but never removes existing ones. Effective
+Vow of Forfeit is narrower: at the ordinary authored room's incoming `Boon` or
+`HermesUpgrade` settlement boundary it vetoes the first such acquisition in
+each biome. The authored offer and bag result remain, but concrete acquisition
+and its trait child stay dormant. Shops, Devotion, local children, and pickups
+do not trigger or consume Forfeit, and no consolation acquisition is modeled.
 
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,
