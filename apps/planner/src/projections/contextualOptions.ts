@@ -236,6 +236,9 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Choose a keepsake that remains available at this rack frontier.',
       };
+    case 'keepsakeEquipResultMissing':
+    case 'keepsakeEquipResultUnavailable':
+      return { kind: 'generic', message: 'Choose the Hades trait granted by Jeweled Pom.' };
     case 'circeResolutionMissing':
     case 'circeResolutionWrongCardinality':
     case 'circeResolutionTargetUnavailable':

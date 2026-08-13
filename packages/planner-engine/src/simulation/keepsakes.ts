@@ -1,5 +1,8 @@
 import type { Catalog } from '../catalog-schema';
+import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
+import type { TraitHistoryState } from './traits';
+import { assessTraitOption } from './traits';
 
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
 export interface KeepsakeHistoryEntry {
@@ -11,6 +14,86 @@ export interface KeepsakeState {
   readonly history: readonly KeepsakeHistoryEntry[];
   readonly removedKeys: readonly string[];
   readonly fatedStatus: FatedStatus;
+  /** Retained output of the exact Jeweled Pom equip transition. */
+  readonly jeweledPom?: {
+    readonly grantedTraitKey: string;
+    readonly active: boolean;
+    readonly levels: number;
+    readonly acquisitionIdentity: string;
+  };
+}
+
+export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Catalog, key: string) {
+  const effect = catalog.keepsakes.byKey[key]?.effect;
+  return effect?.kind === 'jeweledPom' ? effect : undefined;
+}
+
+export function keepsakeEffectByKind(
+  catalog: import('../catalog-schema').Catalog,
+  kind: 'jeweledPom',
+) {
+  return catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === kind)?.effect;
+}
+
+export function equipJeweledPom(
+  state: KeepsakeState,
+  grantedTraitKey: string,
+  levels: number,
+  acquisitionIdentity: string,
+): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    jeweledPom: Object.freeze({
+      grantedTraitKey,
+      active: state.fatedStatus === 'Fated',
+      levels,
+      acquisitionIdentity,
+    }),
+  });
+}
+
+/** One exact direct Hades acquisition; not an ordinary three-option offer. */
+export function assessJeweledPomEquipResult(
+  catalog: Catalog,
+  result: NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>,
+  before: TraitHistoryState,
+  fatedStatus: FatedStatus,
+): { readonly legal: boolean; readonly findings: readonly string[] } {
+  if (fatedStatus !== 'Fated')
+    return Object.freeze({
+      legal: false,
+      findings: Object.freeze(['keepsakeEquipResultUnavailable']),
+    });
+  const effect = keepsakeEffectByKind(catalog, 'jeweledPom');
+  if (effect === undefined)
+    return Object.freeze({
+      legal: false,
+      findings: Object.freeze(['keepsakeEquipResultUnavailable']),
+    });
+  const assessment = assessTraitOption(
+    catalog,
+    result.traitKey,
+    before,
+    {
+      resolvedProviderKey: effect.giverKey,
+      ...(result.deathDefianceConditionMet === undefined
+        ? {}
+        : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
+    },
+    result.rarity,
+  );
+  return Object.freeze({
+    legal: assessment.legal,
+    findings: Object.freeze(assessment.findings.map((finding) => finding.code)),
+  });
+}
+
+export function invalidateJeweledPom(state: KeepsakeState): KeepsakeState {
+  if (state.jeweledPom === undefined || !state.jeweledPom.active) return state;
+  return Object.freeze({
+    ...state,
+    jeweledPom: Object.freeze({ ...state.jeweledPom, active: false }),
+  });
 }
 export type KeepsakeSelectionUnavailableReason =
   'alreadyEquipped' | 'removed' | 'unfatedEnabling' | 'encounterHistory';
@@ -102,6 +185,7 @@ export function applyKeepsakeDisposition(
     { key: disposition.keepsakeKey, kind: 'replace' as const },
   ]);
   return Object.freeze({
+    ...state,
     currentKey: disposition.keepsakeKey,
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),

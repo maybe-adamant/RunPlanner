@@ -33,6 +33,7 @@ export interface TraitOfferEvent {
   readonly options: AuthoredTraitOfferTraits['options'];
   readonly selectedOptionKey: TraitOptionKey;
   readonly acquisitionPoint: string;
+  readonly acquisitionIdentity?: string;
   /** Exact unselected materialized keys banned by an effective Vow of Denial. */
   readonly bannedTraitKeys?: readonly string[];
   /** Derived from the pre-offer state; never persisted in authored state. */
@@ -69,9 +70,19 @@ export interface TraitElementContributionEvent {
   readonly acquisitionPoint: string;
   readonly contributions: Readonly<Partial<Record<TraitElement, number>>>;
 }
+/** A closed lifecycle removal (currently Jeweled Pom's Fated cleanup). */
+export interface TraitRemovalEvent {
+  readonly kind: 'traitRemoval';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly traitKey: string;
+  readonly acquisitionIdentity: string;
+}
 
 export type TraitHistoryEvent =
-  TraitOfferEvent | TraitLevelMutationEvent | TraitElementContributionEvent;
+  TraitOfferEvent | TraitLevelMutationEvent | TraitElementContributionEvent | TraitRemovalEvent;
 
 export interface TraitReplacementTransition {
   readonly slot: string;
@@ -307,6 +318,11 @@ export function foldTraitHistoryEvents(
         }
         continue;
       }
+      if (event.kind === 'traitRemoval') {
+        if (equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity)
+          delete equipped[event.traitKey];
+        continue;
+      }
       const option = event.options[optionIndex(event.selectedOptionKey)];
       for (const traitKey of event.bannedTraitKeys ?? []) bannedTraitKeys.add(traitKey);
       if (option === undefined || equipped[option.traitKey] !== undefined) continue;
@@ -328,6 +344,9 @@ export function foldTraitHistoryEvents(
         ...(isPomEligibleTrait(catalog, option.traitKey) ? { level: 1 } : {}),
         ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
         sourceRole: event.acquisitionRole,
+        ...(event.acquisitionIdentity === undefined
+          ? {}
+          : { acquisitionIdentity: event.acquisitionIdentity }),
       });
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
@@ -650,9 +669,25 @@ export function evaluateReachedTraitOffer(
   context: TraitOfferContext,
   chronologicalIndex: number,
   arcanaFear?: ArcanaFearState,
+  directAcquisition = false,
 ): ReachedTraitOfferEvaluation {
-  const composition = assessTraitOfferComposition(catalog, offer, before);
-  const replacementComposition = assessTraitReplacementComposition(catalog, offer, before, context);
+  // Exact one-result sources (for example, a keepsake equip) are direct
+  // acquisitions, not a sparse ordinary offer. They retain the normal
+  // trait-level assessment and history event path without inheriting the
+  // three-choice offer-composition contract.
+  const composition = directAcquisition
+    ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
+    : assessTraitOfferComposition(catalog, offer, before);
+  const replacementComposition = directAcquisition
+    ? Object.freeze({
+        applies: false,
+        legal: true,
+        ordinaryCandidateCount: 0,
+        maximumReplacementCount: 0,
+        replacementCount: 0,
+        findings: Object.freeze([]),
+      })
+    : assessTraitReplacementComposition(catalog, offer, before, context);
   const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, before);
   return Object.freeze({
     address,
@@ -830,6 +865,7 @@ export function recordReachedTraitOffer(
   evaluation: ReachedTraitOfferEvaluation,
   sequence: number,
   acquisitionPoint: string,
+  acquisitionIdentity?: string,
 ): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
   const valid =
     evaluation.composition.legal &&
@@ -862,6 +898,7 @@ export function recordReachedTraitOffer(
     options: evaluation.offer.options,
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
+    ...(acquisitionIdentity === undefined ? {} : { acquisitionIdentity }),
     ...(bannedTraitKeys === undefined ? {} : { bannedTraitKeys }),
     ...(selectedAssessment?.replacementTransition === undefined
       ? {}

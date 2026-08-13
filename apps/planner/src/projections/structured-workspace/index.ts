@@ -39,6 +39,7 @@ export type {
   WorkspaceInspectorDestination,
   WorkspaceInteractionCatalog,
   WorkspaceKeepsakeSelectionInteraction,
+  WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceMarker,
   WorkspaceMissingPhysicalTarget,
   WorkspaceMixedBatchNode,

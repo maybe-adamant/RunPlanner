@@ -5,6 +5,7 @@ import {
   type CandidateEvaluationEvent,
   type EvaluatedTraitAcquisitionTargetCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
+  type EvaluatedKeepsakeEquipResultCandidate,
   type CirceResolutionDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -24,6 +25,7 @@ import {
   type BiomeAddress,
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
+  type KeepsakeEquipResultAddress,
   type ExitDecisionAddress,
   type EncounterPhaseAddress,
   type HubDecisionAddress,
@@ -100,7 +102,8 @@ export type CandidateProjectionEvaluation =
   | ProjectCandidateEvaluation
   | EvaluatedTraitOfferFocusedOptionCandidate
   | EvaluatedTraitAcquisitionTargetCandidate
-  | EncounterCandidateProjectionEvaluation;
+  | EncounterCandidateProjectionEvaluation
+  | EvaluatedKeepsakeEquipResultCandidate;
 
 export interface CandidateOptionProjection<
   T,
@@ -243,6 +246,10 @@ export interface CandidateProjectionSession {
   /** Exact engine-captured keepsake frontier, projected one option at a time for controls. */
   readonly keepsakeSelections: (
     owner: KeepsakeSelectionAddress,
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly keepsakeEquipResult: (
+    owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' },
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
   ) => readonly CandidateOptionProjection<string>[];
 }
 
@@ -949,6 +956,40 @@ export function createCandidateSessionFactory(
           ),
         );
       },
+      keepsakeEquipResult: (
+        owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' },
+        value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+      ) => {
+        const evaluation = requireProjectCache(
+          cache,
+          assembly,
+          catalog,
+          options,
+        ).evaluator.evaluate({
+          kind: 'keepsakeEquipResult',
+          result: owner,
+          ...(value === undefined ? {} : { value }),
+        });
+        if (evaluation.kind === 'unavailable') return Object.freeze([]);
+        if (evaluation.kind !== 'keepsakeEquipResult')
+          throw new Error(
+            `Keepsake equip result ${semanticAddressKey(owner)} returned ${evaluation.kind}`,
+          );
+        return Object.freeze(
+          evaluation.result.options.map((option) =>
+            Object.freeze({
+              value: option.traitKey,
+              evaluation: Object.freeze({
+                ...evaluation,
+                result: Object.freeze({
+                  ...evaluation.result,
+                  selectedPossible: option.selectedPossible,
+                }),
+              }),
+            }),
+          ),
+        );
+      },
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
@@ -1024,6 +1065,7 @@ function candidateForced(
       return evaluation.result.support === 'forced';
     case 'bossCompletionArcana':
     case 'keepsakeSelection':
+    case 'keepsakeEquipResult':
       return false;
     case 'roomTarget':
       return (

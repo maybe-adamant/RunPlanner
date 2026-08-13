@@ -99,6 +99,12 @@ export interface KeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  /** Closed, source-backed data consumed by the Jeweled Pom transition. */
+  readonly effect?: {
+    readonly kind: 'jeweledPom';
+    readonly giverKey: string;
+    readonly subsequentEligibleTraitLevels: 3;
+  };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';

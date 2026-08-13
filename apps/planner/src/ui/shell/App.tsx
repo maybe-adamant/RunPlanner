@@ -1,13 +1,14 @@
 import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
   semanticAddressKey,
   type EncounterPhaseAddress,
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   presentBiomeFeedbackContext,
@@ -40,7 +41,10 @@ import type {
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
 import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useWorkspaceInteraction,
+  useWorkspaceInteractionController,
+} from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
   candidateSelectState,
@@ -122,6 +126,26 @@ function RouteOverview({
   if (keepsake === undefined)
     throw new Error(`Missing starting keepsake interaction for ${workspaceRoute.routeKey}`);
   const keepsakeCandidates = useWorkspaceInteraction(keepsake);
+  const pomAddress = createKeepsakeEquipResultAddress(startingKeepsake, 'jeweledPom');
+  const pom = interactions.keepsakeEquipResults.get(workspaceInteractionKey(pomAddress));
+  const pomCandidateController =
+    useWorkspaceInteractionController<
+      readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<string>[]
+    >();
+  pomCandidateController.observe(pom);
+  const selectedPom = pom?.value;
+  const [missingPomDeathDefianceDraft, setMissingPomDeathDefianceDraft] = useState(false);
+  const pomDeathDefianceConditionMet =
+    selectedPom === undefined
+      ? missingPomDeathDefianceDraft
+      : selectedPom.deathDefianceConditionMet === true;
+  const pomCandidateFor = (traitKey: string) =>
+    pom
+      ?.load({
+        traitKey,
+        ...(pomDeathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
+      })
+      .find((candidate) => candidate.value === traitKey);
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -197,6 +221,76 @@ function RouteOverview({
             })}
           </select>
         </label>
+        {pom === undefined ? null : (
+          <fieldset className="field-control">
+            <legend>Jeweled Pom result</legend>
+            <select
+              aria-label="Jeweled Pom result"
+              id={`${workspaceRoute.routeKey}-jeweled-pom`}
+              value={pom.value?.traitKey ?? ''}
+              onFocus={() => pom !== undefined && pomCandidateController.activate(pom)}
+              onPointerDown={() => pom !== undefined && pomCandidateController.activate(pom)}
+              onChange={(event) => {
+                const traitKey = event.target.value;
+                if (traitKey === '') return;
+                const option = pomCandidateFor(traitKey);
+                if (candidateMayBeAuthored(option))
+                  dispatch(
+                    authoredProjectCommandDispatched(
+                      pom.intentFor({
+                        ...(pom.value ?? {}),
+                        traitKey,
+                        ...(pomDeathDefianceConditionMet
+                          ? { deathDefianceConditionMet: true }
+                          : {}),
+                      }).command,
+                    ),
+                  );
+              }}
+            >
+              <option value="">Choose Hades trait</option>
+              {pom.choices.map((choice) => {
+                const option = pomCandidateFor(choice.value);
+                return (
+                  <option
+                    key={choice.value}
+                    value={choice.value}
+                    disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                    {...candidateSelectState(option)}
+                  >
+                    {choice.label}
+                  </option>
+                );
+              })}
+            </select>
+            {pom.supportsDeathDefianceCondition ? (
+              <label>
+                <input
+                  checked={pomDeathDefianceConditionMet}
+                  type="checkbox"
+                  onChange={(event) => {
+                    if (selectedPom === undefined) {
+                      setMissingPomDeathDefianceDraft(event.target.checked);
+                      return;
+                    }
+                    dispatch(
+                      authoredProjectCommandDispatched(
+                        pom.intentFor({
+                          traitKey: selectedPom.traitKey,
+                          ...(selectedPom.rarity === undefined
+                            ? {}
+                            : { rarity: selectedPom.rarity }),
+                          deathDefianceConditionMet: event.target.checked,
+                        }).command,
+                      ),
+                    );
+                  }}
+                />
+                Death Defiance condition met
+              </label>
+            ) : null}
+          </fieldset>
+        )}
         <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
           <span>Weapon</span>
           <select

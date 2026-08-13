@@ -691,6 +691,66 @@ describe('route loadout interaction', () => {
     expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
   });
 
+  it('authors the Jeweled Pom result and its local Death Defiance condition at route start', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Starting keepsake' }),
+      'HadesAndPersephoneKeepsake',
+    );
+
+    const active = application.store.getState().projectWorkspace.history.present;
+    const missingResult = {
+      ...active,
+      routes: active.routes.map((route) => {
+        if (route.routeKey !== 'Underworld') return route;
+        const { keepsakeEquipResults, ...loadout } = route.loadout;
+        expect(keepsakeEquipResults?.jeweledPom).toBeDefined();
+        return { ...route, loadout };
+      }),
+    };
+    application.store.dispatch(authoredProjectReplaced(missingResult));
+
+    const result = await screen.findByRole('combobox', { name: 'Jeweled Pom result' });
+    expect(result).toHaveProperty('value', '');
+    const missingFinding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (finding) => finding.code === 'keepsakeEquipResultMissing',
+      );
+    if (missingFinding === undefined) throw new Error('missing Jeweled Pom finding is absent');
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    await user.click(within(findings).getByRole('button', { name: /Choose Jeweled Pom result/ }));
+    expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
+      missingFinding.origin,
+    );
+    const condition = screen.getByRole('checkbox', { name: 'Death Defiance condition met' });
+    await user.click(condition);
+    result.focus();
+    await waitFor(() =>
+      expect(within(result).getByRole('option', { name: 'Last Gasp' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.selectOptions(result, 'HadesDeathDefianceDamageBoon');
+
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .keepsakeEquipResults?.jeweledPom,
+    ).toEqual({
+      traitKey: 'HadesDeathDefianceDamageBoon',
+      rarity: 'Common',
+      deathDefianceConditionMet: true,
+    });
+
+    await user.click(condition);
+    expect(condition).toHaveProperty('checked', false);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(condition).toHaveProperty('checked', true));
+    expect(result).toHaveProperty('value', 'HadesDeathDefianceDamageBoon');
+  });
+
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();
 

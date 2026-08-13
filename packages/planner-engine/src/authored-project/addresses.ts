@@ -51,6 +51,15 @@ export type KeepsakeSelectionAddress =
       readonly owner: CompletionRoomAddress & { readonly role: 'postboss' };
     };
 
+/** One closed immediate result beneath its exact selection, never a trait offer. */
+export interface KeepsakeEquipResultAddress {
+  readonly kind: 'keepsakeEquipResult';
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly selection: KeepsakeSelectionAddress;
+  readonly resultKind: 'jeweledPom' | 'experimentalHammer';
+}
+
 export type ExitDecisionSourceAddress =
   | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
   | { readonly kind: 'hubDecision'; readonly decisionKey: string };
@@ -208,6 +217,7 @@ export type SemanticAddress =
   | CompletionRoomAddress
   | BossCompletionArcanaAddress
   | KeepsakeSelectionAddress
+  | KeepsakeEquipResultAddress
   | ExitDecisionAddress
   | ExitSelectionAddress
   | BatchRewardStoreAddress
@@ -341,6 +351,20 @@ export function createPostbossKeepsakeSelectionAddress(
     routeKey: completion.routeKey,
     biomeKey: completion.biomeKey,
     owner: Object.freeze({ ...completion, role: 'postboss' as const }),
+  });
+}
+export function createKeepsakeEquipResultAddress<
+  ResultKind extends KeepsakeEquipResultAddress['resultKind'],
+>(
+  selection: KeepsakeSelectionAddress,
+  resultKind: ResultKind,
+): KeepsakeEquipResultAddress & { readonly resultKind: ResultKind } {
+  return Object.freeze({
+    kind: 'keepsakeEquipResult',
+    routeKey: selection.routeKey,
+    biomeKey: selection.biomeKey,
+    selection,
+    resultKind,
   });
 }
 export function createExitDecisionAddress(
@@ -610,6 +634,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify(base);
     case 'biomeField':
       return JSON.stringify([...base, address.fieldKey]);
+    case 'keepsakeEquipResult':
+      return JSON.stringify([...base, semanticAddressKey(address.selection), address.resultKind]);
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);

@@ -31,6 +31,8 @@ function applyUnchecked(
       return applyProjectStateCommand(document, catalog, command);
     case 'ReplacePostbossKeepsake':
       return applyKeepsakeCommand(document, catalog, command);
+    case 'ReplaceJeweledPomEquipResult':
+      return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':
     case 'CreateBatch':
     case 'CreateTarget':

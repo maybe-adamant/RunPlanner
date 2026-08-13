@@ -23,4 +23,36 @@ describe('keepsake normalization', () => {
       'must declare the exact authoritative ordinary keepsake inventory',
     );
   });
+
+  it('normalizes the closed Jeweled Pom descriptor without retaining caller-owned effect state', () => {
+    const source = keepsakes.map((keepsake) => ({
+      ...keepsake,
+      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
+    }));
+    const pom = source.find((keepsake) => keepsake.key === 'HadesAndPersephoneKeepsake');
+    if (pom?.effect?.kind !== 'jeweledPom') throw new Error('missing raw Jeweled Pom descriptor');
+    const normalized = normalizeKeepsakes(source).byKey.HadesAndPersephoneKeepsake?.effect;
+    expect(normalized).toEqual({
+      kind: 'jeweledPom',
+      giverKey: 'Hades',
+      subsequentEligibleTraitLevels: 3,
+    });
+    expect(Object.isFrozen(normalized)).toBe(true);
+    (pom.effect as { giverKey: string }).giverKey = 'Apollo';
+    expect(normalized).toMatchObject({ giverKey: 'Hades' });
+
+    for (const effect of [
+      { kind: 'jeweledPom', giverKey: 'Apollo', subsequentEligibleTraitLevels: 3 },
+      { kind: 'jeweledPom', giverKey: 'Hades', subsequentEligibleTraitLevels: 2 },
+    ]) {
+      const malformed = keepsakes.map((keepsake) =>
+        keepsake.key === 'HadesAndPersephoneKeepsake'
+          ? { ...keepsake, effect: effect as never }
+          : keepsake,
+      );
+      expect(() => normalizeKeepsakes(malformed)).toThrow(
+        'must declare Jeweled Pom fixed +3 eligible-trait levels',
+      );
+    }
+  });
 });

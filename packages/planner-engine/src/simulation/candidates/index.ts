@@ -76,6 +76,10 @@ export type {
   KeepsakeSelectionUnavailableReason,
 } from './keepsake-selection';
 export type {
+  EvaluatedKeepsakeEquipResultCandidate,
+  KeepsakeEquipResultCandidateQuery,
+} from './keepsake-equip-result';
+export type {
   EvaluatedTakeoverPrebossBatchCandidate,
   TakeoverPrebossBatchCandidateQuery,
 } from './takeover-preboss';

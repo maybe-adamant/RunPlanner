@@ -69,7 +69,19 @@ export function normalizeKeepsakes(
         : 'neutral';
     if (keepsake.fatedDisposition !== expected)
       fail(`${path}.fatedDisposition`, `expected ${expected}`);
-    return Object.freeze({ ...keepsake });
+    if (keepsake.key === 'HadesAndPersephoneKeepsake') {
+      if (
+        keepsake.effect?.kind !== 'jeweledPom' ||
+        keepsake.effect.giverKey !== 'Hades' ||
+        keepsake.effect.subsequentEligibleTraitLevels !== 3
+      )
+        fail(`${path}.effect`, 'must declare Jeweled Pom fixed +3 eligible-trait levels');
+    } else if (keepsake.effect !== undefined)
+      fail(`${path}.effect`, 'is not supported by this keepsake');
+    return Object.freeze({
+      ...keepsake,
+      ...(keepsake.effect === undefined ? {} : { effect: Object.freeze({ ...keepsake.effect }) }),
+    });
   });
   const collection = createCollection(values, 'keepsakes', (keepsake) => keepsake.key);
   const declaredKeys = new Set(values.map((keepsake) => keepsake.key));

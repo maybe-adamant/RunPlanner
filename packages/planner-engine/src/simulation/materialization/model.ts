@@ -324,6 +324,7 @@ export interface CanonicalBiome {
   readonly biomeState: CanonicalBiomeState;
   readonly bossCompletionArcanaKeys: readonly string[];
   readonly postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition;
+  readonly keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults;
 }
 
 export interface MaterializedExitDecisionFrontier {

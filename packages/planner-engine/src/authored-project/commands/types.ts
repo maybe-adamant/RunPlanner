@@ -8,6 +8,7 @@ import type {
   BossCompletionArcanaAddress,
   CompletionRoomAddress,
   KeepsakeSelectionAddress,
+  KeepsakeEquipResultAddress,
   BiomeFieldAddress,
   ExitDecisionAddress,
   ExitSelectionAddress,
@@ -74,6 +75,11 @@ export type KeepsakeCommand = {
   readonly kind: 'ReplacePostbossKeepsake';
   readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: CompletionRoomAddress }>;
   readonly value: import('../model').PostbossKeepsakeDisposition;
+};
+export type KeepsakeEquipResultCommand = {
+  readonly kind: 'ReplaceJeweledPomEquipResult';
+  readonly result: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
+  readonly value: NonNullable<import('../model').AuthoredKeepsakeEquipResults['jeweledPom']>;
 };
 
 export type TopologyCommand =
@@ -315,6 +321,7 @@ export type ProjectCommand =
   | ProjectStateCommand
   | BossCompletionCommand
   | KeepsakeCommand
+  | KeepsakeEquipResultCommand
   | TopologyCommand
   | RoomReplacementCommand
   | RouteDetourCommand

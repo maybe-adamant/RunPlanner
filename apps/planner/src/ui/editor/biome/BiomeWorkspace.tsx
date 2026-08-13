@@ -3,7 +3,7 @@ import {
   type ProjectCommand,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -16,6 +16,7 @@ import {
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
   type WorkspaceKeepsakeSelectionInteraction,
+  type WorkspaceKeepsakeEquipResultInteraction,
   type WorkspaceMarker,
   type WorkspaceNode,
   type WorkspaceRailEntry,
@@ -399,6 +400,14 @@ function CompletionWorkbench({
       : interactions.keepsakeSelections.get(
           workspaceInteractionKey(node.keepsakeSelection.address),
         );
+  const pom =
+    node.keepsakeSelection === undefined
+      ? undefined
+      : [...interactions.keepsakeEquipResults.values()].find(
+          (interaction) =>
+            semanticAddressKey(interaction.owner.selection) ===
+            semanticAddressKey(node.keepsakeSelection!.address),
+        );
   return (
     <article className="biome-completion-workbench">
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
@@ -440,7 +449,96 @@ function CompletionWorkbench({
       {keepsake === undefined || node.keepsakeSelection === undefined ? null : (
         <PostbossKeepsakeControl interaction={keepsake} value={node.keepsakeSelection.value} />
       )}
+      {pom === undefined ? null : <JeweledPomResultControl interaction={pom} />}
     </article>
+  );
+}
+
+function JeweledPomResultControl({
+  interaction,
+}: {
+  readonly interaction: WorkspaceKeepsakeEquipResultInteraction;
+}) {
+  const dispatch = useAppDispatch();
+  const candidates = useWorkspaceInteraction(interaction);
+  const selected = interaction.value;
+  const [missingDeathDefianceDraft, setMissingDeathDefianceDraft] = useState(false);
+  const deathDefianceConditionMet =
+    selected === undefined
+      ? missingDeathDefianceDraft
+      : selected.deathDefianceConditionMet === true;
+  const candidateFor = (traitKey: string) =>
+    interaction
+      .load({
+        traitKey,
+        ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
+      })
+      .find((candidate) => candidate.value === traitKey);
+  return (
+    <fieldset className="field-control">
+      <legend>Jeweled Pom result</legend>
+      <select
+        aria-label="Jeweled Pom result"
+        id={`jeweled-pom-${interaction.key}`}
+        value={interaction.value?.traitKey ?? ''}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        onChange={(event) => {
+          const traitKey = event.target.value;
+          if (traitKey === '') return;
+          const option = candidateFor(traitKey);
+          if (candidateMayBeAuthored(option))
+            dispatch(
+              authoredProjectCommandDispatched(
+                interaction.intentFor({
+                  ...(interaction.value ?? {}),
+                  traitKey,
+                  ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
+                }).command,
+              ),
+            );
+        }}
+      >
+        <option value="">Choose Hades trait</option>
+        {interaction.choices.map((choice) => {
+          const option = candidateFor(choice.value);
+          return (
+            <option
+              key={choice.value}
+              value={choice.value}
+              disabled={option !== undefined && !candidateMayBeAuthored(option)}
+              {...candidateSelectState(option)}
+            >
+              {choice.label}
+            </option>
+          );
+        })}
+      </select>
+      {interaction.supportsDeathDefianceCondition ? (
+        <label>
+          <input
+            checked={deathDefianceConditionMet}
+            type="checkbox"
+            onChange={(event) => {
+              if (selected === undefined) {
+                setMissingDeathDefianceDraft(event.target.checked);
+                return;
+              }
+              dispatch(
+                authoredProjectCommandDispatched(
+                  interaction.intentFor({
+                    traitKey: selected.traitKey,
+                    ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
+                    deathDefianceConditionMet: event.target.checked,
+                  }).command,
+                ),
+              );
+            }}
+          />
+          Death Defiance condition met
+        </label>
+      ) : null}
+    </fieldset>
   );
 }
 

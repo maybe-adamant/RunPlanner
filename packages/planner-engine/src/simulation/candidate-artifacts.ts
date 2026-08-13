@@ -6,6 +6,7 @@ import {
   type TargetAddress,
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
+  type KeepsakeEquipResultAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
 import type {
@@ -41,6 +42,7 @@ import {
   type TraitHistoryState,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
+import type { ArcanaFearState } from './arcana-fear';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({ at: () => undefined, statusAt: () => undefined, roomAt: () => undefined });
@@ -175,12 +177,39 @@ export interface BiomeCandidateArtifacts {
   readonly levelResolutions: LevelResolutionCandidateArtifacts;
   readonly bossCompletionArcana: BossCompletionArcanaCandidateArtifacts;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
+  readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
 export interface ProjectCandidateArtifacts {
   readonly biomeAt: (biome: BiomeAddress) => BiomeCandidateArtifacts | undefined;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
+  readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
+}
+
+/** Exact pre-equip trait state retained for one closed keepsake result. */
+export interface KeepsakeEquipResultCandidateCapability {
+  readonly frontiers: readonly {
+    readonly before: TraitHistoryState;
+    readonly arcanaFear?: ArcanaFearState;
+    readonly fatedStatus: import('./keepsakes').FatedStatus;
+  }[];
+}
+export interface KeepsakeEquipResultCandidateArtifacts {
+  readonly at: (
+    address: KeepsakeEquipResultAddress,
+  ) => KeepsakeEquipResultCandidateCapability | undefined;
+  /** Engine assembly composition only; candidate consumers use `at`. */
+  readonly entries: () => readonly (readonly [string, KeepsakeEquipResultCandidateCapability])[];
+}
+export function createKeepsakeEquipResultCandidateArtifacts(
+  contexts: ReadonlyMap<string, KeepsakeEquipResultCandidateCapability>,
+): KeepsakeEquipResultCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: KeepsakeEquipResultAddress) => privateContexts.get(semanticAddressKey(address)),
+    entries: () => Object.freeze([...privateContexts.entries()]),
+  });
 }
 
 export class CandidateArtifactContractError extends Error {
@@ -227,6 +256,9 @@ export function createBiomeCandidateArtifacts(
   keepsakeSelections: KeepsakeSelectionCandidateArtifacts = createKeepsakeSelectionCandidateArtifacts(
     new Map(),
   ),
+  keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts = createKeepsakeEquipResultCandidateArtifacts(
+    new Map(),
+  ),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -238,6 +270,7 @@ export function createBiomeCandidateArtifacts(
     levelResolutions,
     bossCompletionArcana,
     keepsakeSelections,
+    keepsakeEquipResults,
   });
 }
 
@@ -427,9 +460,14 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
 export function createProjectCandidateArtifacts(
   biomes: readonly BiomeCandidateArtifacts[],
   routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability> = new Map(),
+  routeStartKeepsakeEquipResults: ReadonlyMap<
+    string,
+    KeepsakeEquipResultCandidateCapability
+  > = new Map(),
 ): ProjectCandidateArtifacts {
   const privateBiomes = new Map<string, BiomeCandidateArtifacts>();
   const keepsakeSelections = new Map(routeStartKeepsakes);
+  const keepsakeEquipResults = new Map(routeStartKeepsakeEquipResults);
   for (const biome of biomes) {
     const key = semanticAddressKey(biome.origin);
     if (privateBiomes.has(key)) {
@@ -445,9 +483,17 @@ export function createProjectCandidateArtifacts(
         );
       keepsakeSelections.set(selectionKey, capability);
     }
+    for (const [resultKey, capability] of biome.keepsakeEquipResults.entries()) {
+      if (keepsakeEquipResults.has(resultKey))
+        throw new CandidateArtifactContractError(
+          `duplicate keepsake equip-result candidate artifact for ${resultKey}`,
+        );
+      keepsakeEquipResults.set(resultKey, capability);
+    }
   }
   return Object.freeze({
     biomeAt: (biome: BiomeAddress) => privateBiomes.get(semanticAddressKey(biome)),
     keepsakeSelections: createKeepsakeSelectionCandidateArtifacts(keepsakeSelections),
+    keepsakeEquipResults: createKeepsakeEquipResultCandidateArtifacts(keepsakeEquipResults),
   });
 }

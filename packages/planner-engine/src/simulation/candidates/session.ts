@@ -108,6 +108,11 @@ import {
   type EvaluatedKeepsakeSelectionCandidate,
   type KeepsakeSelectionCandidateQuery,
 } from './keepsake-selection';
+import {
+  evaluateKeepsakeEquipResultCandidate,
+  type EvaluatedKeepsakeEquipResultCandidate,
+  type KeepsakeEquipResultCandidateQuery,
+} from './keepsake-equip-result';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -132,7 +137,8 @@ export type ProjectCandidateQuery =
   | HubTerminalTakeoverCandidateQuery
   | TraitOfferCandidateQuery
   | BossCompletionArcanaCandidateQuery
-  | KeepsakeSelectionCandidateQuery;
+  | KeepsakeSelectionCandidateQuery
+  | KeepsakeEquipResultCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -165,7 +171,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedHubTerminalTakeoverCandidate
   | EvaluatedTraitOfferCandidate
   | EvaluatedBossCompletionArcanaCandidate
-  | EvaluatedKeepsakeSelectionCandidate;
+  | EvaluatedKeepsakeSelectionCandidate
+  | EvaluatedKeepsakeEquipResultCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -227,6 +234,14 @@ function evaluateCandidateQuery(
 ): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
+    case 'keepsakeEquipResult':
+      return evaluateKeepsakeEquipResultCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.keepsakeEquipResults,
+        query,
+      );
     case 'keepsakeSelection':
       return evaluateKeepsakeSelectionCandidate(
         catalog,

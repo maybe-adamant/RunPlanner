@@ -103,6 +103,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         <h3>Keepsakes</h3>
         <p>Current: {state.keepsakes.currentLabel}</p>
         <p>Fated: {state.keepsakes.fatedStatus}</p>
+        <p>Jeweled Pom: {state.keepsakes.jeweledPomStatus}</p>
         <p>Removed: {state.keepsakes.removedLabels.join(' · ') || 'None'}</p>
       </section>
       <section>
