@@ -31,6 +31,7 @@ import {
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
+  type KeepsakeEquipResultAddress,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -333,6 +334,25 @@ export interface WorkspaceKeepsakeSelectionInteraction {
   >;
 }
 
+/** A closed one-result Jeweled Pom acquisition beneath its exact rack selection. */
+export interface WorkspaceKeepsakeEquipResultInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly key: string;
+  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
+  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
+  readonly supportsDeathDefianceCondition: boolean;
+  readonly load: (
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly intentFor: (
+    value: NonNullable<
+      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
+    >,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceJeweledPomEquipResult' }>
+  >;
+}
+
 interface WorkspaceRoomInteractionBase {
   readonly choices: readonly {
     readonly category: string;
@@ -570,6 +590,7 @@ export interface WorkspaceInteractionCatalog {
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
+  readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -1194,6 +1215,7 @@ export interface WorkspaceRunStatePresentation {
     readonly currentLabel: string;
     readonly removedLabels: readonly string[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
+    readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';
   };
   readonly arcana: readonly {
     readonly key: string;

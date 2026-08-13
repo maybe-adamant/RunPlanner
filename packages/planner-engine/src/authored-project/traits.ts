@@ -61,6 +61,8 @@ export interface EquippedTrait {
   /** Hammers are rarityless player-facing traits with an independent I/II rank. */
   readonly hammerRank?: 'RankI' | 'RankII';
   readonly sourceRole: string;
+  /** Exact acquisition event that installed this instance. */
+  readonly acquisitionIdentity?: string;
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */

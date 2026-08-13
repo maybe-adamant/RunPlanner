@@ -50,6 +50,8 @@ export function projectCommandAddress(
       return command.completion;
     case 'ReplacePostbossKeepsake':
       return command.selection;
+    case 'ReplaceJeweledPomEquipResult':
+      return command.result;
     case 'CreateStart':
     case 'ClearTopology':
       return command.biome;

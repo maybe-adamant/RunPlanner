@@ -79,6 +79,7 @@ import type {
   SelectedTraitOfferAssessment,
   TraitOfferCandidateContext,
 } from '../traits';
+import { attachTraitHistory, createTraitHistoryState, foldTraitHistoryEvents } from '../traits';
 import {
   createRunState,
   publishRunStateThroughCoverage,
@@ -114,13 +115,17 @@ import {
   settleShopAcquisitionSite,
   settlePickupAcquisitionSite,
   publicRewardBranch,
+  applyJeweledPomEquipResult,
   rewardFinding,
   type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
 import {
+  assessJeweledPomEquipResult,
   applyKeepsakeDisposition,
+  invalidateJeweledPom,
+  jeweledPomEffectForKey,
   keepsakeSelectionUnavailableReason,
   refreshKeepsakeFatedStatus,
 } from '../keepsakes';
@@ -132,11 +137,13 @@ import {
 } from '../arcana-fear';
 import {
   createBossCompletionArcanaAddress,
+  createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
 } from '../../authored-project/addresses';
 import {
   createBossCompletionArcanaCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
+  createKeepsakeEquipResultCandidateArtifacts,
 } from '../candidate-artifacts';
 import {
   prepareAcquisitionOrderCandidateContext,
@@ -886,6 +893,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
   readonly bossCompletionArcanaArtifacts: import('../candidate-artifacts').BossCompletionArcanaCandidateArtifacts;
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
+  readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -1125,6 +1133,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     import('../candidate-artifacts').KeepsakeSelectionCandidateCapability
   >();
+  const keepsakeEquipResultContexts = new Map<
+    string,
+    import('../candidate-artifacts').KeepsakeEquipResultCandidateCapability
+  >();
 
   /**
    * Judgment is one authored exact set, so its pre-effect domain cannot be
@@ -1218,6 +1230,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
     initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
     catalog,
     initialBranches === undefined ? routeLoadout.startingKeepsakeKey : undefined,
+    initialBranches === undefined ? routeLoadout.keepsakeEquipResults : undefined,
+    initialBranches === undefined ? snapshot.routeKey : undefined,
   );
   let pendingHubBoard:
     | {
@@ -1735,6 +1749,96 @@ export function evaluateBiomeRewardsAssemblyInternal(
               }),
             ),
           );
+          branches = Object.freeze(
+            branches.map((branch) => {
+              if (
+                branch.keepsakes.fatedStatus !== 'Unfated' ||
+                branch.keepsakes.jeweledPom?.active !== true
+              )
+                return branch;
+              const prior = branch.traitHistory ?? createTraitHistoryState();
+              const traitHistory = foldTraitHistoryEvents(catalog, [
+                ...prior.events,
+                Object.freeze({
+                  kind: 'traitRemoval' as const,
+                  owner: selection,
+                  acquisitionRole: 'jeweledPomCleanup',
+                  sequence: event.sequence,
+                  acquisitionPoint: 'keepsakeFatedInvalidation',
+                  traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
+                  acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
+                }),
+              ]);
+              return Object.freeze({
+                ...branch,
+                history: attachTraitHistory(branch.history, traitHistory),
+                traitHistory,
+                keepsakes: invalidateJeweledPom(branch.keepsakes),
+              });
+            }),
+          );
+          if (disposition.kind === 'replace') {
+            if (jeweledPomEffectForKey(catalog, disposition.keepsakeKey) !== undefined) {
+              const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
+              if (snapshot.keepsakeEquipResults?.jeweledPom === undefined) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding('keepsakeEquipResultMissing', result, {
+                    keepsakeKey: disposition.keepsakeKey,
+                  }),
+                  ownerRegion(selection.owner),
+                  historyFindingChronology(event.sequence),
+                );
+              } else if (
+                branches.some(
+                  (branch) =>
+                    !assessJeweledPomEquipResult(
+                      catalog,
+                      snapshot.keepsakeEquipResults!.jeweledPom!,
+                      branch.traitHistory ?? createTraitHistoryState(),
+                      branch.keepsakes.fatedStatus,
+                    ).legal,
+                )
+              ) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding('keepsakeEquipResultUnavailable', result, {
+                    keepsakeKey: disposition.keepsakeKey,
+                  }),
+                  ownerRegion(selection.owner),
+                  historyFindingChronology(event.sequence),
+                );
+              }
+              keepsakeEquipResultContexts.set(
+                semanticAddressKey(result),
+                Object.freeze({
+                  frontiers: Object.freeze(
+                    branches.map((branch) =>
+                      Object.freeze({
+                        before: branch.traitHistory ?? createTraitHistoryState(),
+                        fatedStatus: branch.keepsakes.fatedStatus,
+                        ...(branch.arcanaFear === undefined
+                          ? {}
+                          : { arcanaFear: branch.arcanaFear }),
+                      }),
+                    ),
+                  ),
+                }),
+              );
+            }
+            branches = Object.freeze(
+              branches.map((branch) =>
+                applyJeweledPomEquipResult(
+                  catalog,
+                  branch,
+                  disposition.keepsakeKey,
+                  snapshot.keepsakeEquipResults,
+                  createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+                  event.sequence,
+                ),
+              ),
+            );
+          }
         }
         if (event.source === 'generatedTarget' && event.parentOrigin.kind === 'hubRoom') {
           const handoff = batchesByParent.get(semanticAddressKey(event.parentOrigin));
@@ -2910,6 +3014,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
     ),
     keepsakeSelectionArtifacts:
       createKeepsakeSelectionCandidateArtifacts(keepsakeSelectionContexts),
+    keepsakeEquipResultArtifacts: createKeepsakeEquipResultCandidateArtifacts(
+      keepsakeEquipResultContexts,
+    ),
     findingRegions: Object.freeze(immutableFindingRegions),
   });
 }

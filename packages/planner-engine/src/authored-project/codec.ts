@@ -16,6 +16,50 @@ import {
   failProjectDocument as fail,
 } from './validation';
 
+function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catalog) {
+  const results = expectRecord(value, path);
+  expectExactKeys(results, ['jeweledPom'], path);
+  if (results.jeweledPom === undefined) return Object.freeze({});
+  const pom = expectRecord(results.jeweledPom, `${path}.jeweledPom`);
+  expectExactKeys(pom, ['traitKey', 'rarity', 'deathDefianceConditionMet'], `${path}.jeweledPom`);
+  const traitKey = expectString(pom.traitKey, `${path}.jeweledPom.traitKey`);
+  const descriptor = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'jeweledPom',
+  )?.effect;
+  if (descriptor === undefined)
+    fail(`${path}.jeweledPom`, 'has no declared Jeweled Pom descriptor');
+  if (!catalog.traitGivers.byKey[descriptor.giverKey]?.traitKeys.includes(traitKey))
+    fail(
+      `${path}.jeweledPom.traitKey`,
+      `must be a ${descriptor.giverKey} trait, received ${traitKey}`,
+    );
+  const rarity = expectString(pom.rarity, `${path}.jeweledPom.rarity`);
+  const rarityPolicy = catalog.traitGivers.byKey[descriptor.giverKey]?.rarityPolicy;
+  if (rarityPolicy?.kind !== 'fixed' || rarity !== rarityPolicy.rarity)
+    fail(`${path}.jeweledPom.rarity`, `must equal ${descriptor.giverKey}'s fixed result rarity`);
+  if (
+    catalog.traits.byKey[traitKey]?.rarityDomain.kind !== 'ranked' ||
+    !catalog.traits.byKey[traitKey]?.rarityDomain.freshOfferRarities.includes(
+      rarity as import('../catalog-schema').TraitRarity,
+    )
+  )
+    fail(`${path}.jeweledPom.rarity`, `is not declared for ${traitKey}`);
+  if (
+    pom.deathDefianceConditionMet !== undefined &&
+    typeof pom.deathDefianceConditionMet !== 'boolean'
+  )
+    fail(`${path}.jeweledPom.deathDefianceConditionMet`, 'must be boolean');
+  return Object.freeze({
+    jeweledPom: Object.freeze({
+      traitKey,
+      rarity: rarity as import('../catalog-schema').TraitRarity,
+      ...(pom.deathDefianceConditionMet === undefined
+        ? {}
+        : { deathDefianceConditionMet: pom.deathDefianceConditionMet }),
+    }),
+  });
+}
+
 export { ProjectDocumentContractError } from './validation';
 
 function decodeBiomePlan(
@@ -40,7 +84,14 @@ function decodeBiomePlan(
   // it, so decoding must accept that exact persisted representation too.
   expectExactKeys(
     plan,
-    ['biomeKey', 'state', 'topology', 'bossCompletionArcanaKeys', 'postbossKeepsakeDisposition'],
+    [
+      'biomeKey',
+      'state',
+      'topology',
+      'bossCompletionArcanaKeys',
+      'postbossKeepsakeDisposition',
+      'keepsakeEquipResults',
+    ],
     path,
   );
   const rawBossKeys =
@@ -103,6 +154,15 @@ function decodeBiomePlan(
           ),
         }),
     ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
+    ...(plan.keepsakeEquipResults === undefined
+      ? {}
+      : {
+          keepsakeEquipResults: decodeKeepsakeEquipResults(
+            plan.keepsakeEquipResults,
+            `${path}.keepsakeEquipResults`,
+            catalog,
+          ),
+        }),
   });
 }
 
@@ -125,7 +185,14 @@ function decodeRoutePlan(
   const loadout = expectRecord(plan.loadout, `${path}.loadout`);
   expectExactKeys(
     loadout,
-    ['weaponKey', 'aspectKey', 'manualArcanaKeys', 'fearRanks', 'startingKeepsakeKey'],
+    [
+      'weaponKey',
+      'aspectKey',
+      'manualArcanaKeys',
+      'fearRanks',
+      'startingKeepsakeKey',
+      'keepsakeEquipResults',
+    ],
     `${path}.loadout`,
   );
   const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
@@ -201,6 +268,15 @@ function decodeRoutePlan(
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
       startingKeepsakeKey,
+      ...(loadout.keepsakeEquipResults === undefined
+        ? {}
+        : {
+            keepsakeEquipResults: decodeKeepsakeEquipResults(
+              loadout.keepsakeEquipResults,
+              `${path}.loadout.keepsakeEquipResults`,
+              catalog,
+            ),
+          }),
     }),
     biomes: Object.freeze(biomes),
   });

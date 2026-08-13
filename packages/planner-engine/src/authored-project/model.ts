@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 23 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 24 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -34,6 +34,17 @@ export interface RouteLoadout extends RouteWeaponAspectLoadout {
   readonly fearRanks: Readonly<Record<string, number>>;
   /** Mandatory ordinary rack selection established before the route begins. */
   readonly startingKeepsakeKey: string;
+  /** Dormant unless the route-start selection equips a supported keepsake. */
+  readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
+}
+
+/** Exact immediate products owned by one keepsake-selection frontier. */
+export interface AuthoredKeepsakeEquipResults {
+  readonly jeweledPom?: {
+    readonly traitKey: string;
+    readonly rarity?: import('../catalog-schema').TraitRarity;
+    readonly deathDefianceConditionMet?: boolean;
+  };
 }
 
 export type PostbossKeepsakeDisposition =
@@ -238,6 +249,8 @@ export interface AuthoredBiomePlan {
   readonly bossCompletionArcanaKeys?: readonly string[];
   /** Present on physical ordinary-rack biomes, including a dormant final configured biome. */
   readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
+  /** Dormant unless this Postboss selection replaces with a supported keepsake. */
+  readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
 }
 
 export interface AuthoredRoutePlan {

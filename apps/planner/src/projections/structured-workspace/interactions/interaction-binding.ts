@@ -11,6 +11,7 @@ import {
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
+  type KeepsakeEquipResultAddress,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -60,6 +61,7 @@ import type {
   WorkspaceLevelResolutionInteraction,
   WorkspaceBossCompletionArcanaInteraction,
   WorkspaceKeepsakeSelectionInteraction,
+  WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceRoomInteraction,
@@ -171,6 +173,13 @@ export interface WorkspaceInteractionBindingInput {
         | { readonly kind: 'retain' }
         | { readonly kind: 'replace'; readonly keepsakeKey: string }
         | string;
+    }
+  >;
+  readonly keepsakeEquipResultControls?: ReadonlyMap<
+    string,
+    {
+      readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
+      readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
     }
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
@@ -1255,6 +1264,7 @@ export function bindWorkspaceInteractions(
     levelResolutionControls,
     bossCompletionArcanaControls,
     keepsakeSelectionControls,
+    keepsakeEquipResultControls,
     roomControls,
     services,
     startInteractionRequirements,
@@ -1858,6 +1868,53 @@ export function bindWorkspaceInteractions(
       }),
     );
   }
+  const keepsakeEquipResults = new Map<string, WorkspaceKeepsakeEquipResultInteraction>();
+  for (const [key, control] of keepsakeEquipResultControls ?? []) {
+    const effect = catalog.keepsakes.values.find(
+      (keepsake) => keepsake.effect?.kind === control.address.resultKind,
+    )?.effect;
+    if (effect === undefined)
+      throw new Error(`Missing ${control.address.resultKind} keepsake descriptor`);
+    keepsakeEquipResults.set(
+      key,
+      Object.freeze({
+        choices: Object.freeze(
+          (catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? []).map((traitKey) =>
+            Object.freeze({
+              label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
+              value: traitKey,
+            }),
+          ),
+        ),
+        key,
+        owner: control.address,
+        ...(control.value === undefined ? {} : { value: control.value }),
+        supportsDeathDefianceCondition: (
+          catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? []
+        ).some(
+          (traitKey) =>
+            catalog.traits.byKey[traitKey]?.offerRequirements.some(
+              (requirement) =>
+                requirement.kind === 'offerContext' &&
+                requirement.context === 'deathDefianceConditionMet',
+            ) === true,
+        ),
+        load: (value = control.value) => candidates.keepsakeEquipResult(control.address, value),
+        intentFor: (
+          value: NonNullable<
+            import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
+          >,
+        ) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceJeweledPomEquipResult' as const,
+              result: control.address,
+              value,
+            }),
+          }),
+      }),
+    );
+  }
 
   return Object.freeze({
     batchRewardStores,
@@ -1875,6 +1932,7 @@ export function bindWorkspaceInteractions(
     levelResolutions,
     bossCompletionArcana,
     keepsakeSelections,
+    keepsakeEquipResults,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,

@@ -43,4 +43,13 @@ export const keepsakes = entries.map(([key, label, fatedDisposition]) => ({
   label,
   rank: 'Epic' as const,
   fatedDisposition: fatedDisposition as RawKeepsakeDeclaration['fatedDisposition'],
+  ...(key === 'HadesAndPersephoneKeepsake'
+    ? {
+        effect: {
+          kind: 'jeweledPom' as const,
+          giverKey: 'Hades',
+          subsequentEligibleTraitLevels: 3 as const,
+        },
+      }
+    : {}),
 })) satisfies readonly RawKeepsakeDeclaration[];

@@ -39,7 +39,9 @@ export type RewardGenerationFindingCode =
   | 'judgmentOutcomeMissing'
   | 'judgmentOutcomeWrongCardinality'
   | 'judgmentOutcomeTargetUnavailable'
-  | 'keepsakeUnavailable';
+  | 'keepsakeUnavailable'
+  | 'keepsakeEquipResultMissing'
+  | 'keepsakeEquipResultUnavailable';
 
 export type TraitFindingCode =
   | 'alreadyEquipped'

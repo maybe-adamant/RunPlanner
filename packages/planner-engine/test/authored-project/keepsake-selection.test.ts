@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createCompletionRoomAddress,
+  createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
@@ -56,6 +57,83 @@ describe('keepsake authored selections', () => {
       'MissingKeepsake';
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       'unknown keepsake MissingKeepsake',
+    );
+  });
+
+  it('installs declaration-owned Jeweled Pom defaults and restores dormant authored results', () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'jeweled-pom-defaults',
+      name: 'Jeweled Pom defaults',
+      configuredBiomeCounts: { Underworld: 2 },
+    });
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const postboss = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    expect(
+      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
+        ?.jeweledPom,
+    ).toEqual({
+      traitKey: 'HadesLifestealBoon',
+      rarity: 'Common',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
+      value: { traitKey: 'HadesCastProjectileBoon' },
+    });
+    expect(
+      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
+        ?.jeweledPom,
+    ).toEqual({ traitKey: 'HadesCastProjectileBoon', rarity: 'Common' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
+      value: {
+        traitKey: 'HadesDeathDefianceDamageBoon',
+        rarity: 'Common',
+        deathDefianceConditionMet: true,
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    expect(
+      project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
+        ?.jeweledPom,
+    ).toEqual({
+      traitKey: 'HadesDeathDefianceDamageBoon',
+      rarity: 'Common',
+      deathDefianceConditionMet: true,
+    });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: postboss,
+      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+    });
+    expect(
+      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0]
+        ?.keepsakeEquipResults?.jeweledPom,
+    ).toEqual({
+      traitKey: 'HadesLifestealBoon',
+      rarity: 'Common',
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
     );
   });
 });

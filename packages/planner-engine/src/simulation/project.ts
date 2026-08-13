@@ -24,9 +24,17 @@ import {
   type ProjectCandidateArtifacts,
   type KeepsakeSelectionCandidateCapability,
 } from './candidate-artifacts';
-import { createKeepsakeState } from './keepsakes';
+import {
+  assessJeweledPomEquipResult,
+  createKeepsakeState,
+  jeweledPomEffectForKey,
+} from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
-import { createRouteStartKeepsakeSelectionAddress } from '../authored-project/addresses';
+import { createTraitHistoryState } from './traits';
+import {
+  createKeepsakeEquipResultAddress,
+  createRouteStartKeepsakeSelectionAddress,
+} from '../authored-project/addresses';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -623,6 +631,7 @@ function evaluateBiomeAssembly(
     context.loadout,
     plan.bossCompletionArcanaKeys,
     context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
+    plan.keepsakeEquipResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
   const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
@@ -712,6 +721,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
+        rewards.keepsakeEquipResultArtifacts,
       ),
     });
   }
@@ -736,6 +746,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
+        rewards.keepsakeEquipResultArtifacts,
       ),
       findingRegions: selectedFindingRegions,
     }),
@@ -844,6 +855,10 @@ interface RouteProjectEvaluationAssembly {
   readonly evaluation: ProjectRouteEvaluation;
   readonly candidateArtifacts: readonly BiomeCandidateArtifacts[];
   readonly routeStartKeepsakes: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
+  readonly routeStartKeepsakeEquipResults: ReadonlyMap<
+    string,
+    import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
+  >;
 }
 
 function evaluateRouteAssembly(
@@ -857,6 +872,10 @@ function evaluateRouteAssembly(
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
+  const routeStartKeepsakeEquipResults = new Map<
+    string,
+    import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
+  >();
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
@@ -869,6 +888,56 @@ function evaluateRouteAssembly(
       encounterBlockedKeepsakeKeys: Object.freeze([]),
     }),
   );
+  if (jeweledPomEffectForKey(catalog, route.loadout.startingKeepsakeKey) !== undefined) {
+    const result = createKeepsakeEquipResultAddress(routeStart, 'jeweledPom');
+    const startArcanaFear = createArcanaFearState(catalog, route.loadout);
+    const startKeepsakes = createKeepsakeState(
+      catalog,
+      route.loadout.startingKeepsakeKey,
+      startArcanaFear,
+    );
+    const authoredResult = route.loadout.keepsakeEquipResults?.jeweledPom;
+    if (authoredResult === undefined) {
+      findings.push(
+        Object.freeze({
+          code: 'keepsakeEquipResultMissing',
+          severity: 'error',
+          phase: 'rewardGeneration',
+          origin: result,
+          evidence: Object.freeze({ keepsakeKey: route.loadout.startingKeepsakeKey }),
+        }),
+      );
+    } else if (
+      !assessJeweledPomEquipResult(
+        catalog,
+        authoredResult,
+        createTraitHistoryState(),
+        startKeepsakes.fatedStatus,
+      ).legal
+    ) {
+      findings.push(
+        Object.freeze({
+          code: 'keepsakeEquipResultUnavailable',
+          severity: 'error',
+          phase: 'rewardGeneration',
+          origin: result,
+          evidence: Object.freeze({ keepsakeKey: route.loadout.startingKeepsakeKey }),
+        }),
+      );
+    }
+    routeStartKeepsakeEquipResults.set(
+      semanticAddressKey(result),
+      Object.freeze({
+        frontiers: Object.freeze([
+          Object.freeze({
+            before: createTraitHistoryState(),
+            arcanaFear: startArcanaFear,
+            fatedStatus: startKeepsakes.fatedStatus,
+          }),
+        ]),
+      }),
+    );
+  }
   for (const [index, plan] of route.biomes.entries()) {
     const previous = evaluations.at(-1);
     if (previous?.authoring === 'incomplete' && previous.validity !== 'invalid') {
@@ -920,6 +989,7 @@ function evaluateRouteAssembly(
     }),
     candidateArtifacts: Object.freeze(candidateArtifacts),
     routeStartKeepsakes,
+    routeStartKeepsakeEquipResults,
   });
 }
 
@@ -987,6 +1057,9 @@ export function simulateProjectAssembly(
     createProjectCandidateArtifacts(
       assembledRoutes.flatMap((route) => route.candidateArtifacts),
       new Map(assembledRoutes.flatMap((route) => [...route.routeStartKeepsakes.entries()])),
+      new Map(
+        assembledRoutes.flatMap((route) => [...route.routeStartKeepsakeEquipResults.entries()]),
+      ),
     ),
     exactProjectEvaluationAssemblyConstructionToken,
   );

@@ -91,7 +91,7 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(23);
+    expect(decoded.schemaVersion).toBe(24);
   });
 
   it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
@@ -156,14 +156,14 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 23, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 24, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 23, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 24, received 21');
   });
 
   it.each([

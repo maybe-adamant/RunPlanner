@@ -3,6 +3,8 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
+  createKeepsakeEquipResultAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createCirceResolutionAddress,
   createLevelResolutionAddress,
   semanticAddressKey,
@@ -12,7 +14,10 @@ import {
   type SemanticAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredRewardState } from '../../authored-project/model';
+import type {
+  AuthoredKeepsakeEquipResults,
+  AuthoredRewardState,
+} from '../../authored-project/model';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -60,6 +65,7 @@ import {
   attachTraitHistory,
   createTraitHistoryState,
   foldTraitHistoryEvents,
+  isPomEligibleTrait,
   evaluateReachedTraitOffer,
   evaluateReachedLevelResolution,
   recordReachedLevelResolution,
@@ -80,7 +86,14 @@ import {
   promoteArcana,
   suppressFearVow,
 } from '../arcana-fear';
-import { createKeepsakeState, refreshKeepsakeFatedStatus, type KeepsakeState } from '../keepsakes';
+import {
+  createKeepsakeState,
+  assessJeweledPomEquipResult,
+  equipJeweledPom,
+  jeweledPomEffectForKey,
+  refreshKeepsakeFatedStatus,
+  type KeepsakeState,
+} from '../keepsakes';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
@@ -494,10 +507,36 @@ function applyTraitOfferForAcquisition(
   // trait into canonical equipped state; the reward/use ledger still records
   // the concrete acquisition.
   if (applied.event === undefined) return Object.freeze({ ...branch, traitEvaluations });
+  const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
+  const pomLevels =
+    branch.keepsakes.jeweledPom?.active === true &&
+    selected !== undefined &&
+    isPomEligibleTrait(catalog, selected.traitKey)
+      ? branch.keepsakes.jeweledPom.levels
+      : undefined;
+  const traitHistory =
+    pomLevels === undefined || selected === undefined
+      ? applied.history
+      : foldTraitHistoryEvents(catalog, [
+          ...applied.history.events,
+          Object.freeze({
+            kind: 'levelMutation' as const,
+            owner: evaluation.address,
+            acquisitionRole: role,
+            sequence,
+            acquisitionPoint: lifecyclePoint,
+            ...(branch.keepsakes.jeweledPom?.grantedTraitKey === undefined
+              ? {}
+              : { sourceTraitKey: branch.keepsakes.jeweledPom.grantedTraitKey }),
+            targetTraitKey: selected.traitKey,
+            oldLevel: applied.history.equippedTraits[selected.traitKey]?.level ?? 1,
+            newLevel: (applied.history.equippedTraits[selected.traitKey]?.level ?? 1) + pomLevels,
+          }),
+        ]);
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, applied.history),
-    traitHistory: applied.history,
+    history: attachTraitHistory(branch.history, traitHistory),
+    traitHistory,
     traitEvaluations,
   });
 }
@@ -797,6 +836,8 @@ export function initializeRewardBranches(
   initialArcanaFear?: ArcanaFearState,
   catalog?: Catalog,
   startingKeepsakeKey?: string,
+  startingKeepsakeEquipResults?: AuthoredKeepsakeEquipResults,
+  routeKey?: string,
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
     if (
@@ -805,18 +846,29 @@ export function initializeRewardBranches(
       startingKeepsakeKey === undefined
     )
       throw new Error('initial branch state is required');
+    const branch = Object.freeze({
+      bags: Object.freeze({}),
+      history: createRewardHistoryState(),
+      events: Object.freeze([]),
+      pendingShops: Object.freeze({}),
+      processedThroughHistorySequence: 0,
+      traitHistory: createTraitHistoryState(),
+      traitEvaluations: Object.freeze([]),
+      arcanaFear: initialArcanaFear,
+      keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
+    });
     return Object.freeze([
-      Object.freeze({
-        bags: Object.freeze({}),
-        history: createRewardHistoryState(),
-        events: Object.freeze([]),
-        pendingShops: Object.freeze({}),
-        processedThroughHistorySequence: 0,
-        traitHistory: createTraitHistoryState(),
-        traitEvaluations: Object.freeze([]),
-        arcanaFear: initialArcanaFear,
-        keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
-      }),
+      applyJeweledPomEquipResult(
+        catalog,
+        branch,
+        startingKeepsakeKey,
+        startingKeepsakeEquipResults,
+        createKeepsakeEquipResultAddress(
+          createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+          'jeweledPom',
+        ),
+        0,
+      ),
     ]);
   }
   return Object.freeze(
@@ -834,6 +886,76 @@ export function initializeRewardBranches(
       }),
     ),
   );
+}
+
+/** Applies the closed immediate Jeweled Pom result through ordinary trait history. */
+export function applyJeweledPomEquipResult(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  equippedKeepsakeKey: string,
+  results: AuthoredKeepsakeEquipResults | undefined,
+  owner: SemanticAddress,
+  sequence: number,
+): RewardBranchState {
+  const result = results?.jeweledPom;
+  const effect = jeweledPomEffectForKey(catalog, equippedKeepsakeKey);
+  if (effect === undefined || result === undefined) return branch;
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  if (!assessJeweledPomEquipResult(catalog, result, before, branch.keepsakes.fatedStatus).legal)
+    return branch;
+  const offer: AuthoredTraitOffer = Object.freeze({
+    kind: 'traits',
+    giverKey: effect.giverKey,
+    options: Object.freeze([
+      {
+        traitKey: result.traitKey,
+        ...(result.rarity === undefined ? {} : { rarity: result.rarity }),
+      },
+    ]) as import('../../authored-project/traits').OneToThree<
+      import('../../authored-project/traits').AuthoredTraitOption
+    >,
+    selectedOptionKey: 'option1',
+    ...(result.deathDefianceConditionMet === undefined
+      ? {}
+      : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
+  });
+  const evaluation = evaluateReachedTraitOffer(
+    catalog,
+    owner,
+    'jeweledPomEquip',
+    offer,
+    before,
+    {
+      ...(result.deathDefianceConditionMet === undefined
+        ? {}
+        : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
+      resolvedProviderKey: effect.giverKey,
+    },
+    branch.traitEvaluations?.length ?? 0,
+    branch.arcanaFear,
+    true,
+  );
+  const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
+  const applied = recordReachedTraitOffer(
+    catalog,
+    evaluation,
+    sequence,
+    'keepsakeEquip',
+    acquisitionIdentity,
+  );
+  if (applied.history === before) return branch;
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, applied.history),
+    traitHistory: applied.history,
+    keepsakes: equipJeweledPom(
+      branch.keepsakes,
+      result.traitKey,
+      effect.subsequentEligibleTraitLevels,
+      acquisitionIdentity,
+    ),
+    traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
+  });
 }
 
 export function rewardFinding(

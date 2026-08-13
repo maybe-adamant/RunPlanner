@@ -35,6 +35,11 @@ export interface RawKeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  readonly effect?: {
+    readonly kind: 'jeweledPom';
+    readonly giverKey: string;
+    readonly subsequentEligibleTraitLevels: 3;
+  };
 }
 
 export interface RawEncounterRewardWheelAttachment {

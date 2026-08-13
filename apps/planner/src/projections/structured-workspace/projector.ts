@@ -1,6 +1,7 @@
 import {
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
+  createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -190,6 +191,15 @@ export function createStructuredWorkspaceProjection(
             | string;
         }
       >();
+      const keepsakeEquipResultControls = new Map<
+        string,
+        {
+          readonly address: import('@run-planner/engine/authored-project').KeepsakeEquipResultAddress & {
+            readonly resultKind: 'jeweledPom';
+          };
+          readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
+        }
+      >();
       const candidates = services.candidateSessions.bind(assembly);
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
         encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
@@ -208,6 +218,19 @@ export function createStructuredWorkspaceProjection(
             value: authoredRoute.loadout.startingKeepsakeKey,
           }),
         );
+        if (
+          catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect?.kind ===
+          'jeweledPom'
+        ) {
+          const address = createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom');
+          keepsakeEquipResultControls.set(
+            semanticAddressKey(address),
+            Object.freeze({
+              address,
+              value: authoredRoute.loadout.keepsakeEquipResults?.jeweledPom,
+            }),
+          );
+        }
         const biomes = routeSource.biomes.map((biomeSource, biomeIndex) => {
           const bossCompletionAddress = createBossCompletionArcanaAddress(
             createCompletionRoomAddress(biomeSource.biome, 'boss'),
@@ -288,6 +311,23 @@ export function createStructuredWorkspaceProjection(
                   value: node.keepsakeSelection.value,
                 }),
               );
+              if (
+                node.keepsakeSelection.value.kind === 'replace' &&
+                catalog.keepsakes.byKey[node.keepsakeSelection.value.keepsakeKey]?.effect?.kind ===
+                  'jeweledPom'
+              ) {
+                const address = createKeepsakeEquipResultAddress(
+                  node.keepsakeSelection.address,
+                  'jeweledPom',
+                );
+                keepsakeEquipResultControls.set(
+                  semanticAddressKey(address),
+                  Object.freeze({
+                    address,
+                    value: biomeSource.plan.keepsakeEquipResults?.jeweledPom,
+                  }),
+                );
+              }
             }
             if (node.kind === 'occurrenceWorkbench') {
               appendEncounterTraitControls(traitControls, [node.room]);
@@ -321,18 +361,30 @@ export function createStructuredWorkspaceProjection(
           findingCount: routeSource.evaluation?.findings.length ?? 0,
           focusKey: semanticAddressKey(routeAddress),
         });
+        const routeDestination = (ownerAddress: typeof routeAddress | typeof routeStartKeepsake) =>
+          Object.freeze<WorkspaceInspectorDestination>({
+            focusAddress: routeAddress,
+            focusKey: routeMarker.focusKey,
+            nodeKey: `route:${routeSource.routeKey}`,
+            ownerAddress,
+            region: 'routeRail',
+            routeKey: routeSource.routeKey,
+          });
+        const routeStartResult = createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom');
         appendUniqueFocusDestinations(focusByOwner, [
-          [
-            routeMarker.focusKey,
-            Object.freeze<WorkspaceInspectorDestination>({
-              focusAddress: routeAddress,
-              focusKey: routeMarker.focusKey,
-              nodeKey: `route:${routeSource.routeKey}`,
-              ownerAddress: routeAddress,
-              region: 'routeRail',
-              routeKey: routeSource.routeKey,
-            }),
-          ],
+          [routeMarker.focusKey, routeDestination(routeAddress)],
+          [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
+          ...(keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
+            ? ([
+                [
+                  semanticAddressKey(routeStartResult),
+                  Object.freeze<WorkspaceInspectorDestination>({
+                    ...routeDestination(routeAddress),
+                    ownerAddress: routeStartResult,
+                  }),
+                ],
+              ] as const)
+            : []),
         ]);
         return Object.freeze({
           biomes: Object.freeze(biomes),
@@ -369,6 +421,7 @@ export function createStructuredWorkspaceProjection(
         levelResolutionControls,
         bossCompletionArcanaControls,
         keepsakeSelectionControls,
+        keepsakeEquipResultControls,
         roomControls,
         services,
         startInteractionRequirements,

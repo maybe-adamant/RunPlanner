@@ -165,6 +165,12 @@ export function presentRunState(
         snapshot.keepsakes.removedKeys.map((key) => catalog.keepsakes.byKey[key]?.label ?? key),
       ),
       fatedStatus: snapshot.keepsakes.fatedStatus,
+      jeweledPomStatus:
+        snapshot.keepsakes.jeweledPom === undefined
+          ? 'inactive'
+          : snapshot.keepsakes.jeweledPom.active
+            ? 'active'
+            : 'invalidated',
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

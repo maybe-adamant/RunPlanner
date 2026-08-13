@@ -263,6 +263,14 @@ const findingCopy = {
     title: 'Keepsake is unavailable',
     description: 'Choose a keepsake that remains available at this rack frontier.',
   },
+  keepsakeEquipResultMissing: {
+    title: 'Choose Jeweled Pom result',
+    description: 'Record the Hades trait granted when Jeweled Pom is equipped.',
+  },
+  keepsakeEquipResultUnavailable: {
+    title: 'Jeweled Pom result is unavailable',
+    description: 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+  },
   circeResolutionMissing: {
     title: 'Choose the Circe outcome',
     description: 'Record the exact Arcana or Vow outcome for the selected Circe trait.',
@@ -556,6 +564,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
   }
   if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
     return 'Starting keepsake';
+  if (origin.kind === 'keepsakeEquipResult') return 'Jeweled Pom result';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${origin.biomeKey}`);

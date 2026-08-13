@@ -64,7 +64,10 @@ function routeKey(origin: SemanticAddress): string | null {
 }
 
 function biomeKey(origin: SemanticAddress): string | null {
-  return origin.kind === 'project' || origin.kind === 'route' ? null : origin.biomeKey;
+  if (origin.kind === 'project' || origin.kind === 'route') return null;
+  if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart') return null;
+  if (origin.kind === 'keepsakeEquipResult' && origin.selection.owner === 'routeStart') return null;
+  return origin.biomeKey;
 }
 
 function panelForOrigin(origin: SemanticAddress): RoutePanel {

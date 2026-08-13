@@ -1125,6 +1125,25 @@ function locateFinding(
     });
   }
   if (
+    finding.origin.kind === 'keepsakeEquipResult' &&
+    finding.origin.selection.owner !== 'routeStart' &&
+    finding.origin.routeKey === prefix.routeKey &&
+    finding.origin.biomeKey === prefix.biomeKey
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: prefix.decisions.length - 1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
+  if (
     prefix.entryRoom !== undefined &&
     ownsOccurrence(finding.origin, prefix.entryRoom.occurrenceId)
   ) {

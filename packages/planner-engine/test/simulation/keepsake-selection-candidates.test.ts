@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createCompletionRoomAddress,
+  createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
@@ -42,6 +43,17 @@ const gPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
 const pPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
   createCompletionRoomAddress(createBiomeAddress('Surface', 'P'), 'postboss'),
 );
+
+function withPomResult(
+  project: ReturnType<typeof createGoldenFGHProject>,
+  selection: KeepsakeSelectionAddress,
+) {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceJeweledPomEquipResult',
+    result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+    value: { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
+  });
+}
 
 function keepsakesAfter(project: ReturnType<typeof createGoldenFGHProject>, biomeKey: string) {
   const biome = simulateProjectAssembly(catalog, project)
@@ -89,11 +101,14 @@ describe('keepsake selection candidates', () => {
       fatedStatus: 'Unknown',
     });
 
-    const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
-      kind: 'ReplacePostbossKeepsake',
-      selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
-    });
+    const replaced = withPomResult(
+      applyProjectCommand(createGoldenFGHProject(), catalog, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: fPostboss,
+        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      }),
+      fPostboss,
+    );
     expect(keepsakesAfter(replaced, 'F')).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',
       history: [
@@ -106,11 +121,14 @@ describe('keepsake selection candidates', () => {
   });
 
   it('reports a persisted no-return selection without inventing a transition', () => {
-    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
-      kind: 'ReplacePostbossKeepsake',
-      selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
-    });
+    let project = withPomResult(
+      applyProjectCommand(createGoldenFGHProject(), catalog, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: fPostboss,
+        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      }),
+      fPostboss,
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
@@ -181,11 +199,14 @@ describe('keepsake selection candidates', () => {
       kind: 'unavailable',
     });
 
-    const reachedProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
-      kind: 'ReplacePostbossKeepsake',
-      selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
-    });
+    const reachedProject = withPomResult(
+      applyProjectCommand(createGoldenFGHProject(), catalog, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: gPostboss,
+        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      }),
+      gPostboss,
+    );
     const reachedSession = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, reachedProject),
@@ -287,5 +308,129 @@ describe('keepsake selection candidates', () => {
     expect(invalid.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeUnavailable' }),
     );
+  });
+
+  it('reports missing and invalid Jeweled Pom children at their exact start and Postboss owners', () => {
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    let startProject = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    startProject = {
+      ...startProject,
+      routes: startProject.routes.map((route) => {
+        if (route.routeKey !== 'Underworld') return route;
+        const { keepsakeEquipResults: _discarded, ...loadout } = route.loadout;
+        void _discarded;
+        return { ...route, loadout };
+      }),
+    };
+    const startResult = createKeepsakeEquipResultAddress(start, 'jeweledPom');
+    expect(simulateProjectAssembly(catalog, startProject).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: startResult }),
+    );
+    startProject = applyProjectCommand(
+      applyProjectCommand(startProject, catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: start,
+        keepsakeKey: 'ManaOverTimeRefundKeepsake',
+      }),
+      catalog,
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: start,
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      },
+    );
+    startProject = applyProjectCommand(startProject, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: startResult,
+      value: {
+        traitKey: 'HadesDeathDefianceDamageBoon',
+        rarity: 'Common',
+        deathDefianceConditionMet: false,
+      },
+    });
+    expect(simulateProjectAssembly(catalog, startProject).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: startResult }),
+    );
+
+    let postbossProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+    });
+    postbossProject = {
+      ...postbossProject,
+      routes: postbossProject.routes.map((route) => ({
+        ...route,
+        biomes: route.biomes.map((biome) => {
+          if (route.routeKey !== 'Underworld' || biome.biomeKey !== 'F') return biome;
+          const { keepsakeEquipResults: _discarded, ...withoutResult } = biome;
+          void _discarded;
+          return withoutResult;
+        }),
+      })),
+    };
+    const postbossResult = createKeepsakeEquipResultAddress(fPostboss, 'jeweledPom');
+    expect(simulateProjectAssembly(catalog, postbossProject).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: postbossResult }),
+    );
+    postbossProject = applyProjectCommand(postbossProject, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: postbossResult,
+      value: {
+        traitKey: 'HadesDeathDefianceDamageBoon',
+        rarity: 'Common',
+        deathDefianceConditionMet: false,
+      },
+    });
+    expect(simulateProjectAssembly(catalog, postbossProject).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: postbossResult }),
+    );
+  });
+
+  it('runs retained Jeweled Pom state through the first real Postboss Unfated transition', () => {
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: gPostboss,
+      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+    });
+
+    const underworld = simulateProjectAssembly(catalog, project).evaluation.routes.find(
+      (route) => route.routeKey === 'Underworld',
+    );
+    const f = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
+    const g = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (f === undefined || g === undefined || !('rewards' in f) || !('rewards' in g))
+      throw new Error('expected reached F/G rewards');
+    const retained = f.rewards.branches[0];
+    const unfated = g.rewards.branches[0];
+    expect(retained?.keepsakes.jeweledPom).toMatchObject({ active: true, levels: 3 });
+    expect(retained?.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
+    const retainedBoost = Object.values(retained?.traitHistory?.equippedTraits ?? {}).find(
+      (trait) => trait.traitKey !== 'HadesLifestealBoon' && trait.level === 4,
+    );
+    expect(retainedBoost).toBeDefined();
+
+    expect(unfated?.keepsakes).toMatchObject({
+      fatedStatus: 'Unfated',
+      jeweledPom: { active: false, levels: 3 },
+    });
+    expect(unfated?.traitHistory?.equippedTraits.HadesLifestealBoon).toBeUndefined();
+    expect(
+      unfated?.traitHistory?.equippedTraits[retainedBoost?.traitKey ?? '']?.level,
+    ).toBeGreaterThanOrEqual(4);
   });
 });
