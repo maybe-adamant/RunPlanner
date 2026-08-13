@@ -45,6 +45,18 @@ interface BiomeWorkspaceProps {
   readonly interactions: WorkspaceInteractionCatalog;
 }
 
+type JeweledPomInteraction = Extract<
+  WorkspaceKeepsakeEquipResultInteraction,
+  { readonly owner: { readonly resultKind: 'jeweledPom' } }
+>;
+
+function jeweledPomLoadable(
+  load: JeweledPomInteraction['load'],
+  value: NonNullable<JeweledPomInteraction['value']>,
+): { readonly load: () => ReturnType<JeweledPomInteraction['load']> } {
+  return Object.freeze({ load: () => load(value) });
+}
+
 type InspectorSubject =
   | { readonly kind: 'frontier'; readonly marker: WorkspaceMarker }
   | { readonly kind: 'node'; readonly node: WorkspaceNode };
@@ -483,7 +495,7 @@ function ExperimentalHammerResultControl({
   const dispatch = useAppDispatch();
   const candidates = useWorkspaceInteraction(interaction);
   const candidateFor = (traitKey: string) =>
-    interaction.load({ traitKey }).find((candidate) => candidate.value === traitKey);
+    candidates.result?.find((candidate) => candidate.value === traitKey);
   return (
     <fieldset className="field-control">
       <legend>Experimental Hammer result</legend>
@@ -527,20 +539,34 @@ function JeweledPomResultControl({
   >;
 }) {
   const dispatch = useAppDispatch();
-  const candidates = useWorkspaceInteraction(interaction);
   const selected = interaction.value;
   const [missingDeathDefianceDraft, setMissingDeathDefianceDraft] = useState(false);
   const deathDefianceConditionMet =
     selected === undefined
       ? missingDeathDefianceDraft
       : selected.deathDefianceConditionMet === true;
-  const candidateFor = (traitKey: string) =>
-    interaction
-      .load({
-        traitKey,
+  const revision = `${selected?.traitKey ?? ''}:${deathDefianceConditionMet ? 'dd' : 'no-dd'}`;
+  const [candidateInput, setCandidateInput] = useState(() => ({
+    interaction,
+    revision,
+    loadable: jeweledPomLoadable(interaction.load, {
+      traitKey: selected?.traitKey ?? '',
+      ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
+    }),
+  }));
+  if (candidateInput.interaction !== interaction || candidateInput.revision !== revision) {
+    setCandidateInput({
+      interaction,
+      revision,
+      loadable: jeweledPomLoadable(interaction.load, {
+        traitKey: selected?.traitKey ?? '',
         ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
-      })
-      .find((candidate) => candidate.value === traitKey);
+      }),
+    });
+  }
+  const candidates = useWorkspaceInteraction(candidateInput.loadable);
+  const candidateFor = (traitKey: string) =>
+    candidates.result?.find((candidate) => candidate.value === traitKey);
   return (
     <fieldset className="field-control">
       <legend>Jeweled Pom result</legend>
