@@ -116,18 +116,21 @@ export const gEncounterDefinitions = [
     label: 'Water unit',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'MiniBossCrawler',
     label: 'Crawler',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksFigLeaf: true,
   },
   {
     key: 'MiniBossJellyfish',
     label: 'Jellyfish',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   { key: 'BossScylla01', label: 'Scylla', kind: 'boss', countsEncounterDepth: false },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];

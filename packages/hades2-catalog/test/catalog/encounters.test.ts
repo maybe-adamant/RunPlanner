@@ -40,7 +40,40 @@ describe('encounter envelope catalog', () => {
       canEncounterSkip: false,
       blocksFigLeaf: true,
     });
-    expect(definitions.MiniBossTreant?.canEncounterSkip).toBe(false);
+    const positiveUnblockedMinibosses = [
+      'MiniBossTreant',
+      'MiniBossFogEmitter',
+      'MiniBossAssassin',
+      'MiniBossWaterUnit',
+      'MiniBossJellyfish',
+      'MiniBossVampire',
+      'MiniBossLamia',
+      'MiniBossRatCatcher',
+      'MiniBossGoldElemental',
+      'MiniBossSatyrCrossbow',
+      'MiniBossBoar',
+    ];
+    for (const key of positiveUnblockedMinibosses) {
+      expect(definitions[key]).toMatchObject({ canEncounterSkip: true, blocksFigLeaf: false });
+    }
+    const positiveBlockedMinibosses = [
+      'MiniBossCaptain',
+      'MiniBossDragon',
+      'MiniBossBrute',
+      'MiniBossStalker',
+      'BossTyphonTail01',
+    ];
+    for (const key of positiveBlockedMinibosses) {
+      expect(definitions[key]).toMatchObject({ canEncounterSkip: true, blocksFigLeaf: true });
+    }
+    const blockedMinibosses = ['MiniBossCrawler', 'MiniBossCharybdis', 'BossTyphonEye01'];
+    for (const key of blockedMinibosses) {
+      expect(definitions[key]).toMatchObject({ canEncounterSkip: false, blocksFigLeaf: true });
+    }
+    expect(definitions.MiniBossTalos).toMatchObject({
+      canEncounterSkip: false,
+      blocksFigLeaf: false,
+    });
     expect(definitions.BossChronos01?.canEncounterSkip).toBe(false);
   });
   it('closes every room declaration over one envelope and complete slot bindings', () => {

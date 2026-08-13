@@ -91,12 +91,15 @@ export const oEncounterDefinitions = [
     label: 'Charybdis',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksFigLeaf: true,
   },
   {
     key: 'MiniBossCaptain',
     label: 'Captain',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
+    blocksFigLeaf: true,
   },
   {
     key: 'Story_Circe_01',

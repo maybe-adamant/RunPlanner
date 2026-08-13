@@ -223,6 +223,8 @@ export const pEncounterDefinitions = [
     label: 'Dragon',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
+    blocksFigLeaf: true,
   },
   {
     key: 'BossPrometheus01',

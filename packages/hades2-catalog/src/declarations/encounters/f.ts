@@ -124,18 +124,21 @@ export const fEncounterDefinitions = [
     label: 'Treant',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'MiniBossFogEmitter',
     label: 'Fog emitter',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'MiniBossAssassin',
     label: 'Assassin',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   { key: 'BossHecate01', label: 'Hecate', kind: 'boss', countsEncounterDepth: false },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
