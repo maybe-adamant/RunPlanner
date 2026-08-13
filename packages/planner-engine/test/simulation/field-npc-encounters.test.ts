@@ -230,6 +230,9 @@ function historyProbeCatalog(): Catalog {
     label: 'Previous room probe',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: false,
+    blocksFigLeaf: false,
+    skipEndEncounterEffects: false,
     requirements: Object.freeze({
       kind: 'all',
       requirements: Object.freeze([

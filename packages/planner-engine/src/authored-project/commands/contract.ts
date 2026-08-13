@@ -118,6 +118,7 @@ export function projectCommandAddress(
       return command.entry;
     case 'SelectEncounter':
     case 'ResetEncounter':
+    case 'ReplaceFigLeafSkip':
       return command.phase;
     case 'ReplaceTraitOffer':
     case 'ReplaceTraitSelection':

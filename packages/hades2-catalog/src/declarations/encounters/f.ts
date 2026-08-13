@@ -16,7 +16,13 @@ export const fEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: true,
   },
-  { key: 'GeneratedF', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedF',
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'ArtemisCombatF',
     label: 'Artemis combat',

@@ -7,6 +7,42 @@ function input(): RawCatalogInput {
 }
 
 describe('encounter envelope catalog', () => {
+  it('publishes the declaration-owned Fig Leaf support and blocker matrix', () => {
+    const definitions = createCatalog(declarations).encounterDefinitions.byKey;
+    for (const key of [
+      'GeneratedF',
+      'GeneratedG',
+      'GeneratedH',
+      'GeneratedH_Treant2',
+      'GeneratedH_Screamer2',
+      'GeneratedI',
+      'GeneratedI_GoalReward',
+      'GeneratedI_Small',
+      'GeneratedI_Small_GoalReward',
+      'OpeningGeneratedN',
+      'PreHubGeneratedN',
+      'GeneratedN',
+      'GeneratedO_Intro01',
+      'GeneratedO',
+      'GeneratedQ',
+      'GeneratedQ_Islands',
+      'GeneratedQ_Large',
+    ]) {
+      expect(definitions[key]?.canEncounterSkip).toBe(true);
+      expect(definitions[key]?.blocksFigLeaf).toBe(false);
+    }
+    for (const key of ['GeneratedNSubRoom', 'GeneratedNSubRoom_Bigger']) {
+      expect(definitions[key]).toMatchObject({ canEncounterSkip: true, blocksFigLeaf: true });
+    }
+    expect(definitions.GeneratedP_PreCombat?.skipEndEncounterEffects).toBe(true);
+    expect(definitions.GeneratedP?.canEncounterSkip).toBe(false);
+    expect(definitions.AthenaCombatP).toMatchObject({
+      canEncounterSkip: false,
+      blocksFigLeaf: true,
+    });
+    expect(definitions.MiniBossTreant?.canEncounterSkip).toBe(false);
+    expect(definitions.BossChronos01?.canEncounterSkip).toBe(false);
+  });
   it('closes every room declaration over one envelope and complete slot bindings', () => {
     const catalog = createCatalog(declarations);
 

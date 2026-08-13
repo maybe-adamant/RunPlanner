@@ -92,6 +92,9 @@ export function normalizeKeepsakes(
     } else if (keepsake.key === 'GoldifyKeepsake') {
       if (keepsake.effect?.kind !== 'timePiece' || keepsake.effect.conversionCharges !== 4)
         fail(`${path}.effect`, 'must declare Time Piece fixed four conversion charges');
+    } else if (keepsake.key === 'SkipEncounterKeepsake') {
+      if (keepsake.effect?.kind !== 'figLeaf' || keepsake.effect.biomeUses !== 3)
+        fail(`${path}.effect`, 'must declare Fig Leaf fixed three biome uses');
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

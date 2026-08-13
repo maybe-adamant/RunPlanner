@@ -28,6 +28,7 @@ import {
   type HistorySegmentWriter,
   type EncounterValidatedBiomeHistory,
   type EncounterValidatedPrefixHistory,
+  type FigLeafLifecycleState,
 } from './composition';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
@@ -555,6 +556,7 @@ function composeBiomeHistoryResult(
   snapshot: CanonicalBiome,
   seed?: HistoryStateView,
   validateEncounterResolution = false,
+  figLeafState?: FigLeafLifecycleState,
 ): EncounterValidatedBiomeHistory {
   let completionPredecessor: CanonicalAuthoredRoom | undefined;
   const options = {
@@ -563,6 +565,7 @@ function composeBiomeHistoryResult(
     biomeKey: snapshot.biomeKey,
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
+    ...(figLeafState === undefined ? {} : { figLeafState }),
     completionRooms: snapshot.completionRooms,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
@@ -647,8 +650,9 @@ export function composeBiomeHistoryWithEncounterValidation(
   catalog: Catalog,
   snapshot: CanonicalBiome,
   seed?: HistoryStateView,
+  figLeafState?: FigLeafLifecycleState,
 ): EncounterValidatedBiomeHistory {
-  return composeBiomeHistoryResult(catalog, snapshot, seed, true);
+  return composeBiomeHistoryResult(catalog, snapshot, seed, true, figLeafState);
 }
 
 function composeBiomeHistoryPrefixResult(
@@ -656,6 +660,7 @@ function composeBiomeHistoryPrefixResult(
   snapshot: MaterializedBiomePrefix,
   seed?: HistoryStateView,
   validateEncounterResolution = false,
+  figLeafState?: FigLeafLifecycleState,
 ): EncounterValidatedPrefixHistory | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
@@ -664,6 +669,7 @@ function composeBiomeHistoryPrefixResult(
     biomeKey: snapshot.biomeKey,
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
+    ...(figLeafState === undefined ? {} : { figLeafState }),
     compose(writer: HistorySegmentWriter): void {
       appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
       let current: CanonicalLifecycleRoom = entry;
@@ -800,6 +806,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   catalog: Catalog,
   snapshot: MaterializedBiomePrefix,
   seed?: HistoryStateView,
+  figLeafState?: FigLeafLifecycleState,
 ): EncounterValidatedPrefixHistory | null {
-  return composeBiomeHistoryPrefixResult(catalog, snapshot, seed, true);
+  return composeBiomeHistoryPrefixResult(catalog, snapshot, seed, true, figLeafState);
 }

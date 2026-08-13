@@ -60,6 +60,10 @@ function selections(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).encounterKeyByPhase ?? {}) as JsonRecord;
 }
 
+function figLeafSkips(owner: JsonRecord): JsonRecord {
+  return ((owner.encounters as JsonRecord).figLeafSkipByPhase ?? {}) as JsonRecord;
+}
+
 function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): JsonRecord {
   const state = occurrence(document, 'N', occurrenceId).state as JsonRecord;
   const sideRooms = state.sideRooms as JsonRecord;
@@ -93,10 +97,10 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(27);
+    expect(decoded.schemaVersion).toBe(28);
   });
 
-  it('schema-27 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
+  it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const trait = createTraitOfferAddress(reward, 'source');
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
@@ -127,7 +131,7 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 27 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 28 });
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -152,6 +156,19 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
       .reward as JsonRecord;
     (extraReward.conversionByAcquisitionRole as JsonRecord).unknown = 'normal';
     expect(() => decodeProjectDocument(extra, catalog)).toThrow('is not an acquisition role');
+  });
+
+  it('round-trips complete Fig Leaf phase maps as immutable nested state', () => {
+    const decoded = decodeProjectDocument(encoded(createRepresentativeNOPProject()), catalog);
+    const occurrence = decoded.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'P')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
+      );
+    if (occurrence === undefined) throw new Error('missing P occurrence');
+    expect(occurrence.encounters.figLeafSkipByPhase).toEqual({ Intro: false, Combat: false });
+    expect(Object.isFrozen(occurrence.encounters.figLeafSkipByPhase)).toBe(true);
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
@@ -226,14 +243,14 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 27, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 28, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 27, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 28, received 21');
   });
 
   it.each([
@@ -289,6 +306,39 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
       },
       message: 'encounterKeyByPhase.Intro: is not a project document field',
     },
+    {
+      label: 'a missing Fig Leaf phase map',
+      mutate: (document: JsonRecord) => {
+        delete (
+          occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1)).encounters as JsonRecord
+        ).figLeafSkipByPhase;
+      },
+      message: 'figLeafSkipByPhase: must be an object',
+    },
+    {
+      label: 'an extra Fig Leaf phase key',
+      mutate: (document: JsonRecord) => {
+        figLeafSkips(occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1))).unexpected =
+          true;
+      },
+      message: 'figLeafSkipByPhase.unexpected: is not a project document field',
+    },
+    {
+      label: 'a non-boolean Fig Leaf phase value',
+      mutate: (document: JsonRecord) => {
+        figLeafSkips(occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1))).Intro = 'true';
+      },
+      message: 'figLeafSkipByPhase.Intro: must be a boolean',
+    },
+    {
+      label: 'a misplaced Fig Leaf fixed-phase key',
+      mutate: (document: JsonRecord) => {
+        const skips = figLeafSkips(occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1)));
+        delete skips.Intro;
+        skips.Encounter = false;
+      },
+      message: 'figLeafSkipByPhase.Encounter: is not a project document field',
+    },
   ])('rejects $label', ({ mutate, message }) => {
     const document = encoded(createRepresentativeNOPProject());
     mutate(document);
@@ -334,6 +384,28 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
           'GeneratedN';
       },
       message: 'GeneratedN is not a member of NEncountersSubRoom',
+    },
+    {
+      label: 'a missing local Fig Leaf phase map',
+      mutate: (document: JsonRecord) => {
+        delete (sideRoom(document, 'round-trip-n-combat02', 'sideDoor1').encounters as JsonRecord)
+          .figLeafSkipByPhase;
+      },
+      message: 'figLeafSkipByPhase: must be an object',
+    },
+    {
+      label: 'an extra local Fig Leaf phase key',
+      mutate: (document: JsonRecord) => {
+        figLeafSkips(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).unexpected = true;
+      },
+      message: 'figLeafSkipByPhase.unexpected: is not a project document field',
+    },
+    {
+      label: 'a mutable local Fig Leaf value',
+      mutate: (document: JsonRecord) => {
+        figLeafSkips(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).Encounter = {};
+      },
+      message: 'figLeafSkipByPhase.Encounter: must be a boolean',
     },
   ])('rejects $label', ({ mutate, message }) => {
     const document = encoded(createCompleteNProject());

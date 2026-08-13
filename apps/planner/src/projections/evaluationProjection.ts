@@ -325,6 +325,10 @@ const findingCopy = {
     description:
       'This reward is not a free, eligible acquisition with a remaining Time Piece charge.',
   },
+  figLeafSkipUnavailable: {
+    title: 'Fig Leaf skip unavailable',
+    description: 'This combat cannot be skipped with the remaining Fig Leaf uses.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

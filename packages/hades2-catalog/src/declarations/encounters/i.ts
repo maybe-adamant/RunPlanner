@@ -16,6 +16,7 @@ export const iEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
     requirements: excludesClockworkGoal,
   },
   {
@@ -23,6 +24,7 @@ export const iEncounterDefinitions = [
     label: 'Goal combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {
@@ -30,6 +32,7 @@ export const iEncounterDefinitions = [
     label: 'Small combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
     requirements: excludesClockworkGoal,
   },
   {
@@ -37,6 +40,7 @@ export const iEncounterDefinitions = [
     label: 'Small goal combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
   {

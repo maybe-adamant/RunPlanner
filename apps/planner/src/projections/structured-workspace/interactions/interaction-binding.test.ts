@@ -29,6 +29,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type CandidateEvaluationEvent,
@@ -45,6 +46,7 @@ import {
   goldenHBiome,
   goldenIBiome,
   createRepresentativeNOPQProject,
+  createRepresentativeNProject,
   createRepresentativeNOPQShopTraitProject,
   createRepresentativeNOProject,
   appendCompleteN,
@@ -88,8 +90,12 @@ function bind(
 ) {
   const projectAssembly = simulateProjectAssembly(catalog, project);
   const evaluation = projectAssembly.evaluation;
-  const source = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
-    encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
+  const source = createWorkspaceProjectSourceIndex(
+    catalog,
+    project,
+    evaluation,
+    (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
+    (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(projectAssembly, phase),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -1509,6 +1515,69 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
+  it('binds Fig Leaf as a separate phase-local command for fixed support and exact local children', () => {
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    const { interactions } = bind(project, 'Surface', 'N');
+    const fixed = [...interactions.figLeafSkips.values()].find(
+      (interaction) =>
+        interaction.owner.kind === 'encounterPhase' &&
+        interaction.owner.owner.kind === 'occurrence' &&
+        interaction.owner.owner.occurrenceId === nOccurrenceIds.preHub,
+    );
+    expect(fixed).toBeDefined();
+    expect(fixed?.intentFor(true).command).toMatchObject({
+      kind: 'ReplaceFigLeafSkip',
+      value: true,
+      phase: fixed?.owner,
+    });
+    expect(
+      [...interactions.encounterPhases.values()].some(
+        (interaction) =>
+          interaction.owner.kind === 'encounterPhase' &&
+          interaction.owner.owner.kind === 'occurrence' &&
+          interaction.owner.owner.occurrenceId === nOccurrenceIds.preHub,
+      ),
+    ).toBe(false);
+    expect(
+      [...interactions.figLeafSkips.values()].some(
+        (interaction) =>
+          interaction.owner.kind === 'encounterPhase' &&
+          interaction.owner.owner.kind === 'localChild',
+      ),
+    ).toBe(false);
+  });
+
+  it('retains a selected invalid local-child Fig Leaf control for repair without publishing a candidate', () => {
+    const parent = nOccurrenceId('combat02');
+    const phase = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'localChild', occurrenceId: parent, groupKey: 'sideRooms', slotKey: 'sideDoor1' },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const { interactions } = bind(project, 'Surface', 'N');
+    const interaction = interactions.figLeafSkips.get(semanticAddressKey(phase));
+    expect(interaction).toMatchObject({ selected: true, supported: false });
+    expect(interaction?.intentFor(false).command).toEqual({
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: false,
+    });
+  });
+
   it('withholds dormant Ship Combat2 and binds its active declaration-invalid multi-choice semantic', () => {
     const initial = createRepresentativeNOPQProject();
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
@@ -1647,6 +1716,7 @@ describe('structured workspace interaction binding', () => {
       (interaction) => interaction.visible && interaction.goldSupported,
     );
     expect(supported).toBeDefined();
+    if (supported === undefined) throw new Error('Time Piece conversion interaction is missing');
     expect(supported?.intentFor('gold')).toEqual({
       command: {
         kind: 'ReplaceAcquisitionConversion',

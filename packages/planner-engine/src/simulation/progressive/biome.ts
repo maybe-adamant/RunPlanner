@@ -67,6 +67,8 @@ import type {
   RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
+import type { FigLeafLifecycleState } from '../history';
+import { attestFigLeafBranchState } from '../keepsakes';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -107,6 +109,22 @@ export interface ProgressiveBiomeContext {
   readonly hasConfiguredSuccessor?: boolean;
   readonly loadout: RouteLoadout;
   readonly seed?: ProgressiveSeed;
+}
+
+function figLeafLifecycleState(
+  catalog: Catalog,
+  context: ProgressiveBiomeContext,
+): FigLeafLifecycleState | undefined {
+  if (context.seed !== undefined) {
+    const state = attestFigLeafBranchState(context.seed.rewardBranches);
+    return state === undefined
+      ? undefined
+      : { remainingUses: state.remainingUses, activatedThisBiome: false };
+  }
+  const effect = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey]?.effect;
+  return effect?.kind === 'figLeaf'
+    ? { remainingUses: effect.biomeUses, activatedThisBiome: false }
+    : undefined;
 }
 
 interface ProgressiveGenerationAssembly {
@@ -325,6 +343,10 @@ function blockedAncestorChain(
  * rediscover them.
  */
 export interface ProgressiveBiomeSelectedProducts {
+  /** The complete history assembled before progressive validity clamping. */
+  readonly history: BiomeHistoryPrefix;
+  /** Generation validation already evaluated against that complete history. */
+  readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
@@ -337,10 +359,12 @@ function products(
   },
   context: ProgressiveBiomeContext,
 ): ProgressiveProducts {
+  const lifecycleFigLeafState = figLeafLifecycleState(catalog, context);
   const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
     context.seed?.history.afterTransition,
+    lifecycleFigLeafState,
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
@@ -661,6 +685,7 @@ function retainBlockedRegionProducts(
       : Object.freeze({
           at: retainedArtifacts.encounters.at,
           statusAt: retainedArtifacts.encounters.statusAt,
+          figLeafAt: retainedArtifacts.encounters.figLeafAt,
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)
@@ -1256,6 +1281,15 @@ function firstUnsupportedFinding(
   return located.sort(compareLocatedFindings)[0];
 }
 
+/**
+ * Fig Leaf authored selections are intentionally repairable in place. Their
+ * lifecycle phase still executes normally when chronology rejects the skip,
+ * so the finding must not clamp the later authored topology/history prefix.
+ */
+function isProgressiveBlockingFinding(finding: SemanticFinding): boolean {
+  return finding.code !== 'figLeafSkipUnavailable';
+}
+
 function findingsAtRegion(
   prefix: MaterializedBiomePrefix,
   findingRegions: readonly FindingRegionEntry[],
@@ -1643,6 +1677,8 @@ export function evaluateProgressiveBiomeAssembly(
       authoredPrefix,
       context,
       Object.freeze({
+        history: evaluated.evaluation.history,
+        roomGeneration: evaluated.evaluation.roomGeneration,
         rewards: evaluated.evaluation.rewards,
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
@@ -1697,10 +1733,25 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   const unsupported = firstUnsupportedFinding(
     authoredPrefix,
     selectedProducts.findingRegions,
-    () => true,
+    isProgressiveBlockingFinding,
   );
   if (unsupported === undefined) {
-    throw new Error(`${plan.biomeKey} complete-invalid products have no blocking region`);
+    // Fig Leaf's retained-invalid authored selections do not clamp the
+    // execution prefix: the selected phase executes normally and remains
+    // repairable at its exact owner. Reuse the complete products so
+    // history/topology/lifecycle stay visible while rewards publish the error.
+    // Re-composing here would lose the already-attested Fig Leaf frontier and
+    // could incorrectly turn a legal first selection into an ordinary phase.
+    return Object.freeze({
+      evaluation: Object.freeze({
+        materializedPrefix: authoredPrefix,
+        history: selectedProducts.history,
+        roomGeneration: selectedProducts.roomGeneration,
+        rewards: selectedProducts.rewards,
+        findings: Object.freeze(selectedProducts.findingRegions.map((entry) => entry.finding)),
+      }),
+      candidateArtifacts: selectedProducts.candidateArtifacts,
+    });
   }
   return clampSelectedProducts(catalog, authoredPrefix, context, selectedProducts, unsupported);
 }

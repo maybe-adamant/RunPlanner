@@ -21,6 +21,7 @@ import {
 } from './preparation';
 import type { ResolvedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
+import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
 
 /** Private capability from the exact simulation assembly. */
 export interface EncounterCandidateArtifacts {
@@ -31,6 +32,7 @@ export interface EncounterCandidateArtifacts {
    * authoring candidates that materialize a different encounter envelope.
    */
   readonly roomAt: (origin: OccurrenceAddress) => EncounterRoomCandidateCapability | undefined;
+  readonly figLeafAt: (origin: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined;
 }
 
 /**
@@ -97,6 +99,7 @@ export function evaluateEncounterCandidatesInternal(
   rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalChildRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
   boundary?: EncounterCandidateBoundary,
+  figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
@@ -149,11 +152,15 @@ export function evaluateEncounterCandidatesInternal(
   const privateEntries = new Map(entries);
   const privateStatuses = new Map(statuses);
   const privateRooms = new Map(roomsByOwner);
+  const privateFigLeaf = new Map(
+    figLeafCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
+  );
   return Object.freeze({
     artifacts: Object.freeze({
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
+      figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
     findingRegions: Object.freeze(

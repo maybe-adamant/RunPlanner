@@ -382,6 +382,29 @@ describe('authored encounter occurrence commands', () => {
     });
   });
 
+  it('persists a Fig Leaf choice at exact top-level and local-child phase owners', () => {
+    const topLevel = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pCombatId },
+      'Intro',
+    );
+    const top = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: topLevel,
+      value: true,
+    });
+    expect(occurrence(top, 'P', pCombatId).encounters.figLeafSkipByPhase).toEqual({
+      Intro: true,
+      Combat: false,
+    });
+    const local = applyProjectCommand(enteredNLocalProject(), catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: nLocalPhase,
+      value: true,
+    });
+    expect(localSideRoom(local).encounters.figLeafSkipByPhase).toEqual({ Encounter: true });
+  });
+
   it('restores a deleted parent-local encounter selection through authored history undo', () => {
     const entered = enteredNLocalProject();
     const selected = applyProjectCommand(entered, catalog, {

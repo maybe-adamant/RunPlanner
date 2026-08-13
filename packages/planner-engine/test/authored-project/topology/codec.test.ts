@@ -281,7 +281,10 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
         traitOffersByAcquisitionRole: {},
       },
     },
-    encounters: { encounterKeyByPhase: {} },
+    encounters: {
+      encounterKeyByPhase: {},
+      figLeafSkipByPhase: { Encounter: false },
+    },
     additionalExits: [],
   });
   const shopOccurrence = encoded.topology.occurrences.find(
@@ -1031,7 +1034,7 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'f-width-one-target',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {} },
+      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
       additionalExits: [],
     });
     widthOne.topology.decisions.push({
@@ -1093,7 +1096,7 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'orphan',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {} },
+      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
       additionalExits: [],
     });
     expectDocumentError(orphan.document, {

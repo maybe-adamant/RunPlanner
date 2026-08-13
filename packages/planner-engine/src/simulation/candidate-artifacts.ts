@@ -51,7 +51,12 @@ import {
 } from './rewards/processing';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
-  return Object.freeze({ at: () => undefined, statusAt: () => undefined, roomAt: () => undefined });
+  return Object.freeze({
+    at: () => undefined,
+    statusAt: () => undefined,
+    roomAt: () => undefined,
+    figLeafAt: () => undefined,
+  });
 }
 
 /**

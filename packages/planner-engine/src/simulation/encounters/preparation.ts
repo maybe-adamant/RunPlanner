@@ -31,6 +31,7 @@ export interface EncounterPhaseCandidateSupport {
   readonly selectedPossible: boolean;
   /** This is a structurally active editable pooled slot. */
   readonly active: true;
+  /** Independent phase-local Fig Leaf control support, when reached. */
 }
 
 /**

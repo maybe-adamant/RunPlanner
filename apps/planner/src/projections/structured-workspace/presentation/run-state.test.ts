@@ -87,6 +87,7 @@ describe('Run State presentation', () => {
           acquisitionIdentity: 'experimental-hammer-test',
           active: true,
         },
+        figLeaf: { remainingUses: 2, activatedThisBiome: true },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -137,6 +138,8 @@ describe('Run State presentation', () => {
       experimentalHammerStatus: 'active',
       experimentalHammerTraitLabel: 'Wicked Thrasher',
       experimentalHammerRemainingUses: 7,
+      figLeafRemainingUses: 2,
+      figLeafActivatedThisBiome: true,
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',

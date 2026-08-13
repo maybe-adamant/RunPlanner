@@ -64,6 +64,8 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
           ? { effect: { kind: 'callingCard' as const, rarificationCharges: 6 as const } }
           : key === 'GoldifyKeepsake'
             ? { effect: { kind: 'timePiece' as const, conversionCharges: 4 as const } }
-            : {}),
+            : key === 'SkipEncounterKeepsake'
+              ? { effect: { kind: 'figLeaf' as const, biomeUses: 3 as const } }
+              : {}),
   }),
 );

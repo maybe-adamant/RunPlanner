@@ -35,6 +35,7 @@ export function applyOccurrenceCommand(
       return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':
+    case 'ReplaceFigLeafSkip':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
 }

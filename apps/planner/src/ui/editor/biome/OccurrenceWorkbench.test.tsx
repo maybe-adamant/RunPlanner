@@ -15,6 +15,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createProjectDocument,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -57,6 +58,7 @@ import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
+  nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -266,6 +268,33 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceIds.preHub),
+    );
+    const skip = screen.getByRole('checkbox', { name: 'Skip combat with Fig Leaf' });
+    expect((skip as HTMLInputElement).disabled).toBe(false);
+    await view.user.click(skip);
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
+        );
+      expect(occurrence?.encounters.figLeafSkipByPhase).toMatchObject({ Encounter: true });
+    });
+  });
+
   it('activates a context-invalid dormant Blind Box, then repairs its source on the pickup row', async () => {
     let project = createCompleteFGProject();
     const occurrence = project.routes

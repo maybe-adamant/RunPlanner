@@ -18,18 +18,26 @@ export const hEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: false,
   },
-  { key: 'GeneratedH', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedH',
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'GeneratedH_Treant2',
     label: 'Treant combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'GeneratedH_Screamer2',
     label: 'Screamer combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'NemesisCombatH',

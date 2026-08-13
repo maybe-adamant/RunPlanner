@@ -186,6 +186,21 @@ export function normalizeEncounterDefinitions(
       if (typeof raw.countsEncounterDepth !== 'boolean') {
         fail(`${path}.countsEncounterDepth`, 'must be boolean');
       }
+      if (raw.canEncounterSkip !== undefined && typeof raw.canEncounterSkip !== 'boolean') {
+        fail(`${path}.canEncounterSkip`, 'must be boolean');
+      }
+      if (raw.blocksFigLeaf !== undefined && typeof raw.blocksFigLeaf !== 'boolean') {
+        fail(`${path}.blocksFigLeaf`, 'must be boolean');
+      }
+      if (
+        raw.skipEndEncounterEffects !== undefined &&
+        typeof raw.skipEndEncounterEffects !== 'boolean'
+      ) {
+        fail(`${path}.skipEndEncounterEffects`, 'must be boolean');
+      }
+      if (raw.skipEndEncounterEffects === true && raw.canEncounterSkip !== true) {
+        fail(`${path}.skipEndEncounterEffects`, 'requires canEncounterSkip');
+      }
       const blocksKeepsakeSelectionKeys =
         raw.blocksKeepsakeSelectionKeys === undefined
           ? undefined
@@ -240,6 +255,9 @@ export function normalizeEncounterDefinitions(
         label,
         kind: raw.kind,
         countsEncounterDepth: raw.countsEncounterDepth,
+        canEncounterSkip: raw.canEncounterSkip ?? false,
+        blocksFigLeaf: raw.blocksFigLeaf ?? false,
+        skipEndEncounterEffects: raw.skipEndEncounterEffects ?? false,
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
         ...(requirements === undefined ? {} : { requirements }),
         ...(raw.sequenceEffect === undefined

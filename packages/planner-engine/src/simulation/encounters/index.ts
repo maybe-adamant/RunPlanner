@@ -5,6 +5,12 @@ export {
 } from './resolve';
 export type { ResolvedEncounterPhase } from './model';
 export {
+  assessFigLeafSkip,
+  type FigLeafSkipAssessment,
+  type FigLeafSkipAssessmentInput,
+  type FigLeafSkipUnavailableReason,
+} from './fig-leaf';
+export {
   prepareRoomEncounterPhases,
   type EncounterAuthoringRoom,
   type EncounterPhaseCandidateSupport,

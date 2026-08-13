@@ -9,7 +9,14 @@ import {
 } from './shared';
 
 function nonCountingCombat(key: string, label: string) {
-  return { key, label, kind: 'combat' as const, countsEncounterDepth: false };
+  return {
+    key,
+    label,
+    kind: 'combat' as const,
+    countsEncounterDepth: false,
+    canEncounterSkip: true,
+    skipEndEncounterEffects: true,
+  };
 }
 
 export const pEncounterDefinitions = [
@@ -86,6 +93,7 @@ export const pEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: false,
     requirements: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 9 } },
   },
   {
@@ -93,6 +101,7 @@ export const pEncounterDefinitions = [
     label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: false,
     requirements: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 9 } },
   },
   {
@@ -167,6 +176,8 @@ export const pEncounterDefinitions = [
     label: 'Athena combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: false,
+    blocksFigLeaf: true,
     blocksKeepsakeSelectionKeys: ['AthenaEncounterKeepsake'],
     npcPresentationKey: 'Athena',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Athena' },

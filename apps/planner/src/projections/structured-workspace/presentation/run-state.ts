@@ -191,6 +191,12 @@ export function presentRunState(
       ...(snapshot.keepsakes.timePiece === undefined
         ? {}
         : { timePieceRemainingCharges: snapshot.keepsakes.timePiece.remainingCharges }),
+      ...(snapshot.keepsakes.figLeaf === undefined
+        ? {}
+        : {
+            figLeafRemainingUses: snapshot.keepsakes.figLeaf.remainingUses,
+            figLeafActivatedThisBiome: snapshot.keepsakes.figLeaf.activatedThisBiome,
+          }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

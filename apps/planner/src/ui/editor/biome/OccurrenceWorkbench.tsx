@@ -193,6 +193,23 @@ function EncounterPhaseControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phase: WorkspaceEncounterPhase;
 }) {
+  const executeIntent = useCommandIntent();
+  const figLeafInteraction =
+    phase.figLeaf === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.figLeafSkips, phase.figLeaf.interactionKey);
+  const figLeafControl =
+    figLeafInteraction === undefined ? null : (
+      <label className="field-control fig-leaf-skip-control">
+        <input
+          checked={figLeafInteraction.selected}
+          disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
+          onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
+          type="checkbox"
+        />
+        <span>Skip combat with Fig Leaf</span>
+      </label>
+    );
   if (!phase.customizable) {
     return (
       <section
@@ -208,6 +225,7 @@ function EncounterPhaseControl({
           </div>
         </div>
         <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
+        {figLeafControl}
         {phase.traitOffer === undefined ? null : (
           <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
         )}
@@ -235,6 +253,7 @@ function EncounterPhaseControl({
         interaction={interaction}
         phase={phase}
       />
+      {figLeafControl}
       {phase.traitOffer === undefined ? null : (
         <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
       )}
@@ -253,7 +272,10 @@ function EncounterWorkbench({
 }) {
   const presentedPhases = phases.filter(
     (phase) =>
-      phase.customizable || phase.marker.findingCount > 0 || phase.traitOffer !== undefined,
+      phase.customizable ||
+      phase.marker.findingCount > 0 ||
+      phase.traitOffer !== undefined ||
+      phase.figLeaf !== undefined,
   );
   if (presentedPhases.length === 0) return null;
   return (

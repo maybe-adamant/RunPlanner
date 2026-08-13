@@ -55,6 +55,7 @@ import type {
 import type { CanonicalDecision } from '../materialization/model';
 import { materializeShipCombatState } from '../materialization';
 import type { ResolvedEncounterPhase } from '../encounters';
+import { assessFigLeafSkip } from '../encounters';
 import {
   ownerRegion,
   type FindingChronology,
@@ -133,6 +134,8 @@ import {
   jeweledPomEffectForKey,
   keepsakeSelectionUnavailableReason,
   refreshKeepsakeFatedStatus,
+  consumeFigLeafUse,
+  attestFigLeafBranchState,
 } from '../keepsakes';
 import {
   activateTemporaryArcana,
@@ -1146,6 +1149,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     import('../candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   function recordAcquisitionRoleFrontiers(
     frontiers: readonly AcquisitionRoleFrontier[] | undefined,
   ): void {
@@ -1732,6 +1736,97 @@ export function evaluateBiomeRewardsAssemblyInternal(
       break;
     }
     switch (event.kind) {
+      case 'encounterStarted': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        if (room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')) {
+          const phase = room.encounterPhases.find(
+            (candidate) => candidate.slotKey === event.phaseKey,
+          );
+          const phaseOwner =
+            room.origin.kind === 'occurrence'
+              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
+              : {
+                  kind: 'localChild' as const,
+                  occurrenceId: room.origin.occurrenceId,
+                  groupKey: room.origin.groupKey,
+                  slotKey: room.origin.slotKey,
+                };
+          if (phase !== undefined) {
+            const origin = createEncounterPhaseAddress(
+              createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
+              phaseOwner,
+              event.phaseKey,
+            );
+            const isBiomeStart =
+              snapshot.entryRoom !== undefined &&
+              semanticAddressKey(snapshot.entryRoom.origin) === semanticAddressKey(event.origin);
+            const blockedByEnvelope = room.encounterPhases.some(
+              (candidate) => candidate.blocksFigLeaf,
+            );
+            const nonLeadingCascadePhase =
+              phase.skipEndEncounterEffects === true &&
+              room.encounterPhases[0]?.slotKey !== phase.slotKey;
+            // Fig Leaf is a single chronological resource even when rewards
+            // have multiple branches. Attest the complete frontier before
+            // deriving candidates/findings; never silently choose branch 0.
+            const figLeaf = attestFigLeafBranchState(branches);
+            const assessment = assessFigLeafSkip({
+              selected: phase.figLeafSkip,
+              canEncounterSkip: phase.canEncounterSkip,
+              biomeStart: isBiomeStart,
+              blockedByEnvelope,
+              nonLeadingCascadePhase,
+              remainingUses: figLeaf?.remainingUses ?? 0,
+              activatedThisBiome: figLeaf?.activatedThisBiome ?? false,
+              selectionAlreadyResolved: event.figLeafSkipOwner !== true,
+            });
+            if (phase.figLeafSkip === true && !assessment.legal) {
+              addRewardFinding(
+                findings,
+                Object.freeze({
+                  code: 'figLeafSkipUnavailable',
+                  severity: 'error',
+                  phase: 'encounterResolution',
+                  origin,
+                  evidence: Object.freeze(
+                    assessment.reason === undefined ? {} : { reason: assessment.reason },
+                  ),
+                }),
+                ownerRegion(origin),
+                historyFindingChronology(event.sequence),
+              );
+            }
+            if (
+              phase.canEncounterSkip &&
+              !isBiomeStart &&
+              !blockedByEnvelope &&
+              !nonLeadingCascadePhase &&
+              figLeaf !== undefined
+            ) {
+              figLeafPhaseCandidates.set(
+                semanticAddressKey(origin),
+                Object.freeze({
+                  origin,
+                  supported: figLeaf.remainingUses > 0 && !figLeaf.activatedThisBiome,
+                  selected: phase.figLeafSkip === true,
+                  remainingUses: figLeaf.remainingUses,
+                  activatedThisBiome: figLeaf.activatedThisBiome,
+                }),
+              );
+            }
+          }
+        }
+        if (event.figLeafSkipOwner) {
+          attestFigLeafBranchState(branches);
+          branches = Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({ ...branch, keepsakes: consumeFigLeafUse(branch.keepsakes) }),
+            ),
+          );
+        }
+        branches = advanceRewardBranches(branches, event.sequence);
+        break;
+      }
       case 'roomPrepared':
         branches = beginRewardRoom(branches, event.sequence);
         break;
@@ -3161,6 +3256,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     runStateAvailability: runStatePublication.availability,
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
+    figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
   });
   return Object.freeze({
     simulation,

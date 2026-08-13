@@ -86,6 +86,9 @@ function withoutArtemisPresentationMetadata(): Catalog {
     label: original.label,
     kind: original.kind,
     countsEncounterDepth: original.countsEncounterDepth,
+    canEncounterSkip: original.canEncounterSkip,
+    blocksFigLeaf: original.blocksFigLeaf,
+    skipEndEncounterEffects: original.skipEndEncounterEffects,
     ...(original.requirements === undefined ? {} : { requirements: original.requirements }),
     ...(original.sequenceEffect === undefined ? {} : { sequenceEffect: original.sequenceEffect }),
   });
