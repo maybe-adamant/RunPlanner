@@ -187,12 +187,16 @@ function TraitOfferOptionEditor({
   index,
   interaction,
   optionKey,
+  effectiveRarity,
+  rarifySupported,
   value,
   onUpdate,
 }: {
   readonly index: number;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly optionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
+  readonly effectiveRarity?: TraitRarity;
+  readonly rarifySupported: boolean;
   readonly value: AuthoredTraitOfferTraits;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
@@ -288,6 +292,21 @@ function TraitOfferOptionEditor({
           }
         />
       )}
+      <button
+        disabled={!rarifySupported}
+        onClick={() =>
+          onUpdate(
+            Object.freeze({
+              ...value,
+              rarificationActions: Object.freeze([...(value.rarificationActions ?? []), optionKey]),
+            }),
+          )
+        }
+        type="button"
+      >
+        Rarify
+      </button>
+      {effectiveRarity === undefined ? null : <p>Effective rarity: {effectiveRarity}</p>}
       <label className="trait-option-selected">
         <input
           checked={value.selectedOptionKey === optionKey}
@@ -369,6 +388,25 @@ export function TraitOfferEditor({
   const hasOptionFeedback = feedback.options.some(
     (option) => option.reasons.length > 0 || option.replacement !== undefined,
   );
+  const rarifySupported = (optionKey: AuthoredTraitOfferTraits['selectedOptionKey']): boolean => {
+    if (candidate?.evaluation.kind !== 'traitOffer') return false;
+    const branches = candidate.evaluation.result.callingCard ?? [];
+    return (
+      branches.length > 0 &&
+      branches.every((branch) => branch.rarifiableOptionKeys.includes(optionKey))
+    );
+  };
+  const effectiveRarity = (
+    optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+  ): TraitRarity | undefined => {
+    if (candidate?.evaluation.kind !== 'traitOffer') return undefined;
+    const values = (candidate.evaluation.result.callingCard ?? [])
+      .map((branch) => branch.effectiveRarities[OPTION_KEYS.indexOf(optionKey)])
+      .filter((value): value is TraitRarity => value !== undefined);
+    return values.length > 0 && values.every((value) => value === values[0])
+      ? values[0]
+      : undefined;
+  };
   const deathDefianceCondition =
     value.kind === 'traits' ? interaction.deathDefianceCondition : undefined;
   const traitsStartingDraft = useMemo(
@@ -448,15 +486,29 @@ export function TraitOfferEditor({
             {value.options.map((_, index) => {
               const optionKey = OPTION_KEYS[index]!;
               const optionFeedback = feedback.options[index];
+              const rowEffectiveRarity = effectiveRarity(optionKey);
               return (
                 <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
-                  <TraitOfferOptionEditor
-                    index={index}
-                    interaction={interaction}
-                    onUpdate={updateValue}
-                    optionKey={optionKey}
-                    value={value}
-                  />
+                  {rowEffectiveRarity === undefined ? (
+                    <TraitOfferOptionEditor
+                      index={index}
+                      interaction={interaction}
+                      onUpdate={updateValue}
+                      optionKey={optionKey}
+                      rarifySupported={rarifySupported(optionKey)}
+                      value={value}
+                    />
+                  ) : (
+                    <TraitOfferOptionEditor
+                      effectiveRarity={rowEffectiveRarity}
+                      index={index}
+                      interaction={interaction}
+                      onUpdate={updateValue}
+                      optionKey={optionKey}
+                      rarifySupported={rarifySupported(optionKey)}
+                      value={value}
+                    />
+                  )}
                 </div>
               );
             })}

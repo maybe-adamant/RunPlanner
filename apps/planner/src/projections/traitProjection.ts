@@ -141,10 +141,17 @@ export function projectTraitOfferFeedback(
     return Object.freeze({ options: Object.freeze([]), support });
   }
   const findingsByTrait = new Map<string, string[]>();
+  const findingsByOption = new Map<string, string[]>();
   const contextMessages = new Set<string>();
   for (const finding of evaluation.result.findings) {
     const reason = presentTraitCandidateReason(finding, traitLabel);
     if (finding.traitKey === undefined) {
+      if (finding.optionKey !== undefined) {
+        const reasons = findingsByOption.get(finding.optionKey) ?? [];
+        if (!reasons.includes(reason)) reasons.push(reason);
+        findingsByOption.set(finding.optionKey, reasons);
+        continue;
+      }
       contextMessages.add(reason);
       continue;
     }
@@ -155,8 +162,11 @@ export function projectTraitOfferFeedback(
   return Object.freeze({
     ...(contextMessages.size === 0 ? {} : { contextMessage: [...contextMessages].join(' ') }),
     options: Object.freeze(
-      offer.options.map((option) => {
-        const reasons = findingsByTrait.get(option.traitKey) ?? [];
+      offer.options.map((option, index) => {
+        const reasons = [
+          ...(findingsByTrait.get(option.traitKey) ?? []),
+          ...(findingsByOption.get(['option1', 'option2', 'option3'][index]!) ?? []),
+        ];
         const replacement = uniformReplacement(
           evaluation.result.assessments,
           evaluation.result.branches.length,

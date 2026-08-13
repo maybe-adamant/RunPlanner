@@ -80,6 +80,7 @@ describe('Run State presentation', () => {
         history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
         removedKeys: [],
         fatedStatus: 'Unknown',
+        callingCard: { remainingCharges: 0 },
         experimentalHammer: {
           traitKey: 'StaffDoubleAttackTrait',
           remainingUses: 7,
@@ -132,6 +133,7 @@ describe('Run State presentation', () => {
       disabled: [{ key: 'EnemyDamageShrineUpgrade', label: 'Vow of Pain', rank: 2 }],
     });
     expect(state.keepsakes).toMatchObject({
+      callingCardRemainingCharges: 0,
       experimentalHammerStatus: 'active',
       experimentalHammerTraitLabel: 'Wicked Thrasher',
       experimentalHammerRemainingUses: 7,

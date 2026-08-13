@@ -28,10 +28,9 @@ import type { EncounterCandidateArtifacts } from './encounters';
 import { circeResolutionDomain } from './arcana-fear';
 import {
   assessTraitOffer,
-  assessTraitOfferComposition,
+  assessTraitOfferBeforeRarification,
   nextTraitOfferDraft,
   traitOfferStartingDraft,
-  assessTraitReplacementComposition,
   assessSelectedTargetedAcquisition,
   targetedAcquisitionTargetKeys,
   type TraitOfferBranchAssessment,
@@ -42,6 +41,7 @@ import {
   type TraitHistoryState,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
+import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -65,6 +65,12 @@ export interface RoomTargetCandidateArtifacts {
  */
 export interface TraitOfferCandidateCapability {
   readonly evaluateOffer: (value: AuthoredTraitOffer) => readonly TraitOfferBranchAssessment[];
+  readonly callingCard: (value: AuthoredTraitOffer) => readonly {
+    readonly effectiveOffer: AuthoredTraitOffer;
+    readonly remainingCharges: number | undefined;
+    readonly invalidActions: readonly number[];
+    readonly rarifiableOptionKeys: readonly TraitOptionKey[];
+  }[];
   /** One exact supported traits draft for returning from Fallback Gold, if any. */
   readonly traitsStartingDraft: (giverKey: string) => AuthoredTraitOfferTraits | undefined;
   readonly nextTraitOptionDraft: (
@@ -350,21 +356,72 @@ export function createTraitOfferCandidateArtifacts(
         evaluateOffer: (value: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {
-              const candidateContext = traitOfferCandidateContext(context.context, value);
+              const base = assessTraitOfferBeforeRarification(
+                catalog,
+                value,
+                context.before,
+                traitOfferCandidateContext(context.context, value),
+              );
+              // Calling Card acts only after the authored (rolled) offer is
+              // accepted. Its derived effective rarity is deliberately not a
+              // fresh-roll input: Heroic and promoted replacement rows must
+              // retain the legality/composition assessment of that base offer.
               return Object.freeze({
-                assessments: assessTraitOffer(catalog, value, context.before, candidateContext),
-                composition: assessTraitOfferComposition(catalog, value, context.before),
-                replacementComposition: assessTraitReplacementComposition(
-                  catalog,
-                  value,
-                  context.before,
-                  candidateContext,
-                ),
-                targetedAcquisition: assessSelectedTargetedAcquisition(
-                  catalog,
-                  value,
-                  context.before,
-                ),
+                assessments: base.assessments,
+                composition: base.composition,
+                replacementComposition: base.replacementComposition,
+                targetedAcquisition: assessSelectedTargetedAcquisition(catalog, value, context.before),
+              });
+            }),
+          ),
+        callingCard: (value: AuthoredTraitOffer) =>
+          Object.freeze(
+            branchContexts.map((context) => {
+              const keepsakes = context.keepsakes;
+              const base = assessTraitOfferBeforeRarification(
+                catalog,
+                value,
+                context.before,
+                traitOfferCandidateContext(context.context, value),
+              );
+              const result =
+                keepsakes === undefined
+                  ? undefined
+                  : evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
+              return Object.freeze({
+                effectiveOffer: result?.offer ?? value,
+                remainingCharges: result?.state.callingCard?.remainingCharges,
+                invalidActions: result?.invalidActions ?? Object.freeze([]),
+                rarifiableOptionKeys:
+                  value.kind !== 'traits' || keepsakes === undefined
+                    ? Object.freeze([])
+                    : Object.freeze(
+                        (['option1', 'option2', 'option3'] as const).filter((key) => {
+                          if (optionIndex(key) >= value.options.length) return false;
+                          const attempted = Object.freeze({
+                            ...value,
+                            rarificationActions: Object.freeze([
+                              ...(value.rarificationActions ?? []),
+                              key,
+                            ]),
+                          });
+                          const attemptedBase = assessTraitOfferBeforeRarification(
+                            catalog,
+                            attempted,
+                            context.before,
+                            traitOfferCandidateContext(context.context, attempted),
+                          );
+                          const attempt = evaluateCallingCardOffer(
+                            catalog,
+                            keepsakes,
+                            attempted,
+                            attemptedBase.legal,
+                          );
+                          return !attempt.invalidActions.includes(
+                            attempted.rarificationActions.length - 1,
+                          );
+                        }),
+                      ),
               });
             }),
           ),

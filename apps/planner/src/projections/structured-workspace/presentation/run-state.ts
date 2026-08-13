@@ -185,6 +185,9 @@ export function presentRunState(
               catalog.traits.byKey[snapshot.keepsakes.experimentalHammer.traitKey]?.label ??
               snapshot.keepsakes.experimentalHammer.traitKey,
           }),
+      ...(snapshot.keepsakes.callingCard === undefined
+        ? {}
+        : { callingCardRemainingCharges: snapshot.keepsakes.callingCard.remainingCharges }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

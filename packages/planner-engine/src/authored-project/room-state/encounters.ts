@@ -12,6 +12,7 @@ import {
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
   type AuthoredCirceResolution,
+  type TraitOptionKey,
 } from '../traits';
 import {
   TRAIT_OPTION_KEYS,
@@ -208,6 +209,7 @@ function decodeEncounterTraitOffer(
       'giverKey',
       'options',
       'selectedOptionKey',
+      'rarificationActions',
       ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
     ],
     path,
@@ -366,6 +368,15 @@ function decodeEncounterTraitOffer(
     options.push(Object.freeze(decodedOption));
   }
   const selectedOptionKey = expectString(record.selectedOptionKey, `${path}.selectedOptionKey`);
+  const rarificationActions = expectArray(
+    record.rarificationActions,
+    `${path}.rarificationActions`,
+  ).map((value, index) => {
+    const key = expectString(value, `${path}.rarificationActions[${index}]`);
+    if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(key))
+      failProjectDocument(`${path}.rarificationActions[${index}]`, 'must name an option row');
+    return key as TraitOptionKey;
+  });
   if (
     !(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey) ||
     options[TRAIT_OPTION_KEYS.indexOf(selectedOptionKey as never)] === undefined
@@ -376,6 +387,7 @@ function decodeEncounterTraitOffer(
     giverKey,
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: selectedOptionKey as AuthoredTraitOfferTraits['selectedOptionKey'],
+    rarificationActions: Object.freeze(rarificationActions),
     ...(conditionApplicable
       ? {
           deathDefianceConditionMet: expectBoolean(

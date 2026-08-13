@@ -20,6 +20,7 @@ import type {
 } from '../authored-project/traits';
 import type { RewardHistoryState } from '../reward-kernel/model';
 import type { ArcanaFearState } from './arcana-fear';
+import type { KeepsakeState } from './keepsakes';
 import type { TraitFindingCode } from './model';
 export type { TraitFindingCode } from './model';
 import { optionIndex, traitOfferSupportsExhaustion } from '../authored-project/traits';
@@ -616,6 +617,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly context: TraitOfferContext;
   /** Exact pre-acquisition frontier retained only for Circe candidate capability. */
   readonly arcanaFear?: ArcanaFearState;
+  /** Exact pre-offer keepsake frontier retained for Calling Card replay. */
+  readonly keepsakes?: KeepsakeState;
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
@@ -651,6 +654,7 @@ export interface TraitOfferCandidateContext {
   readonly before: TraitHistoryState;
   readonly context: TraitOfferContext;
   readonly arcanaFear?: ArcanaFearState;
+  readonly keepsakes?: KeepsakeState;
 }
 
 export interface TraitContextUnavailable {
@@ -670,14 +674,18 @@ export function evaluateReachedTraitOffer(
   chronologicalIndex: number,
   arcanaFear?: ArcanaFearState,
   directAcquisition = false,
+  keepsakes?: KeepsakeState,
+  /** Calling Card changes a rolled row after base-offer legality is established. */
+  rarificationBaseOffer?: AuthoredTraitOffer,
 ): ReachedTraitOfferEvaluation {
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
   // three-choice offer-composition contract.
+  const legalityOffer = rarificationBaseOffer ?? offer;
   const composition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
-    : assessTraitOfferComposition(catalog, offer, before);
+    : assessTraitOfferComposition(catalog, legalityOffer, before);
   const replacementComposition = directAcquisition
     ? Object.freeze({
         applies: false,
@@ -687,8 +695,8 @@ export function evaluateReachedTraitOffer(
         replacementCount: 0,
         findings: Object.freeze([]),
       })
-    : assessTraitReplacementComposition(catalog, offer, before, context);
-  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, before);
+    : assessTraitReplacementComposition(catalog, legalityOffer, before, context);
+  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
   return Object.freeze({
     address,
     acquisitionRole,
@@ -696,7 +704,8 @@ export function evaluateReachedTraitOffer(
     offer,
     context,
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
-    assessments: assessTraitOffer(catalog, offer, before, context),
+    ...(keepsakes === undefined ? {} : { keepsakes }),
+    assessments: assessTraitOffer(catalog, legalityOffer, before, context),
     composition,
     replacementComposition,
     targetedAcquisition,
@@ -1394,6 +1403,41 @@ export function assessTraitOffer(
       assessTraitOption(catalog, option.traitKey, history, offerContext, option.rarity),
     ),
   );
+}
+
+/**
+ * The offer frontier Calling Card is allowed to act on.  This deliberately
+ * excludes selected-only acquisition consequences: spending a row action is
+ * an offer action, so a later invalid selected child must not undo it.
+ */
+export function assessTraitOfferBeforeRarification(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  history: TraitHistoryState,
+  context: TraitOfferContext = {},
+): {
+  readonly assessments: readonly TraitAssessment[];
+  readonly composition: TraitOfferCompositionAssessment;
+  readonly replacementComposition: TraitReplacementCompositionAssessment;
+  readonly legal: boolean;
+} {
+  const assessments = assessTraitOffer(catalog, offer, history, context);
+  const composition = assessTraitOfferComposition(catalog, offer, history);
+  const replacementComposition = assessTraitReplacementComposition(
+    catalog,
+    offer,
+    history,
+    context,
+  );
+  return Object.freeze({
+    assessments,
+    composition,
+    replacementComposition,
+    legal:
+      composition.legal &&
+      replacementComposition.legal &&
+      assessments.every((assessment) => assessment.legal),
+  });
 }
 
 export function assessSelectedTargetedAcquisition(

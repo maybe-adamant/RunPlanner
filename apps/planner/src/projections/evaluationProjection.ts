@@ -316,6 +316,10 @@ const findingCopy = {
     title: 'Trait banned by Vow of Denial',
     description: 'This trait was left unselected in an earlier Denial offer.',
   },
+  callingCardRarificationUnavailable: {
+    title: 'Calling Card cannot rarify this row',
+    description: 'This rarification action is not available at the reached offer frontier.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

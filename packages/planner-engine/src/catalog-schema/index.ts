@@ -110,7 +110,8 @@ export interface KeepsakeDeclaration {
         readonly kind: 'experimentalHammer';
         readonly giverKey: string;
         readonly qualifyingEncounterUses: 20;
-      };
+      }
+    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';

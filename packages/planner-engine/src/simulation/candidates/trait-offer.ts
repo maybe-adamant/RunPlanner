@@ -30,6 +30,8 @@ export interface TraitOfferCandidateFinding {
   readonly optionKey?: TraitOptionKey;
   /** Every offer position containing this duplicate trait. */
   readonly optionKeys?: readonly TraitOptionKey[];
+  /** Ordered Calling Card action evidence at this exact offer owner. */
+  readonly actionIndex?: number;
 }
 
 export interface TraitOfferCandidateQuery {
@@ -108,12 +110,21 @@ export interface TraitOfferCandidateBranch {
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
 }
 
+/** Exact Calling Card replay product for one surviving pre-offer branch. */
+export interface CallingCardOfferCandidateBranch {
+  readonly effectiveRarities: readonly (import('../../catalog-schema').TraitRarity | undefined)[];
+  readonly remainingCharges?: number;
+  readonly invalidActionIndexes: readonly number[];
+  readonly rarifiableOptionKeys: readonly TraitOptionKey[];
+}
+
 export interface EvaluatedTraitOfferCandidate {
   readonly kind: 'traitOffer';
   readonly result: {
     readonly supported: boolean;
     readonly assessments: readonly TraitAssessment[];
     readonly branches: readonly TraitOfferCandidateBranch[];
+    readonly callingCard?: readonly CallingCardOfferCandidateBranch[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
 }
@@ -215,6 +226,8 @@ function assessTraitOfferCandidate(
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   }[],
   duplicateFindings: readonly TraitOfferCandidateFinding[],
+  callingCard: readonly CallingCardOfferCandidateBranch[] = Object.freeze([]),
+  value?: AuthoredTraitOffer,
 ): TraitOfferCandidateAssessment {
   const branches = Object.freeze(
     reached.map((branch) =>
@@ -240,6 +253,20 @@ function assessTraitOfferCandidate(
       ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
     ]),
     ...duplicateFindings,
+    ...callingCard.flatMap((branch) =>
+      branch.invalidActionIndexes.map((index) =>
+        Object.freeze({
+          code: 'callingCardRarificationUnavailable' as const,
+          actionIndex: index,
+          ...(value?.kind === 'traits' && value.rarificationActions?.[index] === undefined
+            ? {}
+            : value?.kind === 'traits'
+              ? { optionKey: value.rarificationActions![index] }
+              : {}),
+          detail: `rarification action ${index + 1} is unavailable at this offer frontier`,
+        }),
+      ),
+    ),
   ]);
   return Object.freeze({
     branches,
@@ -273,6 +300,7 @@ function unavailableForTraitOffer(
 
 function evaluatedTraitOfferCandidate(
   assessment: TraitOfferCandidateAssessment,
+  callingCard: readonly CallingCardOfferCandidateBranch[],
 ): EvaluatedTraitOfferCandidate {
   return Object.freeze({
     kind: 'traitOffer',
@@ -281,6 +309,7 @@ function evaluatedTraitOfferCandidate(
       branches: assessment.branches,
       assessments: assessment.assessments,
       findings: assessment.findings,
+      callingCard: Object.freeze(callingCard),
     }),
   });
 }
@@ -392,11 +421,28 @@ export function evaluateTraitOfferCandidate(
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined && duplicateFindings.length === 0)
     return unavailableForTraitOffer(evaluation, query.trait);
+  const callingCard = Object.freeze(
+    (capability?.callingCard(query.value) ?? []).map((branch) =>
+      Object.freeze({
+        effectiveRarities:
+          branch.effectiveOffer.kind === 'fallbackGold'
+            ? Object.freeze([])
+            : Object.freeze(branch.effectiveOffer.options.map((option) => option.rarity)),
+        ...(branch.remainingCharges === undefined
+          ? {}
+          : { remainingCharges: branch.remainingCharges }),
+        invalidActionIndexes: branch.invalidActions,
+        rarifiableOptionKeys: branch.rarifiableOptionKeys,
+      }),
+    ),
+  );
   const assessment = assessTraitOfferCandidate(
     capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value),
     duplicateFindings,
+    callingCard,
+    query.value,
   );
-  return evaluatedTraitOfferCandidate(assessment);
+  return evaluatedTraitOfferCandidate(assessment, callingCard);
 }
 
 export function evaluateTraitOfferFocusedOptionCandidate(

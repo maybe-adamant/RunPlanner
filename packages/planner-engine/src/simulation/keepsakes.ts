@@ -3,6 +3,8 @@ import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
 import type { TraitHistoryState } from './traits';
 import { assessTraitOption } from './traits';
+import { nextRarity } from './traits';
+import { optionIndex, type AuthoredTraitOffer } from '../authored-project/traits';
 
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
 export interface KeepsakeHistoryEntry {
@@ -28,6 +30,8 @@ export interface KeepsakeState {
     readonly acquisitionIdentity: string;
     readonly active: boolean;
   };
+  /** Retained Calling Card ledger; explicit offer actions are its only consumption source. */
+  readonly callingCard?: { readonly remainingCharges: number };
 }
 
 export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Catalog, key: string) {
@@ -207,15 +211,24 @@ export function createKeepsakeState(
   key: string,
   arcanaFear?: ArcanaFearState,
 ): KeepsakeState {
+  const effect = catalog.keepsakes.byKey[key]?.effect;
+  const fatedStatus = deriveFatedStatus(
+    catalog,
+    [key],
+    arcanaFear?.arcana.active.map((card) => card.key),
+  );
   return Object.freeze({
     currentKey: key,
     history: Object.freeze([{ key, kind: 'start' as const }]),
     removedKeys: Object.freeze([]),
-    fatedStatus: deriveFatedStatus(
-      catalog,
-      [key],
-      arcanaFear?.arcana.active.map((card) => card.key),
-    ),
+    fatedStatus,
+    ...(effect?.kind === 'callingCard'
+      ? {
+          callingCard: Object.freeze({
+            remainingCharges: fatedStatus === 'Unfated' ? 0 : effect.rarificationCharges,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -231,14 +244,18 @@ export function applyKeepsakeDisposition(
       ...state.history,
       { key: state.currentKey, kind: 'retain' as const },
     ]);
+    const fatedStatus = deriveFatedStatus(
+      catalog,
+      history.map((entry) => entry.key),
+      activeArcanaKeys,
+    );
     return Object.freeze({
       ...state,
       history,
-      fatedStatus: deriveFatedStatus(
-        catalog,
-        history.map((entry) => entry.key),
-        activeArcanaKeys,
-      ),
+      fatedStatus,
+      ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
+        ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
+        : {}),
     });
   }
   // Invalid authored values deliberately remain in the document for repair,
@@ -253,16 +270,23 @@ export function applyKeepsakeDisposition(
     ...state.history,
     { key: disposition.keepsakeKey, kind: 'replace' as const },
   ]);
+  const fatedStatus = deriveFatedStatus(
+    catalog,
+    history.map((entry) => entry.key),
+    activeArcanaKeys,
+  );
   return Object.freeze({
     ...state,
     currentKey: disposition.keepsakeKey,
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
-    fatedStatus: deriveFatedStatus(
-      catalog,
-      history.map((entry) => entry.key),
-      activeArcanaKeys,
-    ),
+    fatedStatus,
+    ...(selected.effect?.kind === 'callingCard' && state.callingCard === undefined
+      ? { callingCard: Object.freeze({ remainingCharges: selected.effect.rarificationCharges }) }
+      : {}),
+    ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
+      ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
+      : {}),
   });
 }
 
@@ -276,5 +300,69 @@ export function refreshKeepsakeFatedStatus(
     state.history.map((entry) => entry.key),
     arcanaFear.arcana.active.map((card) => card.key),
   );
-  return fatedStatus === state.fatedStatus ? state : Object.freeze({ ...state, fatedStatus });
+  if (fatedStatus === state.fatedStatus) return state;
+  return Object.freeze({
+    ...state,
+    fatedStatus,
+    ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
+      ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
+      : {}),
+  });
+}
+
+/** Replays the persisted row ledger once for every consumer of an offer. */
+export function evaluateCallingCardOffer(
+  catalog: Catalog,
+  state: KeepsakeState,
+  offer: AuthoredTraitOffer,
+  baseOfferLegal: boolean,
+): {
+  readonly offer: AuthoredTraitOffer;
+  readonly state: KeepsakeState;
+  readonly invalidActions: readonly number[];
+} {
+  if (
+    offer.kind !== 'traits' ||
+    offer.rarificationActions === undefined ||
+    offer.rarificationActions.length === 0
+  )
+    return Object.freeze({ offer, state, invalidActions: Object.freeze([]) });
+  let remaining = state.callingCard?.remainingCharges ?? 0;
+  const options = offer.options.map((option) => ({ ...option }));
+  const invalidActions: number[] = [];
+  for (const [index, key] of offer.rarificationActions.entries()) {
+    const option = options[optionIndex(key)];
+    const trait = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
+    const next =
+      option?.rarity === undefined
+        ? undefined
+        : nextRarity(catalog, option.traitKey, option.rarity);
+    if (
+      !baseOfferLegal ||
+      state.fatedStatus !== 'Fated' ||
+      remaining === 0 ||
+      !catalog.traitGivers.byKey[offer.giverKey]?.callingCardMenu ||
+      trait === undefined ||
+      trait.blockInRunRarify ||
+      next === undefined
+    ) {
+      invalidActions.push(index);
+      continue;
+    }
+    options[optionIndex(key)] = { ...option!, rarity: next };
+    remaining -= 1;
+  }
+  const effective = Object.freeze({
+    ...offer,
+    options: Object.freeze(options) as typeof offer.options,
+  });
+  const nextState =
+    remaining === (state.callingCard?.remainingCharges ?? 0)
+      ? state
+      : Object.freeze({ ...state, callingCard: Object.freeze({ remainingCharges: remaining }) });
+  return Object.freeze({
+    offer: effective,
+    state: nextState,
+    invalidActions: Object.freeze(invalidActions),
+  });
 }

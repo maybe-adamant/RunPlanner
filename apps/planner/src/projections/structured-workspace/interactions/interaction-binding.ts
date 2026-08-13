@@ -1915,6 +1915,7 @@ export function bindWorkspaceInteractions(
       );
       continue;
     }
+    if (effect.kind !== 'jeweledPom') continue;
     keepsakeEquipResults.set(
       key,
       Object.freeze({

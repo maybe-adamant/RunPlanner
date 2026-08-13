@@ -105,6 +105,12 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         <p>Fated: {state.keepsakes.fatedStatus}</p>
         <p>Jeweled Pom: {state.keepsakes.jeweledPomStatus}</p>
         <p>
+          Calling Card:{' '}
+          {state.keepsakes.callingCardRemainingCharges === undefined
+            ? 'inactive'
+            : `${state.keepsakes.callingCardRemainingCharges} charges remaining`}
+        </p>
+        <p>
           Experimental Hammer: {state.keepsakes.experimentalHammerStatus}
           {state.keepsakes.experimentalHammerTraitLabel === undefined
             ? ''

@@ -6,6 +6,8 @@ import {
   createEncounterPhaseAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createIncomingRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -91,7 +93,51 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(25);
+    expect(decoded.schemaVersion).toBe(26);
+  });
+
+  it('schema-26 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const trait = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'RarifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: ['option2', 'option1', 'option2'],
+      },
+    });
+
+    const decoded = decodeProjectDocument(encoded(project), catalog);
+    expect(decoded).toEqual(project);
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 26 });
+  });
+
+  it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
+    const document = encoded(arachneStoryProject());
+    const state = occurrence(document, 'F', goldenFOccurrenceId(7, 1)).encounters as JsonRecord;
+    const offer = ((state.traitOffersByPhase as JsonRecord).Encounter as JsonRecord)
+      .Story_Arachne_01 as JsonRecord;
+    offer.rarificationActions = [key];
+
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('must name an option row');
   });
 
   it('round-trips a fixed Arachne Story offer through the encounter codec', () => {
@@ -156,14 +202,14 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 25, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 26, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 25, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 26, received 21');
   });
 
   it.each([

@@ -1013,6 +1013,7 @@ export function selectedTraitOfferProducts(
             before: trace.before,
             context: trace.context,
             ...(trace.arcanaFear === undefined ? {} : { arcanaFear: trace.arcanaFear }),
+            ...(trace.keepsakes === undefined ? {} : { keepsakes: trace.keepsakes }),
           }),
         ),
       ),

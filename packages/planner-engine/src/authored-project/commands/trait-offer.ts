@@ -177,6 +177,12 @@ function validateOffer(
     failCommand(command, 'Death Defiance condition is required for this trait giver');
   if (!conditionApplicable && value.deathDefianceConditionMet !== undefined)
     failCommand(command, 'Death Defiance condition is not supported by this trait giver');
+  if (
+    value.rarificationActions !== undefined &&
+    (!Array.isArray(value.rarificationActions) ||
+      value.rarificationActions.some((key) => !['option1', 'option2', 'option3'].includes(key)))
+  )
+    failCommand(command, 'rarification actions must name trait offer option rows');
   return Object.freeze({
     kind: 'traits',
     giverKey: value.giverKey,
@@ -204,6 +210,7 @@ function validateOffer(
       }),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: value.selectedOptionKey,
+    rarificationActions: Object.freeze([...(value.rarificationActions ?? [])]),
     ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),
   });
 }

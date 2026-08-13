@@ -217,6 +217,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
+    case 'callingCardRarificationUnavailable':
+      return { kind: 'trait', message: 'Calling Card cannot rarify this option here.' };
     case 'targetRoomSupportEmpty':
       return { kind: 'room', message: 'No room can be offered when this door appears.' };
     case 'targetRoomUnavailable':

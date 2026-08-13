@@ -1,4 +1,5 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import { evaluateCallingCardOffer } from '../keepsakes';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -67,6 +68,7 @@ import {
   foldTraitHistoryEvents,
   isPomEligibleTrait,
   evaluateReachedTraitOffer,
+  assessTraitOfferBeforeRarification,
   evaluateReachedLevelResolution,
   recordReachedLevelResolution,
   recordReachedTraitOffer,
@@ -330,6 +332,31 @@ function applyTraitOfferForAcquisition(
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.traitHistory ?? createTraitHistoryState();
+  const authoredContext =
+    authored === undefined
+      ? undefined
+      : {
+          ...(reward.traitContext ?? {}),
+          devotionNoDuo:
+            reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+          ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
+            ? {}
+            : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
+          resolvedProviderKey: authored.giverKey,
+        };
+  const baseOffer =
+    authored === undefined || authoredContext === undefined
+      ? undefined
+      : assessTraitOfferBeforeRarification(catalog, authored, before, authoredContext);
+  const callingCard =
+    authored === undefined
+      ? undefined
+      : evaluateCallingCardOffer(catalog, branch.keepsakes, authored, baseOffer?.legal ?? false);
+  const effectiveAuthored = callingCard?.offer ?? authored;
+  const effectiveBranch =
+    callingCard === undefined || callingCard.state === branch.keepsakes
+      ? branch
+      : Object.freeze({ ...branch, keepsakes: callingCard.state });
   {
     const effect =
       reward.offer === undefined || reward.producerLifecycleKey === undefined
@@ -415,26 +442,57 @@ function applyTraitOfferForAcquisition(
       });
     }
   }
-  if (authored === undefined) return branch;
+  if (effectiveAuthored === undefined) return effectiveBranch;
   const evaluation = evaluateReachedTraitOffer(
     catalog,
     reward.origin,
     role,
-    authored,
+    effectiveAuthored,
     before,
     {
       ...(reward.traitContext ?? {}),
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-      ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
+      ...(effectiveAuthored.kind === 'fallbackGold' ||
+      effectiveAuthored.deathDefianceConditionMet === undefined
         ? {}
-        : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
-      resolvedProviderKey: authored.giverKey,
+        : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
+      resolvedProviderKey: effectiveAuthored.giverKey,
     },
     branch.traitEvaluations?.length ?? 0,
     branch.arcanaFear,
+    false,
+    branch.keepsakes,
+    callingCard === undefined ? undefined : authored,
   );
   const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
+  if (
+    findings !== undefined &&
+    callingCard !== undefined &&
+    callingCard.invalidActions.length > 0
+  ) {
+    const owner = traitOwnerAddress(reward.origin);
+    if (owner !== undefined) {
+      for (const actionIndex of callingCard.invalidActions) {
+        addTraitFinding(
+          findings,
+          owner,
+          role,
+          lifecyclePoint,
+          sequence,
+          'callingCardRarificationUnavailable',
+          undefined,
+          `rarification action ${actionIndex + 1} is unavailable at this offer frontier`,
+          undefined,
+          findingChronology,
+          actionIndex,
+          callingCard.offer.kind === 'traits'
+            ? callingCard.offer.rarificationActions?.[actionIndex]
+            : undefined,
+        );
+      }
+    }
+  }
   if (
     findings !== undefined &&
     (evaluation.composition.findings.length > 0 ||
@@ -508,7 +566,10 @@ function applyTraitOfferForAcquisition(
   // alternatives are context-invalid. Only a valid offer folds its selected
   // trait into canonical equipped state; the reward/use ledger still records
   // the concrete acquisition.
-  if (applied.event === undefined) return Object.freeze({ ...branch, traitEvaluations });
+  // A Calling Card row action settles at the offer frontier. A later
+  // selected-only acquisition failure must not roll that already-valid spend
+  // back, while an invalid base offer leaves `effectiveBranch` unchanged.
+  if (applied.event === undefined) return Object.freeze({ ...effectiveBranch, traitEvaluations });
   const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
   const pomLevels =
     branch.keepsakes.jeweledPom?.active === true &&
@@ -536,7 +597,7 @@ function applyTraitOfferForAcquisition(
           }),
         ]);
   return Object.freeze({
-    ...branch,
+    ...effectiveBranch,
     history: attachTraitHistory(branch.history, traitHistory),
     traitHistory,
     traitEvaluations,
@@ -780,6 +841,8 @@ function addTraitFinding(
   detail?: string,
   requirementTraitKeys?: readonly string[],
   findingChronology?: FindingChronology,
+  actionIndex?: number,
+  optionKey?: string,
 ): void {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
   const value: SemanticFinding = Object.freeze({
@@ -793,6 +856,8 @@ function addTraitFinding(
       ...(traitKey === undefined ? {} : { traitKey }),
       ...(detail === undefined ? {} : { detail }),
       ...(requirementTraitKeys === undefined ? {} : { requirementTraitKeys }),
+      ...(actionIndex === undefined ? {} : { actionIndex }),
+      ...(optionKey === undefined ? {} : { optionKey }),
     }),
   });
   addRewardFinding(
@@ -949,6 +1014,7 @@ export function applyJeweledPomEquipResult(
     branch.traitEvaluations?.length ?? 0,
     branch.arcanaFear,
     true,
+    branch.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(
@@ -1008,6 +1074,7 @@ export function applyExperimentalHammerEquipResult(
     branch.traitEvaluations?.length ?? 0,
     branch.arcanaFear,
     true,
+    branch.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(
@@ -1495,6 +1562,11 @@ export function processOfferGenerationCohort(
       }
       for (const candidate of candidates) {
         let canonical: RewardBranchState = Object.freeze({
+          // Offer-order permutations may only contribute the candidate bag
+          // state. The rest of the branch has already progressed through the
+          // same history, traits, keepsakes, and evaluations; carrying the
+          // whole candidate would replay that permutation-local evolution a
+          // second time when canonical offers are recorded below.
           ...branch,
           bags: candidate.bags,
         });
