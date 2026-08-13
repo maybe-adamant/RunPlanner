@@ -183,10 +183,12 @@ function localIncomingReward(
     origin: createLocalRewardAddress(biome, parentOccurrenceId, groupKey, slot.slotKey),
     kind: 'resolved',
     producerKind: 'countedChoice',
+    instanceProvenance: 'free',
     producerLifecycleKey: binding.producerLifecycleKey,
     offer: state.reward.offer,
     traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
     levelResolutionsByAcquisitionRole: state.reward.levelResolutionsByAcquisitionRole,
+    conversionByAcquisitionRole: state.reward.conversionByAcquisitionRole,
     traitContext: Object.freeze({
       ...loadout,
       blockGiftBoons: room.blockGiftBoons,

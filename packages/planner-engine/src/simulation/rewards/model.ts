@@ -39,6 +39,15 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
+      /** Evidence of a Time Piece choice; intentionally no Gold acquisition exists. */
+      readonly kind: 'conversionToGold';
+      readonly acquisition: ConcreteAcquisitionEvent;
+      readonly settlement?: {
+        readonly site: AcquisitionSiteAddress;
+        readonly entry: AcquisitionEntryAddress;
+      };
+    })
+  | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
       readonly optionKeys: readonly string[];

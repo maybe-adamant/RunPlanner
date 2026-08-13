@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
+import { createDefaultConversionByAcquisitionRole } from '../../src/authored-project/reward-state';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import {
@@ -115,6 +116,9 @@ describe('Shop trait acquisition processing', () => {
           Minor: Object.freeze({
             reward: Object.freeze({
               offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
+              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                rewardType: 'StoreRewardRandomStack',
+              }),
               traitOffersByAcquisitionRole: Object.freeze({}),
               levelResolutionsByAcquisitionRole: Object.freeze({
                 self: Object.freeze({
@@ -261,6 +265,9 @@ describe('Shop trait acquisition processing', () => {
               MajorNonBoon: Object.freeze({
                 reward: Object.freeze({
                   offer: Object.freeze({ rewardType: 'GiftDrop' }),
+                  conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                    rewardType: 'GiftDrop',
+                  }),
                   traitOffersByAcquisitionRole: Object.freeze({}),
                 }),
               }),
@@ -339,6 +346,9 @@ describe('Shop trait acquisition processing', () => {
           Minor: Object.freeze({
             reward: Object.freeze({
               offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
+              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                rewardType: 'StoreRewardRandomStack',
+              }),
               traitOffersByAcquisitionRole: Object.freeze({}),
               // Deliberately omit levelResolutionsByAcquisitionRole to witness
               // malformed-but-reached imported state at the simulation boundary.
@@ -483,6 +493,9 @@ describe('Shop trait acquisition processing', () => {
             Minor: Object.freeze({
               reward: Object.freeze({
                 offer: Object.freeze({ rewardType: 'StackUpgrade' }),
+                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                  rewardType: 'StackUpgrade',
+                }),
                 traitOffersByAcquisitionRole: Object.freeze({}),
                 levelResolutionsByAcquisitionRole: Object.freeze({
                   self: Object.freeze({
@@ -498,6 +511,10 @@ describe('Shop trait acquisition processing', () => {
                 offer: Object.freeze({
                   rewardType: 'RandomLoot',
                   payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
+                }),
+                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
                 }),
                 traitOffersByAcquisitionRole: Object.freeze({
                   source: Object.freeze({

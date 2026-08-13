@@ -13,6 +13,7 @@ import {
   createTraitOfferAddress,
   createCirceResolutionAddress,
   createLevelResolutionAddress,
+  createAcquisitionRoleAddress,
   traitOfferOption,
   traitGiverUsesOfferContext,
   semanticAddressKey,
@@ -63,6 +64,7 @@ import {
   type WorkspaceExplicitRewardControl,
   type WorkspaceShopConditionControl,
   type WorkspaceTraitOfferControl,
+  type WorkspaceAcquisitionConversionControl,
   type WorkspaceLevelResolutionControl,
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
@@ -245,6 +247,38 @@ function levelResolutionControls(
   );
 }
 
+function conversionControls(
+  input: WorkspaceOccurrenceAssemblyInput,
+  owner: RewardCandidateOwner,
+  reward: AuthoredRewardState,
+): readonly WorkspaceAcquisitionConversionControl[] {
+  if (!input.facts.detailsActive) return Object.freeze([]);
+  const declaration = input.catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
+  if (declaration === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner.address)} has unknown reward type ${reward.offer.rewardType}`,
+    );
+  }
+  return Object.freeze(
+    declaration.acquisitionRoles.values.map((role) => {
+      const address = createAcquisitionRoleAddress(owner.address, role.key);
+      const value = reward.conversionByAcquisitionRole[role.key];
+      if (value === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(owner.address)} lacks conversion disposition for ${role.key}`,
+        );
+      }
+      return Object.freeze({
+        acquisitionRoleLabel: acquisitionRoleLabel(role.key),
+        address,
+        marker: input.markerDestinations.marker(address),
+        rewardOwner: owner.address,
+        value,
+      });
+    }),
+  );
+}
+
 function rewardControl(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
@@ -261,6 +295,7 @@ function rewardControl(
         owner,
         traitOffers: traitOfferControls(input, owner, authoredReward),
         levelResolutions: levelResolutionControls(input, owner, authoredReward),
+        conversions: conversionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
       })
     : Object.freeze({
@@ -271,6 +306,7 @@ function rewardControl(
         owner: owner as CountedRewardCandidateOwner,
         traitOffers: traitOfferControls(input, owner, authoredReward),
         levelResolutions: levelResolutionControls(input, owner, authoredReward),
+        conversions: conversionControls(input, owner, authoredReward),
       });
 }
 

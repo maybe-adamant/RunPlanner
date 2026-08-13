@@ -25,6 +25,7 @@ import type {
   RouteAddress,
   ShopOfferAddress,
   TraitOfferAddress,
+  AcquisitionRoleAddress,
   LevelResolutionAddress,
   TargetAddress,
 } from '../addresses';
@@ -316,6 +317,13 @@ export type LevelResolutionCommand = {
   readonly value: AuthoredLevelResolution;
 };
 
+/** Exact Time Piece disposition on one declaration-owned acquisition role. */
+export type AcquisitionConversionCommand = {
+  readonly kind: 'ReplaceAcquisitionConversion';
+  readonly acquisition: AcquisitionRoleAddress;
+  readonly value: 'normal' | 'gold';
+};
+
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
@@ -336,7 +344,8 @@ export type ProjectCommand =
   | OccurrenceLeafCommand
   | AcquisitionSiteCommand
   | TraitOfferCommand
-  | LevelResolutionCommand;
+  | LevelResolutionCommand
+  | AcquisitionConversionCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

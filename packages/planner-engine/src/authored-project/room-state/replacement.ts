@@ -15,6 +15,7 @@ import {
   producerLevelEffectSource,
   type TraitOfferDefaultsContext,
 } from '../traits';
+import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 function defaultRewardLeaves(
   catalog: Catalog,
@@ -24,6 +25,7 @@ function defaultRewardLeaves(
 ) {
   const levelResolutions = createDefaultLevelResolutions(catalog, offer, source);
   return Object.freeze({
+    conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
     traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
     ...(levelResolutions === undefined
       ? {}

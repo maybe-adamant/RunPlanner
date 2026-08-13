@@ -53,6 +53,7 @@ export {
   type EvaluatedStartRoomCandidate,
   type EvaluatedKeepsakeSelectionCandidate,
   type EvaluatedKeepsakeEquipResultCandidate,
+  type EvaluatedAcquisitionConversionCandidate,
   type EvaluatedHubTerminalTakeoverCandidate,
   type EvaluatedTakeoverPrebossBatchCandidate,
   type ProjectCandidateEvaluation,

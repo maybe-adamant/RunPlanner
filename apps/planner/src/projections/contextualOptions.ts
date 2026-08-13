@@ -219,6 +219,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   switch (finding.code) {
     case 'callingCardRarificationUnavailable':
       return { kind: 'trait', message: 'Calling Card cannot rarify this option here.' };
+    case 'timePieceConversionUnavailable':
+      return { kind: 'reward', message: 'Time Piece cannot convert this acquisition here.' };
     case 'targetRoomSupportEmpty':
       return { kind: 'room', message: 'No room can be offered when this door appears.' };
     case 'targetRoomUnavailable':

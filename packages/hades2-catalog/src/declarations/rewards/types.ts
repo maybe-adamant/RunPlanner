@@ -19,6 +19,7 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly gameName: string;
   readonly kind: AcquisitionKind;
   readonly historyProjection: HistoryProjectionKey;
+  readonly goldConversionEligible?: boolean;
   readonly levelResolutionEffect?: LevelResolutionEffect;
   readonly elementContributions?: Readonly<
     Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>

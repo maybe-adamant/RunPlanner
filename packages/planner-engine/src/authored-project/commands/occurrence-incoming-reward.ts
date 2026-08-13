@@ -8,6 +8,7 @@ import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
+import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -47,6 +48,10 @@ export function applyIncomingRewardCommand(
       kind: 'fixed',
       reward: Object.freeze({
         offer: command.value,
+        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+          catalog,
+          command.value,
+        ),
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
         ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
           ? {}
@@ -69,6 +74,10 @@ export function applyIncomingRewardCommand(
       ...occurrence.state,
       reward: Object.freeze({
         offer: command.value,
+        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+          catalog,
+          command.value,
+        ),
         traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
         ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
           ? {}

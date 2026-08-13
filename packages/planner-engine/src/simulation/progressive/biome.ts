@@ -11,6 +11,7 @@ import {
   type LevelResolutionAddress,
   type TraitOfferAddress,
   type KeepsakeSelectionAddress,
+  type AcquisitionRoleAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -433,6 +434,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
+  const blockedAcquisitionAt: AcquisitionRoleAddress | undefined =
+    blockedAt.kind === 'acquisitionRole' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
@@ -573,6 +576,20 @@ function retainBlockedRegionProducts(
             [semanticAddressKey(blockedKeepsakeAt), blockedKeepsakeCapability] as const,
           ]),
         );
+  const blockedAcquisitionCapability =
+    blockedAcquisitionAt === undefined
+      ? undefined
+      : (selectedArtifacts.acquisitionConversions.at(blockedAcquisitionAt) ??
+        blockedArtifacts.acquisitionConversions.at(blockedAcquisitionAt));
+  const acquisitionConversions =
+    blockedAcquisitionAt === undefined || blockedAcquisitionCapability === undefined
+      ? retainedArtifacts.acquisitionConversions
+      : Object.freeze({
+          at: (address: AcquisitionRoleAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedAcquisitionAt)
+              ? blockedAcquisitionCapability
+              : retainedArtifacts.acquisitionConversions.at(address),
+        });
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
     rewardOwner === undefined
@@ -660,6 +677,8 @@ function retainBlockedRegionProducts(
     levelResolutions,
     bossCompletionArcana,
     keepsakeSelections,
+    retainedArtifacts.keepsakeEquipResults,
+    acquisitionConversions,
   );
   return Object.freeze({
     rewards:
@@ -755,18 +774,21 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   while (
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
+    origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
     origin =
-      origin.kind === 'acquisitionEntry'
-        ? origin.site
-        : origin.kind === 'acquisitionSite'
-          ? origin.owner
-          : origin.kind === 'circeResolution'
-            ? origin.trait
-            : origin.owner;
+      origin.kind === 'acquisitionRole'
+        ? origin.owner
+        : origin.kind === 'acquisitionEntry'
+          ? origin.site
+          : origin.kind === 'acquisitionSite'
+            ? origin.owner
+            : origin.kind === 'circeResolution'
+              ? origin.trait
+              : origin.owner;
   }
   return origin;
 }
@@ -775,18 +797,21 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
   if (
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
+    origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
     return ownsOccurrence(
-      origin.kind === 'acquisitionEntry'
-        ? origin.site
-        : origin.kind === 'acquisitionSite'
-          ? origin.owner
-          : origin.kind === 'circeResolution'
-            ? origin.trait
-            : origin.owner,
+      origin.kind === 'acquisitionRole'
+        ? origin.owner
+        : origin.kind === 'acquisitionEntry'
+          ? origin.site
+          : origin.kind === 'acquisitionSite'
+            ? origin.owner
+            : origin.kind === 'circeResolution'
+              ? origin.trait
+              : origin.owner,
       occurrenceId,
     );
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;
@@ -1647,6 +1672,8 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.levelResolutions,
       evaluated.candidateArtifacts.bossCompletionArcana,
       evaluated.candidateArtifacts.keepsakeSelections,
+      evaluated.candidateArtifacts.keepsakeEquipResults,
+      evaluated.candidateArtifacts.acquisitionConversions,
     ),
   });
 }
@@ -1760,6 +1787,8 @@ function clampSelectedProducts(
       retainedInteractions.levelResolutions,
       retainedInteractions.bossCompletionArcana,
       retainedInteractions.keepsakeSelections,
+      retainedInteractions.keepsakeEquipResults,
+      retainedInteractions.acquisitionConversions,
     ),
   });
 }

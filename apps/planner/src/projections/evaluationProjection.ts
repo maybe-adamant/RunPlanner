@@ -320,6 +320,11 @@ const findingCopy = {
     title: 'Calling Card cannot rarify this row',
     description: 'This rarification action is not available at the reached offer frontier.',
   },
+  timePieceConversionUnavailable: {
+    title: 'Time Piece cannot convert this acquisition',
+    description:
+      'This reward is not a free, eligible acquisition with a remaining Time Piece charge.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -625,6 +630,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Acquisition`;
     case 'traitOffer':
       return `${biomeLabel} · Trait offer`;
+    case 'acquisitionRole':
+      return `${biomeLabel} · Acquisition`;
     case 'circeResolution':
       return `${biomeLabel} · Circe outcome`;
     case 'levelResolution':

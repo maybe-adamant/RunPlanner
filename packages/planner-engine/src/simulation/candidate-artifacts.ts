@@ -7,6 +7,7 @@ import {
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
+  type AcquisitionRoleAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
 import type {
@@ -43,6 +44,11 @@ import {
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
+import {
+  assessTimePieceConversion,
+  type AcquisitionSource,
+  type RewardBranchState,
+} from './rewards/processing';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({ at: () => undefined, statusAt: () => undefined, roomAt: () => undefined });
@@ -184,6 +190,58 @@ export interface BiomeCandidateArtifacts {
   readonly bossCompletionArcana: BossCompletionArcanaCandidateArtifacts;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
+  readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
+}
+
+/** Exact captured role frontiers from the canonical acquisition fold. */
+export interface AcquisitionConversionCandidateCapability {
+  readonly assessments: readonly {
+    readonly supported: boolean;
+    readonly evidence: import('./model').FindingEvidence;
+  }[];
+}
+export interface AcquisitionConversionCandidateArtifacts {
+  readonly at: (
+    address: AcquisitionRoleAddress,
+  ) => AcquisitionConversionCandidateCapability | undefined;
+}
+export function createAcquisitionConversionCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<
+    string,
+    readonly {
+      readonly address: AcquisitionRoleAddress;
+      readonly branchesBeforeRole: readonly RewardBranchState[];
+      readonly source: AcquisitionSource;
+      readonly lifecyclePoint: import('../reward-kernel').ProducerLifecyclePointKey;
+    }[]
+  >,
+): AcquisitionConversionCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: AcquisitionRoleAddress) => {
+      const entries = privateContexts.get(semanticAddressKey(address));
+      if (entries === undefined) return undefined;
+      return Object.freeze({
+        assessments: Object.freeze(
+          entries.flatMap((entry) =>
+            entry.branchesBeforeRole.map((branch) =>
+              assessTimePieceConversion(
+                catalog,
+                branch,
+                entry.source,
+                entry.address.acquisitionRole,
+                entry.lifecyclePoint,
+              ),
+            ),
+          ),
+        ),
+      });
+    },
+  });
+}
+export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -266,6 +324,7 @@ export function createBiomeCandidateArtifacts(
   keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts = createKeepsakeEquipResultCandidateArtifacts(
     new Map(),
   ),
+  acquisitionConversions: AcquisitionConversionCandidateArtifacts = createEmptyAcquisitionConversionCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -278,6 +337,7 @@ export function createBiomeCandidateArtifacts(
     bossCompletionArcana,
     keepsakeSelections,
     keepsakeEquipResults,
+    acquisitionConversions,
   });
 }
 
@@ -370,7 +430,11 @@ export function createTraitOfferCandidateArtifacts(
                 assessments: base.assessments,
                 composition: base.composition,
                 replacementComposition: base.replacementComposition,
-                targetedAcquisition: assessSelectedTargetedAcquisition(catalog, value, context.before),
+                targetedAcquisition: assessSelectedTargetedAcquisition(
+                  catalog,
+                  value,
+                  context.before,
+                ),
               });
             }),
           ),

@@ -46,7 +46,8 @@ export interface RawKeepsakeDeclaration {
         readonly giverKey: string;
         readonly qualifyingEncounterUses: 20;
       }
-    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 };
+    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
+    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 };
 }
 
 export interface RawEncounterRewardWheelAttachment {

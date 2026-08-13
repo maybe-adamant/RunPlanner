@@ -195,6 +195,12 @@ export interface TraitOfferAddress extends BiomeOwnedAddress {
   readonly owner: TraitOfferOwnerAddress;
   readonly acquisitionRole: string;
 }
+/** Exact reward acquisition role; unlike a trait offer it exists for every concrete role. */
+export interface AcquisitionRoleAddress extends BiomeOwnedAddress {
+  readonly kind: 'acquisitionRole';
+  readonly owner: TraitOfferOwnerAddress;
+  readonly acquisitionRole: string;
+}
 /** One selected Circe option's exact Arcana/Fear outcome beneath its offer. */
 export interface CirceResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'circeResolution';
@@ -238,6 +244,7 @@ export type SemanticAddress =
   | AcquisitionSiteAddress
   | AcquisitionEntryAddress
   | TraitOfferAddress
+  | AcquisitionRoleAddress
   | CirceResolutionAddress
   | LevelResolutionAddress;
 
@@ -594,6 +601,18 @@ export function createTraitOfferAddress(
     acquisitionRole: nonBlank(acquisitionRole, 'acquisitionRole'),
   });
 }
+export function createAcquisitionRoleAddress(
+  ownerAddress: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+): AcquisitionRoleAddress {
+  return Object.freeze({
+    kind: 'acquisitionRole',
+    routeKey: ownerAddress.routeKey,
+    biomeKey: ownerAddress.biomeKey,
+    owner: ownerAddress,
+    acquisitionRole: nonBlank(acquisitionRole, 'acquisitionRole'),
+  });
+}
 export function createCirceResolutionAddress(
   trait: TraitOfferAddress,
   optionKey: CirceResolutionAddress['optionKey'],
@@ -684,6 +703,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'acquisitionEntry':
       return JSON.stringify([...base, semanticAddressKey(address.site), address.entryKey]);
     case 'traitOffer':
+    case 'acquisitionRole':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
     case 'circeResolution':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);

@@ -416,7 +416,12 @@ export function decodeRewardState(
   const raw = expectRecord(value, path);
   for (const key of Object.keys(raw)) {
     if (
-      !['offer', 'traitOffersByAcquisitionRole', 'levelResolutionsByAcquisitionRole'].includes(key)
+      ![
+        'offer',
+        'traitOffersByAcquisitionRole',
+        'levelResolutionsByAcquisitionRole',
+        'conversionByAcquisitionRole',
+      ].includes(key)
     )
       failProjectDocument(path, `unexpected key ${key}`);
   }
@@ -442,6 +447,14 @@ export function decodeRewardState(
           source,
           `${path}.levelResolutionsByAcquisitionRole`,
         );
+  if (raw.conversionByAcquisitionRole === undefined)
+    failProjectDocument(`${path}.conversionByAcquisitionRole`, 'is required');
+  const conversionByAcquisitionRole = decodeConversionDispositions(
+    raw.conversionByAcquisitionRole,
+    catalog,
+    offer,
+    `${path}.conversionByAcquisitionRole`,
+  );
   return Object.freeze({
     offer,
     traitOffersByAcquisitionRole: decodeTraitOffers(
@@ -451,7 +464,40 @@ export function decodeRewardState(
       `${path}.traitOffersByAcquisitionRole`,
     ),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
+    conversionByAcquisitionRole,
   });
+}
+
+/**
+ * Time Piece owns a closed disposition for every concrete declaration role.
+ * The required map is explicit: documents never receive an implicit normal
+ * conversion disposition during decoding.
+ */
+function decodeConversionDispositions(
+  value: unknown,
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  path: string,
+): Readonly<Record<string, 'normal' | 'gold'>> {
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined)
+    failProjectDocument(path, `unknown reward type ${offer.rewardType}`);
+  const roles = declaration.acquisitionRoles.values.map((role) => role.key);
+  const raw = expectRecord(value, path);
+  for (const key of Object.keys(raw)) {
+    if (!roles.includes(key)) failProjectDocument(`${path}.${key}`, 'is not an acquisition role');
+  }
+  return Object.freeze(
+    Object.fromEntries(
+      roles.map((role) => {
+        const disposition = raw[role];
+        if (disposition !== 'normal' && disposition !== 'gold') {
+          failProjectDocument(`${path}.${role}`, 'must be normal or gold');
+        }
+        return [role, disposition] as const;
+      }),
+    ),
+  );
 }
 
 function decodeLevelResolutions(

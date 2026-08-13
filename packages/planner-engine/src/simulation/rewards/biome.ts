@@ -71,6 +71,7 @@ import type {
 import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
+  createAcquisitionConversionCandidateArtifacts,
 } from '../candidate-artifacts';
 import type {
   ReachedTraitOfferEvaluation,
@@ -118,6 +119,7 @@ import {
   applyJeweledPomEquipResult,
   applyExperimentalHammerEquipResult,
   rewardFinding,
+  type AcquisitionRoleFrontier,
   type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
@@ -865,6 +867,7 @@ function prepareShipLifecycleCandidateContext(
               source: Object.freeze({
                 ...picked,
                 producerLifecycleKey: wheel.producerLifecycleKey,
+                instanceProvenance: 'free',
               }),
               historySequence: lifecycleView.acquisitionSequence,
             },
@@ -897,6 +900,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly bossCompletionArcanaArtifacts: import('../candidate-artifacts').BossCompletionArcanaCandidateArtifacts;
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
+  readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -1141,6 +1145,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     import('../candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
+  const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  function recordAcquisitionRoleFrontiers(
+    frontiers: readonly AcquisitionRoleFrontier[] | undefined,
+  ): void {
+    for (const frontier of frontiers ?? []) {
+      const key = semanticAddressKey(frontier.address);
+      acquisitionConversionContexts.set(
+        key,
+        Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
+      );
+    }
+  }
 
   function advanceExperimentalHammerForCompletion(
     branchesAtCompletion: readonly RewardBranchState[],
@@ -1426,6 +1442,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         },
         targetFindings,
       );
+      recordAcquisitionRoleFrontiers(settled.roleFrontiers);
       for (const frontier of settled.pickupEntryFrontiers ?? []) {
         const entryKey = semanticAddressKey(frontier.address);
         indexRewardProducerFrontier(
@@ -1503,7 +1520,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }),
       );
     }
-    return settleShopAcquisitionSite(
+    const settled = settleShopAcquisitionSite(
       sourceBranches,
       {
         catalog,
@@ -1533,7 +1550,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
         fail,
       },
       targetFindings,
-    ).branches;
+    );
+    recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+    return settled.branches;
   }
 
   function completeIncomingOfferCandidate(
@@ -2358,7 +2377,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       siteOwner: localReward.origin,
                       pointKey: localReward.encounterPhaseKey,
                       entryKey: localReward.slotKey,
-                      source: Object.freeze({ ...localReward, offer }),
+                      source: Object.freeze({ ...localReward, offer, instanceProvenance: 'free' }),
                       historySequence: acquisitionEvent.sequence,
                     },
                     (branchHistory) =>
@@ -2751,6 +2770,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   ...selectedOffer,
                   offer,
                   producerLifecycleKey: wheel.producerLifecycleKey,
+                  instanceProvenance: 'free',
                 });
                 candidateBranches = settleOwnedAcquisitionSite(
                   catalog,
@@ -2812,7 +2832,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName} has no canonical ${event.offerPoint} acquisition`,
           );
         }
-        branches = settleOwnedAcquisitionSite(
+        const settlement = settleOwnedAcquisitionSite(
           catalog,
           branches,
           {
@@ -2822,6 +2842,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             source: Object.freeze({
               ...picked,
               producerLifecycleKey: wheel.producerLifecycleKey,
+              instanceProvenance: 'free',
             }),
             historySequence: event.sequence,
           },
@@ -2829,7 +2850,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
             rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
           findings,
           ownerRegion(wheel.origin),
-        ).branches;
+        );
+        recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        branches = settlement.branches;
         break;
       }
       case 'producerRoleAdvanced': {
@@ -2859,7 +2882,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           event.sequence,
           'localRoomLifecycle',
         );
-        branches = settleProducerAcquisitionSite(
+        const settlement = settleProducerAcquisitionSite(
           catalog,
           branches,
           room,
@@ -2870,7 +2893,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
           producerRegion,
           producerChronology,
           acquisitionSiteOwner(snapshot, room),
-        ).branches;
+        );
+        recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        branches = settlement.branches;
         break;
       }
       case 'encounterCompleted': {
@@ -3035,7 +3060,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
           );
         }
-        branches = settleOwnedAcquisitionSite(
+        const settlement = settleOwnedAcquisitionSite(
           catalog,
           branches,
           {
@@ -3044,6 +3069,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             entryKey: matchingRewards[0].slotKey,
             source: Object.freeze({
               ...matchingRewards[0],
+              instanceProvenance: 'free',
             }),
             historySequence: event.sequence,
           },
@@ -3065,7 +3091,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
             event.sequence,
             'localRoomLifecycle',
           ),
-        ).branches;
+        );
+        recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        branches = settlement.branches;
         break;
       }
       case 'acquisitionPointReached': {
@@ -3156,6 +3184,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
       createKeepsakeSelectionCandidateArtifacts(keepsakeSelectionContexts),
     keepsakeEquipResultArtifacts: createKeepsakeEquipResultCandidateArtifacts(
       keepsakeEquipResultContexts,
+    ),
+    acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
+      catalog,
+      acquisitionConversionContexts,
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
   });

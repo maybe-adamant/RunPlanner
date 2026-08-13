@@ -178,6 +178,59 @@ function normalizePayloadDomains(
 function normalizeAcquisitions(
   raw: RawRewardKernelInput['acquisitions'],
 ): CatalogCollection<ConcreteAcquisitionDeclaration> {
+  const goldConversionEligible = new Set([
+    'AphroditeUpgrade',
+    'ApolloUpgrade',
+    'AresUpgrade',
+    'DemeterUpgrade',
+    'HephaestusUpgrade',
+    'HeraUpgrade',
+    'HestiaUpgrade',
+    'PoseidonUpgrade',
+    'ZeusUpgrade',
+    'HermesUpgrade',
+    'StackUpgrade',
+    'StackUpgradeBig',
+    'StackUpgradeTriple',
+    'WeaponUpgrade',
+    'SpellDrop',
+    'MaxHealthDrop',
+    'MaxHealthDropBig',
+    'MaxHealthDropSmall',
+    'EmptyMaxHealthSmallDrop',
+    'MaxManaDrop',
+    'MaxManaDropBig',
+    'MaxManaDropSmall',
+    'TalentDrop',
+    'TalentBigDrop',
+    'MinorTalentDrop',
+    'ArmorBoost',
+    'ArmorBigBoost',
+    'LastStandDrop',
+    'GiftDrop',
+    'MetaCurrencyDrop',
+    'MetaCurrencyBigDrop',
+    'MetaCardPointsCommonDrop',
+    'MetaCardPointsCommonBigDrop',
+  ]);
+  const declaredEligible = raw
+    .filter((acquisition, index) => {
+      if (
+        acquisition.goldConversionEligible !== undefined &&
+        typeof acquisition.goldConversionEligible !== 'boolean'
+      ) {
+        fail(`acquisitions[${index}].goldConversionEligible`, 'must be boolean');
+      }
+      return acquisition.goldConversionEligible === true;
+    })
+    .map((acquisition) => acquisition.gameName);
+  if (
+    declaredEligible.length !== goldConversionEligible.size ||
+    declaredEligible.some((gameName) => !goldConversionEligible.has(gameName)) ||
+    [...goldConversionEligible].some((gameName) => !declaredEligible.includes(gameName))
+  ) {
+    fail('acquisitions', 'must declare the exact Time Piece gold-conversion eligibility set');
+  }
   return createCollection(
     raw.map((acquisition, index) =>
       Object.freeze({
@@ -192,6 +245,7 @@ function normalizeAcquisitions(
           HISTORY_PROJECTIONS,
           `acquisitions[${index}].historyProjection`,
         ),
+        goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
         ...(acquisition.levelResolutionEffect === undefined
           ? {}
           : { levelResolutionEffect: Object.freeze(acquisition.levelResolutionEffect) }),

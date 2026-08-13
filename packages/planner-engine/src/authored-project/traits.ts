@@ -1,6 +1,7 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { RoomEncounterState } from './model';
+import { createDefaultConversionByAcquisitionRole } from './reward-state';
 import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
@@ -293,6 +294,7 @@ export function createDefaultPickupRewardState(
   );
   return Object.freeze({
     offer,
+    conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
     traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
   });

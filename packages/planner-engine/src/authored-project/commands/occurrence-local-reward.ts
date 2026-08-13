@@ -17,6 +17,7 @@ import {
   createDefaultTraitOffers,
   producerLevelEffectSource,
 } from '../traits';
+import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 export function applyLocalRewardCommand(
   document: ProjectDocument,
@@ -57,6 +58,10 @@ export function applyLocalRewardCommand(
               ...occurrence.state.cages,
               [command.reward.slotKey]: Object.freeze({
                 offer: command.value,
+                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+                  catalog,
+                  command.value,
+                ),
                 traitOffersByAcquisitionRole: createDefaultTraitOffers(
                   catalog,
                   command.value,
@@ -115,6 +120,10 @@ export function applyLocalRewardCommand(
               ...sideRoom,
               reward: Object.freeze({
                 offer: command.value,
+                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+                  catalog,
+                  command.value,
+                ),
                 traitOffersByAcquisitionRole: createDefaultTraitOffers(
                   catalog,
                   command.value,

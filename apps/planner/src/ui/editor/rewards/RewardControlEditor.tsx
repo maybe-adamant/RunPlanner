@@ -71,6 +71,35 @@ export function RewardControlEditor({
               key={workspaceInteractionKey(resolution.address)}
             />
           ))}
+          {(control.conversions ?? []).map((conversion) => {
+            const interaction = requireWorkspaceInteraction(
+              interactions.acquisitionConversions,
+              workspaceInteractionKey(conversion.address),
+            );
+            return !interaction.visible ? null : (
+              <label
+                className="reward-acquisition-conversion"
+                key={workspaceInteractionKey(conversion.address)}
+              >
+                <span>{conversion.acquisitionRoleLabel}</span>
+                <select
+                  aria-label={`Time Piece ${conversion.acquisitionRoleLabel}`}
+                  onChange={(event) =>
+                    executeIntent(interaction.intentFor(event.target.value as 'normal' | 'gold'))
+                  }
+                  value={conversion.value}
+                >
+                  <option value="normal">Acquire normally</option>
+                  <option
+                    disabled={!interaction.goldSupported && conversion.value !== 'gold'}
+                    value="gold"
+                  >
+                    Convert to Gold
+                  </option>
+                </select>
+              </label>
+            );
+          })}
         </div>
       )}
     </>

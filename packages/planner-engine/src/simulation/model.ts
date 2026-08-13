@@ -40,6 +40,7 @@ export type RewardGenerationFindingCode =
   | 'judgmentOutcomeWrongCardinality'
   | 'judgmentOutcomeTargetUnavailable'
   | 'keepsakeUnavailable'
+  | 'timePieceConversionUnavailable'
   | 'keepsakeEquipResultMissing'
   | 'keepsakeEquipResultUnavailable';
 

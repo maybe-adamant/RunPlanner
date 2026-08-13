@@ -1591,6 +1591,38 @@ export function bindWorkspaceInteractions(
     );
   }
 
+  const acquisitionConversions = new Map();
+  for (const control of rewardControls.values()) {
+    for (const conversion of control.conversions ?? []) {
+      const key = workspaceInteractionKey(conversion.address);
+      acquisitionConversions.set(
+        key,
+        Object.freeze({
+          ...(() => {
+            const evaluated = candidates.acquisitionConversion(conversion.address);
+            return evaluated.kind === 'acquisitionConversion'
+              ? {
+                  goldSupported: evaluated.result.goldSupported,
+                  visible: evaluated.result.goldSupported || conversion.value === 'gold',
+                }
+              : { goldSupported: false, visible: conversion.value === 'gold' };
+          })(),
+          intentFor: (value: 'normal' | 'gold') =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceAcquisitionConversion' as const,
+                acquisition: conversion.address,
+                value,
+              }),
+            }),
+          key,
+          owner: conversion.address,
+          value: conversion.value,
+        }),
+      );
+    }
+  }
+
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
   for (const [key, control] of traitControls ?? []) {
     const traitChoices = Object.freeze(
@@ -1980,6 +2012,7 @@ export function bindWorkspaceInteractions(
     hubSlots,
     hubVisitOrders,
     rewards,
+    acquisitionConversions,
     traitOffers,
     levelResolutions,
     bossCompletionArcana,
