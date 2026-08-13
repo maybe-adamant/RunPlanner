@@ -86,6 +86,9 @@ export function normalizeKeepsakes(
           `${path}.effect`,
           'must declare Experimental Hammer giver and fixed 20 qualifying encounter uses',
         );
+    } else if (keepsake.key === 'RarifyKeepsake') {
+      if (keepsake.effect?.kind !== 'callingCard' || keepsake.effect.rarificationCharges !== 6)
+        fail(`${path}.effect`, 'must declare Calling Card fixed six rarification charges');
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

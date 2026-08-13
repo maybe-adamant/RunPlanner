@@ -60,6 +60,8 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
               qualifyingEncounterUses: 20 as const,
             },
           }
-        : {}),
+        : key === 'RarifyKeepsake'
+          ? { effect: { kind: 'callingCard' as const, rarificationCharges: 6 as const } }
+          : {}),
   }),
 );

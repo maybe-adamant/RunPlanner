@@ -1239,6 +1239,7 @@ export interface WorkspaceRunStatePresentation {
     readonly experimentalHammerStatus: 'inactive' | 'active' | 'expired';
     readonly experimentalHammerTraitLabel?: string;
     readonly experimentalHammerRemainingUses?: number;
+    readonly callingCardRemainingCharges?: number;
   };
   readonly arcana: readonly {
     readonly key: string;

@@ -7,6 +7,10 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyProjectCommand,
+  createIncomingRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
+  createTraitOfferAddress,
+  semanticAddressKey,
   createCirceResolutionAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -26,11 +30,68 @@ import type {
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { TraitOfferEditor } from './TraitOfferEditor';
-import { createGoldenFGHIProject, createRepresentativeNProject } from '@run-planner/test-fixtures';
+import {
+  createGoldenFGHIProject,
+  createRepresentativeNProject,
+  goldenFBiome,
+  goldenFStartId,
+} from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
 
 describe('trait offer editor', () => {
+  it('uses the Calling Card candidate to append ordered row actions through Heroic without mutating base rarity', async () => {
+    const application = createApplication();
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const address = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'RarifyKeepsake',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
+    if (interaction === undefined || interaction.value.kind !== 'traits')
+      throw new Error('Calling Card Apollo interaction is missing');
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={address}
+          interactions={workspace.interactions}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
+    const save = screen.getByRole('button', { name: 'Save trait offer' });
+    expect(save).toHaveProperty('disabled', false);
+    await user.click(save);
+
+    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.options[0]?.rarity).toBe('Common');
+    expect(saved.rarificationActions).toEqual(['option1']);
+    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
+    expect(screen.getByText('Effective rarity: Heroic')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
+    application.dispose();
+  });
+
   it.each([
     ['activateArcana', 'Red Citrine Arcana', 'The Sorceress'],
     ['promoteArcana', 'Lapis Arcana (2)', 'The Sorceress'],

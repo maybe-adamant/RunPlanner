@@ -45,7 +45,8 @@ export interface RawKeepsakeDeclaration {
         readonly kind: 'experimentalHammer';
         readonly giverKey: string;
         readonly qualifyingEncounterUses: 20;
-      };
+      }
+    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 };
 }
 
 export interface RawEncounterRewardWheelAttachment {

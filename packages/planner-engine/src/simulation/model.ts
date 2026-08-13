@@ -44,6 +44,7 @@ export type RewardGenerationFindingCode =
   | 'keepsakeEquipResultUnavailable';
 
 export type TraitFindingCode =
+  | 'callingCardRarificationUnavailable'
   | 'alreadyEquipped'
   | 'bannedTrait'
   | 'missingPrerequisite'

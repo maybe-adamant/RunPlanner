@@ -192,6 +192,8 @@ export interface TraitGiverDeclaration {
   /** Source-declared priority/core traits used by first Olympian offers. */
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy: TraitGiverRarityPolicy;
+  /** Closed source-menu participation normalized for Calling Card. */
+  readonly callingCardMenu: boolean;
   readonly defaultOffer?: TraitOfferDefaults;
   readonly defaultsByLoadout?: Readonly<Record<string, TraitOfferDefaults>>;
   readonly denialParticipates?: boolean;

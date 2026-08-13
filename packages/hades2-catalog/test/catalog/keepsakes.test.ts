@@ -2,8 +2,44 @@ import { describe, expect, it } from 'vitest';
 
 import { keepsakes } from '../../src/declarations/keepsakes';
 import { normalizeKeepsakes } from '../../src/compiler/keepsakes';
+import { catalog } from '../../src';
 
 describe('keepsake normalization', () => {
+  it('normalizes Calling Card only for the exact admitted trait-provider set', () => {
+    const admitted = [
+      'Zeus',
+      'Hera',
+      'Poseidon',
+      'Demeter',
+      'Apollo',
+      'Aphrodite',
+      'Hephaestus',
+      'Hestia',
+      'Ares',
+      'Hermes',
+      'Artemis',
+      'Athena',
+      'Dionysus',
+    ];
+    expect(
+      catalog.traitGivers.values
+        .filter((giver) => giver.callingCardMenu)
+        .map((giver) => giver.key)
+        .sort(),
+    ).toEqual([...admitted].sort());
+    for (const excluded of [
+      'Hades',
+      'WeaponUpgrade',
+      'Icarus',
+      'Circe',
+      'Medea',
+      'Narcissus',
+      'Arachne',
+    ]) {
+      expect(catalog.traitGivers.byKey[excluded]?.callingCardMenu).toBe(false);
+    }
+  });
+
   it('rejects malformed rank and Fated inventory facts before catalog construction', () => {
     const wrongRank = keepsakes.map((keepsake) => ({ ...keepsake }));
     wrongRank[0] = { ...wrongRank[0]!, rank: 'Rare' as never };
@@ -85,5 +121,27 @@ describe('keepsake normalization', () => {
         'must declare Experimental Hammer giver and fixed 20 qualifying encounter uses',
       );
     }
+  });
+
+  it("normalizes Calling Card's fixed six-charge descriptor and rejects malformed charges", () => {
+    const source = keepsakes.map((keepsake) => ({
+      ...keepsake,
+      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
+    }));
+    const callingCard = source.find((keepsake) => keepsake.key === 'RarifyKeepsake');
+    if (callingCard?.effect?.kind !== 'callingCard')
+      throw new Error('missing raw Calling Card descriptor');
+    expect(normalizeKeepsakes(source).byKey.RarifyKeepsake?.effect).toEqual({
+      kind: 'callingCard',
+      rarificationCharges: 6,
+    });
+    const malformed = source.map((keepsake) =>
+      keepsake.key === 'RarifyKeepsake'
+        ? { ...keepsake, effect: { kind: 'callingCard', rarificationCharges: 5 } as never }
+        : keepsake,
+    );
+    expect(() => normalizeKeepsakes(malformed)).toThrow(
+      'must declare Calling Card fixed six rarification charges',
+    );
   });
 });

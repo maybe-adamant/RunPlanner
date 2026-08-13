@@ -26,6 +26,8 @@ export interface AuthoredTraitOfferTraits {
   readonly giverKey: string;
   readonly options: OneToThree<AuthoredTraitOption>;
   readonly selectedOptionKey: TraitOptionKey;
+  /** Ordered explicit Calling Card row actions; base option rarity remains rolled/authored. */
+  readonly rarificationActions?: readonly TraitOptionKey[];
   /** Present only when this giver's normalized offer requirements consume it. */
   readonly deathDefianceConditionMet?: boolean;
 }
@@ -210,6 +212,7 @@ export function createDefaultTraitOffers(
           : defaults.selectedOption === 1
             ? 'option2'
             : 'option3',
+      rarificationActions: Object.freeze([]),
       ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
         ? { deathDefianceConditionMet: false }
         : {}),
@@ -241,6 +244,7 @@ export function createDefaultEncounterTraitOffer(
         : defaults.selectedOption === 1
           ? 'option2'
           : 'option3',
+    rarificationActions: Object.freeze([]),
     ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
       ? { deathDefianceConditionMet: false }
       : {}),

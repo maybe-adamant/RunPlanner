@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -23,6 +24,45 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  it('preserves base rarities and the exact ordered Calling Card ledger in one offer command', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const trait = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'RarifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const next = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: ['option2', 'option1', 'option2'],
+      },
+    });
+    const saved = next.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+    )?.state;
+    const offer =
+      saved?.kind === 'counted' ? saved.reward?.traitOffersByAcquisitionRole?.source : undefined;
+    if (offer?.kind !== 'traits') throw new Error('Calling Card offer is missing');
+
+    expect(offer.options.map((option) => option.rarity)).toEqual(['Common', 'Rare', 'Epic']);
+    expect(offer.rarificationActions).toEqual(['option2', 'option1', 'option2']);
+  });
+
   it('preserves customized trait children when the parent offer is unchanged', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const value = {

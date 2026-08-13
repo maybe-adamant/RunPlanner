@@ -42,6 +42,21 @@ const IN_RUN_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
+const CALLING_CARD_GIVERS = new Set([
+  'Zeus',
+  'Hera',
+  'Poseidon',
+  'Demeter',
+  'Apollo',
+  'Aphrodite',
+  'Hephaestus',
+  'Hestia',
+  'Ares',
+  'Hermes',
+  'Artemis',
+  'Athena',
+  'Dionysus',
+]);
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 const CONTEXTS = [
   'devotionNoDuo',
@@ -895,6 +910,7 @@ function normalizeGivers(
       key: requireNonEmpty(giver.key, `${path}.key`),
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
+      callingCardMenu: CALLING_CARD_GIVERS.has(requireNonEmpty(giver.key, `${path}.key`)),
       traitKeys,
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
