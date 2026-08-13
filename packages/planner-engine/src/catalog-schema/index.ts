@@ -100,11 +100,17 @@ export interface KeepsakeDeclaration {
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
   /** Closed, source-backed data consumed by the Jeweled Pom transition. */
-  readonly effect?: {
-    readonly kind: 'jeweledPom';
-    readonly giverKey: string;
-    readonly subsequentEligibleTraitLevels: 3;
-  };
+  readonly effect?:
+    | {
+        readonly kind: 'jeweledPom';
+        readonly giverKey: string;
+        readonly subsequentEligibleTraitLevels: 3;
+      }
+    | {
+        readonly kind: 'experimentalHammer';
+        readonly giverKey: string;
+        readonly qualifyingEncounterUses: 20;
+      };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
@@ -431,6 +437,7 @@ export interface RoomDeclaration {
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
+  readonly advancesExperimentalHammerUses: boolean;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

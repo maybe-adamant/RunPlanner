@@ -171,6 +171,20 @@ export function presentRunState(
           : snapshot.keepsakes.jeweledPom.active
             ? 'active'
             : 'invalidated',
+      experimentalHammerStatus:
+        snapshot.keepsakes.experimentalHammer === undefined
+          ? 'inactive'
+          : snapshot.keepsakes.experimentalHammer.active
+            ? 'active'
+            : 'expired',
+      ...(snapshot.keepsakes.experimentalHammer === undefined
+        ? {}
+        : {
+            experimentalHammerRemainingUses: snapshot.keepsakes.experimentalHammer.remainingUses,
+            experimentalHammerTraitLabel:
+              catalog.traits.byKey[snapshot.keepsakes.experimentalHammer.traitKey]?.label ??
+              snapshot.keepsakes.experimentalHammer.traitKey,
+          }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

@@ -35,11 +35,17 @@ export interface RawKeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
-  readonly effect?: {
-    readonly kind: 'jeweledPom';
-    readonly giverKey: string;
-    readonly subsequentEligibleTraitLevels: 3;
-  };
+  readonly effect?:
+    | {
+        readonly kind: 'jeweledPom';
+        readonly giverKey: string;
+        readonly subsequentEligibleTraitLevels: 3;
+      }
+    | {
+        readonly kind: 'experimentalHammer';
+        readonly giverKey: string;
+        readonly qualifyingEncounterUses: 20;
+      };
 }
 
 export interface RawEncounterRewardWheelAttachment {
@@ -251,6 +257,8 @@ export interface RawRoomDeclaration {
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
+  /** Exact room-level policy for temporary Hammer encounter uses. */
+  readonly advancesExperimentalHammerUses: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

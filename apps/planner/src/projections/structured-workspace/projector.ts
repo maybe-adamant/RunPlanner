@@ -9,6 +9,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -194,10 +195,8 @@ export function createStructuredWorkspaceProjection(
       const keepsakeEquipResultControls = new Map<
         string,
         {
-          readonly address: import('@run-planner/engine/authored-project').KeepsakeEquipResultAddress & {
-            readonly resultKind: 'jeweledPom';
-          };
-          readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
+          readonly address: import('@run-planner/engine/authored-project').KeepsakeEquipResultAddress;
+          readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults];
         }
       >();
       const candidates = services.candidateSessions.bind(assembly);
@@ -218,16 +217,21 @@ export function createStructuredWorkspaceProjection(
             value: authoredRoute.loadout.startingKeepsakeKey,
           }),
         );
+        const routeStartEffect =
+          catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect;
         if (
-          catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect?.kind ===
-          'jeweledPom'
+          routeStartEffect?.kind === 'jeweledPom' ||
+          routeStartEffect?.kind === 'experimentalHammer'
         ) {
-          const address = createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom');
+          const address = createKeepsakeEquipResultAddress(
+            routeStartKeepsake,
+            routeStartEffect.kind,
+          );
           keepsakeEquipResultControls.set(
             semanticAddressKey(address),
             Object.freeze({
               address,
-              value: authoredRoute.loadout.keepsakeEquipResults?.jeweledPom,
+              value: authoredRoute.loadout.keepsakeEquipResults?.[routeStartEffect.kind],
             }),
           );
         }
@@ -311,22 +315,30 @@ export function createStructuredWorkspaceProjection(
                   value: node.keepsakeSelection.value,
                 }),
               );
+              const replacementEffect =
+                node.keepsakeSelection.value.kind === 'replace'
+                  ? catalog.keepsakes.byKey[node.keepsakeSelection.value.keepsakeKey]?.effect
+                  : undefined;
               if (
-                node.keepsakeSelection.value.kind === 'replace' &&
-                catalog.keepsakes.byKey[node.keepsakeSelection.value.keepsakeKey]?.effect?.kind ===
-                  'jeweledPom'
+                replacementEffect?.kind === 'jeweledPom' ||
+                replacementEffect?.kind === 'experimentalHammer'
               ) {
                 const address = createKeepsakeEquipResultAddress(
                   node.keepsakeSelection.address,
-                  'jeweledPom',
+                  replacementEffect.kind,
                 );
-                keepsakeEquipResultControls.set(
-                  semanticAddressKey(address),
-                  Object.freeze({
-                    address,
-                    value: biomeSource.plan.keepsakeEquipResults?.jeweledPom,
-                  }),
-                );
+                if (
+                  keepsakeEquipResultCandidateForProjectEvaluationAssembly(assembly, address) !==
+                  undefined
+                ) {
+                  keepsakeEquipResultControls.set(
+                    semanticAddressKey(address),
+                    Object.freeze({
+                      address,
+                      value: biomeSource.plan.keepsakeEquipResults?.[replacementEffect.kind],
+                    }),
+                  );
+                }
               }
             }
             if (node.kind === 'occurrenceWorkbench') {
@@ -370,21 +382,26 @@ export function createStructuredWorkspaceProjection(
             region: 'routeRail',
             routeKey: routeSource.routeKey,
           });
-        const routeStartResult = createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom');
+        const routeStartResults = [
+          createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom'),
+          createKeepsakeEquipResultAddress(routeStartKeepsake, 'experimentalHammer'),
+        ] as const;
         appendUniqueFocusDestinations(focusByOwner, [
           [routeMarker.focusKey, routeDestination(routeAddress)],
           [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
-          ...(keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
-            ? ([
-                [
-                  semanticAddressKey(routeStartResult),
-                  Object.freeze<WorkspaceInspectorDestination>({
-                    ...routeDestination(routeAddress),
-                    ownerAddress: routeStartResult,
-                  }),
-                ],
-              ] as const)
-            : []),
+          ...routeStartResults.flatMap((routeStartResult) =>
+            keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
+              ? ([
+                  [
+                    semanticAddressKey(routeStartResult),
+                    Object.freeze<WorkspaceInspectorDestination>({
+                      ...routeDestination(routeAddress),
+                      ownerAddress: routeStartResult,
+                    }),
+                  ],
+                ] as const)
+              : [],
+          ),
         ]);
         return Object.freeze({
           biomes: Object.freeze(biomes),

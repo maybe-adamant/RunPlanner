@@ -38,18 +38,28 @@ const entries: readonly (readonly [string, string, RawKeepsakeDeclaration['fated
     ['RandomBlessingKeepsake', 'Transcendent Embryo', 'neutral'],
   ];
 
-export const keepsakes = entries.map(([key, label, fatedDisposition]) => ({
-  key,
-  label,
-  rank: 'Epic' as const,
-  fatedDisposition: fatedDisposition as RawKeepsakeDeclaration['fatedDisposition'],
-  ...(key === 'HadesAndPersephoneKeepsake'
-    ? {
-        effect: {
-          kind: 'jeweledPom' as const,
-          giverKey: 'Hades',
-          subsequentEligibleTraitLevels: 3 as const,
-        },
-      }
-    : {}),
-})) satisfies readonly RawKeepsakeDeclaration[];
+export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
+  ([key, label, fatedDisposition]) => ({
+    key,
+    label,
+    rank: 'Epic' as const,
+    fatedDisposition: fatedDisposition as RawKeepsakeDeclaration['fatedDisposition'],
+    ...(key === 'HadesAndPersephoneKeepsake'
+      ? {
+          effect: {
+            kind: 'jeweledPom' as const,
+            giverKey: 'Hades',
+            subsequentEligibleTraitLevels: 3 as const,
+          },
+        }
+      : key === 'TempHammerKeepsake'
+        ? {
+            effect: {
+              kind: 'experimentalHammer' as const,
+              giverKey: 'WeaponUpgrade',
+              qualifyingEncounterUses: 20 as const,
+            },
+          }
+        : {}),
+  }),
+);

@@ -8,6 +8,7 @@ export const chaosRooms = chaosMaps.map(
       gameName,
       label: `Chaos ${String(index + 1).padStart(2, '0')}`,
       roomSetKey: 'Chaos',
+      advancesExperimentalHammerUses: true,
       kind: 'Combat',
       mode: { kind: 'authored', templateKey: 'Chaos' },
       structuralTags: [],

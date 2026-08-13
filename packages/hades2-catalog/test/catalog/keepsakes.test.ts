@@ -55,4 +55,35 @@ describe('keepsake normalization', () => {
       );
     }
   });
+
+  it('normalizes the closed Experimental Hammer descriptor and rejects malformed ownership facts', () => {
+    const source = keepsakes.map((keepsake) => ({
+      ...keepsake,
+      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
+    }));
+    const hammer = source.find((keepsake) => keepsake.key === 'TempHammerKeepsake');
+    if (hammer?.effect?.kind !== 'experimentalHammer')
+      throw new Error('missing raw Experimental Hammer descriptor');
+    const normalized = normalizeKeepsakes(source).byKey.TempHammerKeepsake?.effect;
+    expect(normalized).toEqual({
+      kind: 'experimentalHammer',
+      giverKey: 'WeaponUpgrade',
+      qualifyingEncounterUses: 20,
+    });
+    expect(Object.isFrozen(normalized)).toBe(true);
+    (hammer.effect as { giverKey: string }).giverKey = 'Apollo';
+    expect(normalized).toMatchObject({ giverKey: 'WeaponUpgrade' });
+
+    for (const effect of [
+      { kind: 'experimentalHammer', giverKey: 'Apollo', qualifyingEncounterUses: 20 },
+      { kind: 'experimentalHammer', giverKey: 'WeaponUpgrade', qualifyingEncounterUses: 19 },
+    ]) {
+      const malformed = keepsakes.map((keepsake) =>
+        keepsake.key === 'TempHammerKeepsake' ? { ...keepsake, effect: effect as never } : keepsake,
+      );
+      expect(() => normalizeKeepsakes(malformed)).toThrow(
+        'must declare Experimental Hammer giver and fixed 20 qualifying encounter uses',
+      );
+    }
+  });
 });

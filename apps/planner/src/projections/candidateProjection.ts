@@ -248,8 +248,8 @@ export interface CandidateProjectionSession {
     owner: KeepsakeSelectionAddress,
   ) => readonly CandidateOptionProjection<string>[];
   readonly keepsakeEquipResult: (
-    owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' },
-    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+    owner: KeepsakeEquipResultAddress,
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
   ) => readonly CandidateOptionProjection<string>[];
 }
 
@@ -957,8 +957,8 @@ export function createCandidateSessionFactory(
         );
       },
       keepsakeEquipResult: (
-        owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' },
-        value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+        owner: KeepsakeEquipResultAddress,
+        value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
       ) => {
         const evaluation = requireProjectCache(
           cache,

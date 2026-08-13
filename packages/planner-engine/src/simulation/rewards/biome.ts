@@ -116,6 +116,7 @@ import {
   settlePickupAcquisitionSite,
   publicRewardBranch,
   applyJeweledPomEquipResult,
+  applyExperimentalHammerEquipResult,
   rewardFinding,
   type OfferProcessingContext,
   type OfferProcessingPeer,
@@ -123,6 +124,8 @@ import {
 } from './processing';
 import {
   assessJeweledPomEquipResult,
+  assessExperimentalHammerEquipResult,
+  advanceExperimentalHammer,
   applyKeepsakeDisposition,
   invalidateJeweledPom,
   jeweledPomEffectForKey,
@@ -1138,6 +1141,40 @@ export function evaluateBiomeRewardsAssemblyInternal(
     import('../candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
 
+  function advanceExperimentalHammerForCompletion(
+    branchesAtCompletion: readonly RewardBranchState[],
+    owner: SemanticAddress,
+    sequence: number,
+  ): readonly RewardBranchState[] {
+    return Object.freeze(
+      branchesAtCompletion.map((branch) => {
+        const advanced = advanceExperimentalHammer(branch.keepsakes);
+        if (advanced.state === branch.keepsakes) return branch;
+        if (advanced.expired === undefined)
+          return Object.freeze({ ...branch, keepsakes: advanced.state });
+        const prior = branch.traitHistory ?? createTraitHistoryState();
+        const traitHistory = foldTraitHistoryEvents(catalog, [
+          ...prior.events,
+          Object.freeze({
+            kind: 'traitRemoval' as const,
+            owner,
+            acquisitionRole: 'experimentalHammerExpiry',
+            sequence,
+            acquisitionPoint: 'encounterCompleted',
+            traitKey: advanced.expired.traitKey,
+            acquisitionIdentity: advanced.expired.acquisitionIdentity,
+          }),
+        ]);
+        return Object.freeze({
+          ...branch,
+          history: attachTraitHistory(branch.history, traitHistory),
+          traitHistory,
+          keepsakes: advanced.state,
+        });
+      }),
+    );
+  }
+
   /**
    * Judgment is one authored exact set, so its pre-effect domain cannot be
    * picked from an arbitrary reward branch. Branches may still differ in
@@ -1232,6 +1269,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     initialBranches === undefined ? routeLoadout.startingKeepsakeKey : undefined,
     initialBranches === undefined ? routeLoadout.keepsakeEquipResults : undefined,
     initialBranches === undefined ? snapshot.routeKey : undefined,
+    initialBranches === undefined ? routeLoadout : undefined,
   );
   let pendingHubBoard:
     | {
@@ -1727,28 +1765,34 @@ export function evaluateBiomeRewardsAssemblyInternal(
               historyFindingChronology(event.sequence),
             );
           }
-          branches = Object.freeze(
-            branches.map((branch) =>
-              Object.freeze({
-                ...branch,
-                keepsakes:
-                  disposition.kind === 'replace' &&
-                  keepsakeSelectionUnavailableReason(
-                    catalog,
-                    branch.keepsakes,
-                    disposition.keepsakeKey,
-                    encounterBlockedKeepsakeKeys,
-                  ) !== undefined
-                    ? branch.keepsakes
-                    : applyKeepsakeDisposition(
-                        catalog,
-                        branch.keepsakes,
-                        disposition,
-                        branch.arcanaFear,
-                      ),
-              }),
-            ),
-          );
+          // The parent selection remains repairable when a replacement is
+          // unavailable. Its effect child, however, is reached only by the
+          // branches that actually crossed the rack boundary. Keep that
+          // explicit pre/post attestation instead of deriving reachability
+          // from the persisted disposition alone.
+          const rackTransitions = branches.map((branch) => {
+            const before = branch.keepsakes;
+            const unavailable =
+              disposition.kind === 'replace' &&
+              keepsakeSelectionUnavailableReason(
+                catalog,
+                before,
+                disposition.keepsakeKey,
+                encounterBlockedKeepsakeKeys,
+              ) !== undefined;
+            const after = unavailable
+              ? before
+              : applyKeepsakeDisposition(catalog, before, disposition, branch.arcanaFear);
+            const replacementSucceeded =
+              disposition.kind === 'replace' &&
+              before.currentKey !== after.currentKey &&
+              after.currentKey === disposition.keepsakeKey;
+            return Object.freeze({
+              branch: Object.freeze({ ...branch, keepsakes: after }),
+              replacementSucceeded,
+            });
+          });
+          branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
           branches = Object.freeze(
             branches.map((branch) => {
               if (
@@ -1778,9 +1822,17 @@ export function evaluateBiomeRewardsAssemblyInternal(
             }),
           );
           if (disposition.kind === 'replace') {
+            const successfulReplacementBranches = Object.freeze(
+              rackTransitions
+                .filter((transition) => transition.replacementSucceeded)
+                .map((transition) => transition.branch),
+            );
             if (jeweledPomEffectForKey(catalog, disposition.keepsakeKey) !== undefined) {
               const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
-              if (snapshot.keepsakeEquipResults?.jeweledPom === undefined) {
+              if (
+                successfulReplacementBranches.length > 0 &&
+                snapshot.keepsakeEquipResults?.jeweledPom === undefined
+              ) {
                 addRewardFinding(
                   findings,
                   rewardFinding('keepsakeEquipResultMissing', result, {
@@ -1790,7 +1842,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   historyFindingChronology(event.sequence),
                 );
               } else if (
-                branches.some(
+                successfulReplacementBranches.some(
                   (branch) =>
                     !assessJeweledPomEquipResult(
                       catalog,
@@ -1809,33 +1861,107 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   historyFindingChronology(event.sequence),
                 );
               }
-              keepsakeEquipResultContexts.set(
-                semanticAddressKey(result),
-                Object.freeze({
-                  frontiers: Object.freeze(
-                    branches.map((branch) =>
-                      Object.freeze({
-                        before: branch.traitHistory ?? createTraitHistoryState(),
-                        fatedStatus: branch.keepsakes.fatedStatus,
-                        ...(branch.arcanaFear === undefined
-                          ? {}
-                          : { arcanaFear: branch.arcanaFear }),
-                      }),
+              if (successfulReplacementBranches.length > 0) {
+                keepsakeEquipResultContexts.set(
+                  semanticAddressKey(result),
+                  Object.freeze({
+                    frontiers: Object.freeze(
+                      successfulReplacementBranches.map((branch) =>
+                        Object.freeze({
+                          before: branch.traitHistory ?? createTraitHistoryState(),
+                          fatedStatus: branch.keepsakes.fatedStatus,
+                          ...(branch.arcanaFear === undefined
+                            ? {}
+                            : { arcanaFear: branch.arcanaFear }),
+                        }),
+                      ),
                     ),
-                  ),
-                }),
-              );
+                  }),
+                );
+              }
+            }
+            if (
+              catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect?.kind ===
+              'experimentalHammer'
+            ) {
+              const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+              if (
+                successfulReplacementBranches.length > 0 &&
+                snapshot.keepsakeEquipResults?.experimentalHammer === undefined
+              ) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding('keepsakeEquipResultMissing', result, {
+                    keepsakeKey: disposition.keepsakeKey,
+                  }),
+                  ownerRegion(selection.owner),
+                  historyFindingChronology(event.sequence),
+                );
+              } else if (
+                successfulReplacementBranches.some(
+                  (branch) =>
+                    !assessExperimentalHammerEquipResult(
+                      catalog,
+                      snapshot.keepsakeEquipResults!.experimentalHammer!,
+                      branch.traitHistory ?? createTraitHistoryState(),
+                      routeLoadout,
+                    ).legal,
+                )
+              ) {
+                addRewardFinding(
+                  findings,
+                  rewardFinding('keepsakeEquipResultUnavailable', result, {
+                    keepsakeKey: disposition.keepsakeKey,
+                  }),
+                  ownerRegion(selection.owner),
+                  historyFindingChronology(event.sequence),
+                );
+              }
+              if (successfulReplacementBranches.length > 0) {
+                keepsakeEquipResultContexts.set(
+                  semanticAddressKey(result),
+                  Object.freeze({
+                    frontiers: Object.freeze(
+                      successfulReplacementBranches.map((branch) =>
+                        Object.freeze({
+                          before: branch.traitHistory ?? createTraitHistoryState(),
+                          fatedStatus: branch.keepsakes.fatedStatus,
+                          arcanaFear: branch.arcanaFear,
+                          loadout: routeLoadout,
+                        }),
+                      ),
+                    ),
+                  }),
+                );
+              }
             }
             branches = Object.freeze(
               branches.map((branch) =>
-                applyJeweledPomEquipResult(
-                  catalog,
-                  branch,
-                  disposition.keepsakeKey,
-                  snapshot.keepsakeEquipResults,
-                  createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-                  event.sequence,
-                ),
+                successfulReplacementBranches.includes(branch)
+                  ? applyJeweledPomEquipResult(
+                      catalog,
+                      branch,
+                      disposition.keepsakeKey,
+                      snapshot.keepsakeEquipResults,
+                      createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+                      event.sequence,
+                    )
+                  : branch,
+              ),
+            );
+            branches = Object.freeze(
+              branches.map((branch) =>
+                successfulReplacementBranches.includes(branch)
+                  ? applyExperimentalHammerEquipResult(
+                      catalog,
+                      branch,
+                      disposition.keepsakeKey,
+                      snapshot.keepsakeEquipResults,
+                      createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
+                      event.sequence,
+                      routeLoadout,
+                    )
+                  : branch,
               ),
             );
           }
@@ -2747,6 +2873,21 @@ export function evaluateBiomeRewardsAssemblyInternal(
         break;
       }
       case 'encounterCompleted': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const completionRoom =
+          event.origin.kind === 'completionRoom'
+            ? snapshot.completionRooms?.find(
+                (candidate) =>
+                  semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
+              )
+            : undefined;
+        const declaration =
+          room === undefined && completionRoom === undefined
+            ? undefined
+            : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
+        if (declaration?.advancesExperimentalHammerUses === true) {
+          branches = advanceExperimentalHammerForCompletion(branches, event.origin, event.sequence);
+        }
         if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss') {
           const owner = createBossCompletionArcanaAddress(event.origin);
           const activeArcana = attestJudgmentArcanaFrontier(branches);
@@ -2824,8 +2965,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
           );
           break;
         }
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const declaration = room && catalog.rooms.byKey[room.gameName];
         const roomView = views.get(semanticAddressKey(event.origin));
         if (room === undefined || declaration === undefined || roomView === undefined) {
           branches = advanceRewardBranches(branches, event.sequence);

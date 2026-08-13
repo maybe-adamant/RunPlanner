@@ -334,8 +334,11 @@ export interface WorkspaceKeepsakeSelectionInteraction {
   >;
 }
 
-/** A closed one-result Jeweled Pom acquisition beneath its exact rack selection. */
-export interface WorkspaceKeepsakeEquipResultInteraction {
+/** Closed immediate acquisitions beneath their exact rack selection. */
+export type WorkspaceKeepsakeEquipResultInteraction =
+  WorkspaceJeweledPomEquipResultInteraction | WorkspaceExperimentalHammerEquipResultInteraction;
+
+export interface WorkspaceJeweledPomEquipResultInteraction {
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly key: string;
   readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
@@ -350,6 +353,23 @@ export interface WorkspaceKeepsakeEquipResultInteraction {
     >,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceJeweledPomEquipResult' }>
+  >;
+}
+
+export interface WorkspaceExperimentalHammerEquipResultInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly key: string;
+  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'];
+  readonly load: (
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly intentFor: (
+    value: NonNullable<
+      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
+    >,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceExperimentalHammerEquipResult' }>
   >;
 }
 
@@ -1216,6 +1236,9 @@ export interface WorkspaceRunStatePresentation {
     readonly removedLabels: readonly string[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
     readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';
+    readonly experimentalHammerStatus: 'inactive' | 'active' | 'expired';
+    readonly experimentalHammerTraitLabel?: string;
+    readonly experimentalHammerRemainingUses?: number;
   };
   readonly arcana: readonly {
     readonly key: string;

@@ -81,6 +81,13 @@ export type KeepsakeEquipResultCommand = {
   readonly result: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
   readonly value: NonNullable<import('../model').AuthoredKeepsakeEquipResults['jeweledPom']>;
 };
+export type ExperimentalHammerEquipResultCommand = {
+  readonly kind: 'ReplaceExperimentalHammerEquipResult';
+  readonly result: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+  readonly value: NonNullable<
+    import('../model').AuthoredKeepsakeEquipResults['experimentalHammer']
+  >;
+};
 
 export type TopologyCommand =
   | {
@@ -322,6 +329,7 @@ export type ProjectCommand =
   | BossCompletionCommand
   | KeepsakeCommand
   | KeepsakeEquipResultCommand
+  | ExperimentalHammerEquipResultCommand
   | TopologyCommand
   | RoomReplacementCommand
   | RouteDetourCommand

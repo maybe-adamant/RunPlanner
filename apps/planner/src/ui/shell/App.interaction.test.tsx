@@ -751,6 +751,55 @@ describe('route loadout interaction', () => {
     expect(result).toHaveProperty('value', 'HadesDeathDefianceDamageBoon');
   });
 
+  it('repairs the route-start Experimental Hammer result through its projected control', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Starting keepsake' }),
+      'TempHammerKeepsake',
+    );
+
+    const route = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find(
+        (candidate) => candidate.routeKey === 'Underworld',
+      );
+    const defaultTraitKey = route?.loadout.keepsakeEquipResults?.experimentalHammer?.traitKey;
+    if (defaultTraitKey === undefined) throw new Error('Hammer default is missing');
+
+    const active = application.store.getState().projectWorkspace.history.present;
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...active,
+        routes: active.routes.map((candidate) => {
+          if (candidate.routeKey !== 'Underworld') return candidate;
+          const loadout = { ...candidate.loadout };
+          delete loadout.keepsakeEquipResults;
+          return {
+            ...candidate,
+            loadout,
+          };
+        }),
+      }),
+    );
+
+    const result = await screen.findByRole('combobox', { name: 'Experimental Hammer result' });
+    expect(result).toHaveProperty('value', '');
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) => candidate.code === 'keepsakeEquipResultMissing',
+      );
+    if (finding === undefined) throw new Error('missing Hammer finding is absent');
+    await user.selectOptions(result, defaultTraitKey);
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .keepsakeEquipResults?.experimentalHammer,
+    ).toEqual({ traitKey: defaultTraitKey });
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(result).toHaveProperty('value', '');
+  });
+
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();
 

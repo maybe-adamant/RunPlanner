@@ -76,6 +76,16 @@ export function normalizeKeepsakes(
         keepsake.effect.subsequentEligibleTraitLevels !== 3
       )
         fail(`${path}.effect`, 'must declare Jeweled Pom fixed +3 eligible-trait levels');
+    } else if (keepsake.key === 'TempHammerKeepsake') {
+      if (
+        keepsake.effect?.kind !== 'experimentalHammer' ||
+        keepsake.effect.giverKey !== 'WeaponUpgrade' ||
+        keepsake.effect.qualifyingEncounterUses !== 20
+      )
+        fail(
+          `${path}.effect`,
+          'must declare Experimental Hammer giver and fixed 20 qualifying encounter uses',
+        );
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

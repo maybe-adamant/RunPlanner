@@ -88,6 +88,8 @@ import {
 } from '../arcana-fear';
 import {
   createKeepsakeState,
+  assessExperimentalHammerEquipResult,
+  equipExperimentalHammer,
   assessJeweledPomEquipResult,
   equipJeweledPom,
   jeweledPomEffectForKey,
@@ -838,6 +840,7 @@ export function initializeRewardBranches(
   startingKeepsakeKey?: string,
   startingKeepsakeEquipResults?: AuthoredKeepsakeEquipResults,
   routeKey?: string,
+  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
     if (
@@ -857,17 +860,29 @@ export function initializeRewardBranches(
       arcanaFear: initialArcanaFear,
       keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
     });
+    const pomApplied = applyJeweledPomEquipResult(
+      catalog,
+      branch,
+      startingKeepsakeKey,
+      startingKeepsakeEquipResults,
+      createKeepsakeEquipResultAddress(
+        createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+        'jeweledPom',
+      ),
+      0,
+    );
     return Object.freeze([
-      applyJeweledPomEquipResult(
+      applyExperimentalHammerEquipResult(
         catalog,
-        branch,
+        pomApplied,
         startingKeepsakeKey,
         startingKeepsakeEquipResults,
         createKeepsakeEquipResultAddress(
           createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
-          'jeweledPom',
+          'experimentalHammer',
         ),
         0,
+        loadout ?? { weaponKey: '', aspectKey: '' },
       ),
     ]);
   }
@@ -952,6 +967,65 @@ export function applyJeweledPomEquipResult(
       branch.keepsakes,
       result.traitKey,
       effect.subsequentEligibleTraitLevels,
+      acquisitionIdentity,
+    ),
+    traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
+  });
+}
+
+/** Applies the one direct, rarityless Experimental Hammer acquisition. */
+export function applyExperimentalHammerEquipResult(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  equippedKeepsakeKey: string,
+  results: AuthoredKeepsakeEquipResults | undefined,
+  owner: SemanticAddress,
+  sequence: number,
+  loadout: { readonly weaponKey: string; readonly aspectKey: string },
+): RewardBranchState {
+  const effect = catalog.keepsakes.byKey[equippedKeepsakeKey]?.effect;
+  const result = results?.experimentalHammer;
+  if (effect?.kind !== 'experimentalHammer' || result === undefined) return branch;
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  if (!assessExperimentalHammerEquipResult(catalog, result, before, loadout).legal) return branch;
+  const offer: AuthoredTraitOffer = Object.freeze({
+    kind: 'traits',
+    giverKey: effect.giverKey,
+    options: Object.freeze([
+      { traitKey: result.traitKey },
+    ]) as import('../../authored-project/traits').OneToThree<
+      import('../../authored-project/traits').AuthoredTraitOption
+    >,
+    selectedOptionKey: 'option1',
+  });
+  const evaluation = evaluateReachedTraitOffer(
+    catalog,
+    owner,
+    'experimentalHammerEquip',
+    offer,
+    before,
+    loadout,
+    branch.traitEvaluations?.length ?? 0,
+    branch.arcanaFear,
+    true,
+  );
+  const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
+  const applied = recordReachedTraitOffer(
+    catalog,
+    evaluation,
+    sequence,
+    'keepsakeEquip',
+    acquisitionIdentity,
+  );
+  if (applied.history === before) return branch;
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, applied.history),
+    traitHistory: applied.history,
+    keepsakes: equipExperimentalHammer(
+      branch.keepsakes,
+      result.traitKey,
+      effect.qualifyingEncounterUses,
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),

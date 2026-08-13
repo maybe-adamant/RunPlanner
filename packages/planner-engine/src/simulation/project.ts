@@ -4,6 +4,7 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type EncounterPhaseAddress,
+  type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
@@ -25,9 +26,9 @@ import {
   type KeepsakeSelectionCandidateCapability,
 } from './candidate-artifacts';
 import {
+  assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   createKeepsakeState,
-  jeweledPomEffectForKey,
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
 import { createTraitHistoryState } from './traits';
@@ -329,6 +330,14 @@ export function candidateArtifactsForProjectEvaluationAssembly(
     throw new ProjectSimulationContractError('candidate artifact access is not initialized');
   }
   return candidateArtifacts(requireExactProjectEvaluationAssembly(assembly));
+}
+
+/** Narrow reachability query for one exact immediate-keepsake child. */
+export function keepsakeEquipResultCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  address: KeepsakeEquipResultAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly).keepsakeEquipResults.at(address);
 }
 
 /** Narrow supported candidate capability for one reached Pom owner. */
@@ -888,15 +897,19 @@ function evaluateRouteAssembly(
       encounterBlockedKeepsakeKeys: Object.freeze([]),
     }),
   );
-  if (jeweledPomEffectForKey(catalog, route.loadout.startingKeepsakeKey) !== undefined) {
-    const result = createKeepsakeEquipResultAddress(routeStart, 'jeweledPom');
+  const routeStartEffect = catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.effect;
+  if (
+    routeStartEffect !== undefined &&
+    (routeStartEffect.kind === 'jeweledPom' || routeStartEffect.kind === 'experimentalHammer')
+  ) {
+    const result = createKeepsakeEquipResultAddress(routeStart, routeStartEffect.kind);
     const startArcanaFear = createArcanaFearState(catalog, route.loadout);
     const startKeepsakes = createKeepsakeState(
       catalog,
       route.loadout.startingKeepsakeKey,
       startArcanaFear,
     );
-    const authoredResult = route.loadout.keepsakeEquipResults?.jeweledPom;
+    const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
       findings.push(
         Object.freeze({
@@ -908,12 +921,19 @@ function evaluateRouteAssembly(
         }),
       );
     } else if (
-      !assessJeweledPomEquipResult(
-        catalog,
-        authoredResult,
-        createTraitHistoryState(),
-        startKeepsakes.fatedStatus,
-      ).legal
+      !(routeStartEffect.kind === 'jeweledPom'
+        ? assessJeweledPomEquipResult(
+            catalog,
+            authoredResult,
+            createTraitHistoryState(),
+            startKeepsakes.fatedStatus,
+          ).legal
+        : assessExperimentalHammerEquipResult(
+            catalog,
+            authoredResult,
+            createTraitHistoryState(),
+            route.loadout,
+          ).legal)
     ) {
       findings.push(
         Object.freeze({
@@ -933,6 +953,7 @@ function evaluateRouteAssembly(
             before: createTraitHistoryState(),
             arcanaFear: startArcanaFear,
             fatedStatus: startKeepsakes.fatedStatus,
+            loadout: route.loadout,
           }),
         ]),
       }),

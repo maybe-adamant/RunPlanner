@@ -80,6 +80,12 @@ describe('Run State presentation', () => {
         history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
         removedKeys: [],
         fatedStatus: 'Unknown',
+        experimentalHammer: {
+          traitKey: 'StaffDoubleAttackTrait',
+          remainingUses: 7,
+          acquisitionIdentity: 'experimental-hammer-test',
+          active: true,
+        },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -124,6 +130,11 @@ describe('Run State presentation', () => {
       configuredTotal: 4,
       active: [{ key: 'EnemyHealthShrineUpgrade', label: 'Vow of Grit', rank: 1 }],
       disabled: [{ key: 'EnemyDamageShrineUpgrade', label: 'Vow of Pain', rank: 2 }],
+    });
+    expect(state.keepsakes).toMatchObject({
+      experimentalHammerStatus: 'active',
+      experimentalHammerTraitLabel: 'Wicked Thrasher',
+      experimentalHammerRemainingUses: 7,
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',
