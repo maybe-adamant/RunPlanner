@@ -539,10 +539,11 @@ The source treats the existing multi-encounter shapes differently:
 
 | Shape                                                       | Source behavior                                                                                                                                                     | Planner disposition                                                                                                                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ordinary F/G/I/N combat and a generated H cage              | the exact generated encounter is independently skippable                                                                                                            | attach the authored skip to that encounter phase; the first authored success in the biome consumes the biome opportunity                                                                |
+| ordinary F/G/I/N/Q combat and a generated H cage            | the exact generated encounter is independently skippable                                                                                                            | attach the authored skip to that encounter phase; the first authored success in the biome consumes the biome opportunity                                                                |
 | O ship combat                                               | the intro and later generated combat are separate eligible roll points                                                                                              | permit either eligible phase to own the skip, but never both in one biome; skipping the intro does not suppress the later combat                                                        |
 | P combat envelope                                           | the first pre-combat phase is skippable and declares `SkipEndEncounterEffects`; a later `GeneratedP` phase receives `CanEncounterSkip = false` when it is not first | author one envelope-level result at the eligible pre-combat phase; success suppresses enemy spawns for every phase in that room while preserving their identities and noncombat effects |
 | H passive field encounter                                   | it does not declare `CanEncounterSkip = true`                                                                                                                       | do not expose a skip there; each eligible generated cage remains its own opportunity                                                                                                    |
+| N side-room combat                                          | `GeneratedNSubRoom` declares `BlockDionysusEncounterKeepsake = true`, and `GeneratedNSubRoom_Bigger` inherits that blocker                                          | keep the exact local-child encounter phase, but do not permit a Fig Leaf skip there                                                                                                     |
 | Devotion, miniboss, boss, and field-NPC combat declarations | they opt out through `CanEncounterSkip = false` or a blocking declaration                                                                                           | do not infer eligibility merely from their combat kind                                                                                                                                  |
 
 For a room with ordered encounters, one blocking
@@ -554,10 +555,19 @@ later ordinary ship combat unless a declaration supplies the explicit
 room-wide block.
 
 N does not create a separate Fig Leaf rule. Each visited main-room or side-room
-combat is an exact encounter phase at which the declaration can be assessed.
-The shared persistent trait's biome-local activation guard spans the full Hub,
-so only the first authored successful skip among those visited phases consumes
-the biome opportunity.
+combat remains an exact encounter phase at which the declaration can be
+assessed, but the two generated side-room encounter identities carry the
+explicit Dionysus-keepsake blocker and are not skippable. The shared persistent
+trait's biome-local activation guard spans the full Hub, so only the first
+authored successful skip among eligible visited main-room phases consumes the
+biome opportunity.
+
+Q remains a normal positive Fig Leaf surface when a retained use reaches the
+fourth Surface biome. `GeneratedQ` declares `CanEncounterSkip = true`, while
+`GeneratedQ_Large` and `GeneratedQ_Islands` inherit that declaration. Q's
+ordinary generated combat phases therefore use the same exact phase-owned skip
+fact as F, G, I, and N main rooms; the absence of a later rack frontier does not
+end an already-retained Fig Leaf effect.
 
 The authored fact therefore belongs to an existing eligible encounter phase:
 `combat skipped by Fig Leaf`. It does not replace the room reward or introduce
