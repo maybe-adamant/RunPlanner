@@ -14,9 +14,11 @@ Completed delivery gates:
 - Gate D — Calling Card: `df47929`; and
 - Gate E — Time Piece: `b30f90f`.
 
-The current clean implementation base is `b30f90f`. Gate F — Fig Leaf is the
-next delivery boundary. Gates G — Gorgon Amulet and H — product closure and
-absorption remain pending.
+The current clean implementation base is `b30f90f`. Gate F — Fig Leaf was
+live-code preflighted at `03bcc71`; its locked contract includes Q's inherited
+skip support and N side rooms' explicit blocker. Gate F is the next delivery
+boundary. Gates G — Gorgon Amulet and H — product closure and absorption remain
+pending.
 
 Do not link this plan from `README.md`, stable design documents, biome rules,
 or other progress plans while it is active. At final closure, absorb durable
@@ -427,7 +429,9 @@ Fig Leaf creates three persistent total uses and a one-success-per-biome guard.
 The authored fact is `combat skipped by Fig Leaf` on an exact encounter phase.
 It is an optional positive-possibility choice: no authored skip consumes
 nothing, while a legal authored skip consumes one total use and the current
-biome opportunity.
+biome opportunity. It is a separate phase-local disposition beside the selected
+encounter identity, not another Encounter Definition or a member of the
+encounter picker.
 
 Legality uses normalized source facts, not generic combat kind:
 
@@ -443,7 +447,7 @@ only.
 
 The implementation must preserve the audited shapes:
 
-- ordinary F/G/I/N and each generated H cage are independent phase
+- ordinary F/G/I/N/Q and each generated H cage are independent phase
   opportunities;
 - O intro and later ship combat are independent opportunities, but only one
   can succeed in the biome;
@@ -451,7 +455,9 @@ The implementation must preserve the audited shapes:
   envelope without requiring one authored flag per phase;
 - H passive combat is not eligible;
 - Devotion, minibosses, bosses, and field-NPC combat remain excluded; and
-- N main rooms and side rooms share the same biome-local success guard.
+- N main-room opportunities share the biome-local success guard, while
+  `GeneratedNSubRoom` and its inherited larger variant explicitly block Fig
+  Leaf and expose no legal skip.
 
 ### Gorgon Amulet
 
@@ -529,8 +535,10 @@ room rewards or ordinary three-option offers.
 - Calling Card adds engine-backed Rarify actions to exact rows in the trait
   dialog. The dialog presents effective rarity and remaining action support.
 - Time Piece adds Convert to Gold beside exact eligible acquisition roles.
-- Fig Leaf adds one phase-local skip control only where the engine publishes
-  support.
+- Fig Leaf adds one phase-local `Skip combat with Fig Leaf` control beside the
+  encounter presentation only where the engine publishes support. It is not an
+  encounter-picker option. A retained authored skip that becomes invalid stays
+  visible with candidate feedback for explicit repair.
 - Gorgon adds the local Death Defiance condition and Athena offer beneath the
   exact eligible phase when reached.
 
@@ -658,15 +666,21 @@ feat(engine): model Time Piece conversions
 
 ### Gate F — Fig Leaf
 
-1. Normalize exact skip, blocker, and envelope-cascade facts.
+1. Normalize the exact skip, blocker, and envelope-cascade matrix, including
+   Q's inherited positive support, N side rooms' explicit blocker, H passive
+   combat's exclusion, and the existing NPC/miniboss/boss exclusions.
 2. Add the exact phase-owned skip result for occurrence and local-child phases;
    bump the strict schema.
 3. Fold three total uses and the biome-local success guard through route
    branches.
-4. Apply the audited F/G/H/I/N/O/P phase behavior without topology mutation.
-5. Publish candidate support, findings, phase controls, and Run State.
-6. Prove one biome with no skip preserves a use and one successful skip blocks
-   only later successes in that biome.
+4. Apply the audited F/G/H/I/N/O/P/Q phase behavior without topology mutation;
+   N side-room phases remain exact local-child owners but reject the skip.
+5. Publish candidate support, findings, Run State, and a separate phase-local
+   skip control beside encounter presentation rather than inside the encounter
+   candidate domain.
+6. Prove that one biome with no skip preserves a use, one successful skip blocks
+   only later successes in that biome, a retained use can be spent in Q, and N
+   side rooms never admit a skip.
 
 Default commit:
 
@@ -721,7 +735,8 @@ docs: absorb keepsake delivery
 - malformed, duplicate, missing, misplaced, and mutable nested declarations;
 - exact Calling Card provider matrix;
 - exact Time Piece acquisition-capability matrix;
-- exact Fig Leaf/Gorgon room and encounter capabilities; and
+- exact Fig Leaf/Gorgon room and encounter capabilities, including positive Q
+  inheritance and the negative N side-room blocker; and
 - exact Experimental Hammer encounter-use exclusions.
 
 ### Authored project
@@ -748,7 +763,7 @@ docs: absorb keepsake delivery
 - Postboss retain/replace workflow;
 - one structured-workspace ownership/interaction witness per new child family;
 - focused trait-dialog rarification, acquisition conversion, and encounter
-  phase tests; and
+  phase tests, including a fixed Q phase and an N local-child exclusion; and
 - finding navigation to the exact owner.
 
 ### Product-loop witnesses
@@ -782,6 +797,9 @@ Each gate review must explicitly reject:
 - Time Piece modeled as reward replacement, fallback Gold, or Shop price
   simulation;
 - Fig Leaf inferred from combat kind or encounter-depth counting;
+- Fig Leaf represented as another Encounter Definition or encounter-picker
+  option;
+- Q Fig Leaf support omitted or N side-room combat treated as skippable;
 - Experimental Hammer duration inferred from encounter-depth counting;
 - Gorgon Athena represented as `AthenaCombatP`, a synthetic room, or reward
   replacement;
