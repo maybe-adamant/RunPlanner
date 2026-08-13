@@ -51,6 +51,8 @@ export type RoomLifecycleEvent =
       readonly encounterEnvelopeKey: string;
       readonly encounterKey: string;
       readonly phaseKind: EncounterPhaseKind;
+      readonly execution: 'normal' | 'skippedByFigLeaf';
+      readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';
@@ -62,6 +64,8 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterCompleted';
       readonly phaseKey: string;
+      readonly execution: 'normal' | 'skippedByFigLeaf';
+      readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectCompleted';

@@ -35,6 +35,8 @@ export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
 export interface EncounterPhaseAuthoringRoomOptions {
   readonly shipEncounterCount?: 2 | 3;
   readonly fieldsCageRewardCount?: number;
+  /** Include singleton phases so a consumer can project phase-local controls. */
+  readonly includeFixedPhases?: boolean;
 }
 
 function templateSlotActive(
@@ -92,6 +94,7 @@ export function encounterPhaseAuthoringDomainForRoom(
   for (const binding of bindings.values()) {
     if (
       binding.kind === 'fixed' &&
+      options.includeFixedPhases !== true &&
       catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.traitOfferProducer ===
         undefined
     )

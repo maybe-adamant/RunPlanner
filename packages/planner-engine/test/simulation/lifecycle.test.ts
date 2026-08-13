@@ -56,6 +56,10 @@ function phases(
         label: definition.label,
         kind: definition.kind,
         countsEncounterDepth: definition.countsEncounterDepth,
+        canEncounterSkip: definition.canEncounterSkip,
+        blocksFigLeaf: definition.blocksFigLeaf,
+        skipEndEncounterEffects: definition.skipEndEncounterEffects,
+        figLeafSkip: false,
         ...(definition.sequenceEffect === undefined
           ? {}
           : { sequenceEffect: definition.sequenceEffect }),

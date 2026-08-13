@@ -47,7 +47,8 @@ export interface RawKeepsakeDeclaration {
         readonly qualifyingEncounterUses: 20;
       }
     | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
-    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 };
+    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
+    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 };
 }
 
 export interface RawEncounterRewardWheelAttachment {
@@ -115,6 +116,9 @@ export interface RawEncounterDefinitionDeclaration {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  readonly canEncounterSkip?: boolean;
+  readonly blocksFigLeaf?: boolean;
+  readonly skipEndEncounterEffects?: boolean;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };

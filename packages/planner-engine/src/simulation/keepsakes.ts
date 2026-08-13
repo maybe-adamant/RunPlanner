@@ -34,6 +34,38 @@ export interface KeepsakeState {
   readonly callingCard?: { readonly remainingCharges: number };
   /** Retained Time Piece ledger; conversions consume it in acquisition chronology. */
   readonly timePiece?: { readonly remainingCharges: number };
+  /** Fig Leaf total uses and its one-success-per-biome guard. */
+  readonly figLeaf?: { readonly remainingUses: number; readonly activatedThisBiome: boolean };
+}
+
+export interface FigLeafStateValue {
+  readonly remainingUses: number;
+  readonly activatedThisBiome: boolean;
+}
+
+/** Attest the branch frontier before lifecycle composition can consume it. */
+export function attestFigLeafBranchState(
+  branches: readonly { readonly keepsakes: KeepsakeState }[],
+): FigLeafStateValue | undefined {
+  const values = branches.map((branch) => branch.keepsakes.figLeaf);
+  const first = values[0];
+  if (first === undefined) {
+    if (values.some((value) => value !== undefined)) {
+      throw new Error('Fig Leaf branch frontier is divergent');
+    }
+    return undefined;
+  }
+  if (
+    values.some(
+      (value) =>
+        value === undefined ||
+        value.remainingUses !== first.remainingUses ||
+        value.activatedThisBiome !== first.activatedThisBiome,
+    )
+  ) {
+    throw new Error('Fig Leaf branch frontier is divergent');
+  }
+  return Object.freeze({ ...first });
 }
 
 export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Catalog, key: string) {
@@ -238,6 +270,14 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'figLeaf'
+      ? {
+          figLeaf: Object.freeze({
+            remainingUses: effect.biomeUses,
+            activatedThisBiome: false,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -299,12 +339,43 @@ export function applyKeepsakeDisposition(
     ...(selected.effect?.kind === 'timePiece' && state.timePiece === undefined
       ? { timePiece: Object.freeze({ remainingCharges: selected.effect.conversionCharges }) }
       : {}),
+    ...(selected.effect?.kind === 'figLeaf' && state.figLeaf === undefined
+      ? {
+          figLeaf: Object.freeze({
+            remainingUses: selected.effect.biomeUses,
+            activatedThisBiome: false,
+          }),
+        }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
     ...(fatedStatus === 'Unfated' && state.timePiece !== undefined
       ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
       : {}),
+  });
+}
+
+/** Biome starts reset only Fig Leaf's local opportunity. */
+export function beginBiomeKeepsakeState(state: KeepsakeState): KeepsakeState {
+  if (state.figLeaf === undefined || !state.figLeaf.activatedThisBiome) return state;
+  return Object.freeze({
+    ...state,
+    figLeaf: Object.freeze({ ...state.figLeaf, activatedThisBiome: false }),
+  });
+}
+
+/** Consume one total use and close the current biome opportunity. */
+export function consumeFigLeafUse(state: KeepsakeState): KeepsakeState {
+  const figLeaf = state.figLeaf;
+  if (figLeaf === undefined || figLeaf.remainingUses <= 0 || figLeaf.activatedThisBiome)
+    return state;
+  return Object.freeze({
+    ...state,
+    figLeaf: Object.freeze({
+      remainingUses: figLeaf.remainingUses - 1,
+      activatedThisBiome: true,
+    }),
   });
 }
 

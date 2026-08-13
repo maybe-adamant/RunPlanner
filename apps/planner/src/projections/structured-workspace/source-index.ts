@@ -37,6 +37,7 @@ import type {
   CanonicalHubVisit,
   CanonicalLocalChildRoom,
   EncounterPhaseSequenceStatus,
+  FigLeafPhaseCandidateSupport,
   CanonicalTarget,
   MaterializedBiomePrefix,
   ProjectBiomeEvaluation,
@@ -67,6 +68,9 @@ export interface WorkspaceBiomeSource {
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
   ) => EncounterPhaseSequenceStatus | undefined;
+  readonly figLeafSupport: (
+    phase: EncounterPhaseAddress,
+  ) => FigLeafPhaseCandidateSupport | undefined;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
@@ -567,6 +571,7 @@ function createWorkspaceBiomeSource(
   plan: AuthoredBiomePlan,
   evaluation: ProjectBiomeEvaluation | undefined,
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
+  figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -665,6 +670,7 @@ function createWorkspaceBiomeSource(
     biome,
     completeness,
     encounterPhaseStatus,
+    figLeafSupport,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
     evaluatedAdditional: (owner: ExitDecisionAddress) =>
@@ -715,6 +721,8 @@ export function createWorkspaceProjectSourceIndex(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
+  figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined = () =>
+    undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -731,6 +739,7 @@ export function createWorkspaceProjectSourceIndex(
                 plan,
                 routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
                 encounterPhaseStatus,
+                figLeafSupport,
               ),
             ),
           ),

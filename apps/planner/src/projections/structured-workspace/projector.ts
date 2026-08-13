@@ -9,6 +9,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -200,8 +201,12 @@ export function createStructuredWorkspaceProjection(
         }
       >();
       const candidates = services.candidateSessions.bind(assembly);
-      const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation, (phase) =>
-        encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+      const sources = createWorkspaceProjectSourceIndex(
+        catalog,
+        project,
+        evaluation,
+        (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+        (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(assembly, phase),
       );
       const routes = sources.routes.map((routeSource) => {
         const authoredRoute = project.routes.find(

@@ -297,6 +297,11 @@ export type EncounterOccurrenceCommand =
   | {
       readonly kind: 'ResetEncounter';
       readonly phase: EncounterPhaseAddress;
+    }
+  | {
+      readonly kind: 'ReplaceFigLeafSkip';
+      readonly phase: EncounterPhaseAddress;
+      readonly value: boolean;
     };
 
 export type TraitOfferCommand =

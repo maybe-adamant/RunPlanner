@@ -122,6 +122,18 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
         return undefined;
       }
     },
+    encounterPhaseFigLeafSupportForProjectEvaluationAssembly: (
+      ...args: Parameters<typeof actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly>
+    ) => {
+      try {
+        return actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly(...args);
+      } catch {
+        // The forged overlay has no exact Fig Leaf capability. Preserve the
+        // production provenance guard while allowing malformed-overlay tests
+        // to reach their intended source/evaluator contract assertion.
+        return undefined;
+      }
+    },
   };
 });
 

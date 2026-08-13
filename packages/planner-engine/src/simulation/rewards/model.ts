@@ -16,6 +16,15 @@ import type {
 import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
+import type { EncounterPhaseAddress } from '../../authored-project/addresses';
+
+export interface FigLeafPhaseCandidateSupport {
+  readonly origin: EncounterPhaseAddress;
+  readonly supported: boolean;
+  readonly selected: boolean;
+  readonly remainingUses: number;
+  readonly activatedThisBiome: boolean;
+}
 
 interface RewardEventBase {
   readonly rewardSequence: number;
@@ -99,6 +108,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly runStateAvailability: readonly DecisionRunStateAvailability[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
+  readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
 }
 
 export type RewardSimulation = BiomeRewardSimulation;

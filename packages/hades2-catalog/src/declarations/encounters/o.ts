@@ -13,8 +13,15 @@ export const oEncounterDefinitions = [
     label: 'Ship intro',
     kind: 'combat',
     countsEncounterDepth: false,
+    canEncounterSkip: true,
   },
-  { key: 'GeneratedO', label: 'Ship combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedO',
+    label: 'Ship combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'HeraclesCombatO',
     label: 'Heracles combat',

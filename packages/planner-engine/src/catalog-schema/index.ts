@@ -112,7 +112,8 @@ export interface KeepsakeDeclaration {
         readonly qualifyingEncounterUses: 20;
       }
     | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
-    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 };
+    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
+    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
@@ -176,6 +177,12 @@ export interface EncounterDefinition {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  /** Source-declared positive Fig Leaf support for this exact encounter. */
+  readonly canEncounterSkip: boolean;
+  /** Source-declared room-wide blocker carried by this encounter. */
+  readonly blocksFigLeaf: boolean;
+  /** A successful skip suppresses the remainder of this room envelope. */
+  readonly skipEndEncounterEffects: boolean;
   /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;

@@ -1,18 +1,26 @@
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from '../types';
 
 export const qEncounterDefinitions = [
-  { key: 'GeneratedQ', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedQ',
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'GeneratedQ_Islands',
     label: 'Islands combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'GeneratedQ_Large',
     label: 'Preboss combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   { key: 'MiniBossBrute', label: 'Brute', kind: 'miniboss', countsEncounterDepth: true },
   {

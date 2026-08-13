@@ -46,6 +46,7 @@ import type {
   StructuredWorkspaceContextualServices,
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
+  WorkspaceFigLeafInteraction,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
@@ -213,6 +214,7 @@ function candidateInteraction<T>(
 
 interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -241,6 +243,7 @@ function bindOccurrenceLocalInteractions(
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
+  const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
   const rewardWheelOfferCounts = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
@@ -321,38 +324,59 @@ function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
-          if (encounterPhases.has(key)) {
+          if (encounterKeys.length > 1 && encounterPhases.has(key)) {
             throw new StructuredWorkspaceProjectionContractError(
               `${key} has multiple bound encounter phase interactions`,
             );
           }
-          let model: ContextualPickerModel<string> | undefined;
-          encounterPhases.set(
-            key,
-            Object.freeze({
-              intentFor: (encounterKey: string) =>
-                Object.freeze({
-                  command: Object.freeze({
-                    encounterKey,
-                    kind: 'SelectEncounter' as const,
-                    phase: phase.owner,
-                  }),
-                }),
+          if (encounterKeys.length > 1) {
+            let model: ContextualPickerModel<string> | undefined;
+            encounterPhases.set(
               key,
-              load: () =>
-                (model ??= projectEncounterPicker(
-                  contextualPicker,
-                  phase.candidateChoices,
-                  phase.selectedEncounterKey,
-                  candidates.encounterPhases(phase.owner, encounterKeys),
-                )),
-              owner: phase.owner,
-              resetIntent: Object.freeze({
-                command: Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner }),
+              Object.freeze({
+                intentFor: (encounterKey: string) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      encounterKey,
+                      kind: 'SelectEncounter' as const,
+                      phase: phase.owner,
+                    }),
+                  }),
+                key,
+                load: () =>
+                  (model ??= projectEncounterPicker(
+                    contextualPicker,
+                    phase.candidateChoices,
+                    phase.selectedEncounterKey,
+                    candidates.encounterPhases(phase.owner, encounterKeys),
+                  )),
+                owner: phase.owner,
+                resetIntent: Object.freeze({
+                  command: Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner }),
+                }),
+                selected: phase.selectedEncounterKey,
               }),
-              selected: phase.selectedEncounterKey,
-            }),
-          );
+            );
+          }
+          if (phase.figLeaf !== undefined) {
+            figLeafSkips.set(
+              key,
+              Object.freeze({
+                intentFor: (value: boolean) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceFigLeafSkip' as const,
+                      phase: phase.owner,
+                      value,
+                    }),
+                  }),
+                key,
+                owner: phase.owner,
+                selected: phase.figLeaf.selected,
+                supported: phase.figLeaf.supported,
+              }),
+            );
+          }
         }
         break;
       }
@@ -506,6 +530,7 @@ function bindOccurrenceLocalInteractions(
   }
   return Object.freeze({
     encounterPhases,
+    figLeafSkips,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
@@ -1275,6 +1300,7 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
   const {
     encounterPhases,
+    figLeafSkips,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
@@ -2003,6 +2029,7 @@ export function bindWorkspaceInteractions(
   return Object.freeze({
     batchRewardStores,
     encounterPhases,
+    figLeafSkips,
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,

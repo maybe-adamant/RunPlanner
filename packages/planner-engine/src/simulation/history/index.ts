@@ -9,6 +9,7 @@ export type {
   EncounterHistoryBlock,
   EncounterValidatedBiomeHistory,
   EncounterValidatedPrefixHistory,
+  FigLeafLifecycleState,
 } from './composition';
 export {
   projectEncounterRecordPreparation,

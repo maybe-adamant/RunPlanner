@@ -31,6 +31,7 @@ describe('authored room-state replacement', () => {
         Intro: 'P_Combat03_PreCombat01',
         Combat: 'GeneratedP_Large',
       }),
+      figLeafSkipByPhase: previousDefault.figLeafSkipByPhase,
     });
 
     expect(
@@ -51,6 +52,10 @@ describe('authored room-state replacement', () => {
       encounterKeyByPhase: {
         Intro: 'GeneratedP_PreCombat',
         Combat: 'GeneratedP_Large',
+      },
+      figLeafSkipByPhase: {
+        Intro: false,
+        Combat: false,
       },
     });
   });
@@ -199,6 +204,7 @@ describe('authored room-state replacement', () => {
           enteredOrdinal: 1,
           encounters: Object.freeze({
             encounterKeyByPhase: Object.freeze({ Encounter: 'GeneratedNSubRoom_Bigger' }),
+            figLeafSkipByPhase: Object.freeze({ Encounter: false }),
           }),
         }),
       }),

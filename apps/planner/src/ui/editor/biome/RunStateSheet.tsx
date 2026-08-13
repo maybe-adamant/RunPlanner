@@ -125,6 +125,14 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             ? ''
             : ` (${state.keepsakes.experimentalHammerRemainingUses} encounters remaining)`}
         </p>
+        <p>
+          Fig Leaf:{' '}
+          {state.keepsakes.figLeafRemainingUses === undefined
+            ? 'inactive'
+            : `${state.keepsakes.figLeafRemainingUses} uses remaining${
+                state.keepsakes.figLeafActivatedThisBiome ? ' · already used this biome' : ''
+              }`}
+        </p>
         <p>Removed: {state.keepsakes.removedLabels.join(' · ') || 'None'}</p>
       </section>
       <section>

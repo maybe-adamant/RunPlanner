@@ -12,6 +12,11 @@ export interface ResolvedEncounterPhase {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  readonly canEncounterSkip: boolean;
+  readonly blocksFigLeaf: boolean;
+  readonly skipEndEncounterEffects: boolean;
+  /** Persisted phase-local positive disposition, when authored. */
+  readonly figLeafSkip: boolean;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }

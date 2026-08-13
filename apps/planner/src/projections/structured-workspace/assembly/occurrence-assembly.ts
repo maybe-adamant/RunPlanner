@@ -35,6 +35,7 @@ import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/eng
 import type {
   CanonicalAuthoredRoom,
   EncounterPhaseSequenceStatus,
+  FigLeafPhaseCandidateSupport,
   FieldsBatchFacts,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
@@ -98,6 +99,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
   ) => EncounterPhaseSequenceStatus | undefined;
+  readonly figLeafSupport?: (
+    phase: EncounterPhaseAddress,
+  ) => FigLeafPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -570,10 +574,19 @@ function activeEncounterPhasesForOwner(
     room,
     owner,
     encounters,
-    options,
+    { ...options, includeFixedPhases: true },
   )) {
     const address = domain.origin;
     if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
+    const figLeafSupport = input.figLeafSupport?.(address);
+    const authoredFigLeafSkip = encounters.figLeafSkipByPhase?.[domain.slotKey] === true;
+    const fixedPhase = domain.declaredEncounterKeys.length === 1;
+    const fixedHasTraitOffer =
+      fixedPhase &&
+      input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey]?.traitOfferProducer !==
+        undefined;
+    if (fixedPhase && figLeafSupport === undefined && !authoredFigLeafSkip && !fixedHasTraitOffer)
+      continue;
     const candidateChoices = Object.freeze(
       domain.declaredEncounterKeys.map((encounterKey) => {
         const definition = input.catalog.encounterDefinitions.byKey[encounterKey];
@@ -656,6 +669,15 @@ function activeEncounterPhasesForOwner(
         customizable: domain.declaredEncounterKeys.length > 1,
         label: domain.slotKey,
         marker: input.markerDestinations.marker(address),
+        ...(figLeafSupport !== undefined || authoredFigLeafSkip
+          ? {
+              figLeaf: Object.freeze({
+                interactionKey: semanticAddressKey(address),
+                selected: authoredFigLeafSkip,
+                supported: figLeafSupport?.supported === true,
+              }),
+            }
+          : {}),
         ...(traitOffer === undefined ? {} : { traitOffer }),
         resettable: domain.selectedEncounterKey !== domain.defaultEncounterKey,
         selectedEncounter: Object.freeze({
@@ -1073,17 +1095,27 @@ function encounterPhaseInteractionRequirement(
   owner: LocalChildAddress | WorkspaceRoomSummary['address'],
   phases: readonly WorkspaceEncounterPhase[],
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
-  const customizablePhases = phases.filter((phase) => phase.customizable);
-  if (customizablePhases.length === 0) return undefined;
+  const interactivePhases = phases.filter(
+    (phase) => phase.customizable || phase.figLeaf !== undefined,
+  );
+  if (interactivePhases.length === 0) return undefined;
   return Object.freeze({
     kind: 'encounterPhases' as const,
     owner,
     phases: Object.freeze(
-      customizablePhases.map((phase) =>
+      interactivePhases.map((phase) =>
         Object.freeze({
           candidateChoices: phase.candidateChoices,
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
+          ...(phase.figLeaf === undefined
+            ? {}
+            : {
+                figLeaf: Object.freeze({
+                  selected: phase.figLeaf.selected,
+                  supported: phase.figLeaf.supported,
+                }),
+              }),
         }),
       ),
     ),
@@ -1107,7 +1139,10 @@ function hasRoomLocalCustomization(
   if (
     encounterPhases.some(
       (phase) =>
-        phase.customizable || phase.marker.findingCount > 0 || phase.traitOffer !== undefined,
+        phase.customizable ||
+        phase.marker.findingCount > 0 ||
+        phase.traitOffer !== undefined ||
+        phase.figLeaf !== undefined,
     )
   ) {
     return true;

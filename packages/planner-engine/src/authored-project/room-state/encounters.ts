@@ -138,7 +138,9 @@ export function createDefaultRoomEncounterState(
 ): RoomEncounterState {
   const bindings = encounterBindingsBySlot(catalog, room, path);
   const values: Record<string, string> = {};
+  const figLeafSkipByPhase: Record<string, boolean> = {};
   for (const binding of bindings.values()) {
+    figLeafSkipByPhase[binding.slotKey] = false;
     if (binding.kind === 'fixed') {
       encounterDefinitionForKey(
         catalog,
@@ -171,6 +173,7 @@ export function createDefaultRoomEncounterState(
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(values),
+    figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
@@ -417,8 +420,8 @@ export function decodeRoomEncounterState(
   expectExactKeys(
     state,
     state.traitOffersByPhase === undefined
-      ? ['encounterKeyByPhase']
-      : ['encounterKeyByPhase', 'traitOffersByPhase'],
+      ? ['encounterKeyByPhase', 'figLeafSkipByPhase']
+      : ['encounterKeyByPhase', 'traitOffersByPhase', 'figLeafSkipByPhase'],
     path,
   );
   const rawSelections = expectRecord(state.encounterKeyByPhase, `${path}.encounterKeyByPhase`);
@@ -449,6 +452,15 @@ export function decodeRoomEncounterState(
     }
     encounterDefinitionForKey(catalog, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterKeyByPhase[slotKey] = encounterKey;
+  }
+  const rawSkips = expectRecord(state.figLeafSkipByPhase, `${path}.figLeafSkipByPhase`);
+  const figLeafSkipByPhase: Record<string, boolean> = {};
+  expectExactKeys(rawSkips, [...bindings.keys()], `${path}.figLeafSkipByPhase`);
+  for (const phaseKey of bindings.keys()) {
+    figLeafSkipByPhase[phaseKey] = expectBoolean(
+      rawSkips[phaseKey],
+      `${path}.figLeafSkipByPhase.${phaseKey}`,
+    );
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   if (state.traitOffersByPhase !== undefined) {
@@ -507,6 +519,7 @@ export function decodeRoomEncounterState(
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
+    figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
@@ -536,7 +549,9 @@ export function reconcileRoomEncounterState(
     `rooms.${replacementRoom.gameName}.encounters`,
   );
   const selections: Record<string, string> = {};
+  const figLeafSkipByPhase: Record<string, boolean> = {};
   for (const binding of replacementBindings.values()) {
+    figLeafSkipByPhase[binding.slotKey] = previous.figLeafSkipByPhase[binding.slotKey] === true;
     if (binding.kind !== 'set') continue;
     const fallback = replacement.encounterKeyByPhase[binding.slotKey];
     if (fallback === undefined) {
@@ -593,6 +608,7 @@ export function reconcileRoomEncounterState(
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
+    figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),

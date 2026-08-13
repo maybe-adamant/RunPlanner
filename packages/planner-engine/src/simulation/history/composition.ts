@@ -22,6 +22,13 @@ import type {
   HistoryStateView,
   BiomeHistoryPrefix,
 } from './model';
+import type { ResolvedEncounterPhase } from '../encounters/model';
+import { assessFigLeafSkip } from '../encounters/fig-leaf';
+
+export interface FigLeafLifecycleState {
+  readonly remainingUses: number;
+  readonly activatedThisBiome: boolean;
+}
 
 type EnvelopeHistoryEvent = Extract<
   HistoryEvent,
@@ -40,12 +47,21 @@ interface EventBuilder {
   readonly sequenceBase: number;
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution: boolean;
+  readonly figLeafState?: {
+    remainingUses: number;
+    activatedThisBiome: boolean;
+    biomeStart: boolean;
+  };
 }
 
 export interface HistorySegmentWriter {
   append(event: SegmentHistoryEventData): void;
   current(): HistoryStateView;
   readonly validatesEncounterResolution: boolean;
+  resolveFigLeafEncounterPhases(
+    room: CanonicalLifecycleRoom,
+    phases: readonly ResolvedEncounterPhase[],
+  ): readonly ResolvedEncounterPhase[];
 }
 
 export interface EncounterHistoryBlock {
@@ -116,6 +132,7 @@ interface BiomeHistoryEnvelopeOptions<
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution?: boolean;
+  readonly figLeafState?: FigLeafLifecycleState;
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
@@ -153,6 +170,43 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
       return foldBiomeHistoryPrefixEvents(builder.events, builder.seed).current;
     },
     validatesEncounterResolution: builder.validateEncounterResolution,
+    resolveFigLeafEncounterPhases(
+      _room: CanonicalLifecycleRoom,
+      phases: readonly ResolvedEncounterPhase[],
+    ) {
+      const state = builder.figLeafState;
+      if (state === undefined) {
+        return builder.validateEncounterResolution
+          ? Object.freeze(
+              phases.map((phase) =>
+                phase.figLeafSkip ? Object.freeze({ ...phase, figLeafSkip: false }) : phase,
+              ),
+            )
+          : phases;
+      }
+      let selected = false;
+      const envelopeBlocked = phases.some((candidate) => candidate.blocksFigLeaf);
+      const resolved = phases.map((phase, index) => {
+        const assessment = assessFigLeafSkip({
+          selected: phase.figLeafSkip,
+          canEncounterSkip: phase.canEncounterSkip,
+          biomeStart: state.biomeStart,
+          blockedByEnvelope: envelopeBlocked,
+          nonLeadingCascadePhase: phase.skipEndEncounterEffects === true && index !== 0,
+          remainingUses: state.remainingUses,
+          activatedThisBiome: state.activatedThisBiome,
+          selectionAlreadyResolved: selected,
+        });
+        if (assessment.legal) {
+          selected = true;
+          state.remainingUses -= 1;
+          state.activatedThisBiome = true;
+        }
+        return Object.freeze({ ...phase, figLeafSkip: assessment.legal });
+      });
+      state.biomeStart = false;
+      return Object.freeze(resolved);
+    },
   });
 }
 
@@ -207,10 +261,11 @@ export function appendRoomLifecycle(
         )
       : undefined;
   const encounterPhases = encounterPreparation?.validPrefix ?? room.encounterPhases;
+  const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
   if (encounterPreparation !== undefined && !encounterPreparation.valid) {
     const prefix = executeEncounterRecordPrefix(
       catalog,
-      createRoomLifecycleInput(catalog, room, encounterPhases),
+      createRoomLifecycleInput(catalog, room, effectiveEncounterPhases),
     );
     for (const event of prefix.events) appendLifecycleEvent(writer, event, fail);
     throw new EncounterLifecycleBlocked(
@@ -221,7 +276,7 @@ export function appendRoomLifecycle(
   }
   const fragment = executeRoomLifecycle(
     catalog,
-    createRoomLifecycleInput(catalog, room, encounterPhases),
+    createRoomLifecycleInput(catalog, room, effectiveEncounterPhases),
   );
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
@@ -263,6 +318,7 @@ interface BiomeHistoryPrefixOptions {
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution?: boolean;
+  readonly figLeafState?: FigLeafLifecycleState;
   readonly compose: (writer: HistorySegmentWriter) => void;
 }
 
@@ -272,6 +328,7 @@ function composeBiomeHistoryPrefixResult({
   initialCounters,
   seed,
   validateEncounterResolution = false,
+  figLeafState,
   compose,
 }: BiomeHistoryPrefixOptions): EncounterValidatedPrefixHistory {
   const builder: EventBuilder = {
@@ -279,6 +336,15 @@ function composeBiomeHistoryPrefixResult({
     sequenceBase: seed?.sequence ?? 0,
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
+    ...(figLeafState === undefined
+      ? {}
+      : {
+          figLeafState: {
+            remainingUses: figLeafState.remainingUses,
+            activatedThisBiome: figLeafState.activatedThisBiome,
+            biomeStart: true,
+          },
+        }),
   };
   appendEnvelope(builder, {
     kind: 'biomeStarted',
@@ -381,6 +447,7 @@ function composeBiomeHistoryEnvelopeResult<
   initialCounters,
   seed,
   validateEncounterResolution = false,
+  figLeafState,
   completionRooms,
   transitionEffects,
   composeEntry,
@@ -398,6 +465,15 @@ function composeBiomeHistoryEnvelopeResult<
     sequenceBase: seed?.sequence ?? 0,
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
+    ...(figLeafState === undefined
+      ? {}
+      : {
+          figLeafState: {
+            remainingUses: figLeafState.remainingUses,
+            activatedThisBiome: figLeafState.activatedThisBiome,
+            biomeStart: true,
+          },
+        }),
   };
   const writer = segmentWriter(builder);
   appendEnvelope(builder, {

@@ -25,7 +25,7 @@ export type RoomGenerationFindingCode =
   | 'targetRoomUnavailable';
 
 export type EncounterResolutionFindingCode =
-  'encounterSlotActivationUnavailable' | 'encounterUnavailable';
+  'encounterSlotActivationUnavailable' | 'encounterUnavailable' | 'figLeafSkipUnavailable';
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'

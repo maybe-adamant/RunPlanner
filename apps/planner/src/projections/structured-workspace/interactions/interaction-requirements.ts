@@ -58,6 +58,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
+        readonly figLeaf?: {
+          readonly selected: boolean;
+          readonly supported: boolean;
+        };
       }[];
     }
   | {

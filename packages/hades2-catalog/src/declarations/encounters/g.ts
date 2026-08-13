@@ -10,7 +10,13 @@ import {
 } from './shared';
 
 export const gEncounterDefinitions = [
-  { key: 'GeneratedG', label: 'Combat', kind: 'combat', countsEncounterDepth: true },
+  {
+    key: 'GeneratedG',
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'ArtemisCombatG',
     label: 'Artemis combat',

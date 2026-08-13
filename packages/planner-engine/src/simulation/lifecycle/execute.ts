@@ -20,6 +20,8 @@ interface ExecutionContext {
 interface OperationContext extends ExecutionContext {
   readonly operationIndex: number;
   readonly encounterPhase?: ResolvedEncounterPhase;
+  readonly figLeafSkipOwner?: boolean;
+  readonly figLeafSkipped?: boolean;
 }
 
 interface ExecutionState {
@@ -137,6 +139,8 @@ const lifecycleEffectRegistry = Object.freeze({
       encounterEnvelopeKey: phase.envelopeKey,
       encounterKey: phase.encounterKey,
       phaseKind: phase.kind,
+      execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
+      figLeafSkipOwner: context.figLeafSkipOwner === true,
     });
   },
   advanceEncounterDepth: (context, state) => {
@@ -156,6 +160,8 @@ const lifecycleEffectRegistry = Object.freeze({
     appendEvent(state, context, {
       kind: 'encounterCompleted',
       phaseKey: requireEncounterPhase(context).slotKey,
+      execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
+      figLeafSkipOwner: context.figLeafSkipOwner === true,
     }),
   recordPhaseOfferAcquisition: (context, state) => {
     const attachment = requireEncounterPhase(context).rewardAttachment;
@@ -277,9 +283,17 @@ function encounterOperationHandler(
   operationIndex: number,
   state: ExecutionState,
 ): ExecutionState {
+  const phase = resolveOnlyEncounter(context);
   return applyEffects(
     operation,
-    { ...context, operationIndex, encounterPhase: resolveOnlyEncounter(context) },
+    {
+      ...context,
+      operationIndex,
+      encounterPhase: phase,
+      ...(phase.figLeafSkip && phase.canEncounterSkip
+        ? { figLeafSkipped: true, figLeafSkipOwner: true }
+        : {}),
+    },
     state,
   );
 }
@@ -291,8 +305,27 @@ function encounterSequenceOperationHandler(
   state: ExecutionState,
 ): ExecutionState {
   let next = state;
+  const skipOwnerIndex = context.encounterPhases.findIndex(
+    (phase) => phase.figLeafSkip && phase.canEncounterSkip,
+  );
   for (const encounterPhase of context.encounterPhases) {
-    next = applyEffects(operation, { ...context, operationIndex, encounterPhase }, next);
+    const phaseIndex = context.encounterPhases.indexOf(encounterPhase);
+    const skipped =
+      skipOwnerIndex >= 0 &&
+      phaseIndex >= skipOwnerIndex &&
+      (context.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true ||
+        phaseIndex === skipOwnerIndex);
+    next = applyEffects(
+      operation,
+      {
+        ...context,
+        operationIndex,
+        encounterPhase,
+        ...(skipped ? { figLeafSkipped: true } : {}),
+        ...(skipped && phaseIndex === skipOwnerIndex ? { figLeafSkipOwner: true } : {}),
+      },
+      next,
+    );
   }
   return next;
 }
@@ -356,7 +389,7 @@ function resolveExecutionContext(
     selectedPhases.some((phase, index) => {
       const slot = envelope.slots[index];
       const definition = catalog.encounterDefinitions.byKey[phase.encounterKey];
-      return (
+      const invalid =
         slot === undefined ||
         phase.envelopeKey !== envelope.key ||
         phase.slotKey !== slot.key ||
@@ -364,9 +397,15 @@ function resolveExecutionContext(
         phase.label !== definition.label ||
         phase.kind !== definition.kind ||
         phase.countsEncounterDepth !== definition.countsEncounterDepth ||
+        (phase.canEncounterSkip !== undefined &&
+          phase.canEncounterSkip !== (definition.canEncounterSkip === true)) ||
+        (phase.blocksFigLeaf !== undefined &&
+          phase.blocksFigLeaf !== (definition.blocksFigLeaf === true)) ||
+        (phase.skipEndEncounterEffects !== undefined &&
+          phase.skipEndEncounterEffects !== (definition.skipEndEncounterEffects === true)) ||
         phase.sequenceEffect?.kind !== definition.sequenceEffect?.kind ||
-        phase.rewardAttachment !== slot.rewardAttachment
-      );
+        phase.rewardAttachment !== slot.rewardAttachment;
+      return invalid;
     })
   ) {
     throw new LifecycleExecutionContractError(

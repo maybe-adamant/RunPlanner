@@ -136,6 +136,7 @@ function applyUnchecked(
       );
     case 'SelectEncounter':
     case 'ResetEncounter':
+    case 'ReplaceFigLeafSkip':
       return applyOccurrenceCommand(
         document,
         catalog,

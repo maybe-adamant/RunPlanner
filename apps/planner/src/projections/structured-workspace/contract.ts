@@ -170,6 +170,17 @@ export interface WorkspaceEncounterInteraction {
   readonly selected: string;
 }
 
+/** Phase-local Fig Leaf choice; eligibility is supplied by the engine. */
+export interface WorkspaceFigLeafInteraction {
+  readonly intentFor: (
+    value: boolean,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFigLeafSkip' }>>;
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
+  readonly selected: boolean;
+  readonly supported: boolean;
+}
+
 export interface WorkspaceRewardInteraction {
   readonly authoredRewardTypes: readonly string[];
   readonly intentFor: (offer: ResolvedRewardOffer) => WorkspaceRewardCommandIntent;
@@ -609,6 +620,7 @@ export interface WorkspaceInteractionCatalog {
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
@@ -906,6 +918,11 @@ export interface WorkspaceEncounterPhase {
   readonly customizable: boolean;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  readonly figLeaf?: {
+    readonly interactionKey: string;
+    readonly selected: boolean;
+    readonly supported: boolean;
+  };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** A reset is useful only after the authored selection diverges from its static default. */
@@ -1267,6 +1284,8 @@ export interface WorkspaceRunStatePresentation {
     readonly experimentalHammerRemainingUses?: number;
     readonly callingCardRemainingCharges?: number;
     readonly timePieceRemainingCharges?: number;
+    readonly figLeafRemainingUses?: number;
+    readonly figLeafActivatedThisBiome?: boolean;
   };
   readonly arcana: readonly {
     readonly key: string;

@@ -265,6 +265,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'encounter',
         message: 'This encounter phase is not active for the selected room setup.',
       };
+    case 'figLeafSkipUnavailable':
+      return {
+        kind: 'encounter',
+        message: 'Fig Leaf cannot skip another combat in this biome or has no uses left.',
+      };
     case 'fieldsCageOutcomeUnavailable':
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
     case 'hubOpenSlotUnavailable':

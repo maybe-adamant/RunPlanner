@@ -36,6 +36,7 @@ function updatedSelections(
   phase: EncounterPhaseAddress,
   command: EncounterOccurrenceCommand,
 ): RoomEncounterState {
+  if (command.kind === 'ReplaceFigLeafSkip') return current;
   const binding = selectableBinding(catalog, room, phase, command);
   const set = encounterSetForBinding(catalog, binding, room.gameName);
   const encounterKey =
@@ -59,7 +60,26 @@ function updatedSelections(
       ...current.encounterKeyByPhase,
       [phase.phaseKey]: encounterKey,
     }),
+    figLeafSkipByPhase: current.figLeafSkipByPhase,
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
+  });
+}
+
+function updatedFigLeafSkip(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceFigLeafSkip') return current;
+  const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
+  if (binding === undefined)
+    failCommand(command, `${room.gameName} has no encounter phase ${phase.phaseKey}`);
+  const next = { ...current.figLeafSkipByPhase, [phase.phaseKey]: command.value };
+  return Object.freeze({
+    ...current,
+    figLeafSkipByPhase: Object.freeze(next),
   });
 }
 
@@ -120,11 +140,12 @@ function replaceTopLevel(
     command.phase,
     command,
   );
-  if (encounters === occurrence.encounters) return document;
+  const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
+  if (withFigLeaf === occurrence.encounters) return document;
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters })),
+    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: withFigLeaf })),
   );
 }
 
@@ -147,7 +168,8 @@ function replaceLocalChild(
     command,
   );
   const encounters = updatedSelections(catalog, room, state.encounters, command.phase, command);
-  if (encounters === state.encounters) return document;
+  const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
+  if (withFigLeaf === state.encounters) return document;
   if (occurrence.state.kind !== 'ephyraCombat') {
     failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
   }
@@ -162,7 +184,7 @@ function replaceLocalChild(
           ...occurrence.state,
           sideRooms: Object.freeze({
             ...occurrence.state.sideRooms,
-            [slot.slotKey]: Object.freeze({ ...state, encounters }),
+            [slot.slotKey]: Object.freeze({ ...state, encounters: withFigLeaf }),
           }),
         }),
       }),

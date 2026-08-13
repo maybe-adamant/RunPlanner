@@ -98,6 +98,7 @@ import {
   jeweledPomEffectForKey,
   refreshKeepsakeFatedStatus,
   consumeTimePieceCharge,
+  beginBiomeKeepsakeState,
   type KeepsakeState,
 } from '../keepsakes';
 
@@ -1018,7 +1019,7 @@ export function initializeRewardBranches(
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
         arcanaFear: beginBiomeArcanaFearState(branch.arcanaFear),
-        keepsakes: branch.keepsakes,
+        keepsakes: beginBiomeKeepsakeState(branch.keepsakes),
       }),
     ),
   );

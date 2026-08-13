@@ -482,6 +482,7 @@ export function assembleWorkspaceBiomeSemantics(
       biome,
       catalog,
       encounterPhaseStatus: source.encounterPhaseStatus,
+      figLeafSupport: source.figLeafSupport,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
       ...(request.fieldsBatchFacts === undefined
         ? {}

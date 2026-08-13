@@ -29,6 +29,7 @@ import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   createKeepsakeState,
+  attestFigLeafBranchState,
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
 import { createTraitHistoryState } from './traits';
@@ -41,6 +42,7 @@ import {
   type BiomeHistoryPrefix,
   type CanonicalBiomeHistory,
   type HistoryStateView,
+  type FigLeafLifecycleState,
 } from './history';
 import {
   materializeBiome,
@@ -65,6 +67,7 @@ import {
 } from './progressive/biome';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
 import type { BiomeRewardSimulation } from './rewards/model';
+import type { FigLeafPhaseCandidateSupport } from './rewards/model';
 import {
   publishRunStateThroughCoverage,
   type DecisionRunStateOwner,
@@ -364,6 +367,16 @@ export function encounterPhaseCandidateSupportForProjectEvaluationAssembly(
     ?.encounters.at(phase);
 }
 
+/** Narrow Fig Leaf capability for one exact phase owner. */
+export function encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+): FigLeafPhaseCandidateSupport | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
+    ?.encounters.figLeafAt(phase);
+}
+
 /**
  * Supported exact-assembly query for one structurally declared encounter
  * phase. Unlike candidate support, this preserves the distinction between an
@@ -472,7 +485,9 @@ function generation(
     structurallyActiveEncounterRooms(snapshot),
     encounterPreparationViews(history),
     encounterBoundary,
+    rewards.figLeafPhaseCandidates,
   );
+  const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:
       ordinary.validation.validity === 'valid' &&
@@ -495,7 +510,7 @@ function generation(
       ordinary.candidateArtifacts,
       rewardProducers,
       roomLifecycles,
-      encounters.artifacts,
+      encounterArtifacts,
       traitOffers,
       levelResolutions,
     ),
@@ -643,7 +658,31 @@ function evaluateBiomeAssembly(
     plan.keepsakeEquipResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
-  const composed = composeBiomeHistoryWithEncounterValidation(catalog, snapshot, seed);
+  const startingFigLeaf = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey]?.effect;
+  let figLeafState: FigLeafLifecycleState | undefined;
+  try {
+    figLeafState =
+      context.seed === undefined
+        ? startingFigLeaf?.kind === 'figLeaf'
+          ? { remainingUses: startingFigLeaf.biomeUses, activatedThisBiome: false }
+          : undefined
+        : (() => {
+            const state = attestFigLeafBranchState(context.seed.rewardBranches);
+            return state === undefined
+              ? undefined
+              : { remainingUses: state.remainingUses, activatedThisBiome: false };
+          })();
+  } catch (error) {
+    throw new ProjectSimulationContractError(
+      error instanceof Error ? error.message : 'Fig Leaf branch frontier is divergent',
+    );
+  }
+  const composed = composeBiomeHistoryWithEncounterValidation(
+    catalog,
+    snapshot,
+    seed,
+    figLeafState,
+  );
   if (composed.kind === 'blocked') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
     if (progressive === null) {
@@ -759,6 +798,15 @@ function evaluateBiomeAssembly(
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
       ),
+      history: Object.freeze({
+        routeKey: history.routeKey,
+        biomeKey: history.biomeKey,
+        events: history.events,
+        ledgers: history.ledgers,
+        rooms: history.rooms,
+        current: history.afterTransition,
+      }),
+      roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
     }),
   );
