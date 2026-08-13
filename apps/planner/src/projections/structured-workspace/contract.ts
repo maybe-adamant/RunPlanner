@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type AcquisitionSiteAddress,
+  type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredLevelResolution,
@@ -199,6 +200,15 @@ export interface WorkspaceTraitOfferControl {
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
+}
+
+/** One exact Time Piece choice, independent of whether this role has a trait child. */
+export interface WorkspaceAcquisitionConversionControl {
+  readonly acquisitionRoleLabel: string;
+  readonly address: AcquisitionRoleAddress;
+  readonly marker: WorkspaceMarker;
+  readonly rewardOwner: SemanticAddress;
+  readonly value: 'normal' | 'gold';
 }
 
 /** Exact selected Circe outcome owner; its domain is supplied by the candidate session. */
@@ -606,6 +616,7 @@ export interface WorkspaceInteractionCatalog {
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
+  readonly acquisitionConversions: ReadonlyMap<string, WorkspaceAcquisitionConversionInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
@@ -634,6 +645,20 @@ export interface WorkspaceInteractionCatalog {
   readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
+}
+
+export interface WorkspaceAcquisitionConversionInteraction {
+  readonly visible: boolean;
+  /** Gold is enabled only when every reached engine branch supports it. */
+  readonly goldSupported: boolean;
+  readonly intentFor: (
+    value: 'normal' | 'gold',
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionConversion' }>
+  >;
+  readonly key: string;
+  readonly owner: AcquisitionRoleAddress;
+  readonly value: 'normal' | 'gold';
 }
 
 export interface WorkspaceShopDeathDefianceConditionInteraction {
@@ -765,6 +790,7 @@ interface WorkspaceRewardControlBase {
   readonly owner: RewardCandidateOwner;
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
+  readonly conversions?: readonly WorkspaceAcquisitionConversionControl[];
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
@@ -1240,6 +1266,7 @@ export interface WorkspaceRunStatePresentation {
     readonly experimentalHammerTraitLabel?: string;
     readonly experimentalHammerRemainingUses?: number;
     readonly callingCardRemainingCharges?: number;
+    readonly timePieceRemainingCharges?: number;
   };
   readonly arcana: readonly {
     readonly key: string;

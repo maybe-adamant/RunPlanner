@@ -89,6 +89,9 @@ export function normalizeKeepsakes(
     } else if (keepsake.key === 'RarifyKeepsake') {
       if (keepsake.effect?.kind !== 'callingCard' || keepsake.effect.rarificationCharges !== 6)
         fail(`${path}.effect`, 'must declare Calling Card fixed six rarification charges');
+    } else if (keepsake.key === 'GoldifyKeepsake') {
+      if (keepsake.effect?.kind !== 'timePiece' || keepsake.effect.conversionCharges !== 4)
+        fail(`${path}.effect`, 'must declare Time Piece fixed four conversion charges');
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

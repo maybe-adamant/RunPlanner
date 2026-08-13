@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { keepsakes } from '../../src/declarations/keepsakes';
 import { normalizeKeepsakes } from '../../src/compiler/keepsakes';
-import { catalog } from '../../src';
+import { catalog, createCatalog } from '../../src';
+import { declarations } from '../../src/declarations';
 
 describe('keepsake normalization', () => {
   it('normalizes Calling Card only for the exact admitted trait-provider set', () => {
@@ -143,5 +144,99 @@ describe('keepsake normalization', () => {
     expect(() => normalizeKeepsakes(malformed)).toThrow(
       'must declare Calling Card fixed six rarification charges',
     );
+  });
+
+  it('normalizes Time Piece’s fixed four charges and the closed concrete acquisition matrix', () => {
+    expect(catalog.keepsakes.byKey.GoldifyKeepsake?.effect).toEqual({
+      kind: 'timePiece',
+      conversionCharges: 4,
+    });
+    const eligible = catalog.rewards.acquisitions.values
+      .filter((acquisition) => acquisition.goldConversionEligible)
+      .map((acquisition) => acquisition.gameName)
+      .sort();
+    expect(eligible).toEqual(
+      [
+        'AphroditeUpgrade',
+        'ApolloUpgrade',
+        'AresUpgrade',
+        'DemeterUpgrade',
+        'HephaestusUpgrade',
+        'HeraUpgrade',
+        'HermesUpgrade',
+        'HestiaUpgrade',
+        'PoseidonUpgrade',
+        'ZeusUpgrade',
+        'WeaponUpgrade',
+        'SpellDrop',
+        'EmptyMaxHealthSmallDrop',
+        'MaxHealthDrop',
+        'MaxHealthDropBig',
+        'MaxHealthDropSmall',
+        'MaxManaDrop',
+        'MaxManaDropBig',
+        'MaxManaDropSmall',
+        'TalentDrop',
+        'TalentBigDrop',
+        'MinorTalentDrop',
+        'StackUpgrade',
+        'StackUpgradeBig',
+        'StackUpgradeTriple',
+        'ArmorBoost',
+        'ArmorBigBoost',
+        'LastStandDrop',
+        'GiftDrop',
+        'MetaCurrencyDrop',
+        'MetaCurrencyBigDrop',
+        'MetaCardPointsCommonDrop',
+        'MetaCardPointsCommonBigDrop',
+      ].sort(),
+    );
+    for (const excluded of [
+      'Currency',
+      'BlindBoxLoot',
+      'StoreRewardRandomStack',
+      'ChaosWeaponUpgrade',
+      'ElementalBoost',
+    ]) {
+      expect(catalog.rewards.acquisitions.byKey[excluded]?.goldConversionEligible).not.toBe(true);
+    }
+  });
+
+  it('rejects missing, unexpected, and malformed Time Piece acquisition capability facts', () => {
+    const base = declarations.rewardKernel.acquisitions.map((acquisition) => ({ ...acquisition }));
+    const createWith = (acquisitions: readonly unknown[]) =>
+      createCatalog({
+        ...declarations,
+        rewardKernel: { ...declarations.rewardKernel, acquisitions: acquisitions as never },
+      });
+
+    expect(() =>
+      createWith(
+        base.map((acquisition) =>
+          acquisition.gameName === 'ApolloUpgrade'
+            ? { ...acquisition, goldConversionEligible: false }
+            : acquisition,
+        ),
+      ),
+    ).toThrow('exact Time Piece gold-conversion eligibility set');
+    expect(() =>
+      createWith(
+        base.map((acquisition) =>
+          acquisition.gameName === 'Currency'
+            ? { ...acquisition, goldConversionEligible: true }
+            : acquisition,
+        ),
+      ),
+    ).toThrow('exact Time Piece gold-conversion eligibility set');
+    expect(() =>
+      createWith(
+        base.map((acquisition) =>
+          acquisition.gameName === 'ApolloUpgrade'
+            ? { ...acquisition, goldConversionEligible: 'yes' }
+            : acquisition,
+        ),
+      ),
+    ).toThrow('goldConversionEligible: must be boolean');
   });
 });

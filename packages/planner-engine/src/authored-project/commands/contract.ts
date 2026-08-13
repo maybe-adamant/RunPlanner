@@ -124,6 +124,8 @@ export function projectCommandAddress(
       return command.trait;
     case 'ReplaceLevelResolution':
       return command.levelResolution;
+    case 'ReplaceAcquisitionConversion':
+      return command.acquisition;
   }
 }
 

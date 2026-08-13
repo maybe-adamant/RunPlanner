@@ -188,6 +188,9 @@ export function presentRunState(
       ...(snapshot.keepsakes.callingCard === undefined
         ? {}
         : { callingCardRemainingCharges: snapshot.keepsakes.callingCard.remainingCharges }),
+      ...(snapshot.keepsakes.timePiece === undefined
+        ? {}
+        : { timePieceRemainingCharges: snapshot.keepsakes.timePiece.remainingCharges }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

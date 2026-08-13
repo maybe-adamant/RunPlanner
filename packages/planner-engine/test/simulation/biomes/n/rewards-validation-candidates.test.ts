@@ -23,6 +23,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
+import { createDefaultConversionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranches,
@@ -735,7 +736,11 @@ describe('N Hub rewards, validation, and candidates', () => {
           ...parent.state.sideRooms,
           sideDoor1: Object.freeze({
             ...side,
-            reward: Object.freeze({ offer, traitOffersByAcquisitionRole }),
+            reward: Object.freeze({
+              offer,
+              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+              traitOffersByAcquisitionRole,
+            }),
           }),
         }),
       }),

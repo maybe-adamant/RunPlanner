@@ -32,6 +32,8 @@ export interface KeepsakeState {
   };
   /** Retained Calling Card ledger; explicit offer actions are its only consumption source. */
   readonly callingCard?: { readonly remainingCharges: number };
+  /** Retained Time Piece ledger; conversions consume it in acquisition chronology. */
+  readonly timePiece?: { readonly remainingCharges: number };
 }
 
 export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Catalog, key: string) {
@@ -229,6 +231,13 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'timePiece'
+      ? {
+          timePiece: Object.freeze({
+            remainingCharges: fatedStatus === 'Unfated' ? 0 : effect.conversionCharges,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -255,6 +264,9 @@ export function applyKeepsakeDisposition(
       fatedStatus,
       ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
         ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
+        : {}),
+      ...(fatedStatus === 'Unfated' && state.timePiece !== undefined
+        ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
         : {}),
     });
   }
@@ -284,8 +296,14 @@ export function applyKeepsakeDisposition(
     ...(selected.effect?.kind === 'callingCard' && state.callingCard === undefined
       ? { callingCard: Object.freeze({ remainingCharges: selected.effect.rarificationCharges }) }
       : {}),
+    ...(selected.effect?.kind === 'timePiece' && state.timePiece === undefined
+      ? { timePiece: Object.freeze({ remainingCharges: selected.effect.conversionCharges }) }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
+      : {}),
+    ...(fatedStatus === 'Unfated' && state.timePiece !== undefined
+      ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
       : {}),
   });
 }
@@ -307,7 +325,17 @@ export function refreshKeepsakeFatedStatus(
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
+    ...(fatedStatus === 'Unfated' && state.timePiece !== undefined
+      ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
+      : {}),
   });
+}
+
+/** Consume one legal conversion without producing a Gold acquisition. */
+export function consumeTimePieceCharge(state: KeepsakeState): KeepsakeState {
+  const remaining = state.timePiece?.remainingCharges ?? 0;
+  if (state.fatedStatus !== 'Fated' || remaining === 0) return state;
+  return Object.freeze({ ...state, timePiece: Object.freeze({ remainingCharges: remaining - 1 }) });
 }
 
 /** Replays the persisted row ledger once for every consumer of an offer. */

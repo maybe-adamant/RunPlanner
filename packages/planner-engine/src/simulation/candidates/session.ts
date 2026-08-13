@@ -113,6 +113,11 @@ import {
   type EvaluatedKeepsakeEquipResultCandidate,
   type KeepsakeEquipResultCandidateQuery,
 } from './keepsake-equip-result';
+import {
+  evaluateAcquisitionConversionCandidate,
+  type AcquisitionConversionCandidateQuery,
+  type EvaluatedAcquisitionConversionCandidate,
+} from './acquisition-conversion';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -138,7 +143,8 @@ export type ProjectCandidateQuery =
   | TraitOfferCandidateQuery
   | BossCompletionArcanaCandidateQuery
   | KeepsakeSelectionCandidateQuery
-  | KeepsakeEquipResultCandidateQuery;
+  | KeepsakeEquipResultCandidateQuery
+  | AcquisitionConversionCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -172,7 +178,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedTraitOfferCandidate
   | EvaluatedBossCompletionArcanaCandidate
   | EvaluatedKeepsakeSelectionCandidate
-  | EvaluatedKeepsakeEquipResultCandidate;
+  | EvaluatedKeepsakeEquipResultCandidate
+  | EvaluatedAcquisitionConversionCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -234,6 +241,16 @@ function evaluateCandidateQuery(
 ): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
+    case 'acquisitionConversion':
+      return evaluateAcquisitionConversionCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.acquisition.routeKey, query.acquisition.biomeKey),
+        )?.acquisitionConversions,
+        query,
+      );
     case 'keepsakeEquipResult':
       return evaluateKeepsakeEquipResultCandidate(
         catalog,

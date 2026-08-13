@@ -19,7 +19,9 @@ import {
   createRewardWheelAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -43,6 +45,7 @@ import {
   goldenHBiome,
   goldenIBiome,
   createRepresentativeNOPQProject,
+  createRepresentativeNOPQShopTraitProject,
   createRepresentativeNOProject,
   appendCompleteN,
   appendNEntry,
@@ -1584,6 +1587,72 @@ describe('structured workspace interaction binding', () => {
     expect(shop.acquisitionOrders.get(semanticAddressKey(purchase.site))).toMatchObject({
       owner: purchase.site,
       selected: [],
+    });
+  });
+
+  it('retains an invalid paid-Shop Time Piece conversion as an engine-backed repair control', () => {
+    const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');
+    const acquisition = createAcquisitionRoleAddress(shopOffer, 'weaponUpgrade');
+    let project = applyProjectCommand(createRepresentativeNOPQShopTraitProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition,
+      value: 'gold',
+    });
+
+    const candidate = services.candidateSessions
+      .bind(simulateProjectAssembly(catalog, project))
+      .acquisitionConversion(acquisition);
+    if (candidate.kind !== 'acquisitionConversion') {
+      throw new Error(`expected acquisition conversion candidate, received ${candidate.kind}`);
+    }
+    expect(candidate.result).toMatchObject({
+      goldSupported: false,
+      goldConvertible: false,
+      branchCount: expect.any(Number),
+    });
+    expect(candidate.result.unsupportedEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceProvenance: 'paid', goldConversionEligible: true }),
+      ]),
+    );
+    const interaction = bind(project, 'Surface', 'P').interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    expect(interaction).toMatchObject({ owner: acquisition, visible: true, goldSupported: false });
+    expect(interaction?.intentFor('normal')).toEqual({
+      command: { kind: 'ReplaceAcquisitionConversion', acquisition, value: 'normal' },
+    });
+  });
+
+  it('publishes Time Piece conversion controls only at supported acquisition frontiers', () => {
+    const withoutTimePiece = bind(createCompleteFGProject(), 'Underworld', 'F').interactions;
+    expect(
+      [...withoutTimePiece.acquisitionConversions.values()].filter(
+        (interaction) => interaction.visible,
+      ),
+    ).toEqual([]);
+
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    const withTimePiece = bind(project, 'Underworld', 'F').interactions;
+    const supported = [...withTimePiece.acquisitionConversions.values()].find(
+      (interaction) => interaction.visible && interaction.goldSupported,
+    );
+    expect(supported).toBeDefined();
+    expect(supported?.intentFor('gold')).toEqual({
+      command: {
+        kind: 'ReplaceAcquisitionConversion',
+        acquisition: supported.owner,
+        value: 'gold',
+      },
     });
   });
 

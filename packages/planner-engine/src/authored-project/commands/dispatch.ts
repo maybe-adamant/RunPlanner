@@ -11,6 +11,7 @@ import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand } from './acquisition-site';
+import { applyAcquisitionConversionCommand } from './acquisition-conversion';
 import { applyBossCompletionCommand } from './boss-completion';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
@@ -114,6 +115,13 @@ function applyUnchecked(
       );
     case 'ReplaceLevelResolution':
       return applyLevelResolutionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceAcquisitionConversion':
+      return applyAcquisitionConversionCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

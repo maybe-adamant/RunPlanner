@@ -269,9 +269,9 @@ describe('Calling Card offer settlement', () => {
 
     expect(result.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(result.composition.legal).toBe(true);
-    expect(callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity).toBe(
-      'Heroic',
-    );
+    expect(
+      callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity,
+    ).toBe('Heroic');
   });
 
   it('keeps a Calling Card-rarified replacement candidate-legal through its base offer', () => {
@@ -308,8 +308,8 @@ describe('Calling Card offer settlement', () => {
 
     expect(result.assessments[0]).toMatchObject({ legal: true });
     expect(result.replacementComposition.legal).toBe(true);
-    expect(callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity).toBe(
-      'Epic',
-    );
+    expect(
+      callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity,
+    ).toBe('Epic');
   });
 });

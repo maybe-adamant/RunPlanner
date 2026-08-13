@@ -6,6 +6,7 @@ import {
   type EvaluatedTraitAcquisitionTargetCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type EvaluatedKeepsakeEquipResultCandidate,
+  type EvaluatedAcquisitionConversionCandidate,
   type CirceResolutionDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -26,6 +27,7 @@ import {
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
+  type AcquisitionRoleAddress,
   type ExitDecisionAddress,
   type EncounterPhaseAddress,
   type HubDecisionAddress,
@@ -103,7 +105,8 @@ export type CandidateProjectionEvaluation =
   | EvaluatedTraitOfferFocusedOptionCandidate
   | EvaluatedTraitAcquisitionTargetCandidate
   | EncounterCandidateProjectionEvaluation
-  | EvaluatedKeepsakeEquipResultCandidate;
+  | EvaluatedKeepsakeEquipResultCandidate
+  | EvaluatedAcquisitionConversionCandidate;
 
 export interface CandidateOptionProjection<
   T,
@@ -251,6 +254,7 @@ export interface CandidateProjectionSession {
     owner: KeepsakeEquipResultAddress,
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
   ) => readonly CandidateOptionProjection<string>[];
+  readonly acquisitionConversion: (owner: AcquisitionRoleAddress) => CandidateProjectionEvaluation;
 }
 
 export interface LevelResolutionCandidateProjection {
@@ -956,6 +960,11 @@ export function createCandidateSessionFactory(
           ),
         );
       },
+      acquisitionConversion: (owner: AcquisitionRoleAddress) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'acquisitionConversion',
+          acquisition: owner,
+        }) as CandidateProjectionEvaluation,
       keepsakeEquipResult: (
         owner: KeepsakeEquipResultAddress,
         value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
@@ -1052,6 +1061,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       return evaluation.result.selectedPossible;
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
+    case 'acquisitionConversion':
+      return evaluation.result.goldSupported;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -1066,6 +1077,7 @@ function candidateForced(
     case 'bossCompletionArcana':
     case 'keepsakeSelection':
     case 'keepsakeEquipResult':
+    case 'acquisitionConversion':
       return false;
     case 'roomTarget':
       return (

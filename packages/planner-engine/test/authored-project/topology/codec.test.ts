@@ -26,6 +26,7 @@ import {
 import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 
+import { createDefaultConversionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 import { createCompleteNProject } from '../support/complete-n-project';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -263,14 +264,20 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
       (candidate.source as { occurrenceId?: string }).occurrenceId === 'zagreus-shop',
   );
   if (shopDecision === undefined) throw new Error('missing Zagreus Midshop decision');
+  const contractOffer = (
+    catalog.rooms.byKey.C_Boss01?.incomingReward as { kind: 'fixed'; offer: unknown }
+  ).offer as Parameters<typeof createDefaultConversionByAcquisitionRole>[1];
   encoded.topology.occurrences.push({
     occurrenceId: 'zagreus-contract',
     gameName: 'C_Boss01',
     state: {
       kind: 'fixed',
       reward: {
-        offer: (catalog.rooms.byKey.C_Boss01?.incomingReward as { kind: 'fixed'; offer: unknown })
-          .offer,
+        offer: contractOffer,
+        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+          catalog,
+          contractOffer,
+        ),
         traitOffersByAcquisitionRole: {},
       },
     },

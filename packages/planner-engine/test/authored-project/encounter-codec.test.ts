@@ -93,10 +93,10 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(26);
+    expect(decoded.schemaVersion).toBe(27);
   });
 
-  it('schema-26 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
+  it('schema-27 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const trait = createTraitOfferAddress(reward, 'source');
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
@@ -127,7 +127,31 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 26 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 27 });
+  });
+
+  it('requires an exact persisted conversion disposition map for every reward role', () => {
+    const document = encoded(createCompleteFGProject());
+    const reward = (occurrence(document, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord)
+      .reward as JsonRecord;
+
+    delete reward.conversionByAcquisitionRole;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(
+      'conversionByAcquisitionRole: is required',
+    );
+
+    const incomplete = encoded(createCompleteFGProject());
+    const incompleteReward = (
+      occurrence(incomplete, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord
+    ).reward as JsonRecord;
+    incompleteReward.conversionByAcquisitionRole = {};
+    expect(() => decodeProjectDocument(incomplete, catalog)).toThrow('must be normal or gold');
+
+    const extra = encoded(createCompleteFGProject());
+    const extraReward = (occurrence(extra, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord)
+      .reward as JsonRecord;
+    (extraReward.conversionByAcquisitionRole as JsonRecord).unknown = 'normal';
+    expect(() => decodeProjectDocument(extra, catalog)).toThrow('is not an acquisition role');
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
@@ -202,14 +226,14 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 26, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 27, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 26, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 27, received 21');
   });
 
   it.each([

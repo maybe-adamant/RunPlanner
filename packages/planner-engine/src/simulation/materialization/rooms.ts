@@ -123,6 +123,7 @@ function resolvedIncomingReward(
     origin: createIncomingRewardAddress(context.biome, context.occurrence.occurrenceId),
     kind: 'resolved',
     producerKind,
+    instanceProvenance: producerKind === 'shop' ? 'paid' : 'free',
     producerLifecycleKey,
     offer,
     ...('reward' in context.occurrence.state
@@ -131,6 +132,7 @@ function resolvedIncomingReward(
             context.occurrence.state.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole:
             context.occurrence.state.reward.levelResolutionsByAcquisitionRole,
+          conversionByAcquisitionRole: context.occurrence.state.reward.conversionByAcquisitionRole,
         }
       : {}),
     traitContext: traitContextForOffer(context, offer),
@@ -334,6 +336,7 @@ function materializeFieldsCombat(
       offer: reward.offer,
       traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
       levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+      conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
       traitContext: traitContextForOffer(context, reward.offer),
       resolvedStoreKey: storeKey,
     });
@@ -421,6 +424,7 @@ export function materializeShipCombatState(
         offer: reward.offer,
         traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
         levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+        conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
         traitContext: Object.freeze({
           ...loadout,
           blockGiftBoons: room.blockGiftBoons,
@@ -499,6 +503,7 @@ function materializeShopEntry(
           offer: authored.reward.offer,
           traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: authored.reward.levelResolutionsByAcquisitionRole,
+          conversionByAcquisitionRole: authored.reward.conversionByAcquisitionRole,
           traitContext: traitContextForOffer(context, authored.reward.offer),
         });
       }),

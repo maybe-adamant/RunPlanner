@@ -51,6 +51,8 @@ export interface ConcreteAcquisitionAddress {
 
 export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddress {
   readonly historyProjection: HistoryProjectionKey;
+  /** Source GoldConversionEligible capability, independent of the reward category. */
+  readonly goldConversionEligible: boolean;
   readonly levelResolutionEffect?: LevelResolutionEffect;
   /** A concrete pickup can contribute base elements without becoming a trait. */
   readonly elementContributions?: Readonly<

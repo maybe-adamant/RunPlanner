@@ -731,6 +731,7 @@ function evaluateBiomeAssembly(
         rewards.bossCompletionArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
+        rewards.acquisitionConversionArtifacts,
       ),
     });
   }
@@ -756,6 +757,7 @@ function evaluateBiomeAssembly(
         rewards.bossCompletionArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
+        rewards.acquisitionConversionArtifacts,
       ),
       findingRegions: selectedFindingRegions,
     }),

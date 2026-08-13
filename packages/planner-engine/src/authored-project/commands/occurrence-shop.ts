@@ -7,6 +7,7 @@ import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
+import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 export function applyShopOccurrenceCommand(
   document: ProjectDocument,
@@ -53,6 +54,7 @@ export function applyShopOccurrenceCommand(
   const replacement = Object.freeze({
     reward: Object.freeze({
       offer: command.value,
+      conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, command.value),
       traitOffersByAcquisitionRole: createDefaultTraitOffers(
         catalog,
         command.value,

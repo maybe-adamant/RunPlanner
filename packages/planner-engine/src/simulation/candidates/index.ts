@@ -80,6 +80,10 @@ export type {
   KeepsakeEquipResultCandidateQuery,
 } from './keepsake-equip-result';
 export type {
+  EvaluatedAcquisitionConversionCandidate,
+  AcquisitionConversionCandidateQuery,
+} from './acquisition-conversion';
+export type {
   EvaluatedTakeoverPrebossBatchCandidate,
   TakeoverPrebossBatchCandidateQuery,
 } from './takeover-preboss';

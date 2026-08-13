@@ -9,6 +9,8 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createLevelResolutionAddress,
+  createAcquisitionRoleAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createOccurrenceAddress,
   createTraitOfferAddress,
   createProjectHistory,
@@ -112,6 +114,41 @@ function pickupSite(project: ProjectDocument) {
 }
 
 describe('Narcissus pickup producer', () => {
+  it('retains absent, normal, and Time Piece converted optional pickup states in the canonical route', () => {
+    let project = selectNarcissus(
+      createGoldenFGHIProject(),
+      ['NarcissusH', 'NarcissusB', 'NarcissusC'],
+      true,
+    );
+    const entry = pickupEntry(project, 'lastStand');
+    const site = pickupSite(project);
+    const absent = evaluatedG(project);
+    expect(narcissusOccurrence(project).acquisitionSites?.roomExit?.order).toEqual([]);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['lastStand'],
+    });
+    const normal = evaluatedG(project);
+    expect(normal.rewards.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(entry, 'self'),
+      value: 'gold',
+    });
+    const converted = evaluatedG(project);
+    expect(converted.rewards.branches[0]?.history.consumableRecord.LastStandDrop).toBeUndefined();
+    expect(converted.rewards.branches[0]?.events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold' }),
+    );
+    expect(absent.authoring).toBe('complete');
+  });
+
   it('keeps the descriptor out of equipped history and settles selected elemental pickups at G room exit', () => {
     let project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusG',

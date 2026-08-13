@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 26 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 27 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -20,6 +20,8 @@ export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
   readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
+  /** Exact player disposition for every declared concrete acquisition role. */
+  readonly conversionByAcquisitionRole: Readonly<Record<string, 'normal' | 'gold'>>;
 }
 
 /** The narrow loadout surface consumed by room/reward materialization. */

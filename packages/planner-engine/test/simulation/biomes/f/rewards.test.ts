@@ -15,6 +15,8 @@ import {
   createAcquisitionEntryAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  createAcquisitionRoleAddress,
+  createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -1261,6 +1263,36 @@ describe('F reward-history simulation', () => {
       throw new Error('Devotion fixture lost its trait-role traces');
     }
     expect(chosen.chronologicalIndex).toBeLessThan(spurned.chronologicalIndex);
+  });
+
+  it('converts both Devotion roles sequentially through the real lifecycle fold', () => {
+    const origin = createIncomingRewardAddress(biome, createOccurrenceId('devotion-room'));
+    let project = applyProjectCommand(devotionProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(origin, 'chosenSource'),
+      value: 'gold',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(origin, 'spurnedSource'),
+      value: 'gold',
+    });
+    const result = evaluate(project).rewards;
+    const branch = firstBranch(result);
+    expect(branch.keepsakes.timePiece?.remainingCharges).toBe(2);
+    expect(branch.events.filter((event) => event.kind === 'conversionToGold')).toHaveLength(2);
+    expect(
+      branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(origin),
+      ),
+    ).toHaveLength(0);
   });
 
   it('settles the selected fixed/free Preboss reward through its declared singleton site', () => {

@@ -4,6 +4,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
+  createAcquisitionRoleAddress,
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   createCirceResolutionAddress,
@@ -96,6 +97,7 @@ import {
   equipJeweledPom,
   jeweledPomEffectForKey,
   refreshKeepsakeFatedStatus,
+  consumeTimePieceCharge,
   type KeepsakeState,
 } from '../keepsakes';
 
@@ -134,6 +136,20 @@ export interface AcquisitionSettlementProduct {
    * the real settlement merely to rediscover an entry frontier.
    */
   readonly pickupEntryFrontiers?: readonly PickupAcquisitionEntryFrontier[];
+  /** Exact pre-role branch products from the canonical settlement fold. */
+  readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
+}
+
+export interface AcquisitionRoleFrontier {
+  readonly address: import('../../authored-project/addresses').AcquisitionRoleAddress;
+  readonly branchesBeforeRole: readonly RewardBranchState[];
+  readonly source: AcquisitionSource;
+  readonly lifecyclePoint: ProducerLifecyclePointKey;
+  readonly historySequence: number;
+  readonly settlement: {
+    readonly site: AcquisitionSiteAddress;
+    readonly entry: AcquisitionEntryAddress;
+  };
 }
 
 export interface PickupAcquisitionEntryFrontier {
@@ -169,9 +185,49 @@ export interface AcquisitionSource {
   readonly origin: TraitOfferOwnerAddress;
   readonly offer: CanonicalResolvedIncomingReward['offer'];
   readonly producerLifecycleKey: string;
+  readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
+  /** Instance fact supplied by the producer, never inferred from an owner label. */
+  readonly instanceProvenance: 'free' | 'paid';
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+}
+
+/**
+ * Shared Time Piece legality.  Settlement, progressive candidates, and the
+ * persisted-value finding all ask this exact question at the frozen role
+ * frontier; no consumer replays reward settlement to rediscover it.
+ */
+export function assessTimePieceConversion(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  source: AcquisitionSource,
+  role: string,
+  lifecyclePoint: ProducerLifecyclePointKey,
+): { readonly supported: boolean; readonly evidence: FindingEvidence } {
+  const acquisition = resolveAcquisitionRole(catalog.rewards, source.offer, role, lifecyclePoint);
+  const goldConversionEligible =
+    catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.goldConversionEligible ===
+    true;
+  const remainingCharges = branch.keepsakes.timePiece?.remainingCharges ?? 0;
+  const evidence = Object.freeze({
+    ...offerEvidence(source.offer),
+    role,
+    lifecyclePoint,
+    goldConversionEligible,
+    instanceProvenance: source.instanceProvenance,
+    fatedStatus: branch.keepsakes.fatedStatus,
+    remainingCharges,
+  });
+  return Object.freeze({
+    supported:
+      goldConversionEligible &&
+      source.instanceProvenance === 'free' &&
+      branch.keepsakes.fatedStatus === 'Fated' &&
+      remainingCharges > 0,
+    evidence,
+  });
 }
 
 export type RewardFactsFactory = (
@@ -1742,6 +1798,8 @@ export function settleShopAcquisitionSite(
   }
   const next: RewardBranchState[] = [];
   const failures: ShopPurchaseFailure[] = [];
+  const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
+  const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const rolesByOfferKey = new Map<
     string,
     readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[]
@@ -1814,23 +1872,57 @@ export function settleShopAcquisitionSite(
             lifecyclePoint: acquisition.event.lifecyclePoint,
           }),
         ]);
+        const source: AcquisitionSource = Object.freeze({
+          origin: offer.offerOrigin,
+          offer: offer.offer,
+          producerLifecycleKey: profile.key,
+          producerKind: 'shop',
+          instanceProvenance: 'paid',
+          ...(offer.traitOffersByAcquisitionRole === undefined
+            ? {}
+            : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
+          ...(offer.levelResolutionsByAcquisitionRole === undefined
+            ? {}
+            : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
+          ...(offer.conversionByAcquisitionRole === undefined
+            ? {}
+            : { conversionByAcquisitionRole: offer.conversionByAcquisitionRole }),
+          ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+        });
+        const settlement = Object.freeze({
+          site,
+          entry: createAcquisitionEntryAddress(site, offer.offerKey),
+        });
+        const address = createAcquisitionRoleAddress(offer.offerOrigin, acquisition.event.role);
+        roleFrontiers.push(
+          Object.freeze({
+            address,
+            branchesBeforeRole: Object.freeze([candidate]),
+            source,
+            lifecyclePoint: acquisition.event.lifecyclePoint,
+            historySequence,
+            settlement,
+          }),
+        );
+        if (offer.conversionByAcquisitionRole?.[acquisition.event.role] === 'gold') {
+          const conversion = assessTimePieceConversion(
+            catalog,
+            candidate,
+            source,
+            acquisition.event.role,
+            acquisition.event.lifecyclePoint,
+          );
+          addRewardFinding(
+            findings,
+            rewardFinding('timePieceConversionUnavailable', address, conversion.evidence),
+            ownerRegion(room.origin),
+            context.findingChronology ?? historyChronology(historySequence),
+          );
+        }
         candidate = applyTraitOfferForAcquisition(
           catalog,
           candidate,
-          Object.freeze({
-            origin: offer.offerOrigin,
-            kind: 'resolved',
-            producerKind: 'shop',
-            producerLifecycleKey: profile.key,
-            offer: offer.offer,
-            ...(offer.traitOffersByAcquisitionRole === undefined
-              ? {}
-              : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
-            ...(offer.levelResolutionsByAcquisitionRole === undefined
-              ? {}
-              : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
-            ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
-          }),
+          source,
           acquisition.event.role,
           acquisition.event.lifecyclePoint,
           historySequence,
@@ -1855,7 +1947,6 @@ export function settleShopAcquisitionSite(
       next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
     }
   }
-  const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
   if (next.length === 0) {
     const failedIndexes = order.filter(
       (index) =>
@@ -1903,6 +1994,7 @@ export function settleShopAcquisitionSite(
       }),
     ),
     branches: mergeEquivalentRewardBranches(next),
+    roleFrontiers: Object.freeze(roleFrontiers),
   });
 }
 
@@ -1930,6 +2022,7 @@ export function settleProducerAcquisitionSite(
     return fail('Hub room cannot own an ordinary producer acquisition site');
   }
   const site = createAcquisitionSiteAddress(siteOwner ?? event.origin, event.lifecyclePoint);
+  const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const entry = Object.freeze({
     address: createAcquisitionEntryAddress(site, event.role),
     source: incoming.origin,
@@ -1996,11 +2089,13 @@ export function settleProducerAcquisitionSite(
               atomicRegion,
               findingChronology,
               Object.freeze({ site, entry: entry.address }),
+              roleFrontiers,
             );
       return Object.freeze({
         site,
         entries: Object.freeze([entry]),
         branches: mergeEquivalentRewardBranches(Object.freeze([...vetoed, ...settled])),
+        ...(roleFrontiers.length === 0 ? {} : { roleFrontiers: Object.freeze(roleFrontiers) }),
       });
     }
   }
@@ -2014,11 +2109,13 @@ export function settleProducerAcquisitionSite(
     atomicRegion,
     findingChronology,
     Object.freeze({ site, entry: entry.address }),
+    roleFrontiers,
   );
   return Object.freeze({
     site,
     entries: Object.freeze([entry]),
     branches: settled,
+    roleFrontiers: Object.freeze(roleFrontiers),
   });
 }
 
@@ -2057,6 +2154,7 @@ export function settleOwnedAcquisitionSite(
     ),
     participation: 'mandatory' as const,
   });
+  const roleFrontiers: AcquisitionRoleFrontier[] = [];
   return Object.freeze({
     site,
     entries: Object.freeze([entry]),
@@ -2072,9 +2170,11 @@ export function settleOwnedAcquisitionSite(
           atomicRegion,
           findingChronology,
           Object.freeze({ site, entry: entry.address }),
+          roleFrontiers,
         ),
       branches,
     ),
+    roleFrontiers: Object.freeze(roleFrontiers),
   });
 }
 
@@ -2130,6 +2230,7 @@ export function settlePickupAcquisitionSite(
     throw new Error('pickup acquisition order contains a duplicate entry');
   let current = branches;
   const pickupEntryFrontiers: PickupAcquisitionEntryFrontier[] = [];
+  const roleFrontiers: AcquisitionRoleFrontier[] = [];
   for (const key of request.order) {
     const definition = definitions.get(key);
     if (definition === undefined)
@@ -2150,11 +2251,13 @@ export function settlePickupAcquisitionSite(
           origin: entry,
           offer: reward.offer,
           producerLifecycleKey: request.producerLifecycleKey,
+          instanceProvenance: 'free',
           traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
           ...(reward.levelResolutionsByAcquisitionRole === undefined
             ? {}
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
           traitContext: Object.freeze({}),
+          conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
         }),
         Object.freeze({ ...binding, historySequence: request.historySequence }),
         request.facts,
@@ -2162,6 +2265,7 @@ export function settlePickupAcquisitionSite(
         undefined,
         request.findingChronology,
         Object.freeze({ site, entry }),
+        roleFrontiers,
       );
     }
   }
@@ -2170,6 +2274,7 @@ export function settlePickupAcquisitionSite(
     entries: Object.freeze(entries),
     branches: current,
     pickupEntryFrontiers: Object.freeze(pickupEntryFrontiers),
+    roleFrontiers: Object.freeze(roleFrontiers),
   });
 }
 
@@ -2183,7 +2288,18 @@ function applyProducerRoleHistory(
   atomicRegion: string | undefined,
   findingChronology: FindingChronology | undefined,
   settlement: { readonly site: AcquisitionSiteAddress; readonly entry: AcquisitionEntryAddress },
+  roleFrontiers?: AcquisitionRoleFrontier[],
 ): readonly RewardBranchState[] {
+  roleFrontiers?.push(
+    Object.freeze({
+      address: createAcquisitionRoleAddress(incoming.origin, resolution.role),
+      branchesBeforeRole: branches,
+      source: incoming,
+      lifecyclePoint: resolution.lifecyclePoint,
+      historySequence: resolution.historySequence,
+      settlement,
+    }),
+  );
   const next: RewardBranchState[] = [];
   for (const branch of branches) {
     const branchFacts = facts(branch.history);
@@ -2200,6 +2316,47 @@ function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
+    // Time Piece is assessed at the exact concrete role, after offer/bag
+    // evidence exists but before any acquisition, trait, Pom, level, or
+    // element effects can be folded. Shop purchases take their separate paid
+    // settlement path and consequently never enter this free producer path.
+    const convertsToGold = incoming.conversionByAcquisitionRole?.[resolution.role] === 'gold';
+    const conversion = assessTimePieceConversion(
+      catalog,
+      branch,
+      incoming,
+      resolution.role,
+      resolution.lifecyclePoint,
+    );
+    if (convertsToGold && conversion.supported) {
+      next.push(
+        appendRewardEvent(
+          Object.freeze({ ...branch, keepsakes: consumeTimePieceCharge(branch.keepsakes) }),
+          resolution.historySequence,
+          {
+            kind: 'conversionToGold',
+            origin: incoming.origin,
+            acquisition,
+            settlement,
+          },
+        ),
+      );
+      continue;
+    }
+    if (convertsToGold) {
+      addRewardFinding(
+        findings,
+        rewardFinding(
+          'timePieceConversionUnavailable',
+          createAcquisitionRoleAddress(incoming.origin, resolution.role),
+          {
+            ...conversion.evidence,
+          },
+        ),
+        atomicRegion,
+        findingChronology ?? historyChronology(resolution.historySequence),
+      );
+    }
     let history = applyConcreteAcquisition(
       catalog.rewards,
       branch.history,

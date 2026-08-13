@@ -6,6 +6,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createAcquisitionRoleAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -24,6 +25,29 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  it('persists one exact Time Piece acquisition-role disposition without rewriting its reward', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(reward, 'source'),
+      value: 'gold',
+    });
+    const state = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+    )?.state;
+    if (state?.kind !== 'counted') throw new Error('expected counted reward');
+    expect(state.reward.offer).toEqual({
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    });
+    expect(state.reward.conversionByAcquisitionRole).toEqual({ source: 'gold' });
+  });
+
   it('preserves base rarities and the exact ordered Calling Card ledger in one offer command', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const trait = createTraitOfferAddress(reward, 'source');

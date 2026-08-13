@@ -30,11 +30,14 @@ export interface CanonicalResolvedIncomingReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;
   readonly kind: 'resolved';
   readonly producerKind: 'countedChoice' | 'fixed' | 'freeReward' | 'shop';
+  /** Concrete source provenance is required by acquisition effects such as Time Piece. */
+  readonly instanceProvenance: 'free' | 'paid';
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey?: string;
   /**
@@ -52,6 +55,7 @@ export interface CanonicalShopOffer {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
   readonly traitContext?: TraitOfferContext;
 }
 
@@ -74,6 +78,7 @@ export interface CanonicalLocalReward {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey: string;
 }
@@ -85,6 +90,7 @@ export interface CanonicalRewardWheelOffer {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
   readonly traitContext?: TraitOfferContext;
   readonly picked: boolean;
 }
