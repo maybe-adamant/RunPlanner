@@ -10,6 +10,7 @@ export const cRooms = [
     gameName: 'C_Boss01',
     label: 'Zagreus',
     roomSetKey: 'C',
+    advancesExperimentalHammerUses: true,
     kind: 'Boss',
     mode: { kind: 'authored', templateKey: 'ContractBoss' },
     blockGiftBoons: true,

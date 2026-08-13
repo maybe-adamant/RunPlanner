@@ -193,6 +193,7 @@ export interface KeepsakeEquipResultCandidateCapability {
     readonly before: TraitHistoryState;
     readonly arcanaFear?: ArcanaFearState;
     readonly fatedStatus: import('./keepsakes').FatedStatus;
+    readonly loadout?: { readonly weaponKey: string; readonly aspectKey: string };
   }[];
 }
 export interface KeepsakeEquipResultCandidateArtifacts {

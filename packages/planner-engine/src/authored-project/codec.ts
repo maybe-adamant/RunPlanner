@@ -18,15 +18,32 @@ import {
 
 function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catalog) {
   const results = expectRecord(value, path);
-  expectExactKeys(results, ['jeweledPom'], path);
-  if (results.jeweledPom === undefined) return Object.freeze({});
+  expectExactKeys(results, ['jeweledPom', 'experimentalHammer'], path);
+  if (results.jeweledPom === undefined && results.experimentalHammer === undefined)
+    return Object.freeze({});
+  const hammer =
+    results.experimentalHammer === undefined
+      ? undefined
+      : expectRecord(results.experimentalHammer, `${path}.experimentalHammer`);
+  if (hammer !== undefined) {
+    expectExactKeys(hammer, ['traitKey'], `${path}.experimentalHammer`);
+    const traitKey = expectString(hammer.traitKey, `${path}.experimentalHammer.traitKey`);
+    if (catalog.traits.byKey[traitKey]?.hammerCompatibility === undefined)
+      fail(`${path}.experimentalHammer.traitKey`, 'must be a declared Hammer trait');
+  }
+  if (results.jeweledPom === undefined)
+    return Object.freeze({
+      experimentalHammer: Object.freeze({
+        traitKey: (hammer as Record<string, unknown>).traitKey as string,
+      }),
+    });
   const pom = expectRecord(results.jeweledPom, `${path}.jeweledPom`);
   expectExactKeys(pom, ['traitKey', 'rarity', 'deathDefianceConditionMet'], `${path}.jeweledPom`);
   const traitKey = expectString(pom.traitKey, `${path}.jeweledPom.traitKey`);
   const descriptor = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'jeweledPom',
   )?.effect;
-  if (descriptor === undefined)
+  if (descriptor === undefined || descriptor.kind !== 'jeweledPom')
     fail(`${path}.jeweledPom`, 'has no declared Jeweled Pom descriptor');
   if (!catalog.traitGivers.byKey[descriptor.giverKey]?.traitKeys.includes(traitKey))
     fail(
@@ -57,6 +74,9 @@ function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catal
         ? {}
         : { deathDefianceConditionMet: pom.deathDefianceConditionMet }),
     }),
+    ...(hammer === undefined
+      ? {}
+      : { experimentalHammer: Object.freeze({ traitKey: hammer.traitKey as string }) }),
   });
 }
 

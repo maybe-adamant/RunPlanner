@@ -178,8 +178,8 @@ export interface WorkspaceInteractionBindingInput {
   readonly keepsakeEquipResultControls?: ReadonlyMap<
     string,
     {
-      readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
-      readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
+      readonly address: KeepsakeEquipResultAddress;
+      readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults];
     }
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
@@ -1875,6 +1875,46 @@ export function bindWorkspaceInteractions(
     )?.effect;
     if (effect === undefined)
       throw new Error(`Missing ${control.address.resultKind} keepsake descriptor`);
+    if (effect.kind === 'experimentalHammer') {
+      keepsakeEquipResults.set(
+        key,
+        Object.freeze({
+          choices: Object.freeze(
+            catalog.traits.values
+              .filter((trait) => trait.hammerCompatibility !== undefined)
+              .map((trait) => Object.freeze({ label: trait.label, value: trait.key })),
+          ),
+          key,
+          owner: control.address as KeepsakeEquipResultAddress & {
+            readonly resultKind: 'experimentalHammer';
+          },
+          ...(control.value === undefined
+            ? {}
+            : {
+                value:
+                  control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
+              }),
+          load: (
+            value = control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
+          ) => candidates.keepsakeEquipResult(control.address, value),
+          intentFor: (
+            value: NonNullable<
+              import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
+            >,
+          ) =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceExperimentalHammerEquipResult' as const,
+                result: control.address as KeepsakeEquipResultAddress & {
+                  readonly resultKind: 'experimentalHammer';
+                },
+                value,
+              }),
+            }),
+        }),
+      );
+      continue;
+    }
     keepsakeEquipResults.set(
       key,
       Object.freeze({
@@ -1887,8 +1927,15 @@ export function bindWorkspaceInteractions(
           ),
         ),
         key,
-        owner: control.address,
-        ...(control.value === undefined ? {} : { value: control.value }),
+        owner: control.address as KeepsakeEquipResultAddress & {
+          readonly resultKind: 'jeweledPom';
+        },
+        ...(control.value === undefined
+          ? {}
+          : {
+              value:
+                control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+            }),
         supportsDeathDefianceCondition: (
           catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? []
         ).some(
@@ -1899,7 +1946,9 @@ export function bindWorkspaceInteractions(
                 requirement.context === 'deathDefianceConditionMet',
             ) === true,
         ),
-        load: (value = control.value) => candidates.keepsakeEquipResult(control.address, value),
+        load: (
+          value = control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
+        ) => candidates.keepsakeEquipResult(control.address, value),
         intentFor: (
           value: NonNullable<
             import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
@@ -1908,7 +1957,9 @@ export function bindWorkspaceInteractions(
           Object.freeze({
             command: Object.freeze({
               kind: 'ReplaceJeweledPomEquipResult' as const,
-              result: control.address,
+              result: control.address as KeepsakeEquipResultAddress & {
+                readonly resultKind: 'jeweledPom';
+              },
               value,
             }),
           }),

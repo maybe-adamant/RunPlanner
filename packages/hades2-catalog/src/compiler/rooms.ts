@@ -506,6 +506,9 @@ export function normalizeRooms(
     if (room.blockGiftBoons !== undefined && typeof room.blockGiftBoons !== 'boolean') {
       fail(`${path}.blockGiftBoons`, 'must be a boolean when declared');
     }
+    if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
+      fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
+    }
     const mode = validateMode(room, path);
     const encounterEnvelopeKey = requireNonEmpty(
       room.encounterEnvelopeKey,
@@ -734,6 +737,7 @@ export function normalizeRooms(
       blockGiftBoons: room.blockGiftBoons ?? false,
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
+      advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
       encounterSlotBindings,
       ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),
       ...(individualRewardStoreKey === undefined ? {} : { individualRewardStoreKey }),

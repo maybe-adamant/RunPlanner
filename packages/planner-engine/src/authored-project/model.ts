@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 24 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 25 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -45,6 +45,7 @@ export interface AuthoredKeepsakeEquipResults {
     readonly rarity?: import('../catalog-schema').TraitRarity;
     readonly deathDefianceConditionMet?: boolean;
   };
+  readonly experimentalHammer?: { readonly traitKey: string };
 }
 
 export type PostbossKeepsakeDisposition =

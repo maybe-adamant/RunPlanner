@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'cf689ac014d9a042'],
-  ['G', '8b5917bb16b9890e'],
-  ['H', '88d4249b41a1d25c'],
-  ['I', '3d4eb212fe89cca1'],
-  ['N', '8f9eb49a1d7aa929'],
-  ['O', '0110c42145ae48bc'],
-  ['P', '9d2e102e62e259f5'],
-  ['Q', 'b38143a2c27dac6e'],
+  ['F', '6b3dad3ec015b852'],
+  ['G', 'dc08e3a60ec89bd0'],
+  ['H', '2c697eaee9f89b3e'],
+  ['I', '694b9a6a9b3494d7'],
+  ['N', '85d739cedd195589'],
+  ['O', '92a9d87a36d56247'],
+  ['P', '8547fe3b5a3fedbf'],
+  ['Q', 'cef8eda8dd2efe45'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -254,6 +254,28 @@ describe('catalog regression coverage retained through unified decisions', () =>
       expect(rooms.filter((room) => room.mode.kind === 'authored')).toHaveLength(authored);
     },
   );
+
+  it('declares Experimental Hammer use advancement independently of encounter depth', () => {
+    expect(
+      catalog.rooms.values
+        .filter((room) => !room.advancesExperimentalHammerUses)
+        .map((room) => room.gameName),
+    ).toEqual([
+      'N_Sub01',
+      'N_Sub02',
+      'N_Sub03',
+      'N_Sub04',
+      'N_Sub05',
+      'N_Sub06',
+      'N_Sub07',
+      'N_Sub08',
+      'N_Sub09',
+    ]);
+    const sideBinding = catalog.rooms.byKey.N_Sub01?.encounterSlotBindings[0];
+    expect(sideBinding?.kind).toBe('set');
+    if (sideBinding?.kind === 'set') expect(sideBinding.encounterSetKey).toBe('NEncountersSubRoom');
+    expect(catalog.rooms.byKey.F_Opening01?.advancesExperimentalHammerUses).toBe(true);
+  });
 
   it.each(prebossPolicies)(
     '%s keeps its shared Preboss batch contract',

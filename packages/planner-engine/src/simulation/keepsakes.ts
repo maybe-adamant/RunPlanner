@@ -21,6 +21,13 @@ export interface KeepsakeState {
     readonly levels: number;
     readonly acquisitionIdentity: string;
   };
+  /** Exact temporary direct Hammer acquisition, retained after a rack swap. */
+  readonly experimentalHammer?: {
+    readonly traitKey: string;
+    readonly remainingUses: number;
+    readonly acquisitionIdentity: string;
+    readonly active: boolean;
+  };
 }
 
 export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Catalog, key: string) {
@@ -28,11 +35,23 @@ export function jeweledPomEffectForKey(catalog: import('../catalog-schema').Cata
   return effect?.kind === 'jeweledPom' ? effect : undefined;
 }
 
-export function keepsakeEffectByKind(
+export function keepsakeEffectByKind<
+  K extends NonNullable<import('../catalog-schema').KeepsakeDeclaration['effect']>['kind'],
+>(
   catalog: import('../catalog-schema').Catalog,
-  kind: 'jeweledPom',
-) {
-  return catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === kind)?.effect;
+  kind: K,
+):
+  | Extract<
+      NonNullable<import('../catalog-schema').KeepsakeDeclaration['effect']>,
+      { readonly kind: K }
+    >
+  | undefined {
+  return catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === kind)?.effect as
+    | Extract<
+        NonNullable<import('../catalog-schema').KeepsakeDeclaration['effect']>,
+        { readonly kind: K }
+      >
+    | undefined;
 }
 
 export function equipJeweledPom(
@@ -88,11 +107,61 @@ export function assessJeweledPomEquipResult(
   });
 }
 
+/** One direct rarityless Hammer acquisition, assessed against the captured pre-equip state. */
+export function assessExperimentalHammerEquipResult(
+  catalog: Catalog,
+  result: NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>,
+  before: TraitHistoryState,
+  loadout: { readonly weaponKey: string; readonly aspectKey: string },
+): { readonly legal: boolean; readonly findings: readonly string[] } {
+  const assessment = assessTraitOption(catalog, result.traitKey, before, loadout);
+  const trait = catalog.traits.byKey[result.traitKey];
+  return Object.freeze({
+    legal: trait?.hammerCompatibility !== undefined && assessment.legal,
+    findings: Object.freeze([
+      ...(trait?.hammerCompatibility === undefined ? ['keepsakeEquipResultUnavailable'] : []),
+      ...assessment.findings.map((finding) => finding.code),
+    ]),
+  });
+}
+
 export function invalidateJeweledPom(state: KeepsakeState): KeepsakeState {
   if (state.jeweledPom === undefined || !state.jeweledPom.active) return state;
   return Object.freeze({
     ...state,
     jeweledPom: Object.freeze({ ...state.jeweledPom, active: false }),
+  });
+}
+
+export function equipExperimentalHammer(
+  state: KeepsakeState,
+  traitKey: string,
+  remainingUses: number,
+  acquisitionIdentity: string,
+): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    experimentalHammer: Object.freeze({
+      traitKey,
+      remainingUses,
+      acquisitionIdentity,
+      active: true,
+    }),
+  });
+}
+
+/** A qualifying completion consumes exactly one use; expiry is a separate fold event. */
+export function advanceExperimentalHammer(state: KeepsakeState): {
+  readonly state: KeepsakeState;
+  readonly expired?: KeepsakeState['experimentalHammer'];
+} {
+  const hammer = state.experimentalHammer;
+  if (hammer === undefined || !hammer.active) return Object.freeze({ state, expired: undefined });
+  const remainingUses = Math.max(0, hammer.remainingUses - 1);
+  const nextHammer = Object.freeze({ ...hammer, remainingUses, active: remainingUses > 0 });
+  return Object.freeze({
+    state: Object.freeze({ ...state, experimentalHammer: nextHammer }),
+    ...(remainingUses === 0 ? { expired: nextHammer } : {}),
   });
 }
 export type KeepsakeSelectionUnavailableReason =

@@ -3,13 +3,17 @@ import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../../author
 import type { Catalog } from '../../catalog-schema';
 import type { KeepsakeEquipResultCandidateArtifacts } from '../candidate-artifacts';
 import type { ProjectEvaluation } from '../project';
-import { assessJeweledPomEquipResult, keepsakeEffectByKind } from '../keepsakes';
+import {
+  assessExperimentalHammerEquipResult,
+  assessJeweledPomEquipResult,
+  keepsakeEffectByKind,
+} from '../keepsakes';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface KeepsakeEquipResultCandidateQuery {
   readonly kind: 'keepsakeEquipResult';
-  readonly result: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
-  readonly value?: AuthoredKeepsakeEquipResults['jeweledPom'];
+  readonly result: KeepsakeEquipResultAddress;
+  readonly value?: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults];
 }
 
 export interface EvaluatedKeepsakeEquipResultCandidate {
@@ -27,12 +31,13 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
 function authoredValue(
   project: ProjectDocument,
   address: KeepsakeEquipResultAddress,
-): AuthoredKeepsakeEquipResults['jeweledPom'] | undefined {
+): AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined {
   const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
   if (address.selection.owner === 'routeStart')
-    return route?.loadout.keepsakeEquipResults?.jeweledPom;
-  return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)?.keepsakeEquipResults
-    ?.jeweledPom;
+    return route?.loadout.keepsakeEquipResults?.[address.resultKind];
+  return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)?.keepsakeEquipResults?.[
+    address.resultKind
+  ];
 }
 
 /**
@@ -59,15 +64,28 @@ export function evaluateKeepsakeEquipResultCandidate(
   const value = query.value ?? authoredValue(project, query.result);
   const effect = keepsakeEffectByKind(catalog, query.result.resultKind);
   if (effect === undefined) throw new Error(`missing ${query.result.resultKind} descriptor`);
+  const traitKeys =
+    effect.kind === 'jeweledPom'
+      ? (catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? [])
+      : catalog.traits.values
+          .filter((trait) => trait.hammerCompatibility !== undefined)
+          .map((trait) => trait.key);
   const options = Object.freeze(
-    (catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? []).map((traitKey) => {
+    traitKeys.map((traitKey) => {
       const assessments = capability.frontiers.map((frontier) =>
-        assessJeweledPomEquipResult(
-          catalog,
-          { ...(value ?? {}), traitKey },
-          frontier.before,
-          frontier.fatedStatus,
-        ),
+        effect.kind === 'jeweledPom'
+          ? assessJeweledPomEquipResult(
+              catalog,
+              { ...(value ?? {}), traitKey },
+              frontier.before,
+              frontier.fatedStatus,
+            )
+          : assessExperimentalHammerEquipResult(
+              catalog,
+              { ...(value ?? {}), traitKey },
+              frontier.before,
+              frontier.loadout ?? { weaponKey: '', aspectKey: '' },
+            ),
       );
       return Object.freeze({
         traitKey,

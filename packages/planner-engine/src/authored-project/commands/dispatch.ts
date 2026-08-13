@@ -32,6 +32,7 @@ function applyUnchecked(
     case 'ReplacePostbossKeepsake':
       return applyKeepsakeCommand(document, catalog, command);
     case 'ReplaceJeweledPomEquipResult':
+    case 'ReplaceExperimentalHammerEquipResult':
       return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':
     case 'CreateBatch':

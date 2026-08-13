@@ -400,7 +400,7 @@ function CompletionWorkbench({
       : interactions.keepsakeSelections.get(
           workspaceInteractionKey(node.keepsakeSelection.address),
         );
-  const pom =
+  const equipResult =
     node.keepsakeSelection === undefined
       ? undefined
       : [...interactions.keepsakeEquipResults.values()].find(
@@ -449,15 +449,82 @@ function CompletionWorkbench({
       {keepsake === undefined || node.keepsakeSelection === undefined ? null : (
         <PostbossKeepsakeControl interaction={keepsake} value={node.keepsakeSelection.value} />
       )}
-      {pom === undefined ? null : <JeweledPomResultControl interaction={pom} />}
+      {equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
+        <JeweledPomResultControl
+          interaction={
+            equipResult as Extract<
+              WorkspaceKeepsakeEquipResultInteraction,
+              { readonly owner: { readonly resultKind: 'jeweledPom' } }
+            >
+          }
+        />
+      ) : (
+        <ExperimentalHammerResultControl
+          interaction={
+            equipResult as Extract<
+              WorkspaceKeepsakeEquipResultInteraction,
+              { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+            >
+          }
+        />
+      )}
     </article>
+  );
+}
+
+function ExperimentalHammerResultControl({
+  interaction,
+}: {
+  readonly interaction: Extract<
+    WorkspaceKeepsakeEquipResultInteraction,
+    { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+  >;
+}) {
+  const dispatch = useAppDispatch();
+  const candidates = useWorkspaceInteraction(interaction);
+  const candidateFor = (traitKey: string) =>
+    interaction.load({ traitKey }).find((candidate) => candidate.value === traitKey);
+  return (
+    <fieldset className="field-control">
+      <legend>Experimental Hammer result</legend>
+      <select
+        aria-label="Experimental Hammer result"
+        value={interaction.value?.traitKey ?? ''}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        onChange={(event) => {
+          const traitKey = event.target.value;
+          const option = candidateFor(traitKey);
+          if (traitKey !== '' && candidateMayBeAuthored(option))
+            dispatch(authoredProjectCommandDispatched(interaction.intentFor({ traitKey }).command));
+        }}
+      >
+        <option value="">Choose compatible Hammer</option>
+        {interaction.choices.map((choice) => {
+          const option = candidateFor(choice.value);
+          return (
+            <option
+              key={choice.value}
+              value={choice.value}
+              disabled={option !== undefined && !candidateMayBeAuthored(option)}
+              {...candidateSelectState(option)}
+            >
+              {choice.label}
+            </option>
+          );
+        })}
+      </select>
+    </fieldset>
   );
 }
 
 function JeweledPomResultControl({
   interaction,
 }: {
-  readonly interaction: WorkspaceKeepsakeEquipResultInteraction;
+  readonly interaction: Extract<
+    WorkspaceKeepsakeEquipResultInteraction,
+    { readonly owner: { readonly resultKind: 'jeweledPom' } }
+  >;
 }) {
   const dispatch = useAppDispatch();
   const candidates = useWorkspaceInteraction(interaction);

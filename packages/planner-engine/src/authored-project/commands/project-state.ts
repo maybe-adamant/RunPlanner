@@ -135,6 +135,7 @@ export function applyProjectStateCommand(
         catalog,
         command.keepsakeKey,
         route.loadout.keepsakeEquipResults,
+        route.loadout,
       );
       return {
         ...document,

@@ -127,7 +127,12 @@ function RouteOverview({
     throw new Error(`Missing starting keepsake interaction for ${workspaceRoute.routeKey}`);
   const keepsakeCandidates = useWorkspaceInteraction(keepsake);
   const pomAddress = createKeepsakeEquipResultAddress(startingKeepsake, 'jeweledPom');
-  const pom = interactions.keepsakeEquipResults.get(workspaceInteractionKey(pomAddress));
+  const pom = interactions.keepsakeEquipResults.get(workspaceInteractionKey(pomAddress)) as
+    | Extract<
+        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
+        { readonly owner: { readonly resultKind: 'jeweledPom' } }
+      >
+    | undefined;
   const pomCandidateController =
     useWorkspaceInteractionController<
       readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<string>[]
@@ -146,6 +151,26 @@ function RouteOverview({
         ...(pomDeathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
       })
       .find((candidate) => candidate.value === traitKey);
+  const experimentalHammerAddress = createKeepsakeEquipResultAddress(
+    startingKeepsake,
+    'experimentalHammer',
+  );
+  const experimentalHammer = interactions.keepsakeEquipResults.get(
+    workspaceInteractionKey(experimentalHammerAddress),
+  ) as
+    | Extract<
+        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
+        { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+      >
+    | undefined;
+  const experimentalHammerCandidateController =
+    useWorkspaceInteractionController<
+      readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<string>[]
+    >();
+  const experimentalHammerCandidates =
+    experimentalHammerCandidateController.observe(experimentalHammer);
+  const experimentalHammerCandidateFor = (traitKey: string) =>
+    experimentalHammer?.load({ traitKey }).find((candidate) => candidate.value === traitKey);
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -289,6 +314,51 @@ function RouteOverview({
                 Death Defiance condition met
               </label>
             ) : null}
+          </fieldset>
+        )}
+        {experimentalHammer === undefined ? null : (
+          <fieldset className="field-control">
+            <legend>Experimental Hammer result</legend>
+            <select
+              aria-busy={experimentalHammerCandidates.pending || undefined}
+              aria-label="Experimental Hammer result"
+              id={`${workspaceRoute.routeKey}-experimental-hammer`}
+              onChange={(event) => {
+                const traitKey = event.target.value;
+                if (traitKey === '') return;
+                const option = experimentalHammerCandidateFor(traitKey);
+                if (candidateMayBeAuthored(option))
+                  dispatch(
+                    authoredProjectCommandDispatched(
+                      experimentalHammer.intentFor({ traitKey }).command,
+                    ),
+                  );
+              }}
+              onFocus={() =>
+                experimentalHammer !== undefined &&
+                experimentalHammerCandidateController.activate(experimentalHammer)
+              }
+              onPointerDown={() =>
+                experimentalHammer !== undefined &&
+                experimentalHammerCandidateController.activate(experimentalHammer)
+              }
+              value={experimentalHammer.value?.traitKey ?? ''}
+            >
+              <option value="">Choose compatible Hammer</option>
+              {experimentalHammer.choices.map((choice) => {
+                const option = experimentalHammerCandidateFor(choice.value);
+                return (
+                  <option
+                    key={choice.value}
+                    value={choice.value}
+                    disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                    {...candidateSelectState(option)}
+                  >
+                    {choice.label}
+                  </option>
+                );
+              })}
+            </select>
           </fieldset>
         )}
         <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
