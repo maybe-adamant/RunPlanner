@@ -2,9 +2,21 @@
 
 ## Status
 
-**Lock candidate.** This temporary delivery plan is grounded in the live code
-at `7ebdb88` and the source facts in
+**Active implementation.** This temporary delivery plan was locked against the
+live code at `7ebdb88` and the source facts in
 `docs/audits/KEEPSAKE_GAME_DATA_AUDIT.md`.
+
+Completed delivery gates:
+
+- Gate A — keepsake selection timeline: `539d781`;
+- Gate B — Jeweled Pom: `0cfd242`;
+- Gate C — Experimental Hammer: `9209936`;
+- Gate D — Calling Card: `df47929`; and
+- Gate E — Time Piece: `b30f90f`.
+
+The current clean implementation base is `b30f90f`. Gate F — Fig Leaf is the
+next delivery boundary. Gates G — Gorgon Amulet and H — product closure and
+absorption remain pending.
 
 Do not link this plan from `README.md`, stable design documents, biome rules,
 or other progress plans while it is active. At final closure, absorb durable
