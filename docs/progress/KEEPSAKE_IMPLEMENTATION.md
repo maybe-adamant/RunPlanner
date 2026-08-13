@@ -454,7 +454,14 @@ The implementation must preserve the audited shapes:
 - one P pre-combat skip suppresses enemy spawns across the room's ordered
   envelope without requiring one authored flag per phase;
 - H passive combat is not eligible;
-- Devotion, minibosses, bosses, and field-NPC combat remain excluded; and
+- Devotion, bosses, and field-NPC combat remain excluded; minibosses use the
+  declaration-owned matrix rather than a generic kind rule: Treant, Fog
+  Emitter, Assassin, Water Unit, Jellyfish, Vampire, Lamia, Rat Catcher, Gold
+  Elemental, Satyr Crossbow, and Boar inherit positive unblocked support;
+  Captain, Dragon, Brute, Stalker, and Typhon Tail inherit positive support but
+  explicitly block the whole room; Crawler, Charybdis, and Typhon Eye are
+  blocker-only; and Talos has no `CanEncounterSkip` declaration and no
+  Dionysus-keepsake blocker; and
 - N main-room opportunities share the biome-local success guard, while
   `GeneratedNSubRoom` and its inherited larger variant explicitly block Fig
   Leaf and expose no legal skip.
@@ -668,7 +675,8 @@ feat(engine): model Time Piece conversions
 
 1. Normalize the exact skip, blocker, and envelope-cascade matrix, including
    Q's inherited positive support, N side rooms' explicit blocker, H passive
-   combat's exclusion, and the existing NPC/miniboss/boss exclusions.
+   combat's exclusion, and the declaration-owned NPC/miniboss/boss matrix
+   (including Talos's missing `CanEncounterSkip` fact).
 2. Add the exact phase-owned skip result for occurrence and local-child phases;
    bump the strict schema.
 3. Fold three total uses and the biome-local success guard through route

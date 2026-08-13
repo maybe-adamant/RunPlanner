@@ -544,7 +544,32 @@ The source treats the existing multi-encounter shapes differently:
 | P combat envelope                                           | the first pre-combat phase is skippable and declares `SkipEndEncounterEffects`; a later `GeneratedP` phase receives `CanEncounterSkip = false` when it is not first | author one envelope-level result at the eligible pre-combat phase; success suppresses enemy spawns for every phase in that room while preserving their identities and noncombat effects |
 | H passive field encounter                                   | it does not declare `CanEncounterSkip = true`                                                                                                                       | do not expose a skip there; each eligible generated cage remains its own opportunity                                                                                                    |
 | N side-room combat                                          | `GeneratedNSubRoom` declares `BlockDionysusEncounterKeepsake = true`, and `GeneratedNSubRoom_Bigger` inherits that blocker                                          | keep the exact local-child encounter phase, but do not permit a Fig Leaf skip there                                                                                                     |
-| Devotion, miniboss, boss, and field-NPC combat declarations | they opt out through `CanEncounterSkip = false` or a blocking declaration                                                                                           | do not infer eligibility merely from their combat kind                                                                                                                                  |
+| Devotion, boss, field-NPC declarations; see miniboss matrix | they opt out through `CanEncounterSkip = false` or a blocking declaration                                                                                           | do not infer eligibility merely from their combat kind; use the exact miniboss matrix below for miniboss declarations                                                                   |
+
+Miniboss is not a source-level Fig Leaf policy class. The currently modeled
+miniboss declarations have this exact inherited/explicit matrix (from
+`EncounterData.lua`, `EncounterData_Generated.lua`, and
+`EncounterData_MiniBoss.lua`):
+
+- `MiniBossTreant`, `MiniBossFogEmitter`, `MiniBossAssassin`,
+  `MiniBossWaterUnit`, `MiniBossJellyfish`, `MiniBossVampire`, `MiniBossLamia`,
+  `MiniBossRatCatcher`, `MiniBossGoldElemental`, `MiniBossSatyrCrossbow`, and
+  `MiniBossBoar` inherit a `GeneratedF`/`G`/`H`/`I`/`N` declaration with
+  `CanEncounterSkip = true` and no Dionysus-keepsake blocker: normalized as
+  `canEncounterSkip: true`, `blocksFigLeaf: false`.
+- `MiniBossCaptain`, `MiniBossDragon`, `MiniBossBrute`, `MiniBossStalker`, and
+  `BossTyphonTail01` inherit generated positive support and explicitly set
+  `BlockDionysusEncounterKeepsake = true`: normalized as
+  `canEncounterSkip: true`, `blocksFigLeaf: true`.
+- `MiniBossCrawler`, `MiniBossCharybdis`, and `BossTyphonEye01` explicitly
+  block Dionysus-keepsake without inherited generated positive support:
+  normalized as `canEncounterSkip: false`, `blocksFigLeaf: true`.
+- `MiniBossTalos` inherits `MinibossEncounter` (including its Athena blocker),
+  but declares neither `CanEncounterSkip` nor the Dionysus-keepsake blocker:
+  normalized as `canEncounterSkip: false`, `blocksFigLeaf: false`.
+
+`BossTyphonHead01` is modeled as a boss and is outside this miniboss matrix.
+The normalized `kind` value must not be used to infer any of these facts.
 
 For a room with ordered encounters, one blocking
 `BlockDionysusEncounterKeepsake` member blocks the whole room even if another

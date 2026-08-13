@@ -73,8 +73,15 @@ export const hEncounterDefinitions = [
     label: 'Vampire',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
-  { key: 'MiniBossLamia', label: 'Lamia', kind: 'miniboss', countsEncounterDepth: true },
+  {
+    key: 'MiniBossLamia',
+    label: 'Lamia',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'Story_Echo_01',
     label: 'Echo story',

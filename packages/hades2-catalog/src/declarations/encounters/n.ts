@@ -128,8 +128,15 @@ export const nEncounterDefinitions = [
     label: 'Satyr crossbow',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
-  { key: 'MiniBossBoar', label: 'Boar', kind: 'miniboss', countsEncounterDepth: true },
+  {
+    key: 'MiniBossBoar',
+    label: 'Boar',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+    canEncounterSkip: true,
+  },
   {
     key: 'Story_Medea_01',
     label: 'Medea story',

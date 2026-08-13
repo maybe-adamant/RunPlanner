@@ -85,12 +85,14 @@ export const iEncounterDefinitions = [
     label: 'Rat catcher',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   {
     key: 'MiniBossGoldElemental',
     label: 'Gold elemental',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    canEncounterSkip: true,
   },
   { key: 'BossChronos01', label: 'Chronos', kind: 'boss', countsEncounterDepth: false },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
