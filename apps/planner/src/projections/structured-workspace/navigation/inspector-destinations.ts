@@ -71,6 +71,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
     ...room.encounterPhases.flatMap((phase) => [
       phase.marker.focusKey,
       ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker.focusKey]),
+      ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
     ]),
     ...room.localDetailMarkers.map((marker) => marker.focusKey),
     ...room.rewardControls.flatMap((control) => [
@@ -97,6 +98,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
             ...slot.encounterPhases.flatMap((phase) => [
               phase.marker.focusKey,
               ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker.focusKey]),
+              ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
             ]),
             ...(slot.generation === 'generated'
               ? [

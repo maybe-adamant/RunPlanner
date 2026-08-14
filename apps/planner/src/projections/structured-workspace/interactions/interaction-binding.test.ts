@@ -29,6 +29,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
@@ -46,6 +47,7 @@ import {
   goldenHBiome,
   goldenIBiome,
   createRepresentativeNOPQProject,
+  createRepresentativeNOPProject,
   createRepresentativeNProject,
   createRepresentativeNOPQShopTraitProject,
   createRepresentativeNOProject,
@@ -59,6 +61,7 @@ import {
   oBiome,
   oOccurrenceIds,
   pBiome,
+  pOccurrenceId,
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
@@ -96,6 +99,9 @@ function bind(
     evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
     (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(projectAssembly, phase),
+    (phase) =>
+      encounterPhaseGorgonSupportForProjectEvaluationAssembly(projectAssembly, phase)?.supported ===
+      true,
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -165,6 +171,27 @@ function bind(
 }
 
 describe('structured workspace interaction binding', () => {
+  it('binds the exact Gorgon condition replacement command', () => {
+    const project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
+      'Combat',
+    );
+    const { interactions } = bind(project, 'Surface', 'P');
+    const interaction = interactions.gorgonConditions.get(semanticAddressKey(phase));
+    expect(interaction?.supported).toBe(true);
+    expect(interaction?.intentFor(true).command).toEqual({
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+  });
+
   it('publishes immediate engine-backed whole-offer feedback for remove, add, and Fallback Gold', () => {
     const { interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
     const interaction = [...interactions.traitOffers.values()].find(

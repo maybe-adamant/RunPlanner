@@ -6,5 +6,6 @@ export const anomalyEncounterDefinitions = [
     label: 'Anomaly combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];

@@ -22,11 +22,15 @@ import {
 import type { ResolvedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
+import { assessGorgonCandidate, type GorgonLifecycleStatus } from '../keepsakes';
+import type { GorgonPhaseCandidateSupport } from '../rewards/model';
 
 /** Private capability from the exact simulation assembly. */
 export interface EncounterCandidateArtifacts {
   readonly at: (origin: EncounterPhaseAddress) => EncounterPhaseCandidateSupport | undefined;
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
+  /** Exact reached/pending Gorgon control capability for this phase. */
+  readonly gorgonAt: (origin: EncounterPhaseAddress) => { readonly supported: boolean } | undefined;
   /**
    * A top-level room's exact preparation checkpoint, retained for structural
    * authoring candidates that materialize a different encounter envelope.
@@ -100,6 +104,8 @@ export function evaluateEncounterCandidatesInternal(
   views: ReadonlyMap<string, HistoryStateView>,
   boundary?: EncounterCandidateBoundary,
   figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
+  gorgonStatus: GorgonLifecycleStatus | undefined = undefined,
+  gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
@@ -110,7 +116,42 @@ export function evaluateEncounterCandidatesInternal(
     if (!room.entered) continue;
     const context = candidateContext(room, views, boundary);
     if (context === undefined) continue;
-    const prepared = prepareRoomEncounterPhases(catalog, room, context);
+    const preparedSource = prepareRoomEncounterPhases(catalog, room, context);
+    const gorgonEffect = catalog.keepsakes.values.find(
+      (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+    )?.effect;
+    const naturalEncounterKey =
+      gorgonEffect?.kind === 'gorgonAmulet' ? gorgonEffect.naturalEncounterKey : undefined;
+    const prepared =
+      gorgonStatus === 'consumed'
+        ? Object.freeze({
+            ...preparedSource,
+            candidates: Object.freeze(
+              preparedSource.candidates.map((candidate) =>
+                !assessGorgonCandidate({
+                  status: 'consumed',
+                  naturalAthena:
+                    naturalEncounterKey !== undefined &&
+                    candidate.candidateEncounterKeys.includes(naturalEncounterKey),
+                  gorgonEligible: false,
+                }).naturalPossible
+                  ? Object.freeze({
+                      ...candidate,
+                      candidateEncounterKeys: Object.freeze(
+                        candidate.candidateEncounterKeys.filter(
+                          (key) => key !== naturalEncounterKey,
+                        ),
+                      ),
+                      selectedPossible:
+                        candidate.selectedEncounterKey === naturalEncounterKey
+                          ? false
+                          : candidate.selectedPossible,
+                    })
+                  : candidate,
+              ),
+            ),
+          })
+        : preparedSource;
     if (room.kind === 'authored' && hasExactCandidateContext(room, views, boundary)) {
       const roomKey = semanticAddressKey(room.origin);
       if (roomsByOwner.has(roomKey)) {
@@ -155,10 +196,28 @@ export function evaluateEncounterCandidatesInternal(
   const privateFigLeaf = new Map(
     figLeafCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
   );
+  const privateGorgon = new Map(
+    gorgonPhaseCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
+  );
+  const gorgonSupport = new Map<string, { readonly supported: boolean }>();
+  for (const [key, support] of entries) {
+    const exact = privateGorgon.get(key);
+    if (exact === undefined) continue;
+    gorgonSupport.set(
+      key,
+      Object.freeze({
+        supported:
+          catalog.encounterDefinitions.byKey[support.selectedEncounterKey]?.hostsGorgon === true &&
+          gorgonStatus === 'pending' &&
+          privateGorgon.get(key)?.supported === true,
+      }),
+    );
+  }
   return Object.freeze({
     artifacts: Object.freeze({
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
+      gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
     }),

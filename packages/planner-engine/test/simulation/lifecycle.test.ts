@@ -58,6 +58,8 @@ function phases(
         countsEncounterDepth: definition.countsEncounterDepth,
         canEncounterSkip: definition.canEncounterSkip,
         blocksFigLeaf: definition.blocksFigLeaf,
+        blocksGorgon: definition.blocksGorgon,
+        hostsGorgon: definition.hostsGorgon,
         skipEndEncounterEffects: definition.skipEndEncounterEffects,
         figLeafSkip: false,
         ...(definition.sequenceEffect === undefined

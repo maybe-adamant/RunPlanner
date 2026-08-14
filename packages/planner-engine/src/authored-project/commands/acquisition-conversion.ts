@@ -48,7 +48,9 @@ export function applyAcquisitionConversionCommand(
         : failCommand(command, 'acquisition entry is not occurrence-owned')
       : owner.kind === 'encounterPhase'
         ? owner.owner.occurrenceId
-        : owner.occurrenceId;
+        : owner.kind === 'gorgonPhase'
+          ? owner.encounter.owner.occurrenceId
+          : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   if (
     owner.routeKey !== command.acquisition.routeKey ||
@@ -69,6 +71,9 @@ export function applyAcquisitionConversionCommand(
   };
   let state: RoomOccurrence['state'];
   switch (owner.kind) {
+    case 'gorgonPhase':
+      failCommand(command, 'Gorgon phase has no acquisition conversion surface');
+      break;
     case 'acquisitionEntry': {
       const site = occurrence.acquisitionSites?.roomExit;
       const entry = site?.pickupEntries?.[owner.entryKey];

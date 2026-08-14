@@ -15,6 +15,7 @@ export const gEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -22,6 +23,7 @@ export const gEncounterDefinitions = [
     label: 'Artemis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Artemis',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     requirements: {
@@ -52,6 +54,7 @@ export const gEncounterDefinitions = [
     label: 'Arachne cocoon',
     kind: 'combat',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     npcPresentationKey: 'Arachne',
     requirements: {
       kind: 'all',
@@ -80,6 +83,7 @@ export const gEncounterDefinitions = [
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
     requirements: {
       kind: 'all',
@@ -116,6 +120,7 @@ export const gEncounterDefinitions = [
     label: 'Water unit',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -123,6 +128,7 @@ export const gEncounterDefinitions = [
     label: 'Crawler',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     blocksFigLeaf: true,
   },
   {
@@ -130,9 +136,16 @@ export const gEncounterDefinitions = [
     label: 'Jellyfish',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
-  { key: 'BossScylla01', label: 'Scylla', kind: 'boss', countsEncounterDepth: false },
+  {
+    key: 'BossScylla01',
+    label: 'Scylla',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const gEncounterSets = [

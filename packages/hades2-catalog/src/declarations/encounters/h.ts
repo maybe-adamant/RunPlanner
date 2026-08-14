@@ -11,18 +11,21 @@ export const hEncounterDefinitions = [
     label: 'Passive combat',
     kind: 'combat',
     countsEncounterDepth: false,
+    hostsGorgon: true,
   },
   {
     key: 'GeneratedH_PassiveSmall',
     label: 'Small passive combat',
     kind: 'combat',
     countsEncounterDepth: false,
+    hostsGorgon: true,
   },
   {
     key: 'GeneratedH',
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -30,6 +33,7 @@ export const hEncounterDefinitions = [
     label: 'Treant combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -37,6 +41,7 @@ export const hEncounterDefinitions = [
     label: 'Screamer combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -44,6 +49,7 @@ export const hEncounterDefinitions = [
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
     requirements: {
       kind: 'all',
@@ -73,6 +79,7 @@ export const hEncounterDefinitions = [
     label: 'Vampire',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -80,6 +87,7 @@ export const hEncounterDefinitions = [
     label: 'Lamia',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -93,6 +101,7 @@ export const hEncounterDefinitions = [
     label: 'Cerberus',
     kind: 'boss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

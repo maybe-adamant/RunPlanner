@@ -192,6 +192,12 @@ export function normalizeEncounterDefinitions(
       if (raw.blocksFigLeaf !== undefined && typeof raw.blocksFigLeaf !== 'boolean') {
         fail(`${path}.blocksFigLeaf`, 'must be boolean');
       }
+      if (raw.blocksGorgon !== undefined && typeof raw.blocksGorgon !== 'boolean') {
+        fail(`${path}.blocksGorgon`, 'must be boolean');
+      }
+      if (raw.hostsGorgon !== undefined && typeof raw.hostsGorgon !== 'boolean') {
+        fail(`${path}.hostsGorgon`, 'must be boolean');
+      }
       if (
         raw.skipEndEncounterEffects !== undefined &&
         typeof raw.skipEndEncounterEffects !== 'boolean'
@@ -257,6 +263,8 @@ export function normalizeEncounterDefinitions(
         countsEncounterDepth: raw.countsEncounterDepth,
         canEncounterSkip: raw.canEncounterSkip ?? false,
         blocksFigLeaf: raw.blocksFigLeaf ?? false,
+        blocksGorgon: raw.blocksGorgon ?? false,
+        hostsGorgon: raw.hostsGorgon ?? false,
         skipEndEncounterEffects: raw.skipEndEncounterEffects ?? false,
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
         ...(requirements === undefined ? {} : { requirements }),

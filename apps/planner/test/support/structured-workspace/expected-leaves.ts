@@ -178,11 +178,13 @@ export function expectedWorkspaceLeafRequirements(
     const occurrenceId =
       address.kind === 'encounterPhase'
         ? address.owner.occurrenceId
-        : address.kind === 'acquisitionEntry'
-          ? address.site.owner.kind === 'occurrence'
-            ? address.site.owner.occurrenceId
-            : undefined
-          : address.occurrenceId;
+        : address.kind === 'gorgonPhase'
+          ? address.encounter.owner.occurrenceId
+          : address.kind === 'acquisitionEntry'
+            ? address.site.owner.kind === 'occurrence'
+              ? address.site.owner.occurrenceId
+              : undefined
+            : address.occurrenceId;
     if (occurrenceId === undefined) return;
     if (!detailsActive.has(occurrenceId)) return;
     for (const acquisitionRole of Object.keys(reward.traitOffersByAcquisitionRole)) {

@@ -610,6 +610,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Side room order`;
     case 'encounterPhase':
       return `${biomeLabel} · Encounter`;
+    case 'gorgonPhase':
+      return `${biomeLabel} · Gorgon Athena`;
     case 'rewardWheel':
       return `${biomeLabel} · Reward wheel`;
     case 'rewardWheelOffer':

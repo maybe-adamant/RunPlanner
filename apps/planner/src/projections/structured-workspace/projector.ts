@@ -10,6 +10,7 @@ import {
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -61,16 +62,21 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 function appendEncounterTraitControls(
   controls: Map<string, WorkspaceTraitOfferControl>,
   rooms: readonly {
-    readonly encounterPhases: readonly { readonly traitOffer?: WorkspaceTraitOfferControl }[];
+    readonly encounterPhases: readonly {
+      readonly traitOffer?: WorkspaceTraitOfferControl;
+      readonly gorgonAthena?: WorkspaceTraitOfferControl;
+    }[];
   }[],
 ): void {
   for (const room of rooms) {
     for (const phase of room.encounterPhases) {
       const traitControl = phase.traitOffer;
-      if (traitControl === undefined) continue;
-      const key = semanticAddressKey(traitControl.address);
-      if (controls.has(key)) continue;
-      controls.set(key, traitControl);
+      for (const control of [traitControl, phase.gorgonAthena]) {
+        if (control === undefined) continue;
+        const key = semanticAddressKey(control.address);
+        if (controls.has(key)) continue;
+        controls.set(key, control);
+      }
     }
   }
 }
@@ -207,6 +213,19 @@ export function createStructuredWorkspaceProjection(
         evaluation,
         (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
         (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(assembly, phase),
+        (phase) => {
+          try {
+            return (
+              encounterPhaseGorgonSupportForProjectEvaluationAssembly(assembly, phase)
+                ?.supported === true
+            );
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return false;
+            }
+            throw error;
+          }
+        },
       );
       const routes = sources.routes.map((routeSource) => {
         const authoredRoute = project.routes.find(

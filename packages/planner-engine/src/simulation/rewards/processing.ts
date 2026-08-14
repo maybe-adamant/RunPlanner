@@ -669,6 +669,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'shopOffer':
       return origin;
     case 'encounterPhase':
+    case 'gorgonPhase':
       return origin;
     case 'acquisitionEntry':
       return origin;
@@ -687,6 +688,8 @@ export function processEncounterTraitOffer(
   lifecyclePoint: string,
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
+  deathDefianceConditionMet?: boolean,
+  acquisitionRole = 'selection',
 ): RewardBranchState {
   if (offer.kind === 'fallbackGold') {
     return applyTraitOfferForAcquisition(
@@ -694,9 +697,12 @@ export function processEncounterTraitOffer(
       branch,
       {
         origin,
-        traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
+        traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
+        ...(deathDefianceConditionMet === undefined
+          ? {}
+          : { traitContext: Object.freeze({ deathDefianceConditionMet }) }),
       },
-      'selection',
+      acquisitionRole,
       lifecyclePoint,
       sequence,
       findings,
@@ -709,17 +715,18 @@ export function processEncounterTraitOffer(
       ? undefined
       : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
   const resolution = selected?.circeResolution;
-  const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, 'selection');
+  const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
   const circeDomain =
     disposition?.kind === 'circe'
       ? circeResolutionDomain(catalog, branch.arcanaFear, disposition.effect)
       : undefined;
   const source = {
     origin,
-    traitOffersByAcquisitionRole: Object.freeze({ selection: offer }),
+    traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
     traitContext: Object.freeze({
       manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
       circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
+      ...(deathDefianceConditionMet === undefined ? {} : { deathDefianceConditionMet }),
     }),
   } as const;
   // Record the exact pre-effect frontier before validating Circe's authored
@@ -733,7 +740,7 @@ export function processEncounterTraitOffer(
     catalog,
     branch,
     source,
-    'selection',
+    acquisitionRole,
     lifecyclePoint,
     sequence,
     provisionalFindings,
@@ -750,7 +757,7 @@ export function processEncounterTraitOffer(
       addCirceResolutionFinding(
         findings,
         createCirceResolutionAddress(
-          createTraitOfferAddress(origin as TraitOfferOwnerAddress, 'selection'),
+          createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole),
           offer.selectedOptionKey,
         ),
         lifecyclePoint,

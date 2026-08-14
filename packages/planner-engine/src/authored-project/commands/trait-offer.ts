@@ -103,6 +103,7 @@ function validateOffer(
   catalog: Catalog,
   value: AuthoredTraitOffer,
   command: TraitOfferCommand,
+  omitDeathDefianceContext = false,
 ): AuthoredTraitOffer {
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) failCommand(command, `unknown trait giver ${value.giverKey}`);
@@ -168,11 +169,9 @@ function validateOffer(
       }
     }
   }
-  const conditionApplicable = traitGiverUsesOfferContext(
-    catalog,
-    value.giverKey,
-    'deathDefianceConditionMet',
-  );
+  const conditionApplicable =
+    !omitDeathDefianceContext &&
+    traitGiverUsesOfferContext(catalog, value.giverKey, 'deathDefianceConditionMet');
   if (conditionApplicable && typeof value.deathDefianceConditionMet !== 'boolean')
     failCommand(command, 'Death Defiance condition is required for this trait giver');
   if (!conditionApplicable && value.deathDefianceConditionMet !== undefined)
@@ -527,16 +526,20 @@ export function applyTraitOfferCommand(
   const occurrenceId =
     owner.kind === 'encounterPhase'
       ? owner.owner.occurrenceId
-      : owner.kind === 'acquisitionEntry'
-        ? owner.site.owner.kind === 'occurrence'
-          ? owner.site.owner.occurrenceId
-          : failCommand(command, 'acquisition entry is not occurrence-owned')
-        : owner.occurrenceId;
+      : owner.kind === 'gorgonPhase'
+        ? owner.encounter.owner.occurrenceId
+        : owner.kind === 'acquisitionEntry'
+          ? owner.site.owner.kind === 'occurrence'
+            ? owner.site.owner.occurrenceId
+            : failCommand(command, 'acquisition entry is not occurrence-owned')
+          : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   if (owner.routeKey !== command.trait.routeKey || owner.biomeKey !== command.trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
-  if (owner.kind === 'encounterPhase') {
-    const encounterOwner = owner.owner;
+  if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase') {
+    const encounterOwner = owner.kind === 'gorgonPhase' ? owner.encounter.owner : owner.owner;
+    const phaseKey = owner.kind === 'gorgonPhase' ? owner.encounter.phaseKey : owner.phaseKey;
+    const isGorgon = owner.kind === 'gorgonPhase';
     let currentEncounters = occurrence.encounters;
     let encounterRoom = catalog.rooms.byKey[occurrence.gameName];
     let localSide:
@@ -557,28 +560,37 @@ export function applyTraitOfferCommand(
       encounterRoom =
         sideRoom === undefined ? undefined : catalog.rooms.byKey[sideRoom.roomGameName];
     }
-    if (encounterRoom === undefined)
-      failCommand(command, `unknown encounter room for ${owner.phaseKey}`);
-    const phaseOffersValue = currentEncounters.traitOffersByPhase?.[owner.phaseKey];
-    if (phaseOffersValue === undefined)
-      failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
+    if (encounterRoom === undefined) failCommand(command, `unknown encounter room for ${phaseKey}`);
+    const phaseGorgon = isGorgon ? currentEncounters.gorgonResultByPhase?.[phaseKey] : undefined;
+    const phaseOffersValue = currentEncounters.traitOffersByPhase?.[phaseKey];
     const phaseOffers = phaseOffersValue;
     const encounterKey = selectedEncounterDefinitionKey(
       catalog,
       encounterRoom,
       currentEncounters,
-      owner.phaseKey,
+      phaseKey,
       occurrence.gameName,
     );
-    const existing = phaseOffers[encounterKey];
-    if (existing === undefined) failCommand(command, `no trait offer at phase ${owner.phaseKey}`);
-    const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+    const existing = isGorgon ? phaseGorgon?.athenaOffer : phaseOffers?.[encounterKey];
+    if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
+    const gorgonEffect = isGorgon
+      ? catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === 'gorgonAmulet')
+          ?.effect
+      : undefined;
+    const expectedProducer = isGorgon
+      ? gorgonEffect?.kind === 'gorgonAmulet'
+        ? { giverKey: gorgonEffect.providerKey }
+        : undefined
+      : catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
     if (expectedProducer === undefined)
       failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
     if (existing.giverKey !== expectedProducer.giverKey)
       failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
-    if (owner.phaseKey.trim().length === 0 || command.trait.acquisitionRole !== 'selection')
-      failCommand(command, 'encounter trait offers use selection acquisition role');
+    if (
+      phaseKey.trim().length === 0 ||
+      command.trait.acquisitionRole !== (isGorgon ? 'gorgonAthena' : 'selection')
+    )
+      failCommand(command, 'encounter trait offers use the bound acquisition role');
     if (
       command.kind === 'ReplaceTraitSelection' &&
       !['option1', 'option2', 'option3'].includes(command.selectedOptionKey)
@@ -594,18 +606,39 @@ export function applyTraitOfferCommand(
     const value =
       command.kind === 'ReplaceTraitSelection'
         ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
-        : validateOffer(catalog, command.value, command);
+        : validateOffer(catalog, command.value, command, isGorgon);
     if (value.giverKey !== expectedProducer.giverKey)
       failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
+    if (isGorgon) {
+      if (
+        value.kind !== 'traits' ||
+        value.options.length !== 3 ||
+        gorgonEffect?.kind !== 'gorgonAmulet' ||
+        value.options.some((option) => option.rarity !== gorgonEffect.rarity) ||
+        value.deathDefianceConditionMet !== undefined
+      ) {
+        failCommand(command, 'Gorgon Athena requires three fixed Epic options without DD context');
+      }
+    }
     if (sameOccurrenceValue(value, existing)) return document;
-    const nextPhaseOffers = Object.freeze({ ...phaseOffers, [encounterKey]: value });
-    const nextEncounters = Object.freeze({
-      ...currentEncounters,
-      traitOffersByPhase: Object.freeze({
-        ...(currentEncounters.traitOffersByPhase ?? {}),
-        [owner.phaseKey]: nextPhaseOffers,
-      }),
-    });
+    const nextEncounters = isGorgon
+      ? Object.freeze({
+          ...currentEncounters,
+          gorgonResultByPhase: Object.freeze({
+            ...(currentEncounters.gorgonResultByPhase ?? {}),
+            [phaseKey]: Object.freeze({
+              ...(phaseGorgon ?? { deathDefianceConditionMet: false }),
+              athenaOffer: value,
+            }),
+          }),
+        })
+      : Object.freeze({
+          ...currentEncounters,
+          traitOffersByPhase: Object.freeze({
+            ...(currentEncounters.traitOffersByPhase ?? {}),
+            [phaseKey]: Object.freeze({ ...(phaseOffers ?? {}), [encounterKey]: value }),
+          }),
+        });
     if (encounterOwner.kind === 'occurrence') {
       const reconciled = reconcileSelectedPickupEntries(
         catalog,

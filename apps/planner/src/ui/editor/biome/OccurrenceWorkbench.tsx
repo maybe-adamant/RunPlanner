@@ -210,6 +210,25 @@ function EncounterPhaseControl({
         <span>Skip combat with Fig Leaf</span>
       </label>
     );
+  const gorgonInteraction =
+    phase.gorgonCondition === undefined
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.gorgonConditions,
+          phase.gorgonCondition.interactionKey,
+        );
+  const gorgonControl =
+    gorgonInteraction === undefined ? null : (
+      <label className="field-control gorgon-condition-control">
+        <input
+          checked={gorgonInteraction.selected}
+          disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
+          onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
+          type="checkbox"
+        />
+        <span>Death Defiance condition met (Gorgon Amulet)</span>
+      </label>
+    );
   if (!phase.customizable) {
     return (
       <section
@@ -226,8 +245,12 @@ function EncounterPhaseControl({
         </div>
         <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
         {figLeafControl}
+        {gorgonControl}
         {phase.traitOffer === undefined ? null : (
           <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
+        )}
+        {phase.gorgonAthena === undefined ? null : (
+          <TraitOfferLauncher control={phase.gorgonAthena} interactions={interactions} />
         )}
       </section>
     );
@@ -254,8 +277,12 @@ function EncounterPhaseControl({
         phase={phase}
       />
       {figLeafControl}
+      {gorgonControl}
       {phase.traitOffer === undefined ? null : (
         <TraitOfferLauncher control={phase.traitOffer} interactions={interactions} />
+      )}
+      {phase.gorgonAthena === undefined ? null : (
+        <TraitOfferLauncher control={phase.gorgonAthena} interactions={interactions} />
       )}
     </section>
   );
@@ -275,7 +302,9 @@ function EncounterWorkbench({
       phase.customizable ||
       phase.marker.findingCount > 0 ||
       phase.traitOffer !== undefined ||
-      phase.figLeaf !== undefined,
+      phase.figLeaf !== undefined ||
+      phase.gorgonCondition !== undefined ||
+      phase.gorgonAthena !== undefined,
   );
   if (presentedPhases.length === 0) return null;
   return (

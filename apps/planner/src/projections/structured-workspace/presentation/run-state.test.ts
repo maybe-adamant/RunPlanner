@@ -9,7 +9,7 @@ import { presentRunState } from './run-state';
 
 describe('Run State presentation', () => {
   it('joins catalog labels while retaining technical store and reward keys', () => {
-    const state = presentRunState(catalog, {
+    const snapshot = {
       owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
         kind: 'occurrence',
         occurrenceId: 'x' as never,
@@ -88,6 +88,7 @@ describe('Run State presentation', () => {
           active: true,
         },
         figLeaf: { remainingUses: 2, activatedThisBiome: true },
+        gorgon: { status: 'pending' as const },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -109,7 +110,8 @@ describe('Run State presentation', () => {
           ],
         },
       ],
-    });
+    } as const;
+    const state = presentRunState(catalog, snapshot);
     expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
     expect(state.bags[0]).toMatchObject({ label: 'Major Reward', technicalKey: 'RunProgress' });
     expect(state.bags[0]?.eligible.entries[0]).toMatchObject({
@@ -140,6 +142,7 @@ describe('Run State presentation', () => {
       experimentalHammerRemainingUses: 7,
       figLeafRemainingUses: 2,
       figLeafActivatedThisBiome: true,
+      gorgonStatus: 'pending',
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',
@@ -167,5 +170,12 @@ describe('Run State presentation', () => {
         },
       ],
     });
+    for (const status of ['pending', 'consumed', 'expired'] as const) {
+      const projected = presentRunState(catalog, {
+        ...snapshot,
+        keepsakes: { ...snapshot.keepsakes, gorgon: { status } },
+      });
+      expect(projected.keepsakes.gorgonStatus).toBe(status);
+    }
   });
 });

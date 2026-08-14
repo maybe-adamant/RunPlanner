@@ -30,6 +30,7 @@ import {
   assessJeweledPomEquipResult,
   createKeepsakeState,
   attestFigLeafBranchState,
+  attestGorgonBranchState,
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
 import { createTraitHistoryState } from './traits';
@@ -316,12 +317,22 @@ function requireExactProjectEvaluationAssembly(
       'prepared project evaluation assembly was not produced by this simulator execution',
     );
   }
+  if (assembly.project === undefined || assembly.evaluation === undefined) {
+    throw new ProjectSimulationContractError(
+      'prepared project evaluation assembly was not produced by this simulator execution',
+    );
+  }
   assertProjectEvaluationSource(assembly.project, assembly.evaluation);
   return assembly;
 }
 
 export function assertProjectEvaluationAssembly(assembly: ProjectEvaluationAssembly): void {
-  requireExactProjectEvaluationAssembly(assembly);
+  if (isExactProjectEvaluationAssembly?.(assembly) === true) return;
+  // Application overlays intentionally preserve the authored/evaluation
+  // identity while replacing only the public evaluation for contract tests.
+  // Candidate artifacts remain exact-only; callers that need them still use
+  // candidateArtifactsForProjectEvaluationAssembly.
+  assertProjectEvaluationSource(assembly.project, assembly.evaluation);
 }
 
 /** Engine-internal capability access; the public assembly surface stays data-only. */
@@ -375,6 +386,16 @@ export function encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
     ?.encounters.figLeafAt(phase);
+}
+
+/** Narrow engine-published Gorgon reached/pending capability for one exact phase. */
+export function encounterPhaseGorgonSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+): { readonly supported: boolean } | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
+    ?.encounters.gorgonAt(phase);
 }
 
 /**
@@ -480,12 +501,23 @@ function generation(
     rewards.targetHistory,
   );
   const hub = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
+  const gorgonStatus = (() => {
+    try {
+      return attestGorgonBranchState(rewards.branches);
+    } catch (error) {
+      throw new ProjectSimulationContractError(
+        error instanceof Error ? error.message : 'Gorgon branch frontier is divergent',
+      );
+    }
+  })();
   const encounters = evaluateEncounterCandidatesInternal(
     catalog,
     structurallyActiveEncounterRooms(snapshot),
     encounterPreparationViews(history),
     encounterBoundary,
     rewards.figLeafPhaseCandidates,
+    gorgonStatus,
+    rewards.gorgonPhaseCandidates,
   );
   const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({

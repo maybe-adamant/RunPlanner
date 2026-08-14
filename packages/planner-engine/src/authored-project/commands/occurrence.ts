@@ -36,6 +36,7 @@ export function applyOccurrenceCommand(
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
+    case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
 }

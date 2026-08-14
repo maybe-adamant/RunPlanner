@@ -15,12 +15,14 @@ export const fEncounterDefinitions = [
     label: 'Opening combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
   },
   {
     key: 'GeneratedF',
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -28,6 +30,7 @@ export const fEncounterDefinitions = [
     label: 'Artemis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Artemis',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     requirements: {
@@ -58,6 +61,7 @@ export const fEncounterDefinitions = [
     label: 'Arachne cocoon',
     kind: 'combat',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     npcPresentationKey: 'Arachne',
     requirements: {
       kind: 'all',
@@ -87,6 +91,7 @@ export const fEncounterDefinitions = [
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
     requirements: {
       kind: 'all',
@@ -124,6 +129,7 @@ export const fEncounterDefinitions = [
     label: 'Treant',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -131,6 +137,7 @@ export const fEncounterDefinitions = [
     label: 'Fog emitter',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -138,9 +145,16 @@ export const fEncounterDefinitions = [
     label: 'Assassin',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
-  { key: 'BossHecate01', label: 'Hecate', kind: 'boss', countsEncounterDepth: false },
+  {
+    key: 'BossHecate01',
+    label: 'Hecate',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const fEncounterSets = [

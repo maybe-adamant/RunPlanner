@@ -48,7 +48,15 @@ export interface RawKeepsakeDeclaration {
       }
     | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
     | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
-    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 };
+    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 }
+    | {
+        readonly kind: 'gorgonAmulet';
+        readonly uses: 1;
+        readonly minimumBiomeDepth: 2;
+        readonly providerKey: 'Athena';
+        readonly rarity: 'Epic';
+        readonly naturalEncounterKey: string;
+      };
 }
 
 export interface RawEncounterRewardWheelAttachment {
@@ -118,6 +126,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly countsEncounterDepth: boolean;
   readonly canEncounterSkip?: boolean;
   readonly blocksFigLeaf?: boolean;
+  readonly blocksGorgon?: boolean;
+  readonly hostsGorgon?: boolean;
   readonly skipEndEncounterEffects?: boolean;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
@@ -258,6 +268,8 @@ export interface RawRoomDeclaration {
   readonly incomingReward: RawRewardProducerBinding;
   /** The game room flag that suppresses Gift trait offers in this room. */
   readonly blockGiftBoons?: boolean;
+  /** The game room flag that suppresses Gorgon Amulet in this room. */
+  readonly blocksGorgon?: boolean;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

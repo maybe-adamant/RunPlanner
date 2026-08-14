@@ -56,7 +56,7 @@ export function applyLevelResolutionCommand(
     owner.biomeKey !== command.levelResolution.biomeKey
   )
     failCommand(command, 'level-resolution owner is outside its addressed biome');
-  if (owner.kind === 'encounterPhase')
+  if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase')
     failCommand(command, 'encounter phases do not own Pom level resolutions');
   const occurrenceId =
     owner.kind === 'acquisitionEntry'

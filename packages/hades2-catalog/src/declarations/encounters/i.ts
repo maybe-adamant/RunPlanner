@@ -16,6 +16,7 @@ export const iEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
     requirements: excludesClockworkGoal,
   },
@@ -24,6 +25,7 @@ export const iEncounterDefinitions = [
     label: 'Goal combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
@@ -32,6 +34,7 @@ export const iEncounterDefinitions = [
     label: 'Small combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
     requirements: excludesClockworkGoal,
   },
@@ -40,6 +43,7 @@ export const iEncounterDefinitions = [
     label: 'Small goal combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
     requirements: { kind: 'not', requirement: excludesClockworkGoal },
   },
@@ -48,6 +52,7 @@ export const iEncounterDefinitions = [
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
     requirements: {
       kind: 'all',
@@ -85,6 +90,7 @@ export const iEncounterDefinitions = [
     label: 'Rat catcher',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -92,9 +98,16 @@ export const iEncounterDefinitions = [
     label: 'Gold elemental',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
-  { key: 'BossChronos01', label: 'Chronos', kind: 'boss', countsEncounterDepth: false },
+  {
+    key: 'BossChronos01',
+    label: 'Chronos',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const iEncounterSets = [

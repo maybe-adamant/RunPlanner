@@ -95,6 +95,19 @@ export function normalizeKeepsakes(
     } else if (keepsake.key === 'SkipEncounterKeepsake') {
       if (keepsake.effect?.kind !== 'figLeaf' || keepsake.effect.biomeUses !== 3)
         fail(`${path}.effect`, 'must declare Fig Leaf fixed three biome uses');
+    } else if (keepsake.key === 'AthenaEncounterKeepsake') {
+      if (
+        keepsake.effect?.kind !== 'gorgonAmulet' ||
+        keepsake.effect.uses !== 1 ||
+        keepsake.effect.minimumBiomeDepth !== 2 ||
+        keepsake.effect.providerKey !== 'Athena' ||
+        keepsake.effect.rarity !== 'Epic' ||
+        keepsake.effect.naturalEncounterKey !== 'AthenaCombatP'
+      )
+        fail(
+          `${path}.effect`,
+          'must declare Gorgon Amulet one use, depth two, Athena provider, and fixed Epic rarity',
+        );
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

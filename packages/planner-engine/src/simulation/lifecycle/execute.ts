@@ -401,6 +401,8 @@ function resolveExecutionContext(
           phase.canEncounterSkip !== (definition.canEncounterSkip === true)) ||
         (phase.blocksFigLeaf !== undefined &&
           phase.blocksFigLeaf !== (definition.blocksFigLeaf === true)) ||
+        (phase.blocksGorgon !== undefined &&
+          phase.blocksGorgon !== (definition.blocksGorgon === true)) ||
         (phase.skipEndEncounterEffects !== undefined &&
           phase.skipEndEncounterEffects !== (definition.skipEndEncounterEffects === true)) ||
         phase.sequenceEffect?.kind !== definition.sequenceEffect?.kind ||

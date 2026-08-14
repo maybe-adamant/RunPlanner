@@ -13,6 +13,7 @@ export const nEncounterDefinitions = [
     label: 'Opening combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -20,6 +21,7 @@ export const nEncounterDefinitions = [
     label: 'Pre-Hub combat',
     kind: 'combat',
     countsEncounterDepth: false,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -27,6 +29,7 @@ export const nEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -34,6 +37,7 @@ export const nEncounterDefinitions = [
     label: 'Artemis combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Artemis',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Artemis' },
     requirements: {
@@ -64,6 +68,7 @@ export const nEncounterDefinitions = [
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Heracles',
     requirements: {
       kind: 'all',
@@ -98,6 +103,7 @@ export const nEncounterDefinitions = [
     label: 'Small combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -105,6 +111,7 @@ export const nEncounterDefinitions = [
     label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -112,6 +119,7 @@ export const nEncounterDefinitions = [
     label: 'Side-room combat',
     kind: 'combat',
     countsEncounterDepth: false,
+    hostsGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -120,6 +128,7 @@ export const nEncounterDefinitions = [
     label: 'Large side-room combat',
     kind: 'combat',
     countsEncounterDepth: false,
+    hostsGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -128,6 +137,7 @@ export const nEncounterDefinitions = [
     label: 'Satyr crossbow',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -135,6 +145,7 @@ export const nEncounterDefinitions = [
     label: 'Boar',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -150,6 +161,7 @@ export const nEncounterDefinitions = [
     label: 'Polyphemus',
     kind: 'boss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

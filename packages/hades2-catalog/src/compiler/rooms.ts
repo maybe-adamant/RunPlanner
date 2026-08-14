@@ -506,6 +506,9 @@ export function normalizeRooms(
     if (room.blockGiftBoons !== undefined && typeof room.blockGiftBoons !== 'boolean') {
       fail(`${path}.blockGiftBoons`, 'must be a boolean when declared');
     }
+    if (room.blocksGorgon !== undefined && typeof room.blocksGorgon !== 'boolean') {
+      fail(`${path}.blocksGorgon`, 'must be a boolean when declared');
+    }
     if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
       fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
     }
@@ -735,6 +738,7 @@ export function normalizeRooms(
       additionalExits,
       incomingReward,
       blockGiftBoons: room.blockGiftBoons ?? false,
+      blocksGorgon: room.blocksGorgon ?? false,
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
       advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,

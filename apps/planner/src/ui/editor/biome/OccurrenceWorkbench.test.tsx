@@ -268,6 +268,63 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    const condition = screen.getByRole('checkbox', {
+      name: 'Death Defiance condition met (Gorgon Amulet)',
+    }) as HTMLInputElement;
+    expect(condition.disabled).toBe(false);
+    await view.user.click(condition);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Edit Trait: Divine Dash/ })).toBeTruthy();
+    });
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+        ?.encounters.gorgonResultByPhase?.Combat?.deathDefianceConditionMet,
+    ).toBe(true);
+  });
+
+  it('keeps a context-invalid Gorgon child visible as a repair surface', () => {
+    const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'AthenaCombatP',
+    });
+    renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    const condition = screen.getByRole('checkbox', {
+      name: 'Death Defiance condition met (Gorgon Amulet)',
+    }) as HTMLInputElement;
+    expect(condition.checked).toBe(true);
+    expect(condition.disabled).toBe(false);
+    expect(screen.getByRole('button', { name: /Edit Trait: Divine Dash · Epic/ })).toBeTruthy();
+  });
+
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
     const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',

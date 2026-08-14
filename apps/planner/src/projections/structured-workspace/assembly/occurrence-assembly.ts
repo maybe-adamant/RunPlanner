@@ -11,6 +11,7 @@ import {
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createTraitOfferAddress,
+  createGorgonPhaseAddress,
   createCirceResolutionAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
@@ -102,6 +103,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly figLeafSupport?: (
     phase: EncounterPhaseAddress,
   ) => FigLeafPhaseCandidateSupport | undefined;
+  readonly gorgonSupport?: (phase: EncounterPhaseAddress) => boolean;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -579,13 +581,28 @@ function activeEncounterPhasesForOwner(
     const address = domain.origin;
     if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
     const figLeafSupport = input.figLeafSupport?.(address);
+    const gorgonSupport = input.gorgonSupport?.(address) === true;
     const authoredFigLeafSkip = encounters.figLeafSkipByPhase?.[domain.slotKey] === true;
+    const authoredGorgonResult = encounters.gorgonResultByPhase?.[domain.slotKey];
+    const gorgonResult =
+      authoredGorgonResult === undefined && gorgonSupport
+        ? { deathDefianceConditionMet: false as const }
+        : authoredGorgonResult;
+    const retainedGorgon =
+      gorgonResult?.deathDefianceConditionMet === true || gorgonResult?.athenaOffer !== undefined;
     const fixedPhase = domain.declaredEncounterKeys.length === 1;
     const fixedHasTraitOffer =
       fixedPhase &&
       input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey]?.traitOfferProducer !==
         undefined;
-    if (fixedPhase && figLeafSupport === undefined && !authoredFigLeafSkip && !fixedHasTraitOffer)
+    if (
+      fixedPhase &&
+      figLeafSupport === undefined &&
+      !authoredFigLeafSkip &&
+      !fixedHasTraitOffer &&
+      !gorgonSupport &&
+      !retainedGorgon
+    )
       continue;
     const candidateChoices = Object.freeze(
       domain.declaredEncounterKeys.map((encounterKey) => {
@@ -609,6 +626,31 @@ function activeEncounterPhasesForOwner(
     const authoredTraitOffer =
       input.facts.detailsActive && producer !== undefined
         ? encounters.traitOffersByPhase?.[domain.slotKey]?.[selectedDefinition.key]
+        : undefined;
+    const gorgonPhaseAddress = createGorgonPhaseAddress(address);
+    const gorgonAthenaOffer =
+      input.facts.detailsActive && gorgonResult?.deathDefianceConditionMet === true
+        ? gorgonResult.athenaOffer
+        : undefined;
+    const gorgonEffect = input.catalog.keepsakes.values.find(
+      (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+    )?.effect;
+    const gorgonGiver =
+      gorgonEffect?.kind === 'gorgonAmulet'
+        ? input.catalog.traitGivers.byKey[gorgonEffect.providerKey]
+        : undefined;
+    const gorgonAthena =
+      gorgonAthenaOffer !== undefined && gorgonGiver !== undefined
+        ? Object.freeze({
+            acquisitionRoleLabel: 'Gorgon Athena',
+            address: createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
+            giver: gorgonGiver,
+            marker: input.markerDestinations.marker(
+              createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
+            ),
+            offer: gorgonAthenaOffer,
+            rewardOwner: gorgonPhaseAddress,
+          })
         : undefined;
     const giver =
       producer === undefined ? undefined : input.catalog.traitGivers.byKey[producer.giverKey];
@@ -679,6 +721,16 @@ function activeEncounterPhasesForOwner(
             }
           : {}),
         ...(traitOffer === undefined ? {} : { traitOffer }),
+        ...(gorgonResult === undefined || (!gorgonSupport && !retainedGorgon)
+          ? {}
+          : {
+              gorgonCondition: Object.freeze({
+                interactionKey: semanticAddressKey(address),
+                selected: gorgonResult.deathDefianceConditionMet,
+                supported: gorgonSupport,
+              }),
+            }),
+        ...(gorgonAthena === undefined ? {} : { gorgonAthena }),
         resettable: domain.selectedEncounterKey !== domain.defaultEncounterKey,
         selectedEncounter: Object.freeze({
           key: selectedDefinition.key,
@@ -1096,7 +1148,8 @@ function encounterPhaseInteractionRequirement(
   phases: readonly WorkspaceEncounterPhase[],
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
   const interactivePhases = phases.filter(
-    (phase) => phase.customizable || phase.figLeaf !== undefined,
+    (phase) =>
+      phase.customizable || phase.figLeaf !== undefined || phase.gorgonCondition !== undefined,
   );
   if (interactivePhases.length === 0) return undefined;
   return Object.freeze({
@@ -1114,6 +1167,14 @@ function encounterPhaseInteractionRequirement(
                 figLeaf: Object.freeze({
                   selected: phase.figLeaf.selected,
                   supported: phase.figLeaf.supported,
+                }),
+              }),
+          ...(phase.gorgonCondition === undefined
+            ? {}
+            : {
+                gorgonCondition: Object.freeze({
+                  selected: phase.gorgonCondition.selected,
+                  supported: phase.gorgonCondition.supported,
                 }),
               }),
         }),
@@ -1142,6 +1203,7 @@ function hasRoomLocalCustomization(
         phase.customizable ||
         phase.marker.findingCount > 0 ||
         phase.traitOffer !== undefined ||
+        phase.gorgonAthena !== undefined ||
         phase.figLeaf !== undefined,
     )
   ) {
@@ -1456,6 +1518,7 @@ export function assembleWorkspaceOccurrence(
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
       ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+      ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...workspaceLocalDetailMarkers(roomLocal),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
@@ -1465,6 +1528,7 @@ export function assembleWorkspaceOccurrence(
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
       ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+      ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...workspaceCustomizationMarkers(roomLocal),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),

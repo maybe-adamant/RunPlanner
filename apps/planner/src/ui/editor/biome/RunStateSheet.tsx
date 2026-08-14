@@ -133,6 +133,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
                 state.keepsakes.figLeafActivatedThisBiome ? ' · already used this biome' : ''
               }`}
         </p>
+        <p>Gorgon Amulet: {state.keepsakes.gorgonStatus ?? 'inactive'}</p>
         <p>Removed: {state.keepsakes.removedLabels.join(' · ') || 'None'}</p>
       </section>
       <section>

@@ -68,7 +68,7 @@ import type {
 } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import type { FigLeafLifecycleState } from '../history';
-import { attestFigLeafBranchState } from '../keepsakes';
+import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -167,6 +167,9 @@ function generation(
     structurallyActiveEncounterRooms(encounterPrefix),
     new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room.preparation])),
     encounterBoundary,
+    rewards.figLeafPhaseCandidates,
+    attestGorgonBranchState(rewards.branches),
+    rewards.gorgonPhaseCandidates,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:
@@ -685,6 +688,7 @@ function retainBlockedRegionProducts(
       : Object.freeze({
           at: retainedArtifacts.encounters.at,
           statusAt: retainedArtifacts.encounters.statusAt,
+          gorgonAt: retainedArtifacts.encounters.gorgonAt,
           figLeafAt: retainedArtifacts.encounters.figLeafAt,
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&

@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -121,6 +122,29 @@ describe('fine-grained finding routing', () => {
     expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
       /finding has no exact workspace destination/,
     );
+  });
+
+  it('routes a Gorgon finding to its exact Gorgon phase owner', () => {
+    const phase = createEncounterPhaseAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('finding-routing-gorgon') },
+      'Combat',
+    );
+    const finding = {
+      code: 'rewardAcquisitionUnavailable',
+      evidence: {},
+      origin: createGorgonPhaseAddress(phase),
+      phase: 'rewardGeneration',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+    const exact = destination({
+      focusAddress: phase,
+      focusKey: semanticAddressKey(phase),
+      ownerAddress: finding.origin,
+    });
+    const focusByOwner = new Map([[semanticAddressKey(finding.origin), exact]]);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+    expect(focusByOwner.get(semanticAddressKey(finding.origin))).toEqual(exact);
   });
 
   it('requires every live coarse finding to receive an exact fallback destination', () => {

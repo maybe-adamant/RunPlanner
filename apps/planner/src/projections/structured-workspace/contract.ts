@@ -181,6 +181,18 @@ export interface WorkspaceFigLeafInteraction {
   readonly supported: boolean;
 }
 
+export interface WorkspaceGorgonConditionInteraction {
+  readonly intentFor: (
+    value: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceGorgonDeathDefianceCondition' }>
+  >;
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
+  readonly selected: boolean;
+  readonly supported: boolean;
+}
+
 export interface WorkspaceRewardInteraction {
   readonly authoredRewardTypes: readonly string[];
   readonly intentFor: (offer: ResolvedRewardOffer) => WorkspaceRewardCommandIntent;
@@ -621,6 +633,7 @@ export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
+  readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
@@ -925,6 +938,12 @@ export interface WorkspaceEncounterPhase {
   };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
+  readonly gorgonCondition?: {
+    readonly interactionKey: string;
+    readonly selected: boolean;
+    readonly supported: boolean;
+  };
+  readonly gorgonAthena?: WorkspaceTraitOfferControl;
   /** A reset is useful only after the authored selection diverges from its static default. */
   readonly resettable: boolean;
   readonly selectedEncounter: {
@@ -1286,6 +1305,7 @@ export interface WorkspaceRunStatePresentation {
     readonly timePieceRemainingCharges?: number;
     readonly figLeafRemainingUses?: number;
     readonly figLeafActivatedThisBiome?: boolean;
+    readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
   };
   readonly arcana: readonly {
     readonly key: string;

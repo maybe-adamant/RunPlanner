@@ -302,6 +302,11 @@ export type EncounterOccurrenceCommand =
       readonly kind: 'ReplaceFigLeafSkip';
       readonly phase: EncounterPhaseAddress;
       readonly value: boolean;
+    }
+  | {
+      readonly kind: 'ReplaceGorgonDeathDefianceCondition';
+      readonly phase: EncounterPhaseAddress;
+      readonly value: boolean;
     };
 
 export type TraitOfferCommand =

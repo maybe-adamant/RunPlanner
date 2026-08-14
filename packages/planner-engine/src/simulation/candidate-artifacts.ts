@@ -54,6 +54,7 @@ function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
     at: () => undefined,
     statusAt: () => undefined,
+    gorgonAt: () => undefined,
     roomAt: () => undefined,
     figLeafAt: () => undefined,
   });

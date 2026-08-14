@@ -6,6 +6,7 @@ export const qEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -13,6 +14,7 @@ export const qEncounterDefinitions = [
     label: 'Islands combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -20,6 +22,7 @@ export const qEncounterDefinitions = [
     label: 'Preboss combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -27,6 +30,7 @@ export const qEncounterDefinitions = [
     label: 'Brute',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -35,6 +39,7 @@ export const qEncounterDefinitions = [
     label: 'Stalker',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -43,6 +48,7 @@ export const qEncounterDefinitions = [
     label: 'Typhon tail',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -51,6 +57,7 @@ export const qEncounterDefinitions = [
     label: 'Typhon eye',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     blocksFigLeaf: true,
   },
   {
@@ -58,6 +65,7 @@ export const qEncounterDefinitions = [
     label: 'Typhon',
     kind: 'boss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

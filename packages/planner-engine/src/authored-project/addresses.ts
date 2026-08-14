@@ -127,6 +127,13 @@ export interface EncounterPhaseAddress extends BiomeOwnedAddress {
   readonly owner: EncounterPhaseOwner;
   readonly phaseKey: string;
 }
+/** Exact additive Gorgon child owned beneath one encounter phase. */
+export interface GorgonPhaseAddress extends BiomeOwnedAddress {
+  readonly kind: 'gorgonPhase';
+  readonly encounter: EncounterPhaseAddress;
+  /** Convenience narrowing for generic owner consumers. */
+  readonly occurrenceId: OccurrenceId;
+}
 export interface RewardWheelAddress extends BiomeOwnedAddress {
   readonly kind: 'rewardWheel';
   readonly occurrenceId: OccurrenceId;
@@ -188,6 +195,8 @@ export type TraitOfferOwnerAddress =
   | RewardWheelOfferAddress
   | ShopOfferAddress
   | EncounterPhaseAddress
+  | GorgonPhaseAddress
+  | GorgonPhaseAddress
   | AcquisitionEntryAddress;
 
 export interface TraitOfferAddress extends BiomeOwnedAddress {
@@ -234,6 +243,7 @@ export type SemanticAddress =
   | LocalChildAddress
   | LocalChildGroupAddress
   | EncounterPhaseAddress
+  | GorgonPhaseAddress
   | RewardWheelAddress
   | RewardWheelOfferAddress
   | HubSlotAddress
@@ -494,6 +504,21 @@ export function createEncounterPhaseAddress(
     phaseKey: nonBlank(phaseKey, 'phaseKey'),
   });
 }
+export function createGorgonPhaseAddress(encounter: EncounterPhaseAddress): GorgonPhaseAddress {
+  const address = {
+    kind: 'gorgonPhase',
+    routeKey: encounter.routeKey,
+    biomeKey: encounter.biomeKey,
+    encounter,
+  } as GorgonPhaseAddress;
+  Object.defineProperty(address, 'occurrenceId', {
+    configurable: false,
+    enumerable: false,
+    value: encounter.owner.occurrenceId,
+    writable: false,
+  });
+  return Object.freeze(address);
+}
 export function createRewardWheelAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -692,6 +717,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey]);
     case 'encounterPhase':
       return JSON.stringify([...base, address.owner, address.phaseKey]);
+    case 'gorgonPhase':
+      return JSON.stringify([...base, semanticAddressKey(address.encounter)]);
     case 'rewardWheel':
       return JSON.stringify([...base, address.occurrenceId, address.wheelKey]);
     case 'rewardWheelOffer':

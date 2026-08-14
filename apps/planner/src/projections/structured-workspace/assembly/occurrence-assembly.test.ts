@@ -15,11 +15,13 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
+  createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
   simulateProjectAssembly,
@@ -38,6 +40,7 @@ import {
 } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
+  createRepresentativeNOPProject,
   nBiome,
   nOccurrenceId,
   oBiome,
@@ -50,10 +53,22 @@ import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts'
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/marker-builder';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 
-function biomeSource(project: ProjectDocument, routeKey: string, biomeKey: string) {
+function biomeSource(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+  gorgonSupport?: (
+    phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
+  ) => boolean,
+) {
   const assembly = simulateProjectAssembly(catalog, project);
-  const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
-    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+  const source = createWorkspaceProjectSourceIndex(
+    catalog,
+    project,
+    assembly.evaluation,
+    (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+    undefined,
+    gorgonSupport,
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -80,8 +95,11 @@ function assemble(
   routeKey: string,
   biomeKey: string,
   occurrenceId: OccurrenceId,
+  gorgonSupport?: (
+    phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
+  ) => boolean,
 ) {
-  const source = biomeSource(project, routeKey, biomeKey);
+  const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
@@ -102,6 +120,7 @@ function assemble(
     biome: source.biome,
     catalog,
     encounterPhaseStatus: source.encounterPhaseStatus,
+    ...(gorgonSupport === undefined ? {} : { gorgonSupport }),
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     levelResolutionAssessment: source.levelResolutionAssessment,
@@ -184,6 +203,65 @@ function withFPrebossSelection(
 }
 
 describe('structured workspace occurrence assembly', () => {
+  it('publishes pending Gorgon support and retains a context-invalid child for repair', () => {
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
+      'Combat',
+    );
+    let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    let engineAssembly = simulateProjectAssembly(catalog, project);
+    expect(
+      encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, phase)?.supported,
+    ).toBe(true);
+    const support = (
+      candidate: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
+    ) =>
+      encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate)
+        ?.supported === true;
+    const pending = assemble(
+      project,
+      'Surface',
+      'P',
+      pOccurrenceId('P_Combat12', 8, 1),
+      support,
+    ).assembly;
+    const pendingPhase = pending.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Combat',
+    );
+    expect(pendingPhase?.gorgonCondition).toMatchObject({ supported: true, selected: false });
+    expect(pendingPhase?.gorgonAthena).toBeUndefined();
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'AthenaCombatP',
+    });
+    engineAssembly = simulateProjectAssembly(catalog, project);
+    const retained = assemble(
+      project,
+      'Surface',
+      'P',
+      pOccurrenceId('P_Combat12', 8, 1),
+      (candidate) =>
+        encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate)
+          ?.supported === true,
+    ).assembly.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Combat',
+    );
+    expect(retained?.gorgonCondition).toMatchObject({ supported: false, selected: true });
+    expect(retained?.gorgonAthena).toBeDefined();
+  });
+
   it('returns immutable ordinary and fixed workbenches with their exact marker destinations', () => {
     const project = createGoldenFGHIProject();
     const fixed = assemble(project, 'Underworld', 'F', goldenFStartId);

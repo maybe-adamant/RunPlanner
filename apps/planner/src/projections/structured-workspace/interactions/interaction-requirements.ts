@@ -62,6 +62,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly selected: boolean;
           readonly supported: boolean;
         };
+        readonly gorgonCondition?: {
+          readonly selected: boolean;
+          readonly supported: boolean;
+        };
       }[];
     }
   | {

@@ -232,6 +232,8 @@ function historyProbeCatalog(): Catalog {
     countsEncounterDepth: true,
     canEncounterSkip: false,
     blocksFigLeaf: false,
+    blocksGorgon: false,
+    hostsGorgon: false,
     skipEndEncounterEffects: false,
     requirements: Object.freeze({
       kind: 'all',

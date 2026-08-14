@@ -68,6 +68,7 @@ export function workspaceLocalDetailMarkers(
               ...slot.encounterPhases.flatMap((phase) => [
                 phase.marker,
                 ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+                ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
               ]),
               ...(slot.generation === 'generated' ? rewardControlMarkers(slot.rewardControl) : []),
             ]),
@@ -127,6 +128,7 @@ export function workspaceOccurrenceOwnedMarkers(
               ? []
               : [phase.traitOffer.circeResolution.marker]),
           ]),
+      ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...room.rewardControls.flatMap((control) => [
       control.marker,

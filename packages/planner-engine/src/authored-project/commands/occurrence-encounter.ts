@@ -2,7 +2,7 @@ import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catal
 import type { EncounterPhaseAddress } from '../addresses';
 import type { ProjectDocument, RoomEncounterState, RoomOccurrence } from '../model';
 import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounters';
-import { createDefaultEncounterTraitOffer } from '../traits';
+import { createDefaultEncounterTraitOffer, createDefaultGorgonAthenaOffer } from '../traits';
 import {
   failCommand,
   requireOccurrence,
@@ -29,6 +29,19 @@ function selectableBinding(
   return binding;
 }
 
+function gorgonSlotOwnedByDeclaration(
+  catalog: Catalog,
+  binding: EncounterSlotBinding,
+  path: string,
+): boolean {
+  if (binding.kind === 'fixed') {
+    return catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.hostsGorgon === true;
+  }
+  return encounterSetForBinding(catalog, binding, path).encounterDefinitionKeys.some(
+    (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
+  );
+}
+
 function updatedSelections(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -36,7 +49,11 @@ function updatedSelections(
   phase: EncounterPhaseAddress,
   command: EncounterOccurrenceCommand,
 ): RoomEncounterState {
-  if (command.kind === 'ReplaceFigLeafSkip') return current;
+  if (
+    command.kind === 'ReplaceFigLeafSkip' ||
+    command.kind === 'ReplaceGorgonDeathDefianceCondition'
+  )
+    return current;
   const binding = selectableBinding(catalog, room, phase, command);
   const set = encounterSetForBinding(catalog, binding, room.gameName);
   const encounterKey =
@@ -55,13 +72,55 @@ function updatedSelections(
     Object.keys(phaseOffers).length === 0
       ? undefined
       : Object.freeze({ ...priorOffers, [phase.phaseKey]: Object.freeze(phaseOffers) });
+  const gorgonResultByPhase = { ...(current.gorgonResultByPhase ?? {}) };
+  if (gorgonSlotOwnedByDeclaration(catalog, binding, room.gameName)) {
+    gorgonResultByPhase[phase.phaseKey] ??= { deathDefianceConditionMet: false };
+  }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze({
       ...current.encounterKeyByPhase,
       [phase.phaseKey]: encounterKey,
     }),
     figLeafSkipByPhase: current.figLeafSkipByPhase,
+    gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
+  });
+}
+
+function updatedGorgonResult(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceGorgonDeathDefianceCondition') return current;
+  const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
+  if (binding === undefined)
+    failCommand(command, `${room.gameName} has no encounter phase ${phase.phaseKey}`);
+  const prior = current.gorgonResultByPhase?.[phase.phaseKey];
+  if (prior === undefined)
+    failCommand(command, `${room.gameName} has no Gorgon result ${phase.phaseKey}`);
+  const selectedKey =
+    binding.kind === 'fixed'
+      ? binding.encounterDefinitionKey
+      : current.encounterKeyByPhase[phase.phaseKey];
+  if (selectedKey === undefined || !gorgonSlotOwnedByDeclaration(catalog, binding, room.gameName))
+    failCommand(command, `${room.gameName}.${phase.phaseKey} is not a Gorgon-hosting declaration`);
+  const nextOffer =
+    command.value === true && prior.athenaOffer === undefined
+      ? createDefaultGorgonAthenaOffer(catalog)
+      : prior.athenaOffer;
+  const next = Object.freeze({
+    deathDefianceConditionMet: command.value,
+    ...(nextOffer === undefined ? {} : { athenaOffer: nextOffer }),
+  });
+  return Object.freeze({
+    ...current,
+    gorgonResultByPhase: Object.freeze({
+      ...(current.gorgonResultByPhase ?? {}),
+      [phase.phaseKey]: next,
+    }),
   });
 }
 
@@ -141,11 +200,12 @@ function replaceTopLevel(
     command,
   );
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
-  if (withFigLeaf === occurrence.encounters) return document;
+  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, command.phase, command);
+  if (withGorgon === occurrence.encounters) return document;
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: withFigLeaf })),
+    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: withGorgon })),
   );
 }
 
@@ -169,7 +229,8 @@ function replaceLocalChild(
   );
   const encounters = updatedSelections(catalog, room, state.encounters, command.phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
-  if (withFigLeaf === state.encounters) return document;
+  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, command.phase, command);
+  if (withGorgon === state.encounters) return document;
   if (occurrence.state.kind !== 'ephyraCombat') {
     failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
   }
@@ -184,7 +245,7 @@ function replaceLocalChild(
           ...occurrence.state,
           sideRooms: Object.freeze({
             ...occurrence.state.sideRooms,
-            [slot.slotKey]: Object.freeze({ ...state, encounters: withFigLeaf }),
+            [slot.slotKey]: Object.freeze({ ...state, encounters: withGorgon }),
           }),
         }),
       }),
