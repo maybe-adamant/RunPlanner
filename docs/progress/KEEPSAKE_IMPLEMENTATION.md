@@ -12,12 +12,15 @@ Completed delivery gates:
 - Gate B — Jeweled Pom: `0cfd242`;
 - Gate C — Experimental Hammer: `9209936`;
 - Gate D — Calling Card: `df47929`; and
-- Gate E — Time Piece: `b30f90f`.
+- Gate E — Time Piece: `b30f90f`; and
+- Gate F — Fig Leaf: `d6d98ab`, with the source-fidelity miniboss correction at
+  `5239e30` and the workspace-loader boundary correction at `93d4806`.
 
-The current clean implementation base is `b30f90f`. Gate F — Fig Leaf was
-live-code preflighted at `03bcc71`; its locked contract includes Q's inherited
-skip support and N side rooms' explicit blocker. Gate F is the next delivery
-boundary. Gates G — Gorgon Amulet and H — product closure and absorption remain
+The current clean implementation base is `93d4806`. Gate G — Gorgon Amulet was
+live-code preflighted against that base. Its amended contract distinguishes
+room-owned and encounter-owned Athena blockers, locks the exact modeled
+declaration matrix, and defines the phase-child defaults and lifecycle. Gate G
+is the next delivery boundary. Gate H — product closure and absorption remains
 pending.
 
 Do not link this plan from `README.md`, stable design documents, biome rules,
@@ -471,6 +474,33 @@ The implementation must preserve the audited shapes:
 Gorgon Amulet owns one pending Athena appearance while it remains equipped.
 The pending effect is lost when the keepsake is replaced. It is not permanent.
 
+The catalog owns one exact Gorgon descriptor: one pending use, minimum biome
+depth two, Athena as the additive provider, and a fixed Epic fresh-offer rarity.
+Room declarations and encounter declarations expose separate
+Gorgon-Athena-blocking facts. Do not reuse `blocksKeepsakeSelectionKeys`: that
+fact governs later rack selection after an encounter has entered route history,
+not whether the current room and encounter can trigger Gorgon.
+
+The complete modeled declaration policy is:
+
+- positive encounter declarations: ordinary generated F/G/H/I/N/O/P/Q and
+  their modeled generated variants, including both H passive declarations, H
+  cage declarations, N Opening and PreHub, O's later `GeneratedO`, and P's
+  later `GeneratedP` and `GeneratedP_Large`;
+- encounter blockers: F opening, O intro, every P opening and pre-combat
+  declaration, every modeled field-NPC combat, Devotion, miniboss, boss, and
+  Anomaly declaration;
+- room blockers: all fifteen N side rooms through their inherited
+  `BaseN_SubRooms` fact, even though `GeneratedNSubRoom` and
+  `GeneratedNSubRoom_Bigger` are independently encounter-unblocked; and
+- empty, story, shop, and other non-hosted noncombat phases do not
+  structurally host the result.
+
+Eligibility follows these declaration-owned facts, not encounter `kind`, phase
+label, biome, or Fig Leaf support. The catalog's exact matrix test owns the full
+list; engine and product tests retain representative H-passive, N-side-room,
+O, and P witnesses.
+
 Persist one exact `AuthoredGorgonPhaseResult` beneath each encounter phase that
 can structurally host this effect:
 
@@ -485,21 +515,43 @@ Its semantic `GorgonPhaseAddress` owns the local condition and is itself owned
 by the exact `EncounterPhaseAddress`. Extend `TraitOfferOwnerAddress` with that
 Gorgon address so the conditional Athena offer uses the ordinary
 `TraitOfferAddress` with acquisition role `gorgonAthena`. This establishes the
-condition before the offer exists and avoids copying it onto the generated
-offer.
+condition before the offer exists. Although ordinary Athena offers may carry
+their own authored Death Defiance context, a `gorgonAthena` offer must not
+persist a duplicate `deathDefianceConditionMet` field. Its owner supplies that
+fact to the ordinary Athena trait evaluator, and the Gorgon-specific codec and
+commands enforce its absence from the child.
+
+Every structurally hosting phase defaults to
+`deathDefianceConditionMet: false` with no Athena child. The semantic command
+that changes the condition to true atomically creates the declaration-owned
+three-option Athena default when the child is absent and fixes all three rows
+to Epic. A decoded or otherwise structurally representable true result may
+still lack the optional child; that state is retained as incomplete rather
+than repaired silently. Changing the condition back to false preserves an
+existing authored offer dormant for restoration.
 
 The result may remain persisted while dormant. It is reached only while a
 pending Gorgon effect is assessing that structural phase. When the condition
 is false, `athenaOffer` is dormant and publishes no trait finding. When the
 condition is true at the first otherwise-eligible phase, the offer becomes a
-required child; an absent or invalid offer makes that phase incomplete rather
-than silently advancing the pending effect. Changing the condition back to
-false preserves the authored offer for restoration.
+required child. An absent or invalid required offer makes that phase
+incomplete, does not consume the pending use, and prevents the selected
+evaluation from advancing the pending effect to a later phase. It must not
+silently activate twice or skip ahead to find a valid child.
+
+Room or encounter replacement retains a phase-local Gorgon result only for the
+same stable slot in a replacement room whose declaration and active envelope
+still structurally support a Gorgon child. Drop the child when that structural
+surface disappears. Retain it when the surface remains but current depth,
+selected encounter, room blocker, Fig Leaf execution, condition, or shared
+Athena budget makes it context-invalid; the retained result remains authored
+and repairable under the ordinary replacement-retention contract.
 
 At an exact structurally eligible encounter phase:
 
 - biome depth must be at least two;
-- neither the room nor encounter may block the keepsake;
+- the room-owned blocker must be false;
+- the selected encounter declaration's blocker must be false;
 - Fig Leaf must not have skipped the combat; and
 - the existing phase-local `deathDefianceConditionMet` fact must be true,
   meaning no Death Defiance remains at that frontier.
@@ -508,6 +560,12 @@ False leaves the pending appearance unconsumed for a later eligible phase.
 True at the first eligible non-skipped phase creates one additive Athena child
 and consumes the pending use. Reuse the same local fact for Athena traits that
 inspect the missing-Death-Defiance condition.
+
+Eligibility is assessed at `encounterStarted`, after Fig Leaf has resolved,
+using the lifecycle event's actual execution state and the predecessor/pre-room
+`biomeDepthCache`. It must not use the depth after the current encounter has
+incremented it. A required Gorgon Athena offer settles at
+`encounterCompleted`; only a valid required child consumes the pending use.
 
 The additive child does not replace the selected encounter, room reward, or
 room occurrence. It owns an exact Athena trait offer beneath the existing
@@ -520,9 +578,30 @@ reached while Gorgon remains pending because all earlier phases blocked it,
 that natural encounter expires the pending keepsake effect and still produces
 only one Athena appearance.
 
+Candidate evaluation preserves the selected/counterfactual distinction.
+`AthenaCombatP` is excluded after an earlier Gorgon appearance has consumed the
+shared budget. At the same still-pending phase, however, natural Athena remains
+a valid alternative candidate when its own requirements pass: its declaration
+blocks Gorgon for that alternative, and selecting it expires the pending
+effect. The candidate domain must not be derived only from the currently
+selected encounter's positive Gorgon support.
+
 Gorgon support must be resolved by the engine before final encounter candidate
 publication. Do not encode the additive appearance as `AthenaCombatP`, insert
 a synthetic room, or make React arbitrate the shared budget.
+
+The branch-owned Gorgon lifecycle is exact:
+
+- equipping Gorgon creates `pending`;
+- completing one valid required additive Athena child changes it to
+  `consumed`;
+- replacing Gorgon before activation changes pending to `expired`;
+- a natural Athena appearance while Gorgon is pending changes it to `expired`;
+  and
+- consumed history remains consumed after later keepsake replacement.
+
+Run State presents those engine-owned states without reconstructing them from
+the current keepsake key or encounter history.
 
 ## Application and UI Contract
 
@@ -698,16 +777,40 @@ feat(engine): model Fig Leaf encounter skips
 
 ### Gate G — Gorgon Amulet
 
-1. Normalize exact depth, room, encounter, and shared-Athena-budget facts.
-2. Add the exact phase-owned Gorgon result/address, condition command, and
-   conditional `gorgonAthena` trait-offer child; bump the strict schema.
-3. Resolve the pending effect from branch-owned keepsake state at the exact
-   encounter phase.
-4. Reuse Athena trait eligibility with fixed Epic rarity.
-5. Intersect additive Gorgon support with natural encounter candidates before
-   final publication.
-6. Prove Fig Leaf deferral, false-condition deferral, swap loss, P timing,
-   natural-Athena precedence, once-per-route closure, UI, and Run State.
+1. Normalize the exact one-use, depth-two, Athena-provider, fixed-Epic,
+   room-blocker, encounter-blocker, and shared-Athena-budget facts. The catalog
+   matrix must cover every modeled declaration plus all fifteen N side rooms;
+   it must prove H passive positive and N's room-blocked/encounter-unblocked
+   distinction.
+2. Add `gorgonResultByPhase`, the exact phase-owned Gorgon result/address,
+   condition command, and conditional `gorgonAthena` trait-offer child; bump
+   the strict authored schema from 28 to 29. Default false without a child;
+   changing true creates the complete Epic default atomically; malformed true
+   without a child remains representable and incomplete.
+3. Resolve pending, consumed, and expired state chronologically from
+   branch-owned keepsake state. Assess at `encounterStarted` after Fig Leaf,
+   using actual execution and predecessor/pre-room depth; settle the required
+   child at `encounterCompleted`. Fig Leaf, false condition, insufficient
+   depth, and either blocker defer without consuming; an invalid required child
+   blocks downstream activation in that evaluation.
+4. Reuse the ordinary Athena trait evaluator with parent-supplied Death
+   Defiance context and fixed Epic rarity. Do not persist the condition twice
+   or add a parallel Gorgon-only trait evaluator.
+5. Intersect the shared Athena appearance budget with natural encounter
+   candidates before final publication. Exclude natural Athena after an earlier
+   Gorgon appearance, but retain it as a counterfactual at the same pending
+   phase where selecting its blocking declaration would expire Gorgon. Preserve
+   both precedence directions without a synthetic encounter.
+6. Retain Gorgon phase results only for the same stable replacement slot while
+   its declaration/envelope still structurally hosts the child; drop them when
+   that surface disappears and retain context-invalid results otherwise.
+   Project the separate additive child, repair findings, and exact Run State
+   lifecycle through the application without key-based React policy.
+7. Prove depth and false-condition deferral, Fig Leaf deferral, room and
+   encounter blockers, H passive support, N side-room exclusion, O/P phase
+   timing, swap loss, fixed-Epic three-option Athena lifecycle, invalid-child
+   blocking, both shared-budget precedence directions, once-per-route closure,
+   UI/finding navigation, and Run State.
 
 Default commit:
 
@@ -743,8 +846,11 @@ docs: absorb keepsake delivery
 - malformed, duplicate, missing, misplaced, and mutable nested declarations;
 - exact Calling Card provider matrix;
 - exact Time Piece acquisition-capability matrix;
-- exact Fig Leaf/Gorgon room and encounter capabilities, including positive Q
-  inheritance and the negative N side-room blocker; and
+- exact Fig Leaf encounter capabilities, including positive Q inheritance and
+  the N side-room Fig Leaf blocker;
+- exact Gorgon descriptor and declaration matrix, including separate room and
+  encounter blockers, H passive support, and all fifteen N side-room blockers;
+  and
 - exact Experimental Hammer encounter-use exclusions.
 
 ### Authored project
