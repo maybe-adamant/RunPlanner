@@ -1,11 +1,15 @@
 import {
   createBiomeAddress,
+  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createKeepsakeEquipResultAddress,
   createLocalChildAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
+  createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
@@ -14,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import type { WorkspaceInspectorDestination, WorkspaceRoute } from '../contract';
 import {
   assertFineGrainedFindingDestination,
+  isFineGrainedFindingOwner,
   registerWorkspaceFindingDestinations,
 } from './finding-routing';
 
@@ -145,6 +150,41 @@ describe('fine-grained finding routing', () => {
     const focusByOwner = new Map([[semanticAddressKey(finding.origin), exact]]);
     registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
     expect(focusByOwner.get(semanticAddressKey(finding.origin))).toEqual(exact);
+  });
+
+  it('requires a Postboss equip result to route through its exact completion inspector', () => {
+    const selection = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(biome, 'postboss'),
+    );
+    const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+    const finding = {
+      code: 'keepsakeEquipResultMissing',
+      evidence: {},
+      origin: result,
+      phase: 'completeness',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+    const exact = destination({
+      focusAddress: selection,
+      focusKey: semanticAddressKey(selection),
+      ownerAddress: result,
+    });
+    const focusByOwner = new Map([[semanticAddressKey(result), exact]]);
+
+    expect(isFineGrainedFindingOwner(result)).toBe(true);
+    expect(
+      isFineGrainedFindingOwner(
+        createKeepsakeEquipResultAddress(
+          createRouteStartKeepsakeSelectionAddress('Surface'),
+          'experimentalHammer',
+        ),
+      ),
+    ).toBe(false);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+    expect(focusByOwner.get(semanticAddressKey(result))).toEqual(exact);
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+      /finding has no exact workspace destination/,
+    );
   });
 
   it('requires every live coarse finding to receive an exact fallback destination', () => {

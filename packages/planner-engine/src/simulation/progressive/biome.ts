@@ -11,6 +11,7 @@ import {
   type LevelResolutionAddress,
   type TraitOfferAddress,
   type KeepsakeSelectionAddress,
+  type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
@@ -23,6 +24,7 @@ import type {
 } from '../generation/model';
 import {
   createBiomeCandidateArtifacts,
+  createKeepsakeEquipResultCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
   type BiomeCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
@@ -461,6 +463,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
+  const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =
+    blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
   const blockedAcquisitionAt: AcquisitionRoleAddress | undefined =
     blockedAt.kind === 'acquisitionRole' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
@@ -603,6 +607,23 @@ function retainBlockedRegionProducts(
             [semanticAddressKey(blockedKeepsakeAt), blockedKeepsakeCapability] as const,
           ]),
         );
+  const blockedKeepsakeEquipResultCapability =
+    blockedKeepsakeEquipResultAt === undefined
+      ? undefined
+      : (selectedArtifacts.keepsakeEquipResults.at(blockedKeepsakeEquipResultAt) ??
+        blockedArtifacts.keepsakeEquipResults.at(blockedKeepsakeEquipResultAt));
+  const keepsakeEquipResults =
+    blockedKeepsakeEquipResultAt === undefined || blockedKeepsakeEquipResultCapability === undefined
+      ? retainedArtifacts.keepsakeEquipResults
+      : createKeepsakeEquipResultCandidateArtifacts(
+          new Map([
+            ...retainedArtifacts.keepsakeEquipResults.entries(),
+            [
+              semanticAddressKey(blockedKeepsakeEquipResultAt),
+              blockedKeepsakeEquipResultCapability,
+            ] as const,
+          ]),
+        );
   const blockedAcquisitionCapability =
     blockedAcquisitionAt === undefined
       ? undefined
@@ -706,7 +727,7 @@ function retainBlockedRegionProducts(
     levelResolutions,
     bossCompletionArcana,
     keepsakeSelections,
-    retainedArtifacts.keepsakeEquipResults,
+    keepsakeEquipResults,
     acquisitionConversions,
   );
   return Object.freeze({

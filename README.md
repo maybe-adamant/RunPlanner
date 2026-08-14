@@ -46,6 +46,12 @@ additional exit on declared N/F/G/P source rooms: it may be skipped or selected,
 enters a concrete Chaos room, then resumes through a fresh ordinary host target.
 All detours preserve normal-door takeover and completion ownership.
 
+Both routes author one mandatory rank-III keepsake and reached nonfinal
+Postboss retain-or-replace frontiers. All 33 ordinary identities participate in
+chronology, no-return legality, and Fated policy. Jeweled Pom, Experimental
+Hammer, Calling Card, Time Piece, Fig Leaf, and Gorgon Amulet additionally have
+their source-backed effect decisions, simulation, findings, and Run State.
+
 ## Architecture
 
 The repository is split by ownership:
@@ -137,6 +143,7 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Arcana and Fear audit](docs/audits/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md),
+  [keepsake audit](docs/audits/KEEPSAKE_GAME_DATA_AUDIT.md),
   [Shop and Well interaction lifecycle](docs/audits/SHOP_AND_WELL_INTERACTION_LIFECYCLE.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
   [encounter selection and composition findings](docs/audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md),

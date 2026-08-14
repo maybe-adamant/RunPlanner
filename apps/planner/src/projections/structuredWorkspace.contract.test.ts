@@ -6,15 +6,19 @@ import {
   createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
+  createKeepsakeEquipResultAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createProjectDocument,
   createTargetAddress,
   semanticAddressKey,
@@ -24,6 +28,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -566,6 +571,122 @@ describe('structured workspace overlay contract', () => {
       /finding has no exact workspace destination/,
     );
   });
+
+  it('publishes equip-result controls and destinations only for engine-supported owners', () => {
+    const fPostboss = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+    );
+    const fHammerResult = createKeepsakeEquipResultAddress(fPostboss, 'experimentalHammer');
+    let invalidHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+    });
+    invalidHammer = withMalformedAuthoredBiome(invalidHammer, 'Underworld', 'F', (plan) => ({
+      ...plan,
+      keepsakeEquipResults: { experimentalHammer: { traitKey: 'ApolloWeaponBoon' } },
+    }));
+    const invalidAssembly = simulateProjectAssembly(catalog, invalidHammer);
+    expect(invalidAssembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'keepsakeEquipResultUnavailable',
+        origin: fHammerResult,
+      }),
+    );
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(invalidAssembly, fHammerResult),
+    ).toBeDefined();
+    const invalidProjected = projection().project(invalidAssembly);
+    const invalidKey = semanticAddressKey(fHammerResult);
+    const fCompletion = invalidProjected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.nodes.find((node) => node.kind === 'completion' && node.role === 'postboss');
+    if (fCompletion?.kind !== 'completion' || fCompletion.keepsakeSelection === undefined)
+      throw new Error('reached F Postboss completion is missing');
+
+    expect(invalidProjected.interactions.keepsakeEquipResults.has(invalidKey)).toBe(true);
+    expect(fCompletion.keepsakeSelection.equipResult?.address).toEqual(fHammerResult);
+    expect(invalidProjected.focusByOwner.get(invalidKey)).toMatchObject({
+      focusAddress: fPostboss,
+      focusKey: semanticAddressKey(fPostboss),
+      inspectorSubject: { kind: 'node', nodeKey: fCompletion.key },
+      nodeKey: fCompletion.key,
+      ownerAddress: fHammerResult,
+    });
+
+    const gPostboss = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(createBiomeAddress('Underworld', 'G'), 'postboss'),
+    );
+    const hPostboss = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(createBiomeAddress('Underworld', 'H'), 'postboss'),
+    );
+    const hHammerResult = createKeepsakeEquipResultAddress(hPostboss, 'experimentalHammer');
+    let unavailableHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+    });
+    unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result: fHammerResult,
+      value: { traitKey: 'StaffJumpSpecialTrait' },
+    });
+    unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: gPostboss,
+      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+    });
+    unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: hPostboss,
+      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+    });
+    const unavailableAssembly = simulateProjectAssembly(catalog, unavailableHammer);
+    expect(unavailableAssembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeUnavailable', origin: hPostboss }),
+    );
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(unavailableAssembly, hHammerResult),
+    ).toBeUndefined();
+    const unavailableProjected = projection().project(unavailableAssembly);
+    const unavailableKey = semanticAddressKey(hHammerResult);
+    const hCompletion = unavailableProjected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.nodes.find((node) => node.kind === 'completion' && node.role === 'postboss');
+    if (hCompletion?.kind !== 'completion')
+      throw new Error('reached H Postboss completion is missing');
+
+    expect(unavailableProjected.interactions.keepsakeEquipResults.has(unavailableKey)).toBe(false);
+    expect(hCompletion.keepsakeSelection?.equipResult).toBeUndefined();
+    expect(unavailableProjected.focusByOwner.has(unavailableKey)).toBe(false);
+
+    const routeStart = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const startHammerResult = createKeepsakeEquipResultAddress(routeStart, 'experimentalHammer');
+    let missingStartHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      keepsakeKey: 'TempHammerKeepsake',
+      selection: routeStart,
+    });
+    missingStartHammer = {
+      ...missingStartHammer,
+      routes: missingStartHammer.routes.map((route) => {
+        if (route.routeKey !== 'Underworld') return route;
+        const { keepsakeEquipResults: _discarded, ...loadout } = route.loadout;
+        void _discarded;
+        return { ...route, loadout };
+      }),
+    };
+    const startProjected = projectWorkspace(missingStartHammer);
+    const startKey = semanticAddressKey(startHammerResult);
+    expect(startProjected.interactions.keepsakeEquipResults.has(startKey)).toBe(true);
+    expect(startProjected.focusByOwner.get(startKey)).toMatchObject({
+      ownerAddress: startHammerResult,
+      region: 'routeRail',
+      routeKey: 'Underworld',
+    });
+  }, 20_000);
 
   it('rejects a fine-grained finding on a withheld dormant Ephyra side leaf', () => {
     const project = createRepresentativeNOPQProject();

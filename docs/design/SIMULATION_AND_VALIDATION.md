@@ -367,6 +367,26 @@ Forfeit's current-biome status as inactive, available, or consumed. Consumed
 takes precedence over later Circe suppression because suppression cannot
 restore the skipped acquisition.
 
+Keepsakes are another explicit branch-owned ledger in this same progressive
+state. The ledger carries the current identity, ordered start/retain/replace
+history, removed keys, derived `Unknown`/`Fated`/`Unfated` status, and retained
+state for each supported effect. Branch equivalence includes the whole ledger;
+selection candidates and Run State consume it rather than reconstructing state
+from the current slot key.
+
+The six supported effects remain independent transitions through their owning
+authorities: Jeweled Pom directly acquires its authored Hades result and applies
+its prospective +3 trait levels; Experimental Hammer directly acquires one
+compatible rarityless Hammer and advances 20 declaration-owned encounter uses;
+Calling Card consumes six retained charges through ordered offer-row actions;
+Time Piece consumes four retained charges through exact pre-acquisition
+conversions; Fig Leaf consumes three retained uses on exact phases with one
+success per biome; and Gorgon Amulet carries `pending`, `consumed`, or `expired`
+while attaching one conditional fixed-Epic Athena offer to an exact phase.
+Identity-only keepsakes still affect chronology, no-return legality, and Fated
+policy but create no individual effect state. No generic effect interpreter
+replaces the trait, acquisition, encounter, or lifecycle folds.
+
 Judgment is a repeated transition at each reached Boss
 `encounterCompleted` point. Its selected canonical inactive-card set is
 validated and applied after the Boss and before Postboss or later-biome state;

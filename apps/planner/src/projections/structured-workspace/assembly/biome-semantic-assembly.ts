@@ -2,14 +2,16 @@ import {
   createBiomeFieldAddress,
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
-  createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
+  createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
+  createPostbossKeepsakeSelectionAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
   type ExitDecision,
+  type KeepsakeEquipResultAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
   type SemanticAddress,
@@ -416,6 +418,7 @@ export function assembleWorkspaceBiomeSemantics(
     readonly requiredCount: number;
   },
   postbossKeepsakeReached = false,
+  keepsakeEquipResultSupported: (address: KeepsakeEquipResultAddress) => boolean = () => false,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -647,6 +650,35 @@ export function assembleWorkspaceBiomeSemantics(
               requiredCount: bossCompletionArcanaCapability.requiredCount,
               value: plan.bossCompletionArcanaKeys ?? Object.freeze([]),
             });
+      const postbossKeepsakeDisposition =
+        descriptor.role !== 'postboss' ||
+        plan.postbossKeepsakeDisposition === undefined ||
+        !postbossKeepsakeReached
+          ? undefined
+          : plan.postbossKeepsakeDisposition;
+      const keepsakeSelectionAddress =
+        postbossKeepsakeDisposition === undefined
+          ? undefined
+          : createPostbossKeepsakeSelectionAddress(address);
+      const keepsakeSelectionMarker =
+        keepsakeSelectionAddress === undefined
+          ? undefined
+          : markerDestinations.marker(keepsakeSelectionAddress);
+      const replacementEffect =
+        keepsakeSelectionAddress !== undefined && postbossKeepsakeDisposition?.kind === 'replace'
+          ? catalog.keepsakes.byKey[postbossKeepsakeDisposition.keepsakeKey]?.effect
+          : undefined;
+      const keepsakeEquipResultAddress =
+        keepsakeSelectionAddress !== undefined &&
+        (replacementEffect?.kind === 'jeweledPom' ||
+          replacementEffect?.kind === 'experimentalHammer')
+          ? createKeepsakeEquipResultAddress(keepsakeSelectionAddress, replacementEffect.kind)
+          : undefined;
+      const keepsakeEquipResultMarker =
+        keepsakeEquipResultAddress !== undefined &&
+        keepsakeEquipResultSupported(keepsakeEquipResultAddress)
+          ? markerDestinations.marker(keepsakeEquipResultAddress)
+          : undefined;
       const node: WorkspaceCompletionNode = Object.freeze({
         kind: 'completion' as const,
         key: `completion:${semanticAddressKey(address)}`,
@@ -655,15 +687,24 @@ export function assembleWorkspaceBiomeSemantics(
         gameName: descriptor.roomGameName,
         label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
         ...(judgment === undefined ? {} : { judgment }),
-        ...(descriptor.role !== 'postboss' ||
-        plan.postbossKeepsakeDisposition === undefined ||
-        !postbossKeepsakeReached
+        ...(keepsakeSelectionAddress === undefined ||
+        keepsakeSelectionMarker === undefined ||
+        postbossKeepsakeDisposition === undefined
           ? {}
           : {
               keepsakeSelection: Object.freeze({
-                address: createPostbossKeepsakeSelectionAddress(address),
-                marker: markerDestinations.marker(createPostbossKeepsakeSelectionAddress(address)),
-                value: plan.postbossKeepsakeDisposition,
+                address: keepsakeSelectionAddress,
+                ...(keepsakeEquipResultAddress === undefined ||
+                keepsakeEquipResultMarker === undefined
+                  ? {}
+                  : {
+                      equipResult: Object.freeze({
+                        address: keepsakeEquipResultAddress,
+                        marker: keepsakeEquipResultMarker,
+                      }),
+                    }),
+                marker: keepsakeSelectionMarker,
+                value: postbossKeepsakeDisposition,
               }),
             }),
       });
@@ -675,6 +716,9 @@ export function assembleWorkspaceBiomeSemantics(
         ]),
         node.key,
       );
+      if (keepsakeEquipResultMarker !== undefined && keepsakeSelectionMarker !== undefined) {
+        markerDestinations.redirectTo(keepsakeEquipResultMarker, keepsakeSelectionMarker, node.key);
+      }
       return node;
     }),
   );

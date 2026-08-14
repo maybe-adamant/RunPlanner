@@ -104,12 +104,12 @@ Configured scope is not a claim that a biome is complete or simulation-valid.
 
 ### Route Loadout
 
-Each route persists its weapon/aspect choice, an unordered canonical selection
-of manually active Arcana cards, and one declaration-bounded rank for every
-Fear Vow. The catalog owns card order, ordinary automatic-activation rules,
-Vow maxima, and Fear increments. The authored model owns only the player's
-starting selections; derived automatic cards and the configured Fear total are
-not persisted independently.
+Each route persists its weapon/aspect choice, mandatory starting keepsake, an
+unordered canonical selection of manually active Arcana cards, and one
+declaration-bounded rank for every Fear Vow. The catalog owns card order,
+ordinary automatic-activation rules, Vow maxima, and Fear increments. The
+authored model owns only the player's starting selections; derived automatic
+cards and the configured Fear total are not persisted independently.
 
 The closed route commands replace the complete manual Arcana selection or one
 Vow rank. They validate catalog membership and static rank bounds, preserve all
@@ -129,6 +129,30 @@ Judgment stores one canonical distinct Arcana-card set on the exact derived
 Boss-completion address for each authored biome. It is dormant unless Judgment
 is active at that completion. This is a completion-local authored outcome, not
 a synthetic room, reward, or topology edge.
+
+### Keepsake Authorship
+
+The route loadout's starting keepsake and each nonfinal F/G/H/N/O/P Postboss
+completion own one exact chronological selection. A Postboss value is either
+`retain` or `replace` with a catalog keepsake key. The value remains persisted
+while the configured route has no successor, but it becomes reached only when
+another modeled biome follows. I and Q own no final-route rack choice because
+no modeled consumer follows them.
+
+Selection legality is contextual rather than codec policy. Unknown keys are
+malformed, while a structurally valid replacement that has already been
+removed, conflicts with Fated state, or is blocked by prior Athena history
+remains authored and repairable. Commands never silently convert it to retain,
+delete it, or move its effect detail to another frontier.
+
+Only immediate equip outcomes are persisted beneath a selection. Jeweled Pom
+and Experimental Hammer use one closed `KeepsakeEquipResultAddress` family with
+effect-specific complete children; the result is reached on start or
+replacement and is dormant on retention or while another identity is selected.
+Calling Card row actions stay on their exact trait offers, Time Piece conversion
+choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
+exact encounter phases. This preserves one semantic owner for every authored
+effect decision rather than creating a keepsake-owned catch-all result bag.
 
 ## Common Decision Model
 

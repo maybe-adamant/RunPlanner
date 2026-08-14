@@ -12,6 +12,31 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
+The ordinary keepsake delivery is complete through authored schema 29. Gate A
+(`539d781`) established the exact 33-identity rank-III selection timeline,
+Postboss retain-or-replace chronology, no-return legality, and derived Fated
+state. Gates B-G added Jeweled Pom (`0cfd242`), Experimental Hammer (`9209936`),
+Calling Card (`df47929`), Time Piece (`b30f90f`), Fig Leaf (`d6d98ab`, with
+source and workspace corrections `5239e30` and `93d4806`), and Gorgon Amulet
+(`8932f8d`). Later hardening fixed the Experimental Hammer empty-room matrix
+(`3b925d6`) and Blind Box conversion boundary (`6b8c723`).
+
+The catalog owns the exact inventory and effect capabilities; the authored
+model owns exact selections and effect children; one branch-owned keepsake
+ledger drives candidates, selected simulation, findings, and Run State. The
+closure audit corrected shared Jeweled Pom copy on Experimental Hammer findings
+and retained the exact blocked Postboss equip-result candidate through
+progressive clamping. Each supported child now has one engine-backed control
+and exact completion inspector; an unavailable replacement publishes neither.
+After those corrections the closure found no React keepsake-key policy, generic
+effect registry, parallel route history, duplicate state fold, or production
+audit scaffold. Durable catalog, authored, lifecycle, simulation, workspace,
+UX, and source-audit contracts now own the result, and the temporary
+implementation plan is retired. The final closure gate passed all three
+workspace typechecks, 147 test files and 1,580 tests, lint, formatting, and the
+production build. Rank-sensitive extensions, Cherished Heirloom, and Echo
+remain separate focused slices.
+
 Trait-offer exhaustion and the two reward-facing Fear Vows are complete.
 Schema 22 persists one-to-three Olympian/Hermes trait outcomes or mutually
 exclusive Fallback Gold while retaining declaration-owned triples elsewhere.

@@ -180,11 +180,36 @@ The catalog contains at least:
 - shop profiles;
 - requirement expressions;
 - generated-batch, Preboss-batch, and Hub decision descriptors;
+- ordinary keepsakes and their closed supported-effect descriptors;
 - player-facing labels beside stable game identifiers.
 
 Implementations for materializers, evaluators, and projectors live in code
 registries outside declaration records. A declaration selects a known semantic
 kind; it does not contain callbacks.
+
+## Keepsake Declarations
+
+The normalized catalog contains the exact 33-key ordinary rack inventory. Each
+entry owns its stable game key, player-facing label, fixed planner rank III
+(`Epic`), and Fated disposition (`neutral`, `enabling`, or `opposing`). Catalog
+normalization rejects missing, duplicate, unknown, or misclassified entries.
+The planner assumes the inventory is unlocked and does not represent profile
+progression or authored rank choice.
+
+Effect coverage is deliberately narrower than identity coverage. Jeweled Pom,
+Experimental Hammer, Calling Card, Time Piece, Fig Leaf, and Gorgon Amulet own
+one closed data-only descriptor containing only the rank-III facts consumed by
+their respective engine transitions. The other 27 identities remain legal
+selection and Fated-history participants without an individual gameplay-effect
+descriptor. Adding a later effect means extending this closed supported set and
+its owning domain transition; it does not add a generic callback registry.
+
+Keepsake-dependent capability facts stay with the declaration family that
+answers the engine's concrete question. Calling Card menu participation belongs
+to trait-giver declarations, Time Piece conversion support belongs to concrete
+acquisitions and their exact roles, and Fig Leaf/Gorgon/Experimental Hammer
+encounter behavior belongs to room and encounter declarations. The keepsake
+descriptor must not duplicate those matrices.
 
 ## Route and Layout Declarations
 

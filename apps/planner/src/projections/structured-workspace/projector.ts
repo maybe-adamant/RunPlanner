@@ -4,6 +4,7 @@ import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
+  type KeepsakeEquipResultAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -89,6 +90,7 @@ function projectBiome(
     readonly requiredCount: number;
   },
   postbossKeepsakeReached = false,
+  keepsakeEquipResultSupported: (address: KeepsakeEquipResultAddress) => boolean = () => false,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -123,6 +125,7 @@ function projectBiome(
     source,
     bossCompletionArcanaCapability,
     postbossKeepsakeReached,
+    keepsakeEquipResultSupported,
   );
   const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
@@ -272,6 +275,9 @@ export function createStructuredWorkspaceProjection(
             biomeSource,
             bossCompletion.kind === 'bossCompletionArcana' ? bossCompletion.result : undefined,
             biomeIndex + 1 < routeSource.biomes.length,
+            (address) =>
+              keepsakeEquipResultCandidateForProjectEvaluationAssembly(assembly, address) !==
+              undefined,
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueOccurrenceInteractionRequirements(
@@ -339,30 +345,15 @@ export function createStructuredWorkspaceProjection(
                   value: node.keepsakeSelection.value,
                 }),
               );
-              const replacementEffect =
-                node.keepsakeSelection.value.kind === 'replace'
-                  ? catalog.keepsakes.byKey[node.keepsakeSelection.value.keepsakeKey]?.effect
-                  : undefined;
-              if (
-                replacementEffect?.kind === 'jeweledPom' ||
-                replacementEffect?.kind === 'experimentalHammer'
-              ) {
-                const address = createKeepsakeEquipResultAddress(
-                  node.keepsakeSelection.address,
-                  replacementEffect.kind,
+              const equipResult = node.keepsakeSelection.equipResult;
+              if (equipResult !== undefined) {
+                keepsakeEquipResultControls.set(
+                  semanticAddressKey(equipResult.address),
+                  Object.freeze({
+                    address: equipResult.address,
+                    value: biomeSource.plan.keepsakeEquipResults?.[equipResult.address.resultKind],
+                  }),
                 );
-                if (
-                  keepsakeEquipResultCandidateForProjectEvaluationAssembly(assembly, address) !==
-                  undefined
-                ) {
-                  keepsakeEquipResultControls.set(
-                    semanticAddressKey(address),
-                    Object.freeze({
-                      address,
-                      value: biomeSource.plan.keepsakeEquipResults?.[replacementEffect.kind],
-                    }),
-                  );
-                }
               }
             }
             if (node.kind === 'occurrenceWorkbench') {

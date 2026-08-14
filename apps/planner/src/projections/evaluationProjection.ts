@@ -382,6 +382,23 @@ export function indexFindingsByOwner(findings: readonly SemanticFinding[]): Find
 }
 
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
+  if (
+    finding.origin.kind === 'keepsakeEquipResult' &&
+    finding.origin.resultKind === 'experimentalHammer'
+  ) {
+    if (finding.code === 'keepsakeEquipResultMissing') {
+      return Object.freeze({
+        title: 'Choose Experimental Hammer result',
+        description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
+      });
+    }
+    if (finding.code === 'keepsakeEquipResultUnavailable') {
+      return Object.freeze({
+        title: 'Experimental Hammer result is unavailable',
+        description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
+      });
+    }
+  }
   return findingCopy[finding.code];
 }
 
@@ -577,7 +594,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
   }
   if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
     return 'Starting keepsake';
-  if (origin.kind === 'keepsakeEquipResult') return 'Jeweled Pom result';
+  if (origin.kind === 'keepsakeEquipResult')
+    return origin.resultKind === 'jeweledPom' ? 'Jeweled Pom result' : 'Experimental Hammer result';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${origin.biomeKey}`);
