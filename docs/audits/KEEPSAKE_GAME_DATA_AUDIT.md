@@ -507,9 +507,10 @@ keepsake-effect interpreter.
 
 ### Encounter-altering keepsake lifecycles
 
-Fig Leaf and Gorgon Amulet both alter an eligible ordinary combat occurrence,
-but neither should be represented as the existing selectable P Athena encounter
-under a different source.
+Fig Leaf alters an eligible ordinary combat occurrence. Gorgon Amulet attaches
+to an eligible hosted encounter, including the source-supported H passive
+case. Neither should be represented as the existing selectable P Athena
+encounter under a different source.
 
 #### Fig Leaf
 
@@ -602,14 +603,44 @@ one checkbox per suppressed phase.
 
 #### Gorgon Amulet
 
-Gorgon Amulet owns one pending Athena appearance. At the first eligible combat
+Gorgon Amulet owns one pending Athena appearance. At the first eligible hosted
 encounter after equip, Athena is added to that encounter and the one use is
 consumed. There is no biome-P restriction: the keepsake's requirements inspect
-the current encounter and depth, not the room set. The encounter must begin at
-biome depth two or later, must not opt out through
-`BlockAthenaEncounterKeepsake`, and requires the player to have no remaining
-Death Defiance at that frontier. External ending/progression predicates are
-collapsed by the planner baseline.
+the current room and depth, and the encounter handler separately inspects the
+active encounter. The frontier must begin at biome depth two or later and
+requires the player to have no remaining Death Defiance. External
+ending/progression predicates are collapsed by the planner baseline.
+
+The source has two distinct `BlockAthenaEncounterKeepsake` owners:
+
+- `TraitData_Keepsake.lua` checks
+  `CurrentRun.CurrentRoom.BlockAthenaEncounterKeepsake` before starting the
+  effect; and
+- `HandleAthenaSpawn` in `EncounterLogic.lua` separately rejects the active
+  encounter when `encounter.BlockAthenaEncounterKeepsake` is true.
+
+These are not the later rack rule that prevents selecting Gorgon Amulet after
+Athena has already appeared. The planner must preserve room-owned trigger
+blocking, encounter-owned trigger blocking, and history-owned rack
+unavailability as separate facts.
+
+The effective modeled declaration matrix is:
+
+| Disposition                       | Modeled declarations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| encounter permits Gorgon          | `GeneratedF`; `GeneratedG`; `GeneratedH_Passive`, `GeneratedH_PassiveSmall`, `GeneratedH`, `GeneratedH_Treant2`, and `GeneratedH_Screamer2`; `GeneratedI`, `GeneratedI_GoalReward`, `GeneratedI_Small`, and `GeneratedI_Small_GoalReward`; `OpeningGeneratedN`, `PreHubGeneratedN`, `GeneratedN`, `GeneratedN_Smaller`, `GeneratedN_Bigger`, `GeneratedNSubRoom`, and `GeneratedNSubRoom_Bigger`; `GeneratedO`; `GeneratedP` and `GeneratedP_Large`; and `GeneratedQ`, `GeneratedQ_Islands`, and `GeneratedQ_Large` |
+| encounter blocks Gorgon           | `OpeningGeneratedF`; `GeneratedO_Intro01`; every P opening and pre-combat declaration; all modeled field-NPC combat declarations; `DevotionTestO`; all modeled miniboss and boss declarations; and `GeneratedAnomalyB`                                                                                                                                                                                                                                                                                              |
+| room blocks Gorgon                | every modeled N side room, `N_Sub01` through `N_Sub15`, through inherited `BaseN_SubRooms.BlockAthenaEncounterKeepsake = true`                                                                                                                                                                                                                                                                                                                                                                                      |
+| does not structurally host Gorgon | empty, story, shop, and other non-hosted noncombat phases                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+
+The N side-room row is deliberately independent: its generated encounter is
+encounter-unblocked, but its room is blocked. H passive encounters are a
+deliberate positive case rather than a kind-based inference; the Athena handler
+contains H-specific active-enemy-cap handling to account for passive
+encounters. Ordinary H cage encounters are positive through their selected
+generated declarations. O's intro is blocked while its later `GeneratedO`
+phases are positive. P's opening and pre-combat declarations are blocked while
+the later `GeneratedP` and `GeneratedP_Large` declarations are positive.
 
 The planner does not simulate a Death Defiance count. Gorgon Amulet therefore
 reuses the existing source-local authored condition
@@ -621,11 +652,11 @@ resulting Athena offer for traits whose own requirements inspect the missing
 Death Defiance condition. This is not a route loadout flag and must not create
 a synthetic Death Defiance ledger.
 
-A combat skipped by Fig Leaf cannot consume Gorgon Amulet: `HandleAthenaSpawn`
-returns before decrementing the pending use when enemy spawns were skipped.
-The pending Athena appearance therefore advances to the next eligible,
-non-skipped combat. This interaction can occur because Fig Leaf's persistent
-run trait survives after another keepsake is equipped.
+A hosted combat skipped by Fig Leaf cannot consume Gorgon Amulet:
+`HandleAthenaSpawn` returns before decrementing the pending use when enemy
+spawns were skipped. The pending Athena appearance therefore advances to the
+next eligible, non-skipped combat. This interaction can occur because Fig
+Leaf's persistent run trait survives after another keepsake is equipped.
 
 The keepsake appearance is additive. The ordinary encounter still runs; after
 combat, Athena appears as an additional required interaction. The room's
