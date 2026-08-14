@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createCompletionRoomAddress,
+  createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createLocalChildGroupAddress,
   createPostbossKeepsakeSelectionAddress,
@@ -20,8 +21,11 @@ import {
   createCompleteFGProject,
   createGoldenFGHProject,
   createRepresentativeNProject,
+  createRepresentativeNOProject,
   nBiome,
   nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
@@ -197,6 +201,183 @@ describe('Experimental Hammer', () => {
         (branch) => branch.keepsakes.experimentalHammer?.remainingUses === 20 - completions.length,
       ),
     ).toBe(true);
+    const combat02Phases = completions
+      .filter(
+        (event) =>
+          event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-h-combat02',
+      )
+      .map((event) => event.phaseKey);
+    expect(combat02Phases).toEqual(['Passive', 'Cage01', 'Cage02']);
+  });
+
+  it('advances through a selected Story primary encounter', () => {
+    const project = createCompleteFGProject();
+    const evaluated = evaluatedBiome(project, 'G');
+    const completions = lifecycleCompletions(project, 'G');
+    expect(
+      completions.some(
+        (event) =>
+          event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-g-b3-e1',
+      ),
+    ).toBe(true);
+    const result = evaluateBiomeRewardsAssemblyInternal(
+      catalog,
+      evaluated.snapshot,
+      evaluated.history,
+      2,
+      route(project).loadout,
+      [equippedBranch(project, 20)],
+    ).simulation;
+    expect(
+      result.branches.every(
+        (branch) => branch.keepsakes.experimentalHammer?.remainingUses === 20 - completions.length,
+      ),
+    ).toBe(true);
+  });
+
+  it('expires at the exact boss and Postboss completion owners', () => {
+    const project = createCompleteFGProject();
+    const completions = lifecycleCompletions(project, 'F');
+    const usesThrough = (role: 'boss' | 'postboss') => {
+      const index = completions.findIndex(
+        (event) => event.origin.kind === 'completionRoom' && event.origin.role === role,
+      );
+      if (index < 0) throw new Error(`missing ${role} completion`);
+      return index + 1;
+    };
+    for (const role of ['boss', 'postboss'] as const) {
+      const branch = replayThroughRealLifecycle(project, 'F', usesThrough(role)).branches[0]!;
+      expect(branch.keepsakes.experimentalHammer).toMatchObject({
+        active: false,
+        remainingUses: 0,
+      });
+      expect(branch.traitHistory?.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'traitRemoval',
+          acquisitionRole: 'experimentalHammerExpiry',
+          owner: expect.objectContaining({ kind: 'completionRoom', role }),
+        }),
+      );
+    }
+  });
+
+  it('grants 20 uses at the Postboss rack before Empty completion advances it to 19', () => {
+    const project = withPostbossHammer(createGoldenFGHProject());
+    const evaluated = evaluatedBiome(project, 'F');
+    const branch = evaluated.rewards.branches[0]!;
+    expect(branch.keepsakes.experimentalHammer).toMatchObject({
+      traitKey: 'StaffJumpSpecialTrait',
+      active: true,
+      remainingUses: 19,
+    });
+    const equip = branch.traitHistory?.events.find(
+      (event) => event.acquisitionRole === 'experimentalHammerEquip',
+    );
+    const postbossCompletion = evaluated.history.events.find(
+      (event) =>
+        event.kind === 'encounterCompleted' &&
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'postboss',
+    );
+    expect(equip).toBeDefined();
+    expect(postbossCompletion).toBeDefined();
+    expect(equip!.sequence).toBeLessThan(postbossCompletion!.sequence);
+  });
+
+  it('advances once for every active O ordered phase', () => {
+    const project = createRepresentativeNOProject();
+    const routePlan = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const evaluated = simulateProject(catalog, project)
+      .routes.find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (
+      routePlan === undefined ||
+      evaluated?.authoring !== 'complete' ||
+      evaluated.validity !== 'valid'
+    ) {
+      throw new Error('expected valid O lifecycle fixture');
+    }
+    const completions = evaluated.history.events.filter(
+      (event) => event.kind === 'encounterCompleted',
+    );
+    expect(
+      completions
+        .filter(
+          (event) =>
+            event.origin.kind === 'occurrence' &&
+            event.origin.occurrenceId === oOccurrenceIds.combat04,
+        )
+        .map((event) => event.phaseKey),
+    ).toEqual(['Intro', 'Combat1']);
+    const result = evaluateBiomeRewardsAssemblyInternal(
+      catalog,
+      evaluated.snapshot,
+      evaluated.history,
+      2,
+      routePlan.loadout,
+      [equippedBranch(createCompleteFGProject(), 20)],
+    ).simulation;
+    expect(
+      result.branches.every(
+        (branch) => branch.keepsakes.experimentalHammer?.remainingUses === 20 - completions.length,
+      ),
+    ).toBe(true);
+  });
+
+  it('advances for a Fig Leaf-preserved skipped completion', () => {
+    const start = createRouteStartKeepsakeSelectionAddress('Surface');
+    const rack = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(nBiome, 'postboss'),
+    );
+    const skippedPhase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
+      'Intro',
+    );
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: rack,
+      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result: createKeepsakeEquipResultAddress(rack, 'experimentalHammer'),
+      value: { traitKey: 'StaffJumpSpecialTrait' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: skippedPhase,
+      value: true,
+    });
+    const evaluation = simulateProject(catalog, project);
+    const n = evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const o = evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
+      throw new Error('expected valid N/O reward lifecycle');
+    }
+    expect(n.rewards.branches[0]?.keepsakes.experimentalHammer?.remainingUses).toBe(19);
+    const oCompletions = o.history.events.filter((event) => event.kind === 'encounterCompleted');
+    expect(
+      oCompletions.some(
+        (event) =>
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === oOccurrenceIds.combat04 &&
+          event.phaseKey === 'Intro' &&
+          event.execution === 'skippedByFigLeaf',
+      ),
+    ).toBe(true);
+    expect(o.rewards.branches[0]?.keepsakes.experimentalHammer?.remainingUses).toBe(
+      19 - oCompletions.length,
+    );
   });
 
   it('keeps an unavailable Postboss Hammer replacement at its parent and does not reach its child', () => {

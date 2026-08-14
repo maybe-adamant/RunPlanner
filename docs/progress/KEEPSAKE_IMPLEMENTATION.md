@@ -286,13 +286,16 @@ Boss completion
 Judgment, if active
 Postboss room entry with old keepsake
 fixed keepsake retain/replace action
+Postboss primary encounter completion and encounter-use effects
 Postboss acquisitions and later state with resulting keepsake
 next biome
 ```
 
 Do not delay replacement until `beginBiome`; that would make Postboss
 acquisitions observe the wrong state. Do not insert a fabricated rack room or
-general interaction-order list.
+general interaction-order list. The fixed action is also the planner's first
+modeled Postboss action: any primary `Empty` encounter-use effect is folded
+after the retain/replace transition.
 
 Branch equivalence and public carry-forward seeds must include every effective
 keepsake fact that can change later candidates or settlement. A memoization key
@@ -348,10 +351,19 @@ from the current weapon/aspect-compatible, not-already-equipped domain. Reuse
 the direct trait-acquisition path established for Jeweled Pom. The acquired
 Hammer remains rarityless and begins with 20 qualifying encounter uses.
 
-Each qualifying completed room encounter decrements the duration once. The
-room declaration, not `countsEncounterDepth`, determines whether encounter
-uses advance. N side rooms do not advance it. At zero, append an exact
-trait-expiry/removal event.
+Each completed modeled primary or override encounter decrements the duration
+once, regardless of combat kind or `countsEncounterDepth`. This includes
+combat, miniboss, boss, Story, Fountain/Reprieve, Shop, primary `Empty` intro,
+hub and Postboss encounters, each successive ordered room phase, and H cage
+overrides. N side rooms do not advance it because their declaration ignores
+encounter uses. Challenge switches remain outside the modeled route. At zero,
+append an exact trait-expiry/removal event.
+
+At the fixed Postboss boundary, apply the retain/replace action before the
+primary `Empty` completion. A Hammer granted by Experimental Hammer at that
+rack is created with 20 uses and then decremented to 19 before the next biome.
+An already-retained temporary Hammer also decrements once. The preceding boss
+completion independently consumes one use before the rack.
 
 Retaining the keepsake does not grant or refresh another Hammer. Replacing it
 does not remove the granted Hammer. Only duration expiry removes it. Normal
@@ -703,9 +715,16 @@ feat(engine): model Jeweled Pom
    the strict schema; reuse the Gate B semantic boundary without offer
    semantics.
 3. Reuse weapon/aspect compatibility and direct acquisition.
-4. Fold 20 qualifying completions and exact expiry.
-5. Prove retain, replace, N side-room exclusion, and ordinary reacquisition
-   after expiry.
+4. Fold every modeled primary/override completion, independent of combat kind
+   and encounter depth, from 20 uses through exact expiry.
+5. Prove boss, Story, Fountain/Reprieve, Shop, primary `Empty`, ordered-phase,
+   H-cage, Fig Leaf-preserved completion, and N side-room rows; prove the fixed
+   rack-before-Postboss-`Empty` transition, retain, replace, and ordinary
+   reacquisition after expiry.
+   The Gate C preflight tests expose one implementation correction before this
+   matrix is complete: `WorldShopRoom` and `RewardlessRoom` must start and
+   complete their already-declared fixed encounter envelope instead of only
+   recording it. Do not synthesize Experimental Hammer use at room commit.
 6. Publish contextual candidates, findings, UI, and Run State.
 
 Default commit:

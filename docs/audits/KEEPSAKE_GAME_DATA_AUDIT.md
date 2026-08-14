@@ -3,7 +3,8 @@
 ## Status
 
 Source-fact audit completed against the installed Hades II scripts on
-2026-08-12. This document records the ordinary keepsake inventory, rank model,
+2026-08-12 and amended on 2026-08-13 with the exact encounter-use decrement
+boundary. This document records the ordinary keepsake inventory, rank model,
 equip/swap lifecycle, and the effect surfaces that may contact systems already
 modeled by the planner.
 
@@ -483,16 +484,58 @@ the player already has. Under the planner's authored-possibility model, the
 random result can be recorded as one choice from that exact weapon/aspect-valid
 domain.
 
-The acquired Hammer is a separate equipped trait with 20 encounter uses. Each
-qualifying encounter completion reduces the remaining duration by one; rooms
-whose declarations ignore encounter uses do not advance it. At zero, the game
-removes the Hammer trait.
+The acquired Hammer is a separate equipped trait with 20 encounter uses. The
+source decrement is broader than combat or encounter depth. At encounter end,
+`RoomLogic.EndEncounterEffects` advances an encounter-use trait when the
+completed encounter is either the room's current primary encounter or
+`MapState.EncounterOverride`, unless the room declaration has
+`IgnoreEncounterUses`. It does not test `EncounterType` or
+`CountsForRoomEncounterDepth`. At zero, the game removes the Hammer trait.
+
+Consequently, the following currently modeled primary or override completions
+each reduce the duration by one:
+
+- ordinary combat, miniboss, and boss encounters;
+- Story encounters, including those inheriting `NonCombat` or `Empty`;
+- `HealthRestore` Fountain/Reprieve encounters and `Shop` encounters, both of
+  which inherit `NonCombat`;
+- primary `Empty` encounters used by biome intros, hubs, and Postboss rooms;
+- each successive primary phase in a room's ordered encounter sequence; and
+- H cage encounters executed through `MapState.EncounterOverride`.
+
+This decrement occurs at encounter completion, not when the player later talks
+to an NPC, uses a fountain, buys an item, or takes a room reward. An encounter
+whose execution is skipped but whose completion lifecycle is preserved still
+advances the duration.
+
+Live planner preflight found one implementation discrepancy with that source
+rule. `WorldShopRoom` and `RewardlessRoom` currently record their fixed
+encounter envelope but do not start or complete it, so their room declarations'
+positive encounter-use fact cannot reach the Experimental Hammer fold. Their
+fixed `Shop` or `Empty` encounter completion must be restored before those rows
+can have a truthful selected-route simulation witness. Story, Fountain,
+Boss/Postboss, ordered-phase, and H-cage lifecycles already publish their real
+completion events.
+
+The source guard does not advance for a separate `ChallengeEncounter`, but
+Challenge switches are outside the planner's modeled route and impose no
+Experimental Hammer product or acceptance requirement.
 
 Among the currently modeled room declarations, `BaseN_SubRooms` explicitly
 sets `IgnoreEncounterUses = true`. Ephyra side rooms therefore do not reduce
-the Experimental Hammer duration. The source search found no equivalent flag
-on the other currently modeled room families; this is a room-use distinction,
-not an encounter-depth distinction.
+the Experimental Hammer duration even though their own encounters complete.
+The source search found no equivalent flag on the other currently modeled room
+families. This is an explicit room-use distinction, not a combat-kind,
+presentation, or encounter-depth distinction.
+
+Postboss rooms are encounter-free in the ordinary combat and reward sense, but
+their primary `Empty` encounter still reaches the source encounter-use
+decrement. A temporary Hammer that is present when that `Empty` encounter
+completes therefore loses one use. The fixed retain-or-replace rack transition
+always precedes the Postboss primary encounter completion; there is no authored
+Postboss interaction-order choice. Therefore a Hammer granted at that rack
+begins at 20 uses and reaches the next biome with 19, while an already-retained
+temporary Hammer likewise advances once after the rack.
 
 The temporary Hammer is not tied to continued occupation of the keepsake slot.
 Replacing Experimental Hammer at a later postboss rack removes the keepsake but
