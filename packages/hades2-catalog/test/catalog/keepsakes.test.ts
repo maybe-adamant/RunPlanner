@@ -239,4 +239,65 @@ describe('keepsake normalization', () => {
       ),
     ).toThrow('goldConversionEligible: must be boolean');
   });
+
+  it('normalizes only the auto-activated Blind Box hidden source as a Time Piece role blocker', () => {
+    expect(
+      catalog.rewards.rewardTypes.byKey.BlindBoxLoot?.acquisitionRoles.values.map((role) => ({
+        key: role.key,
+        blocksGoldConversion: role.blocksGoldConversion === true,
+      })),
+    ).toEqual([
+      { key: 'box', blocksGoldConversion: false },
+      { key: 'hiddenSource', blocksGoldConversion: true },
+    ]);
+    expect(
+      catalog.rewards.rewardTypes.values.flatMap((rewardType) =>
+        rewardType.acquisitionRoles.values
+          .filter((role) => role.blocksGoldConversion)
+          .map((role) => `${rewardType.gameName}.${role.key}`),
+      ),
+    ).toEqual(['BlindBoxLoot.hiddenSource']);
+
+    const createWithRoles = (
+      replace: (rewardType: (typeof declarations.rewardKernel.rewardTypes)[number]) => unknown,
+    ) =>
+      createCatalog({
+        ...declarations,
+        rewardKernel: {
+          ...declarations.rewardKernel,
+          rewardTypes: declarations.rewardKernel.rewardTypes.map((rewardType) =>
+            rewardType.gameName === 'BlindBoxLoot' ? replace(rewardType) : rewardType,
+          ) as never,
+        },
+      });
+    const blindBox = declarations.rewardKernel.rewardTypes.find(
+      (rewardType) => rewardType.gameName === 'BlindBoxLoot',
+    );
+    if (blindBox === undefined) throw new Error('missing raw Blind Box declaration');
+
+    expect(() =>
+      createWithRoles((rewardType) => ({
+        ...rewardType,
+        acquisitionRoles: rewardType.acquisitionRoles.map((role) =>
+          role.key === 'hiddenSource' ? { key: role.key, resolution: role.resolution } : role,
+        ),
+      })),
+    ).toThrow('exact Time Piece role blocker');
+    expect(() =>
+      createWithRoles((rewardType) => ({
+        ...rewardType,
+        acquisitionRoles: rewardType.acquisitionRoles.map((role) =>
+          role.key === 'box' ? { ...role, blocksGoldConversion: true } : role,
+        ),
+      })),
+    ).toThrow('exact Time Piece role blocker');
+    expect(() =>
+      createWithRoles(() => ({
+        ...blindBox,
+        acquisitionRoles: blindBox.acquisitionRoles.map((role) =>
+          role.key === 'hiddenSource' ? { ...role, blocksGoldConversion: 'yes' } : role,
+        ),
+      })),
+    ).toThrow('blocksGoldConversion: must be boolean');
+  });
 });

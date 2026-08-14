@@ -654,6 +654,7 @@ describe('reward-kernel declaration parity', () => {
           {
             key: 'hiddenSource',
             resolution: { kind: 'payloadSource', acquisitionKind: 'loot', field: 'source' },
+            blocksGoldConversion: true,
           },
         ],
       },

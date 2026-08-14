@@ -78,6 +78,8 @@ export type AcquisitionRoleResolution =
 export interface AcquisitionRoleDeclaration {
   readonly key: string;
   readonly resolution: AcquisitionRoleResolution;
+  /** Source lifecycle exposes no independent special-interact window for this role. */
+  readonly blocksGoldConversion?: true;
 }
 
 export interface AcquisitionLifecycleBinding {
