@@ -1047,8 +1047,9 @@ export function applyJeweledPomEquipResult(
   sequence: number,
 ): RewardBranchState {
   const result = results?.jeweledPom;
+  const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
   const effect = jeweledPomEffectForKey(catalog, equippedKeepsakeKey);
-  if (effect === undefined || result === undefined) return branch;
+  if (keepsake === undefined || effect === undefined || result === undefined) return branch;
   const before = branch.traitHistory ?? createTraitHistoryState();
   if (!assessJeweledPomEquipResult(catalog, result, before, branch.keepsakes.fatedStatus).legal)
     return branch;
@@ -1101,7 +1102,7 @@ export function applyJeweledPomEquipResult(
     keepsakes: equipJeweledPom(
       branch.keepsakes,
       result.traitKey,
-      effect.subsequentEligibleTraitLevels,
+      effect.subsequentEligibleTraitLevelsByRank[keepsake.rank],
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
@@ -1118,9 +1119,11 @@ export function applyExperimentalHammerEquipResult(
   sequence: number,
   loadout: { readonly weaponKey: string; readonly aspectKey: string },
 ): RewardBranchState {
-  const effect = catalog.keepsakes.byKey[equippedKeepsakeKey]?.effect;
+  const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
+  const effect = keepsake?.effect;
   const result = results?.experimentalHammer;
-  if (effect?.kind !== 'experimentalHammer' || result === undefined) return branch;
+  if (keepsake === undefined || effect?.kind !== 'experimentalHammer' || result === undefined)
+    return branch;
   const before = branch.traitHistory ?? createTraitHistoryState();
   if (!assessExperimentalHammerEquipResult(catalog, result, before, loadout).legal) return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
@@ -1161,7 +1164,7 @@ export function applyExperimentalHammerEquipResult(
     keepsakes: equipExperimentalHammer(
       branch.keepsakes,
       result.traitKey,
-      effect.qualifyingEncounterUses,
+      effect.qualifyingEncounterUsesByRank[keepsake.rank],
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),

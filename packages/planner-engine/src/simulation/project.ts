@@ -690,13 +690,17 @@ function evaluateBiomeAssembly(
     plan.keepsakeEquipResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
-  const startingFigLeaf = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey]?.effect;
+  const startingKeepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
+  const startingFigLeaf = startingKeepsake?.effect;
   let figLeafState: FigLeafLifecycleState | undefined;
   try {
     figLeafState =
       context.seed === undefined
-        ? startingFigLeaf?.kind === 'figLeaf'
-          ? { remainingUses: startingFigLeaf.biomeUses, activatedThisBiome: false }
+        ? startingFigLeaf?.kind === 'figLeaf' && startingKeepsake !== undefined
+          ? {
+              remainingUses: startingFigLeaf.biomeUsesByRank[startingKeepsake.rank],
+              activatedThisBiome: false,
+            }
           : undefined
         : (() => {
             const state = attestFigLeafBranchState(context.seed.rewardBranches);

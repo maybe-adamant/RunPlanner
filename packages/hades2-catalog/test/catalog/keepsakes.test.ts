@@ -5,6 +5,80 @@ import { normalizeKeepsakes } from '../../src/compiler/keepsakes';
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
+const supportedEffects = [
+  {
+    key: 'AthenaEncounterKeepsake',
+    profileKey: 'rarityLevelByRank',
+    legacyField: 'rarity',
+    effect: {
+      kind: 'gorgonAmulet',
+      uses: 1,
+      minimumBiomeDepth: 2,
+      providerKey: 'Athena',
+      rarityLevelByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
+      naturalEncounterKey: 'AthenaCombatP',
+    },
+  },
+  {
+    key: 'SkipEncounterKeepsake',
+    profileKey: 'biomeUsesByRank',
+    legacyField: 'biomeUses',
+    effect: {
+      kind: 'figLeaf',
+      biomeUsesByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
+    },
+  },
+  {
+    key: 'TempHammerKeepsake',
+    profileKey: 'qualifyingEncounterUsesByRank',
+    legacyField: 'qualifyingEncounterUses',
+    effect: {
+      kind: 'experimentalHammer',
+      giverKey: 'WeaponUpgrade',
+      qualifyingEncounterUsesByRank: { Common: 10, Rare: 15, Epic: 20, Heroic: 30 },
+    },
+  },
+  {
+    key: 'HadesAndPersephoneKeepsake',
+    profileKey: 'subsequentEligibleTraitLevelsByRank',
+    legacyField: 'subsequentEligibleTraitLevels',
+    effect: {
+      kind: 'jeweledPom',
+      giverKey: 'Hades',
+      subsequentEligibleTraitLevelsByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
+    },
+  },
+  {
+    key: 'RarifyKeepsake',
+    profileKey: 'rarificationChargesByRank',
+    legacyField: 'rarificationCharges',
+    effect: {
+      kind: 'callingCard',
+      rarificationChargesByRank: { Common: 2, Rare: 4, Epic: 6, Heroic: 8 },
+    },
+  },
+  {
+    key: 'GoldifyKeepsake',
+    profileKey: 'conversionChargesByRank',
+    legacyField: 'conversionCharges',
+    effect: {
+      kind: 'timePiece',
+      conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
+    },
+  },
+] as const;
+
+function replaceSupportedEffect(
+  key: string,
+  replace: (effect: Record<string, unknown>) => unknown,
+): Parameters<typeof normalizeKeepsakes>[0] {
+  return keepsakes.map((keepsake) =>
+    keepsake.key === key
+      ? { ...keepsake, effect: replace(keepsake.effect as unknown as Record<string, unknown>) }
+      : keepsake,
+  ) as never;
+}
+
 describe('keepsake normalization', () => {
   it('normalizes Calling Card only for the exact admitted trait-provider set', () => {
     const admitted = [
@@ -61,95 +135,164 @@ describe('keepsake normalization', () => {
     );
   });
 
-  it('normalizes the closed Jeweled Pom descriptor without retaining caller-owned effect state', () => {
-    const source = keepsakes.map((keepsake) => ({
-      ...keepsake,
-      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
-    }));
-    const pom = source.find((keepsake) => keepsake.key === 'HadesAndPersephoneKeepsake');
-    if (pom?.effect?.kind !== 'jeweledPom') throw new Error('missing raw Jeweled Pom descriptor');
-    const normalized = normalizeKeepsakes(source).byKey.HadesAndPersephoneKeepsake?.effect;
-    expect(normalized).toEqual({
-      kind: 'jeweledPom',
-      giverKey: 'Hades',
-      subsequentEligibleTraitLevels: 3,
-    });
-    expect(Object.isFrozen(normalized)).toBe(true);
-    (pom.effect as { giverKey: string }).giverKey = 'Apollo';
-    expect(normalized).toMatchObject({ giverKey: 'Hades' });
+  it('normalizes the exact immutable six-by-four supported rank matrix at fixed Epic selection', () => {
+    const source = JSON.parse(JSON.stringify(keepsakes)) as Parameters<
+      typeof normalizeKeepsakes
+    >[0];
+    const normalized = normalizeKeepsakes(source);
+    expect(normalized.values.every((keepsake) => keepsake.rank === 'Epic')).toBe(true);
+    expect(
+      normalized.values
+        .filter((keepsake) => keepsake.effect !== undefined)
+        .map((keepsake) => keepsake.key),
+    ).toEqual(supportedEffects.map((row) => row.key));
 
-    for (const effect of [
-      { kind: 'jeweledPom', giverKey: 'Apollo', subsequentEligibleTraitLevels: 3 },
-      { kind: 'jeweledPom', giverKey: 'Hades', subsequentEligibleTraitLevels: 2 },
-    ]) {
-      const malformed = keepsakes.map((keepsake) =>
-        keepsake.key === 'HadesAndPersephoneKeepsake'
-          ? { ...keepsake, effect: effect as never }
-          : keepsake,
+    for (const row of supportedEffects) {
+      const declaration = normalized.byKey[row.key];
+      const effect = declaration?.effect;
+      const profile = (effect as unknown as Record<string, unknown> | undefined)?.[row.profileKey];
+      expect(effect).toEqual(row.effect);
+      expect(Object.isFrozen(declaration)).toBe(true);
+      expect(Object.isFrozen(effect)).toBe(true);
+      expect(Object.isFrozen(profile)).toBe(true);
+
+      const sourceEffect = source.find((keepsake) => keepsake.key === row.key)
+        ?.effect as unknown as Record<string, unknown> | undefined;
+      const sourceProfile = sourceEffect?.[row.profileKey] as Record<string, unknown> | undefined;
+      if (sourceProfile === undefined) throw new Error(`missing source profile for ${row.key}`);
+      sourceProfile.Epic = 999;
+      expect(profile).toEqual((row.effect as unknown as Record<string, unknown>)[row.profileKey]);
+    }
+  });
+
+  it('rejects every wrong supported rank cell', () => {
+    for (const row of supportedEffects) {
+      for (const rank of ['Common', 'Rare', 'Epic', 'Heroic'] as const) {
+        const malformed = replaceSupportedEffect(row.key, (effect) => ({
+          ...effect,
+          [row.profileKey]: {
+            ...(effect[row.profileKey] as Record<string, unknown>),
+            [rank]: 999,
+          },
+        }));
+        expect(() => normalizeKeepsakes(malformed), `${row.key}.${row.profileKey}.${rank}`).toThrow(
+          'must equal',
+        );
+      }
+    }
+  });
+
+  it('rejects missing, extra, malformed, and non-numeric supported rank data', () => {
+    for (const row of supportedEffects) {
+      const missing = replaceSupportedEffect(row.key, (effect) => {
+        const profile = { ...(effect[row.profileKey] as Record<string, unknown>) };
+        delete profile.Common;
+        return { ...effect, [row.profileKey]: profile };
+      });
+      expect(() => normalizeKeepsakes(missing), `${row.key} missing rank`).toThrow('is required');
+
+      const extra = replaceSupportedEffect(row.key, (effect) => ({
+        ...effect,
+        [row.profileKey]: {
+          ...(effect[row.profileKey] as Record<string, unknown>),
+          Legendary: 99,
+        },
+      }));
+      expect(() => normalizeKeepsakes(extra), `${row.key} extra rank`).toThrow('is not supported');
+
+      const malformed = replaceSupportedEffect(row.key, (effect) => ({
+        ...effect,
+        [row.profileKey]: [],
+      }));
+      expect(() => normalizeKeepsakes(malformed), `${row.key} malformed profile`).toThrow(
+        'must be an object',
       );
-      expect(() => normalizeKeepsakes(malformed)).toThrow(
-        'must declare Jeweled Pom fixed +3 eligible-trait levels',
+
+      const nonNumeric = replaceSupportedEffect(row.key, (effect) => ({
+        ...effect,
+        [row.profileKey]: {
+          ...(effect[row.profileKey] as Record<string, unknown>),
+          Rare: 'two',
+        },
+      }));
+      expect(() => normalizeKeepsakes(nonNumeric), `${row.key} non-numeric rank`).toThrow(
+        'must be numeric',
       );
     }
   });
 
-  it('normalizes the closed Experimental Hammer descriptor and rejects malformed ownership facts', () => {
-    const source = keepsakes.map((keepsake) => ({
-      ...keepsake,
-      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
-    }));
-    const hammer = source.find((keepsake) => keepsake.key === 'TempHammerKeepsake');
-    if (hammer?.effect?.kind !== 'experimentalHammer')
-      throw new Error('missing raw Experimental Hammer descriptor');
-    const normalized = normalizeKeepsakes(source).byKey.TempHammerKeepsake?.effect;
-    expect(normalized).toEqual({
-      kind: 'experimentalHammer',
-      giverKey: 'WeaponUpgrade',
-      qualifyingEncounterUses: 20,
-    });
-    expect(Object.isFrozen(normalized)).toBe(true);
-    (hammer.effect as { giverKey: string }).giverKey = 'Apollo';
-    expect(normalized).toMatchObject({ giverKey: 'WeaponUpgrade' });
-
-    for (const effect of [
-      { kind: 'experimentalHammer', giverKey: 'Apollo', qualifyingEncounterUses: 20 },
-      { kind: 'experimentalHammer', giverKey: 'WeaponUpgrade', qualifyingEncounterUses: 19 },
-    ]) {
-      const malformed = keepsakes.map((keepsake) =>
-        keepsake.key === 'TempHammerKeepsake' ? { ...keepsake, effect: effect as never } : keepsake,
+  it('enforces the exact six supported descriptors and their effect-specific shape', () => {
+    for (const row of supportedEffects) {
+      expect(() => normalizeKeepsakes(replaceSupportedEffect(row.key, () => undefined))).toThrow(
+        'must be an object',
       );
-      expect(() => normalizeKeepsakes(malformed)).toThrow(
-        'must declare Experimental Hammer giver and fixed 20 qualifying encounter uses',
+      expect(() =>
+        normalizeKeepsakes(
+          replaceSupportedEffect(row.key, (effect) => ({ ...effect, kind: 'unknownEffect' })),
+        ),
+      ).toThrow(/must declare/);
+      expect(() =>
+        normalizeKeepsakes(
+          replaceSupportedEffect(row.key, (effect) => ({
+            ...effect,
+            [row.legacyField]: 999,
+          })),
+        ),
+      ).toThrow('is not supported');
+    }
+
+    const neutral = keepsakes.find((keepsake) => keepsake.effect === undefined);
+    if (neutral === undefined) throw new Error('missing effect-neutral keepsake declaration');
+    expect(() =>
+      normalizeKeepsakes(
+        keepsakes.map((keepsake) =>
+          keepsake.key === neutral.key
+            ? { ...keepsake, effect: supportedEffects[1].effect as never }
+            : keepsake,
+        ),
+      ),
+    ).toThrow('is not supported by this keepsake');
+
+    expect(() =>
+      normalizeKeepsakes(
+        replaceSupportedEffect('HadesAndPersephoneKeepsake', (effect) => ({
+          ...effect,
+          giverKey: 'Apollo',
+        })),
+      ),
+    ).toThrow('must declare the Jeweled Pom rank profile and Hades giver');
+    expect(() =>
+      normalizeKeepsakes(
+        replaceSupportedEffect('TempHammerKeepsake', (effect) => ({
+          ...effect,
+          giverKey: 'Apollo',
+        })),
+      ),
+    ).toThrow('must declare the Experimental Hammer rank profile and giver');
+
+    for (const [field, value] of [
+      ['uses', 2],
+      ['minimumBiomeDepth', 3],
+      ['providerKey', 'Apollo'],
+      ['naturalEncounterKey', 'GeneratedF'],
+    ] as const) {
+      expect(() =>
+        normalizeKeepsakes(
+          replaceSupportedEffect('AthenaEncounterKeepsake', (effect) => ({
+            ...effect,
+            [field]: value,
+          })),
+        ),
+      ).toThrow(
+        'must declare Gorgon Amulet one use, depth two, Athena provider, and natural encounter',
       );
     }
-  });
-
-  it("normalizes Calling Card's fixed six-charge descriptor and rejects malformed charges", () => {
-    const source = keepsakes.map((keepsake) => ({
-      ...keepsake,
-      ...(keepsake.effect === undefined ? {} : { effect: { ...keepsake.effect } }),
-    }));
-    const callingCard = source.find((keepsake) => keepsake.key === 'RarifyKeepsake');
-    if (callingCard?.effect?.kind !== 'callingCard')
-      throw new Error('missing raw Calling Card descriptor');
-    expect(normalizeKeepsakes(source).byKey.RarifyKeepsake?.effect).toEqual({
-      kind: 'callingCard',
-      rarificationCharges: 6,
-    });
-    const malformed = source.map((keepsake) =>
-      keepsake.key === 'RarifyKeepsake'
-        ? { ...keepsake, effect: { kind: 'callingCard', rarificationCharges: 5 } as never }
-        : keepsake,
-    );
-    expect(() => normalizeKeepsakes(malformed)).toThrow(
-      'must declare Calling Card fixed six rarification charges',
-    );
   });
 
   it('normalizes Time Piece’s fixed four charges and the closed concrete acquisition matrix', () => {
     expect(catalog.keepsakes.byKey.GoldifyKeepsake?.effect).toEqual({
       kind: 'timePiece',
-      conversionCharges: 4,
+      conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
     });
     const eligible = catalog.rewards.acquisitions.values
       .filter((acquisition) => acquisition.goldConversionEligible)

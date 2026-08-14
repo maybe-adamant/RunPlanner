@@ -155,7 +155,7 @@ describe('Gorgon Amulet lifecycle', () => {
       minimumBiomeDepth: 2,
       naturalEncounterKey: 'AthenaCombatP',
       providerKey: 'Athena',
-      rarity: 'Epic',
+      rarityLevelByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
     });
     expect(catalog.encounterDefinitions.byKey.AthenaCombatP?.blocksGorgon).toBe(true);
     expect(catalog.encounterDefinitions.byKey.GeneratedH_Passive?.blocksGorgon).not.toBe(true);

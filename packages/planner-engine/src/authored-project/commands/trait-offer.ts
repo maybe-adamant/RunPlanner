@@ -573,10 +573,16 @@ export function applyTraitOfferCommand(
     );
     const existing = isGorgon ? phaseGorgon?.athenaOffer : phaseOffers?.[encounterKey];
     if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
-    const gorgonEffect = isGorgon
+    const gorgonKeepsake = isGorgon
       ? catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === 'gorgonAmulet')
-          ?.effect
       : undefined;
+    const gorgonEffect = gorgonKeepsake?.effect;
+    const gorgonRarityLevel =
+      gorgonEffect?.kind === 'gorgonAmulet' && gorgonKeepsake !== undefined
+        ? gorgonEffect.rarityLevelByRank[gorgonKeepsake.rank]
+        : undefined;
+    const gorgonRarity =
+      gorgonRarityLevel === undefined ? undefined : catalog.traitRarityOrder[gorgonRarityLevel - 1];
     const expectedProducer = isGorgon
       ? gorgonEffect?.kind === 'gorgonAmulet'
         ? { giverKey: gorgonEffect.providerKey }
@@ -614,7 +620,8 @@ export function applyTraitOfferCommand(
         value.kind !== 'traits' ||
         value.options.length !== 3 ||
         gorgonEffect?.kind !== 'gorgonAmulet' ||
-        value.options.some((option) => option.rarity !== gorgonEffect.rarity) ||
+        gorgonRarity === undefined ||
+        value.options.some((option) => option.rarity !== gorgonRarity) ||
         value.deathDefianceConditionMet !== undefined
       ) {
         failCommand(command, 'Gorgon Athena requires three fixed Epic options without DD context');

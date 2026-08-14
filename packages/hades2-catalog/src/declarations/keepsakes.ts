@@ -1,6 +1,6 @@
 import type { RawKeepsakeDeclaration } from './types';
 
-/** Ordinary rack inventory, intentionally rank-III only. */
+/** Ordinary rack inventory; player selection remains fixed at rank III. */
 const entries: readonly (readonly [string, string, RawKeepsakeDeclaration['fatedDisposition']])[] =
   [
     ['ManaOverTimeRefundKeepsake', 'Silver Wheel', 'neutral'],
@@ -49,7 +49,12 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
           effect: {
             kind: 'jeweledPom' as const,
             giverKey: 'Hades',
-            subsequentEligibleTraitLevels: 3 as const,
+            subsequentEligibleTraitLevelsByRank: {
+              Common: 1 as const,
+              Rare: 2 as const,
+              Epic: 3 as const,
+              Heroic: 4 as const,
+            },
           },
         }
       : key === 'TempHammerKeepsake'
@@ -57,15 +62,50 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
             effect: {
               kind: 'experimentalHammer' as const,
               giverKey: 'WeaponUpgrade',
-              qualifyingEncounterUses: 20 as const,
+              qualifyingEncounterUsesByRank: {
+                Common: 10 as const,
+                Rare: 15 as const,
+                Epic: 20 as const,
+                Heroic: 30 as const,
+              },
             },
           }
         : key === 'RarifyKeepsake'
-          ? { effect: { kind: 'callingCard' as const, rarificationCharges: 6 as const } }
+          ? {
+              effect: {
+                kind: 'callingCard' as const,
+                rarificationChargesByRank: {
+                  Common: 2 as const,
+                  Rare: 4 as const,
+                  Epic: 6 as const,
+                  Heroic: 8 as const,
+                },
+              },
+            }
           : key === 'GoldifyKeepsake'
-            ? { effect: { kind: 'timePiece' as const, conversionCharges: 4 as const } }
+            ? {
+                effect: {
+                  kind: 'timePiece' as const,
+                  conversionChargesByRank: {
+                    Common: 2 as const,
+                    Rare: 3 as const,
+                    Epic: 4 as const,
+                    Heroic: 5 as const,
+                  },
+                },
+              }
             : key === 'SkipEncounterKeepsake'
-              ? { effect: { kind: 'figLeaf' as const, biomeUses: 3 as const } }
+              ? {
+                  effect: {
+                    kind: 'figLeaf' as const,
+                    biomeUsesByRank: {
+                      Common: 1 as const,
+                      Rare: 2 as const,
+                      Epic: 3 as const,
+                      Heroic: 4 as const,
+                    },
+                  },
+                }
               : key === 'AthenaEncounterKeepsake'
                 ? {
                     effect: {
@@ -73,7 +113,12 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                       uses: 1 as const,
                       minimumBiomeDepth: 2 as const,
                       providerKey: 'Athena' as const,
-                      rarity: 'Epic' as const,
+                      rarityLevelByRank: {
+                        Common: 1 as const,
+                        Rare: 2 as const,
+                        Epic: 3 as const,
+                        Heroic: 4 as const,
+                      },
                       naturalEncounterKey: 'AthenaCombatP' as const,
                     },
                   }
