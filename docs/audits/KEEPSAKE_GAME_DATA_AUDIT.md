@@ -170,6 +170,13 @@ a fixed max-profile-rank baseline: every keepsake is rank III (`Epic`). It does
 not author per-keepsake ranks or simulate chamber progression. Temporary
 Heroic scaling from `KeepsakeLevelBonus` remains outside the modeled baseline.
 
+Two focused companion audits preserve the exact source behavior needed to add
+those later effects without reopening the broad inventory investigation:
+
+- [Echo Gift Gift Gift keepsake audit](ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md);
+  and
+- [Cherished Heirloom keepsake audit](CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md).
+
 ## Selectable Inventory
 
 The rack declares 33 selectable keepsakes. The table records player-facing
