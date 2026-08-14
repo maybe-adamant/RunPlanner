@@ -13,6 +13,7 @@ export const oEncounterDefinitions = [
     label: 'Ship intro',
     kind: 'combat',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -20,6 +21,7 @@ export const oEncounterDefinitions = [
     label: 'Ship combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: true,
   },
   {
@@ -27,6 +29,7 @@ export const oEncounterDefinitions = [
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Heracles',
     requirements: {
       kind: 'all',
@@ -61,6 +64,7 @@ export const oEncounterDefinitions = [
     label: 'Icarus combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Icarus',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Icarus' },
     requirements: {
@@ -91,6 +95,7 @@ export const oEncounterDefinitions = [
     label: 'Charybdis',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
     blocksFigLeaf: true,
   },
   {
@@ -98,6 +103,7 @@ export const oEncounterDefinitions = [
     label: 'Captain',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -113,8 +119,15 @@ export const oEncounterDefinitions = [
     label: 'Devotion combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
   },
-  { key: 'BossEris01', label: 'Eris', kind: 'boss', countsEncounterDepth: false },
+  {
+    key: 'BossEris01',
+    label: 'Eris',
+    kind: 'boss',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const oEncounterSets = [

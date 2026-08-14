@@ -14,6 +14,8 @@ export interface ResolvedEncounterPhase {
   readonly countsEncounterDepth: boolean;
   readonly canEncounterSkip: boolean;
   readonly blocksFigLeaf: boolean;
+  readonly blocksGorgon: boolean;
+  readonly hostsGorgon: boolean;
   readonly skipEndEncounterEffects: boolean;
   /** Persisted phase-local positive disposition, when authored. */
   readonly figLeafSkip: boolean;

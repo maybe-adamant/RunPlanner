@@ -113,7 +113,15 @@ export interface KeepsakeDeclaration {
       }
     | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
     | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
-    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 };
+    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 }
+    | {
+        readonly kind: 'gorgonAmulet';
+        readonly uses: 1;
+        readonly minimumBiomeDepth: 2;
+        readonly providerKey: 'Athena';
+        readonly rarity: 'Epic';
+        readonly naturalEncounterKey: string;
+      };
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
@@ -181,6 +189,9 @@ export interface EncounterDefinition {
   readonly canEncounterSkip: boolean;
   /** Source-declared room-wide blocker carried by this encounter. */
   readonly blocksFigLeaf: boolean;
+  /** Source-declared active-encounter blocker for Gorgon Amulet. */
+  readonly blocksGorgon: boolean;
+  readonly hostsGorgon: boolean;
   /** A successful skip suppresses the remainder of this room envelope. */
   readonly skipEndEncounterEffects: boolean;
   /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */
@@ -441,6 +452,8 @@ export interface RoomDeclaration {
   readonly incomingReward: RewardProducerBinding;
   /** The normalized room declaration flag that suppresses Gift trait offers. */
   readonly blockGiftBoons: boolean;
+  /** Source-declared room-owned blocker for Gorgon Amulet. */
+  readonly blocksGorgon: boolean;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

@@ -6,5 +6,6 @@ export const cEncounterDefinitions = [
     label: 'Zagreus',
     kind: 'boss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];

@@ -66,6 +66,17 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
             ? { effect: { kind: 'timePiece' as const, conversionCharges: 4 as const } }
             : key === 'SkipEncounterKeepsake'
               ? { effect: { kind: 'figLeaf' as const, biomeUses: 3 as const } }
-              : {}),
+              : key === 'AthenaEncounterKeepsake'
+                ? {
+                    effect: {
+                      kind: 'gorgonAmulet' as const,
+                      uses: 1 as const,
+                      minimumBiomeDepth: 2 as const,
+                      providerKey: 'Athena' as const,
+                      rarity: 'Epic' as const,
+                      naturalEncounterKey: 'AthenaCombatP' as const,
+                    },
+                  }
+                : {}),
   }),
 );

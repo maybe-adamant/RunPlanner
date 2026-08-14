@@ -483,6 +483,7 @@ export function assembleWorkspaceBiomeSemantics(
       catalog,
       encounterPhaseStatus: source.encounterPhaseStatus,
       figLeafSupport: source.figLeafSupport,
+      gorgonSupport: source.gorgonSupport,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
       ...(request.fieldsBatchFacts === undefined
         ? {}

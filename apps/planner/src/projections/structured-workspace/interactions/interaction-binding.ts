@@ -215,6 +215,10 @@ function candidateInteraction<T>(
 interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
+  readonly gorgonConditions: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceGorgonConditionInteraction
+  >;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -244,6 +248,10 @@ function bindOccurrenceLocalInteractions(
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
+  const gorgonConditions = new Map<
+    string,
+    import('../contract').WorkspaceGorgonConditionInteraction
+  >();
   const rewardWheelOfferCounts = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
@@ -374,6 +382,25 @@ function bindOccurrenceLocalInteractions(
                 owner: phase.owner,
                 selected: phase.figLeaf.selected,
                 supported: phase.figLeaf.supported,
+              }),
+            );
+          }
+          if (phase.gorgonCondition !== undefined) {
+            gorgonConditions.set(
+              key,
+              Object.freeze({
+                intentFor: (value: boolean) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceGorgonDeathDefianceCondition' as const,
+                      phase: phase.owner,
+                      value,
+                    }),
+                  }),
+                key,
+                owner: phase.owner,
+                selected: phase.gorgonCondition.selected,
+                supported: phase.gorgonCondition.supported,
               }),
             );
           }
@@ -531,6 +558,7 @@ function bindOccurrenceLocalInteractions(
   return Object.freeze({
     encounterPhases,
     figLeafSkips,
+    gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
@@ -1301,6 +1329,7 @@ export function bindWorkspaceInteractions(
   const {
     encounterPhases,
     figLeafSkips,
+    gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
@@ -2030,6 +2059,7 @@ export function bindWorkspaceInteractions(
     batchRewardStores,
     encounterPhases,
     figLeafSkips,
+    gorgonConditions,
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,

@@ -20,6 +20,7 @@ import {
   goldenFOccurrenceId,
   nOccurrenceIds,
   oOccurrenceIds,
+  pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
 
@@ -64,6 +65,10 @@ function figLeafSkips(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).figLeafSkipByPhase ?? {}) as JsonRecord;
 }
 
+function gorgonResults(owner: JsonRecord): JsonRecord {
+  return ((owner.encounters as JsonRecord).gorgonResultByPhase ?? {}) as JsonRecord;
+}
+
 function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): JsonRecord {
   const state = occurrence(document, 'N', occurrenceId).state as JsonRecord;
   const sideRooms = state.sideRooms as JsonRecord;
@@ -97,7 +102,7 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(28);
+    expect(decoded.schemaVersion).toBe(29);
   });
 
   it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
@@ -131,7 +136,7 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 28 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 29 });
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -169,6 +174,73 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     if (occurrence === undefined) throw new Error('missing P occurrence');
     expect(occurrence.encounters.figLeafSkipByPhase).toEqual({ Intro: false, Combat: false });
     expect(Object.isFrozen(occurrence.encounters.figLeafSkipByPhase)).toBe(true);
+  });
+
+  it('round-trips a strict Gorgon phase map and rejects malformed or misplaced children', () => {
+    const project = createRepresentativeNOPProject();
+    const document = encoded(project);
+    const state = occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1));
+    expect(gorgonResults(state)).toEqual({ Combat: { deathDefianceConditionMet: false } });
+    const decoded = decodeProjectDocument(document, catalog);
+    expect(decoded).toEqual(project);
+
+    const missing = encoded(project);
+    delete (occurrence(missing, 'P', pOccurrenceId('P_Combat03', 1, 1)).encounters as JsonRecord)
+      .gorgonResultByPhase;
+    expect(() => decodeProjectDocument(missing, catalog)).toThrow(
+      'gorgonResultByPhase: must be an object',
+    );
+
+    const extra = encoded(project);
+    gorgonResults(occurrence(extra, 'P', pOccurrenceId('P_Combat03', 1, 1))).Unexpected = {
+      deathDefianceConditionMet: false,
+    };
+    expect(() => decodeProjectDocument(extra, catalog)).toThrow(
+      'gorgonResultByPhase.Unexpected: is not a project document field',
+    );
+
+    const nonBoolean = encoded(project);
+    gorgonResults(occurrence(nonBoolean, 'P', pOccurrenceId('P_Combat03', 1, 1))).Combat = {
+      deathDefianceConditionMet: 'true',
+    };
+    expect(() => decodeProjectDocument(nonBoolean, catalog)).toThrow(
+      'deathDefianceConditionMet: must be a boolean',
+    );
+
+    const trueWithoutChild = encoded(project);
+    gorgonResults(occurrence(trueWithoutChild, 'P', pOccurrenceId('P_Combat03', 1, 1))).Combat = {
+      deathDefianceConditionMet: true,
+    };
+    expect(decodeProjectDocument(trueWithoutChild, catalog)).toBeDefined();
+
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      'Combat',
+    );
+    const withOffer = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    const malformedOffer = encoded(withOffer);
+    const offerResult = gorgonResults(
+      occurrence(malformedOffer, 'P', pOccurrenceId('P_Combat03', 1, 1)),
+    ).Combat as JsonRecord;
+    const offer = offerResult.athenaOffer as JsonRecord;
+    offer.options = (offer.options as unknown[]).slice(0, 1);
+    expect(() => decodeProjectDocument(malformedOffer, catalog)).toThrow(
+      'requires exactly three options',
+    );
+
+    const duplicateContext = encoded(withOffer);
+    const duplicateResult = gorgonResults(
+      occurrence(duplicateContext, 'P', pOccurrenceId('P_Combat03', 1, 1)),
+    ).Combat as JsonRecord;
+    (duplicateResult.athenaOffer as JsonRecord).deathDefianceConditionMet = true;
+    expect(() => decodeProjectDocument(duplicateContext, catalog)).toThrow(
+      'athenaOffer.deathDefianceConditionMet: is not a project document field',
+    );
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
@@ -243,14 +315,14 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 28, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 29, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 28, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 29, received 21');
   });
 
   it.each([

@@ -1,7 +1,7 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 28 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 29 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -89,6 +89,12 @@ export interface ShipCombatState {
   readonly wheels: Readonly<Record<string, RewardWheelState>>;
 }
 
+export interface AuthoredGorgonPhaseResult {
+  readonly deathDefianceConditionMet: boolean;
+  /** Conditional ordinary Athena offer; omitted while dormant. */
+  readonly athenaOffer?: AuthoredTraitOffer;
+}
+
 export type SideRoomGeneration = 'generated' | 'notGenerated';
 
 /**
@@ -101,6 +107,9 @@ export interface RoomEncounterState {
   readonly encounterKeyByPhase: Readonly<Record<string, string>>;
   /** Complete declaration-owned phase-local Fig Leaf dispositions, including fixed slots. */
   readonly figLeafSkipByPhase: Readonly<Record<string, boolean>>;
+  /** Complete declaration-owned Gorgon condition/result for each phase. */
+  /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
+  readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
   /** Sparse authored offers keyed by stable phase and concrete encounter. */
   readonly traitOffersByPhase?: Readonly<
     Record<string, Readonly<Record<string, AuthoredTraitOffer>>>

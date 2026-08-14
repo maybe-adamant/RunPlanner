@@ -197,6 +197,9 @@ export function presentRunState(
             figLeafRemainingUses: snapshot.keepsakes.figLeaf.remainingUses,
             figLeafActivatedThisBiome: snapshot.keepsakes.figLeaf.activatedThisBiome,
           }),
+      ...(snapshot.keepsakes.gorgon === undefined
+        ? {}
+        : { gorgonStatus: snapshot.keepsakes.gorgon.status }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

@@ -25,6 +25,7 @@ export {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createHubSlotAddress,
   createHubOpenSetAddress,
@@ -63,6 +64,7 @@ export {
   type ExitDecisionSourceAddress,
   type ExitSelectionAddress,
   type EncounterPhaseAddress,
+  type GorgonPhaseAddress,
   type EncounterPhaseOwner,
   type IncomingRewardAddress,
   type HubSlotAddress,
@@ -185,6 +187,7 @@ export {
   type ProjectDocument,
   type RoomOccurrence,
   type RoomEncounterState,
+  type AuthoredGorgonPhaseResult,
   type ShopOfferState,
   type ShopState,
 } from './model';

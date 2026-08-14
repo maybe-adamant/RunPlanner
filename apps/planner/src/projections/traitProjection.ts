@@ -236,6 +236,14 @@ function ownerLocationForAddress(
       occurrenceId: owner.owner.occurrenceId,
     });
   }
+  if (owner.kind === 'gorgonPhase') {
+    return ownerLocation(project, {
+      routeKey: owner.encounter.routeKey,
+      biomeKey: owner.encounter.biomeKey,
+      kind: 'occurrence',
+      occurrenceId: owner.encounter.owner.occurrenceId,
+    });
+  }
   if (owner.kind === 'acquisitionEntry') {
     if (owner.site.owner.kind !== 'occurrence') return 'Acquisition';
     return ownerLocation(project, owner.site.owner);

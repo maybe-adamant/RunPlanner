@@ -71,6 +71,8 @@ export interface WorkspaceBiomeSource {
   readonly figLeafSupport: (
     phase: EncounterPhaseAddress,
   ) => FigLeafPhaseCandidateSupport | undefined;
+  /** Exact engine-published reached/pending Gorgon capability. */
+  readonly gorgonSupport: (phase: EncounterPhaseAddress) => boolean;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
@@ -572,6 +574,7 @@ function createWorkspaceBiomeSource(
   evaluation: ProjectBiomeEvaluation | undefined,
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
+  gorgonSupport: (phase: EncounterPhaseAddress) => boolean,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -671,6 +674,7 @@ function createWorkspaceBiomeSource(
     completeness,
     encounterPhaseStatus,
     figLeafSupport,
+    gorgonSupport,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
     evaluatedAdditional: (owner: ExitDecisionAddress) =>
@@ -723,6 +727,7 @@ export function createWorkspaceProjectSourceIndex(
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined = () =>
     undefined,
+  gorgonSupport: (phase: EncounterPhaseAddress) => boolean = () => false,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -740,6 +745,7 @@ export function createWorkspaceProjectSourceIndex(
                 routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
                 encounterPhaseStatus,
                 figLeafSupport,
+                gorgonSupport,
               ),
             ),
           ),

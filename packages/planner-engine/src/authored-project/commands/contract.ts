@@ -119,6 +119,7 @@ export function projectCommandAddress(
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
+    case 'ReplaceGorgonDeathDefianceCondition':
       return command.phase;
     case 'ReplaceTraitOffer':
     case 'ReplaceTraitSelection':

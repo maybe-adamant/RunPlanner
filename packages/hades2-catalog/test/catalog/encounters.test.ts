@@ -7,6 +7,124 @@ function input(): RawCatalogInput {
 }
 
 describe('encounter envelope catalog', () => {
+  it('publishes the complete declaration-owned Gorgon matrix', () => {
+    const built = createCatalog(declarations);
+    const definitions = built.encounterDefinitions.byKey;
+    const positiveKeys = [
+      'GeneratedF',
+      'GeneratedG',
+      'GeneratedH_Passive',
+      'GeneratedH_PassiveSmall',
+      'GeneratedH',
+      'GeneratedH_Treant2',
+      'GeneratedH_Screamer2',
+      'GeneratedI',
+      'GeneratedI_GoalReward',
+      'GeneratedI_Small',
+      'GeneratedI_Small_GoalReward',
+      'OpeningGeneratedN',
+      'PreHubGeneratedN',
+      'GeneratedN',
+      'GeneratedN_Smaller',
+      'GeneratedN_Bigger',
+      'GeneratedNSubRoom',
+      'GeneratedNSubRoom_Bigger',
+      'GeneratedO',
+      'GeneratedP',
+      'GeneratedP_Large',
+      'GeneratedQ',
+      'GeneratedQ_Islands',
+      'GeneratedQ_Large',
+    ];
+    for (const key of positiveKeys) {
+      expect(definitions[key]).toMatchObject({ hostsGorgon: true });
+      expect(definitions[key]?.blocksGorgon).not.toBe(true);
+    }
+
+    const explicitBlockers = [
+      'OpeningGeneratedF',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+      'NemesisCombatF',
+      'MiniBossTreant',
+      'MiniBossFogEmitter',
+      'MiniBossAssassin',
+      'BossHecate01',
+      'ArtemisCombatG',
+      'ArachneCombatG',
+      'NemesisCombatG',
+      'MiniBossWaterUnit',
+      'MiniBossCrawler',
+      'MiniBossJellyfish',
+      'BossScylla01',
+      'NemesisCombatH',
+      'MiniBossVampire',
+      'MiniBossLamia',
+      'BossInfestedCerberus01',
+      'NemesisCombatI',
+      'MiniBossRatCatcher',
+      'MiniBossGoldElemental',
+      'BossChronos01',
+      'ArtemisCombatN',
+      'HeraclesCombatN',
+      'MiniBossSatyrCrossbow',
+      'MiniBossBoar',
+      'BossPolyphemus01',
+      'GeneratedO_Intro01',
+      'HeraclesCombatO',
+      'IcarusCombatO',
+      'MiniBossCharybdis',
+      'MiniBossCaptain',
+      'DevotionTestO',
+      'BossEris01',
+      'AthenaCombatP',
+      'HeraclesCombatP',
+      'IcarusCombatP',
+      'MiniBossTalos',
+      'MiniBossDragon',
+      'BossPrometheus01',
+      'MiniBossBrute',
+      'MiniBossStalker',
+      'BossTyphonTail01',
+      'BossTyphonEye01',
+      'BossTyphonHead01',
+      'BossZagreus01',
+      'GeneratedAnomalyB',
+    ];
+    const pOpeningAndPreCombat = Object.keys(definitions).filter(
+      (key) =>
+        key === 'GeneratedP_PreCombat' ||
+        key.startsWith('PIntroCombat') ||
+        key.startsWith('P_Combat'),
+    );
+    expect(
+      Object.values(definitions)
+        .filter((definition) => definition.blocksGorgon === true)
+        .map((definition) => definition.key)
+        .sort(),
+    ).toEqual([...explicitBlockers, ...pOpeningAndPreCombat].sort());
+
+    for (const key of [
+      'Empty',
+      'Story_Echo_01',
+      'Story_Medea_01',
+      'Story_Dionysus_01',
+      'Story_Dionysus_02',
+      'Story_Hades_01',
+      'Story_Chronos_01',
+    ]) {
+      expect(definitions[key]?.hostsGorgon).not.toBe(true);
+      expect(definitions[key]?.blocksGorgon).not.toBe(true);
+    }
+
+    for (let index = 1; index <= 15; index += 1) {
+      const key = `N_Sub${String(index).padStart(2, '0')}`;
+      expect(built.rooms.byKey[key]?.blocksGorgon).toBe(true);
+    }
+    expect(definitions.GeneratedNSubRoom).toMatchObject({ hostsGorgon: true });
+    expect(definitions.GeneratedNSubRoom?.blocksGorgon).not.toBe(true);
+  });
+
   it('publishes the declaration-owned Fig Leaf support and blocker matrix', () => {
     const definitions = createCatalog(declarations).encounterDefinitions.byKey;
     for (const key of [

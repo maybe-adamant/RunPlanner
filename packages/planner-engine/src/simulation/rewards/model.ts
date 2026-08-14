@@ -26,6 +26,12 @@ export interface FigLeafPhaseCandidateSupport {
   readonly activatedThisBiome: boolean;
 }
 
+/** Exact reached-phase authoring capability captured by the reward fold. */
+export interface GorgonPhaseCandidateSupport {
+  readonly origin: EncounterPhaseAddress;
+  readonly supported: boolean;
+}
+
 interface RewardEventBase {
   readonly rewardSequence: number;
   readonly historySequence: number;
@@ -109,6 +115,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
+  readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
 }
 
 export type RewardSimulation = BiomeRewardSimulation;

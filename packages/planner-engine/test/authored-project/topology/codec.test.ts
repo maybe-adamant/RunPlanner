@@ -284,6 +284,7 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
     encounters: {
       encounterKeyByPhase: {},
       figLeafSkipByPhase: { Encounter: false },
+      gorgonResultByPhase: {},
     },
     additionalExits: [],
   });
@@ -1034,7 +1035,7 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'f-width-one-target',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
       additionalExits: [],
     });
     widthOne.topology.decisions.push({
@@ -1096,7 +1097,7 @@ describe('persisted authored topology codec', () => {
       occurrenceId: 'orphan',
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
-      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+      encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
       additionalExits: [],
     });
     expectDocumentError(orphan.document, {

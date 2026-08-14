@@ -16,6 +16,7 @@ function nonCountingCombat(key: string, label: string) {
     countsEncounterDepth: false,
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
+    blocksGorgon: true,
   };
 }
 
@@ -93,6 +94,7 @@ export const pEncounterDefinitions = [
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: false,
     requirements: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 9 } },
   },
@@ -101,6 +103,7 @@ export const pEncounterDefinitions = [
     label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    hostsGorgon: true,
     canEncounterSkip: false,
     requirements: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 9 } },
   },
@@ -109,6 +112,7 @@ export const pEncounterDefinitions = [
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     sequenceEffect: { kind: 'terminateSuffix' },
     npcPresentationKey: 'Heracles',
     requirements: {
@@ -145,6 +149,7 @@ export const pEncounterDefinitions = [
     label: 'Icarus combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     npcPresentationKey: 'Icarus',
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Icarus' },
     requirements: {
@@ -176,6 +181,7 @@ export const pEncounterDefinitions = [
     label: 'Athena combat',
     kind: 'combat',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: false,
     blocksFigLeaf: true,
     blocksKeepsakeSelectionKeys: ['AthenaEncounterKeepsake'],
@@ -217,12 +223,14 @@ export const pEncounterDefinitions = [
     label: 'Talos',
     kind: 'miniboss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
   {
     key: 'MiniBossDragon',
     label: 'Dragon',
     kind: 'miniboss',
     countsEncounterDepth: true,
+    blocksGorgon: true,
     canEncounterSkip: true,
     blocksFigLeaf: true,
   },
@@ -231,6 +239,7 @@ export const pEncounterDefinitions = [
     label: 'Prometheus',
     kind: 'boss',
     countsEncounterDepth: false,
+    blocksGorgon: true,
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

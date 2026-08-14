@@ -137,6 +137,7 @@ function applyUnchecked(
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
+    case 'ReplaceGorgonDeathDefianceCondition':
       return applyOccurrenceCommand(
         document,
         catalog,

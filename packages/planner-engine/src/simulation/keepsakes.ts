@@ -36,11 +36,83 @@ export interface KeepsakeState {
   readonly timePiece?: { readonly remainingCharges: number };
   /** Fig Leaf total uses and its one-success-per-biome guard. */
   readonly figLeaf?: { readonly remainingUses: number; readonly activatedThisBiome: boolean };
+  readonly gorgon?: { readonly status: 'pending' | 'consumed' | 'expired' };
 }
 
 export interface FigLeafStateValue {
   readonly remainingUses: number;
   readonly activatedThisBiome: boolean;
+}
+
+export type GorgonLifecycleStatus = 'pending' | 'consumed' | 'expired';
+export interface GorgonEligibilityInput {
+  readonly status: GorgonLifecycleStatus | undefined;
+  readonly biomeDepthCache: number;
+  readonly minimumBiomeDepth: number;
+  readonly roomBlocked: boolean;
+  readonly encounterBlocked: boolean;
+  readonly figLeafSkipped: boolean;
+  readonly deathDefianceConditionMet: boolean;
+}
+export function assessGorgonEligibility(input: GorgonEligibilityInput): boolean {
+  return (
+    input.status === 'pending' &&
+    input.biomeDepthCache >= input.minimumBiomeDepth &&
+    !input.roomBlocked &&
+    !input.encounterBlocked &&
+    !input.figLeafSkipped &&
+    input.deathDefianceConditionMet
+  );
+}
+
+export interface GorgonCandidateInput {
+  readonly status: GorgonLifecycleStatus | undefined;
+  readonly naturalAthena: boolean;
+  readonly gorgonEligible: boolean;
+}
+
+export function assessGorgonChildSettlement(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer | undefined,
+): boolean {
+  const effect = keepsakeEffectByKind(catalog, 'gorgonAmulet');
+  return (
+    offer?.kind === 'traits' &&
+    offer.options.length === 3 &&
+    effect?.kind === 'gorgonAmulet' &&
+    offer.giverKey === effect.providerKey &&
+    offer.options.every((option) => option.rarity === effect.rarity) &&
+    offer.deathDefianceConditionMet === undefined
+  );
+}
+
+/** Shared route appearance budget for natural Athena and Gorgon Athena. */
+export function assessGorgonCandidate(input: GorgonCandidateInput): {
+  readonly naturalPossible: boolean;
+  readonly gorgonPossible: boolean;
+  readonly nextStatus: GorgonLifecycleStatus | undefined;
+} {
+  const naturalPossible = input.naturalAthena && input.status !== 'consumed';
+  const gorgonPossible = input.gorgonEligible && input.status === 'pending';
+  return Object.freeze({
+    naturalPossible,
+    gorgonPossible,
+    nextStatus:
+      input.naturalAthena && input.status === 'pending'
+        ? 'expired'
+        : input.gorgonEligible && input.status === 'pending'
+          ? 'consumed'
+          : input.status,
+  });
+}
+export function attestGorgonBranchState(
+  branches: readonly { readonly keepsakes: KeepsakeState }[],
+): GorgonLifecycleStatus | undefined {
+  const values = branches.map((branch) => branch.keepsakes.gorgon?.status);
+  const first = values[0];
+  if (values.some((value) => value !== first))
+    throw new Error('Gorgon branch frontier is divergent');
+  return first;
 }
 
 /** Attest the branch frontier before lifecycle composition can consume it. */
@@ -278,6 +350,9 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'gorgonAmulet'
+      ? { gorgon: Object.freeze({ status: 'pending' as const }) }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -333,6 +408,9 @@ export function applyKeepsakeDisposition(
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
     fatedStatus,
+    ...(state.gorgon?.status === 'pending'
+      ? { gorgon: Object.freeze({ status: 'expired' as const }) }
+      : {}),
     ...(selected.effect?.kind === 'callingCard' && state.callingCard === undefined
       ? { callingCard: Object.freeze({ remainingCharges: selected.effect.rarificationCharges }) }
       : {}),
@@ -347,6 +425,9 @@ export function applyKeepsakeDisposition(
           }),
         }
       : {}),
+    ...(selected.effect?.kind === 'gorgonAmulet' && state.gorgon === undefined
+      ? { gorgon: Object.freeze({ status: 'pending' as const }) }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
@@ -354,6 +435,18 @@ export function applyKeepsakeDisposition(
       ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
       : {}),
   });
+}
+
+export function expirePendingGorgon(state: KeepsakeState): KeepsakeState {
+  return state.gorgon?.status === 'pending'
+    ? Object.freeze({ ...state, gorgon: Object.freeze({ status: 'expired' as const }) })
+    : state;
+}
+
+export function consumeGorgonAppearance(state: KeepsakeState): KeepsakeState {
+  return state.gorgon?.status === 'pending'
+    ? Object.freeze({ ...state, gorgon: Object.freeze({ status: 'consumed' as const }) })
+    : state;
 }
 
 /** Biome starts reset only Fig Leaf's local opportunity. */

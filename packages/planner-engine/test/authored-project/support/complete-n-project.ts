@@ -1,4 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -6,9 +7,13 @@ import {
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
@@ -106,4 +111,57 @@ export function createCompleteNProject(): ProjectDocument {
     gameName: 'N_PreBoss01',
     targetOccurrenceIds: { preboss: createOccurrenceId('round-trip-n-preboss') },
   });
+}
+
+/** Complete N setup with one entered side-room child for local lifecycle tests. */
+export function createEnteredNLocalProject(): ProjectDocument {
+  const nCombatId = createOccurrenceId('round-trip-n-combat02');
+  let project = createCompleteNProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-prehub')),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nCombatId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSideRoomGeneration',
+    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceSideRoomGeneration',
+    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    generation: 'generated',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    value: { rewardType: 'MaxHealthDropSmall' },
+  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
+      enteredSlotKeys: ['sideDoor1'],
+    }),
+  );
 }

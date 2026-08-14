@@ -1,6 +1,7 @@
 import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
 import {
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
@@ -136,6 +137,11 @@ import {
   refreshKeepsakeFatedStatus,
   consumeFigLeafUse,
   attestFigLeafBranchState,
+  attestGorgonBranchState,
+  consumeGorgonAppearance,
+  expirePendingGorgon,
+  assessGorgonEligibility,
+  assessGorgonChildSettlement,
 } from '../keepsakes';
 import {
   activateTemporaryArcana,
@@ -1150,6 +1156,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
   >();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
+  const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
+  const blockedGorgonPhases = new Set<string>();
+  let gorgonEvaluationBlocked = false;
+  const eligibleGorgonPhases = new Set<string>();
   function recordAcquisitionRoleFrontiers(
     frontiers: readonly AcquisitionRoleFrontier[] | undefined,
   ): void {
@@ -1823,6 +1833,97 @@ export function evaluateBiomeRewardsAssemblyInternal(
               Object.freeze({ ...branch, keepsakes: consumeFigLeafUse(branch.keepsakes) }),
             ),
           );
+        }
+        // Gorgon is an additive appearance on the existing phase. Eligibility
+        // is evaluated at the predecessor/pre-room checkpoint after Fig Leaf
+        // execution; the pending branch remains untouched until completion.
+        const gorgonDeclaration =
+          room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')
+            ? catalog.rooms.byKey[room.gameName]
+            : undefined;
+        const gorgonView =
+          room === undefined ? undefined : views.get(semanticAddressKey(room.origin));
+        const gorgonPhase =
+          room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')
+            ? room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey)
+            : undefined;
+        if (
+          room !== undefined &&
+          (room.kind === 'authored' || room.kind === 'localChild') &&
+          gorgonDeclaration !== undefined &&
+          gorgonPhase !== undefined &&
+          gorgonView !== undefined
+        ) {
+          const gorgonStatus = attestGorgonBranchState(branches);
+          const selectedEncounterKey = selectedEncounterDefinitionKey(
+            catalog,
+            gorgonDeclaration,
+            room.encounters,
+            event.phaseKey,
+            semanticAddressKey(event.origin),
+          );
+          const gorgonEffect = catalog.keepsakes.values.find(
+            (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+          )?.effect;
+          const gorgonOrigin = createEncounterPhaseAddress(
+            createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
+            room.kind === 'authored'
+              ? { kind: 'occurrence', occurrenceId: room.occurrenceId }
+              : {
+                  kind: 'localChild',
+                  occurrenceId: room.origin.occurrenceId,
+                  groupKey: room.groupKey,
+                  slotKey: room.slotKey,
+                },
+            event.phaseKey,
+          );
+          const gorgonCandidateSupported =
+            !gorgonEvaluationBlocked &&
+            gorgonStatus === 'pending' &&
+            gorgonEffect?.kind === 'gorgonAmulet' &&
+            gorgonView.preparation.ledgers.counters.biomeDepthCache >=
+              gorgonEffect.minimumBiomeDepth &&
+            gorgonDeclaration.blocksGorgon === false &&
+            gorgonPhase.blocksGorgon === false &&
+            selectedEncounterKey !== undefined &&
+            catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon === true &&
+            event.execution === 'normal';
+          gorgonPhaseCandidates.set(
+            semanticAddressKey(gorgonOrigin),
+            Object.freeze({ origin: gorgonOrigin, supported: gorgonCandidateSupported }),
+          );
+          if (
+            gorgonStatus === 'pending' &&
+            gorgonEffect?.kind === 'gorgonAmulet' &&
+            selectedEncounterKey === gorgonEffect.naturalEncounterKey
+          ) {
+            branches = Object.freeze(
+              branches.map((branch) =>
+                Object.freeze({ ...branch, keepsakes: expirePendingGorgon(branch.keepsakes) }),
+              ),
+            );
+          } else if (
+            assessGorgonEligibility({
+              status: gorgonStatus,
+              biomeDepthCache: gorgonView.preparation.ledgers.counters.biomeDepthCache,
+              minimumBiomeDepth:
+                gorgonEffect?.kind === 'gorgonAmulet'
+                  ? gorgonEffect.minimumBiomeDepth
+                  : Number.POSITIVE_INFINITY,
+              roomBlocked: gorgonDeclaration.blocksGorgon === true,
+              encounterBlocked:
+                gorgonPhase.blocksGorgon === true ||
+                selectedEncounterKey === undefined ||
+                catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon !== true,
+              figLeafSkipped: event.execution === 'skippedByFigLeaf',
+              deathDefianceConditionMet:
+                room.encounters.gorgonResultByPhase?.[event.phaseKey]?.deathDefianceConditionMet ===
+                true,
+            })
+          ) {
+            if (!gorgonEvaluationBlocked)
+              eligibleGorgonPhases.add(`${semanticAddressKey(event.origin)}::${event.phaseKey}`);
+          }
         }
         branches = advanceRewardBranches(branches, event.sequence);
         break;
@@ -3009,6 +3110,111 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (declaration?.advancesExperimentalHammerUses === true) {
           branches = advanceExperimentalHammerForCompletion(branches, event.origin, event.sequence);
         }
+        if (
+          room !== undefined &&
+          declaration !== undefined &&
+          (room.kind === 'authored' || room.kind === 'localChild') &&
+          eligibleGorgonPhases.has(`${semanticAddressKey(event.origin)}::${event.phaseKey}`)
+        ) {
+          const result = room.encounters.gorgonResultByPhase?.[event.phaseKey];
+          const phase = room.encounterPhases.find(
+            (candidate) => candidate.slotKey === event.phaseKey,
+          );
+          const encounterPhaseAddress = createEncounterPhaseAddress(
+            createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
+            room.origin.kind === 'occurrence'
+              ? { kind: 'occurrence', occurrenceId: room.origin.occurrenceId }
+              : {
+                  kind: 'localChild',
+                  occurrenceId: room.origin.occurrenceId,
+                  groupKey: room.origin.groupKey,
+                  slotKey: room.origin.slotKey,
+                },
+            event.phaseKey,
+          );
+          const gorgonPhaseAddress = createGorgonPhaseAddress(encounterPhaseAddress);
+          const gorgonAddress = createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena');
+          const gorgonOffer = result?.athenaOffer;
+          const gorgonKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
+          if (
+            phase?.blocksGorgon !== true &&
+            declaration.blocksGorgon !== true &&
+            result?.deathDefianceConditionMet === true &&
+            gorgonOffer !== undefined &&
+            assessGorgonChildSettlement(catalog, gorgonOffer) &&
+            !blockedGorgonPhases.has(gorgonKey)
+          ) {
+            const beforeEvaluations = branches.map(
+              (branch) => branch.traitEvaluations?.length ?? 0,
+            );
+            const processed = branches.map((branch) =>
+              processEncounterTraitOffer(
+                catalog,
+                branch,
+                gorgonAddress.owner,
+                gorgonOffer,
+                event.sequence,
+                'encounterCompleted',
+                findings,
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+                result.deathDefianceConditionMet,
+                'gorgonAthena',
+              ),
+            );
+            const valid = processed.every((branch, index) => {
+              const evaluations = branch.traitEvaluations ?? [];
+              const evaluation = evaluations[evaluations.length - 1];
+              return (
+                evaluations.length > beforeEvaluations[index]! &&
+                evaluation !== undefined &&
+                evaluation.assessments.every((assessment) => assessment.legal) &&
+                evaluation.composition.legal &&
+                evaluation.replacementComposition.legal &&
+                evaluation.targetedAcquisition.legal
+              );
+            });
+            if (valid) {
+              branches = Object.freeze(
+                processed.map((branch) =>
+                  Object.freeze({
+                    ...branch,
+                    keepsakes: consumeGorgonAppearance(branch.keepsakes),
+                  }),
+                ),
+              );
+            } else {
+              blockedGorgonPhases.add(gorgonKey);
+              gorgonEvaluationBlocked = true;
+            }
+          } else if (result?.deathDefianceConditionMet === true && !gorgonOffer) {
+            blockedGorgonPhases.add(gorgonKey);
+            gorgonEvaluationBlocked = true;
+            addRewardFinding(
+              findings,
+              rewardFinding('rewardAcquisitionUnavailable', gorgonAddress.owner, {
+                reason: 'gorgonAthenaOfferMissing',
+              }),
+              ownerRegion(gorgonAddress.owner),
+              historyFindingChronology(event.sequence),
+            );
+          } else if (result?.deathDefianceConditionMet === true && gorgonOffer !== undefined) {
+            blockedGorgonPhases.add(gorgonKey);
+            gorgonEvaluationBlocked = true;
+            addRewardFinding(
+              findings,
+              rewardFinding('rewardAcquisitionUnavailable', gorgonAddress.owner, {
+                reason: 'gorgonAthenaOfferInvalid',
+              }),
+              ownerRegion(gorgonAddress.owner),
+              historyFindingChronology(event.sequence),
+            );
+          }
+        }
         if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss') {
           const owner = createBossCompletionArcanaAddress(event.origin);
           const activeArcana = attestJudgmentArcanaFrontier(branches);
@@ -3257,6 +3463,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
+    gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
   });
   return Object.freeze({
     simulation,

@@ -139,6 +139,7 @@ export function createDefaultRoomEncounterState(
   const bindings = encounterBindingsBySlot(catalog, room, path);
   const values: Record<string, string> = {};
   const figLeafSkipByPhase: Record<string, boolean> = {};
+  const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
   for (const binding of bindings.values()) {
     figLeafSkipByPhase[binding.slotKey] = false;
     if (binding.kind === 'fixed') {
@@ -162,6 +163,26 @@ export function createDefaultRoomEncounterState(
       `${path}.${binding.slotKey}`,
     );
     values[binding.slotKey] = set.defaultEncounterDefinitionKey;
+    if (
+      set.encounterDefinitionKeys.some(
+        (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
+      )
+    )
+      gorgonResultByPhase[binding.slotKey] = Object.freeze({ deathDefianceConditionMet: false });
+  }
+  for (const binding of bindings.values()) {
+    const hostsGorgon =
+      binding.kind === 'fixed'
+        ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.hostsGorgon === true
+        : encounterSetForBinding(
+            catalog,
+            binding,
+            `${path}.${binding.slotKey}`,
+          ).encounterDefinitionKeys.some(
+            (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
+          );
+    if (hostsGorgon)
+      gorgonResultByPhase[binding.slotKey] ??= Object.freeze({ deathDefianceConditionMet: false });
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   for (const binding of bindings.values()) {
@@ -174,6 +195,7 @@ export function createDefaultRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(values),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
@@ -185,13 +207,13 @@ function decodeEncounterTraitOffer(
   catalog: Catalog,
   giverKey: string,
   path: string,
+  omitDeathDefianceContext = false,
+  allowContextInvalid = false,
 ): AuthoredTraitOffer {
   const record = expectRecord(value, path);
-  const conditionApplicable = traitGiverUsesOfferContext(
-    catalog,
-    giverKey,
-    'deathDefianceConditionMet',
-  );
+  const conditionApplicable =
+    !omitDeathDefianceContext &&
+    traitGiverUsesOfferContext(catalog, giverKey, 'deathDefianceConditionMet');
   if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
     failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
   }
@@ -256,6 +278,7 @@ function decodeEncounterTraitOffer(
     if (trait.rarityDomain.kind === 'none' && rarity !== undefined)
       failProjectDocument(`${path}.options.${optionKey}.rarity`, 'Hammer options have no rarity');
     if (
+      !allowContextInvalid &&
       trait.rarityDomain.kind === 'ranked' &&
       (rarity === undefined || !trait.rarityDomain.equippedRarities.includes(rarity as never))
     )
@@ -263,7 +286,11 @@ function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.rarity`,
         `unsupported authored rarity for ${traitKey}`,
       );
-    if (giver.rarityPolicy.kind === 'fixed' && rarity !== giver.rarityPolicy.rarity)
+    if (
+      !allowContextInvalid &&
+      giver.rarityPolicy.kind === 'fixed' &&
+      rarity !== giver.rarityPolicy.rarity
+    )
       failProjectDocument(
         `${path}.options.${optionKey}.rarity`,
         `${traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`,
@@ -420,8 +447,8 @@ export function decodeRoomEncounterState(
   expectExactKeys(
     state,
     state.traitOffersByPhase === undefined
-      ? ['encounterKeyByPhase', 'figLeafSkipByPhase']
-      : ['encounterKeyByPhase', 'traitOffersByPhase', 'figLeafSkipByPhase'],
+      ? ['encounterKeyByPhase', 'figLeafSkipByPhase', 'gorgonResultByPhase']
+      : ['encounterKeyByPhase', 'traitOffersByPhase', 'figLeafSkipByPhase', 'gorgonResultByPhase'],
     path,
   );
   const rawSelections = expectRecord(state.encounterKeyByPhase, `${path}.encounterKeyByPhase`);
@@ -461,6 +488,71 @@ export function decodeRoomEncounterState(
       rawSkips[phaseKey],
       `${path}.figLeafSkipByPhase.${phaseKey}`,
     );
+  }
+  const rawGorgon = expectRecord(state.gorgonResultByPhase, `${path}.gorgonResultByPhase`);
+  const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
+  const gorgonEffect = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+  )?.effect;
+  if (gorgonEffect?.kind !== 'gorgonAmulet')
+    failProjectDocument(`${path}.gorgonResultByPhase`, 'catalog has no Gorgon Amulet descriptor');
+  const gorgonProviderKey = gorgonEffect.providerKey;
+  const hostingPhaseKeys = [...bindings.values()]
+    .filter((binding) => {
+      if (binding.kind === 'fixed')
+        return (
+          catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.hostsGorgon === true
+        );
+      const set = encounterSetForBinding(catalog, binding, `${path}.${binding.slotKey}`);
+      return set.encounterDefinitionKeys.some(
+        (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
+      );
+    })
+    .map((binding) => binding.slotKey);
+  expectExactKeys(rawGorgon, hostingPhaseKeys, `${path}.gorgonResultByPhase`);
+  for (const phaseKey of hostingPhaseKeys) {
+    const result = expectRecord(rawGorgon[phaseKey], `${path}.gorgonResultByPhase.${phaseKey}`);
+    const hasOffer = result.athenaOffer !== undefined;
+    expectExactKeys(
+      result,
+      hasOffer ? ['deathDefianceConditionMet', 'athenaOffer'] : ['deathDefianceConditionMet'],
+      `${path}.gorgonResultByPhase.${phaseKey}`,
+    );
+    const deathDefianceConditionMet = expectBoolean(
+      result.deathDefianceConditionMet,
+      `${path}.gorgonResultByPhase.${phaseKey}.deathDefianceConditionMet`,
+    );
+    let athenaOffer: import('../traits').AuthoredTraitOffer | undefined;
+    if (hasOffer) {
+      athenaOffer = decodeEncounterTraitOffer(
+        result.athenaOffer,
+        catalog,
+        gorgonProviderKey,
+        `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
+        true,
+        true,
+      );
+      if (
+        athenaOffer.kind !== 'traits' ||
+        athenaOffer.options.length < 1 ||
+        athenaOffer.options.length > 3
+      ) {
+        failProjectDocument(
+          `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
+          'Gorgon Athena requires exactly three trait options',
+        );
+      }
+      if (athenaOffer.kind === 'traits' && athenaOffer.deathDefianceConditionMet !== undefined) {
+        failProjectDocument(
+          `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
+          'Gorgon Athena owns Death Defiance context on its parent phase',
+        );
+      }
+    }
+    gorgonResultByPhase[phaseKey] = Object.freeze({
+      deathDefianceConditionMet,
+      ...(athenaOffer === undefined ? {} : { athenaOffer }),
+    });
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   if (state.traitOffersByPhase !== undefined) {
@@ -520,6 +612,7 @@ export function decodeRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
@@ -550,6 +643,7 @@ export function reconcileRoomEncounterState(
   );
   const selections: Record<string, string> = {};
   const figLeafSkipByPhase: Record<string, boolean> = {};
+  const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
   for (const binding of replacementBindings.values()) {
     figLeafSkipByPhase[binding.slotKey] = previous.figLeafSkipByPhase[binding.slotKey] === true;
     if (binding.kind !== 'set') continue;
@@ -573,6 +667,29 @@ export function reconcileRoomEncounterState(
       set.encounterDefinitionKeys.includes(retained)
         ? retained
         : fallback;
+  }
+  for (const binding of replacementBindings.values()) {
+    const hostsGorgon =
+      binding.kind === 'fixed'
+        ? catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.hostsGorgon === true
+        : encounterSetForBinding(
+            catalog,
+            binding,
+            `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
+          ).encounterDefinitionKeys.some(
+            (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
+          );
+    if (!hostsGorgon) continue;
+    const priorGorgon = previous.gorgonResultByPhase?.[binding.slotKey];
+    gorgonResultByPhase[binding.slotKey] =
+      priorGorgon === undefined
+        ? Object.freeze({ deathDefianceConditionMet: false })
+        : Object.freeze({
+            deathDefianceConditionMet: priorGorgon.deathDefianceConditionMet,
+            ...(priorGorgon.athenaOffer === undefined
+              ? {}
+              : { athenaOffer: priorGorgon.athenaOffer }),
+          });
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
   for (const binding of replacementBindings.values()) {
@@ -609,6 +726,9 @@ export function reconcileRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    ...(previous.gorgonResultByPhase === undefined
+      ? {}
+      : { gorgonResultByPhase: Object.freeze(gorgonResultByPhase) }),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),

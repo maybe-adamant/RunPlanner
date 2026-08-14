@@ -252,6 +252,32 @@ export function createDefaultEncounterTraitOffer(
   });
 }
 
+/** Declaration-owned fixed-Epic Athena child for a Gorgon phase. */
+export function createDefaultGorgonAthenaOffer(catalog: Catalog): AuthoredTraitOffer | undefined {
+  const effect = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+  )?.effect;
+  const providerKey = effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined;
+  const rarity = effect?.kind === 'gorgonAmulet' ? effect.rarity : undefined;
+  const giver = providerKey === undefined ? undefined : catalog.traitGivers.byKey[providerKey];
+  const defaults = giver?.defaultOffer;
+  if (giver === undefined || defaults === undefined || rarity === undefined) return undefined;
+  return Object.freeze({
+    kind: 'traits' as const,
+    giverKey: giver.key,
+    options: Object.freeze(
+      defaults.options.map((option) => Object.freeze({ ...option, rarity })),
+    ) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey:
+      defaults.selectedOption === 0
+        ? 'option1'
+        : defaults.selectedOption === 1
+          ? 'option2'
+          : 'option3',
+    rarificationActions: Object.freeze([]),
+  });
+}
+
 /** Complete entry-owned defaults for one selected pickup-producing descriptor.
  * This is intentionally generic over the declaration disposition; no caller
  * needs a provider-name switch. */

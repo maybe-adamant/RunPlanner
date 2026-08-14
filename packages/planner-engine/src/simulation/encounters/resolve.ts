@@ -60,6 +60,8 @@ export function resolveEncounterPhases(
         countsEncounterDepth: definition.countsEncounterDepth,
         canEncounterSkip: definition.canEncounterSkip === true,
         blocksFigLeaf: definition.blocksFigLeaf === true,
+        blocksGorgon: definition.blocksGorgon === true,
+        hostsGorgon: definition.hostsGorgon === true,
         skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
         figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
         ...(definition.sequenceEffect === undefined
