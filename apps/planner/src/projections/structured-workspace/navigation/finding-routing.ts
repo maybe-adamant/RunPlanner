@@ -39,6 +39,8 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'acquisitionSite':
     case 'acquisitionEntry':
       return true;
+    case 'keepsakeEquipResult':
+      return address.selection.owner !== 'routeStart';
     default:
       return false;
   }

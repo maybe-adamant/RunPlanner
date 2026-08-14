@@ -3,7 +3,9 @@ import {
   createBiomeFieldAddress,
   createBiomeAddress,
   createExitDecisionAddress,
+  createKeepsakeEquipResultAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -327,6 +329,33 @@ describe('contextual option projection', () => {
       'Finish the required earlier route steps before this option can be evaluated.',
       'This purchase order cannot be completed with the current shop configuration.',
     ]);
+  });
+
+  it('explains each keepsake equip-result family without shared Jeweled Pom copy', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const jeweledPom = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
+    const experimentalHammer = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+    const explanation = (
+      code: 'keepsakeEquipResultMissing' | 'keepsakeEquipResultUnavailable',
+      origin: typeof jeweledPom | typeof experimentalHammer,
+    ) =>
+      explainCandidateEvaluation(
+        catalog,
+        invalidReward({ code, evidence: {}, origin, phase: 'completeness', severity: 'error' }),
+      )?.message;
+
+    expect(explanation('keepsakeEquipResultMissing', jeweledPom)).toBe(
+      'Choose the Hades trait granted by Jeweled Pom.',
+    );
+    expect(explanation('keepsakeEquipResultUnavailable', jeweledPom)).toBe(
+      'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+    );
+    expect(explanation('keepsakeEquipResultMissing', experimentalHammer)).toBe(
+      'Choose the Hammer trait granted by Experimental Hammer.',
+    );
+    expect(explanation('keepsakeEquipResultUnavailable', experimentalHammer)).toBe(
+      'Choose a Hammer trait compatible with the active weapon and aspect.',
+    );
   });
 
   it('presents typed room, requirement, sibling, bag, and store reasons without finding codes', () => {

@@ -413,12 +413,10 @@ function CompletionWorkbench({
           workspaceInteractionKey(node.keepsakeSelection.address),
         );
   const equipResult =
-    node.keepsakeSelection === undefined
+    node.keepsakeSelection?.equipResult === undefined
       ? undefined
-      : [...interactions.keepsakeEquipResults.values()].find(
-          (interaction) =>
-            semanticAddressKey(interaction.owner.selection) ===
-            semanticAddressKey(node.keepsakeSelection!.address),
+      : interactions.keepsakeEquipResults.get(
+          workspaceInteractionKey(node.keepsakeSelection.equipResult.address),
         );
   return (
     <article className="biome-completion-workbench">

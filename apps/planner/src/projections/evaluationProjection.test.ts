@@ -6,12 +6,14 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubRoomAddress,
+  createKeepsakeEquipResultAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   semanticAddressKey,
   type SemanticAddress,
@@ -207,6 +209,31 @@ describe('evaluation presentation', () => {
     for (const [code, title, description] of expected) {
       expect(presentFinding(finding(code))).toEqual({ title, description });
     }
+  });
+
+  it('presents each closed keepsake equip-result family truthfully', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const jeweledPom = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
+    const experimentalHammer = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
+
+    expect(presentFinding(finding('keepsakeEquipResultMissing', jeweledPom))).toEqual({
+      title: 'Choose Jeweled Pom result',
+      description: 'Record the Hades trait granted when Jeweled Pom is equipped.',
+    });
+    expect(presentFinding(finding('keepsakeEquipResultUnavailable', jeweledPom))).toEqual({
+      title: 'Jeweled Pom result is unavailable',
+      description: 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+    });
+    expect(presentFinding(finding('keepsakeEquipResultMissing', experimentalHammer))).toEqual({
+      title: 'Choose Experimental Hammer result',
+      description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
+    });
+    expect(presentFinding(finding('keepsakeEquipResultUnavailable', experimentalHammer))).toEqual({
+      title: 'Experimental Hammer result is unavailable',
+      description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
+    });
+    expect(findingDestinationLabel(catalog, jeweledPom)).toBe('Jeweled Pom result');
+    expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Experimental Hammer result');
   });
 
   it('indexes every finding directly under its semantic owner', () => {

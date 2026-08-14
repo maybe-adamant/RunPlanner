@@ -203,6 +203,17 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
+### Keepsake Products
+
+Route Settings projects the mandatory starting selection, and each reached
+nonfinal Postboss completion projects its retain-or-replace selection. Immediate
+Jeweled Pom and Experimental Hammer results appear beneath that exact selection.
+Calling Card actions remain on trait-offer rows, Time Piece conversions remain
+on acquisition roles, and Fig Leaf plus Gorgon controls remain on exact
+encounter phases. Each reached product has one bound interaction, finding
+destination, and containing inspector; dormant detail publishes none. React
+renders those products without switching on keepsake keys to decide legality.
+
 ## Application Projection Boundary
 
 The application projects a structured workspace from:

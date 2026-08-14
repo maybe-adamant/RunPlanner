@@ -13,6 +13,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   assessTraitOption,
+  keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -629,9 +630,13 @@ describe('Experimental Hammer', () => {
       ),
     };
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
+    const missingAssembly = simulateProjectAssembly(catalog, project);
+    expect(missingAssembly.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: result }),
     );
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(missingAssembly, result),
+    ).toBeDefined();
     const invalid = {
       ...project,
       routes: project.routes.map((candidate) =>
@@ -652,8 +657,12 @@ describe('Experimental Hammer', () => {
             },
       ),
     };
-    expect(simulateProjectAssembly(catalog, invalid).evaluation.findings).toContainEqual(
+    const invalidAssembly = simulateProjectAssembly(catalog, invalid);
+    expect(invalidAssembly.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: result }),
     );
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(invalidAssembly, result),
+    ).toBeDefined();
   });
 });

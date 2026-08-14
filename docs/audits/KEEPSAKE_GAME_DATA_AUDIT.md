@@ -912,5 +912,22 @@ snapshot of those effects.
 
 The keepsake baseline has no remaining profile/loadout ambiguity: one starting
 selection is mandatory, all declarations are unlocked, and every declaration
-uses rank III. A later implementation plan only needs to choose delivery gates
-and the exact authored products required by the settled effect subset.
+uses rank III. Effect support is extended only through a focused declaration,
+authorship, simulation, and presentation slice for the settled effect subset.
+
+## Current Planner Disposition
+
+The ordinary keepsake slice is implemented through authored schema 29. All 33
+identities participate in mandatory route-start selection, reached nonfinal
+Postboss retain-or-replace frontiers, ordered history, no-return legality, and
+their declared Fated role. Jeweled Pom, Experimental Hammer, Calling Card, Time
+Piece, Fig Leaf, and Gorgon Amulet additionally implement the effect contracts
+audited above. The remaining 27 identities create no individual simulated
+gameplay effect; they are not complete no-ops because their identity still
+participates in chronology, no-return, and Fated policy.
+
+The implementation retains one branch-owned keepsake state and routes each
+effect through its existing trait, acquisition, encounter, or lifecycle
+authority. It does not contain a generic effect registry, a second route
+history, or React-owned keepsake-key policy. Rank-sensitive extensions and Echo
+remain separate slices governed by their focused audits.

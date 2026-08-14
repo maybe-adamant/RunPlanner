@@ -1416,6 +1416,10 @@ export interface WorkspaceCompletionNode {
   };
   readonly keepsakeSelection?: {
     readonly address: KeepsakeSelectionAddress;
+    readonly equipResult?: {
+      readonly address: KeepsakeEquipResultAddress;
+      readonly marker: WorkspaceMarker;
+    };
     readonly marker: WorkspaceMarker;
     readonly value:
       { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };

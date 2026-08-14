@@ -113,8 +113,12 @@ repeat the four-source-cap state. Equipped traits use fixed Attack, Special,
 Cast, Sprint, and Magick rows sourced from the engine's ordinary-slot ledger,
 followed by all other equipped traits. This presentation uses catalog labels
 plus optional rarity or Hammer rank; it does not expose trait, giver, or slot
-keys. The sheet also presents elements, followed by a `More Info` section with collapsed
-`Counters` and `Reward Bags` disclosures. Counters use one key/value row each;
+keys. A collapsed Keepsakes section presents the engine's current and removed
+identities, Fated state, and retained state for the six supported effects. It
+does not infer an effect from the current identity or recreate charge and
+encounter-use folds. The sheet also presents elements, followed by a `More
+Info` section with collapsed `Counters` and `Reward Bags` disclosures. Counters
+use one key/value row each;
 individual reward bags retain their nested disclosures. Bag disclosures use the
 projected `Eligible now` and `Ineligible now` groups; they do not claim which
 upcoming door can be selected. Opening moves focus to the sheet close control,

@@ -156,6 +156,11 @@ predecessor's outgoing-generation state.
 : The state after every supported local acquisition and exit effect has run. It
 is threaded into the already-generated picked target's preparation.
 
+`Postboss keepsake frontier`
+: The fixed first modeled action after entering a reached nonfinal Postboss
+room. It retains or replaces the current keepsake before that room's primary
+encounter completion and later acquisitions are folded.
+
 ## Ownership
 
 | Concern                                                 | Owner                             |
@@ -174,6 +179,22 @@ is threaded into the already-generated picked target's preparation.
 
 The simulator must not switch on a concrete room name to reconstruct ordering.
 The editor must not persist lifecycle operations or history snapshots.
+
+### Postboss Keepsake Ordering
+
+The route enters each derived Postboss room with the keepsake used for the Boss.
+Boss completion and Judgment therefore observe the old keepsake. When a
+successor biome is configured, the Postboss retain-or-replace disposition is
+then applied as the planner's fixed first modeled action. Immediate equip
+results occur at that boundary; the Postboss primary encounter completion,
+acquisitions, and next-biome seed observe the resulting keepsake state.
+
+This is a fixed lifecycle seam, not an authored rack room or general
+interaction-order list. In particular, a Postboss primary `Empty` encounter
+still completes after the rack action and advances any applicable
+encounter-use effect. Retention records chronology without replaying an equip
+result. I and Q may still walk their physical Postboss completion tail, but no
+meaningless final-route rack action is authored or simulated.
 
 ## Closed Operation Vocabulary
 

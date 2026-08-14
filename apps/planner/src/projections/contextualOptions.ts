@@ -242,7 +242,25 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       };
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':
-      return { kind: 'generic', message: 'Choose the Hades trait granted by Jeweled Pom.' };
+      if (
+        finding.origin.kind === 'keepsakeEquipResult' &&
+        finding.origin.resultKind === 'experimentalHammer'
+      ) {
+        return {
+          kind: 'generic',
+          message:
+            finding.code === 'keepsakeEquipResultMissing'
+              ? 'Choose the Hammer trait granted by Experimental Hammer.'
+              : 'Choose a Hammer trait compatible with the active weapon and aspect.',
+        };
+      }
+      return {
+        kind: 'generic',
+        message:
+          finding.code === 'keepsakeEquipResultMissing'
+            ? 'Choose the Hades trait granted by Jeweled Pom.'
+            : 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+      };
     case 'circeResolutionMissing':
     case 'circeResolutionWrongCardinality':
     case 'circeResolutionTargetUnavailable':
