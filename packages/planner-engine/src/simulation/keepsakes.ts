@@ -75,13 +75,22 @@ export function assessGorgonChildSettlement(
   catalog: Catalog,
   offer: AuthoredTraitOffer | undefined,
 ): boolean {
-  const effect = keepsakeEffectByKind(catalog, 'gorgonAmulet');
+  const keepsake = catalog.keepsakes.values.find(
+    (candidate) => candidate.effect?.kind === 'gorgonAmulet',
+  );
+  const effect = keepsake?.effect;
+  const rarityLevel =
+    effect?.kind === 'gorgonAmulet' && keepsake !== undefined
+      ? effect.rarityLevelByRank[keepsake.rank]
+      : undefined;
+  const rarity = rarityLevel === undefined ? undefined : catalog.traitRarityOrder[rarityLevel - 1];
   return (
     offer?.kind === 'traits' &&
     offer.options.length === 3 &&
     effect?.kind === 'gorgonAmulet' &&
     offer.giverKey === effect.providerKey &&
-    offer.options.every((option) => option.rarity === effect.rarity) &&
+    rarity !== undefined &&
+    offer.options.every((option) => option.rarity === rarity) &&
     offer.deathDefianceConditionMet === undefined
   );
 }
@@ -317,7 +326,8 @@ export function createKeepsakeState(
   key: string,
   arcanaFear?: ArcanaFearState,
 ): KeepsakeState {
-  const effect = catalog.keepsakes.byKey[key]?.effect;
+  const keepsake = catalog.keepsakes.byKey[key];
+  const effect = keepsake?.effect;
   const fatedStatus = deriveFatedStatus(
     catalog,
     [key],
@@ -328,24 +338,26 @@ export function createKeepsakeState(
     history: Object.freeze([{ key, kind: 'start' as const }]),
     removedKeys: Object.freeze([]),
     fatedStatus,
-    ...(effect?.kind === 'callingCard'
+    ...(effect?.kind === 'callingCard' && keepsake !== undefined
       ? {
           callingCard: Object.freeze({
-            remainingCharges: fatedStatus === 'Unfated' ? 0 : effect.rarificationCharges,
+            remainingCharges:
+              fatedStatus === 'Unfated' ? 0 : effect.rarificationChargesByRank[keepsake.rank],
           }),
         }
       : {}),
-    ...(effect?.kind === 'timePiece'
+    ...(effect?.kind === 'timePiece' && keepsake !== undefined
       ? {
           timePiece: Object.freeze({
-            remainingCharges: fatedStatus === 'Unfated' ? 0 : effect.conversionCharges,
+            remainingCharges:
+              fatedStatus === 'Unfated' ? 0 : effect.conversionChargesByRank[keepsake.rank],
           }),
         }
       : {}),
-    ...(effect?.kind === 'figLeaf'
+    ...(effect?.kind === 'figLeaf' && keepsake !== undefined
       ? {
           figLeaf: Object.freeze({
-            remainingUses: effect.biomeUses,
+            remainingUses: effect.biomeUsesByRank[keepsake.rank],
             activatedThisBiome: false,
           }),
         }
@@ -412,15 +424,23 @@ export function applyKeepsakeDisposition(
       ? { gorgon: Object.freeze({ status: 'expired' as const }) }
       : {}),
     ...(selected.effect?.kind === 'callingCard' && state.callingCard === undefined
-      ? { callingCard: Object.freeze({ remainingCharges: selected.effect.rarificationCharges }) }
+      ? {
+          callingCard: Object.freeze({
+            remainingCharges: selected.effect.rarificationChargesByRank[selected.rank],
+          }),
+        }
       : {}),
     ...(selected.effect?.kind === 'timePiece' && state.timePiece === undefined
-      ? { timePiece: Object.freeze({ remainingCharges: selected.effect.conversionCharges }) }
+      ? {
+          timePiece: Object.freeze({
+            remainingCharges: selected.effect.conversionChargesByRank[selected.rank],
+          }),
+        }
       : {}),
     ...(selected.effect?.kind === 'figLeaf' && state.figLeaf === undefined
       ? {
           figLeaf: Object.freeze({
-            remainingUses: selected.effect.biomeUses,
+            remainingUses: selected.effect.biomeUsesByRank[selected.rank],
             activatedThisBiome: false,
           }),
         }

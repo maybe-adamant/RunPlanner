@@ -252,13 +252,18 @@ export function createDefaultEncounterTraitOffer(
   });
 }
 
-/** Declaration-owned fixed-Epic Athena child for a Gorgon phase. */
+/** Declaration-owned rank-III Athena child for an ordinary Gorgon equip. */
 export function createDefaultGorgonAthenaOffer(catalog: Catalog): AuthoredTraitOffer | undefined {
-  const effect = catalog.keepsakes.values.find(
+  const keepsake = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
-  )?.effect;
+  );
+  const effect = keepsake?.effect;
   const providerKey = effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined;
-  const rarity = effect?.kind === 'gorgonAmulet' ? effect.rarity : undefined;
+  const rarityLevel =
+    effect?.kind === 'gorgonAmulet' && keepsake !== undefined
+      ? effect.rarityLevelByRank[keepsake.rank]
+      : undefined;
+  const rarity = rarityLevel === undefined ? undefined : catalog.traitRarityOrder[rarityLevel - 1];
   const giver = providerKey === undefined ? undefined : catalog.traitGivers.byKey[providerKey];
   const defaults = giver?.defaultOffer;
   if (giver === undefined || defaults === undefined || rarity === undefined) return undefined;

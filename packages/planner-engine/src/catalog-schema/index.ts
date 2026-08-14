@@ -93,33 +93,54 @@ export interface FearVowDeclaration {
       };
 }
 
+export type KeepsakeRankProfile<
+  Common extends number,
+  Rare extends number,
+  Epic extends number,
+  Heroic extends number,
+> = Readonly<{
+  readonly Common: Common;
+  readonly Rare: Rare;
+  readonly Epic: Epic;
+  readonly Heroic: Heroic;
+}>;
+
 /** A rank-III ordinary keepsake. Effects are deliberately introduced by their owning gates. */
 export interface KeepsakeDeclaration {
   readonly key: string;
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
-  /** Closed, source-backed data consumed by the Jeweled Pom transition. */
+  /** Closed, source-backed rank data consumed by the six supported effect transitions. */
   readonly effect?:
     | {
         readonly kind: 'jeweledPom';
         readonly giverKey: string;
-        readonly subsequentEligibleTraitLevels: 3;
+        readonly subsequentEligibleTraitLevelsByRank: KeepsakeRankProfile<1, 2, 3, 4>;
       }
     | {
         readonly kind: 'experimentalHammer';
         readonly giverKey: string;
-        readonly qualifyingEncounterUses: 20;
+        readonly qualifyingEncounterUsesByRank: KeepsakeRankProfile<10, 15, 20, 30>;
       }
-    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
-    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
-    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 }
+    | {
+        readonly kind: 'callingCard';
+        readonly rarificationChargesByRank: KeepsakeRankProfile<2, 4, 6, 8>;
+      }
+    | {
+        readonly kind: 'timePiece';
+        readonly conversionChargesByRank: KeepsakeRankProfile<2, 3, 4, 5>;
+      }
+    | {
+        readonly kind: 'figLeaf';
+        readonly biomeUsesByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+      }
     | {
         readonly kind: 'gorgonAmulet';
         readonly uses: 1;
         readonly minimumBiomeDepth: 2;
         readonly providerKey: 'Athena';
-        readonly rarity: 'Epic';
+        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
         readonly naturalEncounterKey: string;
       };
 }

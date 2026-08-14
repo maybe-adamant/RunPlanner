@@ -123,9 +123,10 @@ function figLeafLifecycleState(
       ? undefined
       : { remainingUses: state.remainingUses, activatedThisBiome: false };
   }
-  const effect = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey]?.effect;
-  return effect?.kind === 'figLeaf'
-    ? { remainingUses: effect.biomeUses, activatedThisBiome: false }
+  const keepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
+  const effect = keepsake?.effect;
+  return effect?.kind === 'figLeaf' && keepsake !== undefined
+    ? { remainingUses: effect.biomeUsesByRank[keepsake.rank], activatedThisBiome: false }
     : undefined;
 }
 

@@ -9,6 +9,7 @@ import type {
   ExitBehavior,
   GeneratedProgressionPolicy,
   HubDecisionDescriptor,
+  KeepsakeRankProfile,
   NormalDoorBatchPolicy,
   OceanusAnomalyReplacementDescriptor,
   RewardStorePolicy,
@@ -39,22 +40,31 @@ export interface RawKeepsakeDeclaration {
     | {
         readonly kind: 'jeweledPom';
         readonly giverKey: string;
-        readonly subsequentEligibleTraitLevels: 3;
+        readonly subsequentEligibleTraitLevelsByRank: KeepsakeRankProfile<1, 2, 3, 4>;
       }
     | {
         readonly kind: 'experimentalHammer';
         readonly giverKey: string;
-        readonly qualifyingEncounterUses: 20;
+        readonly qualifyingEncounterUsesByRank: KeepsakeRankProfile<10, 15, 20, 30>;
       }
-    | { readonly kind: 'callingCard'; readonly rarificationCharges: 6 }
-    | { readonly kind: 'timePiece'; readonly conversionCharges: 4 }
-    | { readonly kind: 'figLeaf'; readonly biomeUses: 3 }
+    | {
+        readonly kind: 'callingCard';
+        readonly rarificationChargesByRank: KeepsakeRankProfile<2, 4, 6, 8>;
+      }
+    | {
+        readonly kind: 'timePiece';
+        readonly conversionChargesByRank: KeepsakeRankProfile<2, 3, 4, 5>;
+      }
+    | {
+        readonly kind: 'figLeaf';
+        readonly biomeUsesByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+      }
     | {
         readonly kind: 'gorgonAmulet';
         readonly uses: 1;
         readonly minimumBiomeDepth: 2;
         readonly providerKey: 'Athena';
-        readonly rarity: 'Epic';
+        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
         readonly naturalEncounterKey: string;
       };
 }
