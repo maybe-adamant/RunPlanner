@@ -256,6 +256,21 @@ describe('catalog regression coverage retained through unified decisions', () =>
   );
 
   it('declares Experimental Hammer use advancement independently of encounter depth', () => {
+    for (const gameName of [
+      'F_Combat02',
+      'F_MiniBoss01',
+      'F_Boss01',
+      'G_Story01',
+      'F_Reprieve01',
+      'F_Shop01',
+      'G_Intro',
+      'N_Hub',
+      'F_PostBoss01',
+      'O_Combat04',
+      'H_Combat02',
+    ]) {
+      expect(catalog.rooms.byKey[gameName]?.advancesExperimentalHammerUses, gameName).toBe(true);
+    }
     expect(
       catalog.rooms.values
         .filter((room) => !room.advancesExperimentalHammerUses)
