@@ -149,6 +149,93 @@ describe('Narcissus pickup producer', () => {
     expect(absent.authoring).toBe('complete');
   });
 
+  it('never converts Narcissus’s free Blind Box or its auto-activated hidden source', () => {
+    let project = selectNarcissus(createGoldenFGHIProject(), [
+      'NarcissusI',
+      'NarcissusB',
+      'NarcissusC',
+    ]);
+    const entry = pickupEntry(project, 'mysteryBoon');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site: entry.site,
+      entryKeys: ['mysteryBoon'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
+    const normalBranch = evaluatedG(project).rewards.branches[0];
+    expect(normalBranch?.history.consumableRecord.BlindBoxLoot).toBe(1);
+    expect(
+      normalBranch?.traitHistory?.events.some(
+        (event) =>
+          event.kind === 'traitOffer' &&
+          event.owner.kind === 'acquisitionEntry' &&
+          event.owner.entryKey === 'mysteryBoon',
+      ),
+    ).toBe(true);
+    const box = createAcquisitionRoleAddress(entry, 'box');
+    const hiddenSource = createAcquisitionRoleAddress(entry, 'hiddenSource');
+    const cases = [
+      {
+        acquisition: box,
+        evidence: { goldConversionEligible: false, blocksGoldConversion: false },
+      },
+      {
+        acquisition: hiddenSource,
+        evidence: { goldConversionEligible: true, blocksGoldConversion: true },
+      },
+    ] as const;
+    for (const testCase of cases) {
+      const retainedInvalid = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionConversion',
+        acquisition: testCase.acquisition,
+        value: 'gold',
+      });
+
+      const g = evaluatedG(retainedInvalid);
+      const branch = g.rewards.branches[0];
+      expect(branch?.keepsakes.timePiece?.remainingCharges).toBe(4);
+      expect(branch?.events.filter((event) => event.kind === 'conversionToGold')).toEqual([]);
+      expect(
+        g.rewards.findings.filter((finding) => finding.code === 'timePieceConversionUnavailable'),
+      ).toContainEqual(
+        expect.objectContaining({
+          origin: testCase.acquisition,
+          evidence: expect.objectContaining({
+            ...testCase.evidence,
+            instanceProvenance: 'free',
+          }),
+        }),
+      );
+
+      const candidates = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, retainedInvalid),
+      );
+      expect(
+        candidates.evaluate({
+          kind: 'acquisitionConversion',
+          acquisition: testCase.acquisition,
+        }),
+      ).toMatchObject({
+        kind: 'acquisitionConversion',
+        result: { goldSupported: false, goldConvertible: false },
+      });
+    }
+  });
+
   it('keeps the descriptor out of equipped history and settles selected elemental pickups at G room exit', () => {
     let project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusG',

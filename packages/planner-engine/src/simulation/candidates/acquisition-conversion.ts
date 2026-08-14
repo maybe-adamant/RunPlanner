@@ -49,6 +49,7 @@ export function evaluateAcquisitionConversionCandidate(
         capability.assessments.every(
           (entry) =>
             entry.evidence.goldConversionEligible === true &&
+            entry.evidence.blocksGoldConversion !== true &&
             entry.evidence.instanceProvenance === 'free',
         ),
       branchCount: capability.assessments.length,

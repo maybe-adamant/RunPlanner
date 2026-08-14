@@ -378,12 +378,17 @@ objects fail the game's resource-cost guard and therefore expose no conversion
 choice. Progressive evaluation derives availability from the effective Fated
 state and remaining ordered charge count at each exact acquisition role.
 
-The source eligibility predicate has three independent parts:
+The source capability predicate has three independent parts:
 
 1. the reached world object has `GoldConversionEligible` after declaration
    inheritance and runtime overrides;
 2. the reached object has no positive `ResourceCosts`; and
 3. Fated remains valid and at least one conversion use remains.
+
+The special interaction must also be available on that exact reached world
+object. This is a separate lifecycle fact from the three capability checks: a
+resolved acquisition can carry an eligible declaration without exposing an
+independent player interaction at which Time Piece can be used.
 
 This is object capability, not a reward-category inference. `BaseLoot` supplies
 the capability to ordinary Olympian/Hermes loot, Poms, Hammers, and Chaos loot;
@@ -399,9 +404,16 @@ gold itself, the ordinary health-restoration drops other than the separately
 eligible `RoomRewardConsolationPrize`, elemental essences, Pom Slices,
 `ChaosWeaponUpgrade`, the Blind Box object, and the super-resource family such
 as Nightmare, Moon Dust, and Obol Points. `InfernalContractBoon` is granted
-directly rather than through an eligible reward object. A Blind Box's later
-resolved god-loot object may independently qualify; the box does not transfer
-its own ineligibility to that later acquisition.
+directly rather than through an eligible reward object.
+
+Blind Box remains non-convertible from both supported sources. A Shop box is
+paid and lacks the capability. Narcissus creates a free optional box, proving
+that zero cost alone is insufficient: the box still lacks
+`GoldConversionEligible`. Interacting with either box unwraps a god-loot object
+and immediately auto-activates it, so the resolved `hiddenSource` has no
+separate Time Piece interaction window even though the underlying god-loot
+declaration carries the capability. Neither the `box` nor `hiddenSource` role
+therefore exposes a conversion disposition.
 
 Likewise, an NPC trait menu is not made convertible merely because its provider
 is treated as god loot for rarity UI. Time Piece follows the concrete spawned

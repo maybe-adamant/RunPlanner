@@ -414,8 +414,10 @@ can be converted in lifecycle order.
 Conversion is legal only when:
 
 - Fated remains valid and a charge remains;
-- the exact normalized acquisition declares gold-conversion capability; and
-- the concrete instance is free rather than a paid Shop purchase.
+- the exact normalized acquisition declares gold-conversion capability;
+- the concrete instance has no positive cost rather than being a paid Shop
+  purchase; and
+- the exact acquisition role exposes an independent Time Piece interaction.
 
 A legal conversion consumes one charge and suppresses that role's concrete
 acquisition, trait evaluation/acquisition, Pom resolution, level mutation,
@@ -436,7 +438,14 @@ picked up as gold
 All currently modeled World Shop purchases are paid and expose no conversion
 control. Do not add prices merely to prove this exclusion. The catalog owns
 the closed acquisition-capability matrix; the settlement site supplies the
-free/paid instance fact.
+free/paid instance fact. A zero-valued cost map is free; the presence of a
+`ResourceCosts` map alone must not reject it.
+
+Blind Box exposes no conversion role from either modeled source. Its Shop
+instance is paid, while Narcissus produces a free optional box that still lacks
+the capability. Unwrapping either box immediately auto-activates the resolved
+god loot, so `hiddenSource` is not an independent conversion interaction even
+though that god-loot declaration is ordinarily capable.
 
 ### Fig Leaf
 
@@ -752,16 +761,20 @@ feat(planner): model Calling Card rarification
 
 ### Gate E — Time Piece
 
-1. Normalize the exact acquisition conversion-capability matrix and four-use
-   declaration.
+1. Normalize the exact acquisition conversion-capability matrix, role-local
+   interaction-opportunity facts, and four-use declaration.
 2. Persist role-local conversion dispositions and bump the strict schema.
 3. Intercept legal conversions inside existing acquisition settlement before
    concrete acquisition and child trait/Pom evaluation.
 4. Preserve offer and bag evidence while suppressing only the converted
    acquisition effects.
 5. Publish exact role controls, progressive feedback, findings, and Run State.
-6. Prove ordinary, pickup, Devotion, paid-Shop, exhaustion, neutral-swap, and
-   Fated-invalidation behavior.
+6. Prove the complete capability matrix; the same capable declaration as a
+   zero-cost/free versus positive-cost/paid instance; optional pickup absence,
+   normal acquisition, and conversion; both Devotion roles consuming two
+   charges in order; exhaustion; neutral swap; and Fated invalidation. Prove
+   explicitly that Narcissus's free Blind Box and a paid Shop Blind Box expose
+   no conversion for either `box` or auto-activated `hiddenSource`.
 
 Default commit:
 

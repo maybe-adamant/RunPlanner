@@ -19,6 +19,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
+  assessTimePieceConversion,
   settleOwnedAcquisitionSite,
   type RewardBranchState,
 } from '../../src/simulation/rewards/processing';
@@ -53,7 +54,11 @@ function facts(): RewardKernelFacts {
   };
 }
 
-function settle(value: 'normal' | 'gold', branches = initializeTestRewardBranches()) {
+function settle(
+  value: 'normal' | 'gold',
+  branches = initializeTestRewardBranches(),
+  instanceProvenance: 'free' | 'paid' = 'free',
+) {
   return settleOwnedAcquisitionSite(
     catalog,
     branches,
@@ -66,7 +71,7 @@ function settle(value: 'normal' | 'gold', branches = initializeTestRewardBranche
         origin: reward,
         offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
         producerLifecycleKey: 'RoomReward',
-        instanceProvenance: 'free',
+        instanceProvenance,
         conversionByAcquisitionRole: { source: value },
       },
     },
@@ -100,6 +105,66 @@ describe('Time Piece conversions', () => {
     expect(branch.keepsakes.timePiece).toBeUndefined();
     expect(branch.history.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
     expect([...result.branches]).toHaveLength(1);
+  });
+
+  it('admits a capable zero-cost instance and rejects the same capable acquisition when paid', () => {
+    const branches = initializeTestRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+      }),
+    );
+    const free = settle('gold', branches, 'free');
+    expect(free.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(free.branches[0]?.events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold' }),
+    );
+
+    const paid = settle('gold', branches, 'paid');
+    expect(paid.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(paid.branches[0]?.history.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
+    expect(paid.branches[0]?.events).not.toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold' }),
+    );
+    expect(paid.roleFrontiers?.[0]?.source.instanceProvenance).toBe('paid');
+  });
+
+  it('rejects both paid Blind Box roles, including its capable auto-activated hidden source', () => {
+    const branch = initializeTestRewardBranches().map((candidate) =>
+      Object.freeze({
+        ...candidate,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', candidate.arcanaFear),
+      }),
+    )[0]!;
+    const source = {
+      origin: reward,
+      offer: {
+        rewardType: 'BlindBoxLoot' as const,
+        payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' as const },
+      },
+      producerLifecycleKey: 'WorldShop',
+      instanceProvenance: 'paid' as const,
+    };
+
+    expect(assessTimePieceConversion(catalog, branch, source, 'box', 'purchase')).toMatchObject({
+      supported: false,
+      evidence: {
+        goldConversionEligible: false,
+        blocksGoldConversion: false,
+        instanceProvenance: 'paid',
+      },
+    });
+    expect(
+      assessTimePieceConversion(catalog, branch, source, 'hiddenSource', 'afterUnwrap'),
+    ).toMatchObject({
+      supported: false,
+      evidence: {
+        goldConversionEligible: true,
+        blocksGoldConversion: true,
+        instanceProvenance: 'paid',
+      },
+    });
+    expect(branch.keepsakes.timePiece?.remainingCharges).toBe(4);
   });
 
   it('exhausts exactly four retained conversions in acquisition order', () => {

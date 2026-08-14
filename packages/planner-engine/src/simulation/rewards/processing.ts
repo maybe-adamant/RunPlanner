@@ -208,6 +208,9 @@ export function assessTimePieceConversion(
   lifecyclePoint: ProducerLifecyclePointKey,
 ): { readonly supported: boolean; readonly evidence: FindingEvidence } {
   const acquisition = resolveAcquisitionRole(catalog.rewards, source.offer, role, lifecyclePoint);
+  const blocksGoldConversion =
+    catalog.rewards.rewardTypes.byKey[source.offer.rewardType]?.acquisitionRoles.byKey[role]
+      ?.blocksGoldConversion === true;
   const goldConversionEligible =
     catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.goldConversionEligible ===
     true;
@@ -217,6 +220,7 @@ export function assessTimePieceConversion(
     role,
     lifecyclePoint,
     goldConversionEligible,
+    blocksGoldConversion,
     instanceProvenance: source.instanceProvenance,
     fatedStatus: branch.keepsakes.fatedStatus,
     remainingCharges,
@@ -224,6 +228,7 @@ export function assessTimePieceConversion(
   return Object.freeze({
     supported:
       goldConversionEligible &&
+      !blocksGoldConversion &&
       source.instanceProvenance === 'free' &&
       branch.keepsakes.fatedStatus === 'Fated' &&
       remainingCharges > 0,

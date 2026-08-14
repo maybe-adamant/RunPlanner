@@ -288,13 +288,20 @@ function normalizeRewardTypes(
     const gameName = requireNonEmpty(rewardType.gameName, `${path}.gameName`);
     const roles = createCollection(
       rewardType.acquisitionRoles.map((role, roleIndex): AcquisitionRoleDeclaration =>
-        Object.freeze({
-          key: requireNonEmpty(role.key, `${path}.acquisitionRoles[${roleIndex}].key`),
-          resolution: normalizeRoleResolution(
-            role.resolution,
-            `${path}.acquisitionRoles[${roleIndex}].resolution`,
-          ),
-        }),
+        (() => {
+          const rolePath = `${path}.acquisitionRoles[${roleIndex}]`;
+          if (
+            role.blocksGoldConversion !== undefined &&
+            typeof role.blocksGoldConversion !== 'boolean'
+          ) {
+            fail(`${rolePath}.blocksGoldConversion`, 'must be boolean');
+          }
+          return Object.freeze({
+            key: requireNonEmpty(role.key, `${rolePath}.key`),
+            resolution: normalizeRoleResolution(role.resolution, `${rolePath}.resolution`),
+            ...(role.blocksGoldConversion === true ? { blocksGoldConversion: true as const } : {}),
+          });
+        })(),
       ),
       `${path}.acquisitionRoles`,
       (role) => role.key,
@@ -339,6 +346,21 @@ function normalizeRewardTypes(
     (rewardType) => rewardType.gameName,
     'gameName',
   );
+
+  const goldConversionBlockers = collection.values.flatMap((rewardType) =>
+    rewardType.acquisitionRoles.values
+      .filter((role) => role.blocksGoldConversion === true)
+      .map((role) => `${rewardType.gameName}.${role.key}`),
+  );
+  if (
+    goldConversionBlockers.length !== 1 ||
+    goldConversionBlockers[0] !== 'BlindBoxLoot.hiddenSource'
+  ) {
+    fail(
+      'rewardTypes',
+      'must declare BlindBoxLoot.hiddenSource as the exact Time Piece role blocker',
+    );
+  }
 
   for (const rewardType of collection.values) {
     const path = `rewardTypes.${rewardType.gameName}`;
