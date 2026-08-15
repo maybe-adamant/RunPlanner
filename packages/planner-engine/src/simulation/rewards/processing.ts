@@ -567,7 +567,8 @@ function applyTraitOfferForAcquisition(
   const acquisitionIdentityOwner = traitOwnerAddress(reward.origin);
   const acquisitionIdentity =
     selectedForIdentityDisposition?.kind === 'echo' &&
-    selectedForIdentityDisposition.effect === 'doubleShop' &&
+    (selectedForIdentityDisposition.effect === 'doubleShop' ||
+      selectedForIdentityDisposition.effect === 'repeatKeepsake') &&
     acquisitionIdentityOwner !== undefined
       ? `${semanticAddressKey(createTraitOfferAddress(acquisitionIdentityOwner, role))}:${sequence}`
       : undefined;
@@ -577,6 +578,10 @@ function applyTraitOfferForAcquisition(
     sequence,
     lifecyclePoint,
     acquisitionIdentity,
+    selectedForIdentityDisposition?.kind === 'echo' &&
+      selectedForIdentityDisposition.effect === 'repeatKeepsake'
+      ? reward.traitContext?.currentKeepsakeKey
+      : undefined,
   );
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
   if (
@@ -816,6 +821,7 @@ export function settleEncounterTraitOffer(
           ? {}
           : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
         ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
+        currentKeepsakeKey: branch.keepsakes.currentKey,
       }),
     } as const;
     // Record the exact pre-effect frontier before validating Circe's authored
@@ -1410,6 +1416,7 @@ export function applyExperimentalHammerEquipResult(
     return branch;
   const before = branch.traitHistory ?? createTraitHistoryState();
   if (!assessExperimentalHammerEquipResult(catalog, result, before, loadout).legal) return branch;
+  if (result.kind === 'exhausted') return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
     kind: 'traits',
     giverKey: effect.giverKey,

@@ -1249,6 +1249,26 @@ function locateFinding(
   }
   if (
     finding.origin.kind === 'keepsakeEquipResult' &&
+    finding.origin.selection.kind === 'echoKeepsakeReplay' &&
+    finding.origin.routeKey === prefix.routeKey &&
+    finding.origin.biomeKey === prefix.biomeKey
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: -1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
+  if (
+    finding.origin.kind === 'keepsakeEquipResult' &&
+    finding.origin.selection.kind === 'keepsakeSelection' &&
     finding.origin.selection.owner !== 'routeStart' &&
     finding.origin.routeKey === prefix.routeKey &&
     finding.origin.biomeKey === prefix.biomeKey
@@ -1666,7 +1686,12 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
 ): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
-  const materializedPrefix = initial as MaterializedBiomePrefix & {
+  const materializedPrefix = Object.freeze({
+    ...initial,
+    ...(plan.echoKeepsakeReplayResults === undefined
+      ? {}
+      : { echoKeepsakeReplayResults: plan.echoKeepsakeReplayResults }),
+  }) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, materializedPrefix, context);
@@ -1722,7 +1747,12 @@ export function evaluateProgressiveBiomeAssembly(
 ): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
-  const authoredPrefix = initial as MaterializedBiomePrefix & {
+  const authoredPrefix = Object.freeze({
+    ...initial,
+    ...(plan.echoKeepsakeReplayResults === undefined
+      ? {}
+      : { echoKeepsakeReplayResults: plan.echoKeepsakeReplayResults }),
+  }) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, authoredPrefix, context);
@@ -1801,7 +1831,12 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
 ): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
-  const authoredPrefix = initial as MaterializedBiomePrefix & {
+  const authoredPrefix = Object.freeze({
+    ...initial,
+    ...(plan.echoKeepsakeReplayResults === undefined
+      ? {}
+      : { echoKeepsakeReplayResults: plan.echoKeepsakeReplayResults }),
+  }) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const unsupported = firstUnsupportedFinding(

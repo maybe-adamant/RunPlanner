@@ -288,6 +288,7 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'EchoLastRunBoon',
     'EchoDoubleLevelBoon',
     'EchoDoubleShop',
+    'EchoRepeatKeepsakeBoon',
   ],
   Circe: [
     'CirceShrinkTrait',
@@ -939,7 +940,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(375);
+    expect(traits?.traits.values).toHaveLength(376);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -960,7 +961,7 @@ describe('trait offer catalog closure', () => {
       ['Medea', 8],
       ['Narcissus', 9],
       ['Circe', 9],
-      ['Echo', 7],
+      ['Echo', 8],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -1019,6 +1020,7 @@ describe('trait offer catalog closure', () => {
       'EchoLastRunBoon',
       'EchoDoubleLevelBoon',
       'EchoDoubleShop',
+      'EchoRepeatKeepsakeBoon',
     ]);
     expect(giver?.defaultOffer).toEqual({
       options: [
@@ -1072,6 +1074,20 @@ describe('trait offer catalog closure', () => {
           kind: 'echo',
           effect: 'doubleShop',
           excludedRewardTypes: ['SpellDrop'],
+        },
+      },
+      {
+        key: 'EchoRepeatKeepsakeBoon',
+        rarityDomain: { kind: 'none' },
+        disposition: {
+          kind: 'echo',
+          effect: 'repeatKeepsake',
+          excludedKeepsakeKeys: [
+            'AthenaEncounterKeepsake',
+            'HadesAndPersephoneKeepsake',
+            'EscalatingKeepsake',
+            'FountainRarityKeepsake',
+          ],
         },
       },
     ]);

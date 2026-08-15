@@ -691,6 +691,7 @@ function evaluateBiomeAssembly(
     plan.bossCompletionArcanaKeys,
     context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
     plan.keepsakeEquipResults,
+    plan.echoKeepsakeReplayResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
   const startingKeepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
@@ -1016,13 +1017,13 @@ function evaluateRouteAssembly(
       !(routeStartEffect.kind === 'jeweledPom'
         ? assessJeweledPomEquipResult(
             catalog,
-            authoredResult,
+            route.loadout.keepsakeEquipResults!.jeweledPom!,
             createTraitHistoryState(),
             startKeepsakes.fatedStatus,
           ).legal
         : assessExperimentalHammerEquipResult(
             catalog,
-            authoredResult,
+            route.loadout.keepsakeEquipResults!.experimentalHammer!,
             createTraitHistoryState(),
             route.loadout,
           ).legal)

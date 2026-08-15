@@ -5,6 +5,7 @@ import type {
   TraitRarity,
   TraitRequirementExpression,
 } from '../catalog-schema';
+import type { EchoKeepsakeReplayAddress } from '../authored-project/addresses';
 import type {
   LevelResolutionAddress,
   SemanticAddress,
@@ -35,6 +36,7 @@ export interface TraitOfferEvent {
   readonly selectedOptionKey: TraitOptionKey;
   readonly acquisitionPoint: string;
   readonly acquisitionIdentity?: string;
+  readonly echoRepeatedKeepsakeKey?: string;
   /** Exact unselected materialized keys banned by an effective Vow of Denial. */
   readonly bannedTraitKeys?: readonly string[];
   /** Derived from the pre-offer state; never persisted in authored state. */
@@ -82,8 +84,24 @@ export interface TraitRemovalEvent {
   readonly acquisitionIdentity: string;
 }
 
+/** One declaration-owned Gift Gift Gift attempt at a succeeding biome start. */
+export interface EchoKeepsakeReplayEvent {
+  readonly kind: 'echoKeepsakeReplay';
+  readonly owner: EchoKeepsakeReplayAddress;
+  readonly acquisitionRole: 'echoKeepsakeReplay';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'biomeStart';
+  readonly traitKey: 'EchoRepeatKeepsakeBoon';
+  readonly acquisitionIdentity: string;
+  readonly capturedKeepsakeKey: string;
+}
+
 export type TraitHistoryEvent =
-  TraitOfferEvent | TraitLevelMutationEvent | TraitElementContributionEvent | TraitRemovalEvent;
+  | TraitOfferEvent
+  | TraitLevelMutationEvent
+  | TraitElementContributionEvent
+  | TraitRemovalEvent
+  | EchoKeepsakeReplayEvent;
 
 export interface TraitReplacementTransition {
   readonly slot: string;
@@ -324,6 +342,18 @@ export function foldTraitHistoryEvents(
           delete equipped[event.traitKey];
         continue;
       }
+      if (event.kind === 'echoKeepsakeReplay') {
+        const gift = equipped[event.traitKey];
+        if (
+          gift?.acquisitionIdentity === event.acquisitionIdentity &&
+          gift.echoRepeatedKeepsakeKey === event.capturedKeepsakeKey
+        )
+          equipped[event.traitKey] = Object.freeze({
+            ...gift,
+            echoKeepsakeReplayCount: (gift.echoKeepsakeReplayCount ?? 0) + 1,
+          });
+        continue;
+      }
       const option = event.options[optionIndex(event.selectedOptionKey)];
       for (const traitKey of event.bannedTraitKeys ?? []) bannedTraitKeys.add(traitKey);
       if (option === undefined || equipped[option.traitKey] !== undefined) continue;
@@ -348,6 +378,12 @@ export function foldTraitHistoryEvents(
         ...(event.acquisitionIdentity === undefined
           ? {}
           : { acquisitionIdentity: event.acquisitionIdentity }),
+        ...(event.echoRepeatedKeepsakeKey === undefined
+          ? {}
+          : {
+              echoRepeatedKeepsakeKey: event.echoRepeatedKeepsakeKey,
+              echoKeepsakeReplayCount: 0,
+            }),
       });
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
@@ -447,6 +483,8 @@ export interface TraitOfferContext {
   readonly manualArcanaGraspCost?: number;
   /** Direct sources such as Echo may forbid the ordinary replacement path. */
   readonly ordinarySlotReplacement?: 'forbidden';
+  /** Exact chronological keepsake held at this acquisition frontier. */
+  readonly currentKeepsakeKey?: string;
 }
 
 export interface EchoLastRunBoonOutcome {
@@ -934,6 +972,7 @@ export function recordReachedTraitOffer(
   sequence: number,
   acquisitionPoint: string,
   acquisitionIdentity?: string,
+  echoRepeatedKeepsakeKey?: string,
 ): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
   const valid =
     evaluation.composition.legal &&
@@ -972,6 +1011,7 @@ export function recordReachedTraitOffer(
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
     ...(acquisitionIdentity === undefined ? {} : { acquisitionIdentity }),
+    ...(echoRepeatedKeepsakeKey === undefined ? {} : { echoRepeatedKeepsakeKey }),
     ...(bannedTraitKeys === undefined ? {} : { bannedTraitKeys }),
     ...(selectedAssessment?.replacementTransition === undefined
       ? {}
@@ -1404,6 +1444,13 @@ export function assessTraitOption(
     context.echoLastRewardAvailable !== true
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRewardMissing' });
+  if (
+    trait.selectedDisposition.kind === 'echo' &&
+    trait.selectedDisposition.effect === 'repeatKeepsake' &&
+    (context.currentKeepsakeKey === undefined ||
+      trait.selectedDisposition.excludedKeepsakeKeys.includes(context.currentKeepsakeKey))
+  )
+    findings.push({ code: 'offerContext', traitKey, detail: 'echoKeepsakeExcluded' });
   const occupied =
     trait.ordinaryBoonSlot === undefined
       ? undefined

@@ -117,14 +117,26 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             : `${state.keepsakes.timePieceRemainingCharges} charges remaining`}
         </p>
         <p>
-          Experimental Hammer: {state.keepsakes.experimentalHammerStatus}
-          {state.keepsakes.experimentalHammerTraitLabel === undefined
-            ? ''
-            : ` · ${state.keepsakes.experimentalHammerTraitLabel}`}
-          {state.keepsakes.experimentalHammerRemainingUses === undefined
-            ? ''
-            : ` (${state.keepsakes.experimentalHammerRemainingUses} encounters remaining)`}
+          Gift Gift Gift:{' '}
+          {state.keepsakes.echoGift === undefined
+            ? 'inactive'
+            : `${state.keepsakes.echoGift.capturedKeepsakeLabel} · ${state.keepsakes.echoGift.status} · ${state.keepsakes.echoGift.replayCount} replays`}
         </p>
+        <div>
+          Experimental Hammers:
+          {state.keepsakes.experimentalHammers.length === 0 ? (
+            ' inactive'
+          ) : (
+            <ul>
+              {state.keepsakes.experimentalHammers.map((hammer) => (
+                <li key={hammer.acquisitionIdentity}>
+                  {hammer.traitLabel} · {hammer.status} ({hammer.remainingUses} encounters
+                  remaining)
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <p>
           Fig Leaf:{' '}
           {state.keepsakes.figLeafRemainingUses === undefined

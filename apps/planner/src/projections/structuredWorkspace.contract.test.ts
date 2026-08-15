@@ -73,7 +73,11 @@ import {
 } from '@planner-test/support/structured-workspace/structural-control-closure';
 import { assertExpectedWorkspaceTopologyClosure } from '@planner-test/support/structured-workspace/topology-closure';
 import { unsafeOmitWorkspaceProperty } from '@planner-test/support/structured-workspace/unsafe-product-mutation';
-import { createCandidateSessionFactory } from './candidateProjection';
+import {
+  createGoldenEchoGiftHammerPendingProject,
+  echoGiftHammerReplayAddress,
+} from '@planner-test/fixtures/echoGiftHammer';
+import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
 import type { CandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
@@ -584,7 +588,9 @@ describe('structured workspace overlay contract', () => {
     });
     invalidHammer = withMalformedAuthoredBiome(invalidHammer, 'Underworld', 'F', (plan) => ({
       ...plan,
-      keepsakeEquipResults: { experimentalHammer: { traitKey: 'ApolloWeaponBoon' } },
+      keepsakeEquipResults: {
+        experimentalHammer: { kind: 'selected', traitKey: 'ApolloWeaponBoon' },
+      },
     }));
     const invalidAssembly = simulateProjectAssembly(catalog, invalidHammer);
     expect(invalidAssembly.evaluation.findings).toContainEqual(
@@ -630,7 +636,7 @@ describe('structured workspace overlay contract', () => {
     unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
       result: fHammerResult,
-      value: { traitKey: 'StaffJumpSpecialTrait' },
+      value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
     });
     unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -685,6 +691,44 @@ describe('structured workspace overlay contract', () => {
       ownerAddress: startHammerResult,
       region: 'routeRail',
       routeKey: 'Underworld',
+    });
+  }, 20_000);
+
+  it('projects the reached I Gift Hammer repair through its biome-owned control and destination', () => {
+    const project = createGoldenEchoGiftHammerPendingProject();
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'keepsakeEquipResultMissing',
+        origin: echoGiftHammerReplayAddress,
+      }),
+    );
+
+    const projected = projection().project(assembly);
+    const i = projected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'I');
+    if (i === undefined) throw new Error('reached I workspace is missing');
+    expect(i.echoKeepsakeReplay?.address).toEqual(echoGiftHammerReplayAddress);
+
+    const key = semanticAddressKey(echoGiftHammerReplayAddress);
+    const interaction = projected.interactions.keepsakeEquipResults.get(key);
+    if (interaction?.owner.resultKind !== 'experimentalHammer')
+      throw new Error('I Gift Hammer interaction is missing');
+    expect(interaction.owner).toEqual(echoGiftHammerReplayAddress);
+    expect(interaction.value).toBeUndefined();
+    expect(
+      interaction
+        .load()
+        .some(
+          (candidate) =>
+            candidate.value !== '__exhausted' && candidateSupport(candidate) === 'possible',
+        ),
+    ).toBe(true);
+    expect(projected.focusByOwner.get(key)).toMatchObject({
+      ownerAddress: echoGiftHammerReplayAddress,
+      region: 'structure',
+      nodeKey: i.entry?.key,
     });
   }, 20_000);
 

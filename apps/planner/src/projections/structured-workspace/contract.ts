@@ -1403,9 +1403,17 @@ export interface WorkspaceRunStatePresentation {
     readonly removedLabels: readonly string[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
     readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';
-    readonly experimentalHammerStatus: 'inactive' | 'active' | 'expired';
-    readonly experimentalHammerTraitLabel?: string;
-    readonly experimentalHammerRemainingUses?: number;
+    readonly experimentalHammers: readonly {
+      readonly status: 'active' | 'expired';
+      readonly traitLabel: string;
+      readonly remainingUses: number;
+      readonly acquisitionIdentity: string;
+    }[];
+    readonly echoGift?: {
+      readonly capturedKeepsakeLabel: string;
+      readonly status: 'pending' | 'oneShotApplied' | 'everyBiome' | 'effectNeutral';
+      readonly replayCount: number;
+    };
     readonly callingCardRemainingCharges?: number;
     readonly timePieceRemainingCharges?: number;
     readonly figLeafRemainingUses?: number;
@@ -1654,6 +1662,10 @@ export interface WorkspaceBiome {
   /** Explicitly null only when this workspace has no renderable subject. */
   readonly defaultInspectorDestination: WorkspaceDefaultInspectorDestination | null;
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
+  readonly echoKeepsakeReplay?: {
+    readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+    readonly marker: WorkspaceMarker;
+  };
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly label: string;

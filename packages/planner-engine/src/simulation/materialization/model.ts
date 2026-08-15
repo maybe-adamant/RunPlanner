@@ -331,6 +331,10 @@ export interface CanonicalBiome {
   readonly bossCompletionArcanaKeys: readonly string[];
   readonly postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition;
   readonly keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults;
+  readonly echoKeepsakeReplayResults?: Pick<
+    import('../../authored-project/model').AuthoredKeepsakeEquipResults,
+    'experimentalHammer'
+  >;
 }
 
 export interface MaterializedExitDecisionFrontier {
@@ -407,6 +411,10 @@ export interface MaterializedBiomePrefix {
   readonly completionRooms?: readonly CanonicalCompletionRoom[];
   readonly frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier;
   readonly biomeState: CanonicalBiomeState;
+  readonly echoKeepsakeReplayResults?: Pick<
+    import('../../authored-project/model').AuthoredKeepsakeEquipResults,
+    'experimentalHammer'
+  >;
 }
 
 export type BiomeMaterialization = CanonicalBiome | MaterializedBiomePrefix;

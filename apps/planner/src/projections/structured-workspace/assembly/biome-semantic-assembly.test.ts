@@ -6,9 +6,11 @@ import {
   createBiomeAddress,
   createBiomeFieldAddress,
   createEncounterPhaseAddress,
+  createEchoKeepsakeReplayAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createKeepsakeEquipResultAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -187,6 +189,29 @@ describe('structured workspace biome semantic assembly', () => {
     expect(dormantPostboss).not.toHaveProperty('keepsakeSelection');
     expect(reachedPostboss?.keepsakeSelection).toMatchObject({
       value: { kind: 'retain' },
+    });
+  });
+
+  it('owns a reached Gift Hammer child at the succeeding biome entry address', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'I');
+    const expected = createKeepsakeEquipResultAddress(
+      createEchoKeepsakeReplayAddress(goldenIBiome),
+      'experimentalHammer',
+    );
+    const assembly = assembleWorkspaceBiomeSemantics(
+      catalog,
+      source,
+      undefined,
+      false,
+      (address) => semanticAddressKey(address) === semanticAddressKey(expected),
+    );
+    expect(assembly.echoKeepsakeReplay?.address).toEqual(expected);
+    expect(assembly.preliminaryFocusDestinations.get(semanticAddressKey(expected))).toMatchObject({
+      ownerAddress: expected,
+      region: 'structure',
+      routeKey: 'Underworld',
+      biomeKey: 'I',
+      nodeKey: assembly.entry?.key,
     });
   });
 

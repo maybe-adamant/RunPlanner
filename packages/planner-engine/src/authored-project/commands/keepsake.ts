@@ -30,7 +30,10 @@ export function withDefaultKeepsakeEquipResult(
       );
     })?.key;
     if (traitKey === undefined) throw new Error('catalog has no Hammer trait');
-    return Object.freeze({ ...current, experimentalHammer: Object.freeze({ traitKey }) });
+    return Object.freeze({
+      ...current,
+      experimentalHammer: Object.freeze({ kind: 'selected' as const, traitKey }),
+    });
   }
   if (effect?.kind !== 'jeweledPom' || current?.jeweledPom !== undefined) return current;
   const defaults = catalog.traitGivers.byKey[effect.giverKey]?.defaultOffer;
@@ -52,13 +55,39 @@ export function applyKeepsakeCommand(
   command: KeepsakeCommand | KeepsakeEquipResultCommand | ExperimentalHammerEquipResultCommand,
 ): ProjectDocument {
   if (command.kind === 'ReplaceExperimentalHammerEquipResult') {
-    const trait = catalog.traits.byKey[command.value.traitKey];
-    if (trait?.hammerCompatibility === undefined) failCommand(command, 'trait is not a Hammer');
+    if (
+      command.value.kind === 'selected' &&
+      catalog.traits.byKey[command.value.traitKey]?.hammerCompatibility === undefined
+    )
+      failCommand(command, 'trait is not a Hammer');
     const { selection } = command.result;
     const update = (results: AuthoredKeepsakeEquipResults | undefined) => ({
       ...results,
-      experimentalHammer: Object.freeze({ traitKey: command.value.traitKey }),
+      experimentalHammer: Object.freeze({ ...command.value }),
     });
+    if (selection.kind === 'echoKeepsakeReplay') {
+      const route = document.routes.find((candidate) => candidate.routeKey === selection.routeKey);
+      const biome = route?.biomes.find((candidate) => candidate.biomeKey === selection.biomeKey);
+      if (biome === undefined) failCommand(command, 'unknown Echo keepsake replay biome');
+      return {
+        ...document,
+        routes: document.routes.map((candidate) =>
+          candidate.routeKey !== selection.routeKey
+            ? candidate
+            : {
+                ...candidate,
+                biomes: candidate.biomes.map((plan) =>
+                  plan.biomeKey !== selection.biomeKey
+                    ? plan
+                    : {
+                        ...plan,
+                        echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults),
+                      },
+                ),
+              },
+        ),
+      };
+    }
     if (selection.owner === 'routeStart') {
       const routeIndex = document.routes.findIndex(
         (route) => route.routeKey === selection.routeKey,
@@ -138,6 +167,8 @@ export function applyKeepsakeCommand(
       completeValue = Object.freeze({ ...command.value, rarity: rarityPolicy.rarity });
     }
     const { selection } = command.result;
+    if (selection.kind === 'echoKeepsakeReplay')
+      failCommand(command, 'Jeweled Pom is not supported by Echo keepsake replay');
     if (selection.owner === 'routeStart') {
       const routeIndex = document.routes.findIndex(
         (route) => route.routeKey === selection.routeKey,

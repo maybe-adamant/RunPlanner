@@ -17,6 +17,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -28,6 +29,10 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { routePanelSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import {
+  createGoldenEchoGiftHammerPendingProject,
+  echoGiftHammerReplayAddress,
+} from '@planner-test/fixtures/echoGiftHammer';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 import {
   createCompleteFGProject,
@@ -762,7 +767,8 @@ describe('route loadout interaction', () => {
       .projectWorkspace.history.present.routes.find(
         (candidate) => candidate.routeKey === 'Underworld',
       );
-    const defaultTraitKey = route?.loadout.keepsakeEquipResults?.experimentalHammer?.traitKey;
+    const defaultResult = route?.loadout.keepsakeEquipResults?.experimentalHammer;
+    const defaultTraitKey = defaultResult?.kind === 'selected' ? defaultResult.traitKey : undefined;
     if (defaultTraitKey === undefined) throw new Error('Hammer default is missing');
 
     const active = application.store.getState().projectWorkspace.history.present;
@@ -793,11 +799,73 @@ describe('route loadout interaction', () => {
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
         .keepsakeEquipResults?.experimentalHammer,
-    ).toEqual({ traitKey: defaultTraitKey });
+    ).toEqual({ kind: 'selected', traitKey: defaultTraitKey });
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(result).toHaveProperty('value', '');
   });
+
+  it('navigates to and repairs the reached I Gift Hammer child', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenEchoGiftHammerPendingProject()));
+    const missing = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (finding) =>
+          finding.code === 'keepsakeEquipResultMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(echoGiftHammerReplayAddress),
+      );
+    if (missing === undefined) throw new Error('I Gift Hammer finding is missing');
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.keepsakeEquipResults.get(semanticAddressKey(echoGiftHammerReplayAddress));
+    if (interaction?.owner.resultKind !== 'experimentalHammer')
+      throw new Error('I Gift Hammer interaction is missing');
+    const candidate = interaction
+      .load()
+      .find((option) => option.value !== '__exhausted' && candidateSupport(option) === 'possible');
+    if (candidate === undefined) throw new Error('I Gift Hammer has no selectable result');
+
+    const { user } = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    await user.click(
+      within(findings).getByRole('button', { name: /Choose Experimental Hammer result/ }),
+    );
+
+    expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
+      echoGiftHammerReplayAddress,
+    );
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'I',
+    });
+    const result = await screen.findByRole('combobox', { name: 'Experimental Hammer result' });
+    expect(result).toHaveProperty('value', '');
+    fireEvent.focus(result);
+    const selected = within(result)
+      .getAllByRole('option')
+      .find((option) => (option as HTMLOptionElement).value === candidate.value);
+    if (selected === undefined) throw new Error('projected I Gift Hammer choice is absent');
+    await waitFor(() => expect(selected.dataset.candidateSupport).toBe('possible'));
+    await user.selectOptions(result, candidate.value);
+
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'I')?.echoKeepsakeReplayResults
+        ?.experimentalHammer,
+    ).toEqual({ kind: 'selected', traitKey: candidate.value });
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) =>
+            semanticAddressKey(finding.origin) === semanticAddressKey(echoGiftHammerReplayAddress),
+        ),
+    ).toBe(false);
+  }, 20_000);
 
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();

@@ -7,6 +7,7 @@ import {
   createEchoLastRewardAddress,
   createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
+  createEchoKeepsakeReplayAddress,
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
@@ -139,7 +140,7 @@ import {
 import {
   assessJeweledPomEquipResult,
   assessExperimentalHammerEquipResult,
-  advanceExperimentalHammer,
+  advanceExperimentalHammers,
   applyKeepsakeDisposition,
   invalidateJeweledPom,
   jeweledPomEffectForKey,
@@ -154,6 +155,9 @@ import {
   expirePendingGorgon,
   assessGorgonEligibility,
   assessGorgonChildSettlement,
+  applyEchoFigLeafReplay,
+  applyEchoCallingCardReplay,
+  applyEchoTimePieceReplay,
 } from '../keepsakes';
 import {
   activateTemporaryArcana,
@@ -1217,22 +1221,24 @@ export function evaluateBiomeRewardsAssemblyInternal(
   ): readonly RewardBranchState[] {
     return Object.freeze(
       branchesAtCompletion.map((branch) => {
-        const advanced = advanceExperimentalHammer(branch.keepsakes);
+        const advanced = advanceExperimentalHammers(branch.keepsakes);
         if (advanced.state === branch.keepsakes) return branch;
-        if (advanced.expired === undefined)
+        if (advanced.expired.length === 0)
           return Object.freeze({ ...branch, keepsakes: advanced.state });
         const prior = branch.traitHistory ?? createTraitHistoryState();
         const traitHistory = foldTraitHistoryEvents(catalog, [
           ...prior.events,
-          Object.freeze({
-            kind: 'traitRemoval' as const,
-            owner,
-            acquisitionRole: 'experimentalHammerExpiry',
-            sequence,
-            acquisitionPoint: 'encounterCompleted',
-            traitKey: advanced.expired.traitKey,
-            acquisitionIdentity: advanced.expired.acquisitionIdentity,
-          }),
+          ...advanced.expired.map((expired) =>
+            Object.freeze({
+              kind: 'traitRemoval' as const,
+              owner,
+              acquisitionRole: 'experimentalHammerExpiry',
+              sequence,
+              acquisitionPoint: 'encounterCompleted',
+              traitKey: expired.traitKey,
+              acquisitionIdentity: expired.acquisitionIdentity,
+            }),
+          ),
         ]);
         return Object.freeze({
           ...branch,
@@ -1348,6 +1354,178 @@ export function evaluateBiomeRewardsAssemblyInternal(
     initialBranches === undefined ? snapshot.routeKey : undefined,
     initialBranches === undefined ? routeLoadout : undefined,
   );
+  const echoKeepsakeReplay = createEchoKeepsakeReplayAddress(
+    createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
+  );
+  const echoHammerResult = createKeepsakeEquipResultAddress(
+    echoKeepsakeReplay,
+    'experimentalHammer',
+  );
+  const biomeStartSequence = history.events[0]?.sequence ?? 0;
+  const giftStates = branches.map((branch) => {
+    const gift = branch.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon;
+    return gift?.echoRepeatedKeepsakeKey === undefined || gift.acquisitionIdentity === undefined
+      ? undefined
+      : Object.freeze({
+          capturedKeepsakeKey: gift.echoRepeatedKeepsakeKey,
+          acquisitionIdentity: gift.acquisitionIdentity,
+          replayCount: gift.echoKeepsakeReplayCount ?? 0,
+        });
+  });
+  if (giftStates.some((state) => JSON.stringify(state) !== JSON.stringify(giftStates[0])))
+    throw new BiomeRewardSimulationContractError(
+      'Echo keepsake replay frontier is divergent across surviving branches',
+    );
+  const giftState = giftStates[0];
+  if (giftState !== undefined) {
+    const declaration = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey];
+    if (declaration?.echoGift.availability !== 'eligible')
+      throw new BiomeRewardSimulationContractError(
+        `Echo captured ineligible keepsake ${giftState.capturedKeepsakeKey}`,
+      );
+    const replayEffect = declaration.echoGift.effect;
+    if (
+      replayEffect.kind === 'experimentalHammer' &&
+      new Set(branches.map((branch) => branch.keepsakes.currentKey)).size !== 1
+    )
+      throw new BiomeRewardSimulationContractError(
+        'Echo Experimental Hammer replay frontier has divergent current keepsakes',
+      );
+    const recordReplay = (branch: RewardBranchState): RewardBranchState => {
+      const before = branch.traitHistory ?? createTraitHistoryState();
+      const traitHistory = foldTraitHistoryEvents(catalog, [
+        ...before.events,
+        Object.freeze({
+          kind: 'echoKeepsakeReplay' as const,
+          owner: echoKeepsakeReplay,
+          acquisitionRole: 'echoKeepsakeReplay' as const,
+          sequence: biomeStartSequence,
+          acquisitionPoint: 'biomeStart' as const,
+          traitKey: 'EchoRepeatKeepsakeBoon' as const,
+          acquisitionIdentity: giftState.acquisitionIdentity,
+          capturedKeepsakeKey: giftState.capturedKeepsakeKey,
+        }),
+      ]);
+      return Object.freeze({
+        ...branch,
+        history: attachTraitHistory(branch.history, traitHistory),
+        traitHistory,
+      });
+    };
+    if (replayEffect.kind === 'figLeaf' && giftState.replayCount === 0) {
+      branches = Object.freeze(
+        branches.map((branch) =>
+          recordReplay(
+            Object.freeze({
+              ...branch,
+              keepsakes: applyEchoFigLeafReplay(branch.keepsakes),
+            }),
+          ),
+        ),
+      );
+    } else if (
+      replayEffect.kind === 'experimentalHammer' &&
+      giftState.replayCount === 0 &&
+      branches[0]?.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+    ) {
+      keepsakeEquipResultContexts.set(
+        semanticAddressKey(echoHammerResult),
+        Object.freeze({
+          frontiers: Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({
+                before: branch.traitHistory ?? createTraitHistoryState(),
+                fatedStatus: branch.keepsakes.fatedStatus,
+                arcanaFear: branch.arcanaFear,
+                loadout: routeLoadout,
+              }),
+            ),
+          ),
+        }),
+      );
+      const authored = snapshot.echoKeepsakeReplayResults?.experimentalHammer;
+      if (authored === undefined) {
+        addRewardFinding(
+          findings,
+          rewardFinding('keepsakeEquipResultMissing', echoHammerResult, {
+            keepsakeKey: giftState.capturedKeepsakeKey,
+          }),
+          ownerRegion(echoKeepsakeReplay),
+          Object.freeze({ kind: 'history', sequence: biomeStartSequence, boundary: 'at' }),
+        );
+      } else if (
+        branches.some(
+          (branch) =>
+            !assessExperimentalHammerEquipResult(
+              catalog,
+              authored,
+              branch.traitHistory ?? createTraitHistoryState(),
+              routeLoadout,
+            ).legal,
+        )
+      ) {
+        addRewardFinding(
+          findings,
+          rewardFinding('keepsakeEquipResultUnavailable', echoHammerResult, {
+            keepsakeKey: giftState.capturedKeepsakeKey,
+          }),
+          ownerRegion(echoKeepsakeReplay),
+          Object.freeze({ kind: 'history', sequence: biomeStartSequence, boundary: 'at' }),
+        );
+      } else {
+        branches = Object.freeze(
+          branches.map((branch) =>
+            recordReplay(
+              applyExperimentalHammerEquipResult(
+                catalog,
+                branch,
+                giftState.capturedKeepsakeKey,
+                snapshot.echoKeepsakeReplayResults,
+                echoHammerResult,
+                biomeStartSequence,
+                routeLoadout,
+                'Common',
+              ),
+            ),
+          ),
+        );
+      }
+    } else if (replayEffect.kind === 'callingCard') {
+      const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
+      if (charges?.kind !== 'callingCard')
+        throw new BiomeRewardSimulationContractError('Echo Calling Card replay has no rank data');
+      branches = Object.freeze(
+        branches.map((branch) =>
+          recordReplay(
+            Object.freeze({
+              ...branch,
+              keepsakes: applyEchoCallingCardReplay(
+                branch.keepsakes,
+                charges.rarificationChargesByRank.Common,
+              ),
+            }),
+          ),
+        ),
+      );
+    } else if (replayEffect.kind === 'timePiece') {
+      const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
+      if (charges?.kind !== 'timePiece')
+        throw new BiomeRewardSimulationContractError('Echo Time Piece replay has no rank data');
+      branches = Object.freeze(
+        branches.map((branch) =>
+          recordReplay(
+            Object.freeze({
+              ...branch,
+              keepsakes: applyEchoTimePieceReplay(
+                branch.keepsakes,
+                charges.conversionChargesByRank.Common,
+              ),
+            }),
+          ),
+        ),
+      );
+    }
+  }
   let pendingHubBoard:
     | {
         readonly frontierBranches: readonly RewardBranchState[];

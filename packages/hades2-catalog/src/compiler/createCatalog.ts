@@ -86,6 +86,23 @@ function validateLifecycleBindings(
   }
 }
 
+function validateEchoGiftBindings(
+  keepsakes: Catalog['keepsakes'],
+  traits: Catalog['traits'],
+): void {
+  const gift = traits.byKey.EchoRepeatKeepsakeBoon?.selectedDisposition;
+  if (gift?.kind !== 'echo' || gift.effect !== 'repeatKeepsake')
+    fail('traits.EchoRepeatKeepsakeBoon', 'must declare Echo keepsake replay');
+  const excluded = keepsakes.values
+    .filter((keepsake) => keepsake.echoGift.availability === 'excluded')
+    .map((keepsake) => keepsake.key);
+  if (
+    excluded.length !== gift.excludedKeepsakeKeys.length ||
+    excluded.some((key) => !gift.excludedKeepsakeKeys.includes(key))
+  )
+    fail('traits.EchoRepeatKeepsakeBoon.selectedDisposition', 'must match keepsake exclusions');
+}
+
 export { CatalogContractError } from './errors';
 
 export function createCatalog(input: RawCatalogInput): Catalog {
@@ -98,6 +115,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
   const fearVows = normalizeFearVows(input.fearVows);
   const keepsakes = normalizeKeepsakes(input.keepsakes);
+  validateEchoGiftBindings(keepsakes, traitCatalog.traits);
   const encounterEnvelopes = normalizeEncounterEnvelopes(input.encounterEnvelopes, rewards);
   const encounterDefinitions = normalizeEncounterDefinitions(
     input.encounterDefinitions,

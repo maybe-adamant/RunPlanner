@@ -80,6 +80,52 @@ function replaceSupportedEffect(
 }
 
 describe('keepsake normalization', () => {
+  it('normalizes Gift Gift Gift exclusions and supported replay schedules exactly', () => {
+    const normalized = normalizeKeepsakes(keepsakes);
+    expect(
+      normalized.values
+        .filter((keepsake) => keepsake.echoGift.availability === 'excluded')
+        .map((keepsake) => keepsake.key),
+    ).toEqual([
+      'EscalatingKeepsake',
+      'AthenaEncounterKeepsake',
+      'FountainRarityKeepsake',
+      'HadesAndPersephoneKeepsake',
+    ]);
+    expect(normalized.byKey.SkipEncounterKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'figLeaf', schedule: 'oneShot' },
+    });
+    expect(normalized.byKey.TempHammerKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' },
+    });
+    expect(normalized.byKey.RarifyKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'callingCard', schedule: 'everyBiome' },
+    });
+    expect(normalized.byKey.GoldifyKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'timePiece', schedule: 'everyBiome' },
+    });
+    expect(normalized.byKey.ManaOverTimeRefundKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+    });
+
+    const malformed = keepsakes.map((keepsake) =>
+      keepsake.key === 'SkipEncounterKeepsake'
+        ? {
+            ...keepsake,
+            echoGift: {
+              availability: 'eligible' as const,
+              effect: { kind: 'figLeaf' as const, schedule: 'everyBiome' as never },
+            },
+          }
+        : keepsake,
+    );
+    expect(() => normalizeKeepsakes(malformed)).toThrow('must declare figLeaf/oneShot');
+  });
   it('normalizes Calling Card only for the exact admitted trait-provider set', () => {
     const admitted = [
       'Zeus',

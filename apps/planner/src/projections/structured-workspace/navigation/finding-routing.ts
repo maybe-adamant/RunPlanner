@@ -43,7 +43,11 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'acquisitionEntry':
       return true;
     case 'keepsakeEquipResult':
-      return address.selection.owner !== 'routeStart';
+      return (
+        address.selection.kind === 'echoKeepsakeReplay' || address.selection.owner !== 'routeStart'
+      );
+    case 'echoKeepsakeReplay':
+      return true;
     default:
       return false;
   }

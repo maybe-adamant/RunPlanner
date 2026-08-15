@@ -533,7 +533,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
-  it('persists only derived child detail through schema 34 and one undoable semantic edit', () => {
+  it('persists only derived child detail through schema 35 and one undoable semantic edit', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(

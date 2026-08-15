@@ -1086,6 +1086,10 @@ export function materializeBiome(
   bossCompletionArcanaKeys: readonly string[] = [],
   postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition,
   keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults,
+  echoKeepsakeReplayResults?: Pick<
+    import('../../authored-project/model').AuthoredKeepsakeEquipResults,
+    'experimentalHammer'
+  >,
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
@@ -1194,5 +1198,6 @@ export function materializeBiome(
     bossCompletionArcanaKeys: Object.freeze([...bossCompletionArcanaKeys]),
     ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
     ...(keepsakeEquipResults === undefined ? {} : { keepsakeEquipResults }),
+    ...(echoKeepsakeReplayResults === undefined ? {} : { echoKeepsakeReplayResults }),
   });
 }

@@ -171,20 +171,43 @@ export function presentRunState(
           : snapshot.keepsakes.jeweledPom.active
             ? 'active'
             : 'invalidated',
-      experimentalHammerStatus:
-        snapshot.keepsakes.experimentalHammer === undefined
-          ? 'inactive'
-          : snapshot.keepsakes.experimentalHammer.active
-            ? 'active'
-            : 'expired',
-      ...(snapshot.keepsakes.experimentalHammer === undefined
-        ? {}
-        : {
-            experimentalHammerRemainingUses: snapshot.keepsakes.experimentalHammer.remainingUses,
-            experimentalHammerTraitLabel:
-              catalog.traits.byKey[snapshot.keepsakes.experimentalHammer.traitKey]?.label ??
-              snapshot.keepsakes.experimentalHammer.traitKey,
+      experimentalHammers: Object.freeze(
+        snapshot.keepsakes.experimentalHammers.map((hammer) =>
+          Object.freeze({
+            status: hammer.active ? ('active' as const) : ('expired' as const),
+            traitLabel: catalog.traits.byKey[hammer.traitKey]?.label ?? hammer.traitKey,
+            remainingUses: hammer.remainingUses,
+            acquisitionIdentity: hammer.acquisitionIdentity,
           }),
+        ),
+      ),
+      ...(() => {
+        const gift = snapshot.traits.equippedTraits.EchoRepeatKeepsakeBoon;
+        const captured = gift?.echoRepeatedKeepsakeKey;
+        const declaration = captured === undefined ? undefined : catalog.keepsakes.byKey[captured];
+        if (
+          gift === undefined ||
+          captured === undefined ||
+          declaration?.echoGift.availability !== 'eligible'
+        )
+          return {};
+        const replayCount = gift.echoKeepsakeReplayCount ?? 0;
+        const effect = declaration.echoGift.effect;
+        return {
+          echoGift: Object.freeze({
+            capturedKeepsakeLabel: declaration.label,
+            replayCount,
+            status:
+              effect.kind === 'modeledNeutral'
+                ? ('effectNeutral' as const)
+                : effect.schedule === 'everyBiome'
+                  ? ('everyBiome' as const)
+                  : replayCount > 0
+                    ? ('oneShotApplied' as const)
+                    : ('pending' as const),
+          }),
+        };
+      })(),
       ...(snapshot.keepsakes.callingCard === undefined
         ? {}
         : { callingCardRemainingCharges: snapshot.keepsakes.callingCard.remainingCharges }),

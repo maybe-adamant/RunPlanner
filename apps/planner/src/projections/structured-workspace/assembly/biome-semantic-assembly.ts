@@ -5,6 +5,7 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createKeepsakeEquipResultAddress,
+  createEchoKeepsakeReplayAddress,
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   semanticAddressKey,
@@ -99,6 +100,10 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly completion: readonly WorkspaceCompletionNode[];
   readonly completionOutline: readonly WorkspaceCompletionNode[];
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
+  readonly echoKeepsakeReplay?: {
+    readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+    readonly marker: WorkspaceMarker;
+  };
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly frontierInteractionRequirements: ReadonlyMap<
@@ -725,6 +730,18 @@ export function assembleWorkspaceBiomeSemantics(
   );
   appendUniqueWorkspaceNodes(nodes, completion);
   const completedNodes = Object.freeze([...nodes]);
+  const echoKeepsakeReplayAddress = createKeepsakeEquipResultAddress(
+    createEchoKeepsakeReplayAddress(biome),
+    'experimentalHammer',
+  );
+  const echoKeepsakeReplay = keepsakeEquipResultSupported(echoKeepsakeReplayAddress)
+    ? Object.freeze({
+        address: echoKeepsakeReplayAddress,
+        marker: markerDestinations.marker(echoKeepsakeReplayAddress),
+      })
+    : undefined;
+  if (echoKeepsakeReplay !== undefined && entry !== undefined)
+    markerDestinations.redirect([echoKeepsakeReplay.marker], entry.key);
   appendUniqueTopologyRemovalInteractionRequirements(
     topologyRemovalInteractionRequirements,
     topologyInteractions.topologyRemovalInteractionRequirements,
@@ -754,6 +771,7 @@ export function assembleWorkspaceBiomeSemantics(
     completion,
     completionOutline: completion,
     ...(entry === undefined ? {} : { entry }),
+    ...(echoKeepsakeReplay === undefined ? {} : { echoKeepsakeReplay }),
     fields,
     frontier,
     frontierInteractionRequirements,

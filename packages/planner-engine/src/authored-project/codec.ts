@@ -4,6 +4,7 @@ import { decodeBiomeTopology } from './topology/codec';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
+  type AuthoredKeepsakeEquipResults,
   type AuthoredRoutePlan,
   type ProjectDocument,
 } from './model';
@@ -16,7 +17,11 @@ import {
   failProjectDocument as fail,
 } from './validation';
 
-function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catalog) {
+function decodeKeepsakeEquipResults(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+): AuthoredKeepsakeEquipResults {
   const results = expectRecord(value, path);
   expectExactKeys(results, ['jeweledPom', 'experimentalHammer'], path);
   if (results.jeweledPom === undefined && results.experimentalHammer === undefined)
@@ -26,17 +31,26 @@ function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catal
       ? undefined
       : expectRecord(results.experimentalHammer, `${path}.experimentalHammer`);
   if (hammer !== undefined) {
-    expectExactKeys(hammer, ['traitKey'], `${path}.experimentalHammer`);
-    const traitKey = expectString(hammer.traitKey, `${path}.experimentalHammer.traitKey`);
-    if (catalog.traits.byKey[traitKey]?.hammerCompatibility === undefined)
-      fail(`${path}.experimentalHammer.traitKey`, 'must be a declared Hammer trait');
+    const kind = expectString(hammer.kind, `${path}.experimentalHammer.kind`);
+    if (kind === 'selected') {
+      expectExactKeys(hammer, ['kind', 'traitKey'], `${path}.experimentalHammer`);
+      const traitKey = expectString(hammer.traitKey, `${path}.experimentalHammer.traitKey`);
+      if (catalog.traits.byKey[traitKey]?.hammerCompatibility === undefined)
+        fail(`${path}.experimentalHammer.traitKey`, 'must be a declared Hammer trait');
+    } else if (kind === 'exhausted') {
+      expectExactKeys(hammer, ['kind'], `${path}.experimentalHammer`);
+    } else fail(`${path}.experimentalHammer.kind`, 'must be selected or exhausted');
   }
-  if (results.jeweledPom === undefined)
+  if (results.jeweledPom === undefined) {
+    if (hammer === undefined) return Object.freeze({});
     return Object.freeze({
       experimentalHammer: Object.freeze({
-        traitKey: (hammer as Record<string, unknown>).traitKey as string,
+        ...(hammer.kind === 'selected'
+          ? { kind: 'selected' as const, traitKey: hammer.traitKey as string }
+          : { kind: 'exhausted' as const }),
       }),
     });
+  }
   const pom = expectRecord(results.jeweledPom, `${path}.jeweledPom`);
   expectExactKeys(pom, ['traitKey', 'rarity', 'deathDefianceConditionMet'], `${path}.jeweledPom`);
   const traitKey = expectString(pom.traitKey, `${path}.jeweledPom.traitKey`);
@@ -85,7 +99,13 @@ function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catal
     }),
     ...(hammer === undefined
       ? {}
-      : { experimentalHammer: Object.freeze({ traitKey: hammer.traitKey as string }) }),
+      : {
+          experimentalHammer: Object.freeze(
+            hammer.kind === 'selected'
+              ? { kind: 'selected' as const, traitKey: hammer.traitKey as string }
+              : { kind: 'exhausted' as const },
+          ),
+        }),
   });
 }
 
@@ -120,6 +140,7 @@ function decodeBiomePlan(
       'bossCompletionArcanaKeys',
       'postbossKeepsakeDisposition',
       'keepsakeEquipResults',
+      'echoKeepsakeReplayResults',
     ],
     path,
   );
@@ -191,6 +212,20 @@ function decodeBiomePlan(
             `${path}.keepsakeEquipResults`,
             catalog,
           ),
+        }),
+    ...(plan.echoKeepsakeReplayResults === undefined
+      ? {}
+      : {
+          echoKeepsakeReplayResults: (() => {
+            const results = decodeKeepsakeEquipResults(
+              plan.echoKeepsakeReplayResults,
+              `${path}.echoKeepsakeReplayResults`,
+              catalog,
+            );
+            if ('jeweledPom' in results && results.jeweledPom !== undefined)
+              fail(`${path}.echoKeepsakeReplayResults.jeweledPom`, 'is not supported');
+            return results;
+          })(),
         }),
   });
 }

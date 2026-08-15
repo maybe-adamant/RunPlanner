@@ -697,6 +697,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Boon Boon Boon outcomes`;
     case 'echoLastReward':
       return `${biomeLabel} · Reward Reward Reward replay`;
+    case 'echoKeepsakeReplay':
+      return `${biomeLabel} · Gift Gift Gift replay`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
     case 'completionRoom':

@@ -106,6 +106,46 @@ export function normalizeKeepsakes(
         : 'neutral';
     if (keepsake.fatedDisposition !== expected)
       fail(`${path}.fatedDisposition`, `expected ${expected}`);
+    const excludedFromGift = new Set([
+      'AthenaEncounterKeepsake',
+      'HadesAndPersephoneKeepsake',
+      'EscalatingKeepsake',
+      'FountainRarityKeepsake',
+    ]).has(keepsake.key);
+    let echoGift: KeepsakeDeclaration['echoGift'];
+    if (excludedFromGift) {
+      requireExactObjectKeys(keepsake.echoGift, `${path}.echoGift`, ['availability']);
+      if (keepsake.echoGift.availability !== 'excluded')
+        fail(`${path}.echoGift.availability`, 'must be excluded');
+      echoGift = Object.freeze({ availability: 'excluded' as const });
+    } else {
+      requireExactObjectKeys(keepsake.echoGift, `${path}.echoGift`, ['availability', 'effect']);
+      if (keepsake.echoGift.availability !== 'eligible')
+        fail(`${path}.echoGift.availability`, 'must be eligible');
+      const expectedEffect =
+        keepsake.key === 'SkipEncounterKeepsake'
+          ? ({ kind: 'figLeaf', schedule: 'oneShot' } as const)
+          : keepsake.key === 'TempHammerKeepsake'
+            ? ({ kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' } as const)
+            : keepsake.key === 'RarifyKeepsake'
+              ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
+              : keepsake.key === 'GoldifyKeepsake'
+                ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
+                : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+      requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
+        'kind',
+        'schedule',
+      ]);
+      if (
+        keepsake.echoGift.effect.kind !== expectedEffect.kind ||
+        keepsake.echoGift.effect.schedule !== expectedEffect.schedule
+      )
+        fail(
+          `${path}.echoGift.effect`,
+          `must declare ${expectedEffect.kind}/${expectedEffect.schedule}`,
+        );
+      echoGift = Object.freeze({ availability: 'eligible' as const, effect: expectedEffect });
+    }
     let effect: KeepsakeDeclaration['effect'];
     if (keepsake.key === 'HadesAndPersephoneKeepsake') {
       requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
@@ -225,6 +265,7 @@ export function normalizeKeepsakes(
       label: keepsake.label,
       rank: keepsake.rank,
       fatedDisposition: keepsake.fatedDisposition,
+      echoGift,
       ...(effect === undefined ? {} : { effect }),
     });
   });

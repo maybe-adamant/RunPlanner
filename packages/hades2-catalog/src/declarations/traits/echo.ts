@@ -65,6 +65,22 @@ export const echoTraits = [
       excludedRewardTypes: ['SpellDrop'],
     },
   },
+  {
+    ...raritylessEchoTrait,
+    key: 'EchoRepeatKeepsakeBoon',
+    label: 'Gift Gift Gift',
+    offerRequirements: [],
+    selectedDisposition: {
+      kind: 'echo',
+      effect: 'repeatKeepsake',
+      excludedKeepsakeKeys: [
+        'AthenaEncounterKeepsake',
+        'HadesAndPersephoneKeepsake',
+        'EscalatingKeepsake',
+        'FountainRarityKeepsake',
+      ],
+    },
+  },
 ] as const satisfies readonly RawTraitDeclaration[];
 
 export const echoGiver = {

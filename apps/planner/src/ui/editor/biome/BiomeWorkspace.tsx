@@ -499,14 +499,28 @@ function ExperimentalHammerResultControl({
       <legend>Experimental Hammer result</legend>
       <select
         aria-label="Experimental Hammer result"
-        value={interaction.value?.traitKey ?? ''}
+        value={
+          interaction.value === undefined
+            ? ''
+            : interaction.value.kind === 'selected'
+              ? interaction.value.traitKey
+              : '__exhausted'
+        }
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
         onChange={(event) => {
-          const traitKey = event.target.value;
-          const option = candidateFor(traitKey);
-          if (traitKey !== '' && candidateMayBeAuthored(option))
-            dispatch(authoredProjectCommandDispatched(interaction.intentFor({ traitKey }).command));
+          const selected = event.target.value;
+          const option = candidateFor(selected);
+          if (selected !== '' && candidateMayBeAuthored(option))
+            dispatch(
+              authoredProjectCommandDispatched(
+                interaction.intentFor(
+                  selected === '__exhausted'
+                    ? { kind: 'exhausted' }
+                    : { kind: 'selected', traitKey: selected },
+                ).command,
+              ),
+            );
         }}
       >
         <option value="">Choose compatible Hammer</option>
@@ -828,6 +842,19 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
           <h2>{inspectorTitle}</h2>
         </header>
         {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
+        {biome.echoKeepsakeReplay === undefined ? null : (
+          <ExperimentalHammerResultControl
+            interaction={
+              requireWorkspaceInteraction(
+                interactions.keepsakeEquipResults,
+                semanticAddressKey(biome.echoKeepsakeReplay.address),
+              ) as Extract<
+                WorkspaceKeepsakeEquipResultInteraction,
+                { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+              >
+            }
+          />
+        )}
         {subject === undefined ? (
           <p className="fixed-room-state">Choose the first room to start this biome.</p>
         ) : subject.kind === 'frontier' ? (

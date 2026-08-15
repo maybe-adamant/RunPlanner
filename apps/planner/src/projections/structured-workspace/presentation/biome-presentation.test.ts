@@ -1,8 +1,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
   createExitDecisionAddress,
+  createKeepsakeEquipResultAddress,
   createProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
@@ -69,6 +72,28 @@ function hubRailEntry(rail: readonly WorkspaceRailEntry[]) {
 }
 
 describe('structured workspace biome presentation', () => {
+  it('retains the reached Gift Hammer child and its entry-bound focus destination', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'I');
+    const address = createKeepsakeEquipResultAddress(
+      createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
+      'experimentalHammer',
+    );
+    const semantic = assembleWorkspaceBiomeSemantics(
+      catalog,
+      source,
+      undefined,
+      false,
+      (candidate) => semanticAddressKey(candidate) === semanticAddressKey(address),
+    );
+    const presented = presentWorkspaceBiome(catalog, semantic);
+    expect(presented.biome.echoKeepsakeReplay?.address).toEqual(address);
+    expect(presented.focusDestinations.get(semanticAddressKey(address))).toMatchObject({
+      ownerAddress: address,
+      region: 'structure',
+      nodeKey: presented.biome.entry?.key,
+    });
+  });
+
   it('places exactly one Run State launcher on every reached F outer decision in engine order', () => {
     const project = createGoldenFGHIProject();
     const source = biomeSource(project, 'Underworld', 'F');
