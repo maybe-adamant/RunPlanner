@@ -79,7 +79,9 @@ export type TraitFindingCode =
   | 'circeOptionUnavailable'
   | 'echoPomTargetMissing'
   | 'echoPomNoTargetUnavailable'
-  | 'echoPomTargetUnavailable';
+  | 'echoPomTargetUnavailable'
+  | 'echoLastRunBoonMissing'
+  | 'echoLastRunBoonOptionUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

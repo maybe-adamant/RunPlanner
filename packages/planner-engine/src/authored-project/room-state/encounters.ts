@@ -15,6 +15,7 @@ import {
   type AuthoredCirceResolution,
   type TraitOptionKey,
 } from '../traits';
+import { decodeEchoLastRunBoon } from './echo-last-run';
 import {
   TRAIT_OPTION_KEYS,
   createDefaultEncounterTraitOffer,
@@ -254,6 +255,7 @@ function decodeEncounterTraitOffer(
     const hasTarget = option.targetTraitKey !== undefined;
     const hasCirceResolution = option.circeResolution !== undefined;
     const hasEchoPomTarget = 'echoPomTarget' in option;
+    const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
     expectExactKeys(
       option,
       [
@@ -262,6 +264,7 @@ function decodeEncounterTraitOffer(
         ...(hasTarget ? ['targetTraitKey'] : []),
         ...(hasCirceResolution ? ['circeResolution'] : []),
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
+        ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -410,6 +413,22 @@ function decodeEncounterTraitOffer(
           'is supported only by Echo Pom',
         );
     }
+    const echoLastRunBoon = hasEchoLastRunBoon
+      ? decodeEchoLastRunBoon(
+          option.echoLastRunBoon,
+          catalog,
+          `${path}.options.${optionKey}.echoLastRunBoon`,
+        )
+      : undefined;
+    if (
+      hasEchoLastRunBoon &&
+      (trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'lastRunBoon')
+    )
+      failProjectDocument(
+        `${path}.options.${optionKey}.echoLastRunBoon`,
+        'is supported only by Echo Boon Boon Boon',
+      );
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -417,6 +436,7 @@ function decodeEncounterTraitOffer(
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
+            ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
           }
         : {
             traitKey,
@@ -424,6 +444,7 @@ function decodeEncounterTraitOffer(
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
+            ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
           };
     options.push(Object.freeze(decodedOption));
   }

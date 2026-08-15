@@ -58,6 +58,8 @@ export type {
   WorkspaceTraitOfferControl,
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoPomTargetDomain,
+  WorkspaceEchoLastRunBoonDomain,
+  WorkspaceEchoLastRunBoonCandidate,
   WorkspaceLevelResolutionControl,
   WorkspaceTraitOfferInteraction,
   WorkspaceLevelResolutionInteraction,

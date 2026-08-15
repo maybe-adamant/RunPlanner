@@ -141,21 +141,28 @@ continues to use the audited explicit approximation:
 
 - author one to three `{giver, trait, rarity}` source-resolved outcome rows,
   with distinctness enforced by trait identity rather than by the composite
-  row;
+  row; a row carries only declaration-owned selected-acquisition detail, which
+  currently means an optional exact target for Bridal Glow;
 - draw them from the closed declaration-owned Echo-last-run provider domain:
   the nine ordinary Olympians, Hermes, Artemis, Athena, and Dionysus, with
   Hades and every other provider excluded;
-- assess them against the exact pre-Echo trait state;
+- assess every authored row against the exact pre-Echo trait state, including
+  the outer offer's Death-Defiance condition, and settle no nested result when
+  any selected or unselected row is invalid;
 - exclude currently equipped traits, occupied ordinary slots, explicit trait
   exclusions, and source-excluded providers;
 - validate the authored rarity against the trait's exact equipped-rarity
   domain, including Heroic, Legendary, and Duo, then apply the current scalable
   floor only to Common results;
 - do not apply first-Olympian composition, replacement composition, or
-  Calling Card actions; and
+  Calling Card actions, and do not create Vow of Denial bans for unselected
+  previous-run rows; and
 - directly equip the selected row through ordinary trait history while also
   recording its resolved loot source in the existing reward-history
-  `lootTypeHistory` when the source game does so.
+  `lootTypeHistory` when the source game does so. The direct acquisition reuses
+  the selected declaration's existing acquisition behavior: Bridal Glow
+  promotes its authored eligible target, while Cherished Heirloom advances the
+  current keepsake without a new Echo-specific effect path.
 
 This is a closed mixed-provider child, not an `AuthoredTraitOffer` with Echo as
 a fictional giver. The absent previous-run Shrine fact stays collapsed; the
@@ -321,10 +328,11 @@ state, not authored flags. Every child has an exact semantic address and strict
 codec applicability. Schema versions before the first Echo schema are
 rejected; no compatibility decoder is added.
 
-The rarity correction does not advance schema 31. Trait-option rarity was
+The rarity correction itself did not advance schema 31. Trait-option rarity was
 already optional for the normalized `none` domain, and catalog legality closes
-whether a concrete option may carry it. Schema-31 documents that attach rarity
-to a now-rarityless NPC option are rejected by the strict codec rather than
+whether a concrete option may carry it. Gate B advances authored persistence to
+schema 32 for the mixed-provider child. Older documents that attach rarity to a
+now-rarityless NPC option remain rejected by the strict codec rather than
 migrated through a compatibility shim.
 
 ### Simulation and history
@@ -400,15 +408,20 @@ feat(planner): model Echo direct choices
    matrix: nine ordinary Olympians, Hermes, Artemis, Athena, and Dionysus,
    with Hades and all other providers excluded.
 2. Add the strict one-to-three `{giver, trait, rarity}` source-resolved child,
-   reject repeated trait keys across giver variants, and add semantic commands.
-3. Publish pre-Echo candidate domains and assess selected direct acquisition
-   without ordinary offer-composition policy.
+   plus only declaration-owned selected-acquisition detail (currently Bridal
+   Glow's target), reject repeated trait keys across giver variants, and add
+   semantic commands.
+3. Publish engine-owned pre-Echo candidate domains, including row-distinct
+   replacement and append eligibility, and assess direct acquisition without
+   ordinary offer-composition policy.
 4. Project the focused mixed-provider editor and exact findings.
 5. Prove cross-provider rows, cardinality, trait-key duplicate rejection, the
    full Common/Rare/Epic/Heroic/Legendary/Duo equipped-rarity domain,
    Common-to-Rare floor behavior, empty-domain outer unavailability,
-   slot/equipped/provider exclusions, context-invalid retention,
-   outer-plus-nested persistence, and undo/redo.
+   slot/equipped/provider exclusions, Athena Death-Defiance context behavior,
+   Bridal Glow missing/valid target behavior, Cherished Heirloom contact,
+   engine-owned row-distinct candidate domains, selected and unselected
+   context-invalid retention, outer-plus-nested persistence, and undo/redo.
 6. Prove selected-source chronology: an absent ordinary provider is added to
    loot history and the future god pool, an already-present provider changes
    no set membership, an at-cap selection expands the acquired/effective pool,

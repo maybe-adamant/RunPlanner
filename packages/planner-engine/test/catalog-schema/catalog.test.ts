@@ -54,6 +54,7 @@ describe('summarizeCatalog', () => {
       aspects: emptyCollection(),
       traits: emptyCollection(),
       traitGivers: emptyCollection(),
+      echoLastRunBoon: { variants: emptyCollection() },
       traitOfferContexts: emptyCollection(),
       traitRarityOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
       traitElements: [],

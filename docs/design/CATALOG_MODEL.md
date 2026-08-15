@@ -732,7 +732,7 @@ and port-verification history.
 ## Trait Offer Catalog
 
 The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 372 included trait
+six weapon declarations, their 24 aspect declarations, 373 included trait
 declarations, and 21 giver declarations: the nine Olympians, Hermes,
 `WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
 Narcissus, Circe, and Echo. Arcana card traits are declaration-backed run-state
@@ -762,6 +762,11 @@ Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
 not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
+
+Schema 32 contains 291 memberships across the 20 non-Hammer givers and 92
+memberships under the Hammer giver. Echo contributes five implemented
+rarityless identities: Survive, Evade, Fight, Pom, and Boon. Reward, Gold, and
+Gift remain outside the implemented catalog until their own slices.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,

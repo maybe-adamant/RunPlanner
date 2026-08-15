@@ -1,7 +1,10 @@
 import {
   semanticAddressKey,
+  optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredEchoLastRunBoonOffer,
+  type AuthoredEchoLastRunBoonOption,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -18,6 +21,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceCirceResolutionDomain,
   type WorkspaceEchoPomTargetDomain,
+  type WorkspaceEchoLastRunBoonDomain,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -70,12 +74,189 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
         (option) =>
           `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}:${
             'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
-          }`,
+          }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}`,
       )
       .join(','),
     interaction.value.selectedOptionKey,
     interaction.value.deathDefianceConditionMet === true ? 'dd' : 'no-dd',
   ].join('|');
+}
+
+function sameEchoLastRunOption(
+  left: AuthoredEchoLastRunBoonOption,
+  right: AuthoredEchoLastRunBoonOption,
+): boolean {
+  return (
+    left.giverKey === right.giverKey &&
+    left.traitKey === right.traitKey &&
+    left.rarity === right.rarity
+  );
+}
+function EchoLastRunBoonEditor({
+  domain,
+  value,
+  onSelect,
+}: {
+  readonly domain: WorkspaceEchoLastRunBoonDomain;
+  readonly value?: AuthoredEchoLastRunBoonOffer;
+  readonly onSelect: (value: AuthoredEchoLastRunBoonOffer) => void;
+}) {
+  const firstUnused = domain.appendCandidate;
+  if (value === undefined) {
+    return (
+      <fieldset className="trait-circe-resolution">
+        <legend>Boon Boon Boon outcomes</legend>
+        <button
+          disabled={firstUnused === undefined}
+          onClick={() => {
+            if (firstUnused === undefined) return;
+            onSelect(
+              Object.freeze({
+                options: Object.freeze([firstUnused.value] as const),
+                selectedOptionKey: 'option1',
+              }),
+            );
+          }}
+          type="button"
+        >
+          Choose previous-run outcome
+        </button>
+      </fieldset>
+    );
+  }
+  return (
+    <fieldset className="trait-circe-resolution">
+      <legend>Boon Boon Boon outcomes</legend>
+      {value.options.map((entry, index) => {
+        const optionKey = OPTION_KEYS[index]!;
+        const selectedCandidate = domain.candidates.find((candidate) =>
+          sameEchoLastRunOption(candidate.value, entry),
+        );
+        return (
+          <fieldset key={optionKey}>
+            <legend>{optionKey.replace('option', 'Outcome ')}</legend>
+            <select
+              aria-label={`Boon Boon Boon ${optionKey}`}
+              onChange={(event) => {
+                const candidate = domain.candidates[Number(event.target.value)];
+                if (candidate === undefined || !candidate.supported) return;
+                const options = [...value.options];
+                options[index] = candidate.value;
+                onSelect(
+                  Object.freeze({
+                    ...value,
+                    options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
+                  }),
+                );
+              }}
+              value={domain.candidates.findIndex((candidate) =>
+                sameEchoLastRunOption(candidate.value, entry),
+              )}
+            >
+              {(domain.candidatesByOption[index] ?? []).map((candidate) => {
+                const candidateIndex = domain.candidates.indexOf(candidate);
+                return (
+                  <option
+                    disabled={!candidate.supported}
+                    key={`${candidate.value.giverKey}:${candidate.value.traitKey}:${candidate.value.rarity}`}
+                    value={candidateIndex}
+                  >
+                    {candidate.label}
+                    {candidate.effectiveRarity === candidate.value.rarity
+                      ? ''
+                      : ` → ${candidate.effectiveRarity}`}
+                  </option>
+                );
+              })}
+            </select>
+            {selectedCandidate?.targetChoices.length ? (
+              <select
+                aria-label={`Boon Boon Boon ${optionKey} acquisition target`}
+                onChange={(event) => {
+                  const options = [...value.options];
+                  options[index] = Object.freeze(
+                    event.target.value === ''
+                      ? {
+                          giverKey: entry.giverKey,
+                          traitKey: entry.traitKey,
+                          rarity: entry.rarity,
+                        }
+                      : { ...entry, targetTraitKey: event.target.value },
+                  );
+                  onSelect(
+                    Object.freeze({
+                      ...value,
+                      options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
+                    }),
+                  );
+                }}
+                value={entry.targetTraitKey ?? ''}
+              >
+                <option value="">Choose acquisition target</option>
+                {selectedCandidate.targetChoices.map((choice) => (
+                  <option key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <label>
+              <input
+                checked={value.selectedOptionKey === optionKey}
+                name="echo-last-run-selected"
+                onChange={() => onSelect(Object.freeze({ ...value, selectedOptionKey: optionKey }))}
+                type="radio"
+              />
+              Selected
+            </label>
+            {value.options.length === 1 ? null : (
+              <button
+                onClick={() => {
+                  const options = value.options.filter(
+                    (_, candidateIndex) => candidateIndex !== index,
+                  );
+                  const selectedIndex = optionIndex(value.selectedOptionKey);
+                  const nextSelectedIndex =
+                    selectedIndex === index
+                      ? 0
+                      : selectedIndex > index
+                        ? selectedIndex - 1
+                        : selectedIndex;
+                  onSelect(
+                    Object.freeze({
+                      options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
+                      selectedOptionKey: OPTION_KEYS[nextSelectedIndex]!,
+                    }),
+                  );
+                }}
+                type="button"
+              >
+                Remove outcome
+              </button>
+            )}
+          </fieldset>
+        );
+      })}
+      {value.options.length >= 3 || firstUnused === undefined ? null : (
+        <button
+          onClick={() =>
+            onSelect(
+              Object.freeze({
+                ...value,
+                options: Object.freeze([
+                  ...value.options,
+                  firstUnused.value,
+                ]) as AuthoredEchoLastRunBoonOffer['options'],
+              }),
+            )
+          }
+          type="button"
+        >
+          Add outcome
+        </button>
+      )}
+    </fieldset>
+  );
 }
 
 function replaceOption(
@@ -252,6 +433,16 @@ function TraitOfferOptionEditor({
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
   }, [echoPomController, echoPomLoadable]);
   const echoPomDomain = echoPomLoaded.result;
+  const echoLastRun = loadable.echoLastRunBoon;
+  const echoLastRunLoadable = useMemo(() => echoLastRun?.forOffer(value), [echoLastRun, value]);
+  const echoLastRunController = useWorkspaceInteractionController<
+    WorkspaceEchoLastRunBoonDomain | undefined
+  >();
+  const echoLastRunLoaded = echoLastRunController.observe(echoLastRunLoadable);
+  useEffect(() => {
+    if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
+  }, [echoLastRunController, echoLastRunLoadable]);
+  const echoLastRunDomain = echoLastRunLoaded.result;
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -343,6 +534,15 @@ function TraitOfferOptionEditor({
             </select>
           )}
         </label>
+      )}
+      {echoLastRun === undefined || echoLastRunDomain === undefined ? null : (
+        <EchoLastRunBoonEditor
+          domain={echoLastRunDomain}
+          {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
+          onSelect={(child) =>
+            onUpdate(replaceOption(value, index, { ...option, echoLastRunBoon: child }))
+          }
+        />
       )}
       <button
         disabled={!rarifySupported}

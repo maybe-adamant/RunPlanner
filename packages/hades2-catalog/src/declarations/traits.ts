@@ -93,6 +93,13 @@ export interface RawTraitCatalogInput {
   readonly aspects: readonly RawAspectDeclaration[];
   readonly traits: readonly RawTraitDeclaration[];
   readonly givers: readonly RawTraitGiverDeclaration[];
+  readonly echoLastRunBoon: {
+    readonly sources: readonly {
+      readonly giverKey: string;
+      readonly lootHistorySource?: string;
+    }[];
+    readonly excludedTraitKeys: readonly string[];
+  };
   readonly offerContexts: readonly RawTraitOfferContextDeclaration[];
   readonly deferredTraitKeys: readonly string[];
 }

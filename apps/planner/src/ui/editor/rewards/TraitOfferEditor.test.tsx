@@ -12,6 +12,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   createCirceResolutionAddress,
+  createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -298,6 +299,170 @@ describe('trait offer editor', () => {
     expect(saved.options[0]).toMatchObject({
       traitKey: 'EchoDoubleLevelBoon',
       echoPomTarget: 'ApolloWeaponBoon',
+    });
+    application.dispose();
+  });
+
+  it('renders the source-resolved Echo Boon domain and saves its selected nested outcome', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (base === undefined) throw new Error('trait offer interaction is missing');
+    const child = Object.freeze({
+      options: Object.freeze([
+        Object.freeze({
+          giverKey: 'Aphrodite',
+          traitKey: 'HighHealthOffenseBoon',
+          rarity: 'Common' as const,
+        }),
+        Object.freeze({
+          giverKey: 'Hera',
+          traitKey: 'BoonDecayBoon',
+          rarity: 'Heroic' as const,
+        }),
+      ] as const),
+      selectedOptionKey: 'option1' as const,
+    });
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'EchoLastRunBoon', echoLastRunBoon: child }),
+        Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+        Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+      deathDefianceConditionMet: false,
+    });
+    const childAddress = createEchoLastRunBoonAddress(base.owner, 'option1');
+    const control = Object.freeze({
+      address: childAddress,
+      marker: Object.freeze({
+        address: childAddress,
+        assessment: 'assessed' as const,
+        findingCount: 0,
+        focusKey: 'test-echo-last-run-boon',
+      }),
+      optionKey: 'option1' as const,
+      value: child,
+    });
+    const candidates = Object.freeze([
+      Object.freeze({
+        label: 'Aphrodite · Heart Breaker · Common',
+        value: child.options[0],
+        effectiveRarity: 'Rare' as const,
+        supported: true,
+        targetChoices: Object.freeze([]),
+      }),
+      Object.freeze({
+        label: 'Hera · Bridal Glow · Heroic',
+        value: child.options[1],
+        effectiveRarity: 'Heroic' as const,
+        supported: true,
+        targetChoices: Object.freeze([
+          Object.freeze({ label: 'Melting Point', value: 'HephaestusWeaponBoon' }),
+        ]),
+      }),
+      Object.freeze({
+        label: 'Aphrodite · Romantic Spark · Duo',
+        value: Object.freeze({
+          giverKey: 'Aphrodite',
+          traitKey: 'SprintEchoBoon',
+          rarity: 'Duo' as const,
+        }),
+        effectiveRarity: 'Duo' as const,
+        supported: false,
+        targetChoices: Object.freeze([]),
+      }),
+    ]);
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+            ? {}
+            : {
+                echoLastRunBoon: Object.freeze({
+                  control,
+                  intentFor: () =>
+                    Object.freeze({
+                      command: Object.freeze({
+                        kind: 'ReplaceTraitOffer' as const,
+                        trait: base.owner,
+                        value: draft,
+                      }),
+                    }),
+                  forOffer: () => ({
+                    load: () => ({
+                      candidates,
+                      candidatesByOption: Object.freeze([
+                        Object.freeze([candidates[0]!]),
+                        Object.freeze([candidates[1]!]),
+                      ]),
+                    }),
+                  }),
+                }),
+              }),
+        }),
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    const rendered = render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    expect(
+      screen.getByRole('option', { name: 'Aphrodite · Heart Breaker · Common → Rare' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Aphrodite · Romantic Spark · Duo' })).toBeNull();
+    await user.selectOptions(
+      screen.getByLabelText('Boon Boon Boon option2 acquisition target'),
+      'HephaestusWeaponBoon',
+    );
+    const nestedRadios = rendered.container.querySelectorAll(
+      'input[name="echo-last-run-selected"]',
+    );
+    expect(nestedRadios).toHaveLength(2);
+    await user.click(nestedRadios[1]!);
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.options[0]).toMatchObject({
+      traitKey: 'EchoLastRunBoon',
+      echoLastRunBoon: {
+        options: [
+          { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+          {
+            giverKey: 'Hera',
+            traitKey: 'BoonDecayBoon',
+            rarity: 'Heroic',
+            targetTraitKey: 'HephaestusWeaponBoon',
+          },
+        ],
+        selectedOptionKey: 'option2',
+      },
     });
     application.dispose();
   });

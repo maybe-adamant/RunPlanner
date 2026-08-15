@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createCirceResolutionAddress,
+  createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
@@ -441,6 +442,92 @@ describe('structured workspace interaction binding', () => {
       (pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command.value as AuthoredTraitOfferTraits)
         .options[2],
     ).toMatchObject({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ApolloWeaponBoon' });
+  });
+
+  it('adapts the engine-owned Echo Boon row and append domains without recomputing distinctness', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = createGoldenFGHIProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const bridge = project.routes
+      .find((route) => route.routeKey === 'Underworld')!
+      .biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const child = Object.freeze({
+      options: Object.freeze([
+        Object.freeze({
+          giverKey: 'Zeus',
+          traitKey: 'ZeusWeaponBoon',
+          rarity: 'Common' as const,
+        }),
+        Object.freeze({
+          giverKey: 'Apollo',
+          traitKey: 'ApolloWeaponBoon',
+          rarity: 'Rare' as const,
+        }),
+      ] as const),
+      selectedOptionKey: 'option1' as const,
+    });
+    const boonOffer = Object.freeze({
+      ...defaultOffer,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'EchoLastRunBoon', echoLastRunBoon: child }),
+        defaultOffer.options[1],
+        defaultOffer.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: boonOffer,
+    });
+
+    const interaction = bind(project, 'Underworld', 'H').interactions.traitOffers.get(
+      semanticAddressKey(trait),
+    );
+    const boon = interaction?.optionDomain(boonOffer, 'option1').echoLastRunBoon;
+    expect(boon?.control.address).toEqual(createEchoLastRunBoonAddress(trait, 'option1'));
+    const domain = boon?.forOffer(boonOffer).load();
+    expect(
+      domain?.candidatesByOption[0]?.some(
+        (candidate) => candidate.value.traitKey === 'ZeusWeaponBoon',
+      ),
+    ).toBe(true);
+    expect(
+      domain?.candidatesByOption[0]?.some(
+        (candidate) => candidate.value.traitKey === 'ApolloWeaponBoon',
+      ),
+    ).toBe(false);
+    expect(
+      domain?.candidatesByOption[1]?.some(
+        (candidate) => candidate.value.traitKey === 'ApolloWeaponBoon',
+      ),
+    ).toBe(true);
+    expect(
+      domain?.candidatesByOption[1]?.some(
+        (candidate) => candidate.value.traitKey === 'ZeusWeaponBoon',
+      ),
+    ).toBe(false);
+    expect(['ZeusWeaponBoon', 'ApolloWeaponBoon']).not.toContain(
+      domain?.appendCandidate?.value.traitKey,
+    );
   });
 
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {

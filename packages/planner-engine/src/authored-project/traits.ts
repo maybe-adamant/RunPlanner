@@ -15,6 +15,21 @@ export interface AuthoredTraitOption {
   readonly circeResolution?: AuthoredCirceResolution;
   /** Echo Pom's exact random greatest-level target; null records a legal empty-domain no-op. */
   readonly echoPomTarget?: string | null;
+  /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
+  readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
+}
+
+export interface AuthoredEchoLastRunBoonOption {
+  readonly giverKey: string;
+  readonly traitKey: string;
+  readonly rarity: TraitRarity;
+  /** Declaration-owned selected-acquisition detail, currently Bridal Glow's exact target. */
+  readonly targetTraitKey?: string;
+}
+
+export interface AuthoredEchoLastRunBoonOffer {
+  readonly options: OneToThree<AuthoredEchoLastRunBoonOption>;
+  readonly selectedOptionKey: TraitOptionKey;
 }
 
 export type AuthoredCirceResolution =
@@ -113,6 +128,51 @@ export interface TraitOfferDefaultsContext {
 
 export function optionIndex(key: TraitOptionKey): 0 | 1 | 2 {
   return key === 'option1' ? 0 : key === 'option2' ? 1 : 2;
+}
+
+/** Strict structural closure for Echo's source-resolved mixed-provider child. */
+export function normalizeAuthoredEchoLastRunBoon(
+  catalog: Catalog,
+  value: AuthoredEchoLastRunBoonOffer,
+): AuthoredEchoLastRunBoonOffer {
+  if (value.options.length < 1 || value.options.length > 3)
+    throw new Error('Echo last-run boon requires one to three options');
+  if (new Set(value.options.map((option) => option.traitKey)).size !== value.options.length)
+    throw new Error('Echo last-run boon trait keys must be distinct');
+  if (
+    !TRAIT_OPTION_KEYS.includes(value.selectedOptionKey) ||
+    value.options[optionIndex(value.selectedOptionKey)] === undefined
+  )
+    throw new Error('Echo last-run boon must select a present option');
+  const options = value.options.map((option) => {
+    const variant = catalog.echoLastRunBoon.variants.byKey[`${option.giverKey}:${option.traitKey}`];
+    if (variant === undefined)
+      throw new Error(`${option.giverKey}.${option.traitKey} is not an Echo last-run source`);
+    const trait = catalog.traits.byKey[option.traitKey];
+    if (
+      trait?.rarityDomain.kind !== 'ranked' ||
+      !trait.rarityDomain.equippedRarities.includes(option.rarity)
+    )
+      throw new Error(`${option.rarity} is not an equipped rarity for ${option.traitKey}`);
+    if (
+      option.targetTraitKey !== undefined &&
+      (option.targetTraitKey.length === 0 ||
+        catalog.traits.byKey[option.targetTraitKey] === undefined)
+    )
+      throw new Error(`unknown Echo last-run acquisition target ${String(option.targetTraitKey)}`);
+    if (option.targetTraitKey !== undefined && trait.targetedAcquisition === undefined)
+      throw new Error(`${option.traitKey} does not support an Echo last-run acquisition target`);
+    return Object.freeze({
+      giverKey: option.giverKey,
+      traitKey: option.traitKey,
+      rarity: option.rarity,
+      ...(option.targetTraitKey === undefined ? {} : { targetTraitKey: option.targetTraitKey }),
+    });
+  });
+  return Object.freeze({
+    options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
+    selectedOptionKey: value.selectedOptionKey,
+  });
 }
 
 export function traitOfferOption(

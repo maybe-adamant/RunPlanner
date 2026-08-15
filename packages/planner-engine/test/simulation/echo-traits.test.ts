@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
   createExitSelectionAddress,
   createOccurrenceId,
@@ -9,8 +10,14 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
+import {
+  recordLootTypeHistorySource,
+  supportedPayloads,
+  type RewardKernelFacts,
+} from '@run-planner/engine/reward-kernel';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
@@ -19,18 +26,24 @@ import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures
 import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
+  evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
 import {
+  assessTraitOption,
   attachTraitHistory,
   createTraitHistoryState,
+  echoLastRunBoonOutcomes,
   foldTraitHistoryEvents,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { createKeepsakeState } from '../../src/simulation/keepsakes';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -67,11 +80,84 @@ function echoTraitOption(traitKey: string): AuthoredTraitOfferTraits['options'][
 
 function baseBranch(history = createTraitHistoryState()) {
   const base = initializeTestRewardBranches()[0]!;
+  const attached = attachTraitHistory(base.history, history);
   return Object.freeze({
     ...base,
-    history: attachTraitHistory(base.history, history),
+    history: attached,
     traitHistory: history,
   });
+}
+
+function baseBranchWithSources(sources: readonly string[], history = createTraitHistoryState()) {
+  const base = initializeTestRewardBranches()[0]!;
+  const rewardHistory = sources.reduce(recordLootTypeHistorySource, base.history);
+  return Object.freeze({
+    ...base,
+    history: attachTraitHistory(rewardHistory, history),
+    traitHistory: history,
+  });
+}
+
+function echoBoonChild(
+  options: AuthoredEchoLastRunBoonOffer['options'],
+  selectedOptionKey: AuthoredEchoLastRunBoonOffer['selectedOptionKey'] = 'option1',
+): AuthoredEchoLastRunBoonOffer {
+  return Object.freeze({ options, selectedOptionKey });
+}
+
+function echoBoonOffer(
+  child?: AuthoredEchoLastRunBoonOffer,
+  deathDefianceConditionMet = false,
+): AuthoredTraitOfferTraits {
+  return echoOffer(
+    'option1',
+    [
+      Object.freeze({
+        traitKey: 'EchoLastRunBoon',
+        ...(child === undefined ? {} : { echoLastRunBoon: child }),
+      }),
+      Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+      Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
+    ],
+    deathDefianceConditionMet,
+  );
+}
+
+function historyFromTraits(
+  options: readonly {
+    readonly giverKey: string;
+    readonly traitKey: string;
+    readonly rarity: 'Common' | 'Rare' | 'Epic' | 'Heroic';
+  }[],
+) {
+  return foldTraitHistoryEvents(
+    catalog,
+    options.map((option, index) =>
+      Object.freeze({
+        kind: 'traitOffer' as const,
+        owner: echoOwner.owner,
+        acquisitionRole: `setup${index}`,
+        sequence: index + 1,
+        giverKey: option.giverKey,
+        options: Object.freeze([
+          { traitKey: option.traitKey, rarity: option.rarity },
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'setup',
+      }),
+    ),
+  );
+}
+
+function ordinaryPoolFor(history: ReturnType<typeof baseBranch>['history']): readonly string[] {
+  const rewardType = catalog.rewards.rewardTypes.byKey.Boon;
+  if (rewardType === undefined) throw new Error('Boon reward type is missing');
+  const facts = {
+    requirements: { records: { lootTypeHistory: history.lootTypeHistory } },
+  } as RewardKernelFacts;
+  return supportedPayloads(catalog.rewards, rewardType, facts).flatMap((payload) =>
+    payload.kind === 'BoonSource' ? [payload.source] : [],
+  );
 }
 
 function priorLeveledTraits() {
@@ -442,7 +528,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(31);
+    expect(decoded.schemaVersion).toBe(32);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -562,5 +648,845 @@ describe('Echo Gate A direct choices', () => {
           'occurrenceId' in event.origin && event.origin.occurrenceId === 'golden-h-combat05',
       ),
     ).toBe(false);
+  });
+});
+
+describe('Echo Gate B Boon Boon Boon', () => {
+  it('publishes the source-resolved domain, exact equipped rarities, and Common floor', () => {
+    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState());
+    expect([...new Set(outcomes.map((outcome) => outcome.option.giverKey))]).toEqual([
+      'Aphrodite',
+      'Apollo',
+      'Ares',
+      'Demeter',
+      'Hephaestus',
+      'Hera',
+      'Hestia',
+      'Poseidon',
+      'Zeus',
+      'Hermes',
+      'Artemis',
+      'Athena',
+      'Dionysus',
+    ]);
+    expect([...new Set(outcomes.map((outcome) => outcome.option.rarity))]).toEqual([
+      'Common',
+      'Rare',
+      'Epic',
+      'Heroic',
+      'Legendary',
+      'Duo',
+    ]);
+    expect(
+      outcomes
+        .filter((outcome) => outcome.option.traitKey === 'SprintEchoBoon')
+        .map((outcome) => outcome.option.giverKey),
+    ).toEqual(['Aphrodite', 'Zeus']);
+
+    const floorHistory = Object.freeze({
+      ...createTraitHistoryState(),
+      minimumScalableGodTraitRarity: 'Rare' as const,
+    });
+    const floored = echoLastRunBoonOutcomes(catalog, floorHistory).find(
+      (outcome) =>
+        outcome.option.giverKey === 'Aphrodite' &&
+        outcome.option.traitKey === 'AphroditeWeaponBoon' &&
+        outcome.option.rarity === 'Common',
+    );
+    expect(floored).toMatchObject({ effectiveRarity: 'Rare', assessment: { legal: true } });
+  });
+
+  it('threads the outer Death Defiance condition through Athena candidates and outer availability', () => {
+    const history = createTraitHistoryState();
+    const child = echoBoonChild(
+      Object.freeze([
+        { giverKey: 'Athena', traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
+      ]),
+    );
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: history,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    ).at(echoOwner);
+    const falseAthena = capability
+      ?.echoLastRunBoon(echoBoonOffer(child, false), 'option1')[0]
+      ?.find((outcome) => outcome.option.traitKey === 'DeathDefianceRefillBoon');
+    const trueAthena = capability
+      ?.echoLastRunBoon(echoBoonOffer(child, true), 'option1')[0]
+      ?.find((outcome) => outcome.option.traitKey === 'DeathDefianceRefillBoon');
+    expect(falseAthena).toMatchObject({ assessment: { legal: false } });
+    expect(trueAthena).toMatchObject({ assessment: { legal: true } });
+
+    const onlyAthena = Object.freeze({
+      ...history,
+      bannedTraitKeys: Object.freeze([
+        ...new Set(
+          catalog.echoLastRunBoon.variants.values
+            .map((variant) => variant.traitKey)
+            .filter((traitKey) => traitKey !== 'DeathDefianceRefillBoon'),
+        ),
+      ]),
+    });
+    expect(
+      assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
+        resolvedProviderKey: 'Echo',
+        deathDefianceConditionMet: false,
+      }).legal,
+    ).toBe(false);
+    expect(
+      assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
+        resolvedProviderKey: 'Echo',
+        deathDefianceConditionMet: true,
+      }).legal,
+    ).toBe(true);
+
+    const rejected = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(child, false),
+      10,
+      'encounterCompleted',
+    );
+    expect(rejected.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(rejected.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toBeUndefined();
+    const accepted = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(child, true),
+      10,
+      'encounterCompleted',
+    );
+    expect(accepted.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+      giverKey: 'Athena',
+      rarity: 'Common',
+    });
+  });
+
+  it('publishes row-distinct replacement and append domains from the engine candidate product', () => {
+    const project = createGoldenFGHProject();
+    const history = createTraitHistoryState();
+    const child = echoBoonChild(
+      Object.freeze([
+        { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+      ] as const),
+    );
+    const artifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: history,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    );
+    const domain = evaluateEchoLastRunBoonDomain(
+      catalog,
+      project,
+      simulateProjectAssembly(catalog, project).evaluation,
+      artifacts,
+      {
+        kind: 'echoLastRunBoonDomain',
+        trait: echoOwner,
+        value: echoBoonOffer(child),
+        optionKey: 'option1',
+      },
+    );
+    if (domain.kind !== 'echoLastRunBoonDomain') throw new Error('Echo domain is unavailable');
+    expect(
+      domain.result.candidatesByOption[0]?.some(
+        (candidate) => candidate.option.traitKey === 'ZeusWeaponBoon',
+      ),
+    ).toBe(true);
+    expect(
+      domain.result.candidatesByOption[0]?.some(
+        (candidate) => candidate.option.traitKey === 'ApolloWeaponBoon',
+      ),
+    ).toBe(false);
+    expect(
+      domain.result.candidatesByOption[1]?.some(
+        (candidate) => candidate.option.traitKey === 'ApolloWeaponBoon',
+      ),
+    ).toBe(true);
+    expect(
+      domain.result.candidatesByOption[1]?.some(
+        (candidate) => candidate.option.traitKey === 'ZeusWeaponBoon',
+      ),
+    ).toBe(false);
+    expect(['ZeusWeaponBoon', 'ApolloWeaponBoon']).not.toContain(
+      domain.result.appendCandidate?.option.traitKey,
+    );
+  });
+
+  it.each([
+    [
+      'Heroic',
+      createTraitHistoryState(),
+      { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Heroic' as const },
+    ],
+    [
+      'Legendary',
+      historyFromTraits([
+        { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Aphrodite', traitKey: 'AphroditeCastBoon', rarity: 'Common' },
+        { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+      ]),
+      { giverKey: 'Aphrodite', traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
+    ],
+    [
+      'Duo',
+      historyFromTraits([
+        { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Zeus', traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+      ]),
+      { giverKey: 'Aphrodite', traitKey: 'SprintEchoBoon', rarity: 'Duo' as const },
+    ],
+  ] as const)(
+    'directly equips one %s nested trait after the rarityless outer trait',
+    (_label, history, option) => {
+      const findings = new Map();
+      const result = processEncounterTraitOffer(
+        catalog,
+        baseBranch(history),
+        echoOwner.owner,
+        echoBoonOffer(
+          echoBoonChild(Object.freeze([option]) as AuthoredEchoLastRunBoonOffer['options']),
+        ),
+        10,
+        'encounterCompleted',
+        findings,
+      );
+      expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toMatchObject({
+        giverKey: 'Echo',
+        traitKey: 'EchoLastRunBoon',
+      });
+      expect(result.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
+      expect(result.traitHistory?.equippedTraits[option.traitKey]).toMatchObject({
+        giverKey: option.giverKey,
+        rarity: option.rarity,
+        traitKey: option.traitKey,
+      });
+      expect(
+        result.traitHistory?.events
+          .slice(-2)
+          .map((event) =>
+            event.kind === 'traitOffer'
+              ? [event.giverKey, event.options[0]?.traitKey]
+              : [event.kind],
+          ),
+      ).toEqual([
+        ['Echo', 'EchoLastRunBoon'],
+        [option.giverKey, option.traitKey],
+      ]);
+      expect(findings.size).toBe(0);
+    },
+  );
+
+  it('publishes Bridal Glow targets and retains its missing acquisition detail after the outer trait', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+    ]);
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: history,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    ).at(echoOwner);
+    const offer = echoBoonOffer(
+      echoBoonChild(
+        Object.freeze([{ giverKey: 'Hera', traitKey: 'BoonDecayBoon', rarity: 'Heroic' }]),
+      ),
+    );
+    const outcome = capability
+      ?.echoLastRunBoon(offer, 'option1')[0]
+      ?.find(
+        (candidate) =>
+          candidate.option.giverKey === 'Hera' &&
+          candidate.option.traitKey === 'BoonDecayBoon' &&
+          candidate.option.rarity === 'Heroic',
+      );
+    expect(outcome).toMatchObject({
+      assessment: { legal: true },
+      targetTraitKeys: ['HephaestusWeaponBoon'],
+    });
+    const findings = new Map();
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      offer,
+      10,
+      'encounterCompleted',
+      findings,
+    );
+    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(result.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+      rarity: 'Common',
+      level: 1,
+    });
+    expect(result.history.lootTypeHistory).toEqual({});
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({
+        code: 'targetedAcquisitionTargetMissing',
+        origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
+      }),
+    );
+  });
+
+  it('reuses Bridal Glow acquisition semantics for the selected Echo outcome', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+    ]);
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            {
+              giverKey: 'Hera',
+              traitKey: 'BoonDecayBoon',
+              rarity: 'Heroic',
+              targetTraitKey: 'HephaestusWeaponBoon',
+            },
+          ]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
+      giverKey: 'Hera',
+      rarity: 'Heroic',
+    });
+    expect(result.traitHistory?.events.at(-2)).toMatchObject({
+      kind: 'traitOffer',
+      targetedAcquisitionTransition: {
+        kind: 'promoteGodTraitToHeroic',
+        targetTraitKey: 'HephaestusWeaponBoon',
+      },
+    });
+    expect(result.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+      rarity: 'Heroic',
+      level: 5,
+    });
+    expect(result.history.lootTypeHistory.HeraUpgrade).toBe(1);
+  });
+
+  it('reuses Cherished Heirloom current-keepsake acquisition semantics', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Demeter', traitKey: 'DemeterWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'HeraCastBoon', rarity: 'Common' },
+    ]);
+    const initial = baseBranch(history);
+    const keepsakes = createKeepsakeState(catalog, 'GoldifyKeepsake', initial.arcanaFear);
+    const result = processEncounterTraitOffer(
+      catalog,
+      Object.freeze({ ...initial, keepsakes }),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([{ giverKey: 'Demeter', traitKey: 'KeepsakeLevelBoon', rarity: 'Duo' }]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(result.traitHistory?.equippedTraits.KeepsakeLevelBoon).toMatchObject({
+      giverKey: 'Demeter',
+      rarity: 'Duo',
+    });
+    expect(keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(result.keepsakes.timePiece?.remainingCharges).toBe(5);
+    expect(result.history.lootTypeHistory.DemeterUpgrade).toBe(1);
+  });
+
+  it('does not consume Calling Card or create Vow of Denial bans for the direct nested result', () => {
+    const arcanaFear = createArcanaFearState(catalog, {
+      ...createDefaultRouteLoadout(catalog),
+      fearRanks: { BanUnpickedBoonsShrineUpgrade: 1 },
+    });
+    const initialized = initializeTestRewardBranches()[0]!;
+    const keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
+    const branch = Object.freeze({ ...initialized, arcanaFear, keepsakes });
+    const result = processEncounterTraitOffer(
+      catalog,
+      branch,
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+          ]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(result.keepsakes.callingCard).toEqual(keepsakes.callingCard);
+    expect(result.traitHistory?.bannedTraitKeys).toEqual([]);
+    expect(result.traitHistory?.equippedTraits.AphroditeWeaponBoon).toBeDefined();
+  });
+
+  it('forbids ordinary slot replacement and makes an exhausted nested domain disable the outer row', () => {
+    const occupied = historyFromTraits([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied).find(
+      (outcome) =>
+        outcome.option.giverKey === 'Aphrodite' &&
+        outcome.option.traitKey === 'AphroditeWeaponBoon' &&
+        outcome.option.rarity === 'Rare',
+    );
+    expect(aphroditeWeapon).toMatchObject({
+      assessment: {
+        legal: false,
+        findings: expect.arrayContaining([expect.objectContaining({ code: 'occupiedBoonSlot' })]),
+      },
+    });
+    expect(aphroditeWeapon?.assessment.replacementTransition).toBeUndefined();
+
+    const allTraitKeys = [
+      ...new Set(catalog.echoLastRunBoon.variants.values.map((variant) => variant.traitKey)),
+    ];
+    const exhausted = Object.freeze({
+      ...createTraitHistoryState(),
+      bannedTraitKeys: Object.freeze(allTraitKeys),
+    });
+    expect(
+      assessTraitOption(catalog, 'EchoLastRunBoon', exhausted, { resolvedProviderKey: 'Echo' })
+        .findings,
+    ).toContainEqual(
+      expect.objectContaining({ code: 'offerContext', detail: 'echoLastRunBoonEmpty' }),
+    );
+  });
+
+  it('retains an invalid selected child after the outer acquisition without mutating source history', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+    ]);
+    const findings = new Map();
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Heroic' },
+            { giverKey: 'Zeus', traitKey: 'ZeusRetaliateBoon', rarity: 'Common' },
+          ] as const),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+      findings,
+    );
+    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.ZeusRetaliateBoon).toBeUndefined();
+    expect(result.history.lootTypeHistory).toEqual({});
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({
+        code: 'echoLastRunBoonOptionUnavailable',
+        origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
+      }),
+    );
+  });
+
+  it('retains a valid selection with an invalid unselected row before any nested mutation', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+    ]);
+    const findings = new Map();
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+            { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Heroic' },
+          ] as const),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+      findings,
+    );
+    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
+    expect(result.history.lootTypeHistory).toEqual({});
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({
+        code: 'echoLastRunBoonOptionUnavailable',
+        evidence: expect.objectContaining({
+          detail: 'Aphrodite:HighHealthOffenseBoon:Heroic',
+        }),
+        origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
+      }),
+    );
+  });
+
+  it('retains a missing child as an exact repair checkpoint after the outer acquisition', () => {
+    const findings = new Map();
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(),
+      10,
+      'encounterCompleted',
+      findings,
+    );
+    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.traitHistory?.events).toHaveLength(1);
+    expect(result.history.lootTypeHistory).toEqual({});
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({
+        code: 'echoLastRunBoonMissing',
+        origin: createEchoLastRunBoonAddress(echoOwner, 'option1'),
+      }),
+    );
+  });
+
+  it('records only the selected source, preserves present membership, and expands a capped pool', () => {
+    const child = echoBoonChild(
+      Object.freeze([
+        { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Apollo', traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+      ] as const),
+    );
+    const cappedSources = ['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade', 'DemeterUpgrade'];
+    const expanded = processEncounterTraitOffer(
+      catalog,
+      baseBranchWithSources(cappedSources),
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    expect(expanded.history.lootTypeHistory).toMatchObject({
+      AphroditeUpgrade: 1,
+      ApolloUpgrade: 1,
+      AresUpgrade: 1,
+      DemeterUpgrade: 1,
+      ZeusUpgrade: 1,
+    });
+    expect(ordinaryPoolFor(expanded.history)).toEqual([
+      'AphroditeUpgrade',
+      'ApolloUpgrade',
+      'AresUpgrade',
+      'DemeterUpgrade',
+      'ZeusUpgrade',
+    ]);
+
+    const present = processEncounterTraitOffer(
+      catalog,
+      baseBranchWithSources(['ZeusUpgrade']),
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    expect(present.history.lootTypeHistory).toEqual({ ZeusUpgrade: 2 });
+    expect(Object.keys(present.history.lootTypeHistory)).toEqual(['ZeusUpgrade']);
+  });
+
+  it.each([
+    ['Aphrodite', 'AphroditeUpgrade'],
+    ['Zeus', 'ZeusUpgrade'],
+  ] as const)(
+    'preserves the chosen %s identity for one Duo and never records both partners',
+    (giverKey, expectedSource) => {
+      const history = historyFromTraits([
+        { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Zeus', traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+      ]);
+      const result = processEncounterTraitOffer(
+        catalog,
+        baseBranch(history),
+        echoOwner.owner,
+        echoBoonOffer(
+          echoBoonChild(Object.freeze([{ giverKey, traitKey: 'SprintEchoBoon', rarity: 'Duo' }])),
+        ),
+        10,
+        'encounterCompleted',
+      );
+      expect(result.traitHistory?.equippedTraits.SprintEchoBoon).toMatchObject({ giverKey });
+      expect(result.history.lootTypeHistory).toEqual({ [expectedSource]: 1 });
+    },
+  );
+
+  it('applies source-specific non-ordinary history without entering the ordinary pool', () => {
+    const hermes = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([{ giverKey: 'Hermes', traitKey: 'DodgeChanceBoon', rarity: 'Common' }]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(hermes.history.lootTypeHistory).toEqual({ HermesUpgrade: 1 });
+    expect(ordinaryPoolFor(hermes.history)).not.toContain('HermesUpgrade');
+
+    const artemis = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Heroic' },
+          ]),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+    );
+    expect(artemis.history.lootTypeHistory).toEqual({});
+  });
+
+  it('round-trips the strict child and rejects malformed cardinality, sources, rarities, and Duo duplicates', () => {
+    let project = createGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const bridge = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const existing = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (existing?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const valid = echoBoonOffer(
+      echoBoonChild(
+        Object.freeze([
+          {
+            giverKey: 'Hera',
+            traitKey: 'BoonDecayBoon',
+            rarity: 'Heroic',
+            targetTraitKey: 'HephaestusWeaponBoon',
+          },
+          { giverKey: 'Artemis', traitKey: 'SupportingFireBoon', rarity: 'Rare' },
+          { giverKey: 'Zeus', traitKey: 'SprintEchoBoon', rarity: 'Duo' },
+        ] as const),
+        'option2',
+      ),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: valid,
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+
+    const malformed = (mutate: (child: JsonRecord) => void): JsonRecord => {
+      const document = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
+      const option = (echoOfferInDocument(document).options as JsonRecord[])[0]!;
+      const child = option.echoLastRunBoon as JsonRecord;
+      mutate(child);
+      return document;
+    };
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [];
+        }),
+        catalog,
+      ),
+    ).toThrow(/must contain one to three options/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [
+            { giverKey: 'Aphrodite', traitKey: 'SprintEchoBoon', rarity: 'Duo' },
+            { giverKey: 'Zeus', traitKey: 'SprintEchoBoon', rarity: 'Duo' },
+          ];
+        }),
+        catalog,
+      ),
+    ).toThrow(/trait keys must be distinct/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [{ giverKey: 'Hades', traitKey: 'CastProjectileBoon', rarity: 'Common' }];
+          child.selectedOptionKey = 'option1';
+        }),
+        catalog,
+      ),
+    ).toThrow(/is not an Echo last-run source/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [
+            { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Legendary' },
+          ];
+          child.selectedOptionKey = 'option1';
+        }),
+        catalog,
+      ),
+    ).toThrow(/is not an equipped rarity/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [
+            { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+          ];
+          child.selectedOptionKey = 'option3';
+        }),
+        catalog,
+      ),
+    ).toThrow(/must select a present option/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.options = [
+            {
+              giverKey: 'Aphrodite',
+              traitKey: 'HighHealthOffenseBoon',
+              rarity: 'Common',
+              targetTraitKey: 'HephaestusWeaponBoon',
+            },
+          ];
+          child.selectedOptionKey = 'option1';
+        }),
+        catalog,
+      ),
+    ).toThrow(/does not support an Echo last-run acquisition target/);
+    expect(() =>
+      decodeProjectDocument(
+        malformed((child) => {
+          child.extra = true;
+        }),
+        catalog,
+      ),
+    ).toThrow(/echoLastRunBoon\.extra: is not a project document field/);
+  });
+
+  it('settles the real H Echo fold into Run State with the nested trait and future pool source', () => {
+    let project = createGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
+          ]),
+        ),
+      ),
+    });
+    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!;
+    if (!('rewards' in h)) throw new Error('H must be evaluated');
+    expect(h.rewards.branches.length).toBeGreaterThan(0);
+    expect(
+      h.rewards.branches.every(
+        (branch) =>
+          branch.history.lootTypeHistory.AphroditeUpgrade === 1 &&
+          branch.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity === undefined &&
+          branch.traitHistory?.equippedTraits.HighHealthOffenseBoon?.rarity === 'Common',
+      ),
+    ).toBe(true);
+    const snapshot = [...h.rewards.runStateSnapshots]
+      .reverse()
+      .find((candidate) => candidate.traits.equippedTraits.HighHealthOffenseBoon !== undefined);
+    expect(snapshot).toMatchObject({
+      godPool: {
+        acquiredSourceKeys: expect.arrayContaining(['AphroditeUpgrade']),
+        effectiveSourceKeys: expect.arrayContaining(['AphroditeUpgrade']),
+      },
+      traits: {
+        equippedTraits: {
+          EchoLastRunBoon: { traitKey: 'EchoLastRunBoon' },
+          HighHealthOffenseBoon: { rarity: 'Common' },
+        },
+      },
+    });
+    expect(snapshot?.traits.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
+  });
+
+  it('keeps the real H invalid child addressable while excluding later route state', () => {
+    let project = createGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([{ giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Heroic' }]),
+        ),
+      ),
+    });
+    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!;
+    if (!('rewards' in h)) throw new Error('H must be evaluated');
+    const child = createEchoLastRunBoonAddress(echoOwner, 'option1');
+    expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
+    expect(h.rewards.branches).toHaveLength(1);
+    expect(
+      h.rewards.branches.every(
+        (branch) =>
+          branch.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
+          branch.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity === 'Common' &&
+          branch.history.lootTypeHistory.ApolloUpgrade === 3,
+      ),
+    ).toBe(true);
+    expect(h.findings).toContainEqual(
+      expect.objectContaining({ code: 'echoLastRunBoonOptionUnavailable', origin: child }),
+    );
   });
 });

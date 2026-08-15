@@ -15,6 +15,7 @@ export {
   createRewardHistoryState,
   factsWithHistory,
   resolveAcquisitionRole,
+  recordLootTypeHistorySource,
 } from './history';
 export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './level-effects';
 export {

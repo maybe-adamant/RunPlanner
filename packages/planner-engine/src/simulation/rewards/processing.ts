@@ -9,6 +9,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createCirceResolutionAddress,
   createEchoPomTargetAddress,
+  createEchoLastRunBoonAddress,
   createLevelResolutionAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
@@ -34,6 +35,7 @@ import {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
   resolveAcquisitionRole,
+  recordLootTypeHistorySource,
   type AuthoredShopOffer,
   type RewardBagState,
   type RewardHistoryState,
@@ -70,6 +72,7 @@ import {
   foldTraitHistoryEvents,
   isPomEligibleTrait,
   echoPomGreatestLevelTraitKeys,
+  echoLastRunBoonOutcomes,
   evaluateReachedTraitOffer,
   assessTraitOfferBeforeRarification,
   evaluateReachedLevelResolution,
@@ -79,7 +82,11 @@ import {
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
 } from '../traits';
-import { optionIndex, type AuthoredTraitOffer } from '../../authored-project/traits';
+import {
+  optionIndex,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
+} from '../../authored-project/traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { ArcanaFearState } from '../arcana-fear';
 import {
@@ -393,6 +400,10 @@ function applyTraitOfferForAcquisition(
   sequence: number,
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
+  options: {
+    readonly directAcquisition?: boolean;
+    readonly skipCallingCard?: boolean;
+  } = {},
 ): RewardBranchState {
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
@@ -410,11 +421,11 @@ function applyTraitOfferForAcquisition(
           resolvedProviderKey: authored.giverKey,
         };
   const baseOffer =
-    authored === undefined || authoredContext === undefined
+    authored === undefined || authoredContext === undefined || options.directAcquisition === true
       ? undefined
       : assessTraitOfferBeforeRarification(catalog, authored, before, authoredContext);
   const callingCard =
-    authored === undefined
+    authored === undefined || options.skipCallingCard === true
       ? undefined
       : evaluateCallingCardOffer(catalog, branch.keepsakes, authored, baseOffer?.legal ?? false);
   const effectiveAuthored = callingCard?.offer ?? authored;
@@ -525,7 +536,7 @@ function applyTraitOfferForAcquisition(
     },
     branch.traitEvaluations?.length ?? 0,
     branch.arcanaFear,
-    false,
+    options.directAcquisition === true,
     branch.keepsakes,
     callingCard === undefined ? undefined : authored,
   );
@@ -745,6 +756,8 @@ export function settleEncounterTraitOffer(
         : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
     const resolution = selected?.circeResolution;
     const preChoiceTraitHistory = branch.traitHistory ?? createTraitHistoryState();
+    const effectiveDeathDefianceCondition =
+      offer.deathDefianceConditionMet ?? deathDefianceConditionMet;
     const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
     const circeDomain =
       disposition?.kind === 'circe'
@@ -756,7 +769,9 @@ export function settleEncounterTraitOffer(
       traitContext: Object.freeze({
         manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
         circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
-        ...(deathDefianceConditionMet === undefined ? {} : { deathDefianceConditionMet }),
+        ...(effectiveDeathDefianceCondition === undefined
+          ? {}
+          : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
         ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
       }),
     } as const;
@@ -833,6 +848,113 @@ export function settleEncounterTraitOffer(
       provisionalFindings !== findings
     )
       for (const [key, entry] of provisionalFindings) findings.set(key, entry);
+    if (
+      disposition?.kind === 'echo' &&
+      disposition.effect === 'lastRunBoon' &&
+      selected !== undefined &&
+      applied.traitHistory !== undefined &&
+      applied.traitHistory !== branch.traitHistory
+    ) {
+      const address = createEchoLastRunBoonAddress(owner, offer.selectedOptionKey);
+      const child = selected.echoLastRunBoon;
+      const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
+        blockedChild = Object.freeze({ address, branch: applied });
+        if (findings !== undefined)
+          addTraitChildFinding(
+            findings,
+            address,
+            lifecyclePoint,
+            sequence,
+            code,
+            selected.traitKey,
+            detail,
+            findingChronology,
+          );
+        return applied;
+      };
+      if (child === undefined) return reject('echoLastRunBoonMissing');
+      const selectedChildIndex = optionIndex(child.selectedOptionKey);
+      const selectedChild = child.options[selectedChildIndex];
+      if (selectedChild === undefined) return reject('echoLastRunBoonMissing');
+      const outcomes = echoLastRunBoonOutcomes(catalog, preChoiceTraitHistory, source.traitContext);
+      let outcome: (typeof outcomes)[number] | undefined;
+      for (const [index, childOption] of child.options.entries()) {
+        const rowOutcome = outcomes.find(
+          (candidate) =>
+            candidate.option.giverKey === childOption.giverKey &&
+            candidate.option.traitKey === childOption.traitKey &&
+            candidate.option.rarity === childOption.rarity,
+        );
+        if (rowOutcome === undefined || !rowOutcome.assessment.legal)
+          return reject(
+            'echoLastRunBoonOptionUnavailable',
+            `${childOption.giverKey}:${childOption.traitKey}:${childOption.rarity}`,
+          );
+        if (rowOutcome.targetTraitKeys.length > 0) {
+          if (childOption.targetTraitKey === undefined)
+            return reject('targetedAcquisitionTargetMissing', childOption.traitKey);
+          if (!rowOutcome.targetTraitKeys.includes(childOption.targetTraitKey))
+            return reject('targetedAcquisitionTargetUnavailable', childOption.targetTraitKey);
+        } else if (childOption.targetTraitKey !== undefined) {
+          return reject('targetedAcquisitionTargetUnavailable', childOption.targetTraitKey);
+        }
+        if (index === selectedChildIndex) outcome = rowOutcome;
+      }
+      if (outcome === undefined) return reject('echoLastRunBoonMissing');
+      const nestedOffer: AuthoredTraitOfferTraits = Object.freeze({
+        kind: 'traits',
+        giverKey: selectedChild.giverKey,
+        options: Object.freeze([
+          Object.freeze({
+            traitKey: selectedChild.traitKey,
+            rarity: outcome.effectiveRarity,
+            ...(selectedChild.targetTraitKey === undefined
+              ? {}
+              : { targetTraitKey: selectedChild.targetTraitKey }),
+          }),
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1',
+        rarificationActions: Object.freeze([]),
+      });
+      const variant =
+        catalog.echoLastRunBoon.variants.byKey[
+          `${selectedChild.giverKey}:${selectedChild.traitKey}`
+        ];
+      const rewardHistory =
+        variant?.lootHistorySource === undefined
+          ? applied.history
+          : recordLootTypeHistorySource(applied.history, variant.lootHistorySource);
+      const sourceApplied = Object.freeze({
+        ...applied,
+        history: rewardHistory,
+      });
+      const nested = applyTraitOfferForAcquisition(
+        catalog,
+        sourceApplied,
+        {
+          origin: address,
+          traitOffersByAcquisitionRole: Object.freeze({
+            echoLastRunSelection: nestedOffer,
+          }),
+          traitContext: Object.freeze({
+            freshRarityOverride: outcome.effectiveRarity,
+            ordinarySlotReplacement: 'forbidden',
+            ...(effectiveDeathDefianceCondition === undefined
+              ? {}
+              : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
+          }),
+        },
+        'echoLastRunSelection',
+        lifecyclePoint,
+        sequence,
+        undefined,
+        undefined,
+        { directAcquisition: true, skipCallingCard: true },
+      );
+      if (nested.traitHistory === applied.traitHistory)
+        return reject('echoLastRunBoonOptionUnavailable');
+      return nested;
+    }
     if (
       disposition?.kind === 'echo' &&
       disposition.effect === 'doubleLevel' &&

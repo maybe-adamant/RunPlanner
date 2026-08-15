@@ -14,6 +14,8 @@ export type {
   TraitCatalog,
   TraitDeclaration,
   TraitElement,
+  EchoLastRunBoonCatalog,
+  EchoLastRunBoonVariantDeclaration,
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
   TraitOfferContextKey,
@@ -768,6 +770,7 @@ export interface Catalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly traitGivers: CatalogCollection<TraitGiverDeclaration>;
+  readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
   readonly traitOfferContexts: CatalogCollection<TraitOfferContextDeclaration>;
   readonly traitRarityOrder: readonly ['Common', 'Rare', 'Epic', 'Heroic'];
   readonly traitElements: readonly TraitElement[];

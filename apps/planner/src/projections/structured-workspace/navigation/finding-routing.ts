@@ -35,6 +35,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'traitOffer':
     case 'circeResolution':
     case 'echoPomTarget':
+    case 'echoLastRunBoon':
     case 'levelResolution':
     case 'bossCompletionArcana':
     case 'acquisitionSite':

@@ -2,6 +2,7 @@ import {
   createOccurrenceAddress,
   createCirceResolutionAddress,
   createEchoPomTargetAddress,
+  createEchoLastRunBoonAddress,
   optionIndex,
   semanticAddressKey,
   type OccurrenceId,
@@ -20,6 +21,7 @@ import type {
   AuthoredCirceResolution,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
+  AuthoredEchoLastRunBoonOffer,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -1772,6 +1774,17 @@ export function bindWorkspaceInteractions(
                 : { value: option.echoPomTarget }),
             })
           : undefined;
+      const echoLastRunBoonControl =
+        value.selectedOptionKey === optionKey &&
+        declaration?.selectedDisposition.kind === 'echo' &&
+        declaration.selectedDisposition.effect === 'lastRunBoon'
+          ? Object.freeze({
+              address: createEchoLastRunBoonAddress(control.address, optionKey),
+              marker: control.echoLastRunBoon?.marker ?? control.marker,
+              optionKey,
+              ...(option?.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon }),
+            })
+          : undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
         hasTargetPicker,
@@ -1872,6 +1885,80 @@ export function bindWorkspaceInteractions(
                           ),
                         ),
                         emptyNoOpAllowed: evaluated.result.emptyNoOpAllowed,
+                      });
+                    },
+                  }),
+              }),
+            }),
+        ...(echoLastRunBoonControl === undefined
+          ? {}
+          : {
+              echoLastRunBoon: Object.freeze({
+                control: echoLastRunBoonControl,
+                intentFor: (
+                  offer: AuthoredTraitOfferTraits,
+                  child: AuthoredEchoLastRunBoonOffer,
+                ) => {
+                  const index = optionIndex(optionKey);
+                  const existing = offer.options[index];
+                  if (existing === undefined)
+                    throw new StructuredWorkspaceProjectionContractError(
+                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
+                    );
+                  const options = [...offer.options];
+                  options[index] = Object.freeze({ ...existing, echoLastRunBoon: child });
+                  return ordinaryTraitOfferIntentFor(
+                    control.address,
+                    Object.freeze({
+                      ...offer,
+                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                    }),
+                  );
+                },
+                forOffer: (offer: AuthoredTraitOfferTraits) =>
+                  Object.freeze({
+                    load: () => {
+                      const evaluated = candidates.echoLastRunBoon(
+                        control.address,
+                        offer,
+                        optionKey,
+                      );
+                      if (evaluated.kind !== 'echoLastRunBoonDomain') return undefined;
+                      const projectCandidate = (
+                        candidate: (typeof evaluated.result.candidates)[number],
+                      ) => {
+                        const giver = catalog.traitGivers.byKey[candidate.option.giverKey];
+                        const trait = catalog.traits.byKey[candidate.option.traitKey];
+                        return Object.freeze({
+                          label: `${giver?.label ?? candidate.option.giverKey} · ${trait?.label ?? candidate.option.traitKey} · ${candidate.option.rarity}`,
+                          value: candidate.option,
+                          effectiveRarity: candidate.effectiveRarity,
+                          supported: candidate.supported,
+                          targetChoices: Object.freeze(
+                            candidate.targetTraitKeys.map((traitKey) =>
+                              Object.freeze({
+                                label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                                value: traitKey,
+                              }),
+                            ),
+                          ),
+                        });
+                      };
+                      const projectedCandidates = Object.freeze(
+                        evaluated.result.candidates.map(projectCandidate),
+                      );
+                      return Object.freeze({
+                        candidates: projectedCandidates,
+                        candidatesByOption: Object.freeze(
+                          evaluated.result.candidatesByOption.map((row) =>
+                            Object.freeze(row.map(projectCandidate)),
+                          ),
+                        ),
+                        ...(evaluated.result.appendCandidate === undefined
+                          ? {}
+                          : {
+                              appendCandidate: projectCandidate(evaluated.result.appendCandidate),
+                            }),
                       });
                     },
                   }),

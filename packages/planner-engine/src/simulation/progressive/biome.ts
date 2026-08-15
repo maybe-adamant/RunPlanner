@@ -242,6 +242,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
       return rewardOwnerAddress(address.owner);
     case 'circeResolution':
     case 'echoPomTarget':
+    case 'echoLastRunBoon':
       return rewardOwnerAddress(address.trait);
     default:
       return undefined;
@@ -261,10 +262,13 @@ function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | u
     address.kind === 'traitOffer' ||
     address.kind === 'levelResolution' ||
     address.kind === 'circeResolution' ||
-    address.kind === 'echoPomTarget'
+    address.kind === 'echoPomTarget' ||
+    address.kind === 'echoLastRunBoon'
   )
     return occurrenceOwnerAddress(
-      address.kind === 'circeResolution' || address.kind === 'echoPomTarget'
+      address.kind === 'circeResolution' ||
+        address.kind === 'echoPomTarget' ||
+        address.kind === 'echoLastRunBoon'
         ? address.trait
         : address.owner,
     );
@@ -466,7 +470,9 @@ function retainBlockedRegionProducts(
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
       ? blockedAt
-      : blockedAt.kind === 'circeResolution' || blockedAt.kind === 'echoPomTarget'
+      : blockedAt.kind === 'circeResolution' ||
+          blockedAt.kind === 'echoPomTarget' ||
+          blockedAt.kind === 'echoLastRunBoon'
         ? blockedAt.trait
         : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
@@ -853,6 +859,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'echoPomTarget' ||
+    origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -863,7 +870,9 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution' || origin.kind === 'echoPomTarget'
+            : origin.kind === 'circeResolution' ||
+                origin.kind === 'echoPomTarget' ||
+                origin.kind === 'echoLastRunBoon'
               ? origin.trait
               : origin.owner;
   }
@@ -877,6 +886,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'echoPomTarget' ||
+    origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
@@ -887,7 +897,9 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution' || origin.kind === 'echoPomTarget'
+            : origin.kind === 'circeResolution' ||
+                origin.kind === 'echoPomTarget' ||
+                origin.kind === 'echoLastRunBoon'
               ? origin.trait
               : origin.owner,
       occurrenceId,

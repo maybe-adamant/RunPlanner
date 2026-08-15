@@ -300,6 +300,14 @@ const findingCopy = {
     title: 'Echo Pom target is unavailable',
     description: 'Choose a Pom-eligible trait tied at the greatest pre-Echo level.',
   },
+  echoLastRunBoonMissing: {
+    title: 'Choose the Boon Boon Boon outcomes',
+    description: 'Author one to three source-resolved previous-run boon outcomes.',
+  },
+  echoLastRunBoonOptionUnavailable: {
+    title: 'Boon Boon Boon outcome is unavailable',
+    description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
+  },
   fullTraitOfferWidthRequired: {
     title: 'Three choices are required',
     description: 'This offer still has enough ordinary traits to fill all three choices.',
@@ -673,6 +681,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Circe outcome`;
     case 'echoPomTarget':
       return `${biomeLabel} · Pom Pom Pom target`;
+    case 'echoLastRunBoon':
+      return `${biomeLabel} · Boon Boon Boon outcomes`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
     case 'completionRoom':

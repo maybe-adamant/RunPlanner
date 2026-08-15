@@ -15,6 +15,7 @@ import {
   materializeGorgonAthenaOffer,
   createCirceResolutionAddress,
   createEchoPomTargetAddress,
+  createEchoLastRunBoonAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
@@ -719,6 +720,27 @@ function activeEncounterPhasesForOwner(
                       ? {}
                       : { value: selected.echoPomTarget }),
                   });
+            const echoLastRunBoon =
+              authoredTraitOffer.kind !== 'traits' ||
+              selectedDisposition?.kind !== 'echo' ||
+              selectedDisposition.effect !== 'lastRunBoon'
+                ? undefined
+                : Object.freeze({
+                    address: createEchoLastRunBoonAddress(
+                      traitAddress,
+                      authoredTraitOffer.selectedOptionKey,
+                    ),
+                    marker: input.markerDestinations.marker(
+                      createEchoLastRunBoonAddress(
+                        traitAddress,
+                        authoredTraitOffer.selectedOptionKey,
+                      ),
+                    ),
+                    optionKey: authoredTraitOffer.selectedOptionKey,
+                    ...(selected?.echoLastRunBoon === undefined
+                      ? {}
+                      : { value: selected.echoLastRunBoon }),
+                  });
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               address: traitAddress,
@@ -728,6 +750,7 @@ function activeEncounterPhasesForOwner(
               rewardOwner: address,
               ...(circeResolution === undefined ? {} : { circeResolution }),
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
+              ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
               ...(authoredTraitOffer.kind === 'traits' &&
               traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
                 ? {

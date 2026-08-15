@@ -55,6 +55,7 @@ import {
 } from '../traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
+import { decodeEchoLastRunBoon } from './echo-last-run';
 
 function decodePayload(
   value: unknown,
@@ -220,6 +221,7 @@ function decodeTraitOffers(
           ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
           ...(option.circeResolution === undefined ? [] : ['circeResolution']),
           ...('echoPomTarget' in option ? ['echoPomTarget'] : []),
+          ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -353,6 +355,7 @@ function decodeTraitOffers(
           );
       }
       const hasEchoPomTarget = 'echoPomTarget' in option;
+      const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
       let echoPomTarget: string | null | undefined;
       if (hasEchoPomTarget) {
         if (option.echoPomTarget !== null && typeof option.echoPomTarget !== 'string')
@@ -375,6 +378,22 @@ function decodeTraitOffers(
             'is supported only by Echo Pom',
           );
       }
+      const echoLastRunBoon = hasEchoLastRunBoon
+        ? decodeEchoLastRunBoon(
+            option.echoLastRunBoon,
+            catalog,
+            `${rolePath}.options.${key}.echoLastRunBoon`,
+          )
+        : undefined;
+      if (
+        hasEchoLastRunBoon &&
+        (trait.selectedDisposition.kind !== 'echo' ||
+          trait.selectedDisposition.effect !== 'lastRunBoon')
+      )
+        failProjectDocument(
+          `${rolePath}.options.${key}.echoLastRunBoon`,
+          'is supported only by Echo Boon Boon Boon',
+        );
       options.push(
         Object.freeze({
           traitKey,
@@ -382,6 +401,7 @@ function decodeTraitOffers(
           ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
           ...(circeResolution === undefined ? {} : { circeResolution }),
           ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
+          ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
         }),
       );
     }
