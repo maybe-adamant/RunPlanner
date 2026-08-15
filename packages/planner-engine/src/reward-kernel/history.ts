@@ -149,6 +149,9 @@ export function applyConcreteAcquisition(
     useRecord: increment(history.useRecord, acquisition.gameName),
     biomeUseRecord: increment(history.biomeUseRecord, acquisition.gameName),
     currentRoomUseRecord: increment(history.currentRoomUseRecord, acquisition.gameName),
+    ...(declaration.lastRewardRecreation === undefined
+      ? {}
+      : { lastRewardRecreation: declaration.lastRewardRecreation }),
   };
   // Trait upgradeability is derived solely from the equipped-trait ledger in
   // the trait authority. Reward acquisition remains the exact loot/use ledger

@@ -177,6 +177,7 @@ describe('Narcissus pickup producer', () => {
     project = authorLegalTraitOffers(project);
     const normalBranch = evaluatedG(project).rewards.branches[0];
     expect(normalBranch?.history.consumableRecord.BlindBoxLoot).toBe(1);
+    expect(normalBranch?.history.lastRewardRecreation?.offer.rewardType).toBe('HestiaUpgrade');
     expect(
       normalBranch?.traitHistory?.events.some(
         (event) =>

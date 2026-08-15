@@ -281,6 +281,7 @@ const expectedHammerRestrictions: Readonly<Record<string, readonly string[]>> = 
 
 const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
   Echo: [
+    'EchoLastReward',
     'EchoDeathDefianceRefill',
     'DiminishingDodgeBoon',
     'DiminishingHealthAndManaBoon',
@@ -937,7 +938,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(373);
+    expect(traits?.traits.values).toHaveLength(374);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -958,7 +959,7 @@ describe('trait offer catalog closure', () => {
       ['Medea', 8],
       ['Narcissus', 9],
       ['Circe', 9],
-      ['Echo', 5],
+      ['Echo', 6],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -1010,6 +1011,7 @@ describe('trait offer catalog closure', () => {
     const giver = traits.givers.byKey.Echo;
     expect(giver?.rarityPolicy).toEqual({ kind: 'none' });
     expect(giver?.traitKeys).toEqual([
+      'EchoLastReward',
       'EchoDeathDefianceRefill',
       'DiminishingDodgeBoon',
       'DiminishingHealthAndManaBoon',
@@ -1031,6 +1033,11 @@ describe('trait offer catalog closure', () => {
         disposition: traits.traits.byKey[key]?.selectedDisposition,
       })),
     ).toEqual([
+      {
+        key: 'EchoLastReward',
+        rarityDomain: { kind: 'none' },
+        disposition: { kind: 'echo', effect: 'lastReward' },
+      },
       {
         key: 'EchoDeathDefianceRefill',
         rarityDomain: { kind: 'none' },

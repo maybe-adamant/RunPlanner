@@ -17,6 +17,84 @@ export interface AuthoredTraitOption {
   readonly echoPomTarget?: string | null;
   /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
+  /** Decisions owned by the exact recreated acquisition; replay identity stays derived. */
+  readonly echoLastReward?: AuthoredEchoLastRewardAcquisition;
+}
+
+export interface AuthoredEchoLastRewardAcquisition {
+  readonly conversion: 'normal' | 'gold';
+  readonly traitOffer?: AuthoredTraitOffer;
+  readonly levelResolution?: AuthoredLevelResolution;
+}
+
+export function normalizeAuthoredEchoLastReward(
+  catalog: Catalog,
+  value: AuthoredEchoLastRewardAcquisition,
+): AuthoredEchoLastRewardAcquisition {
+  if (value.conversion !== 'normal' && value.conversion !== 'gold')
+    throw new Error('Echo last-reward conversion must be normal or gold');
+  const level = value.levelResolution;
+  if (level?.kind === 'choice') {
+    if (new Set(level.offeredTraitKeys).size !== level.offeredTraitKeys.length)
+      throw new Error('Echo last-reward Pom choices must be distinct');
+    if (level.offeredTraitKeys.some((key) => catalog.traits.byKey[key] === undefined))
+      throw new Error('Echo last-reward Pom choice contains an unknown trait');
+    if (level.selectedTraitKey !== null && !level.offeredTraitKeys.includes(level.selectedTraitKey))
+      throw new Error('Echo last-reward Pom selection must be one of its choices');
+  } else if (
+    level?.kind === 'random' &&
+    level.targetTraitKey !== null &&
+    catalog.traits.byKey[level.targetTraitKey] === undefined
+  ) {
+    throw new Error('Echo last-reward random Pom target is unknown');
+  }
+  const traitOffer =
+    value.traitOffer?.kind === 'traits'
+      ? Object.freeze({
+          ...value.traitOffer,
+          options: Object.freeze([
+            ...value.traitOffer.options,
+          ]) as AuthoredTraitOfferTraits['options'],
+          rarificationActions: Object.freeze([...(value.traitOffer.rarificationActions ?? [])]),
+        })
+      : value.traitOffer;
+  return Object.freeze({
+    conversion: value.conversion,
+    ...(traitOffer === undefined ? {} : { traitOffer }),
+    ...(level === undefined
+      ? {}
+      : {
+          levelResolution: Object.freeze(
+            level.kind === 'choice'
+              ? {
+                  kind: 'choice' as const,
+                  offeredTraitKeys: Object.freeze([...level.offeredTraitKeys]),
+                  selectedTraitKey: level.selectedTraitKey,
+                }
+              : { kind: 'random' as const, targetTraitKey: level.targetTraitKey },
+          ),
+        }),
+  });
+}
+
+export function createDefaultEchoLastRewardAcquisition(
+  catalog: Catalog,
+  recreation: NonNullable<
+    import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
+  >,
+  loadout: TraitOfferDefaultsContext,
+): AuthoredEchoLastRewardAcquisition {
+  const traitOffer = createDefaultTraitOffers(catalog, recreation.offer, loadout).self;
+  const levelResolution = createDefaultLevelResolutions(
+    catalog,
+    recreation.offer,
+    producerLevelEffectSource({ producerLifecycleKey: recreation.producerLifecycleKey }),
+  )?.self;
+  return Object.freeze({
+    conversion: 'normal',
+    ...(traitOffer === undefined ? {} : { traitOffer }),
+    ...(levelResolution === undefined ? {} : { levelResolution }),
+  });
 }
 
 export interface AuthoredEchoLastRunBoonOption {

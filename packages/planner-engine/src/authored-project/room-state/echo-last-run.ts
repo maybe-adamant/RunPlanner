@@ -56,6 +56,9 @@ export function decodeEchoLastRunBoon(
       selectedOptionKey,
     });
   } catch (error) {
-    failProjectDocument(path, error instanceof Error ? error.message : 'invalid Echo last-run boon');
+    failProjectDocument(
+      path,
+      error instanceof Error ? error.message : 'invalid Echo last-run boon',
+    );
   }
 }

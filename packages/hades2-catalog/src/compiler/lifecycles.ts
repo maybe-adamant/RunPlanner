@@ -40,6 +40,7 @@ const producerLifecyclePoints = {
   afterCombat: true,
   afterUnwrap: true,
   beforeCombat: true,
+  echoReplay: true,
   purchase: true,
   roomRewardPickup: true,
   roomExit: true,

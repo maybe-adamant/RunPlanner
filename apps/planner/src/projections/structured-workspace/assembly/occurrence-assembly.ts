@@ -16,6 +16,7 @@ import {
   createCirceResolutionAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
+  createEchoLastRewardAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
@@ -741,6 +742,27 @@ function activeEncounterPhasesForOwner(
                       ? {}
                       : { value: selected.echoLastRunBoon }),
                   });
+            const echoLastReward =
+              authoredTraitOffer.kind !== 'traits' ||
+              selectedDisposition?.kind !== 'echo' ||
+              selectedDisposition.effect !== 'lastReward'
+                ? undefined
+                : Object.freeze({
+                    address: createEchoLastRewardAddress(
+                      traitAddress,
+                      authoredTraitOffer.selectedOptionKey,
+                    ),
+                    marker: input.markerDestinations.marker(
+                      createEchoLastRewardAddress(
+                        traitAddress,
+                        authoredTraitOffer.selectedOptionKey,
+                      ),
+                    ),
+                    optionKey: authoredTraitOffer.selectedOptionKey,
+                    ...(selected?.echoLastReward === undefined
+                      ? {}
+                      : { value: selected.echoLastReward }),
+                  });
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               address: traitAddress,
@@ -751,6 +773,7 @@ function activeEncounterPhasesForOwner(
               ...(circeResolution === undefined ? {} : { circeResolution }),
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
               ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+              ...(echoLastReward === undefined ? {} : { echoLastReward }),
               ...(authoredTraitOffer.kind === 'traits' &&
               traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
                 ? {

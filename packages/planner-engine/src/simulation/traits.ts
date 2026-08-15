@@ -435,6 +435,9 @@ export interface TraitOfferContext {
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
   readonly deathDefianceConditionMet?: boolean;
+  /** Canonical reward-history fact consumed only by Echo Reward availability. */
+  readonly echoLastRewardAvailable?: boolean;
+  readonly echoLastRewardRecreation?: NonNullable<RewardHistoryState['lastRewardRecreation']>;
   /** Source-resolved appearance rarity that may exceed the ordinary fresh-offer domain. */
   readonly freshRarityOverride?: TraitRarity;
   /** Exact pre-acquisition Fear frontier for catalog-owned Circe availability. */
@@ -565,6 +568,8 @@ function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext)
     context.devotionNoDuo,
     context.blockGiftBoons,
     context.deathDefianceConditionMet,
+    context.echoLastRewardAvailable,
+    context.echoLastRewardRecreation,
     context.circeRemovableFearVow,
     context.manualArcanaGraspCost,
   ]);
@@ -1393,6 +1398,12 @@ export function assessTraitOption(
     !echoLastRunBoonOutcomes(catalog, history, context).some((outcome) => outcome.assessment.legal)
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRunBoonEmpty' });
+  if (
+    trait.selectedDisposition.kind === 'echo' &&
+    trait.selectedDisposition.effect === 'lastReward' &&
+    context.echoLastRewardAvailable !== true
+  )
+    findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRewardMissing' });
   const occupied =
     trait.ordinaryBoonSlot === undefined
       ? undefined

@@ -235,6 +235,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
     case 'echoLastRunBoonOptionUnavailable':
       return { kind: 'trait', message: 'Choose a currently eligible previous-run boon outcome.' };
+    case 'echoLastRewardChildMissing':
+      return { kind: 'reward', message: 'Create the decisions for the recreated reward.' };
+    case 'echoLastRewardChildUnavailable':
+      return { kind: 'reward', message: 'Reset or repair the recreated reward decisions.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',

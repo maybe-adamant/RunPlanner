@@ -20,6 +20,10 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly kind: AcquisitionKind;
   readonly historyProjection: HistoryProjectionKey;
   readonly goldConversionEligible?: boolean;
+  readonly lastRewardRecreation?: {
+    readonly rewardType: string;
+    readonly producerLifecycleKey: 'EchoLastReward';
+  };
   readonly levelResolutionEffect?: LevelResolutionEffect;
   readonly elementContributions?: Readonly<
     Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>

@@ -777,6 +777,186 @@ describe('reward-kernel declaration parity', () => {
     expect(rewardKernelCatalog.acquisitions.values).toHaveLength(52);
   });
 
+  it('declares the exact Echo last-reward replay matrix and recreation lifecycle', () => {
+    const expected = [
+      'AphroditeUpgrade',
+      'ApolloUpgrade',
+      'AresUpgrade',
+      'DemeterUpgrade',
+      'HephaestusUpgrade',
+      'HeraUpgrade',
+      'HestiaUpgrade',
+      'PoseidonUpgrade',
+      'ZeusUpgrade',
+      'HermesUpgrade',
+      'StackUpgrade',
+      'StackUpgradeBig',
+      'StackUpgradeTriple',
+      'WeaponUpgrade',
+      'SpellDrop',
+      'MaxHealthDrop',
+      'MaxHealthDropBig',
+      'MaxManaDrop',
+      'MaxManaDropBig',
+      'RoomMoneyDrop',
+      'RoomMoneyTripleDrop',
+      'TalentDrop',
+      'TalentBigDrop',
+      'TrialUpgrade',
+      'GiftDrop',
+      'MetaCurrencyDrop',
+      'MetaCurrencyBigDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonBigDrop',
+    ].sort();
+    expect(
+      rewardKernelCatalog.acquisitions.values
+        .filter((acquisition) => acquisition.lastRewardRecreation !== undefined)
+        .map((acquisition) => acquisition.gameName)
+        .sort(),
+    ).toEqual(expected);
+    expect(
+      expected.map(
+        (gameName) => rewardKernelCatalog.acquisitions.byKey[gameName]?.lastRewardRecreation,
+      ),
+    ).toEqual(
+      expected.map((rewardType) => ({
+        offer: { rewardType },
+        producerLifecycleKey: 'EchoLastReward',
+      })),
+    );
+    expect(
+      rewardKernelCatalog.producerLifecycles.byKey.EchoLastReward?.rewardTypes.values
+        .map((entry) => [entry.rewardType, entry.acquisitionLifecycle] as const)
+        .sort(([left], [right]) => left.localeCompare(right)),
+    ).toEqual(
+      expected.map((rewardType) => [
+        rewardType,
+        [
+          {
+            role: 'self',
+            lifecyclePoint: 'echoReplay',
+            ...(rewardType === 'GiftDrop'
+              ? { levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 } }
+              : {}),
+          },
+        ],
+      ]),
+    );
+  });
+
+  it('rejects drift in Echo last-reward eligibility and exact-source recreation', () => {
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'GiftDrop'
+              ? { ...acquisition, lastRewardRecreation: undefined }
+              : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow('must declare the exact Echo last-reward eligibility set');
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'GiftDrop'
+              ? {
+                  ...acquisition,
+                  lastRewardRecreation: {
+                    rewardType: 'MetaCurrencyDrop',
+                    producerLifecycleKey: 'EchoLastReward',
+                  },
+                }
+              : acquisition.gameName === 'MetaCurrencyDrop'
+                ? {
+                    ...acquisition,
+                    lastRewardRecreation: {
+                      rewardType: 'GiftDrop',
+                      producerLifecycleKey: 'EchoLastReward',
+                    },
+                  }
+                : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow('must recreate the exact self acquisition source');
+  });
+
+  it('rejects drift in Echo replay timing and its sole Nectar level effect', () => {
+    type EchoLastRewardProfile = Extract<
+      (typeof rewardKernelDeclarations.producerLifecycles)[number],
+      { readonly key: 'EchoLastReward' }
+    >;
+    const mutateEcho = (
+      mutate: (profile: EchoLastRewardProfile) => unknown,
+    ): RawRewardKernelInput =>
+      rawInput({
+        ...rewardKernelDeclarations,
+        producerLifecycles: rewardKernelDeclarations.producerLifecycles.map((profile) =>
+          profile.key === 'EchoLastReward' ? mutate(profile as EchoLastRewardProfile) : profile,
+        ),
+      });
+
+    expect(() =>
+      createRewardKernelCatalog(
+        mutateEcho((profile) => ({
+          ...profile,
+          overrides: [
+            ...(profile.overrides ?? []),
+            {
+              rewardType: 'AphroditeUpgrade',
+              acquisitionLifecycle: [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }],
+            },
+          ],
+        })),
+      ),
+    ).toThrow('must bind exactly self at echoReplay');
+
+    expect(() =>
+      createRewardKernelCatalog(
+        mutateEcho((profile) => ({
+          ...profile,
+          overrides: profile.overrides?.map((override) =>
+            override.rewardType === 'GiftDrop'
+              ? {
+                  ...override,
+                  acquisitionLifecycle: [{ role: 'self', lifecyclePoint: 'echoReplay' }],
+                }
+              : override,
+          ),
+        })),
+      ),
+    ).toThrow('must apply randomTargetIfAvailable levelCount 1');
+
+    expect(() =>
+      createRewardKernelCatalog(
+        mutateEcho((profile) => ({
+          ...profile,
+          overrides: [
+            ...(profile.overrides ?? []),
+            {
+              rewardType: 'MaxHealthDrop',
+              acquisitionLifecycle: [
+                {
+                  role: 'self',
+                  lifecyclePoint: 'echoReplay',
+                  levelResolutionEffect: {
+                    kind: 'randomTargetIfAvailable',
+                    levelCount: 1,
+                  },
+                },
+              ],
+            },
+          ],
+        })),
+      ),
+    ).toThrow('must not apply a level-resolution effect');
+  });
+
   it('normalizes room-reward acquisition timing without reward-name dispatch', () => {
     const roomReward = rewardKernelCatalog.producerLifecycles.byKey.RoomReward;
     expect(roomReward?.rewardTypes.byKey.Boon?.acquisitionLifecycle).toEqual([

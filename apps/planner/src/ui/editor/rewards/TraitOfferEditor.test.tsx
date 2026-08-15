@@ -13,6 +13,7 @@ import {
   semanticAddressKey,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
+  createEchoLastRewardAddress,
   createEchoPomTargetAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -463,6 +464,121 @@ describe('trait offer editor', () => {
         ],
         selectedOptionKey: 'option2',
       },
+    });
+    application.dispose();
+  });
+
+  it('creates and saves the exact Echo last-reward acquisition child', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (base === undefined) throw new Error('trait offer interaction is missing');
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'EchoLastReward' }),
+        Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+        Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+      deathDefianceConditionMet: false,
+    });
+    const childAddress = createEchoLastRewardAddress(base.owner, 'option1');
+    const control = Object.freeze({
+      address: childAddress,
+      marker: Object.freeze({
+        address: childAddress,
+        assessment: 'assessed' as const,
+        findingCount: 1,
+        focusKey: 'test-echo-last-reward',
+      }),
+      optionKey: 'option1' as const,
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+            ? {}
+            : {
+                echoLastReward: Object.freeze({
+                  control,
+                  intentFor: () =>
+                    Object.freeze({
+                      command: Object.freeze({
+                        kind: 'ReplaceTraitOffer' as const,
+                        trait: base.owner,
+                        value: draft,
+                      }),
+                    }),
+                  forOffer: () => ({
+                    load: () => ({
+                      rewardType: 'RoomMoneyDrop',
+                      rewardLabel: 'Gold',
+                      defaultValue: Object.freeze({ conversion: 'normal' as const }),
+                      goldSupported: false,
+                      traitOptionDomains: Object.freeze([]),
+                      traitRarityEditable: false,
+                      levelTargetChoices: Object.freeze([]),
+                      emptyLevelTargetAllowed: false,
+                    }),
+                  }),
+                }),
+              }),
+        }),
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    expect(screen.getByText('Latest replayable source: Gold')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Create replay decisions' }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.options[0]).toEqual({
+      traitKey: 'EchoLastReward',
+      echoLastReward: { conversion: 'normal' },
     });
     application.dispose();
   });

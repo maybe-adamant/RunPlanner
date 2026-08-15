@@ -8,6 +8,8 @@ import {
   traitOfferOption,
   optionIndex,
   normalizeAuthoredEchoLastRunBoon,
+  normalizeAuthoredEchoLastReward,
+  type AuthoredEchoLastRewardAcquisition,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -126,6 +128,20 @@ function pickupEntrySource(
   });
 }
 
+function validateEchoLastReward(
+  catalog: Catalog,
+  value: AuthoredEchoLastRewardAcquisition,
+  command: TraitOfferCommand,
+): AuthoredEchoLastRewardAcquisition {
+  const normalized = normalizeAuthoredEchoLastReward(catalog, value);
+  return normalized.traitOffer === undefined
+    ? normalized
+    : Object.freeze({
+        ...normalized,
+        traitOffer: validateOffer(catalog, normalized.traitOffer, command),
+      });
+}
+
 function validateOffer(
   catalog: Catalog,
   value: AuthoredTraitOffer,
@@ -223,6 +239,21 @@ function validateOffer(
         );
       }
     }
+    if ('echoLastReward' in option) {
+      if (
+        trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'lastReward'
+      )
+        failCommand(command, `${option.traitKey} does not support Echo Reward Reward Reward`);
+      try {
+        validateEchoLastReward(catalog, option.echoLastReward, command);
+      } catch (error) {
+        failCommand(
+          command,
+          error instanceof Error ? error.message : 'invalid Echo last-reward acquisition',
+        );
+      }
+    }
   }
   const conditionApplicable =
     !omitDeathDefianceContext &&
@@ -247,14 +278,20 @@ function validateOffer(
           'echoLastRunBoon' in option
             ? normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon)
             : undefined;
+        const echoLastReward =
+          'echoLastReward' in option
+            ? validateEchoLastReward(catalog, option.echoLastReward, command)
+            : undefined;
         if (resolution === undefined)
           return Object.freeze({
             ...option,
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+            ...(echoLastReward === undefined ? {} : { echoLastReward }),
           });
         if (resolution.kind === 'disableFear')
           return Object.freeze({
             ...option,
+            ...(echoLastReward === undefined ? {} : { echoLastReward }),
             circeResolution: Object.freeze({ kind: resolution.kind, vowKey: resolution.vowKey }),
           });
         return Object.freeze({

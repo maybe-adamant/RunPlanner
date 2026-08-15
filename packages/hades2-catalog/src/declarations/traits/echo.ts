@@ -12,6 +12,13 @@ const raritylessEchoTrait = {
 export const echoTraits = [
   {
     ...raritylessEchoTrait,
+    key: 'EchoLastReward',
+    label: 'Reward Reward Reward',
+    offerRequirements: [],
+    selectedDisposition: { kind: 'echo', effect: 'lastReward' },
+  },
+  {
+    ...raritylessEchoTrait,
     key: 'EchoDeathDefianceRefill',
     label: 'Survive Survive Survive',
     offerRequirements: [

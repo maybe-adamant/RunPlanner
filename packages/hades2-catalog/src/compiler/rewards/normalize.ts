@@ -47,6 +47,7 @@ const PRODUCER_LIFECYCLE_POINTS = [
   'afterCombat',
   'afterUnwrap',
   'beforeCombat',
+  'echoReplay',
   'purchase',
   'roomRewardPickup',
   'roomExit',
@@ -231,6 +232,47 @@ function normalizeAcquisitions(
   ) {
     fail('acquisitions', 'must declare the exact Time Piece gold-conversion eligibility set');
   }
+  const lastRewardEligible = new Set([
+    'AphroditeUpgrade',
+    'ApolloUpgrade',
+    'AresUpgrade',
+    'DemeterUpgrade',
+    'HephaestusUpgrade',
+    'HeraUpgrade',
+    'HestiaUpgrade',
+    'PoseidonUpgrade',
+    'ZeusUpgrade',
+    'HermesUpgrade',
+    'StackUpgrade',
+    'StackUpgradeBig',
+    'StackUpgradeTriple',
+    'WeaponUpgrade',
+    'SpellDrop',
+    'TrialUpgrade',
+    'MaxHealthDrop',
+    'MaxHealthDropBig',
+    'MaxManaDrop',
+    'MaxManaDropBig',
+    'RoomMoneyDrop',
+    'RoomMoneyTripleDrop',
+    'TalentDrop',
+    'TalentBigDrop',
+    'GiftDrop',
+    'MetaCurrencyDrop',
+    'MetaCurrencyBigDrop',
+    'MetaCardPointsCommonDrop',
+    'MetaCardPointsCommonBigDrop',
+  ]);
+  const declaredLastRewardEligible = raw
+    .filter((acquisition) => acquisition.lastRewardRecreation !== undefined)
+    .map((acquisition) => acquisition.gameName);
+  if (
+    declaredLastRewardEligible.length !== lastRewardEligible.size ||
+    declaredLastRewardEligible.some((gameName) => !lastRewardEligible.has(gameName)) ||
+    [...lastRewardEligible].some((gameName) => !declaredLastRewardEligible.includes(gameName))
+  ) {
+    fail('acquisitions', 'must declare the exact Echo last-reward eligibility set');
+  }
   return createCollection(
     raw.map((acquisition, index) =>
       Object.freeze({
@@ -246,6 +288,23 @@ function normalizeAcquisitions(
           `acquisitions[${index}].historyProjection`,
         ),
         goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
+        ...(acquisition.lastRewardRecreation === undefined
+          ? {}
+          : {
+              lastRewardRecreation: Object.freeze({
+                offer: Object.freeze({
+                  rewardType: requireNonEmpty(
+                    acquisition.lastRewardRecreation.rewardType,
+                    `acquisitions[${index}].lastRewardRecreation.rewardType`,
+                  ),
+                }),
+                producerLifecycleKey: requireClosedValue(
+                  acquisition.lastRewardRecreation.producerLifecycleKey,
+                  ['EchoLastReward'] as const,
+                  `acquisitions[${index}].lastRewardRecreation.producerLifecycleKey`,
+                ),
+              }),
+            }),
         ...(acquisition.levelResolutionEffect === undefined
           ? {}
           : { levelResolutionEffect: Object.freeze(acquisition.levelResolutionEffect) }),
@@ -874,6 +933,80 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
   const stores = normalizeStores(input.stores, rewardTypes);
   const shops = normalizeShops(input.shops, rewardTypes);
   const producerLifecycles = normalizeProducerLifecycles(input.producerLifecycles, rewardTypes);
+  const echoLastRewardProfile = producerLifecycles.byKey.EchoLastReward;
+  const recreationRewardTypes = acquisitions.values.flatMap((acquisition) =>
+    acquisition.lastRewardRecreation === undefined
+      ? []
+      : [acquisition.lastRewardRecreation.offer.rewardType],
+  );
+  if (
+    echoLastRewardProfile === undefined ||
+    echoLastRewardProfile.rewardTypes.values.length !== recreationRewardTypes.length ||
+    echoLastRewardProfile.rewardTypes.values.some(
+      (entry) => !recreationRewardTypes.includes(entry.rewardType),
+    )
+  ) {
+    fail(
+      'producerLifecycles.EchoLastReward',
+      'must support the exact Echo last-reward recreation set',
+    );
+  }
+  for (const entry of echoLastRewardProfile.rewardTypes.values) {
+    const lifecycle = entry.acquisitionLifecycle;
+    const binding = lifecycle[0];
+    if (
+      lifecycle.length !== 1 ||
+      binding?.role !== 'self' ||
+      binding.lifecyclePoint !== 'echoReplay'
+    ) {
+      fail(
+        `producerLifecycles.EchoLastReward.${entry.rewardType}`,
+        'must bind exactly self at echoReplay',
+      );
+    }
+    const effect = binding.levelResolutionEffect;
+    if (entry.rewardType === 'GiftDrop') {
+      if (effect?.kind !== 'randomTargetIfAvailable' || effect.levelCount !== 1) {
+        fail(
+          'producerLifecycles.EchoLastReward.GiftDrop',
+          'must apply randomTargetIfAvailable levelCount 1',
+        );
+      }
+    } else if (effect !== undefined) {
+      fail(
+        `producerLifecycles.EchoLastReward.${entry.rewardType}`,
+        'must not apply a level-resolution effect',
+      );
+    }
+  }
+  for (const acquisition of acquisitions.values) {
+    const recreation = acquisition.lastRewardRecreation;
+    if (recreation === undefined) continue;
+    const rewardType = rewardTypes.byKey[recreation.offer.rewardType];
+    const lifecycle = producerLifecycles.byKey[recreation.producerLifecycleKey];
+    if (rewardType === undefined)
+      fail(
+        `acquisitions.${acquisition.gameName}.lastRewardRecreation.offer.rewardType`,
+        `unknown reward type ${recreation.offer.rewardType}`,
+      );
+    if (lifecycle?.rewardTypes.byKey[recreation.offer.rewardType] === undefined)
+      fail(
+        `acquisitions.${acquisition.gameName}.lastRewardRecreation`,
+        `${recreation.offer.rewardType} is not supported by ${recreation.producerLifecycleKey}`,
+      );
+    if (
+      rewardType?.gameName !== acquisition.gameName ||
+      rewardType.acquisitionRoles.values.length !== 1 ||
+      rewardType.acquisitionRoles.values[0]?.key !== 'self' ||
+      rewardType.acquisitionRoles.values[0].resolution.kind !== 'self' ||
+      rewardType.acquisitionRoles.values[0].resolution.acquisitionKind !== acquisition.kind
+    ) {
+      fail(
+        `acquisitions.${acquisition.gameName}.lastRewardRecreation.offer`,
+        'must recreate the exact self acquisition source',
+      );
+    }
+  }
   return Object.freeze({
     payloadDomains,
     acquisitions,

@@ -18,6 +18,7 @@ function rewardControlMarkers(control: {
     readonly circeResolution?: { readonly marker: WorkspaceMarker };
     readonly echoPomTarget?: { readonly marker: WorkspaceMarker };
     readonly echoLastRunBoon?: { readonly marker: WorkspaceMarker };
+    readonly echoLastReward?: { readonly marker: WorkspaceMarker };
   }[];
   readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
@@ -28,6 +29,7 @@ function rewardControlMarkers(control: {
       ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
       ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
       ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
+      ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
     ]),
     ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
@@ -49,6 +51,7 @@ function workspacePostOutgoingAcquisitionMarkers(
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
+        ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
       ]),
       ...(entry.rewardControl?.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
@@ -139,6 +142,9 @@ export function workspaceOccurrenceOwnedMarkers(
             ...(phase.traitOffer.echoLastRunBoon === undefined
               ? []
               : [phase.traitOffer.echoLastRunBoon.marker]),
+            ...(phase.traitOffer.echoLastReward === undefined
+              ? []
+              : [phase.traitOffer.echoLastReward.marker]),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -149,6 +155,7 @@ export function workspaceOccurrenceOwnedMarkers(
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
+        ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
@@ -207,6 +214,7 @@ export function workspaceHubMainRewardMarkers(
           ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
           ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
           ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
+          ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
         ]),
         ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);

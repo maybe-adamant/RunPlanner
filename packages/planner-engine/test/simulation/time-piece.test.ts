@@ -7,7 +7,11 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
-import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
+import {
+  applyConcreteAcquisition,
+  factsWithHistory,
+  type RewardKernelFacts,
+} from '@run-planner/engine/reward-kernel';
 
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import {
@@ -86,6 +90,10 @@ describe('Time Piece conversions', () => {
     const branches = seeded.map((branch) =>
       Object.freeze({
         ...branch,
+        history: applyConcreteAcquisition(catalog.rewards, branch.history, {
+          kind: 'resource',
+          gameName: 'GiftDrop',
+        }),
         keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
       }),
     );
@@ -93,6 +101,7 @@ describe('Time Piece conversions', () => {
     const branch = result.branches[0]!;
     expect(branch.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(branch.history.lootTypeHistory).toEqual({});
+    expect(branch.history.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
     expect(branch.events).toContainEqual(expect.objectContaining({ kind: 'conversionToGold' }));
     expect(result.roleFrontiers?.[0]?.address).toEqual(
       createAcquisitionRoleAddress(reward, 'source'),

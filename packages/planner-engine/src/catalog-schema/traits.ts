@@ -63,7 +63,7 @@ export type TraitSelectedDisposition =
   | {
       /** Echo always equips the outer rarityless identity before this closed effect settles. */
       readonly kind: 'echo';
-      readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon';
+      readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon' | 'lastReward';
     }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
