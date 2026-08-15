@@ -12,6 +12,7 @@ import {
   createAcquisitionEntryAddress,
   createTraitOfferAddress,
   createGorgonPhaseAddress,
+  materializeGorgonAthenaOffer,
   createCirceResolutionAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
@@ -37,6 +38,7 @@ import type {
   CanonicalAuthoredRoom,
   EncounterPhaseSequenceStatus,
   FigLeafPhaseCandidateSupport,
+  GorgonPhaseCandidateSupport,
   FieldsBatchFacts,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
@@ -103,7 +105,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly figLeafSupport?: (
     phase: EncounterPhaseAddress,
   ) => FigLeafPhaseCandidateSupport | undefined;
-  readonly gorgonSupport?: (phase: EncounterPhaseAddress) => boolean;
+  readonly gorgonSupport?: (
+    phase: EncounterPhaseAddress,
+  ) => GorgonPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -581,11 +585,12 @@ function activeEncounterPhasesForOwner(
     const address = domain.origin;
     if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
     const figLeafSupport = input.figLeafSupport?.(address);
-    const gorgonSupport = input.gorgonSupport?.(address) === true;
+    const gorgonSupport = input.gorgonSupport?.(address);
+    const gorgonSupported = gorgonSupport?.supported === true;
     const authoredFigLeafSkip = encounters.figLeafSkipByPhase?.[domain.slotKey] === true;
     const authoredGorgonResult = encounters.gorgonResultByPhase?.[domain.slotKey];
     const gorgonResult =
-      authoredGorgonResult === undefined && gorgonSupport
+      authoredGorgonResult === undefined && gorgonSupported
         ? { deathDefianceConditionMet: false as const }
         : authoredGorgonResult;
     const retainedGorgon =
@@ -600,7 +605,7 @@ function activeEncounterPhasesForOwner(
       figLeafSupport === undefined &&
       !authoredFigLeafSkip &&
       !fixedHasTraitOffer &&
-      !gorgonSupport &&
+      !gorgonSupported &&
       !retainedGorgon
     )
       continue;
@@ -630,7 +635,13 @@ function activeEncounterPhasesForOwner(
     const gorgonPhaseAddress = createGorgonPhaseAddress(address);
     const gorgonAthenaOffer =
       input.facts.detailsActive && gorgonResult?.deathDefianceConditionMet === true
-        ? gorgonResult.athenaOffer
+        ? gorgonResult.athenaOffer === undefined
+          ? undefined
+          : materializeGorgonAthenaOffer(
+              input.catalog,
+              gorgonResult.athenaOffer,
+              gorgonSupport?.rarity,
+            )
         : undefined;
     const gorgonEffect = input.catalog.keepsakes.values.find(
       (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
@@ -649,6 +660,7 @@ function activeEncounterPhasesForOwner(
               createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
             ),
             offer: gorgonAthenaOffer,
+            rarityEditable: false,
             rewardOwner: gorgonPhaseAddress,
           })
         : undefined;
@@ -721,13 +733,13 @@ function activeEncounterPhasesForOwner(
             }
           : {}),
         ...(traitOffer === undefined ? {} : { traitOffer }),
-        ...(gorgonResult === undefined || (!gorgonSupport && !retainedGorgon)
+        ...(gorgonResult === undefined || (!gorgonSupported && !retainedGorgon)
           ? {}
           : {
               gorgonCondition: Object.freeze({
                 interactionKey: semanticAddressKey(address),
                 selected: gorgonResult.deathDefianceConditionMet,
-                supported: gorgonSupport,
+                supported: gorgonSupported,
               }),
             }),
         ...(gorgonAthena === undefined ? {} : { gorgonAthena }),

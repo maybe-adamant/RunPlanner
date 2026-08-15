@@ -30,7 +30,10 @@ import {
   simulateProjectAssembly,
 } from '../../src/simulation';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
-import { createDefaultGorgonAthenaOffer } from '../../src/authored-project/traits';
+import {
+  createDefaultGorgonAthenaOffer,
+  materializeGorgonAthenaOffer,
+} from '../../src/authored-project/traits';
 import {
   assessGorgonCandidate,
   assessGorgonChildSettlement,
@@ -42,7 +45,9 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
 } from '../../src/authored-project';
 import { createRouteStartKeepsakeSelectionAddress } from '../../src/authored-project';
 import { createEnteredNLocalProject } from '../authored-project/support/complete-n-project';
@@ -53,7 +58,7 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it('starts pending, consumes once, and never reactivates', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
-    expect(pending.gorgon).toEqual({ status: 'pending' });
+    expect(pending.gorgon).toEqual({ status: 'pending', rarity: 'Epic' });
     expect(consumeGorgonAppearance(pending).gorgon).toEqual({ status: 'consumed' });
     expect(consumeGorgonAppearance(consumeGorgonAppearance(pending)).gorgon).toEqual({
       status: 'consumed',
@@ -183,33 +188,41 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(project.routes[0]?.loadout.startingKeepsakeKey).toBe('AthenaEncounterKeepsake');
   });
 
-  it('settles a fixed-Epic three-option Athena child with parent DD context', () => {
-    const offer = createDefaultGorgonAthenaOffer(catalog);
-    expect(offer?.kind).toBe('traits');
-    if (offer?.kind !== 'traits') return;
-    expect(offer.options).toHaveLength(3);
-    expect(offer.options.every((option) => option.rarity === 'Epic')).toBe(true);
-    expect(offer.deathDefianceConditionMet).toBeUndefined();
-    const branch = initializeTestRewardBranches()[0]!;
-    const phase = createEncounterPhaseAddress(
-      createBiomeAddress('Underworld', 'G'),
-      { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-child') },
-      'Combat',
-    );
-    const evaluated = processEncounterTraitOffer(
-      catalog,
-      branch,
-      phase,
-      offer,
-      1,
-      'encounterCompleted',
-      undefined,
-      undefined,
-      true,
-      'gorgonAthena',
-    );
-    expect(evaluated.traitEvaluations?.at(-1)?.context.deathDefianceConditionMet).toBe(true);
-  });
+  it.each(['Epic', 'Heroic'] as const)(
+    'settles a chronology-resolved %s Athena child with parent DD context',
+    (rarity) => {
+      const child = createDefaultGorgonAthenaOffer(catalog);
+      expect(child?.traitKeys).toHaveLength(3);
+      if (child === undefined) return;
+      const offer = materializeGorgonAthenaOffer(catalog, child, rarity);
+      expect(offer).toBeDefined();
+      if (offer === undefined) return;
+      expect(offer.options).toHaveLength(3);
+      expect(offer.options.every((option) => option.rarity === rarity)).toBe(true);
+      expect(offer.deathDefianceConditionMet).toBeUndefined();
+      const branch = initializeTestRewardBranches()[0]!;
+      const phase = createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'G'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('gorgon-child') },
+        'Combat',
+      );
+      const evaluated = processEncounterTraitOffer(
+        catalog,
+        branch,
+        phase,
+        offer,
+        1,
+        'encounterCompleted',
+        undefined,
+        undefined,
+        true,
+        'gorgonAthena',
+        rarity,
+      );
+      expect(evaluated.traitEvaluations?.at(-1)?.context.deathDefianceConditionMet).toBe(true);
+      expect(evaluated.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(rarity);
+    },
+  );
 
   it('atomically creates the authored child and preserves it when the condition is cleared', () => {
     const phase = createEncounterPhaseAddress(
@@ -232,10 +245,11 @@ describe('Gorgon Amulet lifecycle', () => {
     const enabledResult = enabledOccurrence?.encounters.gorgonResultByPhase?.Combat;
     expect(enabledResult?.deathDefianceConditionMet).toBe(true);
     const enabledOffer = enabledResult?.athenaOffer;
-    expect(enabledOffer?.kind).toBe('traits');
-    if (enabledOffer?.kind !== 'traits') return;
-    expect(enabledOffer.options).toHaveLength(3);
-    expect(enabledOffer.options.every((option) => option.rarity === 'Epic')).toBe(true);
+    expect(enabledOffer?.traitKeys).toHaveLength(3);
+    expect(enabledOffer).toEqual({
+      traitKeys: ['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon'],
+      selectedOptionKey: 'option1',
+    });
 
     const disabled = applyProjectCommand(enabled, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
@@ -282,23 +296,63 @@ describe('Gorgon Amulet lifecycle', () => {
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       )?.encounters.gorgonResultByPhase?.Combat;
     expect(result?.deathDefianceConditionMet).toBe(true);
-    expect(result?.athenaOffer?.kind).toBe('traits');
+    expect(result?.athenaOffer?.traitKeys).toHaveLength(3);
+  });
+
+  it('persists only Gorgon author decisions through its exact command and undo/redo', () => {
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      'Combat',
+    );
+    const initial = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
+    const value = {
+      traitKeys: [
+        'FocusLastStandBoon',
+        'InvulnerabilityDashBoon',
+        'RetaliateInvulnerabilityBoon',
+      ] as const,
+      selectedOptionKey: 'option2' as const,
+    };
+    const command = { kind: 'ReplaceGorgonAthenaOffer' as const, trait, value };
+    const changed = applyProjectHistoryCommand(createProjectHistory(initial), catalog, command);
+    const occurrence = changed.present.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
+      );
+    expect(occurrence?.encounters.gorgonResultByPhase?.Combat?.athenaOffer).toEqual(value);
+    expect(redoProjectHistory(undoProjectHistory(changed)).present).toEqual(changed.present);
+
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: materializeGorgonAthenaOffer(catalog, value, 'Epic')!,
+      }),
+    ).toThrow('persists only its bound author decisions');
   });
 
   it('blocks downstream activation when the required child is missing or malformed', () => {
     expect(assessGorgonChildSettlement(catalog, undefined)).toBe(false);
     const offer = createDefaultGorgonAthenaOffer(catalog);
     expect(assessGorgonChildSettlement(catalog, offer)).toBe(true);
-    if (offer?.kind !== 'traits') return;
+    if (offer === undefined) return;
     expect(
       assessGorgonChildSettlement(catalog, {
         ...offer,
-        options: Object.freeze([offer.options[0]!]),
+        traitKeys: Object.freeze([offer.traitKeys[0]!, offer.traitKeys[0]!, offer.traitKeys[2]!]),
       }),
     ).toBe(false);
   });
 
-  it('blocks the real reward fold when a retained required child is malformed', () => {
+  it('keeps a structurally valid context-invalid child at its owner and blocks settlement', () => {
     const phase = createEncounterPhaseAddress(
       createBiomeAddress('Underworld', 'G'),
       { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(1, 1) },
@@ -314,7 +368,7 @@ describe('Gorgon Amulet lifecycle', () => {
       phase,
       value: true,
     });
-    const malformed = project.routes.map((route) =>
+    const contextInvalid = project.routes.map((route) =>
       route.routeKey !== 'Underworld'
         ? route
         : Object.freeze({
@@ -345,15 +399,11 @@ describe('Gorgon Amulet lifecycle', () => {
                                               athenaOffer: Object.freeze({
                                                 ...occurrence.encounters.gorgonResultByPhase
                                                   ?.Encounter?.athenaOffer,
-                                                options: Object.freeze(
-                                                  occurrence.encounters.gorgonResultByPhase
-                                                    ?.Encounter?.athenaOffer?.kind === 'traits'
-                                                    ? occurrence.encounters.gorgonResultByPhase.Encounter.athenaOffer.options.slice(
-                                                        0,
-                                                        1,
-                                                      )
-                                                    : [],
-                                                ),
+                                                traitKeys: Object.freeze([
+                                                  'OlympianSpellCountBoon',
+                                                  'RetaliateInvulnerabilityBoon',
+                                                  'FocusLastStandBoon',
+                                                ]),
                                               }),
                                             }),
                                           }),
@@ -369,7 +419,7 @@ describe('Gorgon Amulet lifecycle', () => {
     );
     const evaluation = simulateProjectAssembly(catalog, {
       ...project,
-      routes: Object.freeze(malformed) as typeof project.routes,
+      routes: Object.freeze(contextInvalid) as typeof project.routes,
     }).evaluation;
     const g = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -379,8 +429,11 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       g.rewards.branches.every((branch) => branch.keepsakes.gorgon?.status === 'pending'),
     ).toBe(true);
-    expect(g.findings.some((finding) => finding.code === 'rewardAcquisitionUnavailable')).toBe(
-      true,
+    expect(g.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'missingPrerequisite',
+        origin: expect.objectContaining({ acquisitionRole: 'gorgonAthena' }),
+      }),
     );
 
     const missing = project.routes.map((route) =>
@@ -486,9 +539,10 @@ describe('Gorgon Amulet lifecycle', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     const pending = simulateProjectAssembly(catalog, pendingProject);
-    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(pending, phase)?.supported).toBe(
-      true,
-    );
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(pending, phase)).toMatchObject({
+      supported: true,
+      rarity: 'Epic',
+    });
 
     pendingProject = applyProjectCommand(pendingProject, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
@@ -496,9 +550,10 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     const consumed = simulateProjectAssembly(catalog, pendingProject);
-    expect(
-      encounterPhaseGorgonSupportForProjectEvaluationAssembly(consumed, phase)?.supported,
-    ).toBe(false);
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(consumed, phase)).toMatchObject({
+      supported: false,
+      rarity: 'Epic',
+    });
 
     const naturalFirst = applyProjectCommand(pendingProject, catalog, {
       kind: 'SelectEncounter',
@@ -626,7 +681,7 @@ describe('Gorgon Amulet lifecycle', () => {
         ...branch,
         keepsakes: Object.freeze({
           ...branch.keepsakes,
-          gorgon: { status: 'pending' as const },
+          gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
           figLeaf: { remainingUses: 3, activatedThisBiome: false },
         }),
       }),

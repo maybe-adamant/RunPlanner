@@ -106,6 +106,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceTraitOffer':
+    case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
       return applyTraitOfferCommand(
         document,

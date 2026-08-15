@@ -17,6 +17,7 @@ export type {
   RewardStoreSupportEntry,
   TargetRewardHistoryCheckpoint,
   FigLeafPhaseCandidateSupport,
+  GorgonPhaseCandidateSupport,
 } from './model';
 export type {
   DecisionCounterState,

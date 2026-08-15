@@ -199,7 +199,12 @@ export function presentRunState(
           }),
       ...(snapshot.keepsakes.gorgon === undefined
         ? {}
-        : { gorgonStatus: snapshot.keepsakes.gorgon.status }),
+        : {
+            gorgonStatus: snapshot.keepsakes.gorgon.status,
+            ...(snapshot.keepsakes.gorgon.status === 'pending'
+              ? { gorgonRarity: snapshot.keepsakes.gorgon.rarity }
+              : {}),
+          }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

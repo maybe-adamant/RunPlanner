@@ -143,7 +143,14 @@ describe('trait offer editor', () => {
               : {
                   circeResolution: Object.freeze({
                     control,
-                    intentFor: () => base.intentFor(value),
+                    intentFor: () =>
+                      Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceTraitOffer' as const,
+                          trait: base.owner,
+                          value,
+                        }),
+                      }),
                     forOffer: () => Object.freeze({ load: () => domain }),
                   }),
                 }),

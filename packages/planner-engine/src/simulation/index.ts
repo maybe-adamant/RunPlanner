@@ -188,6 +188,7 @@ export {
   RewardAuthoringDomainContractError,
   type BiomeRewardSimulation,
   type FigLeafPhaseCandidateSupport,
+  type GorgonPhaseCandidateSupport,
   type CountedRewardOwnerAddress,
   type RewardBranch,
   type RewardEvent,

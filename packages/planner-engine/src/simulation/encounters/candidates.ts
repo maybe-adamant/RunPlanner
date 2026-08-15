@@ -30,7 +30,7 @@ export interface EncounterCandidateArtifacts {
   readonly at: (origin: EncounterPhaseAddress) => EncounterPhaseCandidateSupport | undefined;
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
-  readonly gorgonAt: (origin: EncounterPhaseAddress) => { readonly supported: boolean } | undefined;
+  readonly gorgonAt: (origin: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
   /**
    * A top-level room's exact preparation checkpoint, retained for structural
    * authoring candidates that materialize a different encounter envelope.
@@ -199,17 +199,19 @@ export function evaluateEncounterCandidatesInternal(
   const privateGorgon = new Map(
     gorgonPhaseCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
   );
-  const gorgonSupport = new Map<string, { readonly supported: boolean }>();
+  const gorgonSupport = new Map<string, GorgonPhaseCandidateSupport>();
   for (const [key, support] of entries) {
     const exact = privateGorgon.get(key);
     if (exact === undefined) continue;
     gorgonSupport.set(
       key,
       Object.freeze({
+        origin: exact.origin,
         supported:
           catalog.encounterDefinitions.byKey[support.selectedEncounterKey]?.hostsGorgon === true &&
           gorgonStatus === 'pending' &&
           privateGorgon.get(key)?.supported === true,
+        ...(exact.rarity === undefined ? {} : { rarity: exact.rarity }),
       }),
     );
   }

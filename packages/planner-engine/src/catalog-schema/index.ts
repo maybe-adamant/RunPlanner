@@ -93,6 +93,8 @@ export interface FearVowDeclaration {
       };
 }
 
+export type KeepsakeRank = 'Common' | 'Rare' | 'Epic' | 'Heroic';
+
 export type KeepsakeRankProfile<
   Common extends number,
   Rare extends number,

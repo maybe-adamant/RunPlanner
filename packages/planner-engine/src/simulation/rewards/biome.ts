@@ -17,6 +17,7 @@ import {
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
 import {
   createDefaultPickupRewardState,
+  materializeGorgonAthenaOffer,
   selectedPickupProducer,
 } from '../../authored-project/traits';
 import {
@@ -134,10 +135,12 @@ import {
   invalidateJeweledPom,
   jeweledPomEffectForKey,
   keepsakeSelectionUnavailableReason,
+  keepsakeRankForEquip,
   refreshKeepsakeFatedStatus,
   consumeFigLeafUse,
   attestFigLeafBranchState,
   attestGorgonBranchState,
+  attestPendingGorgonRarity,
   consumeGorgonAppearance,
   expirePendingGorgon,
   assessGorgonEligibility,
@@ -1855,6 +1858,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           gorgonView !== undefined
         ) {
           const gorgonStatus = attestGorgonBranchState(branches);
+          const gorgonRarity = attestPendingGorgonRarity(branches);
           const selectedEncounterKey = selectedEncounterDefinitionKey(
             catalog,
             gorgonDeclaration,
@@ -1890,7 +1894,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
             event.execution === 'normal';
           gorgonPhaseCandidates.set(
             semanticAddressKey(gorgonOrigin),
-            Object.freeze({ origin: gorgonOrigin, supported: gorgonCandidateSupported }),
+            Object.freeze({
+              origin: gorgonOrigin,
+              supported: gorgonCandidateSupported,
+              ...(gorgonRarity === undefined ? {} : { rarity: gorgonRarity }),
+            }),
           );
           if (
             gorgonStatus === 'pending' &&
@@ -1986,7 +1994,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           // branches that actually crossed the rack boundary. Keep that
           // explicit pre/post attestation instead of deriving reachability
           // from the persisted disposition alone.
-          const rackTransitions = branches.map((branch) => {
+          let rackTransitions = branches.map((branch) => {
             const before = branch.keepsakes;
             const unavailable =
               disposition.kind === 'replace' &&
@@ -1996,9 +2004,23 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 disposition.keepsakeKey,
                 encounterBlockedKeepsakeKeys,
               ) !== undefined;
+            const equippedRank =
+              disposition.kind === 'replace' && !unavailable
+                ? keepsakeRankForEquip(
+                    catalog,
+                    disposition.keepsakeKey,
+                    branch.traitHistory ?? createTraitHistoryState(),
+                  )
+                : undefined;
             const after = unavailable
               ? before
-              : applyKeepsakeDisposition(catalog, before, disposition, branch.arcanaFear);
+              : applyKeepsakeDisposition(
+                  catalog,
+                  before,
+                  disposition,
+                  branch.arcanaFear,
+                  equippedRank,
+                );
             const replacementSucceeded =
               disposition.kind === 'replace' &&
               before.currentKey !== after.currentKey &&
@@ -2006,42 +2028,46 @@ export function evaluateBiomeRewardsAssemblyInternal(
             return Object.freeze({
               branch: Object.freeze({ ...branch, keepsakes: after }),
               replacementSucceeded,
+              ...(equippedRank === undefined ? {} : { equippedRank }),
             });
           });
-          branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
-          branches = Object.freeze(
-            branches.map((branch) => {
-              if (
-                branch.keepsakes.fatedStatus !== 'Unfated' ||
-                branch.keepsakes.jeweledPom?.active !== true
-              )
-                return branch;
-              const prior = branch.traitHistory ?? createTraitHistoryState();
-              const traitHistory = foldTraitHistoryEvents(catalog, [
-                ...prior.events,
-                Object.freeze({
-                  kind: 'traitRemoval' as const,
-                  owner: selection,
-                  acquisitionRole: 'jeweledPomCleanup',
-                  sequence: event.sequence,
-                  acquisitionPoint: 'keepsakeFatedInvalidation',
-                  traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
-                  acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
-                }),
-              ]);
-              return Object.freeze({
+          rackTransitions = rackTransitions.map((transition) => {
+            const branch = transition.branch;
+            if (
+              branch.keepsakes.fatedStatus !== 'Unfated' ||
+              branch.keepsakes.jeweledPom?.active !== true
+            )
+              return transition;
+            const prior = branch.traitHistory ?? createTraitHistoryState();
+            const traitHistory = foldTraitHistoryEvents(catalog, [
+              ...prior.events,
+              Object.freeze({
+                kind: 'traitRemoval' as const,
+                owner: selection,
+                acquisitionRole: 'jeweledPomCleanup',
+                sequence: event.sequence,
+                acquisitionPoint: 'keepsakeFatedInvalidation',
+                traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
+                acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
+              }),
+            ]);
+            return Object.freeze({
+              ...transition,
+              branch: Object.freeze({
                 ...branch,
                 history: attachTraitHistory(branch.history, traitHistory),
                 traitHistory,
                 keepsakes: invalidateJeweledPom(branch.keepsakes),
-              });
-            }),
-          );
+              }),
+            });
+          });
+          branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
           if (disposition.kind === 'replace') {
+            const successfulReplacementTransitions = Object.freeze(
+              rackTransitions.filter((transition) => transition.replacementSucceeded),
+            );
             const successfulReplacementBranches = Object.freeze(
-              rackTransitions
-                .filter((transition) => transition.replacementSucceeded)
-                .map((transition) => transition.branch),
+              successfulReplacementTransitions.map((transition) => transition.branch),
             );
             if (jeweledPomEffectForKey(catalog, disposition.keepsakeKey) !== undefined) {
               const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
@@ -2151,35 +2177,40 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 );
               }
             }
-            branches = Object.freeze(
-              branches.map((branch) =>
-                successfulReplacementBranches.includes(branch)
-                  ? applyJeweledPomEquipResult(
+            rackTransitions = rackTransitions.map((transition) =>
+              !transition.replacementSucceeded
+                ? transition
+                : Object.freeze({
+                    ...transition,
+                    branch: applyJeweledPomEquipResult(
                       catalog,
-                      branch,
+                      transition.branch,
                       disposition.keepsakeKey,
                       snapshot.keepsakeEquipResults,
                       createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
                       event.sequence,
-                    )
-                  : branch,
-              ),
+                      transition.equippedRank,
+                    ),
+                  }),
             );
-            branches = Object.freeze(
-              branches.map((branch) =>
-                successfulReplacementBranches.includes(branch)
-                  ? applyExperimentalHammerEquipResult(
+            rackTransitions = rackTransitions.map((transition) =>
+              !transition.replacementSucceeded
+                ? transition
+                : Object.freeze({
+                    ...transition,
+                    branch: applyExperimentalHammerEquipResult(
                       catalog,
-                      branch,
+                      transition.branch,
                       disposition.keepsakeKey,
                       snapshot.keepsakeEquipResults,
                       createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
                       event.sequence,
                       routeLoadout,
-                    )
-                  : branch,
-              ),
+                      transition.equippedRank,
+                    ),
+                  }),
             );
+            branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
           }
         }
         if (event.source === 'generatedTarget' && event.parentOrigin.kind === 'hubRoom') {
@@ -3134,14 +3165,21 @@ export function evaluateBiomeRewardsAssemblyInternal(
           );
           const gorgonPhaseAddress = createGorgonPhaseAddress(encounterPhaseAddress);
           const gorgonAddress = createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena');
-          const gorgonOffer = result?.athenaOffer;
           const gorgonKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
+          const gorgonSnapshot = gorgonPhaseCandidates.get(
+            semanticAddressKey(encounterPhaseAddress),
+          );
+          const gorgonOffer =
+            result?.athenaOffer === undefined || gorgonSnapshot?.rarity === undefined
+              ? undefined
+              : materializeGorgonAthenaOffer(catalog, result.athenaOffer, gorgonSnapshot.rarity);
           if (
             phase?.blocksGorgon !== true &&
             declaration.blocksGorgon !== true &&
             result?.deathDefianceConditionMet === true &&
+            result.athenaOffer !== undefined &&
             gorgonOffer !== undefined &&
-            assessGorgonChildSettlement(catalog, gorgonOffer) &&
+            assessGorgonChildSettlement(catalog, result.athenaOffer) &&
             !blockedGorgonPhases.has(gorgonKey)
           ) {
             const beforeEvaluations = branches.map(
@@ -3164,6 +3202,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 ),
                 result.deathDefianceConditionMet,
                 'gorgonAthena',
+                gorgonSnapshot?.rarity,
               ),
             );
             const valid = processed.every((branch, index) => {
@@ -3191,7 +3230,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
               blockedGorgonPhases.add(gorgonKey);
               gorgonEvaluationBlocked = true;
             }
-          } else if (result?.deathDefianceConditionMet === true && !gorgonOffer) {
+          } else if (
+            result?.deathDefianceConditionMet === true &&
+            result.athenaOffer === undefined
+          ) {
             blockedGorgonPhases.add(gorgonKey);
             gorgonEvaluationBlocked = true;
             addRewardFinding(
@@ -3202,7 +3244,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ownerRegion(gorgonAddress.owner),
               historyFindingChronology(event.sequence),
             );
-          } else if (result?.deathDefianceConditionMet === true && gorgonOffer !== undefined) {
+          } else if (
+            result?.deathDefianceConditionMet === true &&
+            result.athenaOffer !== undefined
+          ) {
             blockedGorgonPhases.add(gorgonKey);
             gorgonEvaluationBlocked = true;
             addRewardFinding(

@@ -64,7 +64,13 @@ const CONTEXTS = [
   'deathDefianceConditionMet',
   'circeRemovableFearVow',
 ] as const;
-const SELECTED_DISPOSITIONS = ['equip', 'producePickups', 'noOp', 'circe'] as const;
+const SELECTED_DISPOSITIONS = [
+  'equip',
+  'advanceCurrentKeepsake',
+  'producePickups',
+  'noOp',
+  'circe',
+] as const;
 type RawTraitRequirement = {
   readonly kind: string;
   readonly requirements: readonly TraitRequirementExpression[];
@@ -99,8 +105,14 @@ function normalizeSelectedDisposition(
     readonly producerLifecycleKey?: unknown;
     readonly pickups?: unknown;
     readonly effect?: unknown;
+    readonly rankBonus?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'advanceCurrentKeepsake') {
+    if (Object.keys(value).length !== 2 || value.rankBonus !== 1)
+      fail(path, 'advanceCurrentKeepsake requires only kind and rankBonus 1');
+    return Object.freeze({ kind, rankBonus: 1 });
+  }
   if (kind === 'circe') {
     if (Object.keys(value).length !== 2) fail(path, 'circe requires only kind and effect');
     return Object.freeze({
@@ -627,6 +639,25 @@ function normalizeTraits(
     if (isHammer && (freshOfferRarities.length !== 0 || equippedRarities.length !== 0)) {
       fail(`${path}.freshOfferRarities`, 'Hammer traits have no rarity domain');
     }
+    const selectedDisposition = normalizeSelectedDisposition(
+      trait.selectedDisposition,
+      `${path}.selectedDisposition`,
+    );
+    if (
+      trait.key === 'KeepsakeLevelBoon' &&
+      selectedDisposition.kind !== 'advanceCurrentKeepsake'
+    ) {
+      fail(
+        `${path}.selectedDisposition`,
+        'KeepsakeLevelBoon must declare the rank-one current-keepsake advance',
+      );
+    }
+    if (
+      trait.key !== 'KeepsakeLevelBoon' &&
+      selectedDisposition.kind === 'advanceCurrentKeepsake'
+    ) {
+      fail(`${path}.selectedDisposition`, 'is reserved for KeepsakeLevelBoon');
+    }
     return Object.freeze({
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),
@@ -656,10 +687,7 @@ function normalizeTraits(
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
-      selectedDisposition: normalizeSelectedDisposition(
-        trait.selectedDisposition,
-        `${path}.selectedDisposition`,
-      ),
+      selectedDisposition,
     });
   });
   const collection = createCollection(values, 'traits', (trait) => trait.key);

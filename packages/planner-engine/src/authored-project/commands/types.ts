@@ -30,7 +30,12 @@ import type {
   TargetAddress,
 } from '../addresses';
 import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
-import type { AuthoredLevelResolution, AuthoredTraitOffer, TraitOptionKey } from '../traits';
+import type {
+  AuthoredGorgonAthenaOffer,
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+  TraitOptionKey,
+} from '../traits';
 
 export type ProjectStateCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
@@ -314,6 +319,11 @@ export type TraitOfferCommand =
       readonly kind: 'ReplaceTraitOffer';
       readonly trait: TraitOfferAddress;
       readonly value: AuthoredTraitOffer;
+    }
+  | {
+      readonly kind: 'ReplaceGorgonAthenaOffer';
+      readonly trait: TraitOfferAddress;
+      readonly value: AuthoredGorgonAthenaOffer;
     }
   | {
       readonly kind: 'ReplaceTraitSelection';

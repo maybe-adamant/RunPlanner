@@ -1798,6 +1798,55 @@ describe('trait offer catalog closure', () => {
     });
   });
 
+  it('owns Cherished Heirloom as the sole exact rank-one keepsake advance disposition', () => {
+    expect(catalog.traits.byKey.KeepsakeLevelBoon?.selectedDisposition).toEqual({
+      kind: 'advanceCurrentKeepsake',
+      rankBonus: 1,
+    });
+    expect(
+      catalog.traits.values.filter(
+        (trait) => trait.selectedDisposition.kind === 'advanceCurrentKeepsake',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['wrong rank', { kind: 'advanceCurrentKeepsake', rankBonus: 2 }],
+    ['wrong kind', { kind: 'noOp' }],
+  ] as const)('rejects a %s Cherished keepsake advance declaration', (_label, disposition) => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'KeepsakeLevelBoon'
+            ? { ...trait, selectedDisposition: disposition as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(/KeepsakeLevelBoon|rankBonus 1/);
+  });
+
+  it('rejects the Cherished disposition on any other trait', () => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'ApolloWeaponBoon'
+            ? {
+                ...trait,
+                selectedDisposition: { kind: 'advanceCurrentKeepsake', rankBonus: 1 } as never,
+              }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(/reserved for KeepsakeLevelBoon/);
+  });
+
   it.each([
     [
       'unknown pickup lifecycle',

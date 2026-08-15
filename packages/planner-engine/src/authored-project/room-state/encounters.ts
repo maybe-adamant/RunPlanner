@@ -8,6 +8,7 @@ import type {
 } from '../../catalog-schema';
 import {
   traitOfferSupportsExhaustion,
+  type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
@@ -437,6 +438,35 @@ function legalTraitOfferEncounterKeys(
   return encounterSetForBinding(catalog, binding, 'encounter trait offers').encounterDefinitionKeys;
 }
 
+function decodeGorgonAthenaOffer(
+  value: unknown,
+  catalog: Catalog,
+  giverKey: string,
+  path: string,
+): AuthoredGorgonAthenaOffer {
+  const record = expectRecord(value, path);
+  expectExactKeys(record, ['traitKeys', 'selectedOptionKey'], path);
+  const traitKeys = expectArray(record.traitKeys, `${path}.traitKeys`).map((entry, index) =>
+    expectString(entry, `${path}.traitKeys[${index}]`),
+  );
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (
+    traitKeys.length !== 3 ||
+    new Set(traitKeys).size !== 3 ||
+    giver === undefined ||
+    traitKeys.some((traitKey) => !giver.traitKeys.includes(traitKey))
+  ) {
+    failProjectDocument(path, `must contain exactly three distinct ${giverKey} trait identities`);
+  }
+  const selectedOptionKey = expectString(record.selectedOptionKey, `${path}.selectedOptionKey`);
+  if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(selectedOptionKey))
+    failProjectDocument(`${path}.selectedOptionKey`, 'must select option1, option2, or option3');
+  return Object.freeze({
+    traitKeys: Object.freeze(traitKeys) as readonly [string, string, string],
+    selectedOptionKey: selectedOptionKey as TraitOptionKey,
+  });
+}
+
 export function decodeRoomEncounterState(
   value: unknown,
   catalog: Catalog,
@@ -522,32 +552,14 @@ export function decodeRoomEncounterState(
       result.deathDefianceConditionMet,
       `${path}.gorgonResultByPhase.${phaseKey}.deathDefianceConditionMet`,
     );
-    let athenaOffer: import('../traits').AuthoredTraitOffer | undefined;
+    let athenaOffer: AuthoredGorgonAthenaOffer | undefined;
     if (hasOffer) {
-      athenaOffer = decodeEncounterTraitOffer(
+      athenaOffer = decodeGorgonAthenaOffer(
         result.athenaOffer,
         catalog,
         gorgonProviderKey,
         `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
-        true,
-        true,
       );
-      if (
-        athenaOffer.kind !== 'traits' ||
-        athenaOffer.options.length < 1 ||
-        athenaOffer.options.length > 3
-      ) {
-        failProjectDocument(
-          `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
-          'Gorgon Athena requires exactly three trait options',
-        );
-      }
-      if (athenaOffer.kind === 'traits' && athenaOffer.deathDefianceConditionMet !== undefined) {
-        failProjectDocument(
-          `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
-          'Gorgon Athena owns Death Defiance context on its parent phase',
-        );
-      }
     }
     gorgonResultByPhase[phaseKey] = Object.freeze({
       deathDefianceConditionMet,

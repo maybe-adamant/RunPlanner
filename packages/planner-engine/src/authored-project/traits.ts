@@ -41,6 +41,12 @@ export interface AuthoredTraitOfferFallbackGold {
 export type AuthoredTraitOffer = AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold;
 export type TraitOptionKey = 'option1' | 'option2' | 'option3';
 
+/** Gorgon persists only author decisions; provider and rarity are chronological facts. */
+export interface AuthoredGorgonAthenaOffer {
+  readonly traitKeys: readonly [string, string, string];
+  readonly selectedOptionKey: TraitOptionKey;
+}
+
 /** Makes the declaration-owned producer identity explicit at authored boundaries. */
 export function producerLevelEffectSource(binding: {
   readonly producerLifecycleKey: string;
@@ -252,33 +258,56 @@ export function createDefaultEncounterTraitOffer(
   });
 }
 
-/** Declaration-owned rank-III Athena child for an ordinary Gorgon equip. */
-export function createDefaultGorgonAthenaOffer(catalog: Catalog): AuthoredTraitOffer | undefined {
+/** Declaration-owned Athena decisions for one Gorgon child. */
+export function createDefaultGorgonAthenaOffer(
+  catalog: Catalog,
+): AuthoredGorgonAthenaOffer | undefined {
   const keepsake = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
   );
   const effect = keepsake?.effect;
   const providerKey = effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined;
-  const rarityLevel =
-    effect?.kind === 'gorgonAmulet' && keepsake !== undefined
-      ? effect.rarityLevelByRank[keepsake.rank]
-      : undefined;
-  const rarity = rarityLevel === undefined ? undefined : catalog.traitRarityOrder[rarityLevel - 1];
   const giver = providerKey === undefined ? undefined : catalog.traitGivers.byKey[providerKey];
   const defaults = giver?.defaultOffer;
-  if (giver === undefined || defaults === undefined || rarity === undefined) return undefined;
+  if (giver === undefined || defaults === undefined) return undefined;
   return Object.freeze({
-    kind: 'traits' as const,
-    giverKey: giver.key,
-    options: Object.freeze(
-      defaults.options.map((option) => Object.freeze({ ...option, rarity })),
-    ) as AuthoredTraitOfferTraits['options'],
+    traitKeys: Object.freeze(defaults.options.map((option) => option.traitKey)) as readonly [
+      string,
+      string,
+      string,
+    ],
     selectedOptionKey:
       defaults.selectedOption === 0
         ? 'option1'
         : defaults.selectedOption === 1
           ? 'option2'
           : 'option3',
+  });
+}
+
+/** Transient full offer consumed by ordinary assessment and presentation. */
+export function materializeGorgonAthenaOffer(
+  catalog: Catalog,
+  value: AuthoredGorgonAthenaOffer,
+  rarity?: TraitRarity,
+): AuthoredTraitOfferTraits | undefined {
+  const effect = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+  )?.effect;
+  if (
+    effect?.kind !== 'gorgonAmulet' ||
+    catalog.traitGivers.byKey[effect.providerKey] === undefined
+  )
+    return undefined;
+  return Object.freeze({
+    kind: 'traits',
+    giverKey: effect.providerKey,
+    options: Object.freeze(
+      value.traitKeys.map((traitKey) =>
+        Object.freeze({ traitKey, ...(rarity === undefined ? {} : { rarity }) }),
+      ),
+    ) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: value.selectedOptionKey,
     rarificationActions: Object.freeze([]),
   });
 }

@@ -1,4 +1,4 @@
-import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import type { Catalog, KeepsakeRank, RoomDeclaration } from '../../catalog-schema';
 import { evaluateCallingCardOffer } from '../keepsakes';
 import {
   createAcquisitionEntryAddress,
@@ -695,6 +695,7 @@ export function processEncounterTraitOffer(
   findingChronology?: FindingChronology,
   deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
+  freshRarityOverride?: import('../../catalog-schema').TraitRarity,
 ): RewardBranchState {
   if (offer.kind === 'fallbackGold') {
     return applyTraitOfferForAcquisition(
@@ -732,6 +733,7 @@ export function processEncounterTraitOffer(
       manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
       circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
       ...(deathDefianceConditionMet === undefined ? {} : { deathDefianceConditionMet }),
+      ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
     }),
   } as const;
   // Record the exact pre-effect frontier before validating Circe's authored
@@ -1045,6 +1047,7 @@ export function applyJeweledPomEquipResult(
   results: AuthoredKeepsakeEquipResults | undefined,
   owner: SemanticAddress,
   sequence: number,
+  equippedRank?: KeepsakeRank,
 ): RewardBranchState {
   const result = results?.jeweledPom;
   const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
@@ -1102,7 +1105,7 @@ export function applyJeweledPomEquipResult(
     keepsakes: equipJeweledPom(
       branch.keepsakes,
       result.traitKey,
-      effect.subsequentEligibleTraitLevelsByRank[keepsake.rank],
+      effect.subsequentEligibleTraitLevelsByRank[equippedRank ?? keepsake.rank],
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
@@ -1118,6 +1121,7 @@ export function applyExperimentalHammerEquipResult(
   owner: SemanticAddress,
   sequence: number,
   loadout: { readonly weaponKey: string; readonly aspectKey: string },
+  equippedRank?: KeepsakeRank,
 ): RewardBranchState {
   const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
   const effect = keepsake?.effect;
@@ -1164,7 +1168,7 @@ export function applyExperimentalHammerEquipResult(
     keepsakes: equipExperimentalHammer(
       branch.keepsakes,
       result.traitKey,
-      effect.qualifyingEncounterUsesByRank[keepsake.rank],
+      effect.qualifyingEncounterUsesByRank[equippedRank ?? keepsake.rank],
       acquisitionIdentity,
     ),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),

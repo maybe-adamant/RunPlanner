@@ -435,6 +435,8 @@ export interface TraitOfferContext {
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
   readonly deathDefianceConditionMet?: boolean;
+  /** Source-resolved appearance rarity that may exceed the ordinary fresh-offer domain. */
+  readonly freshRarityOverride?: TraitRarity;
   /** Exact pre-acquisition Fear frontier for catalog-owned Circe availability. */
   readonly circeRemovableFearVow?: boolean;
   /** The declaration-resolved provider for the addressed acquisition role. */
@@ -892,7 +894,11 @@ export function recordReachedTraitOffer(
   // equipped-trait history; descriptors and pickup producers remain
   // observational at this boundary.
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
-  if (selectedDisposition?.kind !== 'equip' && selectedDisposition?.kind !== 'circe') {
+  if (
+    selectedDisposition?.kind !== 'equip' &&
+    selectedDisposition?.kind !== 'circe' &&
+    selectedDisposition?.kind !== 'advanceCurrentKeepsake'
+  ) {
     return Object.freeze({ history: evaluation.before });
   }
   const selectedAssessment =
@@ -1369,12 +1375,14 @@ export function assessTraitOption(
   }
   // Ranked authored rarities are structurally allowed to retain an equipped
   // rarity while the contextual offer decides whether it is a fresh option.
-  // A legal replacement is the one exception: its exact promoted rarity may
-  // be Heroic even though Heroic is never a fresh offer rarity.
+  // Legal replacements may use their exact promoted rarity, and a source may
+  // explicitly override the fresh appearance rarity (for example, Gorgon at
+  // Heroic), even though Heroic is never an ordinary fresh offer rarity.
   if (
     trait.rarityDomain.kind === 'ranked' &&
     rarity !== undefined &&
     !trait.rarityDomain.freshOfferRarities.includes(rarity) &&
+    context.freshRarityOverride !== rarity &&
     replacementTransition === undefined
   ) {
     findings.push({
