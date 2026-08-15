@@ -509,6 +509,13 @@ export interface RoomDeclaration {
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren: readonly LocalChildDescriptor[];
+  /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
+  readonly infernalContractReward?: {
+    readonly entryKey: 'infernalContractReward';
+    readonly producerLifecycleKey: string;
+    readonly rewardTypes: readonly [string, string, string, string, string];
+    readonly defaultRewardType: string;
+  };
 }
 
 export type AuthoredFieldInitialization<T> =

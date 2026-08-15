@@ -647,7 +647,8 @@ feature commit when authorized.
    and the one chronology in the Acquisitions workbench.
 9. Project total opportunities, derived rows, unified chronology, exact
    findings, navigation, UI editing, and Redux undo/redo without React policy.
-10. Prove all supported route profiles and alternative I Preboss declarations.
+10. Prove all supported route profiles, including the planner-supported
+    `I_PreBoss02` variant; do not add the unmodeled `I_PreBoss01` alternate map.
 
 ### Primary test owners
 
@@ -675,9 +676,8 @@ feature commit when authorized.
   rarityless Infernal Contract;
 - no entered contract means no later pedestal despite retained authored child
   state;
-- each reached F/G/H/N/O/P destination exposes 3+1, I exposes 5+1, and Q
-  exposes 6+1 opportunities; both I Preboss declarations use one alternative
-  opportunity, not two;
+- each reached F/G/H/N/O/P destination exposes 3+1, the supported
+  `I_PreBoss02` destination exposes 5+1, and Q exposes 6+1 opportunities;
 - each exact pedestal reward identity can be authored and settled through its
   existing nested acquisition semantics;
 - contract skip/acquire before/acquire after normal purchases preserve one

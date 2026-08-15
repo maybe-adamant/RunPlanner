@@ -1198,6 +1198,33 @@ describe('route-detour simulation', () => {
     ).toBe(false);
   });
 
+  it('acquires the genuine C_Boss01 fixed reward as one rarityless Infernal Contract', () => {
+    const { project, contract } = buildMidshopProject({ normalTargets: true });
+    const { snapshot, history } = prefix(project, fBiome);
+    const rewards = evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project, fBiome),
+    );
+    expect(
+      rewards.branches.some(
+        (branch) =>
+          branch.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
+          'InfernalContractBoon',
+      ),
+    ).toBe(true);
+    expect(
+      history.events.some(
+        (event) =>
+          event.kind === 'roomEntered' &&
+          semanticAddressKey(event.origin) ===
+            semanticAddressKey(createOccurrenceAddress(fBiome, contract)),
+      ),
+    ).toBe(true);
+  });
+
   it('keeps a later unpicked contract authored but invalidates it from the earlier entered route contract', () => {
     const earlier = buildMidshopProject({ normalTargets: true });
     const first = prefix(earlier.project, fBiome);

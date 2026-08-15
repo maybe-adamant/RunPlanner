@@ -103,6 +103,29 @@ function validateEchoGiftBindings(
     fail('traits.EchoRepeatKeepsakeBoon.selectedDisposition', 'must match keepsake exclusions');
 }
 
+function validateFixedAcquisitionTraitGrants(
+  rewards: Catalog['rewards'],
+  traits: Catalog['traits'],
+): void {
+  for (const acquisition of rewards.acquisitions.values) {
+    if (acquisition.gameName === 'InfernalContractBoon') {
+      if (
+        acquisition.grantedTraitKey !== 'InfernalContractBoon' ||
+        traits.byKey.InfernalContractBoon?.rarityDomain.kind !== 'none'
+      )
+        fail(
+          'rewards.acquisitions.InfernalContractBoon',
+          'must grant the rarityless contract trait',
+        );
+    } else if (acquisition.grantedTraitKey !== undefined) {
+      fail(
+        `rewards.acquisitions.${acquisition.gameName}.grantedTraitKey`,
+        'fixed acquisition trait grants are reserved for Infernal Contract',
+      );
+    }
+  }
+}
+
 export { CatalogContractError } from './errors';
 
 export function createCatalog(input: RawCatalogInput): Catalog {
@@ -112,6 +135,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const traitCatalog = createTraitCatalog(input.traitCatalog);
+  validateFixedAcquisitionTraitGrants(rewards, traitCatalog.traits);
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
   const fearVows = normalizeFearVows(input.fearVows);
   const keepsakes = normalizeKeepsakes(input.keepsakes);

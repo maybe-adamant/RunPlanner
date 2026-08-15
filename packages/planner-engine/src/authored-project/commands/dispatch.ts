@@ -98,6 +98,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceAcquisitionOrder':
+    case 'PurchaseTravelDealRefill':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(
         document,

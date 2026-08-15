@@ -119,4 +119,18 @@ export const producerLifecycles = [
     ],
     defaultLifecyclePoint: 'roomExit',
   },
+  {
+    key: 'ZagPedestal',
+    rewardTypes: ['BlindBoxLoot', 'StackUpgradeBig', 'StackUpgrade', 'TalentBigDrop', 'TalentDrop'],
+    defaultLifecyclePoint: 'roomExit',
+    overrides: [
+      {
+        rewardType: 'BlindBoxLoot',
+        acquisitionLifecycle: [
+          { role: 'box', lifecyclePoint: 'roomExit' },
+          { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+        ],
+      },
+    ],
+  },
 ] as const satisfies RawRewardKernelInput['producerLifecycles'];

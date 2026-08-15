@@ -69,6 +69,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly elementContributions?: Readonly<
     Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>
   >;
+  /** One source-fixed rarityless equipped trait installed by this acquisition. */
+  readonly grantedTraitKey?: string;
 }
 
 export type AcquisitionRoleResolution =
@@ -133,6 +135,10 @@ export interface ShopOptionEntry {
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;
   readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
+  /** Exact world interaction identity passed to the physical restock exclusion. */
+  readonly purchaseInteraction:
+    | { readonly kind: 'fixed'; readonly gameName: string }
+    | { readonly kind: 'resolvedOfferSource' };
 }
 
 export interface ShopGroupDeclaration {
@@ -236,6 +242,10 @@ export interface ShopGenerationSupport {
   readonly jointlyUnavailable: boolean;
 }
 
+export interface ShopGenerationConstraints {
+  readonly excludedPurchaseInteractionNames?: ReadonlySet<string>;
+}
+
 export interface ShopPurchaseResult {
   readonly history: RewardHistoryState;
   readonly entryOrder: readonly number[];
@@ -256,4 +266,10 @@ export interface ShopPurchaseFailure {
 export interface ShopPurchaseSimulation {
   readonly results: readonly ShopPurchaseResult[];
   readonly failures: readonly ShopPurchaseFailure[];
+}
+
+export interface ShopSinglePurchaseResult {
+  readonly history: RewardHistoryState;
+  readonly acquisitions: readonly ShopPurchaseAcquisition[];
+  readonly remainingSlotIndexes: readonly number[];
 }

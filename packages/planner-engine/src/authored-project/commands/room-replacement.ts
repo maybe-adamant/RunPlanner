@@ -13,6 +13,7 @@ import {
   createDefaultRoomEncounterState,
   reconcileRoomEncounterState,
 } from '../room-state/encounters';
+import { createDefaultInfernalContractEntries } from '../shop';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import {
   normalDecisionProgressionForLayout,
@@ -334,7 +335,18 @@ export function applyRoomReplacementCommand(
     ...(replacementState.kind === 'shop' && replacementState.shop !== undefined
       ? {
           acquisitionSites: Object.freeze({
-            roomExit: Object.freeze({ order: Object.freeze([]) }),
+            roomExit: Object.freeze({
+              order: Object.freeze([]),
+              ...(replacementRoom.infernalContractReward === undefined
+                ? {}
+                : {
+                    pickupEntries: createDefaultInfernalContractEntries(
+                      catalog,
+                      replacementRoom.gameName,
+                      located.loadout,
+                    ),
+                  }),
+            }),
           }),
         }
       : {}),

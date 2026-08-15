@@ -11,8 +11,12 @@ import {
 } from '../traits';
 import {
   authoredAcquisitionEntry,
+  createEchoShopDuplicateEntryKey,
   echoShopDuplicateOfferMatches,
+  echoShopDuplicateSourceReward,
   echoShopDuplicateSourceOfferKey,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 
 /**
@@ -27,6 +31,41 @@ export function applyAcquisitionSiteCommand(
   located: LocatedBiome,
   command: AcquisitionSiteCommand,
 ): ProjectDocument {
+  if (command.kind === 'PurchaseTravelDealRefill') {
+    if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
+      failCommand(command, 'is not an authorable Shop acquisition site');
+    const topology = requireTopology(located.plan, command);
+    const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
+    const profileKey =
+      occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
+    if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
+    const expected = createDefaultAcquisitionRewardState(
+      catalog,
+      command.defaultValue.offer,
+      located.loadout,
+      { kind: 'shopProfile', key: profileKey },
+    );
+    if (!sameOccurrenceValue(expected, command.defaultValue))
+      failCommand(command, 'must use the declaration-complete derived refill default');
+    if (!command.entryKeys.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY))
+      failCommand(command, 'must include travelDealRefill in the acquisition order');
+    const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
+    const nextOccurrence = Object.freeze({
+      ...occurrence,
+      acquisitionSites: Object.freeze({
+        ...(occurrence.acquisitionSites ?? {}),
+        roomExit: Object.freeze({
+          order: Object.freeze([...command.entryKeys]),
+          pickupEntries: Object.freeze({
+            ...pickupEntries,
+            [TRAVEL_DEAL_REFILL_ENTRY_KEY]:
+              pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] ?? command.defaultValue,
+          }),
+        }),
+      }),
+    });
+    return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
+  }
   if (command.kind === 'ReplaceAcquisitionEntryOffer') {
     const site = command.entry.site;
     if (site.owner.kind !== 'occurrence' || site.pointKey !== 'roomExit')
@@ -40,15 +79,23 @@ export function applyAcquisitionSiteCommand(
       command.entry.entryKey,
       located.loadout,
     );
-    if (entry === undefined) failCommand(command, 'does not own a materialized pickup entry');
-    if (entry.offer.rewardType !== command.value.rewardType)
+    const supplementalEntry =
+      command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
+      command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY;
+    if (entry === undefined && command.entry.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY)
+      failCommand(command, 'does not own a materialized pickup entry');
+    if (
+      !supplementalEntry &&
+      entry !== undefined &&
+      entry.offer.rewardType !== command.value.rewardType
+    )
       failCommand(command, `must retain declared reward type ${entry.offer.rewardType}`);
-    if (sameOccurrenceValue(entry.offer, command.value)) return document;
+    if (entry !== undefined && sameOccurrenceValue(entry.offer, command.value)) return document;
     const duplicateSourceKey = echoShopDuplicateSourceOfferKey(command.entry.entryKey);
     const duplicateSource =
-      duplicateSourceKey === undefined || occurrence.state.kind !== 'shop'
+      duplicateSourceKey === undefined
         ? undefined
-        : occurrence.state.shop?.offers[duplicateSourceKey]?.reward.offer;
+        : echoShopDuplicateSourceReward(occurrence, duplicateSourceKey)?.offer;
     if (
       duplicateSourceKey !== undefined &&
       (duplicateSource === undefined ||
@@ -79,6 +126,53 @@ export function applyAcquisitionSiteCommand(
                     command.value,
                     route.loadout,
                     { kind: 'shopProfile', key: profileKey },
+                  ),
+                }),
+              }),
+            }),
+          }),
+        ),
+      );
+    }
+    if (supplementalEntry) {
+      if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
+        failCommand(command, 'supplemental entry requires a materialized Shop');
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      const source =
+        command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY
+          ? room?.infernalContractReward
+          : undefined;
+      if (
+        command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY &&
+        (source === undefined || !source.rewardTypes.includes(command.value.rewardType))
+      )
+        failCommand(command, 'reward is outside the Infernal Contract pedestal domain');
+      const effectSource =
+        source === undefined
+          ? ({ kind: 'shopProfile', key: occurrence.state.shop.profileKey } as const)
+          : ({ kind: 'producerLifecycle', key: source.producerLifecycleKey } as const);
+      const echoDuplicateKey = createEchoShopDuplicateEntryKey(command.entry.entryKey);
+      const { [echoDuplicateKey]: removedEchoDuplicate, ...remainingPickupEntries } =
+        pickupEntries ?? {};
+      void removedEchoDuplicate;
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...occurrence,
+            acquisitionSites: Object.freeze({
+              ...(occurrence.acquisitionSites ?? {}),
+              roomExit: Object.freeze({
+                order: occurrence.acquisitionSites?.roomExit?.order ?? [],
+                pickupEntries: Object.freeze({
+                  ...remainingPickupEntries,
+                  [command.entry.entryKey]: createDefaultAcquisitionRewardState(
+                    catalog,
+                    command.value,
+                    route.loadout,
+                    effectSource,
                   ),
                 }),
               }),
@@ -136,8 +230,12 @@ export function applyAcquisitionSiteCommand(
   const seen = new Set<string>();
   for (const key of command.entryKeys) {
     const belongs =
-      shopOffers === undefined ? pickupEntries?.[key] !== undefined : shopOffers[key] !== undefined;
+      shopOffers === undefined
+        ? pickupEntries?.[key] !== undefined
+        : shopOffers[key] !== undefined || pickupEntries?.[key] !== undefined;
     if (!belongs) failCommand(command, `unknown entry ${key}`);
+    if (echoShopDuplicateSourceOfferKey(key) !== undefined)
+      failCommand(command, 'Echo duplicates cannot participate in the authored order');
     if (seen.has(key)) failCommand(command, `entry ${key} is duplicated`);
     seen.add(key);
   }

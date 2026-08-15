@@ -169,7 +169,10 @@ profile. The contract item is nevertheless a separately generated physical
 object in that room: it is not inserted into the Shop profile's `GroupsOf`
 array or its ordinary spawned-item inventory. The two I declarations are
 alternative Preboss maps that share the same `I_WorldShop` profile, not two
-contract or Shop opportunities in one ordinary run.
+contract or Shop opportunities in one ordinary run. The planner's progressed-save,
+non-Dream-Run baseline models only the `I_PreBoss02` variant, so the supported
+Gate B destination matrix includes that declaration and does not add
+`I_PreBoss01` as a second modeled room.
 
 ### Pedestal pool
 

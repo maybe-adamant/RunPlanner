@@ -2,6 +2,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEchoLastRewardAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -11,6 +13,7 @@ import {
   createIncomingRewardAddress,
   createLocalChildAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createProjectDocument,
   createTargetAddress,
   createTraitOfferAddress,
@@ -26,7 +29,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
+  createCompleteFGProject,
   goldenFBiome,
+  goldenGBiome,
   goldenHBiome,
 } from '@run-planner/test-fixtures';
 import {
@@ -156,7 +161,100 @@ function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
   });
 }
 
+function staleTravelDealShopProject(): {
+  readonly document: ProjectDocument;
+  readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
+} {
+  const sourceOccurrenceId = createOccurrenceId('golden-g-b1-e1');
+  const incoming = createIncomingRewardAddress(goldenGBiome, sourceOccurrenceId);
+  const shopId = createOccurrenceId('golden-g-preboss-shop');
+  const site = createAcquisitionSiteAddress(
+    createOccurrenceAddress(goldenGBiome, shopId),
+    'roomExit',
+  );
+  const entry = createAcquisitionEntryAddress(site, 'travelDealRefill');
+  let document = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: incoming,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(incoming, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Common' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry,
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceAcquisitionOrder',
+    site,
+    entryKeys: ['MajorNonBoon', 'travelDealRefill'],
+  });
+  return { document, entry };
+}
+
 describe('workspace inspector destinations', () => {
+  it('routes a stale Travel Deal refill finding to its containing Shop and reward editor', () => {
+    const configured = staleTravelDealShopProject();
+    const assembly = simulateProjectAssembly(catalog, configured.document);
+    const finding = assembly.evaluation.findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
+    );
+    if (finding === undefined)
+      throw new Error(
+        `stale Travel Deal finding is missing: ${JSON.stringify(assembly.evaluation.findings)}`,
+      );
+    const workspace = structuredWorkspace.project(assembly);
+    const target = destination(workspace, finding.origin);
+    const shop = biome(workspace, 'G').nodes.find(
+      (node) =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.room.occurrenceId === 'golden-g-preboss-shop'),
+    );
+    if (
+      shop === undefined ||
+      (shop.kind !== 'ordinaryBatch' && shop.kind !== 'mixedBatch' && shop.kind !== 'takeoverBatch')
+    ) {
+      throw new Error('G Preboss Shop decision is missing');
+    }
+    const shopRoom = shop.targets.find(
+      (target) => target.room.occurrenceId === 'golden-g-preboss-shop',
+    )?.room;
+    if (shopRoom?.roomLocal.kind !== 'shop') throw new Error('G Preboss Shop is missing');
+    expect(target).toMatchObject({
+      ownerAddress: configured.entry,
+      focusAddress: configured.entry,
+      inspectorSubject: { kind: 'node', nodeKey: shop.key },
+      nodeKey: shop.key,
+    });
+    expect(target.selectedRailKey).toBeDefined();
+    expect(
+      shopRoom.roomLocal.supplementalOffers.some(
+        (offer) =>
+          offer.kind === 'travelDealRefill' &&
+          semanticAddressKey(offer.rewardControl.owner.address) ===
+            semanticAddressKey(configured.entry),
+      ),
+    ).toBe(true);
+  });
+
   it('routes a real missing Echo replay finding to its containing trait inspector', () => {
     const configured = echoReplayProject();
     const assembly = simulateProjectAssembly(catalog, configured.document);

@@ -20,7 +20,12 @@ import type {
 } from '../model';
 import { decodeRewardState, decodeRoomState } from '../room-state/codec';
 import { optionIndex } from '../traits';
-import { echoShopDuplicateOfferMatches, echoShopDuplicateSourceOfferKey } from '../shop';
+import {
+  echoShopDuplicateOfferMatches,
+  echoShopDuplicateSourceOfferKey,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../shop';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
@@ -306,7 +311,14 @@ function decodeAcquisitionSites(
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
                 shopProfileKey === undefined
                   ? { kind: 'producerLifecycle', key: pickupProducerLifecycleKey! }
-                  : { kind: 'shopProfile', key: shopProfileKey },
+                  : key === INFERNAL_CONTRACT_ENTRY_KEY
+                    ? {
+                        kind: 'producerLifecycle',
+                        key:
+                          catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
+                            ?.producerLifecycleKey ?? '',
+                      }
+                    : { kind: 'shopProfile', key: shopProfileKey },
               ),
             ]),
           ),
@@ -1445,24 +1457,52 @@ export function decodeBiomeTopology(
       for (const [entryKey, entry] of Object.entries(
         acquisitionSites.roomExit.pickupEntries ?? {},
       )) {
+        if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
+          const descriptor = room.infernalContractReward;
+          if (descriptor === undefined || !descriptor.rewardTypes.includes(entry.offer.rewardType))
+            failProjectDocument(
+              `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
+              'must be a declared Infernal Contract pedestal reward',
+            );
+          continue;
+        }
+        if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) continue;
         const sourceKey = echoShopDuplicateSourceOfferKey(entryKey);
-        const source = sourceKey === undefined ? undefined : state.shop.offers[sourceKey]?.reward;
+        const source =
+          sourceKey === undefined
+            ? undefined
+            : (state.shop.offers[sourceKey]?.reward ??
+              (sourceKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+                ? acquisitionSites.roomExit.pickupEntries?.[sourceKey]
+                : undefined));
         if (
           source === undefined ||
           !echoShopDuplicateOfferMatches(catalog, source.offer, entry.offer)
         )
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
-            'must be a valid Echo duplicate of one Shop offer',
+            'must be a supported supplemental Shop entry',
           );
       }
+      const contractEntry = acquisitionSites.roomExit.pickupEntries?.[INFERNAL_CONTRACT_ENTRY_KEY];
+      if ((room.infernalContractReward !== undefined) !== (contractEntry !== undefined))
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
+          'must contain exactly the declaration-owned Infernal Contract entry',
+        );
       for (const entryKey of acquisitionSites.roomExit.order) {
-        if (state.shop.offers[entryKey] === undefined) {
+        const supplemental = acquisitionSites.roomExit.pickupEntries?.[entryKey];
+        if (state.shop.offers[entryKey] === undefined && supplemental === undefined) {
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
-            `${entryKey} is not a Shop offer`,
+            `${entryKey} is not a Shop acquisition entry`,
           );
         }
+        if (echoShopDuplicateSourceOfferKey(entryKey) !== undefined)
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
+            'Echo duplicates cannot participate in the authored order',
+          );
       }
     } else {
       if (

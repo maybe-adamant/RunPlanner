@@ -87,7 +87,8 @@ export interface DirectTraitGrantEvent {
   readonly acquisitionPoint: string;
   readonly sourceTraitKey: string;
   readonly traitKey: string;
-  readonly giverKey: string;
+  /** Absent only for a fixed non-offer acquisition such as Infernal Contract. */
+  readonly giverKey?: string;
 }
 /** A closed lifecycle removal (currently Jeweled Pom's Fated cleanup). */
 export interface TraitRemovalEvent {
@@ -373,18 +374,19 @@ export function foldTraitHistoryEvents(
       }
       if (event.kind === 'directTraitGrant') {
         if (equipped[event.traitKey] !== undefined) continue;
-        const giver = catalog.traitGivers.byKey[event.giverKey];
+        const giver =
+          event.giverKey === undefined ? undefined : catalog.traitGivers.byKey[event.giverKey];
         const declaration = catalog.traits.byKey[event.traitKey];
         if (
-          giver === undefined ||
           declaration === undefined ||
-          !giver.traitKeys.includes(event.traitKey)
+          (event.giverKey !== undefined &&
+            (giver === undefined || !giver.traitKeys.includes(event.traitKey)))
         )
           continue;
         equipped[event.traitKey] = Object.freeze({
           traitKey: event.traitKey,
-          giverKey: giver.key,
-          providerKind: giver.providerKind,
+          giverKey: giver?.key ?? event.sourceTraitKey,
+          providerKind: giver?.providerKind ?? 'npc',
           ...(isPomEligibleTrait(catalog, event.traitKey) ? { level: 1 } : {}),
           sourceRole: event.acquisitionRole,
         });
@@ -1031,7 +1033,8 @@ export function recordReachedTraitOffer(
     selectedDisposition?.kind !== 'directTraitSets' &&
     selectedDisposition?.kind !== 'circe' &&
     selectedDisposition?.kind !== 'echo' &&
-    selectedDisposition?.kind !== 'advanceCurrentKeepsake'
+    selectedDisposition?.kind !== 'advanceCurrentKeepsake' &&
+    selectedDisposition?.kind !== 'worldShopRestock'
   ) {
     return Object.freeze({ history: evaluation.before });
   }
@@ -1108,6 +1111,32 @@ export function recordDirectTraitGrants(
     });
   });
   return foldTraitHistoryEvents(catalog, [...before.events, ...events]);
+}
+
+/** Appends one fixed rarityless trait installed by a concrete non-offer acquisition. */
+export function recordFixedAcquisitionTraitGrant(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+  acquisitionPoint: string,
+  traitKey: string,
+): TraitHistoryState {
+  const declaration = catalog.traits.byKey[traitKey];
+  if (declaration?.rarityDomain.kind !== 'none')
+    throw new Error(`fixed acquisition trait ${traitKey} must be declared rarityless`);
+  return foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directTraitGrant' as const,
+      owner,
+      acquisitionRole: 'directTraitGrant' as const,
+      sequence,
+      acquisitionPoint,
+      sourceTraitKey: traitKey,
+      traitKey,
+    }),
+  ]);
 }
 
 /** Exact ownership-only result domain for one source-declared direct pair. */

@@ -124,7 +124,13 @@ export {
   type TraitOptionKey,
   traitOfferOption,
 } from './traits';
-export { shopProfileUsesDeathDefianceCondition } from './shop';
+export {
+  shopProfileUsesDeathDefianceCondition,
+  shopAcquisitionOrderProposals,
+  createDefaultInfernalContractEntries,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from './shop';
 export {
   applyProjectCommand,
   projectCommandAddress,

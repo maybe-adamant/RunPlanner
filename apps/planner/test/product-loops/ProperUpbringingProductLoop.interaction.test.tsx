@@ -3,6 +3,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createDefaultAllTogetherResult,
   createIncomingRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
@@ -48,10 +49,24 @@ function prepareProperUpbringingFixture() {
     const address = createTraitOfferAddress(trace.address.owner, trace.acquisitionRole);
     const value = supportedTraitOffer(authored, address, giverKey, preferredTraitKey);
     if (value === undefined) throw new Error(`Missing supported ${preferredTraitKey} offer`);
+    const completedValue =
+      value.kind !== 'traits'
+        ? value
+        : Object.freeze({
+            ...value,
+            options: Object.freeze(
+              value.options.map((option) => {
+                const result = createDefaultAllTogetherResult(application.catalog, option.traitKey);
+                return result === undefined
+                  ? option
+                  : Object.freeze({ ...option, allTogetherResult: result });
+              }),
+            ) as typeof value.options,
+          });
     return applyProjectCommand(authored, application.catalog, {
       kind: 'ReplaceTraitOffer',
       trait: address,
-      value,
+      value: completedValue,
     });
   };
   const heraOfferPlan = [

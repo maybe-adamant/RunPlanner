@@ -527,7 +527,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect([...missing.findings.values()].map((entry) => entry.finding.code)).toContain(
       'echoShopDuplicateChildMissing',
     );
-    expect(missing.settlement.derivedEntryFrontiers?.[0]?.defaultValue.offer).toEqual({
+    expect(missing.settlement.derivedEntryFrontiers?.[0]?.defaultValue?.offer).toEqual({
       rewardType: 'MaxManaDrop',
     });
     expect(
@@ -617,7 +617,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       ['Boon', 'Apollo'],
       [result.duplicateKey, 'Hestia'],
     ]);
-    expect(result.settlement.derivedEntryFrontiers?.[0]?.defaultValue.offer).toEqual({
+    expect(result.settlement.derivedEntryFrontiers?.[0]?.defaultValue?.offer).toEqual({
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     });
@@ -662,6 +662,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
 
     const second = frontiers[1];
     if (second === undefined) throw new Error('missing second derived frontier');
+    if (second.defaultValue === undefined) throw new Error('missing derived default');
     const divergent = Object.freeze({
       ...second,
       defaultValue: Object.freeze({
@@ -676,7 +677,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
-  it('persists only derived child detail through schema 36 and one undoable semantic edit', () => {
+  it('persists only derived child detail through schema 37 and one undoable semantic edit', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(
@@ -719,7 +720,14 @@ describe('Echo Gate D Gold Gold Gold', () => {
       decodeProjectDocument(JSON.parse(encodeProjectDocument(edited.present)), catalog),
     ).toEqual(edited.present);
     const undone = undoProjectHistory(edited);
-    expect(occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries).toBeUndefined();
+    expect(
+      occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
+        'echoDoubleShop:Boon'
+      ],
+    ).toBeUndefined();
+    expect(
+      occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward,
+    ).toBeDefined();
     expect(redoProjectHistory(undone).present).toEqual(edited.present);
   });
 
@@ -764,6 +772,69 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(
       decodeProjectDocument(JSON.parse(encodeProjectDocument(history.present)), catalog),
     ).toEqual(history.present);
+  });
+
+  it('round-trips an Echo duplicate sourced from the singleton Travel refill', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
+      'roomExit',
+    );
+    const travel = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    const duplicate = createAcquisitionEntryAddress(
+      site,
+      createEchoShopDuplicateEntryKey('travelDealRefill'),
+    );
+    let history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: travel,
+      value: {
+        rewardType: 'RandomLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(duplicate, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+    });
+    const occurrence = (document: typeof project) =>
+      document.routes
+        .flatMap((route) => route.biomes)
+        .find((candidate) => candidate.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+    expect(
+      occurrence(history.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
+        createEchoShopDuplicateEntryKey('travelDealRefill')
+      ],
+    ).toMatchObject({
+      offer: { rewardType: 'RandomLoot' },
+      traitOffersByAcquisitionRole: { source: { selectedOptionKey: 'option2' } },
+    });
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(history.present)), catalog),
+    ).toEqual(history.present);
+
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: travel,
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(
+      occurrence(history.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
+        createEchoShopDuplicateEntryKey('travelDealRefill')
+      ],
+    ).toBeUndefined();
   });
 });
 

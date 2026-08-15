@@ -6,7 +6,12 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
-import { createEchoShopDuplicateEntryKey, shopProfileUsesDeathDefianceCondition } from '../shop';
+import {
+  createEchoShopDuplicateEntryKey,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  shopProfileUsesDeathDefianceCondition,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../shop';
 import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 export function applyShopOccurrenceCommand(
@@ -47,6 +52,12 @@ export function applyShopOccurrenceCommand(
         }),
       ),
     );
+  }
+  if (
+    command.offer.offerKey === INFERNAL_CONTRACT_ENTRY_KEY ||
+    command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+  ) {
+    failCommand(command, `${command.offer.offerKey} is reserved for a supplemental Shop entry`);
   }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);

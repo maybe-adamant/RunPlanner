@@ -96,6 +96,12 @@ export type TraitSelectedDisposition =
       readonly effect: 'doubleShop';
       readonly excludedRewardTypes: readonly string[];
     }
+  | {
+      /** Hermes Travel Deal: numeric discount is catalog truth while simulation uses one refill. */
+      readonly kind: 'worldShopRestock';
+      readonly refillCount: 1;
+      readonly discountByRarity: Readonly<Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>>;
+    }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
   | {

@@ -99,8 +99,12 @@ export interface WorkspaceBiomeSource {
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
     readonly address: AcquisitionEntryAddress;
-    readonly sourceOfferKey: string;
-    readonly defaultValue: AuthoredRewardState;
+    readonly kind:
+      'echoShopDuplicate' | 'infernalContractReward' | 'travelDealPlaceholder' | 'travelDealRefill';
+    readonly sourceOfferKey?: string;
+    readonly slotIndex?: number;
+    readonly defaultValue?: AuthoredRewardState;
+    readonly rewardTypes?: readonly string[];
   }[];
   readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
     | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }
@@ -584,6 +588,7 @@ function createWorkspaceBiomeSource(
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
   gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined,
+  derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -703,13 +708,7 @@ function createWorkspaceBiomeSource(
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
-    derivedAcquisitionEntries: (site: AcquisitionSiteAddress) =>
-      Object.freeze(
-        (evaluation !== undefined && 'rewards' in evaluation
-          ? evaluation.rewards.derivedAcquisitionEntries
-          : []
-        ).filter((entry) => semanticAddressKey(entry.address.site) === semanticAddressKey(site)),
-      ),
+    derivedAcquisitionEntries,
     plan,
     runState: (owner: ExitDecisionAddress | HubDecisionAddress) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
@@ -745,6 +744,8 @@ export function createWorkspaceProjectSourceIndex(
     undefined,
   gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined = () =>
     undefined,
+  derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'] = () =>
+    Object.freeze([]),
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -763,6 +764,7 @@ export function createWorkspaceProjectSourceIndex(
                 encounterPhaseStatus,
                 figLeafSupport,
                 gorgonSupport,
+                derivedAcquisitionEntries,
               ),
             ),
           ),

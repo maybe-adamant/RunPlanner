@@ -1208,9 +1208,47 @@ export function evaluateBiomeRewardsAssemblyInternal(
   ): void {
     for (const frontier of frontiers ?? []) {
       const key = semanticAddressKey(frontier.address);
-      derivedAcquisitionEntryContexts.set(
-        key,
-        Object.freeze([...(derivedAcquisitionEntryContexts.get(key) ?? []), frontier]),
+      const combined = Object.freeze([
+        ...(derivedAcquisitionEntryContexts.get(key) ?? []),
+        frontier,
+      ]);
+      derivedAcquisitionEntryContexts.set(key, combined);
+      const first = combined[0];
+      if (
+        (first?.kind !== 'travelDealRefill' && first?.kind !== 'infernalContractReward') ||
+        combined.length !== first.branchCohortSize ||
+        combined.some((candidate) => candidate.evaluateOffer === undefined) ||
+        producerFrontiers.has(key)
+      )
+        continue;
+      indexRewardProducerFrontier(
+        producerFrontiers,
+        Object.freeze({
+          generationPolicy:
+            first.kind === 'travelDealRefill'
+              ? ('jointShopInventory' as const)
+              : ('sequential' as const),
+          generationHistorySequence: Math.max(
+            ...combined.flatMap((candidate) =>
+              candidate.branchesBeforeEntry.map((branch) => branch.processedThroughHistorySequence),
+            ),
+          ),
+          reachableBranchCount: combined.length,
+          acquisitionHorizon:
+            first.kind === 'travelDealRefill'
+              ? ('generationOnly' as const)
+              : ('ownEnteredLifecycle' as const),
+          owners: Object.freeze([first.address]),
+          evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+            if (semanticAddressKey(owner) !== key)
+              return fail('derived Shop reward frontier received a foreign owner');
+            const results = combined.map((candidate) => candidate.evaluateOffer!(offer));
+            return Object.freeze({
+              findings: Object.freeze(results.flatMap((result) => result.findings)),
+              supported: results.every((result) => result.supported),
+            });
+          },
+        }),
       );
     }
   }

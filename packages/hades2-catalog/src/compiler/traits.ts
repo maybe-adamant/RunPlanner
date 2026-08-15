@@ -73,6 +73,7 @@ const SELECTED_DISPOSITIONS = [
   'noOp',
   'circe',
   'echo',
+  'worldShopRestock',
 ] as const;
 type RawTraitRequirement = {
   readonly kind: string;
@@ -112,8 +113,31 @@ function normalizeSelectedDisposition(
     readonly excludedKeepsakeKeys?: unknown;
     readonly rankBonus?: unknown;
     readonly sets?: unknown;
+    readonly refillCount?: unknown;
+    readonly discountByRarity?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'worldShopRestock') {
+    if (Object.keys(value).length !== 3 || value.refillCount !== 1)
+      fail(path, 'worldShopRestock requires kind, refillCount 1, and discountByRarity');
+    const discounts = requireObject(value.discountByRarity, `${path}.discountByRarity`);
+    const rarities = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+    if (
+      Object.keys(discounts).length !== rarities.length ||
+      rarities.some((rarity) => typeof discounts[rarity] !== 'number')
+    )
+      fail(`${path}.discountByRarity`, 'must declare exact Common, Rare, Epic, Heroic numbers');
+    return Object.freeze({
+      kind,
+      refillCount: 1,
+      discountByRarity: Object.freeze({
+        Common: discounts.Common as number,
+        Rare: discounts.Rare as number,
+        Epic: discounts.Epic as number,
+        Heroic: discounts.Heroic as number,
+      }),
+    });
+  }
   if (kind === 'directTraitSets') {
     if (Object.keys(value).length !== 2) fail(path, 'directTraitSets requires only kind and sets');
     const expectedKeys = ['earth', 'fire', 'air', 'water'] as const;
@@ -1169,6 +1193,30 @@ function validateDirectTraitSets(
   }
 }
 
+function validateTravelDeal(traits: CatalogCollection<TraitDeclaration>): void {
+  const expected = { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 } as const;
+  for (const trait of traits.values) {
+    if (trait.key === 'RestockBoon') {
+      const disposition = trait.selectedDisposition;
+      if (
+        disposition.kind !== 'worldShopRestock' ||
+        disposition.refillCount !== 1 ||
+        Object.entries(expected).some(
+          ([rarity, value]) =>
+            disposition.kind !== 'worldShopRestock' ||
+            disposition.discountByRarity[rarity as keyof typeof expected] !== value,
+        )
+      )
+        fail('traits.RestockBoon.selectedDisposition', 'must match Travel Deal source values');
+    } else if (trait.selectedDisposition.kind === 'worldShopRestock') {
+      fail(
+        `traits.${trait.key}.selectedDisposition`,
+        'worldShopRestock is reserved for RestockBoon',
+      );
+    }
+  }
+}
+
 function normalizeContexts(
   raw: RawTraitCatalogInput['offerContexts'],
 ): CatalogCollection<TraitOfferContextDeclaration> {
@@ -1331,6 +1379,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   }
   const givers = normalizeGivers(input.givers, traits, weapons, aspects);
   validateDirectTraitSets(traits, givers);
+  validateTravelDeal(traits);
   const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);
   const offerContexts = normalizeContexts(input.offerContexts);
   return Object.freeze({

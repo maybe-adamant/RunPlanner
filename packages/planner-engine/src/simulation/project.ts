@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
   type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
@@ -413,6 +414,18 @@ export function encounterPhaseSequenceStatusForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
     ?.encounters.statusAt(phase);
+}
+
+/** Narrow exact-assembly query for derived entries at one reached acquisition site. */
+export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  site: AcquisitionSiteAddress,
+) {
+  return (
+    candidateArtifactsForProjectEvaluationAssembly(assembly)
+      .biomeAt(createBiomeAddress(site.routeKey, site.biomeKey))
+      ?.derivedAcquisitionEntries.entriesAt(site) ?? Object.freeze([])
+  ).map(({ address, capability }) => Object.freeze({ address, ...capability }));
 }
 
 /** Exact-assembly entry point for one synchronous counted-reward authoring domain. */

@@ -488,7 +488,9 @@ describe('Narcissus pickup producer', () => {
       {
         copiedOffer: state.shop.offers.Boon!.reward,
       };
-    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/valid Echo duplicate/);
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      /supported supplemental Shop entry/,
+    );
   });
 
   it('keeps Narcissus BlindBox source dormant until picked, then records its entry-owned fresh offer', () => {

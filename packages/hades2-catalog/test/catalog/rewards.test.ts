@@ -980,6 +980,24 @@ describe('reward-kernel declaration parity', () => {
     expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
   });
 
+  it('normalizes the fixed Contract grant and exact Travel purchase interaction identities', () => {
+    expect(rewardKernelCatalog.acquisitions.byKey.InfernalContractBoon).toMatchObject({
+      grantedTraitKey: 'InfernalContractBoon',
+      historyProjection: 'lootAndUse',
+    });
+    const world = rewardKernelCatalog.shops.byKey.WorldShop;
+    expect(world?.groups.byKey.Boon?.options.byKey.RandomLoot?.purchaseInteraction).toEqual({
+      kind: 'resolvedOfferSource',
+    });
+    expect(
+      world?.groups.byKey.MajorNonBoon?.options.byKey.WeaponUpgradeDropEarly?.purchaseInteraction,
+    ).toEqual({ kind: 'fixed', gameName: 'WeaponUpgrade' });
+    expect(world?.groups.byKey.Boon?.options.byKey.ShopHermesUpgrade?.purchaseInteraction).toEqual({
+      kind: 'fixed',
+      gameName: 'HermesUpgrade',
+    });
+  });
+
   it('rejects malformed emitted shop slots and producer lifecycle overrides', () => {
     const worldShop = rewardKernelDeclarations.shops.find((shop) => shop.key === 'WorldShop');
     if (worldShop === undefined) {
@@ -992,6 +1010,21 @@ describe('reward-kernel declaration parity', () => {
           shop.key === 'WorldShop' ? { ...shop, slots: shop.slots.slice(1) } : shop,
         ),
       }),
+      ...(['infernalContractReward', 'travelDealRefill'] as const).map((reservedKey) =>
+        rawInput({
+          ...rewardKernelDeclarations,
+          shops: rewardKernelDeclarations.shops.map((shop) =>
+            shop.key === 'WorldShop'
+              ? {
+                  ...shop,
+                  slots: shop.slots.map((slot, index) =>
+                    index === 0 ? { ...slot, key: reservedKey } : slot,
+                  ),
+                }
+              : shop,
+          ),
+        }),
+      ),
       rawInput({
         ...rewardKernelDeclarations,
         shops: rewardKernelDeclarations.shops.map((shop) =>

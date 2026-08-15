@@ -21,7 +21,10 @@ export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './le
 export {
   evaluateShopGenerationSupport,
   evaluateShopPurchases,
+  evaluateShopPurchaseAtSlot,
   findShopGenerationWitnesses,
+  findShopIndexedGenerationWitnesses,
+  purchaseInteractionName,
   simulateShopPurchases,
 } from './shop';
 export {
@@ -62,6 +65,7 @@ export type {
   RewardTypeDeclaration,
   ShopGenerationWitness,
   ShopGenerationSupport,
+  ShopGenerationConstraints,
   ShopGroupDeclaration,
   ShopOptionEntry,
   ShopProfileDeclaration,

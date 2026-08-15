@@ -41,6 +41,7 @@ import {
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
+  type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import type {
   CompletionRoomDescriptor,
@@ -1008,6 +1009,40 @@ export interface WorkspaceShopOfferDescriptor {
   readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 
+export type WorkspaceShopSupplementalDescriptor =
+  | {
+      readonly kind: 'travelDealPlaceholder';
+      readonly key: 'travelDealRefill';
+      readonly label: 'Travel Deal refill';
+      readonly explanation: string;
+    }
+  | {
+      readonly kind: 'travelDealInvalid';
+      readonly key: 'travelDealRefill';
+      readonly label: 'Travel Deal refill';
+      readonly explanation: string;
+      readonly purchase: WorkspaceShopPurchaseDescriptor;
+    }
+  | {
+      readonly kind: 'infernalContractReward';
+      readonly key: string;
+      readonly label: string;
+      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+      readonly defaultValue?: AuthoredRewardState;
+    }
+  | {
+      readonly kind: 'travelDealRefill';
+      readonly key: string;
+      readonly label: string;
+      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+      readonly defaultValue: AuthoredRewardState;
+      readonly sourceOfferKey: string;
+    };
+
 export interface WorkspaceShopConditionControl {
   readonly value: boolean;
 }
@@ -1164,6 +1199,8 @@ export type WorkspaceRoomLocal =
       readonly kind: 'shop';
       readonly materialized: boolean;
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
+      readonly supplementalOffers: readonly WorkspaceShopSupplementalDescriptor[];
+      readonly totalOpportunityCount: number;
       readonly deathDefianceCondition?: WorkspaceShopConditionControl;
       /** One occurrence-owned authored order, separate from inventory rows. */
       readonly acquisitionOrder: readonly string[];
