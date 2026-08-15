@@ -553,9 +553,9 @@ trait. `SpellDrop` neither triggers nor consumes it. With no later eligible
 World Shop purchase, the trait remains equipped. Wells use separate purchase
 paths and are not part of this effect.
 
-The schema-30 keepsake model now owns the current identity at Echo acquisition,
+The schema-35 keepsake model owns the current identity at Echo acquisition,
 ordered later replacements, supported rank-I profiles, and a biome-start
-transition. Gift Gift Gift can therefore join the complete eight-choice Echo
+transition. Gift Gift Gift therefore participates in the complete eight-choice Echo
 provider. Its captured key belongs to the equipped Echo trait and never follows
 a later rack swap. The four source exclusions remain exact; modeled replay is
 narrowed to the supported keepsake effects, with other eligible identities
@@ -1211,8 +1211,8 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                            |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                      |
 
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 373
-unique included trait declarations, 291 memberships across 20 non-Hammer
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 376
+unique included trait declarations, 294 memberships across 20 non-Hammer
 givers, 92 Hammer memberships under the twenty-first giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
 spell/talent operands remain exact keys
@@ -1221,9 +1221,10 @@ Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
 providers. Narcissus's nine choices remain effect-backed rather than persistent
 inventory. Circe's nine rarityless choices are production catalog entries;
 its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
-simulation contract. Echo's Survive, Evade, Fight, Pom, and Boon identities are
-production rarityless catalog entries; the remaining three choices stay gated
-behind their replay, pending-Shop, and keepsake authorities. Spell
+simulation contract. Echo's complete eight-choice inventory is production
+catalog data. All eight outer identities are player-rarityless and their
+direct, replay, pending-Shop, and captured-keepsake dispositions are implemented
+through their owning authorities. Spell
 and Talent providers remain outside
 the production trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
@@ -1233,7 +1234,7 @@ claim.
 
 ## Implemented Offer Disposition
 
-Schema 32 retains this audit's giver membership, requirements, rarity domains,
+Schema 35 retains this audit's giver membership, requirements, rarity domains,
 priority sets, and exact replacement targets. The earlier fixed-triple text is
 historical baseline only: Olympian and Hermes outcomes now support one to three
 materialized traits or Fallback Gold according to the source-backed exhaustion

@@ -674,3 +674,20 @@ following are true:
 Phase 2.7 must then switch F/G persistence and consumers to this reward
 authority. Phase 2.8 requires every dormant later-biome declaration to use the
 same normalized vocabulary before Phase 3 begins.
+
+## Current Planner Disposition
+
+Schema 35 retains exact concrete acquisition identity through Echo's two
+reward-facing effects. Reward Reward Reward folds the latest successfully
+settled effective `LastRewardEligible` recreation descriptor and settles the
+mandatory recreated entry through the ordinary acquisition roles. This keeps
+replayed Nectar on its opted-in run-progress path and keeps Blind Box identity
+separate from its resolved source.
+
+Gold Gold Gold derives one free supplemental acquisition immediately after the
+first purchased non-`SpellDrop` World Shop entry while its exact one-use trait
+is equipped. Loot duplicates receive fresh offer/source resolution, including
+an independently resolved Blind Box; Shop-profile Nectar duplicates do not
+gain the room/Echo-replay Pom mutation. The supplemental entry never enters the
+authored Shop order. Both effects reuse the canonical reward kernel and exact
+history projections rather than adding aliases or a second acquisition fold.

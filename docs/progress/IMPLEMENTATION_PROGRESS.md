@@ -12,7 +12,59 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The keepsake delivery is current through authored schema 30. The original
+Echo's complete eight-choice Story provider is delivered through authored
+schema 35. Gate A added the rarityless provider plus Survive, Evade, Fight, and
+Pom (`adc5a02`), followed by the source-faithful correction that removes
+player-facing rarity from Echo and the other non-god NPC providers (`1a054a3`).
+Gate B added the giver-preserving Boon Boon Boon approximation (`e68b68a`),
+Gate C added exact last-reward replay (`b4b0dd1`), Gate D added one-use World
+Shop duplication (`e8310dc`), and Gate E added captured-keepsake biome-start
+replay plus independent temporary Hammer instances (`5920482`). The production
+catalog now exposes exactly Reward, Boon, Survive, Pom, Evade, Fight, Gold, and
+Gift as player-rarityless Echo identities.
+
+The catalog owns all eight closed dispositions, mixed-provider variants,
+concrete replay descriptors, Shop exclusion, and Gift availability/effect
+axes. Authored state owns only active exact decisions: Pom target, Boon rows,
+recreated acquisition children, a reached Gold supplemental entry's children,
+and a reached Gift Hammer result. Trait, reward, acquisition-site, keepsake,
+candidate, finding, and Run State folds remain authoritative; no prior-run
+simulator, parallel pending state, Shop-private order, generic effect registry,
+or React-owned legality was added. The 27 keepsakes whose inherent effects are
+deferred still participate in ordinary history and may be captured by Gift;
+the 25 source-eligible members of that set remain effect-neutral at biome
+start.
+
+Independent gate review hardened the exact boundaries rather than broadening
+the model. Boon's child was amended to retain only declaration-owned targeted
+acquisition detail for Bridal Glow; every authored row now revalidates against
+the same Death Defiance and equipped-trait frontier before any selected
+source/history mutation, and row-distinct replacement/append domains remain an
+engine product. Reward replay descendants and findings route only through their
+reached Echo ancestry and use exact lifecycle points. Gold duplicates resolve
+fresh hidden-source payloads where required, close the exact `SpellDrop`
+exclusion, withhold divergent branch capabilities, reserve the derived key
+namespace, and keep Shop Nectar free of a run-progress Pom mutation. Gift's
+biome-start product now survives presentation into the bound interaction and
+React repair surface, with a real H-to-I reached integration witness and an
+explicit saturated-domain exhausted candidate. It uses the acquisition-time
+captured keepsake, declaration-owned replay schedules, explicit Hammer
+exhaustion, acquisition-identity-keyed overlapping Hammer lifetimes, and
+reached-only biome-start controls.
+
+Gate F found no production or test defect during the final ownership and
+product audit. Static inspection found no provider/reward/keepsake-name policy
+switch in React, parallel pending state, generic effect registry, Shop-private
+order, duplicate trait/acquisition/biome-start walker, or remaining singular
+temporary-Hammer assumption. The one complete repository gate passed all three workspace
+typechecks, 151 test files and 1,731 tests, lint, formatting, and the production
+build (380 transformed modules). Vite retained its existing advisory that the
+single application chunk exceeds 500 kB; this is not an Echo correctness or
+release failure. Durable catalog, authored, reward, simulation, workspace, and
+source-audit contracts now own the result, and the temporary Echo delivery plan
+is retired.
+
+The underlying keepsake delivery established authored schema 30. The original
 ordinary Gate A (`539d781`) established the exact 33-identity rank-III selection
 timeline, Postboss retain-or-replace chronology, no-return legality, and derived
 Fated state. Gates B-G added Jeweled Pom (`0cfd242`), Experimental Hammer
@@ -21,8 +73,8 @@ Fated state. Gates B-G added Jeweled Pom (`0cfd242`), Experimental Hammer
 Gorgon Amulet (`8932f8d`). Later hardening fixed the Experimental Hammer
 empty-room matrix (`3b925d6`) and Blind Box conversion boundary (`6b8c723`).
 
-The supported-rank and Cherished follow-up is complete in the working delivery
-through Gate C. Gate A (`d48430b`) declared exact four-rank profiles for the six
+The supported-rank and Cherished follow-up is complete. Gate A (`d48430b`)
+declared exact four-rank profiles for the six
 supported effects while retaining fixed Epic ordinary selection. Gate B
 (`c5679a1`) implemented Heroic later equips under active Cherished and corrected
 the Gorgon child to schema 30. Gate C applies the exact current-effect advance
@@ -43,8 +95,8 @@ history, duplicate state fold, or React keepsake-key policy. Durable catalog,
 authored, simulation, workspace, UX, and source-audit contracts own the settled
 result, and the temporary delivery plan is retired. The single final closure
 gate passed all three workspace typechecks, 149 test files and 1,631 tests,
-lint, formatting, and the production build. Echo and Gift Gift Gift remain
-separate deferred work.
+lint, formatting, and the production build. The subsequent Echo delivery is
+recorded above.
 
 Trait-offer exhaustion and the two reward-facing Fear Vows are complete.
 Schema 22 persists one-to-three Olympian/Hermes trait outcomes or mutually
@@ -2493,5 +2545,6 @@ committed baseline. The focused closure fix removed the dead code and derives
 the default route-state branch while reconciling authoritative interaction
 changes during render. The two affected UI files pass 36 focused tests; full
 lint, all workspace typechecks, formatting, and the production build pass. The
-Echo Gate E reassessment is retained in its source audits and isolated follow-
-up plan; Gift Gift Gift remains deferred with keepsake state.
+Echo Gate E reassessment remains retained in its source audits. The
+then-isolated follow-up is now complete through schema 35 as recorded in the
+active frontier above.

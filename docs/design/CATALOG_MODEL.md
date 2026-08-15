@@ -212,6 +212,14 @@ effect means extending the closed supported union and its owning transitions;
 declarations never carry callbacks and no generic keepsake-effect registry is
 introduced.
 
+Every keepsake also owns one closed Gift Gift Gift disposition. Gorgon Amulet,
+Jeweled Pom, Discordant Bell, and Aromatic Phial are excluded. Fig Leaf and
+Experimental Hammer declare their one-shot replay schedules, Calling Card and
+Time Piece declare every-biome replay, and the other 25 eligible identities
+declare an effect-neutral planner result. These are two independent data facts:
+whether Gift may capture an identity and what biome-start transition is
+supported. The catalog does not turn either axis into a callback.
+
 Keepsake-dependent capability facts stay with the declaration family that
 answers the engine's concrete question. Calling Card menu participation belongs
 to trait-giver declarations, Time Piece conversion support belongs to concrete
@@ -732,7 +740,7 @@ and port-verification history.
 ## Trait Offer Catalog
 
 The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 373 included trait
+six weapon declarations, their 24 aspect declarations, 376 included trait
 declarations, and 21 giver declarations: the nine Olympians, Hermes,
 `WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
 Narcissus, Circe, and Echo. Arcana card traits are declaration-backed run-state
@@ -763,10 +771,15 @@ not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
 
-Schema 32 contains 291 memberships across the 20 non-Hammer givers and 92
-memberships under the Hammer giver. Echo contributes five implemented
-rarityless identities: Survive, Evade, Fight, Pom, and Boon. Reward, Gold, and
-Gift remain outside the implemented catalog until their own slices.
+Schema 35 contains 294 memberships across the 20 non-Hammer givers and 92
+memberships under the Hammer giver. Echo contributes exactly eight
+player-rarityless identities: Reward, Boon, Survive, Pom, Evade, Fight, Gold,
+and Gift. Their selected dispositions close direct numeric/no-op behavior,
+greatest-level Pom targeting, the giver-preserving previous-run approximation,
+exact last-reward replay, World Shop duplication with `SpellDrop` excluded, and
+captured-keepsake replay with four exact source exclusions. Echo's ordinary
+internal Epic/Dream-Dive scaling tier is not a player-facing boon rarity and is
+therefore absent from authored and normalized rarity state.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,

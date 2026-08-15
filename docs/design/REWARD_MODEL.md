@@ -825,6 +825,25 @@ equipped-trait history. A random Pom target or Mystery Boon offer belongs to
 the concrete produced pickup and is evaluated only when that entry participates
 in the site's exact order.
 
+Echo reuses the same boundary in two different ways. Reward Reward Reward
+reads the latest successfully settled acquisition whose concrete declaration
+opts into last-reward replay, then creates one mandatory Echo-room acquisition
+from that exact recreation descriptor. A loot source owns a fresh offer and a
+consumable reuses its ordinary pickup path; replay does not synthesize a
+generic Boon, Pom, or consumable alias. Gold Gold Gold instead observes the
+equipped one-use Echo trait while folding a World Shop's authored purchase
+order. The first purchased non-`SpellDrop` entry is followed immediately by
+one free declaration-derived acquisition at the same site, after which the
+exact Echo trait acquisition is removed. That supplemental entry is not a
+purchase and never enters the authored Shop order.
+
+Both paths keep acquisition-time choices with the reached concrete entry.
+Blind Box recreation retains the box as the acquisition while resolving a
+fresh hidden source independently; a Gold duplicate of Nectar follows the Shop
+duplicate profile and does not invent the run-progress Pom effect. Missing or
+context-invalid active children remain exact finding-backed repair owners,
+while dormant or not-yet-generated entries publish no acquisition child.
+
 Fixed and forced producers do not borrow requirements from a same-named
 counted bag entry. A forced Devotion is validated as a fixed Devotion producer,
 not through `Devotion`'s `RunProgress` bag-entry requirements.
