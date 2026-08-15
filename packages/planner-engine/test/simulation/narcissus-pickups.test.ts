@@ -467,7 +467,7 @@ describe('Narcissus pickup producer', () => {
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/requires pickupEntries/);
   });
 
-  it('preserves ordinary Shop schema-20 state and rejects copied pickup entries', () => {
+  it('preserves ordinary Shop schema-34 state and rejects non-derived pickup entries', () => {
     const shop = createCompleteNProject();
     const encoded = JSON.parse(encodeProjectDocument(shop)) as {
       routes: Array<{
@@ -481,9 +481,14 @@ describe('Narcissus pickup producer', () => {
         (entry.acquisitionSites as { roomExit?: unknown } | undefined)?.roomExit !== undefined,
     );
     if (occurrence === undefined) throw new Error('N fixture has no Shop acquisition site');
+    const state = occurrence.state as {
+      shop: { offers: Record<string, { reward: unknown }> };
+    };
     (occurrence.acquisitionSites as { roomExit: Record<string, unknown> }).roomExit.pickupEntries =
-      {};
-    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/pickupEntries/);
+      {
+        copiedOffer: state.shop.offers.Boon!.reward,
+      };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/valid Echo duplicate/);
   });
 
   it('keeps Narcissus BlindBox source dormant until picked, then records its entry-owned fresh offer', () => {

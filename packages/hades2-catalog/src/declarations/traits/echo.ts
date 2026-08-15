@@ -54,6 +54,17 @@ export const echoTraits = [
     offerRequirements: [],
     selectedDisposition: { kind: 'echo', effect: 'doubleLevel' },
   },
+  {
+    ...raritylessEchoTrait,
+    key: 'EchoDoubleShop',
+    label: 'Gold Gold Gold',
+    offerRequirements: [],
+    selectedDisposition: {
+      kind: 'echo',
+      effect: 'doubleShop',
+      excludedRewardTypes: ['SpellDrop'],
+    },
+  },
 ] as const satisfies readonly RawTraitDeclaration[];
 
 export const echoGiver = {

@@ -220,6 +220,74 @@ export interface BiomeCandidateArtifacts {
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
+  readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
+}
+
+export interface DerivedAcquisitionEntryCandidateCapability {
+  readonly sourceOfferKey: string;
+  readonly defaultValue: import('../authored-project/model').AuthoredRewardState;
+}
+export interface DerivedAcquisitionEntryCandidateArtifacts {
+  readonly at: (
+    address: import('../authored-project/addresses').AcquisitionEntryAddress,
+  ) => DerivedAcquisitionEntryCandidateCapability | undefined;
+  readonly entriesAt: (
+    site: import('../authored-project/addresses').AcquisitionSiteAddress,
+  ) => readonly {
+    readonly address: import('../authored-project/addresses').AcquisitionEntryAddress;
+    readonly capability: DerivedAcquisitionEntryCandidateCapability;
+  }[];
+}
+export function attestDerivedAcquisitionEntryCandidateCapability(
+  frontiers: readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[],
+): DerivedAcquisitionEntryCandidateCapability | undefined {
+  const first = frontiers[0];
+  if (first === undefined) return undefined;
+  if (
+    frontiers.some(
+      (frontier) =>
+        frontier.sourceOfferKey !== first.sourceOfferKey ||
+        JSON.stringify(frontier.defaultValue) !== JSON.stringify(first.defaultValue),
+    )
+  )
+    return undefined;
+  return Object.freeze({
+    sourceOfferKey: first.sourceOfferKey,
+    defaultValue: first.defaultValue,
+  });
+}
+export function createDerivedAcquisitionEntryCandidateArtifacts(
+  contexts: ReadonlyMap<
+    string,
+    readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[]
+  >,
+): DerivedAcquisitionEntryCandidateArtifacts {
+  const privateContexts = new Map(
+    [...contexts].map(([key, frontiers]) => [key, Object.freeze([...frontiers])] as const),
+  );
+  return Object.freeze({
+    at: (address: import('../authored-project/addresses').AcquisitionEntryAddress) => {
+      const frontiers = privateContexts.get(semanticAddressKey(address));
+      return frontiers === undefined
+        ? undefined
+        : attestDerivedAcquisitionEntryCandidateCapability(frontiers);
+    },
+    entriesAt: (site: import('../authored-project/addresses').AcquisitionSiteAddress) =>
+      Object.freeze(
+        [...privateContexts.values()].flatMap((frontiers) => {
+          const first = frontiers[0];
+          const capability = attestDerivedAcquisitionEntryCandidateCapability(frontiers);
+          return first === undefined ||
+            capability === undefined ||
+            semanticAddressKey(first.address.site) !== semanticAddressKey(site)
+            ? []
+            : [Object.freeze({ address: first.address, capability })];
+        }),
+      ),
+  });
+}
+function createEmptyDerivedAcquisitionEntryCandidateArtifacts(): DerivedAcquisitionEntryCandidateArtifacts {
+  return Object.freeze({ at: () => undefined, entriesAt: () => Object.freeze([]) });
 }
 
 /** Exact captured role frontiers from the canonical acquisition fold. */
@@ -354,6 +422,7 @@ export function createBiomeCandidateArtifacts(
     new Map(),
   ),
   acquisitionConversions: AcquisitionConversionCandidateArtifacts = createEmptyAcquisitionConversionCandidateArtifacts(),
+  derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts = createEmptyDerivedAcquisitionEntryCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -367,6 +436,7 @@ export function createBiomeCandidateArtifacts(
     keepsakeSelections,
     keepsakeEquipResults,
     acquisitionConversions,
+    derivedAcquisitionEntries,
   });
 }
 

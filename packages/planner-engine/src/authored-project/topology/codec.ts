@@ -20,6 +20,7 @@ import type {
 } from '../model';
 import { decodeRewardState, decodeRoomState } from '../room-state/codec';
 import { optionIndex } from '../traits';
+import { echoShopDuplicateOfferMatches, echoShopDuplicateSourceOfferKey } from '../shop';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
@@ -246,6 +247,7 @@ function decodeAcquisitionSites(
   occurrence: RawOccurrence,
   catalog: Catalog,
   pickupProducerLifecycleKey: string | undefined,
+  shopProfileKey: string | undefined,
 ): Readonly<
   Record<
     string,
@@ -283,7 +285,7 @@ function decodeAcquisitionSites(
         'contains a duplicate entry',
       );
     }
-    if (hasPickups && pickupProducerLifecycleKey === undefined)
+    if (hasPickups && pickupProducerLifecycleKey === undefined && shopProfileKey === undefined)
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
         'has no selected pickup producer',
@@ -302,7 +304,9 @@ function decodeAcquisitionSites(
                 raw,
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
-                { kind: 'producerLifecycle', key: pickupProducerLifecycleKey! },
+                shopProfileKey === undefined
+                  ? { kind: 'producerLifecycle', key: pickupProducerLifecycleKey! }
+                  : { kind: 'shopProfile', key: shopProfileKey },
               ),
             ]),
           ),
@@ -1422,6 +1426,7 @@ export function decodeBiomeTopology(
           rawOccurrence,
           catalog,
           pickupDisposition?.producerLifecycleKey,
+          state.kind === 'shop' ? state.shop?.profileKey : undefined,
         )
       : undefined;
     if (state.kind === 'shop' && state.shop !== undefined) {
@@ -1437,11 +1442,19 @@ export function decodeBiomeTopology(
           'Shop only authors roomExit state',
         );
       }
-      if (acquisitionSites.roomExit.pickupEntries !== undefined) {
-        failProjectDocument(
-          `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
-          'Shop offers are producer-owned and cannot be copied into pickupEntries',
-        );
+      for (const [entryKey, entry] of Object.entries(
+        acquisitionSites.roomExit.pickupEntries ?? {},
+      )) {
+        const sourceKey = echoShopDuplicateSourceOfferKey(entryKey);
+        const source = sourceKey === undefined ? undefined : state.shop.offers[sourceKey]?.reward;
+        if (
+          source === undefined ||
+          !echoShopDuplicateOfferMatches(catalog, source.offer, entry.offer)
+        )
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
+            'must be a valid Echo duplicate of one Shop offer',
+          );
       }
       for (const entryKey of acquisitionSites.roomExit.order) {
         if (state.shop.offers[entryKey] === undefined) {

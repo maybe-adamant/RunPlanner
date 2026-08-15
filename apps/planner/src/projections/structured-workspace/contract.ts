@@ -1444,6 +1444,7 @@ export interface WorkspaceRunStatePresentation {
     readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
     readonly other: readonly WorkspaceRunStateTrait[];
     readonly banned: readonly WorkspaceRunStateSource[];
+    readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
   };
 }
 

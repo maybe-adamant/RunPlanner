@@ -22,6 +22,9 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
   type LevelResolutionAddress,
+  type AcquisitionSiteAddress,
+  type AcquisitionEntryAddress,
+  type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -94,6 +97,11 @@ export interface WorkspaceBiomeSource {
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
+  readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
+    readonly address: AcquisitionEntryAddress;
+    readonly sourceOfferKey: string;
+    readonly defaultValue: AuthoredRewardState;
+  }[];
   readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
     | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }
     | {
@@ -695,6 +703,13 @@ function createWorkspaceBiomeSource(
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
+    derivedAcquisitionEntries: (site: AcquisitionSiteAddress) =>
+      Object.freeze(
+        (evaluation !== undefined && 'rewards' in evaluation
+          ? evaluation.rewards.derivedAcquisitionEntries
+          : []
+        ).filter((entry) => semanticAddressKey(entry.address.site) === semanticAddressKey(site)),
+      ),
     plan,
     runState: (owner: ExitDecisionAddress | HubDecisionAddress) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));

@@ -392,7 +392,11 @@ export function evaluateAcquisitionOrderCandidate(
   }
   const seen = new Set<string>();
   for (const offerKey of query.entryKeys) {
-    if (shopOffers?.[offerKey] === undefined && pickupEntries?.[offerKey] === undefined) {
+    const belongs =
+      shopOffers === undefined
+        ? pickupEntries?.[offerKey] !== undefined
+        : shopOffers[offerKey] !== undefined;
+    if (!belongs) {
       throw new CandidateEvaluationContractError(
         `acquisition order has no declared entry ${offerKey}`,
       );

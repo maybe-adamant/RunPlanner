@@ -65,6 +65,12 @@ export type TraitSelectedDisposition =
       readonly kind: 'echo';
       readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon' | 'lastReward';
     }
+  | {
+      /** One equipped Echo trait duplicates the first eligible World Shop acquisition. */
+      readonly kind: 'echo';
+      readonly effect: 'doubleShop';
+      readonly excludedRewardTypes: readonly string[];
+    }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
   | {

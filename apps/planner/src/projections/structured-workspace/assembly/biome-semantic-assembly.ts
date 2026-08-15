@@ -493,6 +493,7 @@ export function assembleWorkspaceBiomeSemantics(
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       levelResolutionAssessment: source.levelResolutionAssessment,
+      derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
       occurrence: request.occurrence,
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),

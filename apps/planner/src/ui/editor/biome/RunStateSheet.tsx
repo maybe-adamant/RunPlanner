@@ -209,6 +209,12 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.traits.activeMinimumScalableRarity === undefined ? null : (
           <p>Active minimum scalable rarity: {state.traits.activeMinimumScalableRarity}</p>
         )}
+        {state.traits.echoShopDuplicateStatus === undefined ? null : (
+          <p>
+            Gold Gold Gold:{' '}
+            {state.traits.echoShopDuplicateStatus === 'pending' ? 'Pending' : 'Consumed'}
+          </p>
+        )}
         <h4>Banned traits</h4>
         <p>{state.traits.banned.map(({ label }) => label).join(' · ') || 'None'}</p>
       </section>

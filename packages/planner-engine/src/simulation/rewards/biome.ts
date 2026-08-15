@@ -80,6 +80,8 @@ import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
   createAcquisitionConversionCandidateArtifacts,
+  createDerivedAcquisitionEntryCandidateArtifacts,
+  attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
 import type {
   ReachedTraitOfferEvaluation,
@@ -920,6 +922,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
+  readonly derivedAcquisitionEntryArtifacts: import('../candidate-artifacts').DerivedAcquisitionEntryCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -1175,6 +1178,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     import('../candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const derivedAcquisitionEntryContexts = new Map<
+    string,
+    readonly import('./processing').DerivedAcquisitionEntryFrontier[]
+  >();
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
   const blockedGorgonPhases = new Set<string>();
@@ -1188,6 +1195,17 @@ export function evaluateBiomeRewardsAssemblyInternal(
       acquisitionConversionContexts.set(
         key,
         Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
+      );
+    }
+  }
+  function recordDerivedAcquisitionEntryFrontiers(
+    frontiers: readonly import('./processing').DerivedAcquisitionEntryFrontier[] | undefined,
+  ): void {
+    for (const frontier of frontiers ?? []) {
+      const key = semanticAddressKey(frontier.address);
+      derivedAcquisitionEntryContexts.set(
+        key,
+        Object.freeze([...(derivedAcquisitionEntryContexts.get(key) ?? []), frontier]),
       );
     }
   }
@@ -1449,7 +1467,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     historySequence: number,
     targetFindings: Map<string, FindingRegionEntry>,
   ): readonly RewardBranchState[] {
-    if (room.pickupSite !== undefined) {
+    if (room.pickupSite !== undefined && room.entryState?.kind !== 'shop') {
       const producer = selectedPickupProducer(catalog, room.encounters);
       if (producer === undefined) fail('pickup site has no selected pickup producer');
       const pickupFacts = (branchHistory: RewardHistoryState) =>
@@ -1606,6 +1624,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       targetFindings,
     );
     recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+    recordDerivedAcquisitionEntryFrontiers(settled.derivedEntryFrontiers);
     return settled.branches;
   }
 
@@ -3731,6 +3750,15 @@ export function evaluateBiomeRewardsAssemblyInternal(
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
     gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
+    derivedAcquisitionEntries: Object.freeze(
+      [...derivedAcquisitionEntryContexts.values()].flatMap((frontiers) => {
+        const first = frontiers[0];
+        const capability = attestDerivedAcquisitionEntryCandidateCapability(frontiers);
+        return first === undefined || capability === undefined
+          ? []
+          : [Object.freeze({ address: first.address, ...capability })];
+      }),
+    ),
   });
   return Object.freeze({
     simulation,
@@ -3758,6 +3786,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
     acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
       catalog,
       acquisitionConversionContexts,
+    ),
+    derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
+      derivedAcquisitionEntryContexts,
     ),
     traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),

@@ -119,6 +119,11 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
+  readonly derivedAcquisitionEntries: readonly {
+    readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;
+    readonly sourceOfferKey: string;
+    readonly defaultValue: import('../../authored-project/model').AuthoredRewardState;
+  }[];
 }
 
 export type RewardSimulation = BiomeRewardSimulation;

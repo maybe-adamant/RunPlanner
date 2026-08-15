@@ -99,6 +99,9 @@ function assemble(
   gorgonSupport?: (
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined,
+  derivedAcquisitionEntries?: Parameters<
+    typeof assembleWorkspaceOccurrence
+  >[0]['derivedAcquisitionEntries'],
 ) {
   const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
@@ -125,6 +128,7 @@ function assemble(
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     levelResolutionAssessment: source.levelResolutionAssessment,
+    derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
     markerDestinations: markers.emitter,
     occurrence,
   });
@@ -738,6 +742,62 @@ describe('structured workspace occurrence assembly', () => {
     if (dormant.node.room.roomLocal.kind !== 'shop') throw new Error('dormant Shop is missing');
     expect(dormant.node.room.roomLocal.materialized).toBe(false);
     expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
+  });
+
+  it('projects a reached Echo Shop duplicate after its paid source without adding purchase policy', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopId),
+      'roomExit',
+    );
+    let project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['Minor', 'Boon', 'MajorNonBoon'],
+    });
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+    const source =
+      occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon : undefined;
+    if (source === undefined) throw new Error('selected Shop Boon is missing');
+    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:Boon');
+    const projected = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [{ address: duplicate, sourceOfferKey: 'Boon', defaultValue: source.reward }],
+    );
+    const result = projected.assembly;
+
+    expect(result.node.room.acquisitions?.entries.map((entry) => entry.key)).toEqual([
+      'Minor',
+      'Boon',
+      'echoDoubleShop:Boon',
+      'MajorNonBoon',
+    ]);
+    const derived = result.node.room.acquisitions?.entries[2];
+    expect(derived).toMatchObject({
+      address: duplicate,
+      label: 'Free duplicate',
+      rewardControl: {
+        kind: 'explicitReward',
+        owner: { kind: 'acquisitionEntry', address: duplicate },
+        rewardTypes: ['RandomLoot'],
+      },
+    });
+    expect(result.node.room.roomLocal.kind).toBe('shop');
+    if (result.node.room.roomLocal.kind !== 'shop') throw new Error('Shop summary is missing');
+    expect(result.node.room.roomLocal.acquisitionOrder).toEqual(['Minor', 'Boon', 'MajorNonBoon']);
+    expect(result.occurrenceInteractionRequirements).toEqual([
+      expect.objectContaining({ kind: 'acquisitionOrder' }),
+    ]);
+    expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
+      ownerAddress: duplicate,
+      focusAddress: duplicate,
+      nodeKey: result.node.key,
+    });
   });
 
   it('projects the Narcissus pickup as an unpicked, dormant room-exit acquisition', () => {
