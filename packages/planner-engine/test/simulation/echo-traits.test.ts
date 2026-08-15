@@ -61,8 +61,8 @@ function echoOffer(
 
 function echoTraitOption(traitKey: string): AuthoredTraitOfferTraits['options'][number] {
   return traitKey === 'EchoDoubleLevelBoon'
-    ? Object.freeze({ traitKey, rarity: 'Common', echoPomTarget: null })
-    : Object.freeze({ traitKey, rarity: 'Common' });
+    ? Object.freeze({ traitKey, echoPomTarget: null })
+    : Object.freeze({ traitKey });
 }
 
 function baseBranch(history = createTraitHistoryState()) {
@@ -200,9 +200,9 @@ describe('Echo Gate A direct choices', () => {
     const project = createGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const value = echoOffer('option1', [
-      { traitKey: 'EchoDeathDefianceRefill', rarity: 'Common' },
-      { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-      { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+      { traitKey: 'EchoDeathDefianceRefill' },
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'DiminishingHealthAndManaBoon' },
     ]);
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
@@ -238,9 +238,9 @@ describe('Echo Gate A direct choices', () => {
     const project = createGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const value = echoOffer('option1', [
-      { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common', echoPomTarget: null },
-      { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-      { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+      { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'DiminishingHealthAndManaBoon' },
     ]);
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
@@ -277,9 +277,7 @@ describe('Echo Gate A direct choices', () => {
       'encounterCompleted',
       findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toMatchObject({
-      rarity: 'Common',
-    });
+    expect(result.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
     expect(result.traitHistory?.events.map((event) => event.kind)).toEqual(['traitOffer']);
     expect(findings.size).toBe(0);
   });
@@ -289,7 +287,7 @@ describe('Echo Gate A direct choices', () => {
     ['DiminishingHealthAndManaBoon', false],
     ['EchoDeathDefianceRefill', true],
     ['EchoDoubleLevelBoon', false],
-  ] as const)('retains %s as a fixed-Common outer acquisition', (traitKey, dd) => {
+  ] as const)('retains %s as a rarityless outer acquisition', (traitKey, dd) => {
     const siblingKeys = [
       'DiminishingDodgeBoon',
       'DiminishingHealthAndManaBoon',
@@ -320,8 +318,8 @@ describe('Echo Gate A direct choices', () => {
     expect(result.traitHistory?.equippedTraits[traitKey]).toMatchObject({
       traitKey,
       giverKey: 'Echo',
-      rarity: 'Common',
     });
+    expect(result.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
     expect(findings.size).toBe(0);
   });
 
@@ -332,9 +330,9 @@ describe('Echo Gate A direct choices', () => {
       baseBranch(),
       echoOwner.owner,
       echoOffer('option1', [
-        { traitKey: 'EchoDeathDefianceRefill', rarity: 'Common' },
-        { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-        { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+        { traitKey: 'EchoDeathDefianceRefill' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
       ]),
       10,
       'encounterCompleted',
@@ -347,9 +345,9 @@ describe('Echo Gate A direct choices', () => {
   it('offers only greatest-level Pom ties and doubles the selected current level', () => {
     const history = priorLeveledTraits();
     const offer = echoOffer('option1', [
-      { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common', echoPomTarget: 'ZeusWeaponBoon' },
-      { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-      { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+      { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ZeusWeaponBoon' },
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'DiminishingHealthAndManaBoon' },
     ]);
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
@@ -396,7 +394,6 @@ describe('Echo Gate A direct choices', () => {
     const findings = new Map();
     const option = {
       traitKey: 'EchoDoubleLevelBoon',
-      rarity: 'Common' as const,
       ...(target === undefined ? {} : { echoPomTarget: target }),
     };
     const result = processEncounterTraitOffer(
@@ -405,8 +402,8 @@ describe('Echo Gate A direct choices', () => {
       echoOwner.owner,
       echoOffer('option1', [
         option,
-        { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-        { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
       ]),
       10,
       'encounterCompleted',
@@ -436,9 +433,9 @@ describe('Echo Gate A direct choices', () => {
       kind: 'traits',
       giverKey: 'Echo',
       options: [
-        { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-        { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
-        { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common', echoPomTarget: null },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+        { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
       ],
       selectedOptionKey: 'option1',
       rarificationActions: [],
@@ -446,6 +443,12 @@ describe('Echo Gate A direct choices', () => {
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(decoded.schemaVersion).toBe(31);
+    const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
+    const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
+    ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
+    expect(() => decodeProjectDocument(invalidRarityDocument, catalog)).toThrow(
+      /options\.option1\.rarity: rarityless options have no rarity/,
+    );
     const assembly = simulateProjectAssembly(catalog, decoded);
     const h = assembly.evaluation.routes
       .find((route) => route.routeKey === 'Underworld')!
@@ -527,16 +530,20 @@ describe('Echo Gate A direct choices', () => {
     expect(h.rewards.branches).toHaveLength(1);
     expect(h.rewards.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
       ApolloWeaponBoon: { level: 3 },
-      EchoDoubleLevelBoon: { rarity: 'Common' },
+      EchoDoubleLevelBoon: { traitKey: 'EchoDoubleLevelBoon' },
     });
+    expect(
+      h.rewards.branches[0]?.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
+    ).toBeUndefined();
     expect(h.rewards.branches[0]?.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
     expect(h.findings).toContainEqual(
       expect.objectContaining({ code: 'echoPomTargetUnavailable', origin: child }),
     );
     const echoSnapshots = h.rewards.runStateSnapshots.filter(
-      (snapshot) => snapshot.traits.equippedTraits.EchoDoubleLevelBoon?.rarity === 'Common',
+      (snapshot) => snapshot.traits.equippedTraits.EchoDoubleLevelBoon !== undefined,
     );
     expect(echoSnapshots).toHaveLength(1);
+    expect(echoSnapshots[0]?.traits.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
     expect(echoSnapshots[0]?.owner).toMatchObject({
       kind: 'exitDecision',
       source: { kind: 'occurrence', occurrenceId: bridgeId },

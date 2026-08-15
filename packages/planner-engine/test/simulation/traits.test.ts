@@ -672,9 +672,9 @@ describe('Latest Model Hammer Rank II target predicate', () => {
     kind: 'traits',
     giverKey: 'Icarus',
     options: Object.freeze([
-      { traitKey: 'UpgradeHammerBoon', rarity: 'Common' },
-      { traitKey: 'OmegaExplodeBoon', rarity: 'Common' },
-      { traitKey: 'CastHazardBoon', rarity: 'Common' },
+      { traitKey: 'UpgradeHammerBoon' },
+      { traitKey: 'OmegaExplodeBoon' },
+      { traitKey: 'CastHazardBoon' },
     ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     selectedOptionKey: 'option1',
   });
@@ -724,8 +724,8 @@ describe('Latest Model Hammer Rank II target predicate', () => {
     expect(recorded.history.equippedTraits.StaffDashAttackTrait?.hammerRank).toBe('RankI');
     expect(recorded.history.equippedTraits.UpgradeHammerBoon).toMatchObject({
       giverKey: 'Icarus',
-      rarity: 'Common',
     });
+    expect(recorded.history.equippedTraits.UpgradeHammerBoon?.rarity).toBeUndefined();
     expect(targetedAcquisitionTargetKeys(catalog, 'UpgradeHammerBoon', recorded.history)).toEqual(
       [],
     );

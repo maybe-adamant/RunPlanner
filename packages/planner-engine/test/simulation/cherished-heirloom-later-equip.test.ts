@@ -198,7 +198,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       catalog,
       { ...pom.branch, keepsakes: pom.keepsakes },
       'HadesAndPersephoneKeepsake',
-      { jeweledPom: { traitKey: 'HadesLifestealBoon', rarity: 'Common' } },
+      { jeweledPom: { traitKey: 'HadesLifestealBoon' } },
       createKeepsakeEquipResultAddress(postbossOwner(), 'jeweledPom'),
       2,
       pom.rank,
@@ -269,7 +269,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     pomProject = applyProjectCommand(pomProject, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
       result: createKeepsakeEquipResultAddress(rack, 'jeweledPom'),
-      value: { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
+      value: { traitKey: 'HadesLifestealBoon' },
     });
     expect(replayBiome(pomProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',

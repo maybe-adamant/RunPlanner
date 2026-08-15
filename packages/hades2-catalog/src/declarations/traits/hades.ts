@@ -1,25 +1,24 @@
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
 
-const fixedCommonHadesTrait = {
-  freshOfferRarities: ['Common'],
-  equippedRarities: ['Common'],
+const raritylessHadesTrait = {
+  rarityDomain: 'none',
   elementContributions: {},
-  usesBoonRarity: true,
+  usesBoonRarity: false,
   blockStacking: false,
   blockInRunRarify: true,
   excludeFromRarityCount: false,
 } as const;
 
-/** Hades's effectively fixed-Common Story-room choices. */
+/** Hades's player-rarityless Story-room choices. */
 export const hadesTraits = [
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesLifestealBoon',
     label: 'Life Tax',
     offerRequirements: [],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesCastProjectileBoon',
     label: 'Howling Soul',
     offerRequirements: [
@@ -30,25 +29,25 @@ export const hadesTraits = [
     ],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesPreDamageBoon',
     label: 'Old Grudge',
     offerRequirements: [],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesChronosDebuffBoon',
     label: 'Deep Dissent',
     offerRequirements: [],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesDashSweepBoon',
     label: 'Gigaros Dash',
     offerRequirements: [],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesDeathDefianceDamageBoon',
     label: 'Last Gasp',
     offerRequirements: [
@@ -60,13 +59,13 @@ export const hadesTraits = [
     ],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesManaUrnBoon',
     label: 'Cinerary Circle',
     offerRequirements: [],
   },
   {
-    ...fixedCommonHadesTrait,
+    ...raritylessHadesTrait,
     key: 'HadesInvisibilityRetaliateBoon',
     label: 'Unseen Ire',
     offerRequirements: [],
@@ -88,12 +87,12 @@ export const hadesGiver = {
     'HadesManaUrnBoon',
     'HadesInvisibilityRetaliateBoon',
   ],
-  rarityPolicy: { kind: 'fixed', rarity: 'Common' },
+  rarityPolicy: { kind: 'none' },
   defaultOffer: {
     options: [
-      { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
-      { traitKey: 'HadesCastProjectileBoon', rarity: 'Common' },
-      { traitKey: 'HadesPreDamageBoon', rarity: 'Common' },
+      { traitKey: 'HadesLifestealBoon' },
+      { traitKey: 'HadesCastProjectileBoon' },
+      { traitKey: 'HadesPreDamageBoon' },
     ],
     selectedOption: 0,
   },

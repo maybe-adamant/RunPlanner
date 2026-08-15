@@ -206,7 +206,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       acquisitionRole: 'jeweledPomEquip',
       sequence: 3,
       giverKey: 'Hades',
-      options: [{ traitKey: 'HadesLifestealBoon', rarity: 'Common' }],
+      options: [{ traitKey: 'HadesLifestealBoon' }],
       selectedOptionKey: 'option1',
       acquisitionPoint: 'keepsakeEquip',
       acquisitionIdentity,

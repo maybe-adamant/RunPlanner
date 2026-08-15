@@ -1,8 +1,7 @@
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
 
-const fixedCommon = {
-  freshOfferRarities: ['Common'],
-  equippedRarities: ['Common'],
+const raritylessNpcTrait = {
+  rarityDomain: 'none',
   elementContributions: {},
   usesBoonRarity: false,
   blockStacking: false,
@@ -12,7 +11,7 @@ const fixedCommon = {
 
 export const narcissusTraits = [
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusA',
     label: 'Verdure Sampler',
     offerRequirements: [{ kind: 'upgradableTrait' }],
@@ -23,14 +22,14 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusB',
     label: 'Heartfelt Condolences',
     offerRequirements: [],
     selectedDisposition: { kind: 'noOp' },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusC',
     label: 'Precious Metals',
     offerRequirements: [],
@@ -41,7 +40,7 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusD',
     label: 'Mystic Secrets',
     offerRequirements: [],
@@ -52,7 +51,7 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusE',
     label: 'Ancestral Offering',
     offerRequirements: [],
@@ -63,14 +62,14 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusF',
     label: "Fates' Trimmings",
     offerRequirements: [],
     selectedDisposition: { kind: 'noOp' },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusG',
     label: 'Heavenly Splendor',
     offerRequirements: [],
@@ -84,7 +83,7 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusH',
     label: 'Life Savings',
     offerRequirements: [
@@ -97,7 +96,7 @@ export const narcissusTraits = [
     },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'NarcissusI',
     label: 'Mixed Blessings',
     offerRequirements: [],
@@ -115,13 +114,9 @@ export const narcissusGiver = {
   providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: narcissusTraits.map((trait) => trait.key),
-  rarityPolicy: { kind: 'fixed', rarity: 'Common' },
+  rarityPolicy: { kind: 'none' },
   defaultOffer: {
-    options: [
-      { traitKey: 'NarcissusA', rarity: 'Common' },
-      { traitKey: 'NarcissusD', rarity: 'Common' },
-      { traitKey: 'NarcissusE', rarity: 'Common' },
-    ],
+    options: [{ traitKey: 'NarcissusA' }, { traitKey: 'NarcissusD' }, { traitKey: 'NarcissusE' }],
     selectedOption: 0,
   },
 } as const satisfies RawTraitGiverDeclaration;

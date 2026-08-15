@@ -150,9 +150,9 @@ positive-probability support:
 ### Red Citrine Divination
 
 `RandomArcanaTrait` calls `AddRandomMetaUpgrades` with a base count of one.
-Circe's menu fixes the choice at Common, so Red Citrine activates exactly one
-inactive card. Under a fully progressed rank-III baseline, the newly installed
-Arcana trait begins at Epic.
+Circe's menu uses internal Common scaling, so Red Citrine activates exactly one
+inactive card; this is not player-facing boon rarity. Under a fully progressed
+rank-III baseline, the newly installed Arcana trait begins at Epic.
 
 ### Judgment
 
@@ -228,7 +228,8 @@ Vow of Rivals is the only declaration with
 
 Black Night Banishment (`RemoveShrineTrait`) is offered only when at least one
 configured Vow has rank greater than zero and is not marked ineligible for
-Circe removal. At Common it chooses exactly one such Vow.
+Circe removal. Its normal-run internal Common scaling chooses exactly one such
+Vow; the Circe trait itself is player-rarityless.
 
 The effect does not change `GameState.ShrineUpgrades` or the selected rank. It
 sets `CurrentRun.ShrineUpgradesDisabled[vowKey] = true`. Runtime Shrine queries
@@ -284,7 +285,7 @@ Schema 21 established the Arcana/Fear and Circe subset: rank-III card
 baselines, ordinary automatic activation, manual Arcana and ranked Fear
 loadouts, configured versus effective Fear, temporary Arcana activation,
 Lapis promotion, Black Night suppression, Judgment's exact post-Boss draws,
-and Circe's nine fixed-Common choices. Schema 22 adds the two supported
+and Circe's nine player-rarityless choices. Schema 22 adds the two supported
 reward-facing Vow effects without introducing a generic Fear interpreter:
 Denial records exact displayed unselected Olympian/Hermes traits in the folded
 route history, and Forfeit records one ordinary-room acquisition veto per

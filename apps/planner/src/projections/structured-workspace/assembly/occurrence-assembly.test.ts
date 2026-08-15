@@ -784,9 +784,9 @@ describe('structured workspace occurrence assembly', () => {
         kind: 'traits',
         giverKey: 'Narcissus',
         options: [
-          { traitKey: 'NarcissusI', rarity: 'Common' },
-          { traitKey: 'NarcissusB', rarity: 'Common' },
-          { traitKey: 'NarcissusC', rarity: 'Common' },
+          { traitKey: 'NarcissusI' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusC' },
         ],
         selectedOptionKey: 'option1',
         deathDefianceConditionMet: false,

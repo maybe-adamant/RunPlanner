@@ -2,7 +2,7 @@
 
 ## Status
 
-**Lock candidate after final adversarial corrections.** This plan has been
+**Locked and in execution.** This plan has been
 regrounded against clean commit `25e25e2`, authored schema 30, and the completed
 supported-keepsake and Cherished Heirloom phase. It supersedes the earlier
 schema-20 seven-choice draft.
@@ -24,7 +24,7 @@ closure, absorb only durable contracts and delete this file.
 
 ## Objective
 
-Publish Echo as a complete fixed-Common Story provider with the game's eight
+Publish Echo as a complete player-rarityless Story provider with the game's eight
 menu identities:
 
 1. Reward Reward Reward;
@@ -101,9 +101,13 @@ back restores it. React renders supported children supplied by the workspace
 and never switches on Echo trait keys.
 
 Every legally selected outer Echo identity first enters ordinary trait history
-at fixed Common rarity, including the source-hidden Reward, Boon, Survive, and
-Pom identities. The planner does not model the source's presentation-only
-`Hidden` flag. The selected declaration's closed effect settles after that
+without authored rarity, including the source-hidden Reward, Boon, Survive,
+and Pom identities. In an ordinary run the source assigns Echo internal Epic
+scaling; Dream Dive replaces it with an entered-biome-indexed tier, and
+`ForceCommonAppearanceTrait` hides the rarity name. Those numeric scaling rows
+and Dream Dive are outside scope, and Echo is excluded from the modeled
+god-boon rarity mutations. The planner therefore omits the internal tier rather
+than misrepresenting it as Common. The selected declaration's closed effect settles after that
 outer acquisition. Boon therefore leaves both its outer Echo identity and its
 selected nested trait; Gold later removes only its own exact outer acquisition
 when its use is consumed. A missing or context-invalid active child does not
@@ -118,16 +122,16 @@ offer machinery.
 
 ### Direct choices
 
-- Evade and Fight retain their fixed-Common outer Echo identities. Their
+- Evade and Fight retain their rarityless outer Echo identities. Their
   numeric bonuses and decay remain outside the planner.
-- Survive retains its fixed-Common outer identity and reuses the existing
+- Survive retains its rarityless outer identity and reuses the existing
   source-local `deathDefianceConditionMet` fact. Death Defiance restoration
   count and healing remain collapsed.
 - Pom evaluates the exact pre-choice trait frontier, restricts targets to
   Pom-eligible equipped traits tied at the greatest current level, and adds the
   target's current level to itself. No eligible target is a legal no-op, not an
   ineligible outer Echo choice and not a missing-target finding. Its outer
-  fixed-Common identity remains in trait history even when the effect is a
+  rarityless identity remains in trait history even when the effect is a
   no-op.
 
 ### Boon Boon Boon
@@ -210,7 +214,7 @@ pickup from the concrete god source resolved at interaction.
 
 ### Gold Gold Gold
 
-Selecting Gold equips fixed-Common `EchoDoubleShop` with one use. That exact
+Selecting Gold equips rarityless `EchoDoubleShop` with one use. That exact
 equipped trait is the only pending representation.
 
 World Shop settlement examines purchased entries in authored order. At the
@@ -283,7 +287,7 @@ unslotted replay can occur.
 
 The Hades II catalog owns:
 
-- Echo's eight declarations, labels, fixed Common rarity, pool membership,
+- Echo's eight declarations, labels, rarityless domain, pool membership,
   requirements, and closed selected dispositions;
 - exact Echo-last-run provider/trait outcome variants, trait-key distinctness,
   exclusions, rarity domains, and resolved loot-history source;
@@ -317,9 +321,15 @@ state, not authored flags. Every child has an exact semantic address and strict
 codec applicability. Schema versions before the first Echo schema are
 rejected; no compatibility decoder is added.
 
+The rarity correction does not advance schema 31. Trait-option rarity was
+already optional for the normalized `none` domain, and catalog legality closes
+whether a concrete option may carry it. Schema-31 documents that attach rarity
+to a now-rarityless NPC option are rejected by the strict codec rather than
+migrated through a compatibility shim.
+
 ### Simulation and history
 
-Trait history remains the authority for all eight fixed-Common outer Echo
+Trait history remains the authority for all eight rarityless outer Echo
 acquisitions, Boon direct equip, Gold consumption, and Gift's immutable captured
 identity and one-shot replay marker.
 Reward history owns the latest exact replayable acquisition. Keepsake state
@@ -363,17 +373,17 @@ labels and layout only.
 
 ### Gate A — Echo provider, simple choices, and Pom Pom Pom
 
-1. Add the fixed-Common Echo giver and the Survive, Evade, Fight, and Pom
+1. Add the rarityless Echo giver and the Survive, Evade, Fight, and Pom
    declarations as one partial-provider slice.
 2. Bind `Story_Echo_01` to the giver and NPC presentation.
-3. Record every selected outer identity in fixed-Common trait history before
+3. Record every selected outer identity in rarityless trait history before
    settling its effect; keep Evade/Fight numeric behavior and Survive's DD
    restoration count collapsed.
 4. Evaluate Pom's exact pre-choice Pom-eligible frontier and publish only
    targets tied at the greatest current level.
 5. Add strict selected-target or explicit no-target authored state, semantic
    commands, candidates, findings, focused projection, and Run State contact.
-6. Prove three-option availability with and without Survive, fixed rarity, all
+6. Prove three-option availability with and without Survive, omitted rarity, all
    four outer acquisitions, DD condition retention, greatest-level ties, exact
    doubling, legal no-target persistence, context-invalid repair, and
    undo/redo.
@@ -434,7 +444,7 @@ feat(engine): model Echo last-reward replay
 
 ### Gate D — Gold Gold Gold
 
-1. Add and equip the fixed-Common one-use Gold trait.
+1. Add and equip the rarityless one-use Gold trait.
 2. Extend one reached Shop site with one derived supplemental acquisition
    immediately after its triggering paid entry.
 3. Reuse exact trait-history removal and ordinary acquisition child products.
@@ -509,8 +519,8 @@ docs: absorb Echo trait delivery
 ## Final acceptance audits
 
 - The reached Echo menu draws three distinct rows from exactly eight
-  fixed-Common identities, subject only to their supported source conditions.
-- Every selected outer Echo identity enters fixed-Common trait history before
+  rarityless identities, subject only to their supported source conditions.
+- Every selected outer Echo identity enters rarityless trait history before
   its effect settles; Boon additionally equips its selected nested trait and
   presentation-only source hiding does not suppress Run State truth.
 - Pom doubles one exact greatest-level target and is a legal no-op with none.

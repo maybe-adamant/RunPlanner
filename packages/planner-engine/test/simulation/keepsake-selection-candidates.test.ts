@@ -51,7 +51,7 @@ function withPomResult(
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceJeweledPomEquipResult',
     result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-    value: { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
+    value: { traitKey: 'HadesLifestealBoon' },
   });
 }
 
@@ -348,7 +348,6 @@ describe('keepsake selection candidates', () => {
       result: startResult,
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        rarity: 'Common',
         deathDefianceConditionMet: false,
       },
     });
@@ -382,7 +381,6 @@ describe('keepsake selection candidates', () => {
       result: postbossResult,
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        rarity: 'Common',
         deathDefianceConditionMet: false,
       },
     });

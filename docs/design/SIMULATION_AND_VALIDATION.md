@@ -1532,7 +1532,7 @@ effect remains active. Promotions are immutable replacement values and are
 recomputed into slots, elements, rarity counts, upgradeability, and all later
 trait predicates. A floor-aware fresh Common assessment reports
 `rarityBelowActiveFloor` when the declaration also supports Rare; Rare/Epic,
-fixed Common/Legendary/Duo, and Hammer domains retain their existing rules.
+fixed Common/Legendary/Duo and rarityless domains retain their existing rules.
 Invalid, unselected, dormant, and unreached offers do not enter this replay.
 
 The current canonical trace still keeps `allSpellInvested = false` and

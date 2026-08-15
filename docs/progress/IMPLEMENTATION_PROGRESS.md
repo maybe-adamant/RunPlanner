@@ -64,10 +64,10 @@ The Arcana, Fear, Judgment, and Circe delivery is complete. Schema 21 adds
 route-owned manual Arcana and ranked Fear loadouts, exact Boss-completion
 Judgment outcomes, and selected Circe resolution children. The catalog owns the
 25-card board, automatic activation rules, Vow rank/Fear data, Judgment's
-Epic-five/Heroic-six count, and Circe's fixed-Common provider. The engine owns
-progressive Arcana/Fear state, branch identity, exact target domains, selected
-effects, findings, and repair candidates; the application projects route
-settings, Run State, trait-dialog children, and exact completion controls
+Epic-five/Heroic-six count, and Circe's player-rarityless provider. The engine
+owns progressive Arcana/Fear state, branch identity, exact target domains,
+selected effects, findings, and repair candidates; the application projects
+route settings, Run State, trait-dialog children, and exact completion controls
 without recreating that policy. The closing audit centralized Circe target
 domains and Judgment counts and retired the temporary delivery plan. The
 complete inventory passed: 1,383 tests passed in the parallel run, and its six
@@ -181,8 +181,8 @@ exact selected encounter phases through the existing trait lifecycle. Schema
 17 preserves sparse dormant encounter offers and exact targeted-acquisition
 outcomes; the closed Bridal Glow and Latest Model transitions respectively
 promote one eligible god trait to Heroic and one source-capable Rank-I Hammer
-to Rank II. Catalog-owned selectable, fixed, and rarityless policies keep
-Athena, Icarus, and Hammer authoring on one generic editor path. Delivery landed
+to Rank II. Catalog-owned selectable and rarityless policies keep Athena,
+Icarus, and Hammer authoring on one generic editor path. Delivery landed
 in `36fcfa4`, `1fc84dc`, `3dcbf44`, and `e35994d`; the final repository check
 passed. The temporary field-NPC plan is retired, and its durable catalog,
 authored, simulation, candidate, editor, and biome contracts are absorbed into
@@ -2471,7 +2471,7 @@ decision exists, so purchased trait and Pom repairs are immediately available
 without moving purchases earlier in game time.
 
 Narcissus is the second authored consumer of that seam. Its selected
-fixed-Common descriptor may materialize exact `roomExit` pickups, but the
+player-rarityless descriptor may materialize exact `roomExit` pickups, but the
 descriptor never enters equipped state and owns no nested outcome controls.
 Pickup entries own their concrete reward, fresh trait offer, or level target
 and settle after the current outgoing batch in one authored order. Currency,

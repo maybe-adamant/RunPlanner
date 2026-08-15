@@ -279,7 +279,10 @@ function decodeEncounterTraitOffer(
       ? expectString(option.rarity, `${path}.options.${optionKey}.rarity`)
       : undefined;
     if (trait.rarityDomain.kind === 'none' && rarity !== undefined)
-      failProjectDocument(`${path}.options.${optionKey}.rarity`, 'Hammer options have no rarity');
+      failProjectDocument(
+        `${path}.options.${optionKey}.rarity`,
+        'rarityless options have no rarity',
+      );
     if (
       !allowContextInvalid &&
       trait.rarityDomain.kind === 'ranked' &&

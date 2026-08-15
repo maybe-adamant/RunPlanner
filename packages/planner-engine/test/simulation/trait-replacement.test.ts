@@ -617,12 +617,12 @@ describe('derived Olympian trait replacement', () => {
     });
   });
 
-  it('rejects sparse fixed-provider drafts through the selected assessment authority', () => {
+  it('rejects sparse rarityless-provider drafts through the selected assessment authority', () => {
     const value = Object.freeze({
       kind: 'traits' as const,
       giverKey: 'Icarus',
-      options: Object.freeze([{ traitKey: 'OmegaExplodeBoon', rarity: 'Common' }]) as readonly [
-        { readonly traitKey: string; readonly rarity: 'Common' },
+      options: Object.freeze([{ traitKey: 'OmegaExplodeBoon' }]) as readonly [
+        { readonly traitKey: string },
       ],
       selectedOptionKey: 'option1' as const,
     });

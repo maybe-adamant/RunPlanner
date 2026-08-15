@@ -5,11 +5,11 @@ export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc';
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
 
-/** The rarity vocabulary a declaration participates in.
+/** The player-facing boon-rarity vocabulary a declaration participates in.
  *
- * Hammers are deliberately un-rarified in the planner.  Keeping that as an
- * explicit domain (rather than encoding it as a fixed Common rarity) prevents
- * rarity-bearing Hammer state from leaking into authored or derived products.
+ * `none` is explicit for every planner-rarityless trait. It covers Hammers,
+ * whose independent Rank I/II state is not rarity, and NPC traits whose source
+ * uses internal scaling tiers without exposing or mutating boon rarity.
  */
 export type TraitRarityDomain =
   | { readonly kind: 'none' }
@@ -61,7 +61,7 @@ export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
   | {
-      /** Echo always equips the outer fixed-Common identity before this closed effect settles. */
+      /** Echo always equips the outer rarityless identity before this closed effect settles. */
       readonly kind: 'echo';
       readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel';
     }

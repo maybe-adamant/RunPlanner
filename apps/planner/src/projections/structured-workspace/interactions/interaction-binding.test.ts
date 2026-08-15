@@ -306,10 +306,9 @@ describe('structured workspace interaction binding', () => {
       kind: 'traits',
       giverKey: 'Circe',
       options: Object.freeze([
-        Object.freeze({ traitKey: 'CirceShrinkTrait', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'CirceShrinkTrait' }),
         Object.freeze({
           traitKey: 'RandomArcanaTrait',
-          rarity: 'Common' as const,
           circeResolution: Object.freeze({
             kind: 'activateArcana' as const,
             arcanaKeys: Object.freeze(['ChanneledCast']),
@@ -317,7 +316,6 @@ describe('structured workspace interaction binding', () => {
         }),
         Object.freeze({
           traitKey: 'RemoveShrineTrait',
-          rarity: 'Common' as const,
           circeResolution: Object.freeze({
             kind: 'disableFear' as const,
             vowKey: 'EnemyDamageShrineUpgrade',
@@ -364,7 +362,7 @@ describe('structured workspace interaction binding', () => {
       ...directOffer,
       options: Object.freeze([
         directOffer.options[0],
-        Object.freeze({ traitKey: 'RandomArcanaTrait', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'RandomArcanaTrait' }),
         directOffer.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option2' as const,
@@ -1054,9 +1052,9 @@ describe('structured workspace interaction binding', () => {
         kind: 'traits',
         giverKey: 'Narcissus',
         options: [
-          { traitKey: 'NarcissusI', rarity: 'Common' },
-          { traitKey: 'NarcissusB', rarity: 'Common' },
-          { traitKey: 'NarcissusC', rarity: 'Common' },
+          { traitKey: 'NarcissusI' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusC' },
         ],
         selectedOptionKey: 'option1',
         deathDefianceConditionMet: false,

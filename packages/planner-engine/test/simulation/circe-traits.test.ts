@@ -102,11 +102,10 @@ describe('Circe selected trait acquisition', () => {
       circeOffer('option1', [
         {
           traitKey: 'RandomArcanaTrait',
-          rarity: 'Common',
           circeResolution: { kind: 'activateArcana', arcanaKeys: ['ChanneledCast'] },
         },
-        { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-        { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
       ]),
     );
     const { biome } = oEvaluation(project);
@@ -127,11 +126,10 @@ describe('Circe selected trait acquisition', () => {
     const lapis = circeOffer('option1', [
       {
         traitKey: 'ArcanaRarityTrait',
-        rarity: 'Common',
         circeResolution: { kind: 'promoteArcana', arcanaKeys: ['CastCount', 'ChanneledCast'] },
       },
-      { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-      { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
     ]);
     const state = createArcanaFearState(catalog, {
       ...createDefaultRouteLoadout(catalog),
@@ -174,11 +172,10 @@ describe('Circe selected trait acquisition', () => {
       circeOffer('option1', [
         {
           traitKey: 'RandomArcanaTrait',
-          rarity: 'Common',
           circeResolution: { kind: 'activateArcana', arcanaKeys: [] },
         },
-        { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-        { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
       ]),
       1,
       'encounterCompleted',
@@ -190,11 +187,10 @@ describe('Circe selected trait acquisition', () => {
     const black = circeOffer('option1', [
       {
         traitKey: 'RemoveShrineTrait',
-        rarity: 'Common',
         circeResolution: { kind: 'disableFear', vowKey: 'EnemyDamageShrineUpgrade' },
       },
-      { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-      { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
     ]);
     const unavailable = oEvaluation(withCirce(black));
     expect(unavailable.biome.findings).toEqual(
@@ -240,9 +236,9 @@ describe('Circe selected trait acquisition', () => {
   it('retains the missing child repair domain at Circe and stops later O state', () => {
     const project = withCirce(
       circeOffer('option1', [
-        { traitKey: 'RandomArcanaTrait', rarity: 'Common' },
-        { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-        { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+        { traitKey: 'RandomArcanaTrait' },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
       ]),
     );
     const { assembly, biome } = oEvaluation(project);
@@ -272,11 +268,10 @@ describe('Circe selected trait acquisition', () => {
       circeOffer('option1', [
         {
           traitKey: 'ArcanaRarityTrait',
-          rarity: 'Common',
           circeResolution: { kind: 'promoteArcana', arcanaKeys: ['CastCount', 'CardDraw'] },
         },
-        { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-        { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
       ]),
     );
     const first = authoredCirceOffer(project);
@@ -326,9 +321,9 @@ describe('Circe selected trait acquisition', () => {
 
   it('retains divergent Arcana frontiers through trace grouping for atomic-domain rejection', () => {
     const offer = circeOffer('option1', [
-      { traitKey: 'RandomArcanaTrait', rarity: 'Common' },
-      { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-      { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
+      { traitKey: 'RandomArcanaTrait' },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
     ]);
     const initial = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
     const changed = activateTemporaryArcana(catalog, initial, ['ChanneledCast'], {

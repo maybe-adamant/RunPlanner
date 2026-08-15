@@ -115,14 +115,28 @@ export function applyKeepsakeCommand(
     const trait = catalog.traits.byKey[command.value.traitKey];
     if (trait === undefined) failCommand(command, `unknown trait ${command.value.traitKey}`);
     const rarityPolicy = catalog.traitGivers.byKey[descriptor.giverKey]?.rarityPolicy;
-    if (rarityPolicy?.kind !== 'fixed')
-      failCommand(command, `${descriptor.giverKey} must declare one fixed result rarity`);
-    if (command.value.rarity !== undefined && command.value.rarity !== rarityPolicy.rarity)
-      failCommand(
-        command,
-        `rarity ${command.value.rarity} does not match ${descriptor.giverKey}'s fixed rarity`,
-      );
-    const completeValue = Object.freeze({ ...command.value, rarity: rarityPolicy.rarity });
+    let completeValue: NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>;
+    if (trait.rarityDomain.kind === 'none') {
+      if (rarityPolicy?.kind !== 'none')
+        failCommand(command, `${descriptor.giverKey} has inconsistent rarity declarations`);
+      if (command.value.rarity !== undefined)
+        failCommand(command, `rarityless option ${command.value.traitKey} has no rarity`);
+      completeValue = Object.freeze({
+        traitKey: command.value.traitKey,
+        ...(command.value.deathDefianceConditionMet === undefined
+          ? {}
+          : { deathDefianceConditionMet: command.value.deathDefianceConditionMet }),
+      });
+    } else {
+      if (rarityPolicy?.kind !== 'fixed')
+        failCommand(command, `${descriptor.giverKey} must declare one fixed result rarity`);
+      if (command.value.rarity !== undefined && command.value.rarity !== rarityPolicy.rarity)
+        failCommand(
+          command,
+          `rarity ${command.value.rarity} does not match ${descriptor.giverKey}'s fixed rarity`,
+        );
+      completeValue = Object.freeze({ ...command.value, rarity: rarityPolicy.rarity });
+    }
     const { selection } = command.result;
     if (selection.owner === 'routeStart') {
       const routeIndex = document.routes.findIndex(
