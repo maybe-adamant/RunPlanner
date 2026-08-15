@@ -34,7 +34,14 @@ Primary evidence:
   restocking, and Shop item registration;
 - `SurfaceShopLogic.lua`: delayed Surface Shop purchase and expedited-delivery
   restock behavior;
-- `InteractLogic.lua`: paid loot and consumable purchase contacts;
+- `InteractLogic.lua`: paid loot and consumable purchase contacts and zero-cost
+  contract-item construction;
+- `PowersLogic.lua` and `ResourceLogic.lua`: Time Piece conversion eligibility
+  and the positive-cost predicate;
+- `ConsumableData.lua` and `LootData.lua`: contract-option conversion facts and
+  the Blind Box replacement behavior;
+- `LootData_Hermes.lua` and `RewardLogic.lua`: Hermes's Shop-only god treatment
+  and the ordinary Blind Box source domain;
 - `EventLogic.lua`: `AwardContractTrait` and `SpawnZagContractRewards`;
 - `TraitData.lua`: `InfernalContractBoon`;
 - `EncounterData_Boss.lua`: the contract-room award event;
@@ -181,6 +188,13 @@ Eligibility and payload resolution still follow the selected option's normal
 declaration. The weights affect probability only; all eligible identities are
 possibilities.
 
+`BlindBoxLoot` resolves through the ordinary eligible-god domain on
+interaction. That domain requires `GodLoot = true`. Hermes instead declares
+`GodLoot = false` and only `TreatAsGodLootByShops = true`, so a contract Blind
+Box cannot resolve to `HermesUpgrade` and cannot grant Travel Deal. Travel Deal
+must already have been acquired before entering the Shop if it is to affect
+that Shop's first normal purchase.
+
 The spawned item is marked `ZagContractItem`, receives `CostOverride = 0`, and
 then receives `IgnorePurchase = true`. Acquiring it therefore follows the
 selected loot or consumable's normal acquisition behavior without spending
@@ -200,6 +214,30 @@ For planner discussion, calling this an extra free Shop slot is a bounded
 abstraction over the biome's acquisition opportunities. The literal source
 fact remains that the contract pedestal is separately produced at the reached
 qualifying destination and is not another ordinary weighted Shop slot.
+
+### Time Piece capability
+
+`SpawnZagContractRewards` applies `CostOverride = 0`. Lua treats zero as
+truthy, so the consumable construction path installs `ResourceCosts =
+{ Money = 0 }`; `HasResourceCost` returns true only for a positive amount.
+`CanGoldifyReward` can therefore reach the option's ordinary
+`GoldConversionEligible` fact instead of rejecting the pedestal as a paid Shop
+item.
+
+The exact contract pool splits as follows:
+
+| Identity          | Time Piece capability on the free pedestal |
+| ----------------- | ------------------------------------------ |
+| `BlindBoxLoot`    | no                                         |
+| `StackUpgradeBig` | yes                                        |
+| `StackUpgrade`    | yes                                        |
+| `TalentBigDrop`   | yes                                        |
+| `TalentDrop`      | yes                                        |
+
+The usual modeled Time Piece conditions still apply, including Fated and a
+remaining conversion use. This capability belongs to the separately spawned
+zero-cost acquisition. The ordinary initial Shop options and any Travel Deal
+refill retain positive Shop provenance and are not convertible.
 
 ## Travel Deal
 
@@ -237,6 +275,16 @@ excluding the purchased name and its `Drop` alias. If the same-index option is
 not available under those exclusions, it retries the ordinary store without
 them. The result replaces the purchased physical slot; it is not appended as a
 new independent initial inventory slot.
+
+The excluded names are the spawned interaction identity, not the raw profile
+entry label. A purchased concrete god passes (for example) `ZeusUpgrade`, so
+the profile's `RandomLoot` wrapper remains eligible. Hammer passes
+`WeaponUpgrade`, so the pair `{ WeaponUpgrade, WeaponUpgradeDrop }` excludes
+the raw `WeaponUpgradeDrop` option. The Shop Hermes wrapper spawns and
+interacts as `HermesUpgrade`, so the pair `{ HermesUpgrade,
+HermesUpgradeDrop }` does **not** exclude the raw `ShopHermesUpgrade` profile
+option. These are exact source identities rather than a generic reward-label
+rewrite.
 
 Only the first qualifying normal purchase in that Shop triggers the refill.
 Purchasing Travel Deal itself cannot retroactively trigger Travel Deal in the
@@ -305,6 +353,9 @@ Travel Deal's trigger depends on that distinction.
   the contract room's forced resource.
 - Every reached qualifying destination produces one free option from the exact
   five-entry pedestal pool; the trait is not consumed.
+- A contract Blind Box cannot resolve to Hermes or grant Travel Deal.
+- The four Pom/Path options on the zero-cost contract pedestal retain ordinary
+  Time Piece capability; the Blind Box and paid initial/refill options do not.
 - The 4/6/7 opportunity counts are a truthful planner abstraction over ordinary
   Shop options plus the separately spawned pedestal.
 - Travel Deal refills the exact first normal purchased slot from that Shop's
