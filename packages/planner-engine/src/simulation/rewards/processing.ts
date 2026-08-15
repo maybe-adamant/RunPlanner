@@ -22,6 +22,11 @@ import type {
   AuthoredKeepsakeEquipResults,
   AuthoredRewardState,
 } from '../../authored-project/model';
+import { createDefaultAcquisitionRewardState } from '../../authored-project/traits';
+import {
+  createEchoShopDuplicateEntryKey,
+  echoShopDuplicateOffer,
+} from '../../authored-project/shop';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -149,6 +154,15 @@ export interface AcquisitionSettlementProduct {
   readonly pickupEntryFrontiers?: readonly PickupAcquisitionEntryFrontier[];
   /** Exact pre-role branch products from the canonical settlement fold. */
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
+  /** Reached derived entry whose authored child is not part of the site's order. */
+  readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
+}
+
+export interface DerivedAcquisitionEntryFrontier {
+  readonly address: AcquisitionEntryAddress;
+  readonly sourceOfferKey: string;
+  readonly defaultValue: AuthoredRewardState;
+  readonly branchesBeforeEntry: readonly RewardBranchState[];
 }
 
 export interface AcquisitionRoleFrontier {
@@ -188,6 +202,7 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly entryKey: string;
   readonly source: AcquisitionSource;
   readonly historySequence: number;
+  readonly roleBindings?: readonly AcquisitionSettlementRole[];
 }
 export interface AcquisitionRoleResolution extends AcquisitionSettlementRole {
   readonly historySequence: number;
@@ -541,7 +556,28 @@ function applyTraitOfferForAcquisition(
     branch.keepsakes,
     callingCard === undefined ? undefined : authored,
   );
-  const applied = recordReachedTraitOffer(catalog, evaluation, sequence, lifecyclePoint);
+  const selectedForIdentity =
+    effectiveAuthored.kind === 'traits'
+      ? effectiveAuthored.options[optionIndex(effectiveAuthored.selectedOptionKey)]
+      : undefined;
+  const selectedForIdentityDisposition =
+    selectedForIdentity === undefined
+      ? undefined
+      : catalog.traits.byKey[selectedForIdentity.traitKey]?.selectedDisposition;
+  const acquisitionIdentityOwner = traitOwnerAddress(reward.origin);
+  const acquisitionIdentity =
+    selectedForIdentityDisposition?.kind === 'echo' &&
+    selectedForIdentityDisposition.effect === 'doubleShop' &&
+    acquisitionIdentityOwner !== undefined
+      ? `${semanticAddressKey(createTraitOfferAddress(acquisitionIdentityOwner, role))}:${sequence}`
+      : undefined;
+  const applied = recordReachedTraitOffer(
+    catalog,
+    evaluation,
+    sequence,
+    lifecyclePoint,
+    acquisitionIdentity,
+  );
   const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
   if (
     findings !== undefined &&
@@ -2064,6 +2100,7 @@ export function settleShopAcquisitionSite(
   const failures: ShopPurchaseFailure[] = [];
   const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
+  const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
   const rolesByOfferKey = new Map<
     string,
     readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[]
@@ -2124,8 +2161,9 @@ export function settleShopAcquisitionSite(
     );
     failures.push(...simulation.failures);
     for (const result of simulation.results) {
-      let candidate: RewardBranchState = Object.freeze({ ...branch, history: result.history });
-      for (const acquisition of result.acquisitions) {
+      let candidate: RewardBranchState = branch;
+      let duplicateAttempted = false;
+      for (const [acquisitionIndex, acquisition] of result.acquisitions.entries()) {
         const offer = entry.offers[acquisition.slotIndex];
         if (offer === undefined) {
           return fail('shop acquisition has no semantic slot');
@@ -2183,6 +2221,30 @@ export function settleShopAcquisitionSite(
             context.findingChronology ?? historyChronology(historySequence),
           );
         }
+        let paidHistory = applyConcreteAcquisition(
+          catalog.rewards,
+          candidate.history,
+          acquisition.event.acquisition,
+        );
+        const paidContributions =
+          catalog.rewards.acquisitions.byKey[acquisition.event.acquisition.gameName]
+            ?.elementContributions;
+        if (paidContributions !== undefined) {
+          const priorTraits = candidate.traitHistory ?? createTraitHistoryState();
+          const traitHistory = foldTraitHistoryEvents(catalog, [
+            ...priorTraits.events,
+            Object.freeze({
+              kind: 'elementContribution' as const,
+              owner: offer.offerOrigin,
+              acquisitionRole: acquisition.event.role,
+              sequence: historySequence,
+              acquisitionPoint: acquisition.event.lifecyclePoint,
+              contributions: paidContributions,
+            }),
+          ]);
+          paidHistory = attachTraitHistory(paidHistory, traitHistory);
+          candidate = Object.freeze({ ...candidate, history: paidHistory, traitHistory });
+        } else candidate = Object.freeze({ ...candidate, history: paidHistory });
         candidate = applyTraitOfferForAcquisition(
           catalog,
           candidate,
@@ -2204,6 +2266,160 @@ export function settleShopAcquisitionSite(
             ),
           }),
         });
+        const nextAcquisition = result.acquisitions[acquisitionIndex + 1];
+        if (!duplicateAttempted && nextAcquisition?.slotIndex !== acquisition.slotIndex) {
+          const pending = Object.values(candidate.traitHistory?.equippedTraits ?? {}).find(
+            (equipped) => {
+              const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
+              return disposition?.kind === 'echo' && disposition.effect === 'doubleShop';
+            },
+          );
+          const pendingDisposition =
+            pending === undefined
+              ? undefined
+              : catalog.traits.byKey[pending.traitKey]?.selectedDisposition;
+          if (
+            pending !== undefined &&
+            pending.acquisitionIdentity !== undefined &&
+            pendingDisposition?.kind === 'echo' &&
+            pendingDisposition.effect === 'doubleShop' &&
+            !pendingDisposition.excludedRewardTypes.includes(offer.offer.rewardType)
+          ) {
+            duplicateAttempted = true;
+            const duplicateKey = createEchoShopDuplicateEntryKey(offer.offerKey);
+            const duplicateAddress = createAcquisitionEntryAddress(site, duplicateKey);
+            const weaponKey = offer.traitContext?.weaponKey;
+            const aspectKey = offer.traitContext?.aspectKey;
+            if (weaponKey === undefined || aspectKey === undefined)
+              return fail(`${room.gameName} Shop offer has no route loadout context`);
+            const defaultValue = createDefaultAcquisitionRewardState(
+              catalog,
+              echoShopDuplicateOffer(catalog, offer.offer),
+              { weaponKey, aspectKey },
+              { kind: 'shopProfile', key: profile.key },
+            );
+            const sourceRoleBindings = Object.freeze(
+              result.acquisitions
+                .filter((candidate) => candidate.slotIndex === acquisition.slotIndex)
+                .map((candidate) =>
+                  Object.freeze({
+                    role: candidate.event.role,
+                    lifecyclePoint: candidate.event.lifecyclePoint,
+                  }),
+                ),
+            );
+            derivedEntryFrontiers.push(
+              Object.freeze({
+                address: duplicateAddress,
+                sourceOfferKey: offer.offerKey,
+                defaultValue,
+                branchesBeforeEntry: Object.freeze([candidate]),
+              }),
+            );
+            const child = room.pickupSite?.entries[duplicateKey];
+            if (child === undefined) {
+              const defaultFrontier = settleOwnedAcquisitionSite(
+                catalog,
+                [candidate],
+                {
+                  siteOwner: room.origin,
+                  pointKey: 'roomExit',
+                  entryKey: duplicateKey,
+                  source: Object.freeze({
+                    origin: duplicateAddress,
+                    offer: defaultValue.offer,
+                    producerLifecycleKey: profile.key,
+                    producerKind: 'shop',
+                    instanceProvenance: 'free',
+                    traitOffersByAcquisitionRole: defaultValue.traitOffersByAcquisitionRole,
+                    ...(defaultValue.levelResolutionsByAcquisitionRole === undefined
+                      ? {}
+                      : {
+                          levelResolutionsByAcquisitionRole:
+                            defaultValue.levelResolutionsByAcquisitionRole,
+                        }),
+                    conversionByAcquisitionRole: defaultValue.conversionByAcquisitionRole,
+                    ...(offer.traitContext === undefined
+                      ? {}
+                      : { traitContext: offer.traitContext }),
+                  }),
+                  historySequence,
+                  roleBindings: sourceRoleBindings,
+                },
+                context.facts,
+                new Map(),
+                ownerRegion(room.origin),
+                context.findingChronology,
+              );
+              roleFrontiers.push(...(defaultFrontier.roleFrontiers ?? []));
+              addRewardFinding(
+                findings,
+                Object.freeze({
+                  code: 'echoShopDuplicateChildMissing' as const,
+                  severity: 'error' as const,
+                  phase: 'rewardGeneration' as const,
+                  origin: duplicateAddress,
+                  evidence: Object.freeze({ sourceOfferKey: offer.offerKey }),
+                }),
+                ownerRegion(room.origin),
+                context.findingChronology ?? historyChronology(historySequence),
+              );
+              continue;
+            }
+            const duplicate = settleOwnedAcquisitionSite(
+              catalog,
+              [candidate],
+              {
+                siteOwner: room.origin,
+                pointKey: 'roomExit',
+                entryKey: duplicateKey,
+                source: Object.freeze({
+                  origin: duplicateAddress,
+                  offer: child.offer,
+                  producerLifecycleKey: profile.key,
+                  producerKind: 'shop',
+                  instanceProvenance: 'free',
+                  traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
+                  ...(child.levelResolutionsByAcquisitionRole === undefined
+                    ? {}
+                    : {
+                        levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole,
+                      }),
+                  conversionByAcquisitionRole: child.conversionByAcquisitionRole,
+                  ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+                }),
+                historySequence,
+                roleBindings: sourceRoleBindings,
+              },
+              context.facts,
+              findings,
+              ownerRegion(room.origin),
+              context.findingChronology,
+            );
+            roleFrontiers.push(...(duplicate.roleFrontiers ?? []));
+            const duplicated = duplicate.branches[0];
+            if (duplicated !== undefined) {
+              const priorTraits = duplicated.traitHistory ?? createTraitHistoryState();
+              const traitHistory = foldTraitHistoryEvents(catalog, [
+                ...priorTraits.events,
+                Object.freeze({
+                  kind: 'traitRemoval' as const,
+                  owner: duplicateAddress,
+                  acquisitionRole: 'echoShopDuplicateConsumed',
+                  sequence: historySequence,
+                  acquisitionPoint: 'shopDuplicateSettled',
+                  traitKey: pending.traitKey,
+                  acquisitionIdentity: pending.acquisitionIdentity,
+                }),
+              ]);
+              candidate = Object.freeze({
+                ...duplicated,
+                history: attachTraitHistory(duplicated.history, traitHistory),
+                traitHistory,
+              });
+            }
+          }
+        }
       }
       const { [semanticAddressKey(room.origin)]: completed, ...remainingShops } =
         candidate.pendingShops;
@@ -2259,6 +2475,7 @@ export function settleShopAcquisitionSite(
     ),
     branches: mergeEquivalentRewardBranches(next),
     roleFrontiers: Object.freeze(roleFrontiers),
+    derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),
   });
 }
 
@@ -2396,13 +2613,13 @@ export function settleOwnedAcquisitionSite(
   const site = createAcquisitionSiteAddress(request.siteOwner, request.pointKey);
   const producer = catalog.rewards.producerLifecycles.byKey[request.source.producerLifecycleKey];
   const lifecycle = producer?.rewardTypes.byKey[request.source.offer.rewardType];
-  if (lifecycle === undefined) {
+  if (lifecycle === undefined && request.roleBindings === undefined) {
     throw new Error(
       `${request.source.producerLifecycleKey} does not support ${request.source.offer.rewardType}`,
     );
   }
   const roleBindings: readonly AcquisitionRoleResolution[] = Object.freeze(
-    lifecycle.acquisitionLifecycle.map((binding) =>
+    (request.roleBindings ?? lifecycle!.acquisitionLifecycle).map((binding) =>
       Object.freeze({ ...binding, historySequence: request.historySequence }),
     ),
   );

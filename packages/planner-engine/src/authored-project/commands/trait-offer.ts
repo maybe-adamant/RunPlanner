@@ -25,6 +25,7 @@ import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
+import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
 function validateGorgonAthenaOffer(
   catalog: Catalog,
@@ -111,12 +112,21 @@ export interface LocatedTraitReward {
 
 function pickupEntrySource(
   catalog: Catalog,
+  located: LocatedBiome,
   occurrence: RoomOccurrence,
   entryKey: string,
   command: TraitOfferCommand,
 ): LocatedTraitReward {
-  const entry = occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey];
+  const entry = authoredAcquisitionEntry(catalog, occurrence, entryKey, located.loadout);
   if (entry === undefined) failCommand(command, `missing pickup entry ${entryKey}`);
+  if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined)
+    return Object.freeze({
+      reward: entry,
+      levelEffectSource: {
+        kind: 'shopProfile' as const,
+        key: occurrence.state.shop.profileKey,
+      },
+    });
   const producer = selectedPickupProducer(catalog, occurrence.encounters);
   if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
   return Object.freeze({
@@ -352,7 +362,7 @@ export function locateTraitReward(
   const owner = command.trait.owner;
   switch (owner.kind) {
     case 'acquisitionEntry':
-      return pickupEntrySource(catalog, occurrence, owner.entryKey, command);
+      return pickupEntrySource(catalog, located, occurrence, owner.entryKey, command);
     case 'incomingReward':
       switch (state.kind) {
         case 'counted':
@@ -806,7 +816,7 @@ export function applyTraitOfferCommand(
   if (sameOccurrenceValue(value, existing)) return document;
   if (owner.kind === 'acquisitionEntry') {
     const site = occurrence.acquisitionSites?.roomExit;
-    const pickup = site?.pickupEntries?.[owner.entryKey];
+    const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
     if (site === undefined || pickup === undefined)
       failCommand(command, `missing pickup entry ${owner.entryKey}`);
     const nextPickup = updateReward(pickup, command.trait.acquisitionRole, value);
@@ -815,16 +825,7 @@ export function applyTraitOfferCommand(
       located,
       replaceOccurrence(
         topology,
-        Object.freeze({
-          ...occurrence,
-          acquisitionSites: Object.freeze({
-            ...(occurrence.acquisitionSites ?? {}),
-            roomExit: Object.freeze({
-              ...site,
-              pickupEntries: Object.freeze({ ...site.pickupEntries, [owner.entryKey]: nextPickup }),
-            }),
-          }),
-        }),
+        replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, nextPickup),
       ),
     );
   }

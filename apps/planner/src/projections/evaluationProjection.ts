@@ -316,6 +316,10 @@ const findingCopy = {
     title: 'Reward Reward Reward replay is stale',
     description: 'Reset or repair the acquisition decisions for the latest replayable source.',
   },
+  echoShopDuplicateChildMissing: {
+    title: 'Create the Gold Gold Gold duplicate',
+    description: 'Create the acquisition decisions for the reached free Shop duplicate.',
+  },
   fullTraitOfferWidthRequired: {
     title: 'Three choices are required',
     description: 'This offer still has enough ordinary traits to fill all three choices.',

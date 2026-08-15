@@ -5,6 +5,7 @@ import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { AcquisitionConversionCommand } from './types';
 import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
 function updateReward(
   reward: AuthoredRewardState,
@@ -76,26 +77,14 @@ export function applyAcquisitionConversionCommand(
       break;
     case 'acquisitionEntry': {
       const site = occurrence.acquisitionSites?.roomExit;
-      const entry = site?.pickupEntries?.[owner.entryKey];
+      const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
       if (site === undefined || entry === undefined) failCommand(command, 'missing pickup entry');
       return updateOccurrenceTopology(
         document,
         located,
         replaceOccurrence(
           topology,
-          Object.freeze({
-            ...occurrence,
-            acquisitionSites: Object.freeze({
-              ...(occurrence.acquisitionSites ?? {}),
-              roomExit: Object.freeze({
-                ...site,
-                pickupEntries: Object.freeze({
-                  ...site.pickupEntries,
-                  [owner.entryKey]: replace(entry),
-                }),
-              }),
-            }),
-          }),
+          replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, replace(entry)),
         ),
       );
     }

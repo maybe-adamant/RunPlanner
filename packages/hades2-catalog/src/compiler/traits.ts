@@ -107,6 +107,7 @@ function normalizeSelectedDisposition(
     readonly producerLifecycleKey?: unknown;
     readonly pickups?: unknown;
     readonly effect?: unknown;
+    readonly excludedRewardTypes?: unknown;
     readonly rankBonus?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
@@ -127,15 +128,28 @@ function normalizeSelectedDisposition(
     });
   }
   if (kind === 'echo') {
+    const effect = closedValue(
+      value.effect,
+      ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon', 'lastReward', 'doubleShop'] as const,
+      `${path}.effect`,
+    );
+    if (effect === 'doubleShop') {
+      if (Object.keys(value).length !== 3)
+        fail(path, 'Echo doubleShop requires kind, effect, and excludedRewardTypes');
+      const excludedRewardTypes = freezeUniqueStrings(
+        requireArray(value.excludedRewardTypes, `${path}.excludedRewardTypes`) as string[],
+        `${path}.excludedRewardTypes`,
+      );
+      if (excludedRewardTypes.length !== 1 || excludedRewardTypes[0] !== 'SpellDrop')
+        fail(`${path}.excludedRewardTypes`, 'must equal [SpellDrop]');
+      return Object.freeze({
+        kind,
+        effect,
+        excludedRewardTypes,
+      });
+    }
     if (Object.keys(value).length !== 2) fail(path, 'echo requires only kind and effect');
-    return Object.freeze({
-      kind,
-      effect: closedValue(
-        value.effect,
-        ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon', 'lastReward'] as const,
-        `${path}.effect`,
-      ),
-    });
+    return Object.freeze({ kind, effect });
   }
   if (kind !== 'producePickups') {
     if (Object.keys(value).length !== 1) fail(path, 'must contain only kind');

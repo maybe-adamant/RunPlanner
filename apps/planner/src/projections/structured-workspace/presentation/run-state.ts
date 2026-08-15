@@ -261,6 +261,9 @@ export function presentRunState(
       forfeitStatus: snapshot.forfeitStatus,
     }),
     traits: Object.freeze({
+      ...(snapshot.traits.echoShopDuplicateStatus === undefined
+        ? {}
+        : { echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus }),
       ...(snapshot.traits.minimumScalableGodTraitRarity === undefined
         ? {}
         : { activeMinimumScalableRarity: snapshot.traits.minimumScalableGodTraitRarity }),

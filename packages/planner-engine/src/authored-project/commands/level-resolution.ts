@@ -10,6 +10,7 @@ import {
 } from './trait-offer';
 import type { LevelResolutionCommand, TraitOfferCommand } from './types';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
 function validate(
   catalog: Catalog,
@@ -91,7 +92,7 @@ export function applyLevelResolutionCommand(
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
   if (owner.kind === 'acquisitionEntry') {
     const site = occurrence.acquisitionSites?.roomExit;
-    const pickup = site?.pickupEntries?.[owner.entryKey];
+    const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
     if (site === undefined || pickup === undefined)
       failCommand(command, `missing pickup entry ${owner.entryKey}`);
     const nextPickup = updateLevelResolutionReward(
@@ -104,16 +105,7 @@ export function applyLevelResolutionCommand(
       located,
       replaceOccurrence(
         topology,
-        Object.freeze({
-          ...occurrence,
-          acquisitionSites: Object.freeze({
-            ...(occurrence.acquisitionSites ?? {}),
-            roomExit: Object.freeze({
-              ...site,
-              pickupEntries: Object.freeze({ ...site.pickupEntries, [owner.entryKey]: nextPickup }),
-            }),
-          }),
-        }),
+        replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, nextPickup),
       ),
     );
   }

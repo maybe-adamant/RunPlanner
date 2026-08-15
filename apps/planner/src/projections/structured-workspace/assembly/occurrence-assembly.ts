@@ -118,6 +118,13 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly derivedAcquisitionEntries?: (
+    site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress,
+  ) => readonly {
+    readonly address: import('@run-planner/engine/authored-project').AcquisitionEntryAddress;
+    readonly sourceOfferKey: string;
+    readonly defaultValue: AuthoredRewardState;
+  }[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
   readonly roomPicker?: WorkspaceRoomPickerControl;
@@ -1549,7 +1556,7 @@ export function assembleWorkspaceOccurrence(
         })();
   const pickupSite = occurrence.acquisitionSites?.roomExit?.pickupEntries;
   const pickupAcquisitions =
-    !input.facts.detailsActive || pickupSite === undefined
+    !input.facts.detailsActive || pickupSite === undefined || occurrence.state.kind === 'shop'
       ? undefined
       : (() => {
           const site = createAcquisitionSiteAddress(address, 'roomExit');
@@ -1645,24 +1652,45 @@ export function assembleWorkspaceOccurrence(
                 room.kind === 'Preboss' || !input.facts.postOutgoingSettlement
                   ? ('afterProducer' as const)
                   : ('postOutgoing' as const),
-              entries: Object.freeze(
-                roomLocal.acquisitionOrder.flatMap((entryKey) => {
-                  const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
-                  return offer === undefined
-                    ? []
-                    : [
+              entries: (() => {
+                const acquisitionSite = createAcquisitionSiteAddress(address, 'roomExit');
+                const derivedEntries =
+                  input.derivedAcquisitionEntries?.(acquisitionSite) ?? Object.freeze([]);
+                return Object.freeze(
+                  roomLocal.acquisitionOrder
+                    .flatMap((entryKey) => {
+                      const offer = roomLocal.offers.find(
+                        (candidate) => candidate.key === entryKey,
+                      );
+                      if (offer === undefined) return [];
+                      return [
                         Object.freeze({
                           key: offer.key,
-                          address: createAcquisitionEntryAddress(
-                            createAcquisitionSiteAddress(address, 'roomExit'),
-                            offer.key,
-                          ),
+                          address: createAcquisitionEntryAddress(acquisitionSite, offer.key),
                           label: offer.label,
                           rewardControl: offer.rewardControl,
                         }),
+                        ...derivedEntries.filter((entry) => entry.sourceOfferKey === offer.key),
                       ];
-                }),
-              ),
+                    })
+                    .map((entry) => {
+                      if (!('defaultValue' in entry)) return entry;
+                      const authored = pickupSite?.[entry.address.entryKey] ?? entry.defaultValue;
+                      return Object.freeze({
+                        key: entry.address.entryKey,
+                        address: entry.address,
+                        label: 'Free duplicate',
+                        rewardControl: rewardControl(
+                          input,
+                          { kind: 'acquisitionEntry' as const, address: entry.address },
+                          undefined,
+                          authored.offer,
+                          authored,
+                        ) as WorkspaceExplicitRewardControl,
+                      });
+                    }),
+                );
+              })(),
             }),
           }
         : {}),
@@ -1703,9 +1731,9 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
     rewardControls,
   });
-  const pickupRewardControls = Object.freeze(
-    (pickupAcquisitions?.entries ?? []).flatMap((entry) =>
-      entry.rewardControl === undefined ? [] : [entry.rewardControl],
+  const acquisitionRewardControls = Object.freeze(
+    (roomSummary.acquisitions?.entries ?? []).flatMap((entry) =>
+      entry.rewardControl?.owner.kind !== 'acquisitionEntry' ? [] : [entry.rewardControl],
     ),
   );
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
@@ -1725,6 +1753,6 @@ export function assembleWorkspaceOccurrence(
     node,
     occurrenceInteractionRequirements: localInteractionRequirements,
     roomControls,
-    rewardControls: Object.freeze([...rewardControls, ...pickupRewardControls]),
+    rewardControls: Object.freeze([...rewardControls, ...acquisitionRewardControls]),
   });
 }

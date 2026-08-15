@@ -55,6 +55,15 @@ function validateLifecycleBindings(
   }
   for (const trait of traits.values) {
     const disposition = trait.selectedDisposition;
+    if (disposition.kind === 'echo' && disposition.effect === 'doubleShop') {
+      for (const rewardType of disposition.excludedRewardTypes)
+        if (rewards.rewardTypes.byKey[rewardType] === undefined)
+          fail(
+            `traits.${trait.key}.selectedDisposition.excludedRewardTypes`,
+            `unknown reward type ${rewardType}`,
+          );
+      continue;
+    }
     if (disposition.kind !== 'producePickups') continue;
     const lifecycle = rewards.producerLifecycles.byKey[disposition.producerLifecycleKey];
     if (lifecycle === undefined)

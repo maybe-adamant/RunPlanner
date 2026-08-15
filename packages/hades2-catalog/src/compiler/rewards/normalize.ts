@@ -752,6 +752,7 @@ function normalizeShops(
   raw: RawRewardKernelInput['shops'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
 ): CatalogCollection<ShopProfileDeclaration> {
+  const echoDuplicateKeyPrefix = 'echoDoubleShop:';
   return createCollection(
     raw.map((profile, profileIndex): ShopProfileDeclaration => {
       const path = `shops[${profileIndex}]`;
@@ -822,8 +823,11 @@ function normalizeShops(
           }
           usedDefaults.add(defaultOptionKey);
           defaultOptionsByGroup.set(groupKey, usedDefaults);
+          const slotKey = requireNonEmpty(slot.key, `${slotPath}.key`);
+          if (slotKey.startsWith(echoDuplicateKeyPrefix))
+            fail(`${slotPath}.key`, `must not use reserved prefix ${echoDuplicateKeyPrefix}`);
           return Object.freeze({
-            key: requireNonEmpty(slot.key, `${slotPath}.key`),
+            key: slotKey,
             label: requireNonEmpty(slot.label, `${slotPath}.label`),
             groupKey,
             defaultOptionKey,

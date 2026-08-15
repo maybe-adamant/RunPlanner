@@ -459,11 +459,42 @@ describe('Echo Gate A direct choices', () => {
     expect(findings.size).toBe(0);
   });
 
+  it('publishes the pending Gold use from canonical trait history in Run State', () => {
+    let project = selectGoldenBridge();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoOffer('option1', [
+        { traitKey: 'EchoDoubleShop' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+      ]),
+    });
+    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]?.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    );
+    if (h === undefined || !('rewards' in h)) throw new Error('H reward evaluation is missing');
+    const snapshot = h.rewards.runStateSnapshots.find(
+      (candidate) => candidate.traits.echoShopDuplicateStatus === 'pending',
+    );
+    expect(snapshot).toMatchObject({
+      owner: {
+        kind: 'exitDecision',
+        source: { kind: 'occurrence', occurrenceId: bridgeId },
+      },
+      traits: {
+        echoShopDuplicateStatus: 'pending',
+        equippedTraits: { EchoDoubleShop: { traitKey: 'EchoDoubleShop' } },
+      },
+    });
+  });
+
   it.each([
     ['DiminishingDodgeBoon', false],
     ['DiminishingHealthAndManaBoon', false],
     ['EchoDeathDefianceRefill', true],
     ['EchoDoubleLevelBoon', false],
+    ['EchoDoubleShop', false],
   ] as const)('retains %s as a rarityless outer acquisition', (traitKey, dd) => {
     const siblingKeys = [
       'DiminishingDodgeBoon',
@@ -497,6 +528,11 @@ describe('Echo Gate A direct choices', () => {
       giverKey: 'Echo',
     });
     expect(result.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
+    if (traitKey === 'EchoDoubleShop') {
+      expect(result.traitHistory?.equippedTraits[traitKey]?.acquisitionIdentity).toBe(
+        `${semanticAddressKey(echoOwner)}:10`,
+      );
+    }
     expect(findings.size).toBe(0);
   });
 
@@ -619,7 +655,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(33);
+    expect(decoded.schemaVersion).toBe(34);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';

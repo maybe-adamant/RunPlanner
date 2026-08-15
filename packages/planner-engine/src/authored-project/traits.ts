@@ -495,11 +495,20 @@ export function createDefaultPickupRewardState(
   loadout: TraitOfferDefaultsContext,
   producerLifecycleKey: string,
 ): import('./model').AuthoredRewardState {
-  const levels = createDefaultLevelResolutions(
-    catalog,
-    offer,
-    producerLevelEffectSource({ producerLifecycleKey }),
-  );
+  return createDefaultAcquisitionRewardState(catalog, offer, loadout, {
+    kind: 'producerLifecycle',
+    key: producerLifecycleKey,
+  });
+}
+
+/** One command-complete reward state for a reached concrete acquisition source. */
+export function createDefaultAcquisitionRewardState(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  loadout: TraitOfferDefaultsContext,
+  levelEffectSource: LevelResolutionEffectSource,
+): import('./model').AuthoredRewardState {
+  const levels = createDefaultLevelResolutions(catalog, offer, levelEffectSource);
   return Object.freeze({
     offer,
     conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),

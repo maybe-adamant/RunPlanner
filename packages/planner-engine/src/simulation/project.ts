@@ -810,6 +810,7 @@ function evaluateBiomeAssembly(
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
+        rewards.derivedAcquisitionEntryArtifacts,
       ),
     });
   }
@@ -836,6 +837,7 @@ function evaluateBiomeAssembly(
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
+        rewards.derivedAcquisitionEntryArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

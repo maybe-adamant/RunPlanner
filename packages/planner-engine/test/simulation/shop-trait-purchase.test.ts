@@ -1,16 +1,25 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectHistoryCommand,
   createShopOfferAddress,
+  createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   semanticAddressKey,
+  createProjectHistory,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  redoProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
   createRewardHistoryState,
   factsWithHistory,
+  type ResolvedRewardOffer,
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -18,20 +27,32 @@ import { createDefaultRoomState } from '../../src/authored-project/room-state/de
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
 import { createDefaultConversionByAcquisitionRole } from '../../src/authored-project/reward-state';
+import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
+import {
+  createEchoShopDuplicateEntryKey,
+  echoShopDuplicateOffer,
+} from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
-import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import {
+  createDerivedAcquisitionEntryCandidateArtifacts,
+  createLevelResolutionCandidateArtifacts,
+} from '../../src/simulation/candidate-artifacts';
 import {
   processShopInventory,
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
+import { prepareAcquisitionOrderCandidateContext } from '../../src/simulation/rewards/acquisition-order-candidates';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
+import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { simulateProject } from '../../src/simulation';
 import {
   createRepresentativeNOPQShopTraitProject,
+  createGoldenFGHIProject,
+  goldenFBiome,
   pBiome,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures';
@@ -93,6 +114,515 @@ function pomTargetHistory() {
   };
   return foldTraitHistoryEvents(catalog, [event]);
 }
+
+function echoGoldHistory() {
+  return foldTraitHistoryEvents(catalog, [
+    Object.freeze({
+      kind: 'traitOffer' as const,
+      owner: { kind: 'project' as const },
+      acquisitionRole: 'echoSelection',
+      sequence: 1,
+      giverKey: 'Echo',
+      options: Object.freeze([{ traitKey: 'EchoDoubleShop' }]) as TraitOfferEvent['options'],
+      selectedOptionKey: 'option1' as const,
+      acquisitionPoint: 'encounterCompleted',
+      acquisitionIdentity: 'echo-gold-use',
+    }),
+  ]);
+}
+
+function echoGoldShop(
+  order: readonly string[],
+  options: {
+    readonly replaceMinorWithSpell?: boolean;
+    readonly includeDuplicate?: boolean;
+    readonly duplicateConversion?: 'normal' | 'gold';
+    readonly duplicateSelectOption2?: boolean;
+    readonly timePiece?: boolean;
+    readonly initialBranches?: Parameters<typeof processShopInventory>[0];
+    readonly occurrenceId?: ReturnType<typeof createOccurrenceId>;
+    readonly offerOverrides?: Readonly<Record<string, ResolvedRewardOffer>>;
+    readonly duplicateOffer?: ResolvedRewardOffer;
+    readonly duplicateTraitKeys?: readonly [string, string, string];
+    readonly withPomTarget?: boolean;
+  } = {},
+) {
+  const room = catalog.rooms.byKey.F_Shop01;
+  if (room === undefined) throw new Error('missing F Shop declaration');
+  const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+  const baseState = createDefaultRoomState(catalog, room, {
+    role: 'ordinary',
+    entryActive: true,
+    loadout,
+  });
+  if (baseState.kind !== 'shop' || baseState.shop === undefined)
+    throw new Error('missing active Shop');
+  const spellOffer = Object.freeze({ rewardType: 'SpellDrop' as const });
+  const offerOverrides: Readonly<Record<string, ResolvedRewardOffer>> = {
+    ...(options.replaceMinorWithSpell ? { Minor: spellOffer } : {}),
+    ...(options.offerOverrides ?? {}),
+  };
+  const shop: NonNullable<typeof baseState.shop> = Object.freeze({
+    ...baseState.shop,
+    offers: Object.freeze(
+      Object.fromEntries(
+        Object.entries(baseState.shop.offers).map(([key, value]) => {
+          const override = offerOverrides[key];
+          return [
+            key,
+            override === undefined
+              ? value
+              : Object.freeze({
+                  reward: createDefaultAcquisitionRewardState(catalog, override, loadout, {
+                    kind: 'shopProfile',
+                    key: baseState.shop!.profileKey,
+                  }),
+                }),
+          ];
+        }),
+      ),
+    ),
+  });
+  const sourceKey = order.find((key) => shop.offers[key]?.reward.offer.rewardType !== 'SpellDrop');
+  const duplicateKey =
+    sourceKey === undefined ? undefined : createEchoShopDuplicateEntryKey(sourceKey);
+  const source = sourceKey === undefined ? undefined : shop.offers[sourceKey]?.reward;
+  const duplicate =
+    source === undefined
+      ? undefined
+      : createDefaultAcquisitionRewardState(
+          catalog,
+          options.duplicateOffer ?? echoShopDuplicateOffer(catalog, source.offer),
+          loadout,
+          {
+            kind: 'shopProfile',
+            key: shop.profileKey,
+          },
+        );
+  const selectedDuplicate =
+    duplicate === undefined || options.duplicateSelectOption2 !== true
+      ? duplicate
+      : Object.freeze({
+          ...duplicate,
+          traitOffersByAcquisitionRole: Object.freeze(
+            Object.fromEntries(
+              Object.entries(duplicate.traitOffersByAcquisitionRole).map(([role, offer]) => [
+                role,
+                offer.kind === 'traits' && offer.options[1] !== undefined
+                  ? Object.freeze({
+                      ...offer,
+                      options: Object.freeze(
+                        (
+                          options.duplicateTraitKeys ?? [
+                            'ApolloManaBoon',
+                            'ApolloSpecialBoon',
+                            'ApolloCastBoon',
+                          ]
+                        ).map((traitKey) => Object.freeze({ traitKey, rarity: 'Common' as const })),
+                      ) as typeof offer.options,
+                      selectedOptionKey: 'option2' as const,
+                    })
+                  : offer,
+              ]),
+            ),
+          ),
+        });
+  const duplicateValue =
+    selectedDuplicate === undefined || options.duplicateConversion === undefined
+      ? selectedDuplicate
+      : Object.freeze({
+          ...selectedDuplicate,
+          conversionByAcquisitionRole: Object.freeze(
+            Object.fromEntries(
+              Object.keys(selectedDuplicate.conversionByAcquisitionRole).map((role) => [
+                role,
+                options.duplicateConversion!,
+              ]),
+            ),
+          ),
+        });
+  const occurrenceId = options.occurrenceId ?? shopId;
+  const occurrence = Object.freeze({
+    occurrenceId,
+    gameName: room.gameName,
+    state: Object.freeze({ ...baseState, shop }),
+    acquisitionSites: Object.freeze({
+      roomExit: Object.freeze({
+        order: Object.freeze([...order]),
+        ...(options.includeDuplicate !== true ||
+        duplicateKey === undefined ||
+        duplicateValue === undefined
+          ? {}
+          : { pickupEntries: Object.freeze({ [duplicateKey]: duplicateValue }) }),
+      }),
+    }),
+    encounters: createDefaultRoomEncounterState(catalog, room, 'echo-gold-shop.encounters'),
+    additionalExits: Object.freeze([]),
+  });
+  const canonical = materializeAuthoredRoom({
+    catalog,
+    biome,
+    room,
+    occurrence,
+    role: 'ordinary',
+    entered: true,
+    lifecycleProfileKey: 'WorldShopRoom',
+    loadout,
+  });
+  const echoTraits = echoGoldHistory();
+  const traits =
+    options.withPomTarget === true
+      ? foldTraitHistoryEvents(catalog, [...echoTraits.events, ...pomTargetHistory().events])
+      : echoTraits;
+  const seeded =
+    options.initialBranches ??
+    initializeTestRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        history: attachTraitHistory(branch.history, traits),
+        traitHistory: traits,
+        ...(options.timePiece
+          ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear) }
+          : {}),
+      }),
+    );
+  const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+    factsWithHistory(baseFacts(), history, new Set());
+  const inventory = processShopInventory(
+    seeded,
+    {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 2,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    },
+    new Map(),
+  );
+  const findings = new Map();
+  const candidate = prepareAcquisitionOrderCandidateContext({
+    catalog,
+    room: canonical,
+    declaration: room,
+    branchesBeforePurchases: inventory,
+    historySequence: 3,
+    facts: (_candidateRoom, history) => facts(history),
+    fail: (detail) => {
+      throw new Error(detail);
+    },
+  });
+  const settlement = settleShopAcquisitionSite(
+    inventory,
+    {
+      catalog,
+      room: canonical,
+      declaration: room,
+      historySequence: 3,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    },
+    findings,
+  );
+  return { candidate, canonical, duplicateKey, findings, inventory, settlement };
+}
+
+describe('Echo Gate D Gold Gold Gold', () => {
+  it('skips SpellDrop, duplicates the first later purchase immediately, and removes its exact trait', () => {
+    const result = echoGoldShop(['Minor', 'Boon', 'MajorNonBoon'], {
+      replaceMinorWithSpell: true,
+      includeDuplicate: true,
+      duplicateSelectOption2: true,
+    });
+    const branch = result.settlement.branches[0];
+    expect(branch?.history.consumableRecord).toMatchObject({ SpellDrop: 1 });
+    expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
+    expect(branch?.traitHistory?.events.filter((event) => event.kind === 'traitRemoval')).toEqual([
+      expect.objectContaining({
+        traitKey: 'EchoDoubleShop',
+        acquisitionIdentity: 'echo-gold-use',
+      }),
+    ]);
+    expect(
+      branch?.events.flatMap((event) =>
+        event.kind !== 'concreteAcquisition' || event.settlement === undefined
+          ? []
+          : [event.settlement.entry.entryKey],
+      ),
+    ).toEqual(['Minor', 'Boon', result.duplicateKey, 'MajorNonBoon']);
+    expect(result.settlement.entries.map((entry) => entry.address.entryKey)).toEqual([
+      'Minor',
+      'Boon',
+      'MajorNonBoon',
+    ]);
+    expect(result.settlement.derivedEntryFrontiers?.[0]).toMatchObject({
+      address: { entryKey: result.duplicateKey },
+      sourceOfferKey: 'Boon',
+    });
+    expect([...result.findings.values()]).toEqual([]);
+    expect(result.candidate.evaluateOrder(['Minor', 'Boon', 'MajorNonBoon'])).toEqual({
+      findings: [],
+      supported: true,
+    });
+  });
+
+  it('retains the use with no purchase and publishes one repairable child at the later Shop', () => {
+    const empty = echoGoldShop([], {
+      occurrenceId: createOccurrenceId('echo-gold-empty-world-shop'),
+    });
+    expect(empty.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop).toBeDefined();
+    expect(empty.settlement.derivedEntryFrontiers).toEqual([]);
+
+    const missing = echoGoldShop(['Minor'], {
+      initialBranches: empty.settlement.branches,
+      occurrenceId: createOccurrenceId('echo-gold-later-world-shop'),
+    });
+    expect([...missing.findings.values()].map((entry) => entry.finding.code)).toContain(
+      'echoShopDuplicateChildMissing',
+    );
+    expect(missing.settlement.derivedEntryFrontiers?.[0]?.defaultValue.offer).toEqual({
+      rewardType: 'MaxManaDrop',
+    });
+    expect(
+      missing.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeDefined();
+
+    const settledLater = echoGoldShop(['Minor'], {
+      includeDuplicate: true,
+      initialBranches: empty.settlement.branches,
+      occurrenceId: createOccurrenceId('echo-gold-later-complete-world-shop'),
+    });
+    expect(settledLater.settlement.branches[0]?.history.consumableRecord.MaxManaDrop).toBe(2);
+    expect(
+      settledLater.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeUndefined();
+  });
+
+  it('uses fresh loot detail and lets Time Piece convert only the free duplicate', () => {
+    const fresh = echoGoldShop(['Boon'], {
+      includeDuplicate: true,
+      duplicateSelectOption2: true,
+    });
+    const equipped = fresh.settlement.branches[0]?.traitHistory?.equippedTraits ?? {};
+    const apolloTraits = Object.values(equipped).filter((trait) => trait.giverKey === 'Apollo');
+    expect(apolloTraits).toHaveLength(2);
+
+    const converted = echoGoldShop(['Minor'], {
+      includeDuplicate: true,
+      duplicateConversion: 'gold',
+      timePiece: true,
+    });
+    expect(converted.settlement.branches[0]?.history.consumableRecord.MaxManaDrop).toBe(1);
+    expect(converted.settlement.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(converted.settlement.branches[0]?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'conversionToGold',
+        settlement: expect.objectContaining({
+          entry: expect.objectContaining({ entryKey: converted.duplicateKey }),
+        }),
+      }),
+    );
+    expect(
+      converted.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeUndefined();
+  });
+
+  it('resolves a paid Apollo Blind Box and its free duplicate as a fresh Hestia box', () => {
+    const paidApollo = {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    } as const;
+    const freeHestia = {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+    } as const;
+    const result = echoGoldShop(['Boon'], {
+      offerOverrides: { Boon: paidApollo },
+      duplicateOffer: freeHestia,
+      includeDuplicate: true,
+      duplicateSelectOption2: true,
+      duplicateTraitKeys: ['HestiaSpecialBoon', 'HestiaCastBoon', 'HestiaSprintBoon'],
+    });
+    expect(
+      result.duplicateKey === undefined
+        ? undefined
+        : result.canonical.pickupSite?.entries[result.duplicateKey]?.traitOffersByAcquisitionRole
+            .hiddenSource,
+    ).toMatchObject({ giverKey: 'Hestia', selectedOptionKey: 'option2' });
+    const branch = result.settlement.branches[0];
+    expect([...result.findings.values()]).toEqual([]);
+    expect(branch?.history.consumableRecord.BlindBoxLoot).toBe(2);
+    expect(
+      branch?.traitHistory?.events
+        .filter(
+          (event): event is TraitOfferEvent =>
+            event.kind === 'traitOffer' && event.giverKey !== 'Echo',
+        )
+        .map((event) => [
+          event.owner.kind === 'acquisitionEntry' || event.owner.kind === 'shopOffer'
+            ? event.owner.kind === 'acquisitionEntry'
+              ? event.owner.entryKey
+              : event.owner.offerKey
+            : undefined,
+          event.giverKey,
+        ]),
+    ).toEqual([
+      ['Boon', 'Apollo'],
+      [result.duplicateKey, 'Hestia'],
+    ]);
+    expect(result.settlement.derivedEntryFrontiers?.[0]?.defaultValue.offer).toEqual({
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    });
+    expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
+  });
+
+  it('duplicates Shop Nectar without inheriting Echo Reward Pom semantics', () => {
+    const result = echoGoldShop(['MajorNonBoon'], {
+      offerOverrides: { MajorNonBoon: { rewardType: 'GiftDrop' } },
+      includeDuplicate: true,
+      withPomTarget: true,
+    });
+    const branch = result.settlement.branches[0];
+    expect(branch?.history.consumableRecord.GiftDrop).toBe(2);
+    expect(branch?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(branch?.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
+      false,
+    );
+    expect(result.settlement.derivedEntryFrontiers?.[0]?.defaultValue).not.toHaveProperty(
+      'levelResolutionsByAcquisitionRole',
+    );
+    expect([...result.findings.values()]).toEqual([]);
+  });
+
+  it('publishes one agreed derived capability across branches and withholds disagreement', () => {
+    const pending = echoGoldShop([], {
+      occurrenceId: createOccurrenceId('echo-gold-frontier-seed'),
+    }).settlement.branches[0];
+    if (pending === undefined) throw new Error('missing pending Echo branch');
+    const reached = echoGoldShop(['Minor'], {
+      initialBranches: [pending, pending],
+      occurrenceId: createOccurrenceId('echo-gold-frontier-agreement'),
+    });
+    const frontiers = reached.settlement.derivedEntryFrontiers ?? [];
+    expect(frontiers).toHaveLength(2);
+    const address = frontiers[0]?.address;
+    if (address === undefined) throw new Error('missing derived frontier address');
+    const key = semanticAddressKey(address);
+    const agreed = createDerivedAcquisitionEntryCandidateArtifacts(new Map([[key, frontiers]]));
+    expect(agreed.at(address)).toMatchObject({ sourceOfferKey: 'Minor' });
+    expect(agreed.entriesAt(address.site)).toHaveLength(1);
+
+    const second = frontiers[1];
+    if (second === undefined) throw new Error('missing second derived frontier');
+    const divergent = Object.freeze({
+      ...second,
+      defaultValue: Object.freeze({
+        ...second.defaultValue,
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+      }),
+    });
+    const withheld = createDerivedAcquisitionEntryCandidateArtifacts(
+      new Map([[key, Object.freeze([frontiers[0]!, divergent])]]),
+    );
+    expect(withheld.at(address)).toBeUndefined();
+    expect(withheld.entriesAt(address.site)).toEqual([]);
+  });
+
+  it('persists only derived child detail through schema 34 and one undoable semantic edit', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
+      'roomExit',
+    );
+    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:Boon');
+    const edited = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(duplicate, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
+    });
+    const occurrence = (document: typeof project) =>
+      document.routes
+        .flatMap((route) => route.biomes)
+        .find((candidate) => candidate.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+
+    expect(occurrence(edited.present)?.acquisitionSites?.roomExit).toMatchObject({
+      order: [],
+      pickupEntries: {
+        'echoDoubleShop:Boon': {
+          offer: { rewardType: 'RandomLoot' },
+          traitOffersByAcquisitionRole: {
+            source: { selectedOptionKey: 'option2' },
+          },
+        },
+      },
+    });
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(edited.present)), catalog),
+    ).toEqual(edited.present);
+    const undone = undoProjectHistory(edited);
+    expect(occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries).toBeUndefined();
+    expect(redoProjectHistory(undone).present).toEqual(edited.present);
+  });
+
+  it('round-trips an independently resolved hidden source on a derived Blind Box', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const shopOffer = createShopOfferAddress(goldenFBiome, shopOccurrenceId, 'Boon');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
+        'roomExit',
+      ),
+      'echoDoubleShop:Boon',
+    );
+    let history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: shopOffer,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+    });
+    const shop = history.present.routes
+      .flatMap((route) => route.biomes)
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+    expect(shop?.acquisitionSites?.roomExit?.pickupEntries?.['echoDoubleShop:Boon']).toMatchObject({
+      offer: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+      traitOffersByAcquisitionRole: { hiddenSource: { giverKey: 'Hestia' } },
+    });
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(history.present)), catalog),
+    ).toEqual(history.present);
+  });
+});
 
 describe('Shop trait acquisition processing', () => {
   it('folds a purchased random Shop Pom only at purchase, while unpurchased and dormant inventory stay inert', () => {

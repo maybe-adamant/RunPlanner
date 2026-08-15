@@ -45,16 +45,9 @@ function workspacePostOutgoingAcquisitionMarkers(
 ): readonly WorkspaceMarker[] {
   return Object.freeze([
     acquisitions.marker,
-    ...acquisitions.entries.flatMap((entry) => [
-      ...(entry.rewardControl?.traitOffers ?? []).flatMap((trait) => [
-        trait.marker,
-        ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-        ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
-        ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
-        ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
-      ]),
-      ...(entry.rewardControl?.levelResolutions ?? []).map((resolution) => resolution.marker),
-    ]),
+    ...acquisitions.entries.flatMap((entry) =>
+      entry.rewardControl === undefined ? [] : rewardControlMarkers(entry.rewardControl),
+    ),
   ]);
 }
 
@@ -160,9 +153,9 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
-    ...(room.acquisitions?.placement === 'afterProducer'
-      ? workspacePostOutgoingAcquisitionMarkers(room.acquisitions)
-      : []),
+    ...(room.acquisitions === undefined
+      ? []
+      : workspacePostOutgoingAcquisitionMarkers(room.acquisitions)),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),

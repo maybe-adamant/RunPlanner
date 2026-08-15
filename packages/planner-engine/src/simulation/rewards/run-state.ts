@@ -3,6 +3,7 @@ import {
   type ExitDecisionAddress,
   type HubDecisionAddress,
 } from '../../authored-project/addresses';
+import { optionIndex } from '../../authored-project/traits';
 import type { Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
@@ -34,6 +35,7 @@ export interface DecisionTraitState {
   readonly upgradableTraitCount: number;
   readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
   readonly minimumScalableGodTraitRarity?: TraitHistoryState['minimumScalableGodTraitRarity'];
+  readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
 }
 
 export interface DecisionCounterState extends HistoryCounters {
@@ -237,7 +239,7 @@ export function aggregateDecisionRewardBag(
   });
 }
 
-function traitState(history: TraitHistoryState | undefined): DecisionTraitState {
+function traitState(catalog: Catalog, history: TraitHistoryState | undefined): DecisionTraitState {
   if (history === undefined) {
     return Object.freeze({
       equippedTraits: Object.freeze({}),
@@ -249,6 +251,17 @@ function traitState(history: TraitHistoryState | undefined): DecisionTraitState 
     });
   }
   const source = history;
+  const echoShopTrait = catalog.traits.values.find(
+    (trait) =>
+      trait.selectedDisposition.kind === 'echo' &&
+      trait.selectedDisposition.effect === 'doubleShop',
+  );
+  const echoShopAcquired =
+    echoShopTrait !== undefined &&
+    source.events.some((event) => {
+      if (event.kind !== 'traitOffer') return false;
+      return event.options[optionIndex(event.selectedOptionKey)]?.traitKey === echoShopTrait.key;
+    });
   return Object.freeze({
     equippedTraits: Object.freeze({ ...source.equippedTraits }),
     ordinaryBoonSlots: Object.freeze({ ...source.ordinaryBoonSlots }),
@@ -256,6 +269,14 @@ function traitState(history: TraitHistoryState | undefined): DecisionTraitState 
     godBoonRarityCounts: Object.freeze({ ...source.godBoonRarityCounts }),
     upgradableTraitCount: source.upgradableTraitCount,
     bannedTraitKeys: source.bannedTraitKeys,
+    ...(echoShopTrait === undefined || !echoShopAcquired
+      ? {}
+      : {
+          echoShopDuplicateStatus:
+            source.equippedTraits[echoShopTrait.key] === undefined
+              ? ('consumed' as const)
+              : ('pending' as const),
+        }),
     ...(source.minimumScalableGodTraitRarity === undefined
       ? {}
       : { minimumScalableGodTraitRarity: source.minimumScalableGodTraitRarity }),
@@ -317,7 +338,7 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
     }
     return Object.freeze({
       godPool: sourcePool(context.catalog, facts),
-      traits: traitState(branch.traitHistory),
+      traits: traitState(context.catalog, branch.traitHistory),
       counters: historyCounters(context.historyView, branch.history, context.enteredBiomeCount),
       arcanaFear: branch.arcanaFear,
       keepsakes: branch.keepsakes,

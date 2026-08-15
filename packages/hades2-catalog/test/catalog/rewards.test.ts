@@ -1007,6 +1007,19 @@ describe('reward-kernel declaration parity', () => {
       }),
       rawInput({
         ...rewardKernelDeclarations,
+        shops: rewardKernelDeclarations.shops.map((shop) =>
+          shop.key === 'WorldShop'
+            ? {
+                ...shop,
+                slots: shop.slots.map((slot, index) =>
+                  index === 0 ? { ...slot, key: 'echoDoubleShop:Major' } : slot,
+                ),
+              }
+            : shop,
+        ),
+      }),
+      rawInput({
+        ...rewardKernelDeclarations,
         producerLifecycles: [
           {
             key: 'RoomReward',

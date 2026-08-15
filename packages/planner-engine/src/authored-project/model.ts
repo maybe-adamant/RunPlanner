@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 33 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 34 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 

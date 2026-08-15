@@ -54,6 +54,7 @@ describe('Run State presentation', () => {
         upgradableTraitCount: 1,
         bannedTraitKeys: ['ApolloSpecialBoon'],
         minimumScalableGodTraitRarity: 'Rare',
+        echoShopDuplicateStatus: 'pending',
       },
       counters: {
         biomeDepthCache: 0,
@@ -147,6 +148,7 @@ describe('Run State presentation', () => {
     });
     expect(state.traits).toMatchObject({
       activeMinimumScalableRarity: 'Rare',
+      echoShopDuplicateStatus: 'pending',
       coreSlots: [
         {
           label: 'Attack',
@@ -171,6 +173,12 @@ describe('Run State presentation', () => {
         },
       ],
     });
+    expect(
+      presentRunState(catalog, {
+        ...snapshot,
+        traits: { ...snapshot.traits, echoShopDuplicateStatus: 'consumed' },
+      }).traits.echoShopDuplicateStatus,
+    ).toBe('consumed');
     for (const status of ['pending', 'consumed', 'expired'] as const) {
       const projected = presentRunState(catalog, {
         ...snapshot,

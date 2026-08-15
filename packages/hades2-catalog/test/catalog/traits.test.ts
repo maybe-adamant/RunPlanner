@@ -287,6 +287,7 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'DiminishingHealthAndManaBoon',
     'EchoLastRunBoon',
     'EchoDoubleLevelBoon',
+    'EchoDoubleShop',
   ],
   Circe: [
     'CirceShrinkTrait',
@@ -938,7 +939,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(374);
+    expect(traits?.traits.values).toHaveLength(375);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -959,7 +960,7 @@ describe('trait offer catalog closure', () => {
       ['Medea', 8],
       ['Narcissus', 9],
       ['Circe', 9],
-      ['Echo', 6],
+      ['Echo', 7],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -1017,6 +1018,7 @@ describe('trait offer catalog closure', () => {
       'DiminishingHealthAndManaBoon',
       'EchoLastRunBoon',
       'EchoDoubleLevelBoon',
+      'EchoDoubleShop',
     ]);
     expect(giver?.defaultOffer).toEqual({
       options: [
@@ -1063,7 +1065,59 @@ describe('trait offer catalog closure', () => {
         rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'doubleLevel' },
       },
+      {
+        key: 'EchoDoubleShop',
+        rarityDomain: { kind: 'none' },
+        disposition: {
+          kind: 'echo',
+          effect: 'doubleShop',
+          excludedRewardTypes: ['SpellDrop'],
+        },
+      },
     ]);
+  });
+
+  it('compiler-closes Gold Gold Gold to excluding exactly SpellDrop', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'EchoDoubleShop'
+              ? ({
+                  ...trait,
+                  selectedDisposition: { kind: 'echo', effect: 'doubleShop' },
+                } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/requires kind, effect, and excludedRewardTypes/);
+
+    const mutatedExcludedTypes = [['GiftDrop'], ['SpellDrop', 'GiftDrop']] as const;
+    for (const excludedRewardTypes of mutatedExcludedTypes) {
+      expect(() =>
+        createCatalog({
+          ...declarations,
+          traitCatalog: {
+            ...declarations.traitCatalog,
+            traits: declarations.traitCatalog.traits.map((trait) =>
+              trait.key === 'EchoDoubleShop'
+                ? ({
+                    ...trait,
+                    selectedDisposition: {
+                      kind: 'echo',
+                      effect: 'doubleShop',
+                      excludedRewardTypes,
+                    },
+                  } as RawTraitDeclaration)
+                : trait,
+            ),
+          },
+        }),
+      ).toThrow(/must equal \[SpellDrop\]/);
+    }
   });
 
   it('declares Echo Boon as the exact source-resolved 13-provider union', () => {

@@ -6,7 +6,7 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
-import { shopProfileUsesDeathDefianceCondition } from '../shop';
+import { createEchoShopDuplicateEntryKey, shopProfileUsesDeathDefianceCondition } from '../shop';
 import { createDefaultConversionByAcquisitionRole } from '../reward-state';
 
 export function applyShopOccurrenceCommand(
@@ -74,6 +74,13 @@ export function applyShopOccurrenceCommand(
           }),
     }),
   });
+  const duplicateKey = createEchoShopDuplicateEntryKey(command.offer.offerKey);
+  const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+  const { [duplicateKey]: removedDuplicate, ...remainingPickupEntries } = pickupEntries ?? {};
+  const { pickupEntries: priorPickupEntries, ...roomExitWithoutPickups } = occurrence
+    .acquisitionSites?.roomExit ?? { order: Object.freeze([]) };
+  void removedDuplicate;
+  void priorPickupEntries;
   return updateOccurrenceTopology(
     document,
     located,
@@ -81,6 +88,19 @@ export function applyShopOccurrenceCommand(
       current,
       Object.freeze({
         ...occurrence,
+        ...(occurrence.acquisitionSites?.roomExit === undefined
+          ? {}
+          : {
+              acquisitionSites: Object.freeze({
+                ...(occurrence.acquisitionSites ?? {}),
+                roomExit: Object.freeze({
+                  ...roomExitWithoutPickups,
+                  ...(Object.keys(remainingPickupEntries).length === 0
+                    ? {}
+                    : { pickupEntries: Object.freeze(remainingPickupEntries) }),
+                }),
+              }),
+            }),
         state: Object.freeze({
           ...occurrence.state,
           shop: Object.freeze({
