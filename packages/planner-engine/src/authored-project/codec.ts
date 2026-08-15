@@ -50,17 +50,26 @@ function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catal
       `${path}.jeweledPom.traitKey`,
       `must be a ${descriptor.giverKey} trait, received ${traitKey}`,
     );
-  const rarity = expectString(pom.rarity, `${path}.jeweledPom.rarity`);
+  const trait = catalog.traits.byKey[traitKey];
   const rarityPolicy = catalog.traitGivers.byKey[descriptor.giverKey]?.rarityPolicy;
-  if (rarityPolicy?.kind !== 'fixed' || rarity !== rarityPolicy.rarity)
-    fail(`${path}.jeweledPom.rarity`, `must equal ${descriptor.giverKey}'s fixed result rarity`);
-  if (
-    catalog.traits.byKey[traitKey]?.rarityDomain.kind !== 'ranked' ||
-    !catalog.traits.byKey[traitKey]?.rarityDomain.freshOfferRarities.includes(
-      rarity as import('../catalog-schema').TraitRarity,
+  let rarity: import('../catalog-schema').TraitRarity | undefined;
+  if (trait?.rarityDomain.kind === 'none') {
+    if (rarityPolicy?.kind !== 'none')
+      fail(`${path}.jeweledPom`, `${descriptor.giverKey} has inconsistent rarity declarations`);
+    if (pom.rarity !== undefined)
+      fail(`${path}.jeweledPom.rarity`, `rarityless trait ${traitKey} has no rarity`);
+  } else {
+    const authoredRarity = expectString(pom.rarity, `${path}.jeweledPom.rarity`);
+    if (rarityPolicy?.kind !== 'fixed' || authoredRarity !== rarityPolicy.rarity)
+      fail(`${path}.jeweledPom.rarity`, `must equal ${descriptor.giverKey}'s fixed result rarity`);
+    if (
+      !trait?.rarityDomain.freshOfferRarities.includes(
+        authoredRarity as import('../catalog-schema').TraitRarity,
+      )
     )
-  )
-    fail(`${path}.jeweledPom.rarity`, `is not declared for ${traitKey}`);
+      fail(`${path}.jeweledPom.rarity`, `is not declared for ${traitKey}`);
+    rarity = authoredRarity as import('../catalog-schema').TraitRarity;
+  }
   if (
     pom.deathDefianceConditionMet !== undefined &&
     typeof pom.deathDefianceConditionMet !== 'boolean'
@@ -69,7 +78,7 @@ function decodeKeepsakeEquipResults(value: unknown, path: string, catalog: Catal
   return Object.freeze({
     jeweledPom: Object.freeze({
       traitKey,
-      rarity: rarity as import('../catalog-schema').TraitRarity,
+      ...(rarity === undefined ? {} : { rarity }),
       ...(pom.deathDefianceConditionMet === undefined
         ? {}
         : { deathDefianceConditionMet: pom.deathDefianceConditionMet }),

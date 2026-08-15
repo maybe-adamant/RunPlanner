@@ -108,9 +108,9 @@ ledger.
 
 When either definition is selected and entered, its exact Combat phase owns the
 corresponding three-choice trait offer and folds the selected trait at encounter
-completion. Athena uses selectable Common/Rare/Epic rarity. Icarus is fixed at
-Common, and Latest Model may target one exact eligible equipped Rank-I Hammer
-for the shared Rank-II transition.
+completion. Athena uses selectable Common/Rare/Epic rarity. Icarus is
+player-rarityless, and Latest Model may target one exact eligible equipped
+Rank-I Hammer for the shared Rank-II transition.
 
 ## Product boundary
 

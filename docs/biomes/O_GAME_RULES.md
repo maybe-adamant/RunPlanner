@@ -103,9 +103,10 @@ active main slot. Both identities leave the existing wheel ownership and
 selected reward behavior on their exact Combat slots unchanged.
 
 When `IcarusCombatO` is selected and entered, its exact phase owns Icarus's
-three-choice fixed-Common trait offer and folds the selected trait at encounter
-completion. Latest Model may target one exact eligible equipped Rank-I Hammer
-and upgrade it to Rank II through the shared targeted-acquisition lifecycle.
+three-choice player-rarityless trait offer and folds the selected trait at
+encounter completion. Latest Model may target one exact eligible equipped
+Rank-I Hammer and upgrade it to Rank II through the shared
+targeted-acquisition lifecycle.
 
 The remaining NPC event, interaction, reward, and external-profile paths are
 not encounter candidates. The raw source composition remains documented in the

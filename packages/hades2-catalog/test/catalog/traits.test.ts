@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
+import type {
+  RawTraitDeclaration,
+  RawTraitGiverDeclaration,
+  RawTraitOfferDefaults,
+} from '../../src/declarations/traits';
 import type { ScalableGodTraitRarityFloorEffect } from '@run-planner/engine/catalog-schema';
 
 const expectedPositiveRequirementOwners = [
@@ -965,32 +970,43 @@ describe('trait offer catalog closure', () => {
     expect(traits.givers.byKey.WeaponUpgrade?.priorityTraitKeys).toEqual([]);
   });
 
-  it('declares Circe as a fixed-Common nine-trait provider', () => {
-    const giver = traits.givers.byKey.Circe;
-    expect(giver?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
-    expect(giver?.traitKeys).toEqual([
-      'CirceShrinkTrait',
-      'CirceEnlargeTrait',
-      'ArcanaRarityTrait',
-      'HealAmplifyTrait',
-      'DoubleFamiliarTrait',
-      'RemoveShrineTrait',
-      'RandomArcanaTrait',
-      'CirceSorceryDamageBoon',
-      'ExPolymorphBoon',
-    ]);
-    expect(giver?.traitKeys.map((key) => traits.traits.byKey[key]?.rarityDomain)).toEqual(
-      Array.from({ length: 9 }, () => ({
-        kind: 'ranked',
-        freshOfferRarities: ['Common'],
-        equippedRarities: ['Common'],
-      })),
-    );
+  it('declares the exact player-rarityless Story and field-NPC matrix', () => {
+    const raritylessProviders = [
+      'Arachne',
+      'Icarus',
+      'Medea',
+      'Narcissus',
+      'Circe',
+      'Hades',
+    ] as const;
+    for (const giverKey of raritylessProviders) {
+      const giver = traits.givers.byKey[giverKey];
+      expect(giver?.rarityPolicy, giverKey).toEqual({ kind: 'none' });
+      expect(
+        giver?.defaultOffer?.options.every((option) => option.rarity === undefined),
+        giverKey,
+      ).toBe(true);
+      for (const traitKey of giver?.traitKeys ?? []) {
+        expect(traits.traits.byKey[traitKey], `${giverKey}:${traitKey}`).toMatchObject({
+          rarityDomain: { kind: 'none' },
+          usesBoonRarity: false,
+          blockInRunRarify: giverKey === 'Hades',
+        });
+      }
+    }
+
+    for (const giverKey of ['Athena', 'Artemis', 'Dionysus'] as const) {
+      const giver = traits.givers.byKey[giverKey];
+      expect(giver?.rarityPolicy.kind, giverKey).toBe('selectable');
+      expect(
+        giver?.traitKeys.every((key) => traits.traits.byKey[key]?.rarityDomain.kind === 'ranked'),
+      ).toBe(true);
+    }
   });
 
-  it('declares the Gate A Echo matrix as fixed Common with closed dispositions', () => {
+  it('declares the Gate A Echo matrix as rarityless with closed dispositions', () => {
     const giver = traits.givers.byKey.Echo;
-    expect(giver?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
+    expect(giver?.rarityPolicy).toEqual({ kind: 'none' });
     expect(giver?.traitKeys).toEqual([
       'EchoDeathDefianceRefill',
       'DiminishingDodgeBoon',
@@ -999,9 +1015,9 @@ describe('trait offer catalog closure', () => {
     ]);
     expect(giver?.defaultOffer).toEqual({
       options: [
-        { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-        { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
-        { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+        { traitKey: 'EchoDoubleLevelBoon' },
       ],
       selectedOption: 0,
     });
@@ -1014,38 +1030,22 @@ describe('trait offer catalog closure', () => {
     ).toEqual([
       {
         key: 'EchoDeathDefianceRefill',
-        rarityDomain: {
-          kind: 'ranked',
-          freshOfferRarities: ['Common'],
-          equippedRarities: ['Common'],
-        },
+        rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'survive' },
       },
       {
         key: 'DiminishingDodgeBoon',
-        rarityDomain: {
-          kind: 'ranked',
-          freshOfferRarities: ['Common'],
-          equippedRarities: ['Common'],
-        },
+        rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'numericNoOp' },
       },
       {
         key: 'DiminishingHealthAndManaBoon',
-        rarityDomain: {
-          kind: 'ranked',
-          freshOfferRarities: ['Common'],
-          equippedRarities: ['Common'],
-        },
+        rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'numericNoOp' },
       },
       {
         key: 'EchoDoubleLevelBoon',
-        rarityDomain: {
-          kind: 'ranked',
-          freshOfferRarities: ['Common'],
-          equippedRarities: ['Common'],
-        },
+        rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'doubleLevel' },
       },
     ]);
@@ -1098,24 +1098,17 @@ describe('trait offer catalog closure', () => {
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],
     });
-    expect(traits?.givers.byKey.Icarus?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
-    expect(traits?.givers.byKey.Hades?.rarityPolicy).toEqual({
-      kind: 'fixed',
-      rarity: 'Common',
-    });
+    expect(traits?.givers.byKey.Icarus?.rarityPolicy).toEqual({ kind: 'none' });
+    expect(traits?.givers.byKey.Hades?.rarityPolicy).toEqual({ kind: 'none' });
     expect(traits?.givers.byKey.Dionysus?.rarityPolicy).toEqual({
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],
     });
     for (const traitKey of expectedGiverPools.Hades ?? []) {
       expect(traits.traits.byKey[traitKey]).toMatchObject({
-        rarityDomain: {
-          kind: 'ranked',
-          freshOfferRarities: ['Common'],
-          equippedRarities: ['Common'],
-        },
+        rarityDomain: { kind: 'none' },
         elementContributions: {},
-        usesBoonRarity: true,
+        usesBoonRarity: false,
         isCoreGodTrait: false,
         blockStacking: false,
         blockInRunRarify: true,
@@ -1215,8 +1208,8 @@ describe('trait offer catalog closure', () => {
     ).toEqual(new Set([1]));
 
     // The declaration set is the source expected map for the normalized
-    // classification. Compare every included trait, including the 92
-    // no-rarity Hammers, rather than sampling only the ten infusion traits.
+    // classification. Compare every included trait, including explicit
+    // rarityless NPC declarations and the 92 no-rarity Hammers.
     const expectedCoreGodTraitKeys = new Set(
       declarations.traitCatalog.givers
         .filter((giver) => giver.providerKind === 'olympian')
@@ -1244,7 +1237,7 @@ describe('trait offer catalog closure', () => {
         key: expected.key,
         label: expected.label,
         rarityDomain:
-          expected.hammerCompatibility === undefined
+          expected.hammerCompatibility === undefined && expected.rarityDomain !== 'none'
             ? {
                 kind: 'ranked',
                 freshOfferRarities: expected.freshOfferRarities,
@@ -1458,7 +1451,7 @@ describe('trait offer catalog closure', () => {
           ),
         },
       }),
-    ).toThrow(/Hammer traits cannot declare/);
+    ).toThrow(/rarityless traits cannot declare/);
   });
 
   it('provides a compatible complete Hammer default for every weapon/aspect pair', () => {
@@ -1644,10 +1637,119 @@ describe('trait offer catalog closure', () => {
         ),
       },
     };
-    expect(() => createCatalog(invalidHammer)).toThrow(/no rarity domain/);
+    expect(() => createCatalog(invalidHammer)).toThrow(/rarityless traits cannot declare/);
     expect(catalog.traitGivers.byKey.WeaponUpgrade?.rarityPolicy).toEqual({ kind: 'none' });
     expect(catalog.traits.byKey.StaffTripleShotTrait?.rarityDomain).toEqual({ kind: 'none' });
     expect(Object.isFrozen(catalog.traitGivers.byKey.WeaponUpgrade?.rarityPolicy)).toBe(true);
+  });
+
+  it('rejects malformed rarityless declarations, giver policies, and defaults', () => {
+    const withTrait = (
+      traitKey: string,
+      replacement: (trait: RawTraitDeclaration) => RawTraitDeclaration,
+    ) => ({
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === traitKey ? replacement(trait) : trait,
+        ),
+      },
+    });
+
+    expect(() =>
+      createCatalog(
+        withTrait('DiminishingDodgeBoon', (trait) => ({
+          ...trait,
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        })),
+      ),
+    ).toThrow(/explicitly rarityless traits must omit rarity arrays/);
+    for (const rarityArrays of [
+      { freshOfferRarities: [] },
+      { equippedRarities: [] },
+      { freshOfferRarities: [], equippedRarities: [] },
+    ] as const) {
+      expect(() =>
+        createCatalog(
+          withTrait('DiminishingDodgeBoon', (trait) => ({ ...trait, ...rarityArrays })),
+        ),
+      ).toThrow(/explicitly rarityless traits must omit rarity arrays/);
+    }
+    expect(() =>
+      createCatalog(
+        withTrait('DiminishingDodgeBoon', (trait) => ({ ...trait, usesBoonRarity: true })),
+      ),
+    ).toThrow(/rarityless traits cannot use boon rarity/);
+    expect(() =>
+      createCatalog(
+        withTrait('AphroditeWeaponBoon', (trait) => {
+          const {
+            freshOfferRarities: _freshOfferRarities,
+            equippedRarities: _equippedRarities,
+            ...withoutRarityArrays
+          } = trait;
+          void _freshOfferRarities;
+          void _equippedRarities;
+          return withoutRarityArrays;
+        }),
+      ),
+    ).toThrow(/ranked rarity domains must not be empty/);
+
+    const withGiver = (
+      giverKey: string,
+      replacement: (giver: RawTraitGiverDeclaration) => RawTraitGiverDeclaration,
+    ) => ({
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === giverKey ? replacement(giver) : giver,
+        ),
+      },
+    });
+    expect(() =>
+      createCatalog(
+        withGiver('Aphrodite', (giver) => ({ ...giver, rarityPolicy: { kind: 'none' } })),
+      ),
+    ).toThrow(/no-rarity givers require only rarityless members/);
+    expect(() =>
+      createCatalog(
+        withGiver('Echo', (giver) => ({
+          ...giver,
+          rarityPolicy: { kind: 'fixed', rarity: 'Common' },
+        })),
+      ),
+    ).toThrow(/ranked giver policies cannot contain rarityless members/);
+    for (const [giverKey, rarityPolicy] of [
+      ['Echo', { kind: 'none', rarity: 'Common' }],
+      ['Aphrodite', { kind: 'fixed', rarity: 'Common', rarities: ['Common'] }],
+      ['Aphrodite', { kind: 'selectable', rarities: ['Common'], rarity: 'Common' }],
+    ] as const) {
+      expect(() =>
+        createCatalog(
+          withGiver(giverKey, (giver) => ({
+            ...giver,
+            rarityPolicy: rarityPolicy as unknown as RawTraitGiverDeclaration['rarityPolicy'],
+          })),
+        ),
+      ).toThrow(/rarity policy must contain exactly/);
+    }
+    expect(() =>
+      createCatalog(
+        withGiver('Echo', (giver) => ({
+          ...giver,
+          defaultOffer: {
+            ...giver.defaultOffer!,
+            options: giver.defaultOffer!.options.map((option) => ({
+              ...option,
+              rarity: 'Common' as const,
+            })) as unknown as RawTraitOfferDefaults['options'],
+          },
+        })),
+      ),
+    ).toThrow(/rarityless trait .* has no rarity/);
   });
 
   it('rejects malformed raw booleans, rarity domains, and requirement discriminators', () => {

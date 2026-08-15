@@ -215,11 +215,10 @@ describe('trait offer editor', () => {
       options: Object.freeze([
         Object.freeze({
           traitKey: 'EchoDoubleLevelBoon',
-          rarity: 'Common' as const,
           echoPomTarget: null,
         }),
-        Object.freeze({ traitKey: 'DiminishingDodgeBoon', rarity: 'Common' as const }),
-        Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+        Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon' }),
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
@@ -393,7 +392,7 @@ describe('trait offer editor', () => {
       value: {
         ...initial.value,
         options: [
-          { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' },
+          { traitKey: 'DeathDefianceRetaliateCurse' },
           initial.value.options[1]!,
           initial.value.options[2]!,
         ] as AuthoredTraitOfferTraits['options'],
@@ -693,7 +692,7 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
-  it('does not render a rarity picker for fixed-Common Icarus offers', () => {
+  it('does not render a rarity picker for rarityless Icarus offers', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -706,9 +705,9 @@ describe('trait offer editor', () => {
       kind: 'traits',
       giverKey: 'Icarus',
       options: Object.freeze([
-        Object.freeze({ traitKey: 'FocusAttackDamageTrait', rarity: 'Common' as const }),
-        Object.freeze({ traitKey: 'FocusSpecialDamageTrait', rarity: 'Common' as const }),
-        Object.freeze({ traitKey: 'OmegaExplodeBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'FocusAttackDamageTrait' }),
+        Object.freeze({ traitKey: 'FocusSpecialDamageTrait' }),
+        Object.freeze({ traitKey: 'OmegaExplodeBoon' }),
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });

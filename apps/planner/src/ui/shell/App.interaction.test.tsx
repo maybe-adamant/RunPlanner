@@ -740,7 +740,6 @@ describe('route loadout interaction', () => {
         .keepsakeEquipResults?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
-      rarity: 'Common',
       deathDefianceConditionMet: true,
     });
 

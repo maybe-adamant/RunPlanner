@@ -819,7 +819,7 @@ entry and advances exactly its purchased slots through purchase-time
 acquisition.
 
 Narcissus demonstrates the producer/acquisition distinction. The selected
-fixed-Common descriptor may emit zero or more declaration-owned pickups at the
+player-rarityless descriptor may emit zero or more declaration-owned pickups at the
 Story room's post-outgoing `roomExit` site. The descriptor never enters
 equipped-trait history. A random Pom target or Mystery Boon offer belongs to
 the concrete produced pickup and is evaluated only when that entry participates
@@ -1068,12 +1068,12 @@ Encounter-owned offers use the selected active encounter phase as their exact
 owner and fold at `encounterCompleted`, before any encounter-local reward at
 that same completion point. Their alternative-definition offers persist
 sparsely and remain dormant until selected. Provider rarity authorship remains
-catalog-owned: Artemis and Athena expose selectable ranked rarity, Icarus is
-fixed at `Common` without a rarity control, and Hammers omit rarity entirely.
+catalog-owned: Artemis and Athena expose selectable ranked rarity, while
+Icarus and Hammers omit rarity entirely.
 
 Targeted acquisitions form a closed transition set. Bridal Glow equips its
 source and promotes one exact eligible equipped god trait to `Heroic`. Latest
-Model equips its fixed-Common source and upgrades one exact eligible equipped,
+Model equips its rarityless source and upgrades one exact eligible equipped,
 source-capable Rank-I Hammer to Rank II. The exact outcome is authored as the
 selected option's `targetTraitKey`; unselected or dormant options may retain an
 incomplete target, while a selected targeted option must pass the same engine

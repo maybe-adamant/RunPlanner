@@ -14,6 +14,9 @@ import type {
 export interface RawTraitDeclaration {
   readonly key: string;
   readonly label: string;
+  /** Explicit planner disposition for a non-Hammer trait whose source scaling
+   * tiers do not participate in player-facing boon rarity. */
+  readonly rarityDomain?: 'none';
   readonly freshOfferRarities?: readonly TraitRarity[];
   readonly equippedRarities?: readonly TraitRarity[];
   readonly offerRequirements: readonly TraitRequirementExpression[];

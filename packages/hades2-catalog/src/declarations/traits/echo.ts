@@ -1,8 +1,7 @@
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
 
-const fixedCommon = {
-  freshOfferRarities: ['Common'],
-  equippedRarities: ['Common'],
+const raritylessEchoTrait = {
+  rarityDomain: 'none',
   elementContributions: {},
   usesBoonRarity: false,
   blockStacking: false,
@@ -12,7 +11,7 @@ const fixedCommon = {
 
 export const echoTraits = [
   {
-    ...fixedCommon,
+    ...raritylessEchoTrait,
     key: 'EchoDeathDefianceRefill',
     label: 'Survive Survive Survive',
     offerRequirements: [
@@ -21,21 +20,21 @@ export const echoTraits = [
     selectedDisposition: { kind: 'echo', effect: 'survive' },
   },
   {
-    ...fixedCommon,
+    ...raritylessEchoTrait,
     key: 'DiminishingDodgeBoon',
     label: 'Evade Evade Evade',
     offerRequirements: [],
     selectedDisposition: { kind: 'echo', effect: 'numericNoOp' },
   },
   {
-    ...fixedCommon,
+    ...raritylessEchoTrait,
     key: 'DiminishingHealthAndManaBoon',
     label: 'Fight Fight Fight',
     offerRequirements: [],
     selectedDisposition: { kind: 'echo', effect: 'numericNoOp' },
   },
   {
-    ...fixedCommon,
+    ...raritylessEchoTrait,
     key: 'EchoDoubleLevelBoon',
     label: 'Pom Pom Pom',
     offerRequirements: [],
@@ -49,12 +48,12 @@ export const echoGiver = {
   providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: echoTraits.map((trait) => trait.key),
-  rarityPolicy: { kind: 'fixed', rarity: 'Common' },
+  rarityPolicy: { kind: 'none' },
   defaultOffer: {
     options: [
-      { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
-      { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
-      { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common' },
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'DiminishingHealthAndManaBoon' },
+      { traitKey: 'EchoDoubleLevelBoon' },
     ],
     selectedOption: 0,
   },

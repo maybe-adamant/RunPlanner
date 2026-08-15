@@ -158,7 +158,7 @@ function validateOffer(
       );
     if (trait.rarityDomain.kind === 'none') {
       if (option.rarity !== undefined)
-        failCommand(command, `Hammer option ${option.traitKey} has no rarity`);
+        failCommand(command, `rarityless option ${option.traitKey} has no rarity`);
     } else if (
       option.rarity === undefined ||
       !trait.rarityDomain.equippedRarities.includes(option.rarity)

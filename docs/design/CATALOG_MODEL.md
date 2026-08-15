@@ -732,10 +732,10 @@ and port-verification history.
 ## Trait Offer Catalog
 
 The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 368 included trait
-declarations, and 20 giver declarations: the nine Olympians, Hermes,
+six weapon declarations, their 24 aspect declarations, 372 included trait
+declarations, and 21 giver declarations: the nine Olympians, Hermes,
 `WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
-Narcissus, and Circe. Arcana card traits are declaration-backed run-state
+Narcissus, Circe, and Echo. Arcana card traits are declaration-backed run-state
 traits rather than a giver pool. Trait declarations are
 giver-neutral facts: fresh and equipped rarity domains, exact offer
 requirements, ordinary boon slot, element contributions, boon-rarity and
@@ -744,9 +744,10 @@ targeted acquisition, and Hammer weapon/aspect compatibility. Giver
 declarations own ordered pool membership, normalized `priorityTraitKeys`, one
 of the closed `selectable`/`fixed`/`none` rarity policies, and the complete
 default triple (one provider default for Olympian, Hermes, and field-NPC givers
-and one per weapon/aspect loadout for Hammers). Icarus is fixed at `Common`.
-Hammer traits deliberately use a `none` rarity domain; `Heroic` remains in the
-normalized equipped rarity order but is never a fresh authored choice.
+and one per weapon/aspect loadout for Hammers). The `none` policy covers every
+planner-rarityless provider, including Icarus and Hammers; Hammer Rank I/II and
+internal NPC scaling remain independent. `Heroic` remains in the normalized
+equipped rarity order but is never a fresh authored choice.
 
 Targeted acquisition is likewise a closed catalog fact, not a general effect
 registry. Bridal Glow declares promotion of one eligible equipped god trait to

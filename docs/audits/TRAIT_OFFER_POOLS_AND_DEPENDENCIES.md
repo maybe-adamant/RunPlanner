@@ -79,9 +79,10 @@ The game also routes NPC and Story choices through `Traits` arrays even when
 selecting an entry immediately executes an effect. `UpgradeHammerBoon` and
 `NarcissusA..I` are effect-backed choice keys whose exact persistence must be
 classified before treating them as inventory. Echo is different: generic trait
-acquisition inserts every selected fixed-Common Echo identity into hero trait
+acquisition inserts every selected Echo identity into hero trait
 state before its acquisition callback runs. The source `Hidden` flag affects
-presentation, not persistence.
+presentation, not persistence; its internal scaling tier is not player-facing
+boon rarity.
 
 ### Priority-upgrade closure
 
@@ -282,11 +283,12 @@ provider path.
 `SupplyDropBoon`, `UpgradeHammerBoon`.
 
 `NPCData_Icarus.lua` exposes these eight choices in that order. Its live
-benefit-choice entries set their offered rarity to Common, so the supported
-normal-run surface is fixed Common rather than a selectable field-NPC rarity
-roll. The individual `TraitData_Icarus.lua` declarations retain their wider
-Common/Rare/Epic/Heroic progression levels, but those do not make a fresh
-Icarus choice Rare or Epic. Heroic is not fresh here.
+benefit-choice entries set their internal scaling tier to Common. The
+individual `TraitData_Icarus.lua` declarations retain wider
+Common/Rare/Epic/Heroic scaling levels, but the player sees no boon rarity and
+the traits do not participate in ordinary boon-rarity mutation. The planner
+therefore authors Icarus without rarity; the Dream-run scaling rewrite remains
+outside the supported route baseline.
 
 | Trait                      | Player-facing label | Positive offer fact                 | Element / classification           |
 | -------------------------- | ------------------- | ----------------------------------- | ---------------------------------- |
@@ -377,6 +379,30 @@ production state.
 
 ### Story-Room Choice Givers
 
+#### Internal NPC scaling versus boon rarity
+
+Several NPC traits reuse the source `Rarity` field to select numeric scaling
+rows without joining the player-facing god-boon rarity system. The ordinary
+Echo interaction makes this distinction explicit: `EchoChoice` assigns every
+eligible choice internal `Epic`, matching Echo's ordinary third-biome
+placement, while the Dream Dive branch replaces that value from the number of
+entered biomes so Echo can scale from the first through fourth mixed biome.
+`TraitData_Echo.lua` declares the corresponding scaling rows, and
+`ForceCommonAppearanceTrait` suppresses the rarity name in player-facing
+presentation rather than converting the underlying value to Common.
+
+These scaling values are outside the mutation boundary used by Proper
+Upbringing, Bridal Glow, and Aromatic Phial. Arachne, Icarus, Medea, Narcissus,
+Circe, and Echo are outside the relevant `IsGodTrait`/shop-god classification;
+Hades participates in the broader shop-style predicate but every Hades trait
+declares `BlockInRunRarify`. The different source exclusion mechanisms have
+the same supported planner consequence: these traits expose no authored,
+persisted, counted, mutable, or displayed boon rarity. The planner therefore
+normalizes Arachne, Icarus, Medea, Narcissus, Circe, Hades, and Echo through the
+explicit `none` rarity domain. The nine ordinary Olympians, Hermes, Athena,
+Artemis, and Dionysus retain real player-facing rarity. Dream Dive and the
+NPCs' scaled combat numbers remain outside scope.
+
 #### Arachne
 
 `AgilityCostume`, `ManaCostume`, `VitalityCostume`, `HighArmorCostume`,
@@ -396,7 +422,7 @@ production state.
 
 #### Narcissus effect inventory
 
-Narcissus's nine fixed-Common menu entries are choice keys whose acquisition
+Narcissus's nine player-rarityless menu entries are choice keys whose acquisition
 functions create benefits. They are not nine persistent equipped traits.
 External tool, dialogue, lifetime-resource, and unlock predicates collapse
 under the progressed baseline; the current-run predicates and outputs below do
@@ -422,12 +448,14 @@ not produce `GiftDrop`.
 
 #### Echo effect inventory
 
-Echo's live menu is also fixed Common. Every selected outer identity is first
-inserted into hero trait state, including the four source-hidden effect-backed
-keys. Its entries then mix one-shot effects, temporary lifecycle state, and
-additional acquired traits, so the selected key alone is not a sufficient
-acquisition model. A planner without a hidden-presentation model should retain
-and show all eight outer identities truthfully in Run State.
+Echo's live menu uses internal Epic scaling in an ordinary run and a
+biome-indexed internal tier in Dream Dive, while `ForceCommonAppearanceTrait`
+hides the rarity label. Every selected outer identity is first inserted into
+hero trait state, including the four source-hidden effect-backed keys. Its
+entries then mix one-shot effects, temporary lifecycle state, and additional
+acquired traits, so the selected key alone is not a sufficient acquisition
+model. The planner retains and shows all eight outer identities truthfully in
+Run State but omits the source's non-boon scaling tier.
 
 | Choice                         | Label                   | Eligibility                                                                          | Exact source effect and baseline disposition                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------ | ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -859,13 +887,13 @@ In the supported normal-run model, the nine core gods are the only
 providers whose eligible traits can receive Pom levels. Variable offer rarity
 belongs to those nine plus Hermes, Artemis, Athena, and Dionysus. Hammers use
 their independent Rank I/Rank II domain, with Icarus's Latest Model as the
-modeled in-run Rank II transition. Other normal-run providers are fixed-rarity
-and do not receive Pom levels. Hades participates in the source's broader
-`IsGodTrait(..., { ForShop = true })` query and its traits carry processed
-rarity tables, but its live field offer is effectively fixed Common and every
-Hades trait declares `BlockInRunRarify`. Icarus choices
-also explicitly author Common in normal runs; the dream-run rarity rewrite is
-outside the supported route baseline.
+modeled in-run Rank II transition. Other normal-run providers are
+player-rarityless and do not receive Pom levels. Some retain internal scaling
+tables or values in source. Hades participates in the source's broader
+`IsGodTrait(..., { ForShop = true })` query, but every Hades trait declares
+`BlockInRunRarify`; Icarus uses internal Common in normal runs and
+Dream-indexed scaling outside the supported route baseline. Neither source
+mechanism becomes planner rarity.
 
 ### Trait levels and Pom acquisition
 
@@ -1154,34 +1182,34 @@ The supported trait-offer catalog consumes the following declaration facts
 from the installed scripts. These are normalized without
 moving any lifecycle, authored-state, or simulation policy into declarations:
 
-| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                                                                     |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                                                               |
-| fresh/equipped rarity domains | each included `TraitData_*` `RarityLevels`; ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`; Legendary/Duo retain their sole rarity; Hammer declarations use a `none` rarity domain (source `ForceCommon` is not player rarity, while the exact 65-member source Legendary capability is normalized separately as Hammer Rank-II data) |
-| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                                                               |
-| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                                                                         |
-| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                                                                          |
-| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                                                                |
-| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                         |
-| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                 |
-| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                    |
-| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                                                                            |
-| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                      |
+| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                               |
+| fresh/equipped rarity domains | player-facing boon rarity only: ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`, and Legendary/Duo retain their sole rarity; Hammers and the audited rarityless NPC providers use `none`, while their independent Hammer rank or internal NPC scaling stays separate                   |
+| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                               |
+| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                         |
+| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                          |
+| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                |
+| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements         |
+| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon` |
+| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                    |
+| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                            |
+| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                      |
 
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 368
-unique included trait declarations, 286 memberships across 19 non-Hammer
-givers, 92 Hammer memberships under the twentieth giver, and one
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 372
+unique included trait declarations, 290 memberships across 20 non-Hammer
+givers, 92 Hammer memberships under the twenty-first giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
 spell/talent operands remain exact keys
 only. Artemis, Athena, and Icarus are the modeled field-NPC providers;
 Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
 providers. Narcissus's nine choices remain effect-backed rather than persistent
-inventory. Circe's nine fixed-Common choices are production catalog entries;
+inventory. Circe's nine rarityless choices are production catalog entries;
 its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
-simulation contract. All eight
-Echo choices remain audited future evidence; the complete Echo provider stays
-outside production until its replay, prior-run, pending-Shop, and keepsake
-authorities are deliberately added. Spell and Talent providers remain outside
+simulation contract. Echo's Survive, Evade, Fight, and Pom identities are
+production rarityless catalog entries; the remaining four choices stay gated
+behind their replay, prior-run, pending-Shop, and keepsake authorities. Spell
+and Talent providers remain outside
 the production trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline and mechanical-effect deferrals. Newly discovered
@@ -1190,7 +1218,7 @@ claim.
 
 ## Implemented Offer Disposition
 
-Schema 22 retains this audit's giver membership, requirements, rarity domains,
+Schema 31 retains this audit's giver membership, requirements, rarity domains,
 priority sets, and exact replacement targets. The earlier fixed-triple text is
 historical baseline only: Olympian and Hermes outcomes now support one to three
 materialized traits or Fallback Gold according to the source-backed exhaustion

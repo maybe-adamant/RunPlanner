@@ -720,7 +720,7 @@ one generic trait-outcome mechanism:
   requires canonical history to retain the exact replayable source identity,
   not merely the latest reward-history event. The recreated item settles before
   Echo's exits become usable.
-- Boon Boon Boon first acquires its fixed-Common outer Echo identity, then
+- Boon Boon Boon first acquires its player-rarityless outer Echo identity, then
   directly equips one selected nested trait. It does not spawn a pickup and
   therefore remains in trait-offer authority. Because the real game reads the
   previous run's rarity cache, the planner may use an explicit cross-provider
@@ -739,8 +739,9 @@ shops no longer observe the effect. Once the duplicate materializes, its exact
 acquisition entry owns its child state and does not retain an invented permanent
 link to Echo.
 
-All eight selected Echo menu identities are themselves acquired fixed-Common
-traits before these effect-specific contacts run. Source-hidden Reward, Boon,
+All eight selected Echo menu identities are themselves acquired
+player-rarityless traits before these effect-specific contacts run.
+Source-hidden Reward, Boon,
 Survive, and Pom therefore remain in trait history even though their callbacks
 produce a pickup, nested trait, collapsed Death Defiance restoration, or Pom
 mutation. Boon leaves both the outer Echo identity and the selected nested

@@ -625,9 +625,9 @@ describe('field NPC encounter requirements', () => {
       giverKey: 'Arachne',
       selectedOptionKey: 'option1',
       options: [
-        { traitKey: 'AgilityCostume', rarity: 'Common' },
-        { traitKey: 'ManaCostume', rarity: 'Common' },
-        { traitKey: 'VitalityCostume', rarity: 'Common' },
+        { traitKey: 'AgilityCostume' },
+        { traitKey: 'ManaCostume' },
+        { traitKey: 'VitalityCostume' },
       ],
     });
     const traitAddress = createTraitOfferAddress(storyPhase, 'selection');
@@ -648,8 +648,19 @@ describe('field NPC encounter requirements', () => {
     expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.ManaCostume).toMatchObject({
       giverKey: 'Arachne',
       providerKind: 'npc',
-      rarity: 'Common',
     });
+    expect(
+      biome.rewards.branches[0]?.traitHistory?.equippedTraits.ManaCostume?.rarity,
+    ).toBeUndefined();
+    const arachneSnapshots = biome.rewards.runStateSnapshots.filter(
+      (snapshot) => snapshot.traits.equippedTraits.ManaCostume !== undefined,
+    );
+    expect(arachneSnapshots.length).toBeGreaterThan(0);
+    expect(
+      arachneSnapshots.every(
+        (snapshot) => snapshot.traits.equippedTraits.ManaCostume?.rarity === undefined,
+      ),
+    ).toBe(true);
     expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.VitalityCostume).toBeUndefined();
   });
 
@@ -678,7 +689,7 @@ describe('field NPC encounter requirements', () => {
       traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: true }).find(
         (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
       ),
-    ).toMatchObject({ available: true, rarity: 'Common' });
+    ).toMatchObject({ available: true });
 
     const storyId = nOccurrenceId('story');
     const storyPhase = phase(nBiome, storyId);
@@ -688,9 +699,9 @@ describe('field NPC encounter requirements', () => {
     const editedOffer = {
       ...storyOffer!,
       options: [
-        { traitKey: 'DeathDefianceRetaliateCurse', rarity: 'Common' as const },
-        { traitKey: 'MoneyOnDeathCurse', rarity: 'Common' as const },
-        { traitKey: 'ManaOverTimeCurse', rarity: 'Common' as const },
+        { traitKey: 'DeathDefianceRetaliateCurse' },
+        { traitKey: 'MoneyOnDeathCurse' },
+        { traitKey: 'ManaOverTimeCurse' },
       ] as const,
       selectedOptionKey: 'option1' as const,
       deathDefianceConditionMet: true,
@@ -716,7 +727,6 @@ describe('field NPC encounter requirements', () => {
     expect(branch?.traitHistory?.equippedTraits.DeathDefianceRetaliateCurse).toMatchObject({
       giverKey: 'Medea',
       providerKind: 'npc',
-      rarity: 'Common',
     });
     expect(
       biome.rewards.selectedTraitOffers.find(
@@ -725,7 +735,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', chronologicalIndex: expect.any(Number) });
   });
 
-  it('gates Last Gasp locally and acquires a fixed-Common Hades Story trait', () => {
+  it('gates Last Gasp locally and acquires a rarityless Hades Story trait', () => {
     const history = createTraitHistoryState();
     expect(
       traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: false }).find(
@@ -736,7 +746,7 @@ describe('field NPC encounter requirements', () => {
       traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: true }).find(
         (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
       ),
-    ).toMatchObject({ available: true, rarity: 'Common' });
+    ).toMatchObject({ available: true });
 
     const reachedStoryId = createOccurrenceId('golden-i-story01');
     let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
@@ -754,17 +764,17 @@ describe('field NPC encounter requirements', () => {
       giverKey: 'Hades',
       deathDefianceConditionMet: false,
       options: [
-        { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
-        { traitKey: 'HadesCastProjectileBoon', rarity: 'Common' },
-        { traitKey: 'HadesPreDamageBoon', rarity: 'Common' },
+        { traitKey: 'HadesLifestealBoon' },
+        { traitKey: 'HadesCastProjectileBoon' },
+        { traitKey: 'HadesPreDamageBoon' },
       ],
     });
     const editedOffer = {
       ...storyOffer!,
       options: [
-        { traitKey: 'HadesDeathDefianceDamageBoon', rarity: 'Common' as const },
-        { traitKey: 'HadesManaUrnBoon', rarity: 'Common' as const },
-        { traitKey: 'HadesDashSweepBoon', rarity: 'Common' as const },
+        { traitKey: 'HadesDeathDefianceDamageBoon' },
+        { traitKey: 'HadesManaUrnBoon' },
+        { traitKey: 'HadesDashSweepBoon' },
       ] as const,
       selectedOptionKey: 'option1' as const,
       deathDefianceConditionMet: true,
@@ -795,6 +805,22 @@ describe('field NPC encounter requirements', () => {
       biome.rewards.branches.some(
         (branch) =>
           branch.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon?.giverKey === 'Hades',
+      ),
+    ).toBe(true);
+    expect(
+      biome.rewards.branches.every(
+        (branch) =>
+          branch.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon?.rarity === undefined,
+      ),
+    ).toBe(true);
+    const hadesSnapshots = biome.rewards.runStateSnapshots.filter(
+      (snapshot) => snapshot.traits.equippedTraits.HadesDeathDefianceDamageBoon !== undefined,
+    );
+    expect(hadesSnapshots.length).toBeGreaterThan(0);
+    expect(
+      hadesSnapshots.every(
+        (snapshot) =>
+          snapshot.traits.equippedTraits.HadesDeathDefianceDamageBoon?.rarity === undefined,
       ),
     ).toBe(true);
   });
@@ -1204,7 +1230,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
       selectedEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.FocusAttackDamageTrait,
-    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc', rarity: 'Common' });
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
   });
 
   it('uses declaration-owned P Indoor and Outdoor tags for Heracles, Icarus, and Athena', () => {
@@ -1284,7 +1310,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', reached: true });
     expect(
       pEvaluation.rewards.branches[0]?.traitHistory?.equippedTraits.OmegaExplodeBoon,
-    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc', rarity: 'Common' });
+    ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
   });
 
   it('applies reached Latest Model through the encounter-owned offer and exhausts its exact Hammer target', () => {
@@ -1304,11 +1330,10 @@ describe('field NPC encounter requirements', () => {
         options: [
           {
             traitKey: 'UpgradeHammerBoon',
-            rarity: 'Common',
             targetTraitKey: 'StaffDoubleAttackTrait',
           },
-          { traitKey: 'OmegaExplodeBoon', rarity: 'Common' },
-          { traitKey: 'CastHazardBoon', rarity: 'Common' },
+          { traitKey: 'OmegaExplodeBoon' },
+          { traitKey: 'CastHazardBoon' },
         ],
         selectedOptionKey: 'option1',
       },
@@ -1339,7 +1364,6 @@ describe('field NPC encounter requirements', () => {
     expect(history.equippedTraits.UpgradeHammerBoon).toMatchObject({
       giverKey: 'Icarus',
       providerKind: 'npc',
-      rarity: 'Common',
     });
     expect(history.equippedTraits.StaffDoubleAttackTrait).toMatchObject({
       giverKey: 'WeaponUpgrade',

@@ -520,10 +520,10 @@ supported, otherwise selects the first supported declaration-ordered repair.
 When the domain is unassessed, the exact current concrete value remains the
 first choice when applicable, followed by the first declaration-ordered
 unassessed variant. The rarity picker reuses the already evaluated concrete
-batch. Fixed-rarity givers such as Icarus retain their authored rarity without
-a picker; Hammers expose no rarity control. Heroic remains hidden as a fresh
-technical probe and appears only for a retained authored value or an
-engine-supported Epic-to-Heroic replacement.
+batch. Fixed-rarity givers retain their authored rarity without a picker;
+rarityless NPCs and Hammers expose no rarity control or label. Heroic remains
+hidden as a fresh technical probe and appears only for a retained authored
+value or an engine-supported Epic-to-Heroic replacement.
 
 The same modal renders engine-backed shape controls for exhausted Olympian and
 Hermes offers. Adding a position consumes an exact engine-produced next draft;

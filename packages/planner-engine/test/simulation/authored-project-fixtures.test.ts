@@ -26,17 +26,17 @@ describe('canonical authored-project fixtures', () => {
     [
       'Underworld F/G default',
       () => createCompleteFGProject(),
-      '19d958d2f2bd07d10f4a8a71348d96fd72640e52189e3168c216cc3cce6e6878',
+      '2d954cb17b3a7dc35da1394643474a8f7ec57b38c6d0544b0909a734b7264489',
     ],
     [
       'Underworld F/G alternate miniboss',
       () => createCompleteFGProject({ pickedMiniboss: 'G_MiniBoss02' }),
-      '934f300932a2e4f8be3c0f074e305c570797b087724514c65bb08fee6f0b62e9',
+      '9068d838e20fe271dc22bb6189c1b01528da439e80c1cfc721f3f2489ea72b4e',
     ],
     [
       'Underworld F/G alternate Preboss source',
       () => createCompleteFGProject({ prebossSource: 'G_Combat14' }),
-      '7580167532ef07977f7877374288e238ec71923ba19a75c16dc9c902cd3e90a2',
+      'e818366d1a5733df7ffacdbbf6e08c7b594cde26fad1e1e363bd5399b53ccb4d',
     ],
     [
       'Underworld F/G combined alternates',
@@ -45,17 +45,17 @@ describe('canonical authored-project fixtures', () => {
           pickedMiniboss: 'G_MiniBoss02',
           prebossSource: 'G_Combat14',
         }),
-      '0291a020593d1bc3013eedb783af90e0239dd6aabfe08fd49b6b77b7b9106f50',
+      '7af98ea142d7f0447227b0a6a386a5562bcc21edd35eac43e2885bccfe33e6a9',
     ],
     [
       'Underworld F/G/H',
       () => createGoldenFGHProject(),
-      'deee18dec066c18f9a48292f896ff99f1f8359a3e151a92c92aca24ad226fe97',
+      'bc364d2f67e14efe2e88de1b2e7356b00a40da7aa6b905e91352b3a1584c5612',
     ],
     [
       'Underworld F/G/H/I',
       () => createGoldenFGHIProject(),
-      'a7a88dac4b9eb8f680423aca829493b7c31453690aca2e2d3f00f94745028c6f',
+      '98e2f1b437ee8bf0da5034b311b42b49724f4c03448863a04b7ea5000a868dc9',
     ],
     [
       'Surface N',
@@ -88,22 +88,22 @@ describe('canonical authored-project fixtures', () => {
           ],
           visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
         }),
-      '71fc3c2724a0bcdbcf35fb6a5356e16b45cf975ef806a6b04628b33fab52011d',
+      'ac1cbfa0b6eca1c5a5e562b8351e48bd2315abc43e036f7c566f0c7fbe8dd582',
     ],
     [
       'Surface N/O',
       () => createRepresentativeNOProject(),
-      '21cce513aa87b8b9185613bfcf2aa2702e7e5f186321a76ddf337e5d3b909282',
+      'c3c212804d907ea11f9bc082c5badd6b99ec8a31e0eff8dc1aa88100bf7b1c87',
     ],
     [
       'Surface N/O/P',
       () => createRepresentativeNOPProject(),
-      '6e0dc10d85851c4f7d3dcb6f0d905d000e01fd8605f48268b242fdc18b053df4',
+      '7691e4476e1fd84b3d337e424e99ad8e61dc941e65dd357441e3cde2e5280893',
     ],
     [
       'Surface N/O/P/Q',
       () => createRepresentativeNOPQProject(),
-      '14499ab06288d81e378dff3f115e92fad6fc3307e7f5986a99d89cedd6fdd8ea',
+      'e955986554e776d5607761eb6a4119ce9b96fb518fcf4a2177baa833d7f58f66',
     ],
   ])('preserves the characterized %s document', (_name, createProject, digest) => {
     expect(authoredDocumentDigest(createProject())).toBe(digest);

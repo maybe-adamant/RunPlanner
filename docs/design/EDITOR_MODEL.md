@@ -800,9 +800,9 @@ rows, their selected option, and contextual trait pickers, or the mutually
 exclusive Fallback Gold outcome. Engine-projected controls add the next
 supported row, remove only a trailing row, select fallback, or return to one
 supported trait draft. Selectable-rarity givers receive a contextual rarity
-picker; fixed-rarity providers such as Icarus retain rarity in the authored
-value and summary but expose no rarity control, and Hammer rows intentionally
-expose no rarity field. Giver labels, selected trait labels, contextual support,
+picker; fixed-rarity providers retain their declaration-owned rarity without a
+control, while rarityless NPC and Hammer rows omit rarity entirely. Giver
+labels, selected trait labels, contextual support,
 and findings are presentation products derived from catalog and engine outputs.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and

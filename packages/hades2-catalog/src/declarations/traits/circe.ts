@@ -1,8 +1,7 @@
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../traits';
 
-const fixedCommon = {
-  freshOfferRarities: ['Common'],
-  equippedRarities: ['Common'],
+const raritylessNpcTrait = {
+  rarityDomain: 'none',
   elementContributions: {},
   usesBoonRarity: false,
   blockStacking: false,
@@ -10,51 +9,56 @@ const fixedCommon = {
   excludeFromRarityCount: false,
 } as const;
 
-/** Circe's menu is a fixed Common pool; the three stateful choices are marked
+/** Circe's menu is player-rarityless; the three stateful choices are marked
  * with a closed acquisition policy consumed by the engine. */
 export const circeTraits = [
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'CirceShrinkTrait',
     label: 'Word of Smaller Stature',
     offerRequirements: [],
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'CirceEnlargeTrait',
     label: 'Word of Greater Girth',
     offerRequirements: [],
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'ArcanaRarityTrait',
     label: 'Lapis Lazuli Insight',
     offerRequirements: [{ kind: 'manualArcanaGraspCost', minimum: 1 }],
     selectedDisposition: { kind: 'circe', effect: 'promoteArcana' },
   },
-  { ...fixedCommon, key: 'HealAmplifyTrait', label: 'Old Herbal Remedy', offerRequirements: [] },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
+    key: 'HealAmplifyTrait',
+    label: 'Old Herbal Remedy',
+    offerRequirements: [],
+  },
+  {
+    ...raritylessNpcTrait,
     key: 'DoubleFamiliarTrait',
     label: 'Primal Psychic Connection',
     offerRequirements: [],
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'RemoveShrineTrait',
     label: 'Black Night Banishment',
     offerRequirements: [{ kind: 'offerContext', context: 'circeRemovableFearVow', required: true }],
     selectedDisposition: { kind: 'circe', effect: 'disableFear' },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'RandomArcanaTrait',
     label: 'Red Citrine Divination',
     offerRequirements: [],
     selectedDisposition: { kind: 'circe', effect: 'activateArcana' },
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'CirceSorceryDamageBoon',
     label: 'Hymn to the Eye of Night',
     offerRequirements: [
@@ -73,7 +77,7 @@ export const circeTraits = [
     ],
   },
   {
-    ...fixedCommon,
+    ...raritylessNpcTrait,
     key: 'ExPolymorphBoon',
     label: 'Turning to a Simple Form',
     offerRequirements: [],
@@ -86,12 +90,12 @@ export const circeGiver = {
   providerKind: 'npc',
   priorityTraitKeys: [],
   traitKeys: circeTraits.map((trait) => trait.key),
-  rarityPolicy: { kind: 'fixed', rarity: 'Common' },
+  rarityPolicy: { kind: 'none' },
   defaultOffer: {
     options: [
-      { traitKey: 'CirceShrinkTrait', rarity: 'Common' },
-      { traitKey: 'CirceEnlargeTrait', rarity: 'Common' },
-      { traitKey: 'HealAmplifyTrait', rarity: 'Common' },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
+      { traitKey: 'HealAmplifyTrait' },
     ],
     selectedOption: 0,
   },

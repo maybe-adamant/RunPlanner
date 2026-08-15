@@ -135,9 +135,9 @@ describe('Vow of Denial trait history', () => {
         kind: 'traits',
         giverKey: 'Medea',
         options: [
-          { traitKey: 'HealingOnDeathCurse', rarity: 'Common' },
-          { traitKey: 'MoneyOnDeathCurse', rarity: 'Common' },
-          { traitKey: 'ManaOverTimeCurse', rarity: 'Common' },
+          { traitKey: 'HealingOnDeathCurse' },
+          { traitKey: 'MoneyOnDeathCurse' },
+          { traitKey: 'ManaOverTimeCurse' },
         ],
         selectedOptionKey: 'option1',
       },

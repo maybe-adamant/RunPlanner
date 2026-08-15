@@ -54,15 +54,15 @@ describe('Jeweled Pom', () => {
       branch,
       'HadesAndPersephoneKeepsake',
       {
-        jeweledPom: { traitKey: 'HadesLifestealBoon', rarity: 'Common' },
+        jeweledPom: { traitKey: 'HadesLifestealBoon' },
       },
       result,
       1,
     );
     expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon).toMatchObject({
-      rarity: 'Common',
       sourceRole: 'jeweledPomEquip',
     });
+    expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon?.rarity).toBeUndefined();
     expect(equipped.traitEvaluations?.at(-1)?.composition).toMatchObject({
       applies: false,
       legal: true,
@@ -114,7 +114,7 @@ describe('Jeweled Pom', () => {
       catalog,
       branch,
       'HadesAndPersephoneKeepsake',
-      { jeweledPom: { traitKey: 'HadesLifestealBoon', rarity: 'Common' } },
+      { jeweledPom: { traitKey: 'HadesLifestealBoon' } },
       result,
       1,
     );

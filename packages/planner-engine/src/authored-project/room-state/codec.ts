@@ -244,7 +244,10 @@ function decodeTraitOffers(
               `${rolePath}.options.${key}.rarity`,
             ) as AuthoredTraitOption['rarity']);
       if (trait.rarityDomain.kind === 'none' && rarity !== undefined)
-        failProjectDocument(`${rolePath}.options.${key}.rarity`, 'Hammer options have no rarity');
+        failProjectDocument(
+          `${rolePath}.options.${key}.rarity`,
+          'rarityless options have no rarity',
+        );
       if (
         trait.rarityDomain.kind === 'ranked' &&
         (rarity === undefined || !trait.rarityDomain.equippedRarities.includes(rarity))

@@ -65,10 +65,10 @@ function selectNarcissus(
     value: {
       kind: 'traits',
       giverKey: 'Narcissus',
-      options: traitKeys.map((traitKey) => ({ traitKey, rarity: 'Common' })) as [
-        { traitKey: string; rarity: 'Common' },
-        { traitKey: string; rarity: 'Common' },
-        { traitKey: string; rarity: 'Common' },
+      options: traitKeys.map((traitKey) => ({ traitKey })) as [
+        { traitKey: string },
+        { traitKey: string },
+        { traitKey: string },
       ],
       selectedOptionKey: 'option1',
       deathDefianceConditionMet,
@@ -411,9 +411,9 @@ describe('Narcissus pickup producer', () => {
         kind: 'traits',
         giverKey: 'Narcissus',
         options: [
-          { traitKey: 'NarcissusA', rarity: 'Common' },
-          { traitKey: 'NarcissusD', rarity: 'Common' },
-          { traitKey: 'NarcissusE', rarity: 'Common' },
+          { traitKey: 'NarcissusA' },
+          { traitKey: 'NarcissusD' },
+          { traitKey: 'NarcissusE' },
         ],
         selectedOptionKey: 'option1',
         deathDefianceConditionMet: false,

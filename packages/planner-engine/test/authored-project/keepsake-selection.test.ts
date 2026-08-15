@@ -81,8 +81,14 @@ describe('keepsake authored selections', () => {
         ?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesLifestealBoon',
-      rarity: 'Common',
     });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceJeweledPomEquipResult',
+        result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
+        value: { traitKey: 'HadesCastProjectileBoon', rarity: 'Common' },
+      }),
+    ).toThrow(/rarityless option HadesCastProjectileBoon has no rarity/);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
       result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
@@ -91,13 +97,12 @@ describe('keepsake authored selections', () => {
     expect(
       project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
         ?.jeweledPom,
-    ).toEqual({ traitKey: 'HadesCastProjectileBoon', rarity: 'Common' });
+    ).toEqual({ traitKey: 'HadesCastProjectileBoon' });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
       result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        rarity: 'Common',
         deathDefianceConditionMet: true,
       },
     });
@@ -116,7 +121,6 @@ describe('keepsake authored selections', () => {
         ?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
-      rarity: 'Common',
       deathDefianceConditionMet: true,
     });
 
@@ -130,7 +134,6 @@ describe('keepsake authored selections', () => {
         ?.keepsakeEquipResults?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesLifestealBoon',
-      rarity: 'Common',
     });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
