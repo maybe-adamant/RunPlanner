@@ -61,6 +61,8 @@ export type {
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoLastRunBoonCandidate,
   WorkspaceEchoLastRewardDomain,
+  WorkspaceAllTogetherSetDomain,
+  WorkspaceAllTogetherSetInteraction,
   WorkspaceLevelResolutionControl,
   WorkspaceTraitOfferInteraction,
   WorkspaceLevelResolutionInteraction,

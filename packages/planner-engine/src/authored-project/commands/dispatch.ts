@@ -108,6 +108,7 @@ function applyUnchecked(
     case 'ReplaceTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
+    case 'ReplaceAllTogetherSet':
       return applyTraitOfferCommand(
         document,
         catalog,

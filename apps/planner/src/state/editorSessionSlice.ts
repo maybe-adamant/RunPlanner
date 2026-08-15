@@ -11,6 +11,8 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 export interface FindingSelection {
   readonly key: string;
   readonly origin: SemanticAddress;
+  /** Projection-resolved containing dialog for a fine-grained finding. */
+  readonly traitDialogTarget?: TraitOfferAddress;
 }
 
 /** Transient navigation references invalidated by one workspace publication. */
@@ -133,7 +135,8 @@ const editorSessionSlice = createSlice({
       state.focusedSemanticOwner = action.payload.origin;
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget =
-        action.payload.origin.kind === 'traitOffer' ? action.payload.origin : null;
+        action.payload.traitDialogTarget ??
+        (action.payload.origin.kind === 'traitOffer' ? action.payload.origin : null);
       state.levelResolutionDialogTarget =
         action.payload.origin.kind === 'levelResolution' ? action.payload.origin : null;
       state.runStateTarget = null;

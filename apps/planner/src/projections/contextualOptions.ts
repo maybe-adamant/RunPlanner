@@ -241,6 +241,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'reward', message: 'Reset or repair the recreated reward decisions.' };
     case 'echoShopDuplicateChildMissing':
       return { kind: 'reward', message: 'Create the decisions for the free Shop duplicate.' };
+    case 'allTogetherResultMissing':
+      return { kind: 'trait', message: 'Choose one direct trait outcome for every element set.' };
+    case 'allTogetherResultUnavailable':
+      return { kind: 'trait', message: 'Repair the direct trait outcomes for All Together.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',

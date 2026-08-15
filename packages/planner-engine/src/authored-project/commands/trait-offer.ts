@@ -9,11 +9,13 @@ import {
   optionIndex,
   normalizeAuthoredEchoLastRunBoon,
   normalizeAuthoredEchoLastReward,
+  normalizeAllTogetherResult,
   type AuthoredEchoLastRewardAcquisition,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../traits';
+import type { TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
 import { selectedEncounterDefinitionKey } from '../room-state/encounters';
@@ -26,6 +28,54 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import type { TraitOfferCommand } from './types';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
+
+function commandTraitAddress(command: TraitOfferCommand): TraitOfferAddress {
+  return command.kind === 'ReplaceAllTogetherSet' ? command.set.trait : command.trait;
+}
+
+function replaceAllTogetherSet(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer,
+  command: Extract<TraitOfferCommand, { readonly kind: 'ReplaceAllTogetherSet' }>,
+): AuthoredTraitOffer {
+  if (existing.kind !== 'traits') failCommand(command, 'All Together requires a traits offer');
+  const index = optionIndex(command.set.optionKey);
+  const option = existing.options[index];
+  if (option === undefined) failCommand(command, 'All Together option is not materialized');
+  const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'directTraitSets')
+    failCommand(command, 'addressed option is not All Together');
+  const set = disposition.sets.find((candidate) => candidate.key === command.set.setKey);
+  if (set === undefined) failCommand(command, `unknown All Together set ${command.set.setKey}`);
+  if (command.value !== null && !set.traitKeys.includes(command.value))
+    failCommand(command, `${command.value} is not a member of ${set.key}`);
+  const result = option.allTogetherResult;
+  if (result === undefined) failCommand(command, 'All Together result is required');
+  const options = [...existing.options];
+  options[index] = Object.freeze({
+    ...option,
+    allTogetherResult: Object.freeze({ ...result, [set.key]: command.value }),
+  });
+  return Object.freeze({
+    ...existing,
+    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+  });
+}
+
+function replaceTraitOfferValue(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer,
+  command: TraitOfferCommand,
+  omitDeathDefianceContext = false,
+): AuthoredTraitOffer {
+  if (command.kind === 'ReplaceAllTogetherSet')
+    return replaceAllTogetherSet(catalog, existing, command);
+  if (command.kind === 'ReplaceTraitSelection')
+    return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
+  if (command.kind === 'ReplaceGorgonAthenaOffer')
+    failCommand(command, 'Gorgon Athena decisions require a Gorgon phase owner');
+  return validateOffer(catalog, command.value, command, omitDeathDefianceContext);
+}
 
 function validateGorgonAthenaOffer(
   catalog: Catalog,
@@ -264,6 +314,18 @@ function validateOffer(
         );
       }
     }
+    if ('allTogetherResult' in option) {
+      try {
+        normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult);
+      } catch (error) {
+        failCommand(
+          command,
+          error instanceof Error ? error.message : 'invalid All Together result',
+        );
+      }
+    }
+    if (trait.selectedDisposition.kind === 'directTraitSets' && !('allTogetherResult' in option))
+      failCommand(command, `${option.traitKey} requires an All Together result`);
   }
   const conditionApplicable =
     !omitDeathDefianceContext &&
@@ -292,11 +354,16 @@ function validateOffer(
           'echoLastReward' in option
             ? validateEchoLastReward(catalog, option.echoLastReward, command)
             : undefined;
+        const allTogetherResult =
+          'allTogetherResult' in option
+            ? normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult)
+            : undefined;
         if (resolution === undefined)
           return Object.freeze({
             ...option,
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(echoLastReward === undefined ? {} : { echoLastReward }),
+            ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           });
         if (resolution.kind === 'disableFear')
           return Object.freeze({
@@ -359,7 +426,8 @@ export function locateTraitReward(
   state: RoomOccurrence['state'],
   command: TraitOfferCommand,
 ): LocatedTraitReward | undefined {
-  const owner = command.trait.owner;
+  const trait = commandTraitAddress(command);
+  const owner = trait.owner;
   switch (owner.kind) {
     case 'acquisitionEntry':
       return pickupEntrySource(catalog, located, occurrence, owner.entryKey, command);
@@ -501,7 +569,8 @@ export function updateTraitRewardState(
     value: AuthoredTraitOffer,
   ) => AuthoredRewardState = updateReward,
 ): RoomOccurrence['state'] {
-  const owner = command.trait.owner;
+  const trait = commandTraitAddress(command);
+  const owner = trait.owner;
   switch (owner.kind) {
     case 'acquisitionEntry':
       return failCommand(command, 'site pickup entries are updated on their occurrence overlay');
@@ -514,7 +583,7 @@ export function updateTraitRewardState(
         case 'freeReward':
           return Object.freeze({
             ...state,
-            reward: update(state.reward, command.trait.acquisitionRole, value),
+            reward: update(state.reward, trait.acquisitionRole, value),
           });
         case 'none':
         case 'fieldsCombat':
@@ -542,7 +611,7 @@ export function updateTraitRewardState(
           ...state,
           cages: Object.freeze({
             ...state.cages,
-            [owner.slotKey]: update(reward, command.trait.acquisitionRole, value),
+            [owner.slotKey]: update(reward, trait.acquisitionRole, value),
           }),
         });
       }
@@ -565,7 +634,7 @@ export function updateTraitRewardState(
             ...state.sideRooms,
             [owner.slotKey]: Object.freeze({
               ...sideRoom,
-              reward: update(sideRoom.reward, command.trait.acquisitionRole, value),
+              reward: update(sideRoom.reward, trait.acquisitionRole, value),
             }),
           }),
         });
@@ -592,7 +661,7 @@ export function updateTraitRewardState(
               ...wheel,
               offers: Object.freeze({
                 ...wheel.offers,
-                [owner.offerKey]: update(reward, command.trait.acquisitionRole, value),
+                [owner.offerKey]: update(reward, trait.acquisitionRole, value),
               }),
             }),
           }),
@@ -613,7 +682,7 @@ export function updateTraitRewardState(
               ...state.shop.offers,
               [owner.offerKey]: Object.freeze({
                 ...entry,
-                reward: update(entry.reward, command.trait.acquisitionRole, value),
+                reward: update(entry.reward, trait.acquisitionRole, value),
               }),
             }),
           }),
@@ -632,7 +701,8 @@ export function applyTraitOfferCommand(
   command: TraitOfferCommand,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const owner = command.trait.owner;
+  const trait = commandTraitAddress(command);
+  const owner = trait.owner;
   const occurrenceId =
     owner.kind === 'encounterPhase'
       ? owner.owner.occurrenceId
@@ -644,7 +714,7 @@ export function applyTraitOfferCommand(
             : failCommand(command, 'acquisition entry is not occurrence-owned')
           : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  if (owner.routeKey !== command.trait.routeKey || owner.biomeKey !== command.trait.biomeKey)
+  if (owner.routeKey !== trait.routeKey || owner.biomeKey !== trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
   if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase') {
     const encounterOwner = owner.kind === 'gorgonPhase' ? owner.encounter.owner : owner.owner;
@@ -683,7 +753,7 @@ export function applyTraitOfferCommand(
     );
     if (
       phaseKey.trim().length === 0 ||
-      command.trait.acquisitionRole !== (isGorgon ? 'gorgonAthena' : 'selection')
+      trait.acquisitionRole !== (isGorgon ? 'gorgonAthena' : 'selection')
     )
       failCommand(command, 'encounter trait offers use the bound acquisition role');
     if (
@@ -696,7 +766,7 @@ export function applyTraitOfferCommand(
     if (isGorgon) {
       const existing = phaseGorgon?.athenaOffer;
       if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
-      if (command.kind === 'ReplaceTraitOffer')
+      if (command.kind === 'ReplaceTraitOffer' || command.kind === 'ReplaceAllTogetherSet')
         failCommand(command, 'Gorgon Athena persists only its bound author decisions');
       const value =
         command.kind === 'ReplaceTraitSelection'
@@ -729,10 +799,7 @@ export function applyTraitOfferCommand(
           traitOfferOption(existing, command.selectedOptionKey) === undefined)
       )
         failCommand(command, 'selected option is not materialized by this trait offer');
-      const value =
-        command.kind === 'ReplaceTraitSelection'
-          ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
-          : validateOffer(catalog, command.value, command, false);
+      const value = replaceTraitOfferValue(catalog, existing, command, false);
       if (value.giverKey !== expectedProducer.giverKey)
         failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
       if (sameOccurrenceValue(value, existing)) return document;
@@ -776,18 +843,17 @@ export function applyTraitOfferCommand(
     );
   }
   const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
-  if (reward === undefined)
-    failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
-  const existing = reward.reward.traitOffersByAcquisitionRole[command.trait.acquisitionRole];
+  if (reward === undefined) failCommand(command, `no trait offer at role ${trait.acquisitionRole}`);
+  const existing = reward.reward.traitOffersByAcquisitionRole[trait.acquisitionRole];
   if (existing === undefined)
-    failCommand(command, `no trait offer at role ${command.trait.acquisitionRole}`);
+    failCommand(command, `no trait offer at role ${trait.acquisitionRole}`);
   const expectedGiver = traitGiverForAcquisitionRole(
     catalog,
     reward.reward.offer,
-    command.trait.acquisitionRole,
+    trait.acquisitionRole,
   );
   if (expectedGiver === undefined) {
-    failCommand(command, `no catalog trait provider at role ${command.trait.acquisitionRole}`);
+    failCommand(command, `no catalog trait provider at role ${trait.acquisitionRole}`);
   }
   if (existing.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
@@ -806,10 +872,7 @@ export function applyTraitOfferCommand(
       traitOfferOption(existing, command.selectedOptionKey) === undefined)
   )
     failCommand(command, 'selected option is not materialized by this trait offer');
-  const value =
-    command.kind === 'ReplaceTraitSelection'
-      ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
-      : validateOffer(catalog, command.value, command);
+  const value = replaceTraitOfferValue(catalog, existing, command);
   if (value.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
@@ -819,7 +882,7 @@ export function applyTraitOfferCommand(
     const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
     if (site === undefined || pickup === undefined)
       failCommand(command, `missing pickup entry ${owner.entryKey}`);
-    const nextPickup = updateReward(pickup, command.trait.acquisitionRole, value);
+    const nextPickup = updateReward(pickup, trait.acquisitionRole, value);
     return updateOccurrenceTopology(
       document,
       located,

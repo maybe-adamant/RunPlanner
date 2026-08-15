@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAllTogetherSetAddress,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -96,13 +97,63 @@ function arachneStoryProject(): ProjectDocument {
   });
 }
 
-describe('schema-35 occurrence-owned encounter persistence', () => {
+function allTogetherProject(): ProjectDocument {
+  const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+  const trait = createTraitOfferAddress(reward, 'source');
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait,
+    value: {
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: [
+        {
+          traitKey: 'AllElementalBoon',
+          rarity: 'Legendary',
+          allTogetherResult: {
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: 'ElementalHealthBoon',
+          },
+        },
+        { traitKey: 'HeraManaBoon', rarity: 'Common' },
+        { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+    },
+  });
+  return project;
+}
+
+function allTogetherResult(document: JsonRecord): JsonRecord {
+  const state = occurrence(document, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord;
+  const reward = state.reward as JsonRecord;
+  const offers = reward.traitOffersByAcquisitionRole as JsonRecord;
+  const source = offers.source as JsonRecord;
+  const options = source.options as JsonRecord[];
+  return options[0]!.allTogetherResult as JsonRecord;
+}
+
+function allTogetherOffer(document: JsonRecord): JsonRecord {
+  const state = occurrence(document, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord;
+  const reward = state.reward as JsonRecord;
+  return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
+}
+
+describe('schema-36 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(35);
+    expect(decoded.schemaVersion).toBe(36);
   });
 
   it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
@@ -136,7 +187,104 @@ describe('schema-35 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 35 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 36 });
+  });
+
+  it('round-trips the exact All Together map, legal null, and one semantic set edit', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const trait = createTraitOfferAddress(reward, 'source');
+    const edited = applyProjectCommand(allTogetherProject(), catalog, {
+      kind: 'ReplaceAllTogetherSet',
+      set: createAllTogetherSetAddress(trait, 'option1', 'earth'),
+      value: 'ElementalOlympianDamageBoon',
+    });
+    const nulled = applyProjectCommand(edited, catalog, {
+      kind: 'ReplaceAllTogetherSet',
+      set: createAllTogetherSetAddress(trait, 'option1', 'water'),
+      value: null,
+    });
+    const decoded = decodeProjectDocument(encoded(nulled), catalog);
+    expect(decoded).toEqual(nulled);
+    expect(allTogetherResult(encoded(decoded))).toEqual({
+      earth: 'ElementalOlympianDamageBoon',
+      fire: 'ElementalBaseDamageBoon',
+      air: 'ElementalDamageFloorBoon',
+      water: null,
+    });
+
+    const dormant = applyProjectCommand(nulled, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    const restored = applyProjectCommand(dormant, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option1',
+    });
+    expect(allTogetherResult(encoded(dormant))).toEqual(allTogetherResult(encoded(restored)));
+  });
+
+  it.each([
+    [
+      'missing set',
+      (result: JsonRecord): void => {
+        delete result.water;
+      },
+      /water: must be a string/,
+    ],
+    [
+      'extra set',
+      (result: JsonRecord): void => {
+        result.aether = null;
+      },
+      /aether: is not a project document field/,
+    ],
+    [
+      'wrong member',
+      (result: JsonRecord): void => {
+        result.earth = 'ElementalRallyBoon';
+      },
+      /must be null or one of/,
+    ],
+    [
+      'wrong value shape',
+      (result: JsonRecord): void => {
+        result.fire = 4;
+      },
+      /must be a string/,
+    ],
+  ] as const)('rejects an All Together map with %s', (_label, mutate, message) => {
+    const document = encoded(allTogetherProject());
+    mutate(allTogetherResult(document));
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(message);
+  });
+
+  it('rejects omission of the complete All Together child in codecs and ReplaceTraitOffer', () => {
+    const document = encoded(allTogetherProject());
+    delete ((allTogetherOffer(document).options as JsonRecord[])[0] as JsonRecord)
+      .allTogetherResult;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow(
+      'allTogetherResult: is required by this trait',
+    );
+
+    const project = allTogetherProject();
+    const commandValue = allTogetherOffer(encoded(project));
+    delete ((commandValue.options as JsonRecord[])[0] as JsonRecord).allTogetherResult;
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'source'),
+        value: commandValue as never,
+      }),
+    ).toThrow('AllElementalBoon requires an All Together result');
+  });
+
+  it('rejects schema 35 rather than inventing an All Together child migration', () => {
+    const document = encoded(allTogetherProject());
+    document.schemaVersion = 35;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 35');
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -344,28 +492,28 @@ describe('schema-35 occurrence-owned encounter persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 30');
   });
 
   it.each([

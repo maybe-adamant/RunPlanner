@@ -24,7 +24,11 @@ import type { ArcanaFearState } from './arcana-fear';
 import type { KeepsakeState } from './keepsakes';
 import type { TraitFindingCode } from './model';
 export type { TraitFindingCode } from './model';
-import { optionIndex, traitOfferSupportsExhaustion } from '../authored-project/traits';
+import {
+  optionIndex,
+  traitOfferSupportsExhaustion,
+  withDefaultTraitOptionDetail,
+} from '../authored-project/traits';
 
 export interface TraitOfferEvent {
   readonly kind: 'traitOffer';
@@ -73,6 +77,18 @@ export interface TraitElementContributionEvent {
   readonly acquisitionPoint: string;
   readonly contributions: Readonly<Partial<Record<TraitElement, number>>>;
 }
+
+/** One fixed rarityless trait installed directly by another acquired trait. */
+export interface DirectTraitGrantEvent {
+  readonly kind: 'directTraitGrant';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'directTraitGrant';
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly sourceTraitKey: string;
+  readonly traitKey: string;
+  readonly giverKey: string;
+}
 /** A closed lifecycle removal (currently Jeweled Pom's Fated cleanup). */
 export interface TraitRemovalEvent {
   readonly kind: 'traitRemoval';
@@ -100,6 +116,7 @@ export type TraitHistoryEvent =
   | TraitOfferEvent
   | TraitLevelMutationEvent
   | TraitElementContributionEvent
+  | DirectTraitGrantEvent
   | TraitRemovalEvent
   | EchoKeepsakeReplayEvent;
 
@@ -352,6 +369,25 @@ export function foldTraitHistoryEvents(
             ...gift,
             echoKeepsakeReplayCount: (gift.echoKeepsakeReplayCount ?? 0) + 1,
           });
+        continue;
+      }
+      if (event.kind === 'directTraitGrant') {
+        if (equipped[event.traitKey] !== undefined) continue;
+        const giver = catalog.traitGivers.byKey[event.giverKey];
+        const declaration = catalog.traits.byKey[event.traitKey];
+        if (
+          giver === undefined ||
+          declaration === undefined ||
+          !giver.traitKeys.includes(event.traitKey)
+        )
+          continue;
+        equipped[event.traitKey] = Object.freeze({
+          traitKey: event.traitKey,
+          giverKey: giver.key,
+          providerKind: giver.providerKind,
+          ...(isPomEligibleTrait(catalog, event.traitKey) ? { level: 1 } : {}),
+          sourceRole: event.acquisitionRole,
+        });
         continue;
       }
       const option = event.options[optionIndex(event.selectedOptionKey)];
@@ -992,6 +1028,7 @@ export function recordReachedTraitOffer(
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   if (
     selectedDisposition?.kind !== 'equip' &&
+    selectedDisposition?.kind !== 'directTraitSets' &&
     selectedDisposition?.kind !== 'circe' &&
     selectedDisposition?.kind !== 'echo' &&
     selectedDisposition?.kind !== 'advanceCurrentKeepsake'
@@ -1041,6 +1078,53 @@ export function recordReachedTraitOffer(
     ...(mutation === undefined ? [] : [mutation]),
   ]);
   return Object.freeze({ history, event });
+}
+
+/** Appends fixed direct grants without ordinary offer, rarity, Calling Card,
+ * Denial, provider-history, or prerequisite processing. */
+export function recordDirectTraitGrants(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  sequence: number,
+  acquisitionPoint: string,
+  sourceTraitKey: string,
+  grants: readonly { readonly owner: SemanticAddress; readonly traitKey: string }[],
+): TraitHistoryState {
+  const events = grants.map(({ owner, traitKey }): DirectTraitGrantEvent => {
+    const providers = catalog.traitGivers.values.filter((giver) =>
+      giver.traitKeys.includes(traitKey),
+    );
+    if (providers.length !== 1)
+      throw new Error(`direct trait ${traitKey} must resolve to exactly one provider`);
+    return Object.freeze({
+      kind: 'directTraitGrant',
+      owner,
+      acquisitionRole: 'directTraitGrant',
+      sequence,
+      acquisitionPoint,
+      sourceTraitKey,
+      traitKey,
+      giverKey: providers[0]!.key,
+    });
+  });
+  return foldTraitHistoryEvents(catalog, [...before.events, ...events]);
+}
+
+/** Exact ownership-only result domain for one source-declared direct pair. */
+export function directTraitSetOutcomes(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  sourceTraitKey: string,
+  setKey: import('../catalog-schema').DirectTraitSetKey,
+): readonly (string | null)[] {
+  const disposition = catalog.traits.byKey[sourceTraitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'directTraitSets') return Object.freeze([]);
+  const set = disposition.sets.find((candidate) => candidate.key === setKey);
+  if (set === undefined) return Object.freeze([]);
+  const available = set.traitKeys.filter(
+    (traitKey) => history.equippedTraits[traitKey] === undefined,
+  );
+  return Object.freeze(available.length === 0 ? [null] : available);
 }
 
 /** Echo Pom's exact pre-choice random domain: Pom-eligible traits at the greatest level only. */
@@ -1852,7 +1936,7 @@ export function traitOfferStartingDraft(
     : fixedStartingCandidates(variants, selfContained);
   if (chosen.length === 0 || (!traitOfferSupportsExhaustion(giver) && chosen.length !== 3))
     return undefined;
-  const draft = traitDraft(giverKey, chosen);
+  const draft = traitDraft(catalog, giverKey, chosen);
   // Candidate domains establish leaf legality. Keep the authoritative complete
   // offer checks at this boundary, once, rather than evaluating every variant.
   return assessTraitOfferComposition(catalog, draft, history).legal &&
@@ -1928,6 +2012,7 @@ export function nextTraitOfferDraft(
 }
 
 function traitDraft(
+  catalog: Catalog,
   giverKey: string,
   candidates: readonly TraitCandidateAssessment[],
 ): AuthoredTraitOfferTraits {
@@ -1935,7 +2020,7 @@ function traitDraft(
     kind: 'traits',
     giverKey,
     options: Object.freeze(
-      candidates.map(candidateToOption),
+      candidates.map((candidate) => candidateToOption(catalog, candidate)),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
   });
@@ -2030,8 +2115,11 @@ function assessDraftDomainComposition(
   });
 }
 
-function candidateToOption(candidate: TraitCandidateAssessment): AuthoredTraitOption {
-  return Object.freeze({
+function candidateToOption(
+  catalog: Catalog,
+  candidate: TraitCandidateAssessment,
+): AuthoredTraitOption {
+  return withDefaultTraitOptionDetail(catalog, {
     traitKey: candidate.traitKey,
     ...(candidate.rarity === undefined ? {} : { rarity: candidate.rarity }),
   });

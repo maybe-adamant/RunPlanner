@@ -745,6 +745,7 @@ function RouteWorkspace({
               : 'No findings in this route.'
           }
           findings={routeEvaluation.findings}
+          focusByOwner={workspace.focusByOwner}
         />
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {contextMessage === undefined ? null : (

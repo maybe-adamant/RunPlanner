@@ -10,6 +10,7 @@ import {
   semanticFindingKey,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
+import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import { selectProjectFindingsByOwner, useAppDispatch, useAppSelector } from '@planner/state/store';
 import { semanticOwnerElementId } from './semanticOwner';
@@ -138,10 +139,12 @@ export function ProjectFindings({
   catalog,
   emptyMessage,
   findings,
+  focusByOwner,
 }: {
   readonly catalog: Catalog;
   readonly emptyMessage: string;
   readonly findings: readonly SemanticFinding[];
+  readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -160,12 +163,23 @@ export function ProjectFindings({
           {findings.map((finding, index) => {
             const copy = presentFinding(finding);
             const key = semanticFindingKey(finding);
+            const destination = focusByOwner.get(semanticAddressKey(finding.origin));
             return (
               <li key={`${key}-${index}`}>
                 <button
                   aria-current={selectedKey === key ? 'true' : undefined}
                   data-selected={selectedKey === key}
-                  onClick={() => dispatch(findingSelected({ key, origin: finding.origin }))}
+                  onClick={() =>
+                    dispatch(
+                      findingSelected({
+                        key,
+                        origin: finding.origin,
+                        ...(destination?.traitDialogTarget === undefined
+                          ? {}
+                          : { traitDialogTarget: destination.traitDialogTarget }),
+                      }),
+                    )
+                  }
                   type="button"
                 >
                   <span className="finding-title">{copy.title}</span>

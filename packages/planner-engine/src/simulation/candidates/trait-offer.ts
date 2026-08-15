@@ -141,6 +141,23 @@ export interface EvaluatedEchoLastRewardDomain {
 export type EchoLastRewardDomainEvaluation =
   CandidateContextUnavailable | EvaluatedEchoLastRewardDomain;
 
+export interface AllTogetherSetDomainQuery {
+  readonly kind: 'allTogetherSetDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+  readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+}
+export interface EvaluatedAllTogetherSetDomain {
+  readonly kind: 'allTogetherSetDomain';
+  readonly result: {
+    readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
+    readonly values: readonly (string | null)[];
+  };
+}
+export type AllTogetherSetDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedAllTogetherSetDomain;
+
 export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly kind: 'traitAcquisitionTarget';
   readonly result: {
@@ -739,5 +756,30 @@ export function evaluateEchoLastRewardDomain(
       rewardType: first.recreation.offer.rewardType,
       defaultValue: first.defaultValue,
     }),
+  });
+}
+
+export function evaluateAllTogetherSetDomain(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: AllTogetherSetDomainQuery,
+): AllTogetherSetDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const branches = capability.allTogetherSet(query.value, query.optionKey, query.setKey);
+  const first = branches[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  if (
+    !branches.every(
+      (branch) =>
+        branch.length === first.length && branch.every((value, index) => value === first[index]),
+    )
+  )
+    return unavailableForTraitOffer(evaluation, query.trait);
+  return Object.freeze({
+    kind: 'allTogetherSetDomain',
+    result: Object.freeze({ setKey: query.setKey, values: first }),
   });
 }

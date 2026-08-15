@@ -299,6 +299,27 @@ export const heraTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'directTraitSets',
+      sets: [
+        {
+          key: 'earth',
+          traitKeys: ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
+        },
+        {
+          key: 'fire',
+          traitKeys: ['ElementalBaseDamageBoon', 'ElementalRallyBoon'],
+        },
+        {
+          key: 'air',
+          traitKeys: ['ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
+        },
+        {
+          key: 'water',
+          traitKeys: ['ElementalHealthBoon', 'ElementalDamageCapBoon'],
+        },
+      ],
+    },
   },
   {
     key: 'SuperSacrificeBoonHera',

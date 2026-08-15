@@ -56,6 +56,7 @@ import {
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
 import { decodeEchoLastRunBoon } from './echo-last-run';
+import { decodeAllTogetherResult } from './all-together';
 
 function decodePayload(
   value: unknown,
@@ -213,6 +214,7 @@ function decodeTraitOffers(
     for (const [index, key] of TRAIT_OPTION_KEYS.entries()) {
       if (index >= optionsRaw.length) break;
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
+      const hasAllTogetherResult = 'allTogetherResult' in option;
       expectExactKeys(
         option,
         [
@@ -222,6 +224,7 @@ function decodeTraitOffers(
           ...(option.circeResolution === undefined ? [] : ['circeResolution']),
           ...('echoPomTarget' in option ? ['echoPomTarget'] : []),
           ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
+          ...('allTogetherResult' in option ? ['allTogetherResult'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -237,6 +240,11 @@ function decodeTraitOffers(
         failProjectDocument(
           `${rolePath}.options.${key}.traitKey`,
           `${traitKey} is not in giver ${giverKey}`,
+        );
+      if (trait.selectedDisposition.kind === 'directTraitSets' && !hasAllTogetherResult)
+        failProjectDocument(
+          `${rolePath}.options.${key}.allTogetherResult`,
+          'is required by this trait',
         );
       const rarity =
         option.rarity === undefined
@@ -394,6 +402,14 @@ function decodeTraitOffers(
           `${rolePath}.options.${key}.echoLastRunBoon`,
           'is supported only by Echo Boon Boon Boon',
         );
+      const allTogetherResult = hasAllTogetherResult
+        ? decodeAllTogetherResult(
+            option.allTogetherResult,
+            catalog,
+            traitKey,
+            `${rolePath}.options.${key}.allTogetherResult`,
+          )
+        : undefined;
       options.push(
         Object.freeze({
           traitKey,
@@ -402,6 +418,7 @@ function decodeTraitOffers(
           ...(circeResolution === undefined ? {} : { circeResolution }),
           ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
           ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+          ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
         }),
       );
     }

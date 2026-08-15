@@ -4,12 +4,14 @@ import {
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
+  createAllTogetherSetAddress,
   createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createTraitOfferAddress,
   createLevelResolutionAddress,
   optionIndex,
+  createDefaultAllTogetherResult,
   semanticAddressKey,
   type OccurrenceId,
   type SemanticAddress,
@@ -1803,6 +1805,27 @@ export function bindWorkspaceInteractions(
               ...(option?.echoLastReward === undefined ? {} : { value: option.echoLastReward }),
             })
           : undefined;
+      const allTogetherSetControls =
+        value.selectedOptionKey === optionKey &&
+        declaration?.selectedDisposition.kind === 'directTraitSets'
+          ? Object.freeze(
+              declaration.selectedDisposition.sets.map((set) => {
+                const address = createAllTogetherSetAddress(control.address, optionKey, set.key);
+                const persisted = control.allTogetherSets?.find(
+                  (candidate) => candidate.setKey === set.key,
+                );
+                return Object.freeze({
+                  address,
+                  marker: persisted?.marker ?? control.marker,
+                  optionKey,
+                  setKey: set.key,
+                  ...(option?.allTogetherResult === undefined
+                    ? {}
+                    : { value: option.allTogetherResult[set.key] }),
+                });
+              }),
+            )
+          : undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
         hasTargetPicker,
@@ -2124,6 +2147,77 @@ export function bindWorkspaceInteractions(
                     },
                   }),
               }),
+            }),
+        ...(allTogetherSetControls === undefined
+          ? {}
+          : {
+              allTogetherSets: Object.freeze(
+                allTogetherSetControls.map((setControl) =>
+                  Object.freeze({
+                    control: setControl,
+                    intentFor: (result: string | null) =>
+                      Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceAllTogetherSet' as const,
+                          set: setControl.address,
+                          value: result,
+                        }),
+                      }),
+                    offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
+                      const index = optionIndex(optionKey);
+                      const existing = offer.options[index];
+                      if (existing === undefined)
+                        throw new StructuredWorkspaceProjectionContractError(
+                          `${semanticAddressKey(control.address)} is missing ${optionKey}`,
+                        );
+                      const current =
+                        existing.allTogetherResult ??
+                        createDefaultAllTogetherResult(catalog, existing.traitKey);
+                      if (current === undefined)
+                        throw new StructuredWorkspaceProjectionContractError(
+                          `${existing.traitKey} has no All Together default`,
+                        );
+                      const options = [...offer.options];
+                      options[index] = Object.freeze({
+                        ...existing,
+                        allTogetherResult: Object.freeze({
+                          ...current,
+                          [setControl.setKey]: result,
+                        }),
+                      });
+                      return Object.freeze({
+                        ...offer,
+                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      });
+                    },
+                    forOffer: (offer: AuthoredTraitOfferTraits) =>
+                      Object.freeze({
+                        load: () => {
+                          const evaluated = candidates.allTogetherSet(
+                            control.address,
+                            offer,
+                            optionKey,
+                            setControl.setKey,
+                          );
+                          if (evaluated.kind !== 'allTogetherSetDomain') return undefined;
+                          return Object.freeze({
+                            choices: Object.freeze(
+                              evaluated.result.values.map((value) =>
+                                Object.freeze({
+                                  label:
+                                    value === null
+                                      ? 'No grant (set exhausted)'
+                                      : (catalog.traits.byKey[value]?.label ?? value),
+                                  value,
+                                }),
+                              ),
+                            ),
+                          });
+                        },
+                      }),
+                  }),
+                ),
+              ),
             }),
         load() {
           if (projected !== undefined) return projected;

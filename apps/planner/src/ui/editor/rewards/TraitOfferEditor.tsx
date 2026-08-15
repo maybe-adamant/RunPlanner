@@ -24,15 +24,18 @@ import {
   type WorkspaceEchoPomTargetDomain,
   type WorkspaceEchoLastRunBoonDomain,
   type WorkspaceEchoLastRewardDomain,
+  type WorkspaceAllTogetherSetInteraction,
+  type WorkspaceAllTogetherSetDomain,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -50,6 +53,59 @@ const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
 
 function rarityLabel(rarity: TraitRarity): string {
   return rarity;
+}
+
+function AllTogetherSetEditor({
+  interaction,
+  offer,
+  optionIndex: index,
+  onUpdate,
+}: {
+  readonly interaction: WorkspaceAllTogetherSetInteraction;
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly optionIndex: number;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+}) {
+  const loadable = useMemo(() => interaction.forOffer(offer), [interaction, offer]);
+  const controller = useWorkspaceInteractionController<WorkspaceAllTogetherSetDomain | undefined>();
+  const loaded = controller.observe(loadable);
+  useEffect(() => {
+    controller.activate(loadable);
+    // This exact authored-set loadable is the activation identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadable]);
+  const option = offer.options[index];
+  if (option === undefined) return null;
+  const current = option.allTogetherResult?.[interaction.control.setKey];
+  const choices = loaded.result?.choices ?? Object.freeze([]);
+  const forced = choices.length === 1;
+  const currentLegal = choices.some((choice) => choice.value === current);
+  const label = `${interaction.control.setKey[0]!.toUpperCase()}${interaction.control.setKey.slice(1)} grant`;
+  return (
+    <label className="trait-circe-resolution">
+      {label}
+      <select
+        aria-disabled={choices.length === 0 ? true : undefined}
+        aria-label={label}
+        disabled={loaded.pending || (forced && currentLegal)}
+        id={semanticOwnerControlElementId(interaction.control.address)}
+        onChange={(event) => {
+          if (choices.length === 0) return;
+          const next = event.target.value === '__none__' ? null : event.target.value;
+          onUpdate(interaction.offerFor(offer, next));
+        }}
+        value={current === null ? '__none__' : (current ?? '')}
+      >
+        {!currentLegal ? <option value="">Choose a legal result</option> : null}
+        {choices.map((choice) => (
+          <option key={choice.value ?? '__none__'} value={choice.value ?? '__none__'}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+      {choices.length === 0 ? <span>Unavailable across current route branches</span> : null}
+    </label>
+  );
 }
 
 function launcherId(address: TraitOfferAddress): string {
@@ -78,7 +134,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
             'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
           }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
             'echoLastReward' in option ? JSON.stringify(option.echoLastReward) : ''
-          }`,
+          }:${'allTogetherResult' in option ? JSON.stringify(option.allTogetherResult) : ''}`,
       )
       .join(','),
     interaction.value.selectedOptionKey,
@@ -792,6 +848,15 @@ function TraitOfferOptionEditor({
           }
         />
       )}
+      {loadable.allTogetherSets?.map((setInteraction) => (
+        <AllTogetherSetEditor
+          interaction={setInteraction}
+          key={setInteraction.control.setKey}
+          offer={value}
+          optionIndex={index}
+          onUpdate={onUpdate}
+        />
+      ))}
       <button
         disabled={!rarifySupported}
         onClick={() =>
@@ -1099,6 +1164,7 @@ export function TraitOfferDialog({
 }) {
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
+  const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const interaction = requireWorkspaceInteraction(
@@ -1138,8 +1204,16 @@ export function TraitOfferDialog({
       dialog.setAttribute('open', '');
     }
 
+    const exactControl =
+      focusedSemanticOwner?.kind === 'allTogetherSet' &&
+      semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
+        ? document.getElementById(semanticOwnerControlElementId(focusedSemanticOwner))
+        : null;
     const first = dialog.querySelector<HTMLElement>('select, input, button');
-    first?.focus();
+    (exactControl instanceof HTMLElement && dialog.contains(exactControl)
+      ? exactControl
+      : first
+    )?.focus();
     const onCancel = (event: Event): void => {
       event.preventDefault();
       close();
@@ -1163,7 +1237,7 @@ export function TraitOfferDialog({
       }
       if (dialog.open && typeof dialog.close === 'function') dialog.close();
     };
-  }, [close, target]);
+  }, [close, focusedSemanticOwner, target]);
   return (
     <dialog
       aria-labelledby={`trait-offer-dialog-title-${semanticAddressKey(target)}`}

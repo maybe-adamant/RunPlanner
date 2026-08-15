@@ -19,6 +19,7 @@ import {
 import {
   createRewardHistoryState,
   factsWithHistory,
+  recordLootTypeHistorySource,
   type ResolvedRewardOffer,
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
@@ -46,6 +47,7 @@ import {
   attachTraitHistory,
   foldTraitHistoryEvents,
   type TraitOfferEvent,
+  type TraitHistoryState,
 } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { simulateProject } from '../../src/simulation';
@@ -131,6 +133,83 @@ function echoGoldHistory() {
   ]);
 }
 
+const allTogetherResult = Object.freeze({
+  earth: 'ElementalDamageBoon',
+  fire: 'ElementalBaseDamageBoon',
+  air: 'ElementalDamageFloorBoon',
+  water: 'ElementalHealthBoon',
+});
+
+function allTogetherOffer() {
+  return Object.freeze({
+    kind: 'traits' as const,
+    giverKey: 'Hera',
+    options: Object.freeze([
+      Object.freeze({
+        traitKey: 'AllElementalBoon',
+        rarity: 'Legendary' as const,
+        allTogetherResult,
+      }),
+      Object.freeze({ traitKey: 'HeraManaBoon', rarity: 'Common' as const }),
+      Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
+    ]) as TraitOfferEvent['options'],
+    selectedOptionKey: 'option1' as const,
+    rarificationActions: Object.freeze([]),
+  });
+}
+
+function allTogetherReward() {
+  const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
+  const offer = Object.freeze({
+    rewardType: 'RandomLoot' as const,
+    payload: Object.freeze({ kind: 'BoonSource' as const, source: 'HeraUpgrade' }),
+  });
+  const base = createDefaultAcquisitionRewardState(catalog, offer, loadout, {
+    kind: 'shopProfile',
+    key: 'WorldShop',
+  });
+  return Object.freeze({
+    ...base,
+    traitOffersByAcquisitionRole: Object.freeze({ source: allTogetherOffer() }),
+  });
+}
+
+function allTogetherHistory(withEarth: boolean, withEcho: boolean): TraitHistoryState {
+  const event = (sequence: number, giverKey: string, traitKey: string): TraitOfferEvent =>
+    Object.freeze({
+      kind: 'traitOffer',
+      owner: { kind: 'project' as const },
+      acquisitionRole: 'seed',
+      sequence,
+      giverKey,
+      options: Object.freeze([{ traitKey, rarity: 'Common' }]) as TraitOfferEvent['options'],
+      selectedOptionKey: 'option1',
+      acquisitionPoint: `seed:${sequence}`,
+    });
+  return foldTraitHistoryEvents(catalog, [
+    ...(withEcho ? echoGoldHistory().events : []),
+    event(2, 'Hera', 'HeraWeaponBoon'),
+    event(3, 'Hera', 'CommonGlobalDamageBoon'),
+    event(4, 'Hera', 'DamageSharePotencyBoon'),
+    ...(withEarth ? [event(5, 'Hephaestus', 'ElementalDamageBoon')] : []),
+  ]);
+}
+
+function divergentAllTogetherBranches(withEcho: boolean, lootSources: readonly string[]) {
+  const initial = initializeTestRewardBranches()[0]!;
+  return [allTogetherHistory(false, withEcho), allTogetherHistory(true, withEcho)].map((traits) => {
+    const rewardHistory = lootSources.reduce(
+      (history, source) => recordLootTypeHistorySource(history, source),
+      initial.history,
+    );
+    return Object.freeze({
+      ...initial,
+      history: attachTraitHistory(rewardHistory, traits),
+      traitHistory: traits,
+    });
+  });
+}
+
 function echoGoldShop(
   order: readonly string[],
   options: {
@@ -143,6 +222,10 @@ function echoGoldShop(
     readonly occurrenceId?: ReturnType<typeof createOccurrenceId>;
     readonly offerOverrides?: Readonly<Record<string, ResolvedRewardOffer>>;
     readonly duplicateOffer?: ResolvedRewardOffer;
+    readonly duplicateRewardOverride?: ReturnType<typeof createDefaultAcquisitionRewardState>;
+    readonly rewardOverrides?: Readonly<
+      Record<string, ReturnType<typeof createDefaultAcquisitionRewardState>>
+    >;
     readonly duplicateTraitKeys?: readonly [string, string, string];
     readonly withPomTarget?: boolean;
   } = {},
@@ -168,16 +251,19 @@ function echoGoldShop(
       Object.fromEntries(
         Object.entries(baseState.shop.offers).map(([key, value]) => {
           const override = offerOverrides[key];
+          const rewardOverride = options.rewardOverrides?.[key];
           return [
             key,
-            override === undefined
-              ? value
-              : Object.freeze({
-                  reward: createDefaultAcquisitionRewardState(catalog, override, loadout, {
-                    kind: 'shopProfile',
-                    key: baseState.shop!.profileKey,
-                  }),
-                }),
+            rewardOverride === undefined
+              ? override === undefined
+                ? value
+                : Object.freeze({
+                    reward: createDefaultAcquisitionRewardState(catalog, override, loadout, {
+                      kind: 'shopProfile',
+                      key: baseState.shop!.profileKey,
+                    }),
+                  })
+              : Object.freeze({ reward: rewardOverride }),
           ];
         }),
       ),
@@ -188,7 +274,8 @@ function echoGoldShop(
     sourceKey === undefined ? undefined : createEchoShopDuplicateEntryKey(sourceKey);
   const source = sourceKey === undefined ? undefined : shop.offers[sourceKey]?.reward;
   const duplicate =
-    source === undefined
+    options.duplicateRewardOverride ??
+    (source === undefined
       ? undefined
       : createDefaultAcquisitionRewardState(
           catalog,
@@ -198,7 +285,7 @@ function echoGoldShop(
             kind: 'shopProfile',
             key: shop.profileKey,
           },
-        );
+        ));
   const selectedDuplicate =
     duplicate === undefined || options.duplicateSelectOption2 !== true
       ? duplicate
@@ -286,8 +373,11 @@ function echoGoldShop(
           : {}),
       }),
     );
-  const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
-    factsWithHistory(baseFacts(), history, new Set());
+  const facts = (
+    history: ReturnType<typeof createRewardHistoryState>,
+    currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
+  ) => factsWithHistory(baseFacts(), history, currentRoomShopOptionNames);
+  const inventoryFindings = new Map();
   const inventory = processShopInventory(
     seeded,
     {
@@ -300,7 +390,7 @@ function echoGoldShop(
         throw new Error(detail);
       },
     },
-    new Map(),
+    inventoryFindings,
   );
   const findings = new Map();
   const candidate = prepareAcquisitionOrderCandidateContext({
@@ -328,10 +418,63 @@ function echoGoldShop(
     },
     findings,
   );
-  return { candidate, canonical, duplicateKey, findings, inventory, settlement };
+  return {
+    candidate,
+    canonical,
+    duplicateKey,
+    findings,
+    inventory,
+    inventoryFindings,
+    settlement,
+  };
 }
 
 describe('Echo Gate D Gold Gold Gold', () => {
+  it('settles paid All Together atomically across the complete divergent Shop cohort', () => {
+    const reward = allTogetherReward();
+    const result = echoGoldShop(['Boon'], {
+      initialBranches: divergentAllTogetherBranches(false, ['HeraUpgrade']),
+      offerOverrides: { Boon: reward.offer },
+      rewardOverrides: { Boon: reward },
+    });
+    expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
+    expect(result.inventory).toHaveLength(2);
+    expect(result.settlement.branches).toHaveLength(2);
+    expect(result.settlement.traitChildSettlements).toHaveLength(2);
+    for (const branch of result.settlement.branches) {
+      expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+      expect(
+        branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+      ).toEqual([]);
+    }
+  });
+
+  it('settles an Echo-derived All Together duplicate atomically across its divergent cohort', () => {
+    const duplicate = allTogetherReward();
+    const result = echoGoldShop(['Boon'], {
+      duplicateOffer: duplicate.offer,
+      duplicateRewardOverride: duplicate,
+      includeDuplicate: true,
+      initialBranches: divergentAllTogetherBranches(true, ['ApolloUpgrade', 'HeraUpgrade']),
+      offerOverrides: {
+        Boon: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      },
+    });
+    expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
+    expect(result.inventory).toHaveLength(2);
+    expect(result.settlement.branches).toHaveLength(2);
+    expect(result.settlement.traitChildSettlements).toHaveLength(2);
+    for (const branch of result.settlement.branches) {
+      expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+      expect(
+        branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+      ).toEqual([]);
+    }
+  });
+
   it('skips SpellDrop, duplicates the first later purchase immediately, and removes its exact trait', () => {
     const result = echoGoldShop(['Minor', 'Boon', 'MajorNonBoon'], {
       replaceMinorWithSpell: true,
@@ -533,7 +676,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
-  it('persists only derived child detail through schema 35 and one undoable semantic edit', () => {
+  it('persists only derived child detail through schema 36 and one undoable semantic edit', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(

@@ -1093,6 +1093,72 @@ describe('trait offer catalog closure', () => {
     ]);
   });
 
+  it('compiler-closes All Together to the exact immutable four-pair direct-grant matrix', () => {
+    const expected = {
+      kind: 'directTraitSets',
+      sets: [
+        {
+          key: 'earth',
+          traitKeys: ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
+        },
+        {
+          key: 'fire',
+          traitKeys: ['ElementalBaseDamageBoon', 'ElementalRallyBoon'],
+        },
+        {
+          key: 'air',
+          traitKeys: ['ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
+        },
+        {
+          key: 'water',
+          traitKeys: ['ElementalHealthBoon', 'ElementalDamageCapBoon'],
+        },
+      ],
+    } as const;
+    const disposition = catalog.traits.byKey.AllElementalBoon?.selectedDisposition;
+    expect(disposition).toEqual(expected);
+    expect(Object.isFrozen(disposition)).toBe(true);
+    if (disposition?.kind !== 'directTraitSets') throw new Error('missing All Together descriptor');
+    expect(Object.isFrozen(disposition.sets)).toBe(true);
+    expect(
+      disposition.sets.every((set) => Object.isFrozen(set) && Object.isFrozen(set.traitKeys)),
+    ).toBe(true);
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'AllElementalBoon'
+              ? ({
+                  ...trait,
+                  selectedDisposition: {
+                    ...expected,
+                    sets: [expected.sets[0], expected.sets[2], expected.sets[1], expected.sets[3]],
+                  },
+                } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/must declare earth, fire, air, and water in source order/);
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'HeraWeaponBoon'
+              ? ({ ...trait, selectedDisposition: expected } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/direct trait sets are reserved for All Together/);
+  });
+
   it('compiler-closes Gold Gold Gold to excluding exactly SpellDrop', () => {
     expect(() =>
       createCatalog({

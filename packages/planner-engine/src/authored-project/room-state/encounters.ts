@@ -17,6 +17,7 @@ import {
   type TraitOptionKey,
 } from '../traits';
 import { decodeEchoLastRunBoon } from './echo-last-run';
+import { decodeAllTogetherResult } from './all-together';
 import {
   TRAIT_OPTION_KEYS,
   createDefaultEncounterTraitOffer,
@@ -344,6 +345,7 @@ export function decodeEncounterTraitOffer(
     const hasEchoPomTarget = 'echoPomTarget' in option;
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
     const hasEchoLastReward = 'echoLastReward' in option;
+    const hasAllTogetherResult = 'allTogetherResult' in option;
     expectExactKeys(
       option,
       [
@@ -354,6 +356,7 @@ export function decodeEncounterTraitOffer(
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
         ...(hasEchoLastReward ? ['echoLastReward'] : []),
+        ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -366,6 +369,11 @@ export function decodeEncounterTraitOffer(
       failProjectDocument(
         `${path}.options.${optionKey}.traitKey`,
         `${traitKey} is not in giver ${giverKey}`,
+      );
+    if (trait.selectedDisposition.kind === 'directTraitSets' && !hasAllTogetherResult)
+      failProjectDocument(
+        `${path}.options.${optionKey}.allTogetherResult`,
+        'is required by this trait',
       );
     const rarity = hasRarity
       ? expectString(option.rarity, `${path}.options.${optionKey}.rarity`)
@@ -534,6 +542,14 @@ export function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.echoLastReward`,
         'is supported only by Echo Reward Reward Reward',
       );
+    const allTogetherResult = hasAllTogetherResult
+      ? decodeAllTogetherResult(
+          option.allTogetherResult,
+          catalog,
+          traitKey,
+          `${path}.options.${optionKey}.allTogetherResult`,
+        )
+      : undefined;
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -543,6 +559,7 @@ export function decodeEncounterTraitOffer(
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(echoLastReward === undefined ? {} : { echoLastReward }),
+            ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           }
         : {
             traitKey,
@@ -552,6 +569,7 @@ export function decodeEncounterTraitOffer(
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(echoLastReward === undefined ? {} : { echoLastReward }),
+            ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           };
     options.push(Object.freeze(decodedOption));
   }

@@ -84,7 +84,9 @@ export type TraitFindingCode =
   | 'echoLastRunBoonOptionUnavailable'
   | 'echoLastRewardChildMissing'
   | 'echoLastRewardChildUnavailable'
-  | 'echoShopDuplicateChildMissing';
+  | 'echoShopDuplicateChildMissing'
+  | 'allTogetherResultMissing'
+  | 'allTogetherResultUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

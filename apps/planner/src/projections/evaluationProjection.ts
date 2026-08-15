@@ -345,6 +345,14 @@ const findingCopy = {
     title: 'Choose a materialized trait',
     description: 'The selected trait must be one of this offer’s displayed choices.',
   },
+  allTogetherResultMissing: {
+    title: 'Complete the All Together outcome',
+    description: 'Choose one direct trait outcome for every element set.',
+  },
+  allTogetherResultUnavailable: {
+    title: 'All Together outcome unavailable',
+    description: 'Repair every element set against the reached pre-acquisition trait history.',
+  },
   bannedTrait: {
     title: 'Trait banned by Vow of Denial',
     description: 'This trait was left unselected in an earlier Denial offer.',
@@ -697,6 +705,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Boon Boon Boon outcomes`;
     case 'echoLastReward':
       return `${biomeLabel} · Reward Reward Reward replay`;
+    case 'allTogetherSet':
+      return `${biomeLabel} · All Together ${origin.setKey} set`;
     case 'echoKeepsakeReplay':
       return `${biomeLabel} · Gift Gift Gift replay`;
     case 'levelResolution':

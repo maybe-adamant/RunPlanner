@@ -92,6 +92,7 @@ import {
   evaluateEchoPomTargetDomain,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoLastRewardDomain,
+  evaluateAllTogetherSetDomain,
   type CirceResolutionDomainEvaluation,
   type CirceResolutionDomainQuery,
   type EvaluatedCirceResolutionDomain,
@@ -104,6 +105,9 @@ import {
   type EchoLastRewardDomainQuery,
   type EchoLastRewardDomainEvaluation,
   type EvaluatedEchoLastRewardDomain,
+  type AllTogetherSetDomainQuery,
+  type AllTogetherSetDomainEvaluation,
+  type EvaluatedAllTogetherSetDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
@@ -166,7 +170,8 @@ export type ProjectCandidateSessionQuery =
   | CirceResolutionDomainQuery
   | EchoPomTargetDomainQuery
   | EchoLastRunBoonDomainQuery
-  | EchoLastRewardDomainQuery;
+  | EchoLastRewardDomainQuery
+  | AllTogetherSetDomainQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -204,7 +209,8 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedCirceResolutionDomain
   | EvaluatedEchoPomTargetDomain
   | EvaluatedEchoLastRunBoonDomain
-  | EvaluatedEchoLastRewardDomain;
+  | EvaluatedEchoLastRewardDomain
+  | EvaluatedAllTogetherSetDomain;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -235,6 +241,8 @@ export interface ProjectCandidateSession {
     (queries: readonly EchoLastRunBoonDomainQuery[]): readonly EchoLastRunBoonDomainEvaluation[];
     (query: EchoLastRewardDomainQuery): EchoLastRewardDomainEvaluation;
     (queries: readonly EchoLastRewardDomainQuery[]): readonly EchoLastRewardDomainEvaluation[];
+    (query: AllTogetherSetDomainQuery): AllTogetherSetDomainEvaluation;
+    (queries: readonly AllTogetherSetDomainQuery[]): readonly AllTogetherSetDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
     (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
@@ -485,6 +493,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'allTogetherSetDomain':
+      return evaluateAllTogetherSetDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -529,6 +546,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly EchoLastRewardDomainQuery[],
   ): readonly EchoLastRewardDomainEvaluation[];
+  function evaluate(query: AllTogetherSetDomainQuery): AllTogetherSetDomainEvaluation;
+  function evaluate(
+    queries: readonly AllTogetherSetDomainQuery[],
+  ): readonly AllTogetherSetDomainEvaluation[];
   function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
   function evaluate(
     queries: readonly ProjectCandidateSessionQuery[],

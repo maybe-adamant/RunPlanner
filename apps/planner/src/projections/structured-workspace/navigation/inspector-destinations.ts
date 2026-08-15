@@ -83,6 +83,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
             ...(phase.traitOffer.echoLastReward === undefined
               ? []
               : [phase.traitOffer.echoLastReward.marker.focusKey]),
+            ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker.focusKey),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
     ]),
@@ -95,6 +96,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker.focusKey]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker.focusKey]),
         ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
+        ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker.focusKey),
     ]),
@@ -126,6 +128,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
                     ...(phase.traitOffer.echoLastReward === undefined
                       ? []
                       : [phase.traitOffer.echoLastReward.marker.focusKey]),
+                    ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker.focusKey),
                   ]),
               ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
             ]),
@@ -146,6 +149,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
                     ...(trait.echoLastReward === undefined
                       ? []
                       : [trait.echoLastReward.marker.focusKey]),
+                    ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
                   ]),
                   ...(slot.rewardControl.levelResolutions ?? []).map(
                     (resolution) => resolution.marker.focusKey,
@@ -176,6 +180,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
                 ? []
                 : [trait.echoLastRunBoon.marker.focusKey]),
               ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
+              ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
             ]),
             ...(offer.control.levelResolutions ?? []).map(
               (resolution) => resolution.marker.focusKey,
@@ -195,6 +200,7 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
             ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker.focusKey]),
             ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker.focusKey]),
             ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker.focusKey]),
+            ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
           ]),
           ...(offer.rewardControl.levelResolutions ?? []).map(
             (resolution) => resolution.marker.focusKey,

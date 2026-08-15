@@ -19,6 +19,7 @@ function rewardControlMarkers(control: {
     readonly echoPomTarget?: { readonly marker: WorkspaceMarker };
     readonly echoLastRunBoon?: { readonly marker: WorkspaceMarker };
     readonly echoLastReward?: { readonly marker: WorkspaceMarker };
+    readonly allTogetherSets?: readonly { readonly marker: WorkspaceMarker }[];
   }[];
   readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
@@ -30,6 +31,7 @@ function rewardControlMarkers(control: {
       ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
       ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
       ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+      ...(trait.allTogetherSets ?? []).map((set) => set.marker),
     ]),
     ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
@@ -138,6 +140,7 @@ export function workspaceOccurrenceOwnedMarkers(
             ...(phase.traitOffer.echoLastReward === undefined
               ? []
               : [phase.traitOffer.echoLastReward.marker]),
+            ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -149,6 +152,7 @@ export function workspaceOccurrenceOwnedMarkers(
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
         ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+        ...(trait.allTogetherSets ?? []).map((set) => set.marker),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
@@ -208,6 +212,7 @@ export function workspaceHubMainRewardMarkers(
           ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
           ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
           ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+          ...(trait.allTogetherSets ?? []).map((set) => set.marker),
         ]),
         ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);

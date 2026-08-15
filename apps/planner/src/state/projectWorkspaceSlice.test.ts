@@ -1,11 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAllTogetherSetAddress,
   createBiomeAddress,
   createDefaultRouteLoadout,
   createEmptyProjectDocument,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
@@ -32,7 +34,13 @@ import {
   selectProjectEvaluation,
   selectProjectHistory,
 } from './store';
-import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures';
+import {
+  createCompleteFGProject,
+  createGoldenFGHProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenHBiome,
+} from '@run-planner/test-fixtures';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -185,6 +193,58 @@ describe('project workspace application state', () => {
     );
     const edited = selectPresentProject(store.getState());
     expect(edited).not.toBe(before);
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(store.getState())).toBe(before);
+    store.dispatch(authoredProjectRedoRequested());
+    expect(selectPresentProject(store.getState())).toBe(edited);
+  });
+
+  it('undoes and redoes one exact All Together set edit without replacing the complete map', () => {
+    const { store } = createStore();
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const trait = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Hera',
+        options: [
+          {
+            traitKey: 'AllElementalBoon',
+            rarity: 'Legendary',
+            allTogetherResult: {
+              earth: 'ElementalDamageBoon',
+              fire: 'ElementalBaseDamageBoon',
+              air: 'ElementalDamageFloorBoon',
+              water: 'ElementalHealthBoon',
+            },
+          },
+          { traitKey: 'HeraManaBoon', rarity: 'Common' },
+          { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    store.dispatch(authoredProjectReplaced(project));
+    const before = selectPresentProject(store.getState());
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAllTogetherSet',
+        set: createAllTogetherSetAddress(trait, 'option1', 'earth'),
+        value: 'ElementalOlympianDamageBoon',
+      }),
+    );
+    const edited = selectPresentProject(store.getState());
+    expect(JSON.stringify(edited)).toContain('ElementalOlympianDamageBoon');
+    expect(JSON.stringify(edited)).toContain('ElementalBaseDamageBoon');
 
     store.dispatch(authoredProjectUndoRequested());
     expect(selectPresentProject(store.getState())).toBe(before);

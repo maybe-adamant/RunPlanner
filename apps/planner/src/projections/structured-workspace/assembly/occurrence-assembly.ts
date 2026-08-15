@@ -17,6 +17,7 @@ import {
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
+  createAllTogetherSetAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
@@ -204,6 +205,27 @@ function traitOfferControls(
             optionKey: offer.selectedOptionKey,
             ...(selected?.circeResolution === undefined ? {} : { value: selected.circeResolution }),
           });
+    const allTogetherSets =
+      offer.kind !== 'traits' || selectedDisposition?.kind !== 'directTraitSets'
+        ? undefined
+        : Object.freeze(
+            selectedDisposition.sets.map((set) => {
+              const setAddress = createAllTogetherSetAddress(
+                address,
+                offer.selectedOptionKey,
+                set.key,
+              );
+              return Object.freeze({
+                address: setAddress,
+                marker: input.markerDestinations.marker(setAddress),
+                optionKey: offer.selectedOptionKey,
+                setKey: set.key,
+                ...(selected?.allTogetherResult === undefined
+                  ? {}
+                  : { value: selected.allTogetherResult[set.key] }),
+              });
+            }),
+          );
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
@@ -213,6 +235,7 @@ function traitOfferControls(
         offer,
         rewardOwner: owner.address,
         ...(circeResolution === undefined ? {} : { circeResolution }),
+        ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
         ...(offer.kind === 'traits' &&
         traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
           ? {
