@@ -12,7 +12,6 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
-  keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -272,11 +271,19 @@ export function createStructuredWorkspaceProjection(
             biomeSource,
             bossCompletion.kind === 'bossCompletionArcana' ? bossCompletion.result : undefined,
             biomeIndex + 1 < routeSource.biomes.length,
-            (address) =>
-              keepsakeEquipResultCandidateForProjectEvaluationAssembly(assembly, address) !==
-              undefined,
+            (address) => candidates.keepsakeEquipResult(address).length > 0,
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
+          if (projected.biome.echoKeepsakeReplay !== undefined) {
+            const result = projected.biome.echoKeepsakeReplay.address;
+            keepsakeEquipResultControls.set(
+              semanticAddressKey(result),
+              Object.freeze({
+                address: result,
+                value: biomeSource.plan.echoKeepsakeReplayResults?.experimentalHammer,
+              }),
+            );
+          }
           appendUniqueOccurrenceInteractionRequirements(
             occurrenceInteractionRequirements,
             projected.occurrenceInteractionRequirements.values(),

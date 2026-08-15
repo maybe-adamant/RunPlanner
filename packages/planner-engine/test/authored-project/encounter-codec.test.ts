@@ -96,13 +96,13 @@ function arachneStoryProject(): ProjectDocument {
   });
 }
 
-describe('schema-34 occurrence-owned encounter persistence', () => {
+describe('schema-35 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(34);
+    expect(decoded.schemaVersion).toBe(35);
   });
 
   it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
@@ -136,7 +136,7 @@ describe('schema-34 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 34 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 35 });
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -344,28 +344,28 @@ describe('schema-34 occurrence-owned encounter persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 34, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 34, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 34, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 34, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 35, received 30');
   });
 
   it.each([

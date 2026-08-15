@@ -1041,7 +1041,12 @@ export function createCandidateSessionFactory(
         return Object.freeze(
           evaluation.result.options.map((option) =>
             Object.freeze({
-              value: option.traitKey,
+              value:
+                'kind' in option.value
+                  ? option.value.kind === 'selected'
+                    ? option.value.traitKey
+                    : '__exhausted'
+                  : option.value.traitKey,
               evaluation: Object.freeze({
                 ...evaluation,
                 result: Object.freeze({

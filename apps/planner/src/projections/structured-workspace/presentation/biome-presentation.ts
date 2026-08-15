@@ -446,6 +446,9 @@ export function presentWorkspaceBiome(
   );
   const inspectorDefaults = Object.freeze({
     ...(entry === undefined ? {} : { entry }),
+    ...(semantic.echoKeepsakeReplay === undefined
+      ? {}
+      : { echoKeepsakeReplay: semantic.echoKeepsakeReplay }),
     frontier,
     nodes,
     rail,
@@ -457,6 +460,9 @@ export function presentWorkspaceBiome(
     completionOutline: semantic.completionOutline,
     defaultInspectorDestination: defaultInspector,
     ...(entry === undefined ? {} : { entry }),
+    ...(semantic.echoKeepsakeReplay === undefined
+      ? {}
+      : { echoKeepsakeReplay: semantic.echoKeepsakeReplay }),
     fields: semantic.fields,
     frontier,
     label: semantic.label,

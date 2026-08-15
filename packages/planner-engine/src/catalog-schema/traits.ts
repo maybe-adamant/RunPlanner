@@ -66,6 +66,12 @@ export type TraitSelectedDisposition =
       readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon' | 'lastReward';
     }
   | {
+      /** Gift Gift Gift snapshots the current eligible keepsake into this equipped identity. */
+      readonly kind: 'echo';
+      readonly effect: 'repeatKeepsake';
+      readonly excludedKeepsakeKeys: readonly string[];
+    }
+  | {
       /** One equipped Echo trait duplicates the first eligible World Shop acquisition. */
       readonly kind: 'echo';
       readonly effect: 'doubleShop';

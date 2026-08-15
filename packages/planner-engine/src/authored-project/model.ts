@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 34 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 35 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -51,8 +51,11 @@ export interface AuthoredKeepsakeEquipResults {
     readonly rarity?: import('../catalog-schema').TraitRarity;
     readonly deathDefianceConditionMet?: boolean;
   };
-  readonly experimentalHammer?: { readonly traitKey: string };
+  readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
 }
+
+export type AuthoredExperimentalHammerEquipResult =
+  { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
 
 export type PostbossKeepsakeDisposition =
   { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
@@ -269,6 +272,8 @@ export interface AuthoredBiomePlan {
   readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
   /** Dormant unless this Postboss selection replaces with a supported keepsake. */
   readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
+  /** Dormant until Gift Gift Gift reaches a Hammer replay at this biome start. */
+  readonly echoKeepsakeReplayResults?: Pick<AuthoredKeepsakeEquipResults, 'experimentalHammer'>;
 }
 
 export interface AuthoredRoutePlan {

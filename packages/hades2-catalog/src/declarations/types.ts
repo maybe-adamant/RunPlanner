@@ -36,6 +36,20 @@ export interface RawKeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  readonly echoGift:
+    | { readonly availability: 'excluded' }
+    | {
+        readonly availability: 'eligible';
+        readonly effect:
+          | { readonly kind: 'figLeaf'; readonly schedule: 'oneShot' }
+          | {
+              readonly kind: 'experimentalHammer';
+              readonly schedule: 'oneShotAfterUnequipped';
+            }
+          | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
+      };
   readonly effect?:
     | {
         readonly kind: 'jeweledPom';

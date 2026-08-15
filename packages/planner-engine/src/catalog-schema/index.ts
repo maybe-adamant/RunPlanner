@@ -115,6 +115,21 @@ export interface KeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  /** Closed planner disposition for Echo's captured-keepsake replay. */
+  readonly echoGift:
+    | { readonly availability: 'excluded' }
+    | {
+        readonly availability: 'eligible';
+        readonly effect:
+          | { readonly kind: 'figLeaf'; readonly schedule: 'oneShot' }
+          | {
+              readonly kind: 'experimentalHammer';
+              readonly schedule: 'oneShotAfterUnequipped';
+            }
+          | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
+      };
   /** Closed, source-backed rank data consumed by the six supported effect transitions. */
   readonly effect?:
     | {

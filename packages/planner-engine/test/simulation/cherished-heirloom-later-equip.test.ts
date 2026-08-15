@@ -211,14 +211,14 @@ describe('Cherished Heirloom later keepsake equips', () => {
       catalog,
       { ...hammer.branch, keepsakes: hammer.keepsakes },
       'TempHammerKeepsake',
-      { experimentalHammer: { traitKey: 'StaffJumpSpecialTrait' } },
+      { experimentalHammer: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' } },
       createKeepsakeEquipResultAddress(postbossOwner(), 'experimentalHammer'),
       2,
       loadout,
       hammer.rank,
     );
     expect(hammer.rank).toBe('Heroic');
-    expect(hammerApplied.keepsakes.experimentalHammer?.remainingUses).toBe(30);
+    expect(hammerApplied.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(30);
   });
 
   it('applies rank IV at the legal rack and carries it into the succeeding biome only once', () => {
@@ -284,10 +284,11 @@ describe('Cherished Heirloom later keepsake equips', () => {
     hammerProject = applyProjectCommand(hammerProject, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
       result: createKeepsakeEquipResultAddress(rack, 'experimentalHammer'),
-      value: { traitKey: 'StaffJumpSpecialTrait' },
+      value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
     });
-    const hammer = replayBiome(hammerProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes
-      .experimentalHammer;
+    const hammer = replayBiome(hammerProject, 'F', [
+      cherishedBranch(),
+    ]).branches[0]?.keepsakes.experimentalHammers.at(-1);
     expect(catalog.keepsakes.byKey.TempHammerKeepsake?.effect).toMatchObject({
       kind: 'experimentalHammer',
       qualifyingEncounterUsesByRank: { Heroic: 30 },

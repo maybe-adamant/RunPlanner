@@ -20,7 +20,14 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
   readonly kind: 'keepsakeEquipResult';
   readonly result: {
     readonly options: readonly {
-      readonly traitKey: string;
+      readonly resultKind: 'jeweledPom' | 'experimentalHammer';
+      readonly value:
+        | NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>
+        | {
+            readonly traitKey: string;
+            readonly rarity?: import('../../catalog-schema').TraitRarity;
+            readonly deathDefianceConditionMet?: boolean;
+          };
       readonly selectedPossible: boolean;
       readonly findings: readonly string[];
     }[];
@@ -33,6 +40,9 @@ function authoredValue(
   address: KeepsakeEquipResultAddress,
 ): AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined {
   const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
+  if (address.selection.kind === 'echoKeepsakeReplay')
+    return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)
+      ?.echoKeepsakeReplayResults?.experimentalHammer;
   if (address.selection.owner === 'routeStart')
     return route?.loadout.keepsakeEquipResults?.[address.resultKind];
   return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)?.keepsakeEquipResults?.[
@@ -72,23 +82,28 @@ export function evaluateKeepsakeEquipResultCandidate(
           .map((trait) => trait.key);
   const options = Object.freeze(
     traitKeys.map((traitKey) => {
+      const candidateValue =
+        effect.kind === 'experimentalHammer'
+          ? ({ kind: 'selected' as const, traitKey } as const)
+          : ({ ...(value ?? {}), traitKey } as const);
       const assessments = capability.frontiers.map((frontier) =>
         effect.kind === 'jeweledPom'
           ? assessJeweledPomEquipResult(
               catalog,
-              { ...(value ?? {}), traitKey },
+              candidateValue as NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>,
               frontier.before,
               frontier.fatedStatus,
             )
           : assessExperimentalHammerEquipResult(
               catalog,
-              { ...(value ?? {}), traitKey },
+              candidateValue as NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>,
               frontier.before,
               frontier.loadout ?? { weaponKey: '', aspectKey: '' },
             ),
       );
       return Object.freeze({
-        traitKey,
+        resultKind: effect.kind,
+        value: candidateValue,
         selectedPossible: assessments.every((assessment) => assessment.legal),
         findings: Object.freeze([
           ...new Set(assessments.flatMap((assessment) => assessment.findings)),
@@ -96,10 +111,47 @@ export function evaluateKeepsakeEquipResultCandidate(
       });
     }),
   );
+  const completedOptions =
+    effect.kind !== 'experimentalHammer'
+      ? options
+      : Object.freeze([
+          ...options,
+          Object.freeze({
+            resultKind: 'experimentalHammer' as const,
+            value: Object.freeze({ kind: 'exhausted' as const }),
+            selectedPossible: capability.frontiers.every(
+              (frontier) =>
+                assessExperimentalHammerEquipResult(
+                  catalog,
+                  { kind: 'exhausted' },
+                  frontier.before,
+                  frontier.loadout ?? { weaponKey: '', aspectKey: '' },
+                ).legal,
+            ),
+            findings: Object.freeze(
+              capability.frontiers.every(
+                (frontier) =>
+                  assessExperimentalHammerEquipResult(
+                    catalog,
+                    { kind: 'exhausted' },
+                    frontier.before,
+                    frontier.loadout ?? { weaponKey: '', aspectKey: '' },
+                  ).legal,
+              )
+                ? []
+                : ['keepsakeEquipResultUnavailable'],
+            ),
+          }),
+        ]);
   const selected =
-    value === undefined ? undefined : options.find((option) => option.traitKey === value.traitKey);
+    value === undefined
+      ? undefined
+      : completedOptions.find((option) => JSON.stringify(option.value) === JSON.stringify(value));
   return Object.freeze({
     kind: 'keepsakeEquipResult',
-    result: Object.freeze({ options, selectedPossible: selected?.selectedPossible ?? false }),
+    result: Object.freeze({
+      options: completedOptions,
+      selectedPossible: selected?.selectedPossible ?? false,
+    }),
   });
 }

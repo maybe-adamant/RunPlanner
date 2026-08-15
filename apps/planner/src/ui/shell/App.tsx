@@ -368,7 +368,11 @@ function RouteOverview({
                 if (candidateMayBeAuthored(option))
                   dispatch(
                     authoredProjectCommandDispatched(
-                      experimentalHammer.intentFor({ traitKey }).command,
+                      experimentalHammer.intentFor(
+                        traitKey === '__exhausted'
+                          ? { kind: 'exhausted' }
+                          : { kind: 'selected', traitKey },
+                      ).command,
                     ),
                   );
               }}
@@ -380,7 +384,13 @@ function RouteOverview({
                 experimentalHammer !== undefined &&
                 experimentalHammerCandidateController.activate(experimentalHammer)
               }
-              value={experimentalHammer.value?.traitKey ?? ''}
+              value={
+                experimentalHammer.value?.kind === 'selected'
+                  ? experimentalHammer.value.traitKey
+                  : experimentalHammer.value?.kind === 'exhausted'
+                    ? '__exhausted'
+                    : ''
+              }
             >
               <option value="">Choose compatible Hammer</option>
               {experimentalHammer.choices.map((choice) => {

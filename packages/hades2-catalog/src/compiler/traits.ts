@@ -108,6 +108,7 @@ function normalizeSelectedDisposition(
     readonly pickups?: unknown;
     readonly effect?: unknown;
     readonly excludedRewardTypes?: unknown;
+    readonly excludedKeepsakeKeys?: unknown;
     readonly rankBonus?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
@@ -130,7 +131,15 @@ function normalizeSelectedDisposition(
   if (kind === 'echo') {
     const effect = closedValue(
       value.effect,
-      ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon', 'lastReward', 'doubleShop'] as const,
+      [
+        'numericNoOp',
+        'survive',
+        'doubleLevel',
+        'lastRunBoon',
+        'lastReward',
+        'doubleShop',
+        'repeatKeepsake',
+      ] as const,
       `${path}.effect`,
     );
     if (effect === 'doubleShop') {
@@ -147,6 +156,26 @@ function normalizeSelectedDisposition(
         effect,
         excludedRewardTypes,
       });
+    }
+    if (effect === 'repeatKeepsake') {
+      if (Object.keys(value).length !== 3)
+        fail(path, 'Echo repeatKeepsake requires kind, effect, and excludedKeepsakeKeys');
+      const excludedKeepsakeKeys = freezeUniqueStrings(
+        requireArray(value.excludedKeepsakeKeys, `${path}.excludedKeepsakeKeys`) as string[],
+        `${path}.excludedKeepsakeKeys`,
+      );
+      const expected = [
+        'AthenaEncounterKeepsake',
+        'HadesAndPersephoneKeepsake',
+        'EscalatingKeepsake',
+        'FountainRarityKeepsake',
+      ];
+      if (
+        excludedKeepsakeKeys.length !== expected.length ||
+        expected.some((key) => !excludedKeepsakeKeys.includes(key))
+      )
+        fail(`${path}.excludedKeepsakeKeys`, 'must declare the four source exclusions');
+      return Object.freeze({ kind, effect, excludedKeepsakeKeys });
     }
     if (Object.keys(value).length !== 2) fail(path, 'echo requires only kind and effect');
     return Object.freeze({ kind, effect });

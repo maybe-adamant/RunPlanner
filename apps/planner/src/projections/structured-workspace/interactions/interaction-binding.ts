@@ -2306,7 +2306,8 @@ export function bindWorkspaceInteractions(
           choices: Object.freeze(
             catalog.traits.values
               .filter((trait) => trait.hammerCompatibility !== undefined)
-              .map((trait) => Object.freeze({ label: trait.label, value: trait.key })),
+              .map((trait) => Object.freeze({ label: trait.label, value: trait.key }))
+              .concat([Object.freeze({ label: 'No compatible Hammer', value: '__exhausted' })]),
           ),
           key,
           owner: control.address as KeepsakeEquipResultAddress & {

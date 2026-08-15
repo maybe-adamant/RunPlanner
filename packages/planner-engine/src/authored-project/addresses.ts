@@ -51,12 +51,17 @@ export type KeepsakeSelectionAddress =
       readonly owner: CompletionRoomAddress & { readonly role: 'postboss' };
     };
 
+/** Exact succeeding-biome start where Gift Gift Gift may replay its captured keepsake. */
+export interface EchoKeepsakeReplayAddress extends BiomeOwnedAddress {
+  readonly kind: 'echoKeepsakeReplay';
+}
+
 /** One closed immediate result beneath its exact selection, never a trait offer. */
 export interface KeepsakeEquipResultAddress {
   readonly kind: 'keepsakeEquipResult';
   readonly routeKey: string;
   readonly biomeKey: string;
-  readonly selection: KeepsakeSelectionAddress;
+  readonly selection: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress;
   readonly resultKind: 'jeweledPom' | 'experimentalHammer';
 }
 
@@ -251,6 +256,7 @@ export type SemanticAddress =
   | CompletionRoomAddress
   | BossCompletionArcanaAddress
   | KeepsakeSelectionAddress
+  | EchoKeepsakeReplayAddress
   | KeepsakeEquipResultAddress
   | ExitDecisionAddress
   | ExitSelectionAddress
@@ -395,7 +401,7 @@ export function createPostbossKeepsakeSelectionAddress(
 export function createKeepsakeEquipResultAddress<
   ResultKind extends KeepsakeEquipResultAddress['resultKind'],
 >(
-  selection: KeepsakeSelectionAddress,
+  selection: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress,
   resultKind: ResultKind,
 ): KeepsakeEquipResultAddress & { readonly resultKind: ResultKind } {
   return Object.freeze({
@@ -405,6 +411,9 @@ export function createKeepsakeEquipResultAddress<
     selection,
     resultKind,
   });
+}
+export function createEchoKeepsakeReplayAddress(biome: BiomeAddress): EchoKeepsakeReplayAddress {
+  return Object.freeze({ kind: 'echoKeepsakeReplay', ...owner(biome) });
 }
 export function createExitDecisionAddress(
   biome: BiomeAddress,
@@ -733,6 +742,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'route':
       return JSON.stringify([address.kind, address.routeKey]);
     case 'biome':
+      return JSON.stringify(base);
+    case 'echoKeepsakeReplay':
       return JSON.stringify(base);
     case 'biomeField':
       return JSON.stringify([...base, address.fieldKey]);

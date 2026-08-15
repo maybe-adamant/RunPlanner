@@ -160,12 +160,9 @@ describe('Cherished Heirloom active keepsake advance', () => {
       const initial = createKeepsakeState(catalog, 'TempHammerKeepsake', arcanaFear);
       const keepsakes = {
         ...initial,
-        experimentalHammer: {
-          traitKey: 'StaffJumpSpecialTrait',
-          remainingUses,
-          acquisitionIdentity,
-          active,
-        },
+        experimentalHammers: [
+          { traitKey: 'StaffJumpSpecialTrait', remainingUses, acquisitionIdentity, active },
+        ],
       };
       const hammerEvent: TraitHistoryEvent = {
         kind: 'traitOffer',
@@ -179,7 +176,9 @@ describe('Cherished Heirloom active keepsake advance', () => {
         acquisitionIdentity,
       };
       const acquired = acquireCherished(branchWithKeepsakes(keepsakes, [hammerEvent]));
-      expect(acquired.keepsakes.experimentalHammer).toEqual(keepsakes.experimentalHammer);
+      expect(acquired.keepsakes.experimentalHammers.at(-1)).toEqual(
+        keepsakes.experimentalHammers.at(-1),
+      );
       expect(
         acquired.traitHistory?.events.filter(
           (event) => event.kind === 'traitOffer' && event.giverKey === 'WeaponUpgrade',
@@ -338,12 +337,14 @@ describe('Cherished Heirloom active keepsake advance', () => {
       ]),
       gorgon: Object.freeze({ status: 'expired' }),
       figLeaf: Object.freeze({ remainingUses: 1, activatedThisBiome: true }),
-      experimentalHammer: Object.freeze({
-        traitKey: 'StaffJumpSpecialTrait',
-        remainingUses: 7,
-        acquisitionIdentity: 'keepsake:hammer:removed',
-        active: true,
-      }),
+      experimentalHammers: Object.freeze([
+        Object.freeze({
+          traitKey: 'StaffJumpSpecialTrait',
+          remainingUses: 7,
+          acquisitionIdentity: 'keepsake:hammer:removed',
+          active: true,
+        }),
+      ]),
       jeweledPom: Object.freeze({
         grantedTraitKey: 'HadesLifestealBoon',
         active: true,

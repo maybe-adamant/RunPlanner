@@ -44,6 +44,36 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
     label,
     rank: 'Epic' as const,
     fatedDisposition: fatedDisposition as RawKeepsakeDeclaration['fatedDisposition'],
+    echoGift:
+      key === 'AthenaEncounterKeepsake' ||
+      key === 'HadesAndPersephoneKeepsake' ||
+      key === 'EscalatingKeepsake' ||
+      key === 'FountainRarityKeepsake'
+        ? ({ availability: 'excluded' } as const)
+        : key === 'SkipEncounterKeepsake'
+          ? ({
+              availability: 'eligible',
+              effect: { kind: 'figLeaf', schedule: 'oneShot' },
+            } as const)
+          : key === 'TempHammerKeepsake'
+            ? ({
+                availability: 'eligible',
+                effect: { kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' },
+              } as const)
+            : key === 'RarifyKeepsake'
+              ? ({
+                  availability: 'eligible',
+                  effect: { kind: 'callingCard', schedule: 'everyBiome' },
+                } as const)
+              : key === 'GoldifyKeepsake'
+                ? ({
+                    availability: 'eligible',
+                    effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                  } as const)
+                : ({
+                    availability: 'eligible',
+                    effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                  } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {

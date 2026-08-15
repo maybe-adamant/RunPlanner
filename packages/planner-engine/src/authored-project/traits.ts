@@ -167,6 +167,10 @@ export interface EquippedTrait {
   readonly sourceRole: string;
   /** Exact acquisition event that installed this instance. */
   readonly acquisitionIdentity?: string;
+  /** Immutable acquisition-time target owned only by Gift Gift Gift. */
+  readonly echoRepeatedKeepsakeKey?: string;
+  /** Count of declaration-owned biome-start replay attempts recorded in trait history. */
+  readonly echoKeepsakeReplayCount?: number;
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */

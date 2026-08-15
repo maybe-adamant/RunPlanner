@@ -27,13 +27,13 @@ export interface KeepsakeState {
     readonly levels: number;
     readonly acquisitionIdentity: string;
   };
-  /** Exact temporary direct Hammer acquisition, retained after a rack swap. */
-  readonly experimentalHammer?: {
+  /** Exact temporary direct Hammer acquisitions, retained and expired independently. */
+  readonly experimentalHammers: readonly {
     readonly traitKey: string;
     readonly remainingUses: number;
     readonly acquisitionIdentity: string;
     readonly active: boolean;
-  };
+  }[];
   /** Retained Calling Card ledger; explicit offer actions are its only consumption source. */
   readonly callingCard?: { readonly remainingCharges: number };
   /** Retained Time Piece ledger; conversions consume it in acquisition chronology. */
@@ -370,6 +370,16 @@ export function assessExperimentalHammerEquipResult(
   before: TraitHistoryState,
   loadout: { readonly weaponKey: string; readonly aspectKey: string },
 ): { readonly legal: boolean; readonly findings: readonly string[] } {
+  const domain = catalog.traits.values.filter(
+    (trait) =>
+      trait.hammerCompatibility !== undefined &&
+      assessTraitOption(catalog, trait.key, before, loadout).legal,
+  );
+  if (result.kind === 'exhausted')
+    return Object.freeze({
+      legal: domain.length === 0,
+      findings: Object.freeze(domain.length === 0 ? [] : ['keepsakeEquipResultUnavailable']),
+    });
   const assessment = assessTraitOption(catalog, result.traitKey, before, loadout);
   const trait = catalog.traits.byKey[result.traitKey];
   return Object.freeze({
@@ -397,27 +407,33 @@ export function equipExperimentalHammer(
 ): KeepsakeState {
   return Object.freeze({
     ...state,
-    experimentalHammer: Object.freeze({
-      traitKey,
-      remainingUses,
-      acquisitionIdentity,
-      active: true,
-    }),
+    experimentalHammers: Object.freeze([
+      ...state.experimentalHammers,
+      Object.freeze({ traitKey, remainingUses, acquisitionIdentity, active: true }),
+    ]),
   });
 }
 
 /** A qualifying completion consumes exactly one use; expiry is a separate fold event. */
-export function advanceExperimentalHammer(state: KeepsakeState): {
+export function advanceExperimentalHammers(state: KeepsakeState): {
   readonly state: KeepsakeState;
-  readonly expired?: KeepsakeState['experimentalHammer'];
+  readonly expired: KeepsakeState['experimentalHammers'];
 } {
-  const hammer = state.experimentalHammer;
-  if (hammer === undefined || !hammer.active) return Object.freeze({ state, expired: undefined });
-  const remainingUses = Math.max(0, hammer.remainingUses - 1);
-  const nextHammer = Object.freeze({ ...hammer, remainingUses, active: remainingUses > 0 });
+  if (!state.experimentalHammers.some((hammer) => hammer.active))
+    return Object.freeze({ state, expired: Object.freeze([]) });
+  const expired: KeepsakeState['experimentalHammers'][number][] = [];
+  const experimentalHammers = Object.freeze(
+    state.experimentalHammers.map((hammer) => {
+      if (!hammer.active) return hammer;
+      const remainingUses = Math.max(0, hammer.remainingUses - 1);
+      const next = Object.freeze({ ...hammer, remainingUses, active: remainingUses > 0 });
+      if (remainingUses === 0) expired.push(next);
+      return next;
+    }),
+  );
   return Object.freeze({
-    state: Object.freeze({ ...state, experimentalHammer: nextHammer }),
-    ...(remainingUses === 0 ? { expired: nextHammer } : {}),
+    state: Object.freeze({ ...state, experimentalHammers }),
+    expired: Object.freeze(expired),
   });
 }
 export type KeepsakeSelectionUnavailableReason =
@@ -475,6 +491,7 @@ export function createKeepsakeState(
     history: Object.freeze([{ key, kind: 'start' as const }]),
     removedKeys: Object.freeze([]),
     fatedStatus,
+    experimentalHammers: Object.freeze([]),
     ...(effect?.kind === 'callingCard' && keepsake !== undefined
       ? {
           callingCard: Object.freeze({
@@ -624,6 +641,34 @@ export function beginBiomeKeepsakeState(state: KeepsakeState): KeepsakeState {
   return Object.freeze({
     ...state,
     figLeaf: Object.freeze({ ...state.figLeaf, activatedThisBiome: false }),
+  });
+}
+
+export function applyEchoFigLeafReplay(state: KeepsakeState): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    figLeaf: Object.freeze({
+      remainingUses: Math.max(state.figLeaf?.remainingUses ?? 0, 1),
+      activatedThisBiome: state.figLeaf?.activatedThisBiome ?? false,
+    }),
+  });
+}
+
+export function applyEchoCallingCardReplay(state: KeepsakeState, charges: number): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    callingCard: Object.freeze({
+      remainingCharges: (state.callingCard?.remainingCharges ?? 0) + charges,
+    }),
+  });
+}
+
+export function applyEchoTimePieceReplay(state: KeepsakeState, charges: number): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    timePiece: Object.freeze({
+      remainingCharges: (state.timePiece?.remainingCharges ?? 0) + charges,
+    }),
   });
 }
 

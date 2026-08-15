@@ -31,6 +31,15 @@ describe('Run State presentation', () => {
             sourceRole: 'main',
             traitKey: 'ApolloWeaponBoon',
           },
+          EchoRepeatKeepsakeBoon: {
+            traitKey: 'EchoRepeatKeepsakeBoon',
+            giverKey: 'Echo',
+            providerKind: 'npc',
+            sourceRole: 'selection',
+            acquisitionIdentity: 'echo-gift-test',
+            echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
+            echoKeepsakeReplayCount: 2,
+          },
           StaffDoubleAttackTrait: {
             giverKey: 'WeaponUpgrade',
             hammerRank: 'RankII',
@@ -82,12 +91,14 @@ describe('Run State presentation', () => {
         removedKeys: [],
         fatedStatus: 'Unknown',
         callingCard: { remainingCharges: 0 },
-        experimentalHammer: {
-          traitKey: 'StaffDoubleAttackTrait',
-          remainingUses: 7,
-          acquisitionIdentity: 'experimental-hammer-test',
-          active: true,
-        },
+        experimentalHammers: [
+          {
+            traitKey: 'StaffDoubleAttackTrait',
+            remainingUses: 7,
+            acquisitionIdentity: 'experimental-hammer-test',
+            active: true,
+          },
+        ],
         figLeaf: { remainingUses: 2, activatedThisBiome: true },
         gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
       },
@@ -138,9 +149,19 @@ describe('Run State presentation', () => {
     });
     expect(state.keepsakes).toMatchObject({
       callingCardRemainingCharges: 0,
-      experimentalHammerStatus: 'active',
-      experimentalHammerTraitLabel: 'Wicked Thrasher',
-      experimentalHammerRemainingUses: 7,
+      echoGift: {
+        capturedKeepsakeLabel: 'Time Piece',
+        replayCount: 2,
+        status: 'everyBiome',
+      },
+      experimentalHammers: [
+        {
+          status: 'active',
+          traitLabel: 'Wicked Thrasher',
+          remainingUses: 7,
+          acquisitionIdentity: 'experimental-hammer-test',
+        },
+      ],
       figLeafRemainingUses: 2,
       figLeafActivatedThisBiome: true,
       gorgonStatus: 'pending',
@@ -166,6 +187,10 @@ describe('Run State presentation', () => {
         { label: 'Magick', slotKey: 'Mana' },
       ],
       other: [
+        {
+          label: 'Gift Gift Gift',
+          traitKey: 'EchoRepeatKeepsakeBoon',
+        },
         {
           hammerRank: 'RankII',
           label: 'Wicked Thrasher',
