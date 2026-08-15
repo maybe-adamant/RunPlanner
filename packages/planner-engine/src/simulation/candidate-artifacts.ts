@@ -43,6 +43,7 @@ import {
   type TraitHistoryState,
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
+  directTraitSetOutcomes,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
@@ -129,6 +130,12 @@ export interface TraitOfferCandidateCapability {
     >;
     readonly defaultValue: import('../authored-project/traits').AuthoredEchoLastRewardAcquisition;
   }[];
+  /** Exact ownership-only All Together set domains for surviving branches. */
+  readonly allTogetherSet: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+    setKey: import('../catalog-schema').DirectTraitSetKey,
+  ) => readonly (readonly (string | null)[])[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -662,10 +669,8 @@ export function createTraitOfferCandidateArtifacts(
             branchContexts.flatMap((context) => {
               if (value.kind === 'fallbackGold') return [];
               const option = value.options[optionIndex(optionKey)];
-              const disposition =
-                option === undefined
-                  ? undefined
-                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (option === undefined) return [];
+              const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'doubleLevel') return [];
               return [echoPomGreatestLevelTraitKeys(catalog, context.before)];
             }),
@@ -675,10 +680,8 @@ export function createTraitOfferCandidateArtifacts(
             branchContexts.flatMap((context) => {
               if (value.kind === 'fallbackGold') return [];
               const option = value.options[optionIndex(optionKey)];
-              const disposition =
-                option === undefined
-                  ? undefined
-                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (option === undefined) return [];
+              const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'lastRunBoon') return [];
               return [
                 echoLastRunBoonOutcomes(
@@ -748,6 +751,21 @@ export function createTraitOfferCandidateArtifacts(
                   }),
                 }),
               ];
+            }),
+          ),
+        allTogetherSet: (
+          value: AuthoredTraitOffer,
+          optionKey: TraitOptionKey,
+          setKey: import('../catalog-schema').DirectTraitSetKey,
+        ) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              if (value.kind === 'fallbackGold') return [];
+              const option = value.options[optionIndex(optionKey)];
+              if (option === undefined) return [];
+              const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (disposition?.kind !== 'directTraitSets') return [];
+              return [directTraitSetOutcomes(catalog, context.before, option.traitKey, setKey)];
             }),
           ),
       });

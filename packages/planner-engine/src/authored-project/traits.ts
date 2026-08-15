@@ -19,6 +19,65 @@ export interface AuthoredTraitOption {
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
   /** Decisions owned by the exact recreated acquisition; replay identity stays derived. */
   readonly echoLastReward?: AuthoredEchoLastRewardAcquisition;
+  /** All Together's complete one-result-per-source-set outcome. */
+  readonly allTogetherResult?: AuthoredAllTogetherResult;
+}
+
+export type AuthoredAllTogetherResult = Readonly<
+  Record<import('../catalog-schema').DirectTraitSetKey, string | null>
+>;
+
+export function createDefaultAllTogetherResult(
+  catalog: Catalog,
+  traitKey: string,
+): AuthoredAllTogetherResult | undefined {
+  const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'directTraitSets') return undefined;
+  return Object.freeze(
+    Object.fromEntries(disposition.sets.map((set) => [set.key, set.traitKeys[0]])),
+  ) as AuthoredAllTogetherResult;
+}
+
+export function normalizeAllTogetherResult(
+  catalog: Catalog,
+  traitKey: string,
+  value: AuthoredAllTogetherResult,
+): AuthoredAllTogetherResult {
+  const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'directTraitSets')
+    throw new Error(`${traitKey} does not support an All Together result`);
+  const expectedKeys = disposition.sets.map((set) => set.key);
+  const actualKeys = Object.keys(value);
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    expectedKeys.some((key) => !actualKeys.includes(key))
+  )
+    throw new Error('All Together result must contain exactly earth, fire, air, and water');
+  return Object.freeze(
+    Object.fromEntries(
+      disposition.sets.map((set) => {
+        const selected = value[set.key];
+        if (selected !== null && !set.traitKeys.includes(selected))
+          throw new Error(`${String(selected)} is not a member of ${set.key}`);
+        return [set.key, selected];
+      }),
+    ),
+  ) as AuthoredAllTogetherResult;
+}
+
+/** Adds only declaration-complete static option detail. Contextual eligibility
+ * remains entirely in simulation/candidate authorities. */
+export function withDefaultTraitOptionDetail(
+  catalog: Catalog,
+  option: AuthoredTraitOption,
+): AuthoredTraitOption {
+  const allTogetherResult = createDefaultAllTogetherResult(catalog, option.traitKey);
+  return Object.freeze({
+    ...option,
+    ...(allTogetherResult === undefined
+      ? {}
+      : { allTogetherResult: option.allTogetherResult ?? allTogetherResult }),
+  });
 }
 
 export interface AuthoredEchoLastRewardAcquisition {
@@ -355,7 +414,7 @@ export function createDefaultTraitOffers(
       kind: 'traits',
       giverKey: giver.key,
       options: Object.freeze(
-        defaults.options.map((option) => Object.freeze({ ...option })),
+        defaults.options.map((option) => withDefaultTraitOptionDetail(catalog, option)),
       ) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey:
         defaults.selectedOption === 0
@@ -389,7 +448,7 @@ export function createDefaultEncounterTraitOffer(
     options: Object.freeze(
       defaults.options.map((option) => {
         const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
-        return Object.freeze({
+        return withDefaultTraitOptionDetail(catalog, {
           ...option,
           ...(disposition?.kind === 'echo' && disposition.effect === 'doubleLevel'
             ? { echoPomTarget: null }

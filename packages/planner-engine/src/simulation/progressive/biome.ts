@@ -865,6 +865,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'echoPomTarget' ||
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
+    origin.kind === 'allTogetherSet' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -878,7 +879,8 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
             : origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
-                origin.kind === 'echoLastReward'
+                origin.kind === 'echoLastReward' ||
+                origin.kind === 'allTogetherSet'
               ? origin.trait
               : origin.owner;
   }
@@ -894,6 +896,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
     origin.kind === 'echoPomTarget' ||
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
+    origin.kind === 'allTogetherSet' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
@@ -907,7 +910,8 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
             : origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
-                origin.kind === 'echoLastReward'
+                origin.kind === 'echoLastReward' ||
+                origin.kind === 'allTogetherSet'
               ? origin.trait
               : origin.owner,
       occurrenceId,

@@ -1,4 +1,5 @@
 import {
+  createAllTogetherSetAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
   createTraitOfferAddress,
@@ -68,6 +69,25 @@ describe('structured workspace marker destination builder', () => {
       nodeKey: 'hub-node',
       ownerAddress: trait.address,
       traitDialogTarget: trait.address,
+    });
+  });
+
+  it('routes an exact All Together child through its containing trait dialog', () => {
+    const value = builder();
+    const reward = createIncomingRewardAddress(
+      biome,
+      createOccurrenceId('all-together-finding-reward'),
+    );
+    const trait = createTraitOfferAddress(reward, 'source');
+    const set = createAllTogetherSetAddress(trait, 'option1', 'earth');
+    const marker = value.emitter.marker(set, 'reward-node');
+
+    expect(value.destinations().get(marker.focusKey)).toMatchObject({
+      focusAddress: set,
+      focusKey: semanticAddressKey(set),
+      nodeKey: 'reward-node',
+      ownerAddress: set,
+      traitDialogTarget: trait,
     });
   });
 

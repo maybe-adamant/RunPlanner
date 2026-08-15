@@ -67,6 +67,7 @@ const CONTEXTS = [
 ] as const;
 const SELECTED_DISPOSITIONS = [
   'equip',
+  'directTraitSets',
   'advanceCurrentKeepsake',
   'producePickups',
   'noOp',
@@ -110,8 +111,44 @@ function normalizeSelectedDisposition(
     readonly excludedRewardTypes?: unknown;
     readonly excludedKeepsakeKeys?: unknown;
     readonly rankBonus?: unknown;
+    readonly sets?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'directTraitSets') {
+    if (Object.keys(value).length !== 2) fail(path, 'directTraitSets requires only kind and sets');
+    const expectedKeys = ['earth', 'fire', 'air', 'water'] as const;
+    const sets = requireArray(value.sets, `${path}.sets`).map((entry, index) => {
+      const set = requireObject(entry, `${path}.sets[${index}]`) as {
+        readonly key?: unknown;
+        readonly traitKeys?: unknown;
+      };
+      if (Object.keys(set).length !== 2)
+        fail(`${path}.sets[${index}]`, 'must contain key and traitKeys');
+      const key = closedValue(set.key, expectedKeys, `${path}.sets[${index}].key`);
+      const traitKeys = freezeUniqueStrings(
+        requireArray(set.traitKeys, `${path}.sets[${index}].traitKeys`) as readonly string[],
+        `${path}.sets[${index}].traitKeys`,
+      );
+      if (traitKeys.length !== 2)
+        fail(`${path}.sets[${index}].traitKeys`, 'must contain exactly two distinct traits');
+      return Object.freeze({
+        key,
+        traitKeys: Object.freeze(traitKeys) as readonly [string, string],
+      });
+    });
+    if (
+      sets.length !== expectedKeys.length ||
+      sets.some((set, index) => set.key !== expectedKeys[index])
+    )
+      fail(`${path}.sets`, 'must declare earth, fire, air, and water in source order');
+    return Object.freeze({
+      kind,
+      sets: Object.freeze(sets) as Extract<
+        TraitSelectedDisposition,
+        { readonly kind: 'directTraitSets' }
+      >['sets'],
+    });
+  }
   if (kind === 'advanceCurrentKeepsake') {
     if (Object.keys(value).length !== 2 || value.rankBonus !== 1)
       fail(path, 'advanceCurrentKeepsake requires only kind and rankBonus 1');
@@ -1082,6 +1119,56 @@ function normalizeGivers(
   return createCollection(values, 'givers', (giver) => giver.key);
 }
 
+function validateDirectTraitSets(
+  traits: CatalogCollection<TraitDeclaration>,
+  givers: CatalogCollection<TraitGiverDeclaration>,
+): void {
+  const expected = [
+    ['earth', 'ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
+    ['fire', 'ElementalBaseDamageBoon', 'ElementalRallyBoon'],
+    ['air', 'ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
+    ['water', 'ElementalHealthBoon', 'ElementalDamageCapBoon'],
+  ] as const;
+  for (const trait of traits.values) {
+    if (trait.key === 'AllElementalBoon') {
+      if (trait.selectedDisposition.kind !== 'directTraitSets')
+        fail(`traits.${trait.key}.selectedDisposition`, 'must declare the fixed direct trait sets');
+      const sets = trait.selectedDisposition.sets;
+      if (
+        sets.length !== expected.length ||
+        expected.some(
+          ([key, first, second], index) =>
+            sets[index]?.key !== key ||
+            sets[index]?.traitKeys[0] !== first ||
+            sets[index]?.traitKeys[1] !== second,
+        )
+      )
+        fail(`traits.${trait.key}.selectedDisposition.sets`, 'must match the source pair matrix');
+      for (const set of sets) {
+        for (const member of set.traitKeys) {
+          const declaration = traits.byKey[member];
+          if (declaration === undefined)
+            fail(
+              `traits.${trait.key}.selectedDisposition.sets.${set.key}`,
+              `unknown trait ${member}`,
+            );
+          const providers = givers.values.filter((giver) => giver.traitKeys.includes(member));
+          if (providers.length !== 1)
+            fail(
+              `traits.${trait.key}.selectedDisposition.sets.${set.key}`,
+              `${member} must belong to exactly one giver`,
+            );
+        }
+      }
+    } else if (trait.selectedDisposition.kind === 'directTraitSets') {
+      fail(
+        `traits.${trait.key}.selectedDisposition`,
+        'direct trait sets are reserved for All Together',
+      );
+    }
+  }
+}
+
 function normalizeContexts(
   raw: RawTraitCatalogInput['offerContexts'],
 ): CatalogCollection<TraitOfferContextDeclaration> {
@@ -1243,6 +1330,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     }
   }
   const givers = normalizeGivers(input.givers, traits, weapons, aspects);
+  validateDirectTraitSets(traits, givers);
   const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);
   const offerContexts = normalizeContexts(input.offerContexts);
   return Object.freeze({

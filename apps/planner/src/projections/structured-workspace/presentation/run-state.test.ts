@@ -31,6 +31,20 @@ describe('Run State presentation', () => {
             sourceRole: 'main',
             traitKey: 'ApolloWeaponBoon',
           },
+          AllElementalBoon: {
+            giverKey: 'Hera',
+            providerKind: 'olympian',
+            rarity: 'Legendary',
+            sourceRole: 'source',
+            traitKey: 'AllElementalBoon',
+          },
+          ElementalDamageBoon: {
+            giverKey: 'Hephaestus',
+            providerKind: 'olympian',
+            level: 1,
+            sourceRole: 'directTraitGrant',
+            traitKey: 'ElementalDamageBoon',
+          },
           EchoRepeatKeepsakeBoon: {
             traitKey: 'EchoRepeatKeepsakeBoon',
             giverKey: 'Echo',
@@ -187,6 +201,16 @@ describe('Run State presentation', () => {
         { label: 'Magick', slotKey: 'Mana' },
       ],
       other: [
+        {
+          label: 'All Together',
+          rarity: 'Legendary',
+          traitKey: 'AllElementalBoon',
+        },
+        {
+          label: 'Martial Art',
+          level: 1,
+          traitKey: 'ElementalDamageBoon',
+        },
         {
           label: 'Gift Gift Gift',
           traitKey: 'EchoRepeatKeepsakeBoon',

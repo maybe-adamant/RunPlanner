@@ -11,6 +11,7 @@ import {
   type EchoPomTargetDomainEvaluation,
   type EchoLastRunBoonDomainEvaluation,
   type EchoLastRewardDomainEvaluation,
+  type AllTogetherSetDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
@@ -251,6 +252,12 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => EchoLastRewardDomainEvaluation;
+  readonly allTogetherSet: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+    setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey,
+  ) => AllTogetherSetDomainEvaluation;
   /**
    * Exact declaration-owned Pom capability. The engine retains the correlated
    * branch histories; application presentation only adapts its returned data.
@@ -342,7 +349,8 @@ function candidateOptionEvaluation(
     evaluation.kind === 'circeResolutionDomain' ||
     evaluation.kind === 'echoPomTargetDomain' ||
     evaluation.kind === 'echoLastRunBoonDomain' ||
-    evaluation.kind === 'echoLastRewardDomain'
+    evaluation.kind === 'echoLastRewardDomain' ||
+    evaluation.kind === 'allTogetherSetDomain'
   ) {
     throw new Error('a target-domain aggregate cannot be projected as one candidate option');
   }
@@ -935,6 +943,19 @@ export function createCandidateSessionFactory(
           trait: owner,
           value,
           optionKey,
+        }),
+      allTogetherSet: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+        setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey,
+      ) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'allTogetherSetDomain',
+          trait: owner,
+          value,
+          optionKey,
+          setKey,
         }),
       levelResolution: (owner: LevelResolutionAddress, value: AuthoredLevelResolution) => {
         const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, owner);

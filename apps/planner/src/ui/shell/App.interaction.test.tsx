@@ -3,9 +3,12 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createAllTogetherSetAddress,
+  createDefaultAllTogetherResult,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createRouteAddress,
   createTraitOfferAddress,
@@ -45,6 +48,9 @@ import {
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
+  reachedTraitOffers,
+  prepareLegalPomTraitOffers,
+  supportedTraitOffer,
 } from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
@@ -70,6 +76,71 @@ function projectWithArtemisInErebus() {
       encounterKey: 'ArtemisCombatF',
     }),
   };
+}
+
+function allTogetherFindingFixture() {
+  const application = createApplication();
+  let project = createCompleteFGProject();
+  const plans = [
+    [goldenFBiome, goldenFOccurrenceId(2, 1), 'HeraCastBoon'],
+    [goldenFBiome, goldenFOccurrenceId(6, 1), 'OmegaHeraProjectileBoon'],
+    [goldenGBiome, goldenGOccurrenceId(1, 1), 'DamageSharePotencyBoon'],
+    [goldenGBiome, goldenGOccurrenceId(6, 1), 'HeraSprintBoon'],
+    [goldenGBiome, goldenGOccurrenceId(7, 1), 'AllElementalBoon'],
+  ] as const;
+  let target: ReturnType<typeof createTraitOfferAddress> | undefined;
+  let optionKey: 'option1' | 'option2' | 'option3' | undefined;
+  for (const [biomeAddress, occurrenceId, traitKey] of plans) {
+    const reward = createIncomingRewardAddress(biomeAddress, occurrenceId);
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    const prepared = prepareLegalPomTraitOffers(project);
+    project = prepared.project;
+    const trace = reachedTraitOffers(project).find(
+      (candidate) =>
+        semanticAddressKey(candidate.address.owner) === semanticAddressKey(reward) &&
+        candidate.acquisitionRole === 'source',
+    );
+    if (trace === undefined) throw new Error(`missing reached ${traitKey} offer`);
+    const value = supportedTraitOffer(project, trace.address, 'Hera', traitKey);
+    if (value === undefined || value.kind !== 'traits')
+      throw new Error(`missing supported ${traitKey} offer`);
+    const completeValue =
+      traitKey !== 'AllElementalBoon'
+        ? value
+        : Object.freeze({
+            ...value,
+            options: Object.freeze(
+              value.options.map((option) => {
+                const result = createDefaultAllTogetherResult(application.catalog, option.traitKey);
+                return result === undefined
+                  ? option
+                  : Object.freeze({ ...option, allTogetherResult: result });
+              }),
+            ) as typeof value.options,
+          });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: trace.address,
+      value: completeValue,
+    });
+    if (traitKey === 'AllElementalBoon') {
+      target = trace.address;
+      optionKey = completeValue.selectedOptionKey;
+    }
+  }
+  if (target === undefined || optionKey === undefined)
+    throw new Error('All Together target was not prepared');
+  const set = createAllTogetherSetAddress(target, optionKey, 'earth');
+  project = applyProjectCommand(project, application.catalog, {
+    kind: 'ReplaceAllTogetherSet',
+    set,
+    value: null,
+  });
+  return { application, project, set, target };
 }
 
 describe('planner history interaction', () => {
@@ -481,6 +552,31 @@ describe('planner history interaction', () => {
           (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
         ),
     ).toBe(false);
+  });
+
+  it('opens and focuses the exact All Together set control from its finding', async () => {
+    const { application, project, set, target } = allTogetherFindingFixture();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'allTogetherResultUnavailable' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(set),
+      );
+    if (finding === undefined) throw new Error('All Together set finding is missing');
+    const view = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    await view.user.click(
+      within(findings).getByRole('button', { name: /All Together outcome unavailable/ }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const earth = within(dialog).getByLabelText('Earth grant');
+    await waitFor(() => expect(document.activeElement).toBe(earth));
+    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(set);
   });
 
   it('edits ordinary, Hermes, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {

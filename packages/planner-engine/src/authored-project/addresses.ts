@@ -240,6 +240,13 @@ export interface EchoLastRewardAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** One exact source-set result beneath an All Together option. */
+export interface AllTogetherSetAddress extends BiomeOwnedAddress {
+  readonly kind: 'allTogetherSet';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+  readonly setKey: import('../catalog-schema').DirectTraitSetKey;
+}
 export interface LevelResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'levelResolution';
   readonly owner: TraitOfferOwnerAddress;
@@ -284,6 +291,7 @@ export type SemanticAddress =
   | EchoPomTargetAddress
   | EchoLastRunBoonAddress
   | EchoLastRewardAddress
+  | AllTogetherSetAddress
   | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
@@ -717,6 +725,20 @@ export function createEchoLastRewardAddress(
     optionKey,
   });
 }
+export function createAllTogetherSetAddress(
+  trait: TraitOfferAddress,
+  optionKey: AllTogetherSetAddress['optionKey'],
+  setKey: AllTogetherSetAddress['setKey'],
+): AllTogetherSetAddress {
+  return Object.freeze({
+    kind: 'allTogetherSet',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+    setKey,
+  });
+}
 export function createLevelResolutionAddress(
   ownerAddress: TraitOfferOwnerAddress,
   acquisitionRole: string,
@@ -806,6 +828,13 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'echoLastRunBoon':
     case 'echoLastReward':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
+    case 'allTogetherSet':
+      return JSON.stringify([
+        ...base,
+        semanticAddressKey(address.trait),
+        address.optionKey,
+        address.setKey,
+      ]);
     case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
   }

@@ -133,6 +133,7 @@ import {
   applyExperimentalHammerEquipResult,
   rewardFinding,
   type AcquisitionRoleFrontier,
+  type ReachedTraitChildCheckpoint,
   type OfferProcessingContext,
   type OfferProcessingPeer,
   type RewardBranchState,
@@ -1336,6 +1337,22 @@ export function evaluateBiomeRewardsAssemblyInternal(
       readonly runStateSnapshots: Map<string, DecisionRunStateSnapshot>;
     }
   >();
+  function recordTraitChildSettlements(
+    checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
+    occurrenceOwner: SemanticAddress,
+  ): void {
+    for (const checkpoint of checkpoints ?? []) {
+      const key = semanticAddressKey(checkpoint.address);
+      const current = traitChildSettlementBuilders.get(key);
+      if (current === undefined)
+        traitChildSettlementBuilders.set(key, {
+          occurrenceOwner,
+          branches: [checkpoint.branch],
+          runStateSnapshots: new Map(),
+        });
+      else current.branches.push(checkpoint.branch);
+    }
+  }
   const hubDecisionsBySource = new Map(
     snapshot.decisions
       .filter(
@@ -1693,6 +1710,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         targetFindings,
       );
       recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+      recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
       for (const frontier of settled.pickupEntryFrontiers ?? []) {
         const entryKey = semanticAddressKey(frontier.address);
         indexRewardProducerFrontier(
@@ -1803,6 +1821,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     );
     recordAcquisitionRoleFrontiers(settled.roleFrontiers);
     recordDerivedAcquisitionEntryFrontiers(settled.derivedEntryFrontiers);
+    recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
     return settled.branches;
   }
 
@@ -3313,6 +3332,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           ownerRegion(wheel.origin),
         );
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
         branches = settlement.branches;
         break;
       }
@@ -3356,6 +3376,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           acquisitionSiteOwner(snapshot, room),
         );
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
         branches = settlement.branches;
         break;
       }
@@ -3626,6 +3647,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               'selection',
               undefined,
               routeLoadout,
+              branches.map((candidate) => candidate.traitHistory ?? createTraitHistoryState()),
             ),
           );
           for (const settlement of settlements) {
@@ -3779,6 +3801,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 ),
               );
               recordAcquisitionRoleFrontiers(replay.roleFrontiers);
+              recordTraitChildSettlements(replay.traitChildSettlements, room.origin);
               if (replay.branches.length === 0) {
                 const key = semanticAddressKey(replayOwner);
                 const current = traitChildSettlementBuilders.get(key);
@@ -3842,6 +3865,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           ),
         );
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+        recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
         branches = settlement.branches;
         break;
       }

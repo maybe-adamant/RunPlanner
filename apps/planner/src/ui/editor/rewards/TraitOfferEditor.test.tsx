@@ -7,6 +7,7 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyProjectCommand,
+  createAllTogetherSetAddress,
   createIncomingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
@@ -92,6 +93,172 @@ describe('trait offer editor', () => {
     await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
     expect(screen.getByText('Effective rarity: Heroic')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
+    application.dispose();
+  });
+
+  it('edits one active All Together set while retaining the complete four-set draft', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    const hera = application.catalog.traitGivers.byKey.Hera;
+    if (base === undefined || hera === undefined) throw new Error('Hera editor fixture is missing');
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'AllElementalBoon',
+          rarity: 'Legendary' as const,
+          allTogetherResult: Object.freeze({
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: 'ElementalHealthBoon',
+          }),
+        }),
+        Object.freeze({ traitKey: 'HeraManaBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+    });
+    const domains = {
+      earth: ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
+      fire: ['ElementalBaseDamageBoon'],
+      air: ['ElementalDamageFloorBoon'],
+      water: ['ElementalHealthBoon'],
+    } as const;
+    const allTogetherSets = (Object.keys(domains) as (keyof typeof domains)[]).map((setKey) => {
+      const address = createAllTogetherSetAddress(base.owner, 'option1', setKey);
+      return Object.freeze({
+        control: Object.freeze({
+          address,
+          marker: Object.freeze({
+            address,
+            assessment: 'assessed' as const,
+            findingCount: 0,
+            focusKey: `test-all-together-${setKey}`,
+          }),
+          optionKey: 'option1' as const,
+          setKey,
+        }),
+        intentFor: (result: string | null) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceAllTogetherSet' as const,
+              set: address,
+              value: result,
+            }),
+          }),
+        offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
+          const option = offer.options[0]!;
+          return Object.freeze({
+            ...offer,
+            options: Object.freeze([
+              Object.freeze({
+                ...option,
+                allTogetherResult: Object.freeze({
+                  ...option.allTogetherResult,
+                  [setKey]: result,
+                }),
+              }),
+              offer.options[1]!,
+              offer.options[2]!,
+            ]) as AuthoredTraitOfferTraits['options'],
+          });
+        },
+        forOffer: () =>
+          Object.freeze({
+            load: () =>
+              Object.freeze({
+                choices: Object.freeze(
+                  domains[setKey].map((traitKey) =>
+                    Object.freeze({
+                      label: application.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                      value: traitKey,
+                    }),
+                  ),
+                ),
+              }),
+          }),
+      });
+    });
+    const interaction = Object.freeze({
+      ...base,
+      choices: Object.freeze(
+        hera.traitKeys.map((traitKey) =>
+          Object.freeze({
+            label: application.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+            value: traitKey,
+          }),
+        ),
+      ),
+      giver: hera,
+      value,
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+          ...(draft.kind === 'traits' &&
+          draft.selectedOptionKey === optionKey &&
+          optionKey === 'option1'
+            ? { allTogetherSets: Object.freeze(allTogetherSets) }
+            : {}),
+        }),
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[base.key, interaction]]),
+    });
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={interactions as WorkspaceInteractionCatalog}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    const earth = await screen.findByLabelText('Earth grant');
+    await waitFor(() => expect(earth).toHaveProperty('disabled', false));
+    expect(screen.getByLabelText('Fire grant')).toHaveProperty('disabled', true);
+    await user.selectOptions(earth, 'ElementalOlympianDamageBoon');
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(
+      (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.allTogetherResult,
+    ).toEqual({
+      earth: 'ElementalOlympianDamageBoon',
+      fire: 'ElementalBaseDamageBoon',
+      air: 'ElementalDamageFloorBoon',
+      water: 'ElementalHealthBoon',
+    });
     application.dispose();
   });
 

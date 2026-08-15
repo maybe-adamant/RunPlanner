@@ -56,10 +56,29 @@ export type TargetedTraitAcquisition =
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
 
+export type DirectTraitSetKey = 'earth' | 'fire' | 'air' | 'water';
+
+/** One closed source-owned direct-grant pair. This is deliberately narrower
+ * than a generic trait callback/effect language. */
+export interface DirectTraitSetDeclaration {
+  readonly key: DirectTraitSetKey;
+  readonly traitKeys: readonly [string, string];
+}
+
 /** Selection either equips, produces declared concrete pickups, or has no
  * modeled run effect. Pickup detail remains owned by the acquisition entry. */
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
+  | {
+      /** Equips the outer trait, then resolves one direct rarityless grant per set. */
+      readonly kind: 'directTraitSets';
+      readonly sets: readonly [
+        DirectTraitSetDeclaration,
+        DirectTraitSetDeclaration,
+        DirectTraitSetDeclaration,
+        DirectTraitSetDeclaration,
+      ];
+    }
   | {
       /** Echo always equips the outer rarityless identity before this closed effect settles. */
       readonly kind: 'echo';

@@ -31,6 +31,7 @@ import {
   type EchoPomTargetAddress,
   type EchoLastRunBoonAddress,
   type EchoLastRewardAddress,
+  type AllTogetherSetAddress,
   type AuthoredEchoLastRewardAcquisition,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
@@ -232,6 +233,7 @@ export interface WorkspaceTraitOfferControl {
   readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
+  readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
@@ -275,6 +277,14 @@ export interface WorkspaceEchoLastRewardControl {
   readonly value?: AuthoredEchoLastRewardAcquisition;
 }
 
+export interface WorkspaceAllTogetherSetControl {
+  readonly address: AllTogetherSetAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey;
+  readonly value?: string | null;
+}
+
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -296,6 +306,25 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
   readonly echoLastReward?: WorkspaceEchoLastRewardInteraction;
+  readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
+}
+
+export interface WorkspaceAllTogetherSetDomain {
+  readonly choices: readonly WorkspaceInteractionChoice<string | null>[];
+}
+
+export interface WorkspaceAllTogetherSetInteraction {
+  readonly control: WorkspaceAllTogetherSetControl;
+  readonly intentFor: (
+    value: string | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAllTogetherSet' }>>;
+  readonly offerFor: (
+    offer: AuthoredTraitOfferTraits,
+    value: string | null,
+  ) => AuthoredTraitOfferTraits;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceAllTogetherSetDomain | undefined;
+  };
 }
 
 export interface WorkspaceCirceResolutionDomain {

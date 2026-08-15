@@ -1,10 +1,12 @@
 import {
+  createAllTogetherSetAddress,
   createBiomeAddress,
   createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createTraitOfferAddress,
   createKeepsakeEquipResultAddress,
   createLocalChildAddress,
   createOccurrenceId,
@@ -127,6 +129,34 @@ describe('fine-grained finding routing', () => {
     expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
       /finding has no exact workspace destination/,
     );
+  });
+
+  it('treats an All Together set as an exact fine-grained trait child', () => {
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('all-together-finding')),
+      'source',
+    );
+    const set = createAllTogetherSetAddress(trait, 'option1', 'earth');
+    const exact = destination({
+      focusAddress: set,
+      focusKey: semanticAddressKey(set),
+      ownerAddress: set,
+      traitDialogTarget: trait,
+    });
+    const finding = {
+      code: 'allTogetherResultUnavailable',
+      evidence: {},
+      origin: set,
+      phase: 'rewardGeneration',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+    const focusByOwner = new Map([[semanticAddressKey(set), exact]]);
+
+    expect(isFineGrainedFindingOwner(set)).toBe(true);
+    expect(() =>
+      registerWorkspaceFindingDestinations([finding], focusByOwner, routes),
+    ).not.toThrow();
+    expect(focusByOwner.get(semanticAddressKey(set))?.traitDialogTarget).toEqual(trait);
   });
 
   it('routes a Gorgon finding to its exact Gorgon phase owner', () => {

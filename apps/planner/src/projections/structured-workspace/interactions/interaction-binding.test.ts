@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAllTogetherSetAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createCirceResolutionAddress,
@@ -443,6 +444,103 @@ describe('structured workspace interaction binding', () => {
       (pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command.value as AuthoredTraitOfferTraits)
         .options[2],
     ).toMatchObject({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ApolloWeaponBoon' });
+  });
+
+  it('binds four active All Together children and keeps retained detail dormant off-selection', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const trait = createTraitOfferAddress(reward, 'source');
+    const authored: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'AllElementalBoon',
+          rarity: 'Legendary' as const,
+          allTogetherResult: Object.freeze({
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: 'ElementalHealthBoon',
+          }),
+        }),
+        Object.freeze({ traitKey: 'HeraManaBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+    });
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: authored,
+    });
+    const baseSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const allTogetherSet = vi.fn(
+      (
+        _owner: unknown,
+        _value: unknown,
+        _optionKey: unknown,
+        setKey: 'earth' | 'fire' | 'air' | 'water',
+      ) => ({
+        kind: 'allTogetherSetDomain' as const,
+        result: {
+          setKey,
+          values:
+            setKey === 'earth'
+              ? (['ElementalDamageBoon', 'ElementalOlympianDamageBoon'] as const)
+              : ([] as const),
+        },
+      }),
+    );
+    const candidateSession = Object.freeze({ ...baseSession, allTogetherSet });
+    const active = bind(project, 'Underworld', 'F', undefined, candidateSession);
+    const interaction = active.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (interaction === undefined) throw new Error('All Together interaction is missing');
+    const sets = interaction.optionDomain(authored, 'option1').allTogetherSets;
+    expect(sets?.map((set) => set.control.setKey)).toEqual(['earth', 'fire', 'air', 'water']);
+    const earth = sets?.[0];
+    expect(earth?.control.address).toEqual(createAllTogetherSetAddress(trait, 'option1', 'earth'));
+    expect(earth?.forOffer(authored).load()).toEqual({
+      choices: [
+        { label: 'Martial Art', value: 'ElementalDamageBoon' },
+        { label: 'Rallying Cry', value: 'ElementalOlympianDamageBoon' },
+      ],
+    });
+    expect(earth?.intentFor('ElementalOlympianDamageBoon').command).toEqual({
+      kind: 'ReplaceAllTogetherSet',
+      set: createAllTogetherSetAddress(trait, 'option1', 'earth'),
+      value: 'ElementalOlympianDamageBoon',
+    });
+    expect(
+      active.assembly.preliminaryFocusDestinations.has(semanticAddressKey(earth!.control.address)),
+    ).toBe(true);
+
+    const dormantProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    const dormant = bind(dormantProject, 'Underworld', 'F', undefined, candidateSession);
+    const dormantInteraction = dormant.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (dormantInteraction?.value.kind !== 'traits') throw new Error('dormant offer is missing');
+    expect(
+      dormantInteraction.optionDomain(dormantInteraction.value, 'option1').allTogetherSets,
+    ).toBeUndefined();
+    expect(dormantInteraction.value.options[0]?.allTogetherResult).toEqual(
+      authored.options[0]?.allTogetherResult,
+    );
+    expect(
+      dormant.assembly.preliminaryFocusDestinations.has(
+        semanticAddressKey(createAllTogetherSetAddress(trait, 'option1', 'earth')),
+      ),
+    ).toBe(false);
   });
 
   it('adapts the engine-owned Echo Boon row and append domains without recomputing distinctness', () => {

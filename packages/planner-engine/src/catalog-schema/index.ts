@@ -28,6 +28,8 @@ export type {
   ScalableGodTraitRarityFloorEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
+  DirectTraitSetDeclaration,
+  DirectTraitSetKey,
   TraitPickupDeclaration,
   WeaponDeclaration,
 } from './traits';
