@@ -155,6 +155,8 @@ copied elsewhere.
   [trait-offer pools and dependencies](docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md),
   [acquisition delivery and room settlement](docs/audits/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md),
   [Arcana and Fear audit](docs/audits/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md),
+  [All Together and Shop-trait audit](docs/audits/ALL_TOGETHER_AND_SHOP_TRAITS_GAME_DATA_AUDIT.md),
+  [Fields optional rewards and Artificer audit](docs/audits/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md),
   [keepsake audit](docs/audits/KEEPSAKE_GAME_DATA_AUDIT.md),
   [Echo Gift Gift Gift keepsake audit](docs/audits/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md),
   [Cherished Heirloom keepsake audit](docs/audits/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md),
