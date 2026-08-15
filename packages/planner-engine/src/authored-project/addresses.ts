@@ -216,6 +216,12 @@ export interface CirceResolutionAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** Echo Pom's selected target/no-target child beneath the selected outer row. */
+export interface EchoPomTargetAddress extends BiomeOwnedAddress {
+  readonly kind: 'echoPomTarget';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+}
 export interface LevelResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'levelResolution';
   readonly owner: TraitOfferOwnerAddress;
@@ -256,6 +262,7 @@ export type SemanticAddress =
   | TraitOfferAddress
   | AcquisitionRoleAddress
   | CirceResolutionAddress
+  | EchoPomTargetAddress
   | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
@@ -650,6 +657,18 @@ export function createCirceResolutionAddress(
     optionKey,
   });
 }
+export function createEchoPomTargetAddress(
+  trait: TraitOfferAddress,
+  optionKey: EchoPomTargetAddress['optionKey'],
+): EchoPomTargetAddress {
+  return Object.freeze({
+    kind: 'echoPomTarget',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+  });
+}
 export function createLevelResolutionAddress(
   ownerAddress: TraitOfferOwnerAddress,
   acquisitionRole: string,
@@ -733,6 +752,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'acquisitionRole':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
     case 'circeResolution':
+    case 'echoPomTarget':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
     case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);

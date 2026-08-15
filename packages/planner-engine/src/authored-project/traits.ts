@@ -13,6 +13,8 @@ export interface AuthoredTraitOption {
   readonly targetTraitKey?: string;
   /** Circe's closed exact Arcana/Fear outcome. Detail may remain dormant on an unselected option. */
   readonly circeResolution?: AuthoredCirceResolution;
+  /** Echo Pom's exact random greatest-level target; null records a legal empty-domain no-op. */
+  readonly echoPomTarget?: string | null;
 }
 
 export type AuthoredCirceResolution =
@@ -243,7 +245,15 @@ export function createDefaultEncounterTraitOffer(
     kind: 'traits',
     giverKey: giver.key,
     options: Object.freeze(
-      defaults.options.map((option) => Object.freeze({ ...option })),
+      defaults.options.map((option) => {
+        const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+        return Object.freeze({
+          ...option,
+          ...(disposition?.kind === 'echo' && disposition.effect === 'doubleLevel'
+            ? { echoPomTarget: null }
+            : {}),
+        });
+      }),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey:
       defaults.selectedOption === 0

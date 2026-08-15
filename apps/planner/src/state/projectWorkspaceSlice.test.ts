@@ -1,11 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createDefaultRouteLoadout,
   createEmptyProjectDocument,
+  createEncounterPhaseAddress,
+  createExitSelectionAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createTraitOfferAddress,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -28,6 +32,7 @@ import {
   selectProjectEvaluation,
   selectProjectHistory,
 } from './store';
+import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -137,6 +142,54 @@ describe('project workspace application state', () => {
     expect(selectProjectEvaluation(redoneState)).toBe(
       assembleProjectEvaluation.mock.results[4]?.value.evaluation,
     );
+  });
+
+  it('undoes and redoes one atomic Echo Pom child edit with its outer selection', () => {
+    const { store } = createStore();
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = createGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    store.dispatch(authoredProjectReplaced(project));
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const before = selectPresentProject(store.getState());
+    const bridge = before.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (offer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const editedOffer = Object.freeze({
+      ...offer,
+      selectedOptionKey: 'option3' as const,
+      options: Object.freeze([
+        offer.options[0],
+        offer.options[1],
+        Object.freeze({ ...offer.options[2], echoPomTarget: null }),
+      ]) as typeof offer.options,
+    });
+    store.dispatch(
+      authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
+    );
+    const edited = selectPresentProject(store.getState());
+    expect(edited).not.toBe(before);
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(store.getState())).toBe(before);
+    store.dispatch(authoredProjectRedoRequested());
+    expect(selectPresentProject(store.getState())).toBe(edited);
   });
 
   it('retains the coherent workspace without resimulation for semantic and history no-ops', () => {

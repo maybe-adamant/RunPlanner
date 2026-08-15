@@ -62,7 +62,10 @@ import {
   type HistoryFindingChronology,
 } from '../finding-regions';
 import type { SelectedTraitOfferAssessment } from '../traits';
-import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
+import {
+  evaluateBiomeRewardsAssemblyInternal,
+  type TraitChildSettlementCheckpoints,
+} from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type {
   RewardProducerCandidateArtifacts,
@@ -213,6 +216,7 @@ interface ProgressiveProducts {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly encounterBlock?: EncounterHistoryBlock;
   readonly findingRegions: readonly FindingRegionEntry[];
+  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
 }
 
 interface BlockedAncestorChain {
@@ -237,6 +241,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'levelResolution':
       return rewardOwnerAddress(address.owner);
     case 'circeResolution':
+    case 'echoPomTarget':
       return rewardOwnerAddress(address.trait);
     default:
       return undefined;
@@ -255,10 +260,13 @@ function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | u
   if (
     address.kind === 'traitOffer' ||
     address.kind === 'levelResolution' ||
-    address.kind === 'circeResolution'
+    address.kind === 'circeResolution' ||
+    address.kind === 'echoPomTarget'
   )
     return occurrenceOwnerAddress(
-      address.kind === 'circeResolution' ? address.trait : address.owner,
+      address.kind === 'circeResolution' || address.kind === 'echoPomTarget'
+        ? address.trait
+        : address.owner,
     );
   if (address.kind === 'encounterPhase' && address.owner.kind === 'occurrence') {
     return createOccurrenceAddress(
@@ -356,6 +364,7 @@ export interface ProgressiveBiomeSelectedProducts {
   readonly rewards: BiomeRewardSimulation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
+  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
 }
 
 function products(
@@ -430,6 +439,7 @@ function products(
     candidateArtifacts: roomGeneration.candidateArtifacts,
     ...(composed.kind === 'blocked' ? { encounterBlock: composed.block } : {}),
     findingRegions: Object.freeze([...roomGeneration.findingRegions, ...rewards.findingRegions]),
+    traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
   });
 }
 
@@ -446,6 +456,7 @@ function retainBlockedRegionProducts(
   blockedArtifacts: BiomeCandidateArtifacts,
   selectedRewards: BiomeRewardSimulation,
   selectedArtifacts: BiomeCandidateArtifacts,
+  selectedTraitChildSettlements: TraitChildSettlementCheckpoints,
   ancestors: BlockedAncestorChain,
   blockedAt: SemanticAddress,
   blockedRegionKey: string,
@@ -455,7 +466,7 @@ function retainBlockedRegionProducts(
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
       ? blockedAt
-      : blockedAt.kind === 'circeResolution'
+      : blockedAt.kind === 'circeResolution' || blockedAt.kind === 'echoPomTarget'
         ? blockedAt.trait
         : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
@@ -490,6 +501,16 @@ function retainBlockedRegionProducts(
       .filter((entry) => entry.atomicRegion === blockedRegionKey && entry.aggregate === 'reward')
       .map((entry) => entry.finding),
   );
+  const blockedChildSettlement = selectedTraitChildSettlements.at(blockedAt);
+  const retainedRunStateKeys = new Set(
+    retainedRewards.runStateSnapshots.map((snapshot) => semanticAddressKey(snapshot.owner)),
+  );
+  const runStateSnapshots = Object.freeze([
+    ...retainedRewards.runStateSnapshots,
+    ...(blockedChildSettlement?.runStateSnapshots ?? []).filter(
+      (snapshot) => !retainedRunStateKeys.has(semanticAddressKey(snapshot.owner)),
+    ),
+  ]);
   const retainedLevelFindingKeys = new Set(
     [...retainedRewards.findings, ...blockedRewardFindings]
       .filter((finding) => finding.origin.kind === 'levelResolution')
@@ -736,15 +757,19 @@ function retainBlockedRegionProducts(
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
       selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
       rewardFindings.length === retainedRewards.findings.length &&
+      blockedChildSettlement === undefined &&
       settledCurrentSiteBranches === undefined
         ? retainedRewards
         : Object.freeze({
             ...retainedRewards,
             ...(settledCurrentSiteBranches === undefined
-              ? {}
+              ? blockedChildSettlement === undefined
+                ? {}
+                : { branches: blockedChildSettlement.branches }
               : { branches: settledCurrentSiteBranches }),
             validity: rewardFindings.length === 0 ? retainedRewards.validity : 'invalid',
             findings: rewardFindings,
+            runStateSnapshots,
             selectedTraitOffers,
             selectedLevelResolutions,
           }),
@@ -827,6 +852,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
+    origin.kind === 'echoPomTarget' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -837,7 +863,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution'
+            : origin.kind === 'circeResolution' || origin.kind === 'echoPomTarget'
               ? origin.trait
               : origin.owner;
   }
@@ -850,6 +876,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'circeResolution' ||
+    origin.kind === 'echoPomTarget' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
@@ -860,7 +887,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution'
+            : origin.kind === 'circeResolution' || origin.kind === 'echoPomTarget'
               ? origin.trait
               : origin.owner,
       occurrenceId,
@@ -1708,6 +1735,7 @@ export function evaluateProgressiveBiomeAssembly(
         rewards: evaluated.evaluation.rewards,
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
+        traitChildSettlementCheckpoints: evaluated.traitChildSettlementCheckpoints,
       }),
       unsupported,
     );
@@ -1833,6 +1861,7 @@ function clampSelectedProducts(
     interactionProducts.candidateArtifacts,
     selectedProducts.rewards,
     selectedProducts.candidateArtifacts,
+    selectedProducts.traitChildSettlementCheckpoints,
     ancestors,
     unsupported.finding.origin,
     unsupported.regionKey,

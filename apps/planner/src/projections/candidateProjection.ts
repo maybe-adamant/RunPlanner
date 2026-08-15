@@ -8,6 +8,7 @@ import {
   type EvaluatedKeepsakeEquipResultCandidate,
   type EvaluatedAcquisitionConversionCandidate,
   type CirceResolutionDomainEvaluation,
+  type EchoPomTargetDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
@@ -233,6 +234,11 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => CirceResolutionDomainEvaluation;
+  readonly echoPomTarget: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => EchoPomTargetDomainEvaluation;
   /**
    * Exact declaration-owned Pom capability. The engine retains the correlated
    * branch histories; application presentation only adapts its returned data.
@@ -321,7 +327,8 @@ function candidateOptionEvaluation(
 ): CandidateProjectionEvaluation {
   if (
     evaluation.kind === 'traitAcquisitionTargetDomain' ||
-    evaluation.kind === 'circeResolutionDomain'
+    evaluation.kind === 'circeResolutionDomain' ||
+    evaluation.kind === 'echoPomTargetDomain'
   ) {
     throw new Error('a target-domain aggregate cannot be projected as one candidate option');
   }
@@ -878,6 +885,17 @@ export function createCandidateSessionFactory(
       ) =>
         requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
           kind: 'circeResolutionDomain',
+          trait: owner,
+          value,
+          optionKey,
+        }),
+      echoPomTarget: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOffer,
+        optionKey: TraitOptionKey,
+      ) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'echoPomTargetDomain',
           trait: owner,
           value,
           optionKey,

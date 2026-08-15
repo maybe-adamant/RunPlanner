@@ -194,6 +194,19 @@ function validateOffer(
           failCommand(command, `${option.traitKey} requires distinct known Arcana keys`);
       }
     }
+    if ('echoPomTarget' in option) {
+      if (
+        trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'doubleLevel'
+      )
+        failCommand(command, `${option.traitKey} does not support an Echo Pom target`);
+      if (
+        option.echoPomTarget !== null &&
+        (typeof option.echoPomTarget !== 'string' ||
+          catalog.traits.byKey[option.echoPomTarget] === undefined)
+      )
+        failCommand(command, `unknown Echo Pom target ${String(option.echoPomTarget)}`);
+    }
   }
   const conditionApplicable =
     !omitDeathDefianceContext &&

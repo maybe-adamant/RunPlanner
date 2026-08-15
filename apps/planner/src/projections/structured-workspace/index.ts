@@ -57,6 +57,7 @@ export type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceCirceResolutionDomain,
+  WorkspaceEchoPomTargetDomain,
   WorkspaceLevelResolutionControl,
   WorkspaceTraitOfferInteraction,
   WorkspaceLevelResolutionInteraction,

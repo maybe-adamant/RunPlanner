@@ -847,6 +847,7 @@ function evaluateBiomeAssembly(
       }),
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
+      traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
     }),
   );
   if (progressive === null) {

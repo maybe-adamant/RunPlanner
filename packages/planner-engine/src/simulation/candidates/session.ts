@@ -89,9 +89,13 @@ import {
 import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateCirceResolutionDomain,
+  evaluateEchoPomTargetDomain,
   type CirceResolutionDomainEvaluation,
   type CirceResolutionDomainQuery,
   type EvaluatedCirceResolutionDomain,
+  type EvaluatedEchoPomTargetDomain,
+  type EchoPomTargetDomainEvaluation,
+  type EchoPomTargetDomainQuery,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
@@ -151,7 +155,8 @@ export type ProjectCandidateSessionQuery =
   | ProjectCandidateQuery
   | TraitOfferFocusedOptionCandidateQuery
   | TraitAcquisitionTargetDomainQuery
-  | CirceResolutionDomainQuery;
+  | CirceResolutionDomainQuery
+  | EchoPomTargetDomainQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -186,7 +191,8 @@ export type ProjectCandidateSessionEvaluation =
   | ProjectCandidateEvaluation
   | EvaluatedTraitOfferFocusedOptionCandidate
   | EvaluatedTraitAcquisitionTargetDomain
-  | EvaluatedCirceResolutionDomain;
+  | EvaluatedCirceResolutionDomain
+  | EvaluatedEchoPomTargetDomain;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -211,6 +217,8 @@ export interface ProjectCandidateSession {
     ): readonly TraitAcquisitionTargetDomainEvaluation[];
     (query: CirceResolutionDomainQuery): CirceResolutionDomainEvaluation;
     (queries: readonly CirceResolutionDomainQuery[]): readonly CirceResolutionDomainEvaluation[];
+    (query: EchoPomTargetDomainQuery): EchoPomTargetDomainEvaluation;
+    (queries: readonly EchoPomTargetDomainQuery[]): readonly EchoPomTargetDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
     (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
@@ -434,6 +442,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'echoPomTargetDomain':
+      return evaluateEchoPomTargetDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -466,6 +483,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly CirceResolutionDomainQuery[],
   ): readonly CirceResolutionDomainEvaluation[];
+  function evaluate(query: EchoPomTargetDomainQuery): EchoPomTargetDomainEvaluation;
+  function evaluate(
+    queries: readonly EchoPomTargetDomainQuery[],
+  ): readonly EchoPomTargetDomainEvaluation[];
   function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
   function evaluate(
     queries: readonly ProjectCandidateSessionQuery[],

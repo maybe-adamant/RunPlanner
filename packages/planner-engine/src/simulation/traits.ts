@@ -897,6 +897,7 @@ export function recordReachedTraitOffer(
   if (
     selectedDisposition?.kind !== 'equip' &&
     selectedDisposition?.kind !== 'circe' &&
+    selectedDisposition?.kind !== 'echo' &&
     selectedDisposition?.kind !== 'advanceCurrentKeepsake'
   ) {
     return Object.freeze({ history: evaluation.before });
@@ -943,6 +944,20 @@ export function recordReachedTraitOffer(
     ...(mutation === undefined ? [] : [mutation]),
   ]);
   return Object.freeze({ history, event });
+}
+
+/** Echo Pom's exact pre-choice random domain: Pom-eligible traits at the greatest level only. */
+export function echoPomGreatestLevelTraitKeys(
+  catalog: Catalog,
+  history: TraitHistoryState,
+): readonly string[] {
+  const eligible = Object.values(history.equippedTraits).filter(
+    (trait) => isPomEligibleTrait(catalog, trait.traitKey) && trait.level !== undefined,
+  );
+  const greatest = Math.max(0, ...eligible.map((trait) => trait.level ?? 0));
+  return Object.freeze(
+    eligible.filter((trait) => trait.level === greatest).map((trait) => trait.traitKey),
+  );
 }
 
 /** Validates and records the closed declaration-owned Pom mutation against its pre-effect ledger. */

@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createCirceResolutionAddress,
+  createEchoPomTargetAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -381,6 +382,67 @@ describe('structured workspace interaction binding', () => {
         .get(semanticAddressKey(trait))
         ?.optionDomain(invalidOffer, 'option2').circeResolution?.control.marker.findingCount,
     ).toBeGreaterThan(0);
+  });
+
+  it('binds the real H Bridge Pom draft and its invalid authored target to the exact child', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = createGoldenFGHIProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const bridge = project.routes
+      .find((route) => route.routeKey === 'Underworld')!
+      .biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const pomOffer = Object.freeze({
+      ...defaultOffer,
+      selectedOptionKey: 'option3' as const,
+      options: Object.freeze([
+        defaultOffer.options[0],
+        defaultOffer.options[1],
+        Object.freeze({
+          ...defaultOffer.options[2],
+          echoPomTarget: 'ZeusWeaponBoon',
+        }),
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: pomOffer,
+    });
+
+    const bound = bind(project, 'Underworld', 'H');
+    const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (interaction === undefined) throw new Error('Echo interaction is missing');
+    const child = createEchoPomTargetAddress(trait, 'option3');
+    const pom = interaction.optionDomain(pomOffer, 'option3').echoPomTarget;
+    expect(pom?.control.address).toEqual(child);
+    expect(pom?.forOffer(pomOffer).load()).toEqual({
+      choices: [{ label: 'Nova Strike', value: 'ApolloWeaponBoon' }],
+      emptyNoOpAllowed: false,
+    });
+    expect(pom?.control.marker.findingCount).toBeGreaterThan(0);
+    expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
+    expect(
+      (pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command.value as AuthoredTraitOfferTraits)
+        .options[2],
+    ).toMatchObject({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ApolloWeaponBoon' });
   });
 
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {

@@ -275,6 +275,12 @@ const expectedHammerRestrictions: Readonly<Record<string, readonly string[]>> = 
 };
 
 const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
+  Echo: [
+    'EchoDeathDefianceRefill',
+    'DiminishingDodgeBoon',
+    'DiminishingHealthAndManaBoon',
+    'EchoDoubleLevelBoon',
+  ],
   Circe: [
     'CirceShrinkTrait',
     'CirceEnlargeTrait',
@@ -721,6 +727,8 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   NarcissusA: '[{"kind":"upgradableTrait"}]',
   NarcissusH: '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
+  EchoDeathDefianceRefill:
+    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRefillBoon:
     '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   DeathDefianceRetaliateCurse:
@@ -922,7 +930,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(368);
+    expect(traits?.traits.values).toHaveLength(372);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -943,6 +951,7 @@ describe('trait offer catalog closure', () => {
       ['Medea', 8],
       ['Narcissus', 9],
       ['Circe', 9],
+      ['Echo', 4],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -976,6 +985,89 @@ describe('trait offer catalog closure', () => {
         freshOfferRarities: ['Common'],
         equippedRarities: ['Common'],
       })),
+    );
+  });
+
+  it('declares the Gate A Echo matrix as fixed Common with closed dispositions', () => {
+    const giver = traits.givers.byKey.Echo;
+    expect(giver?.rarityPolicy).toEqual({ kind: 'fixed', rarity: 'Common' });
+    expect(giver?.traitKeys).toEqual([
+      'EchoDeathDefianceRefill',
+      'DiminishingDodgeBoon',
+      'DiminishingHealthAndManaBoon',
+      'EchoDoubleLevelBoon',
+    ]);
+    expect(giver?.defaultOffer).toEqual({
+      options: [
+        { traitKey: 'DiminishingDodgeBoon', rarity: 'Common' },
+        { traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' },
+        { traitKey: 'EchoDoubleLevelBoon', rarity: 'Common' },
+      ],
+      selectedOption: 0,
+    });
+    expect(
+      giver?.traitKeys.map((key) => ({
+        key,
+        rarityDomain: traits.traits.byKey[key]?.rarityDomain,
+        disposition: traits.traits.byKey[key]?.selectedDisposition,
+      })),
+    ).toEqual([
+      {
+        key: 'EchoDeathDefianceRefill',
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        },
+        disposition: { kind: 'echo', effect: 'survive' },
+      },
+      {
+        key: 'DiminishingDodgeBoon',
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        },
+        disposition: { kind: 'echo', effect: 'numericNoOp' },
+      },
+      {
+        key: 'DiminishingHealthAndManaBoon',
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        },
+        disposition: { kind: 'echo', effect: 'numericNoOp' },
+      },
+      {
+        key: 'EchoDoubleLevelBoon',
+        rarityDomain: {
+          kind: 'ranked',
+          freshOfferRarities: ['Common'],
+          equippedRarities: ['Common'],
+        },
+        disposition: { kind: 'echo', effect: 'doubleLevel' },
+      },
+    ]);
+  });
+
+  it('rejects an unknown Echo disposition effect at the raw declaration boundary', () => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'EchoDoubleLevelBoon'
+            ? {
+                ...trait,
+                selectedDisposition: { kind: 'echo', effect: 'unexpected' } as never,
+              }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(
+      /selectedDisposition.effect.*numericNoOp.*survive.*doubleLevel/,
     );
   });
 

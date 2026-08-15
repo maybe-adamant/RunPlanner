@@ -76,7 +76,10 @@ export type TraitFindingCode =
   | 'circeResolutionMissing'
   | 'circeResolutionWrongCardinality'
   | 'circeResolutionTargetUnavailable'
-  | 'circeOptionUnavailable';
+  | 'circeOptionUnavailable'
+  | 'echoPomTargetMissing'
+  | 'echoPomNoTargetUnavailable'
+  | 'echoPomTargetUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode
