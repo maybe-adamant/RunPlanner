@@ -12,6 +12,7 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
+  type AuthoredEchoLastRewardAcquisition,
   type AuthoredCirceResolution,
   type TraitOptionKey,
 } from '../traits';
@@ -204,7 +205,93 @@ export function createDefaultRoomEncounterState(
   });
 }
 
-function decodeEncounterTraitOffer(
+function decodeEchoLastReward(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): AuthoredEchoLastRewardAcquisition {
+  const record = expectRecord(value, path);
+  const hasTraitOffer = record.traitOffer !== undefined;
+  const hasLevelResolution = record.levelResolution !== undefined;
+  expectExactKeys(
+    record,
+    [
+      'conversion',
+      ...(hasTraitOffer ? ['traitOffer'] : []),
+      ...(hasLevelResolution ? ['levelResolution'] : []),
+    ],
+    path,
+  );
+  const conversion = expectString(record.conversion, `${path}.conversion`);
+  if (conversion !== 'normal' && conversion !== 'gold')
+    failProjectDocument(`${path}.conversion`, 'must be normal or gold');
+  let traitOffer: AuthoredTraitOffer | undefined;
+  if (hasTraitOffer) {
+    const rawOffer = expectRecord(record.traitOffer, `${path}.traitOffer`);
+    const giverKey = expectString(rawOffer.giverKey, `${path}.traitOffer.giverKey`);
+    traitOffer = decodeEncounterTraitOffer(
+      rawOffer,
+      catalog,
+      giverKey,
+      `${path}.traitOffer`,
+      true,
+      true,
+    );
+  }
+  let levelResolution: AuthoredEchoLastRewardAcquisition['levelResolution'];
+  if (hasLevelResolution) {
+    const rawLevel = expectRecord(record.levelResolution, `${path}.levelResolution`);
+    const kind = expectString(rawLevel.kind, `${path}.levelResolution.kind`);
+    if (kind === 'choice') {
+      expectExactKeys(
+        rawLevel,
+        ['kind', 'offeredTraitKeys', 'selectedTraitKey'],
+        `${path}.levelResolution`,
+      );
+      const offeredTraitKeys = expectArray(
+        rawLevel.offeredTraitKeys,
+        `${path}.levelResolution.offeredTraitKeys`,
+      ).map((entry, index) => {
+        const key = expectString(entry, `${path}.levelResolution.offeredTraitKeys[${index}]`);
+        if (catalog.traits.byKey[key] === undefined)
+          failProjectDocument(
+            `${path}.levelResolution.offeredTraitKeys[${index}]`,
+            'unknown trait',
+          );
+        return key;
+      });
+      if (new Set(offeredTraitKeys).size !== offeredTraitKeys.length)
+        failProjectDocument(`${path}.levelResolution.offeredTraitKeys`, 'must be distinct');
+      const selectedTraitKey =
+        rawLevel.selectedTraitKey === null
+          ? null
+          : expectString(rawLevel.selectedTraitKey, `${path}.levelResolution.selectedTraitKey`);
+      if (selectedTraitKey !== null && !offeredTraitKeys.includes(selectedTraitKey))
+        failProjectDocument(`${path}.levelResolution.selectedTraitKey`, 'must be an offered trait');
+      levelResolution = Object.freeze({
+        kind,
+        offeredTraitKeys: Object.freeze(offeredTraitKeys),
+        selectedTraitKey,
+      });
+    } else if (kind === 'random') {
+      expectExactKeys(rawLevel, ['kind', 'targetTraitKey'], `${path}.levelResolution`);
+      const targetTraitKey =
+        rawLevel.targetTraitKey === null
+          ? null
+          : expectString(rawLevel.targetTraitKey, `${path}.levelResolution.targetTraitKey`);
+      if (targetTraitKey !== null && catalog.traits.byKey[targetTraitKey] === undefined)
+        failProjectDocument(`${path}.levelResolution.targetTraitKey`, 'unknown trait');
+      levelResolution = Object.freeze({ kind, targetTraitKey });
+    } else failProjectDocument(`${path}.levelResolution.kind`, 'must be choice or random');
+  }
+  return Object.freeze({
+    conversion,
+    ...(traitOffer === undefined ? {} : { traitOffer }),
+    ...(levelResolution === undefined ? {} : { levelResolution }),
+  });
+}
+
+export function decodeEncounterTraitOffer(
   value: unknown,
   catalog: Catalog,
   giverKey: string,
@@ -256,6 +343,7 @@ function decodeEncounterTraitOffer(
     const hasCirceResolution = option.circeResolution !== undefined;
     const hasEchoPomTarget = 'echoPomTarget' in option;
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
+    const hasEchoLastReward = 'echoLastReward' in option;
     expectExactKeys(
       option,
       [
@@ -265,6 +353,7 @@ function decodeEncounterTraitOffer(
         ...(hasCirceResolution ? ['circeResolution'] : []),
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
+        ...(hasEchoLastReward ? ['echoLastReward'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -429,6 +518,22 @@ function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.echoLastRunBoon`,
         'is supported only by Echo Boon Boon Boon',
       );
+    const echoLastReward = hasEchoLastReward
+      ? decodeEchoLastReward(
+          option.echoLastReward,
+          catalog,
+          `${path}.options.${optionKey}.echoLastReward`,
+        )
+      : undefined;
+    if (
+      hasEchoLastReward &&
+      (trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'lastReward')
+    )
+      failProjectDocument(
+        `${path}.options.${optionKey}.echoLastReward`,
+        'is supported only by Echo Reward Reward Reward',
+      );
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -437,6 +542,7 @@ function decodeEncounterTraitOffer(
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+            ...(echoLastReward === undefined ? {} : { echoLastReward }),
           }
         : {
             traitKey,
@@ -445,6 +551,7 @@ function decodeEncounterTraitOffer(
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+            ...(echoLastReward === undefined ? {} : { echoLastReward }),
           };
     options.push(Object.freeze(decodedOption));
   }

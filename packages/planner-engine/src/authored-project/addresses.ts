@@ -176,7 +176,8 @@ export type AcquisitionSiteOwnerAddress =
   | LocalChildAddress
   | LocalRewardAddress
   | RewardWheelAddress
-  | HubVisitAddress;
+  | HubVisitAddress
+  | EchoLastRewardAddress;
 export interface AcquisitionSiteAddress extends BiomeOwnedAddress {
   readonly kind: 'acquisitionSite';
   readonly owner: AcquisitionSiteOwnerAddress;
@@ -228,6 +229,12 @@ export interface EchoLastRunBoonAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** Echo Reward's derived recreation owner beneath the selected outer row. */
+export interface EchoLastRewardAddress extends BiomeOwnedAddress {
+  readonly kind: 'echoLastReward';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+}
 export interface LevelResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'levelResolution';
   readonly owner: TraitOfferOwnerAddress;
@@ -270,6 +277,7 @@ export type SemanticAddress =
   | CirceResolutionAddress
   | EchoPomTargetAddress
   | EchoLastRunBoonAddress
+  | EchoLastRewardAddress
   | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
@@ -688,6 +696,18 @@ export function createEchoLastRunBoonAddress(
     optionKey,
   });
 }
+export function createEchoLastRewardAddress(
+  trait: TraitOfferAddress,
+  optionKey: EchoLastRewardAddress['optionKey'],
+): EchoLastRewardAddress {
+  return Object.freeze({
+    kind: 'echoLastReward',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+  });
+}
 export function createLevelResolutionAddress(
   ownerAddress: TraitOfferOwnerAddress,
   acquisitionRole: string,
@@ -773,6 +793,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'circeResolution':
     case 'echoPomTarget':
     case 'echoLastRunBoon':
+    case 'echoLastReward':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
     case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);

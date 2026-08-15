@@ -81,7 +81,9 @@ export type TraitFindingCode =
   | 'echoPomNoTargetUnavailable'
   | 'echoPomTargetUnavailable'
   | 'echoLastRunBoonMissing'
-  | 'echoLastRunBoonOptionUnavailable';
+  | 'echoLastRunBoonOptionUnavailable'
+  | 'echoLastRewardChildMissing'
+  | 'echoLastRewardChildUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

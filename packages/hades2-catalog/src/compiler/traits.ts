@@ -132,7 +132,7 @@ function normalizeSelectedDisposition(
       kind,
       effect: closedValue(
         value.effect,
-        ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon'] as const,
+        ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon', 'lastReward'] as const,
         `${path}.effect`,
       ),
     });

@@ -30,6 +30,8 @@ import {
   type CirceResolutionAddress,
   type EchoPomTargetAddress,
   type EchoLastRunBoonAddress,
+  type EchoLastRewardAddress,
+  type AuthoredEchoLastRewardAcquisition,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
@@ -229,6 +231,7 @@ export interface WorkspaceTraitOfferControl {
   /** Present only for the currently selected Echo Pom row. */
   readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
+  readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
@@ -265,6 +268,13 @@ export interface WorkspaceEchoLastRunBoonControl {
   readonly value?: AuthoredEchoLastRunBoonOffer;
 }
 
+export interface WorkspaceEchoLastRewardControl {
+  readonly address: EchoLastRewardAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly value?: AuthoredEchoLastRewardAcquisition;
+}
+
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -285,6 +295,7 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
+  readonly echoLastReward?: WorkspaceEchoLastRewardInteraction;
 }
 
 export interface WorkspaceCirceResolutionDomain {
@@ -347,6 +358,29 @@ export interface WorkspaceEchoLastRunBoonInteraction {
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoLastRunBoonDomain | undefined;
+  };
+}
+
+export interface WorkspaceEchoLastRewardDomain {
+  readonly rewardType: string;
+  readonly rewardLabel: string;
+  readonly defaultValue: AuthoredEchoLastRewardAcquisition;
+  readonly goldSupported: boolean;
+  readonly traitOptionDomains: readonly TraitOptionDomainProjection[];
+  readonly traitRarityEditable: boolean;
+  readonly nextTraitOffer?: AuthoredTraitOfferTraits;
+  readonly levelTargetChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly emptyLevelTargetAllowed: boolean;
+}
+
+export interface WorkspaceEchoLastRewardInteraction {
+  readonly control: WorkspaceEchoLastRewardControl;
+  readonly intentFor: (
+    offer: AuthoredTraitOfferTraits,
+    value: AuthoredEchoLastRewardAcquisition,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceEchoLastRewardDomain | undefined;
   };
 }
 

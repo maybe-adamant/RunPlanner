@@ -5,6 +5,7 @@ import {
   type AuthoredTraitOfferTraits,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
+  type AuthoredEchoLastRewardAcquisition,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -22,6 +23,7 @@ import {
   type WorkspaceCirceResolutionDomain,
   type WorkspaceEchoPomTargetDomain,
   type WorkspaceEchoLastRunBoonDomain,
+  type WorkspaceEchoLastRewardDomain,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -74,7 +76,9 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
         (option) =>
           `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}:${
             'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
-          }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}`,
+          }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
+            'echoLastReward' in option ? JSON.stringify(option.echoLastReward) : ''
+          }`,
       )
       .join(','),
     interaction.value.selectedOptionKey,
@@ -255,6 +259,227 @@ function EchoLastRunBoonEditor({
           Add outcome
         </button>
       )}
+    </fieldset>
+  );
+}
+
+function EchoLastRewardEditor({
+  domain,
+  value,
+  onSelect,
+}: {
+  readonly domain: WorkspaceEchoLastRewardDomain;
+  readonly value?: AuthoredEchoLastRewardAcquisition;
+  readonly onSelect: (value: AuthoredEchoLastRewardAcquisition) => void;
+}) {
+  if (value === undefined) {
+    return (
+      <fieldset className="trait-circe-resolution">
+        <legend>Reward Reward Reward replay</legend>
+        <p>Latest replayable source: {domain.rewardLabel}</p>
+        <button onClick={() => onSelect(domain.defaultValue)} type="button">
+          Create replay decisions
+        </button>
+      </fieldset>
+    );
+  }
+  const traitOffer = value.traitOffer?.kind === 'traits' ? value.traitOffer : undefined;
+  const level = value.levelResolution;
+  const updateTraitOffer = (next: AuthoredTraitOfferTraits): void =>
+    onSelect(Object.freeze({ ...value, traitOffer: next }));
+  return (
+    <fieldset className="trait-circe-resolution">
+      <legend>Reward Reward Reward replay</legend>
+      <p>Recreated source: {domain.rewardLabel}</p>
+      <label>
+        Conversion
+        <select
+          aria-label="Reward Reward Reward conversion"
+          onChange={(event) =>
+            onSelect(
+              Object.freeze({
+                ...value,
+                conversion: event.target.value as 'normal' | 'gold',
+              }),
+            )
+          }
+          value={value.conversion}
+        >
+          <option value="normal">Acquire reward</option>
+          {domain.goldSupported || value.conversion === 'gold' ? (
+            <option disabled={!domain.goldSupported} value="gold">
+              Convert to Gold
+            </option>
+          ) : null}
+        </select>
+      </label>
+      {traitOffer === undefined ? null : (
+        <fieldset>
+          <legend>Fresh reward offer</legend>
+          {traitOffer.options.map((traitOption, index) => {
+            const optionKey = OPTION_KEYS[index]!;
+            const optionDomain = domain.traitOptionDomains[index];
+            const traitPicker = optionDomain?.traitPicker ?? emptyTraitPicker;
+            const rarityPicker =
+              optionDomain?.rarityPickerFor(traitOption.traitKey) ?? emptyRarityPicker;
+            const targetPicker = optionDomain?.targetPicker ?? emptyTargetPicker;
+            return (
+              <div key={optionKey}>
+                <ContextualPicker
+                  ariaLabel={`Replayed ${optionKey} trait`}
+                  id={`echo-replay-${domain.rewardType}-${optionKey}-trait`}
+                  label="Trait"
+                  model={traitPicker}
+                  onSelect={(traitKey) => {
+                    const preferred = optionDomain?.preferredOptionFor(traitKey);
+                    if (preferred !== undefined)
+                      updateTraitOffer(replaceOption(traitOffer, index, preferred));
+                  }}
+                  placeholder="Choose a trait"
+                  triggerLabel={traitOption.traitKey}
+                />
+                {!domain.traitRarityEditable ? null : (
+                  <ContextualPicker
+                    ariaLabel={`Replayed ${optionKey} rarity`}
+                    id={`echo-replay-${domain.rewardType}-${optionKey}-rarity`}
+                    label="Rarity"
+                    model={rarityPicker}
+                    onSelect={(rarity) =>
+                      updateTraitOffer(replaceOption(traitOffer, index, { ...traitOption, rarity }))
+                    }
+                    placeholder="Choose a rarity"
+                    {...(traitOption.rarity === undefined
+                      ? {}
+                      : { triggerLabel: rarityLabel(traitOption.rarity) })}
+                  />
+                )}
+                {optionDomain?.targetPicker === undefined ? null : (
+                  <ContextualPicker
+                    ariaLabel={`Replayed ${optionKey} acquisition target`}
+                    id={`echo-replay-${domain.rewardType}-${optionKey}-target`}
+                    label="Target"
+                    model={targetPicker}
+                    onSelect={(targetTraitKey) =>
+                      updateTraitOffer(
+                        replaceOption(traitOffer, index, { ...traitOption, targetTraitKey }),
+                      )
+                    }
+                    placeholder="Choose an equipped trait"
+                    {...(traitOption.targetTraitKey === undefined
+                      ? {}
+                      : { triggerLabel: traitOption.targetTraitKey })}
+                  />
+                )}
+                <label>
+                  <input
+                    checked={traitOffer.selectedOptionKey === optionKey}
+                    name={`echo-replay-${domain.rewardType}-selected`}
+                    onChange={() =>
+                      updateTraitOffer(
+                        Object.freeze({ ...traitOffer, selectedOptionKey: optionKey }),
+                      )
+                    }
+                    type="radio"
+                  />
+                  Selected
+                </label>
+              </div>
+            );
+          })}
+          {domain.nextTraitOffer === undefined ? null : (
+            <button onClick={() => updateTraitOffer(domain.nextTraitOffer!)} type="button">
+              Next fresh offer
+            </button>
+          )}
+        </fieldset>
+      )}
+      {level?.kind === 'choice' ? (
+        <fieldset>
+          <legend>Pom choices</legend>
+          {domain.levelTargetChoices.map((choice) => {
+            const checked = level.offeredTraitKeys.includes(choice.value);
+            return (
+              <label key={choice.value}>
+                <input
+                  checked={checked}
+                  onChange={() => {
+                    const offeredTraitKeys = checked
+                      ? level.offeredTraitKeys.filter((key) => key !== choice.value)
+                      : [...level.offeredTraitKeys, choice.value].slice(0, 3);
+                    onSelect(
+                      Object.freeze({
+                        ...value,
+                        levelResolution: Object.freeze({
+                          kind: 'choice' as const,
+                          offeredTraitKeys: Object.freeze(offeredTraitKeys),
+                          selectedTraitKey: offeredTraitKeys.includes(level.selectedTraitKey ?? '')
+                            ? level.selectedTraitKey
+                            : (offeredTraitKeys[0] ?? null),
+                        }),
+                      }),
+                    );
+                  }}
+                  type="checkbox"
+                />
+                {choice.label}
+              </label>
+            );
+          })}
+          <select
+            aria-label="Reward Reward Reward Pom selection"
+            onChange={(event) =>
+              onSelect(
+                Object.freeze({
+                  ...value,
+                  levelResolution: Object.freeze({
+                    ...level,
+                    selectedTraitKey: event.target.value === '' ? null : event.target.value,
+                  }),
+                }),
+              )
+            }
+            value={level.selectedTraitKey ?? ''}
+          >
+            <option value="">Choose a Pom target</option>
+            {level.offeredTraitKeys.map((traitKey) => (
+              <option key={traitKey} value={traitKey}>
+                {domain.levelTargetChoices.find((choice) => choice.value === traitKey)?.label ??
+                  traitKey}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      ) : level?.kind === 'random' ? (
+        <label>
+          Random Pom target
+          <select
+            aria-label="Reward Reward Reward random Pom target"
+            onChange={(event) =>
+              onSelect(
+                Object.freeze({
+                  ...value,
+                  levelResolution: Object.freeze({
+                    kind: 'random' as const,
+                    targetTraitKey: event.target.value === '' ? null : event.target.value,
+                  }),
+                }),
+              )
+            }
+            value={level.targetTraitKey ?? ''}
+          >
+            {domain.emptyLevelTargetAllowed ? <option value="">No eligible target</option> : null}
+            {!domain.emptyLevelTargetAllowed ? <option value="">Choose a target</option> : null}
+            {domain.levelTargetChoices.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <button onClick={() => onSelect(domain.defaultValue)} type="button">
+        Reset replay decisions
+      </button>
     </fieldset>
   );
 }
@@ -443,6 +668,20 @@ function TraitOfferOptionEditor({
     if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
   }, [echoLastRunController, echoLastRunLoadable]);
   const echoLastRunDomain = echoLastRunLoaded.result;
+  const echoLastReward = loadable.echoLastReward;
+  const echoLastRewardLoadable = useMemo(
+    () => echoLastReward?.forOffer(value),
+    [echoLastReward, value],
+  );
+  const echoLastRewardController = useWorkspaceInteractionController<
+    WorkspaceEchoLastRewardDomain | undefined
+  >();
+  const echoLastRewardLoaded = echoLastRewardController.observe(echoLastRewardLoadable);
+  useEffect(() => {
+    if (echoLastRewardLoadable !== undefined)
+      echoLastRewardController.activate(echoLastRewardLoadable);
+  }, [echoLastRewardController, echoLastRewardLoadable]);
+  const echoLastRewardDomain = echoLastRewardLoaded.result;
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -541,6 +780,15 @@ function TraitOfferOptionEditor({
           {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
           onSelect={(child) =>
             onUpdate(replaceOption(value, index, { ...option, echoLastRunBoon: child }))
+          }
+        />
+      )}
+      {echoLastReward === undefined || echoLastRewardDomain === undefined ? null : (
+        <EchoLastRewardEditor
+          domain={echoLastRewardDomain}
+          {...(option.echoLastReward === undefined ? {} : { value: option.echoLastReward })}
+          onSelect={(child) =>
+            onUpdate(replaceOption(value, index, { ...option, echoLastReward: child }))
           }
         />
       )}

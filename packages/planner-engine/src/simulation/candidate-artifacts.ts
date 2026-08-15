@@ -16,6 +16,7 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../authored-project/traits';
 import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
+import { createDefaultEchoLastRewardAcquisition } from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
   createEmptyRewardProducerCandidateArtifacts,
@@ -118,6 +119,16 @@ export interface TraitOfferCandidateCapability {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => readonly (readonly import('./traits').EchoLastRunBoonOutcome[])[];
+  /** Branch-correlated exact replay descriptors and declaration-owned initial children. */
+  readonly echoLastReward: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => readonly {
+    readonly recreation: NonNullable<
+      import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
+    >;
+    readonly defaultValue: import('../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+  }[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -605,6 +616,67 @@ export function createTraitOfferCandidateArtifacts(
                   context.before,
                   traitOfferCandidateContext(context.context, value),
                 ),
+              ];
+            }),
+          ),
+        echoLastReward: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              if (value.kind === 'fallbackGold') return [];
+              const option = value.options[optionIndex(optionKey)];
+              const disposition =
+                option === undefined
+                  ? undefined
+                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              const recreation = context.context.echoLastRewardRecreation;
+              if (
+                disposition?.kind !== 'echo' ||
+                disposition.effect !== 'lastReward' ||
+                recreation === undefined
+              )
+                return [];
+              const declaredDefault = createDefaultEchoLastRewardAcquisition(catalog, recreation, {
+                weaponKey: context.context.weaponKey ?? '',
+                aspectKey: context.context.aspectKey ?? '',
+              });
+              const freshTraitOffer =
+                declaredDefault.traitOffer?.kind === 'traits'
+                  ? traitOfferStartingDraft(
+                      catalog,
+                      declaredDefault.traitOffer.giverKey,
+                      context.before,
+                      Object.freeze({
+                        ...context.context,
+                        resolvedProviderKey: declaredDefault.traitOffer.giverKey,
+                      }),
+                    )
+                  : declaredDefault.traitOffer;
+              const levelResolution = declaredDefault.levelResolution;
+              const eligibleLevelTargets = pomEligibleTargetKeys(catalog, context.before);
+              const reachedLevelResolution =
+                levelResolution?.kind === 'choice'
+                  ? Object.freeze({
+                      kind: 'choice' as const,
+                      offeredTraitKeys: Object.freeze(eligibleLevelTargets.slice(0, 3)),
+                      selectedTraitKey: eligibleLevelTargets[0] ?? null,
+                    })
+                  : levelResolution?.kind === 'random'
+                    ? Object.freeze({
+                        kind: 'random' as const,
+                        targetTraitKey: eligibleLevelTargets[0] ?? null,
+                      })
+                    : undefined;
+              return [
+                Object.freeze({
+                  recreation,
+                  defaultValue: Object.freeze({
+                    ...declaredDefault,
+                    ...(freshTraitOffer === undefined ? {} : { traitOffer: freshTraitOffer }),
+                    ...(reachedLevelResolution === undefined
+                      ? {}
+                      : { levelResolution: reachedLevelResolution }),
+                  }),
+                }),
               ];
             }),
           ),

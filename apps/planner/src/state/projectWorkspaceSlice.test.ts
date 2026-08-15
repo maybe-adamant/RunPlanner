@@ -253,6 +253,57 @@ describe('project workspace application state', () => {
     expect(selectPresentProject(store.getState())).toBe(edited);
   });
 
+  it('undoes and redoes one atomic Echo last-reward child edit with its outer selection', () => {
+    const { store } = createStore();
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = createGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    store.dispatch(authoredProjectReplaced(project));
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const before = selectPresentProject(store.getState());
+    const bridge = before.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const offer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (offer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const editedOffer = Object.freeze({
+      ...offer,
+      selectedOptionKey: 'option1' as const,
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'EchoLastReward',
+          echoLastReward: Object.freeze({ conversion: 'normal' as const }),
+        }),
+        offer.options[1],
+        offer.options[2],
+      ]) as typeof offer.options,
+    });
+    store.dispatch(
+      authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
+    );
+    const edited = selectPresentProject(store.getState());
+    expect(edited).not.toBe(before);
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(store.getState())).toBe(before);
+    store.dispatch(authoredProjectRedoRequested());
+    expect(selectPresentProject(store.getState())).toBe(edited);
+  });
+
   it('retains the coherent workspace without resimulation for semantic and history no-ops', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const original = store.getState().projectWorkspace;

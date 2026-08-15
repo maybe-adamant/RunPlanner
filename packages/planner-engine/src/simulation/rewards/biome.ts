@@ -4,6 +4,9 @@ import {
   createGorgonPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
+  createEchoLastRewardAddress,
+  createAcquisitionSiteAddress,
+  createAcquisitionEntryAddress,
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
@@ -16,6 +19,8 @@ import {
 } from '../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
 import {
+  createDefaultEchoLastRewardAcquisition,
+  optionIndex,
   createDefaultPickupRewardState,
   materializeGorgonAthenaOffer,
   selectedPickupProducer,
@@ -3404,6 +3409,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             phaseOwner,
             event.phaseKey,
           );
+          const preEchoBranches = branches;
           const settlements = branches.map((branch) =>
             settleEncounterTraitOffer(
               catalog,
@@ -3419,6 +3425,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 event.sequence,
                 'localRoomLifecycle',
               ),
+              undefined,
+              'selection',
+              undefined,
+              routeLoadout,
             ),
           );
           for (const settlement of settlements) {
@@ -3434,7 +3444,159 @@ export function evaluateBiomeRewardsAssemblyInternal(
               });
             else current.branches.push(checkpoint.branch);
           }
-          branches = Object.freeze(settlements.map((settlement) => settlement.branch));
+          const selectedEchoOption =
+            authoredEncounterOffer.kind === 'traits'
+              ? authoredEncounterOffer.options[
+                  optionIndex(authoredEncounterOffer.selectedOptionKey)
+                ]
+              : undefined;
+          const selectedEchoDisposition =
+            selectedEchoOption === undefined
+              ? undefined
+              : catalog.traits.byKey[selectedEchoOption.traitKey]?.selectedDisposition;
+          if (
+            authoredEncounterOffer.kind === 'traits' &&
+            selectedEchoOption !== undefined &&
+            selectedEchoDisposition?.kind === 'echo' &&
+            selectedEchoDisposition.effect === 'lastReward'
+          ) {
+            const replayOwner = createEchoLastRewardAddress(
+              createTraitOfferAddress(phaseAddress, 'selection'),
+              authoredEncounterOffer.selectedOptionKey,
+            );
+            const site = createAcquisitionSiteAddress(replayOwner, 'echoReplay');
+            const entry = createAcquisitionEntryAddress(site, 'recreatedReward');
+            const child = selectedEchoOption.echoLastReward;
+            const settledEchoBranches: RewardBranchState[] = [];
+            for (const [index, outer] of settlements.entries()) {
+              const beforeOuter = preEchoBranches[index];
+              if (beforeOuter === undefined) continue;
+              const recreation = beforeOuter.history.lastRewardRecreation;
+              const outerAcquired =
+                outer.branch.traitHistory?.equippedTraits.EchoLastReward !== undefined &&
+                beforeOuter.traitHistory?.equippedTraits.EchoLastReward === undefined;
+              if (!outerAcquired || recreation === undefined) {
+                settledEchoBranches.push(outer.branch);
+                continue;
+              }
+              const defaultChild = createDefaultEchoLastRewardAcquisition(
+                catalog,
+                recreation,
+                routeLoadout,
+              );
+              const expectedTrait = defaultChild.traitOffer !== undefined;
+              const expectedLevel = defaultChild.levelResolution !== undefined;
+              const childApplicable =
+                child !== undefined &&
+                (child.traitOffer !== undefined) === expectedTrait &&
+                (child.levelResolution !== undefined) === expectedLevel;
+              if (!childApplicable) {
+                const finding = Object.freeze({
+                  code:
+                    child === undefined
+                      ? ('echoLastRewardChildMissing' as const)
+                      : ('echoLastRewardChildUnavailable' as const),
+                  severity: 'error' as const,
+                  phase: 'rewardGeneration' as const,
+                  origin: replayOwner,
+                  evidence: Object.freeze({
+                    rewardType: recreation.offer.rewardType,
+                    expectedTrait,
+                    expectedLevel,
+                  }),
+                });
+                addRewardFinding(
+                  findings,
+                  finding,
+                  ownerRegion(replayOwner),
+                  rewardFindingChronologyForRoom(
+                    snapshot,
+                    room.origin,
+                    event.sequence,
+                    'localRoomLifecycle',
+                  ),
+                );
+                const key = semanticAddressKey(replayOwner);
+                const current = traitChildSettlementBuilders.get(key);
+                if (current === undefined)
+                  traitChildSettlementBuilders.set(key, {
+                    occurrenceOwner: room.origin,
+                    branches: [outer.branch],
+                    runStateSnapshots: new Map(),
+                  });
+                else current.branches.push(outer.branch);
+                settledEchoBranches.push(outer.branch);
+                continue;
+              }
+              const replay = settleOwnedAcquisitionSite(
+                catalog,
+                [outer.branch],
+                {
+                  siteOwner: replayOwner,
+                  pointKey: 'echoReplay',
+                  entryKey: 'recreatedReward',
+                  source: Object.freeze({
+                    origin: entry,
+                    offer: recreation.offer,
+                    producerLifecycleKey: recreation.producerLifecycleKey,
+                    instanceProvenance: 'free',
+                    ...(child!.traitOffer === undefined
+                      ? {}
+                      : {
+                          traitOffersByAcquisitionRole: Object.freeze({
+                            self: child!.traitOffer,
+                          }),
+                        }),
+                    ...(child!.levelResolution === undefined
+                      ? {}
+                      : {
+                          levelResolutionsByAcquisitionRole: Object.freeze({
+                            self: child!.levelResolution,
+                          }),
+                        }),
+                    conversionByAcquisitionRole: Object.freeze({ self: child!.conversion }),
+                    traitContext: Object.freeze({
+                      weaponKey: routeLoadout.weaponKey,
+                      aspectKey: routeLoadout.aspectKey,
+                    }),
+                  }),
+                  historySequence: event.sequence,
+                },
+                (branchHistory) =>
+                  rewardFacts(
+                    catalog,
+                    room,
+                    room,
+                    declaration,
+                    roomView.preOutgoing ?? roomView.entry,
+                    branchHistory,
+                    enteredBiomeCount,
+                  ),
+                findings,
+                undefined,
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+              );
+              recordAcquisitionRoleFrontiers(replay.roleFrontiers);
+              if (replay.branches.length === 0) {
+                const key = semanticAddressKey(replayOwner);
+                const current = traitChildSettlementBuilders.get(key);
+                if (current === undefined)
+                  traitChildSettlementBuilders.set(key, {
+                    occurrenceOwner: room.origin,
+                    branches: [outer.branch],
+                    runStateSnapshots: new Map(),
+                  });
+                else current.branches.push(outer.branch);
+                settledEchoBranches.push(outer.branch);
+              } else settledEchoBranches.push(...replay.branches);
+            }
+            branches = mergeEquivalentRewardBranches(settledEchoBranches);
+          } else branches = Object.freeze(settlements.map((settlement) => settlement.branch));
         }
         const matchingRewards =
           room.kind === 'authored'

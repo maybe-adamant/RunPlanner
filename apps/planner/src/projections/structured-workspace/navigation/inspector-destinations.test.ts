@@ -1,7 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createEchoLastRewardAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -10,14 +13,22 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
+  type AuthoredEchoLastRewardAcquisition,
+  type AuthoredTraitOfferTraits,
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
+import {
+  createGoldenFGHProject,
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenHBiome,
+} from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
   appendNEntry,
@@ -94,7 +105,173 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
   });
 }
 
+function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
+  readonly document: ProjectDocument;
+  readonly replay: ReturnType<typeof createEchoLastRewardAddress>;
+  readonly trait: ReturnType<typeof createTraitOfferAddress>;
+} {
+  const bridgeId = createOccurrenceId('golden-h-bridge01');
+  let document = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-combat09'),
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  const trait = createTraitOfferAddress(
+    createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: bridgeId },
+      'Encounter',
+    ),
+    'selection',
+  );
+  const bridge = document.routes[0]?.biomes
+    .find((candidate) => candidate.biomeKey === 'H')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
+  const current = bridge?.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+  if (current?.kind !== 'traits') throw new Error('Echo offer is missing');
+  const value = Object.freeze({
+    ...current,
+    options: Object.freeze([
+      Object.freeze({
+        traitKey: 'EchoLastReward',
+        ...(child === undefined ? {} : { echoLastReward: child }),
+      }),
+      current.options[1],
+      current.options[2],
+    ]) as AuthoredTraitOfferTraits['options'],
+    selectedOptionKey: 'option1' as const,
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait,
+    value,
+  });
+  return Object.freeze({
+    document,
+    replay: createEchoLastRewardAddress(trait, 'option1'),
+    trait,
+  });
+}
+
 describe('workspace inspector destinations', () => {
+  it('routes a real missing Echo replay finding to its containing trait inspector', () => {
+    const configured = echoReplayProject();
+    const assembly = simulateProjectAssembly(catalog, configured.document);
+    const finding = assembly.evaluation.findings.find(
+      (candidate) => candidate.code === 'echoLastRewardChildMissing',
+    );
+    expect(finding?.origin).toEqual(configured.replay);
+
+    const workspace = structuredWorkspace.project(assembly);
+    const replayDestination = destination(workspace, configured.replay);
+    expect(replayDestination).toMatchObject({
+      ownerAddress: configured.replay,
+      focusAddress: configured.replay,
+      traitDialogTarget: configured.trait,
+      inspectorSubject: { kind: 'node', nodeKey: replayDestination.nodeKey },
+    });
+    expect(replayDestination.selectedRailKey).toBeDefined();
+  });
+
+  it('redirects only reached generated Echo replay findings to the same trait inspector', () => {
+    const configured = echoReplayProject(
+      Object.freeze({
+        conversion: 'normal',
+        traitOffer: Object.freeze({
+          kind: 'traits',
+          giverKey: 'WeaponUpgrade',
+          options: Object.freeze([
+            Object.freeze({ traitKey: 'AxeSpinSpeedTrait' }),
+            Object.freeze({ traitKey: 'AxeChargedSpecialTrait' }),
+            Object.freeze({ traitKey: 'AxeAttackRecoveryTrait' }),
+          ]) as AuthoredTraitOfferTraits['options'],
+          selectedOptionKey: 'option1',
+          rarificationActions: Object.freeze([]),
+        }),
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, configured.document);
+    const findings = assembly.evaluation.findings.filter(
+      (candidate) => candidate.code === 'wrongHammerLoadout',
+    );
+    expect(findings).toHaveLength(3);
+    expect(
+      findings.every(
+        (finding) =>
+          finding.origin.kind === 'traitOffer' &&
+          finding.origin.owner.kind === 'acquisitionEntry' &&
+          finding.origin.owner.entryKey === 'recreatedReward' &&
+          finding.origin.owner.site.owner.kind === 'echoLastReward',
+      ),
+    ).toBe(true);
+
+    const workspace = structuredWorkspace.project(assembly);
+    const replayDestination = destination(workspace, configured.replay);
+    for (const finding of findings) {
+      expect(destination(workspace, finding.origin)).toMatchObject({
+        ownerAddress: finding.origin,
+        focusAddress: configured.replay,
+        focusKey: semanticAddressKey(configured.replay),
+        nodeKey: replayDestination.nodeKey,
+        selectedRailKey: replayDestination.selectedRailKey,
+        traitDialogTarget: configured.trait,
+        inspectorSubject: replayDestination.inspectorSubject,
+      });
+    }
+  });
+
+  it('routes a real invalid Echo replay conversion role to the same trait inspector', () => {
+    const configured = echoReplayProject(
+      Object.freeze({
+        conversion: 'gold',
+        traitOffer: Object.freeze({
+          kind: 'traits',
+          giverKey: 'WeaponUpgrade',
+          options: Object.freeze([
+            Object.freeze({ traitKey: 'StaffAttackRecoveryTrait' }),
+            Object.freeze({ traitKey: 'StaffPowershotTrait' }),
+            Object.freeze({ traitKey: 'StaffDoubleAttackTrait' }),
+          ]) as AuthoredTraitOfferTraits['options'],
+          selectedOptionKey: 'option1',
+          rarificationActions: Object.freeze([]),
+        }),
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, configured.document);
+    const finding = assembly.evaluation.findings.find(
+      (candidate) => candidate.code === 'timePieceConversionUnavailable',
+    );
+    expect(finding?.origin).toMatchObject({
+      kind: 'acquisitionRole',
+      acquisitionRole: 'self',
+      owner: {
+        kind: 'acquisitionEntry',
+        entryKey: 'recreatedReward',
+        site: {
+          kind: 'acquisitionSite',
+          pointKey: 'echoReplay',
+          owner: configured.replay,
+        },
+      },
+    });
+    if (finding === undefined) throw new Error('Echo replay conversion finding is missing');
+
+    const workspace = structuredWorkspace.project(assembly);
+    const replayDestination = destination(workspace, configured.replay);
+    expect(destination(workspace, finding.origin)).toMatchObject({
+      ownerAddress: finding.origin,
+      focusAddress: configured.replay,
+      focusKey: semanticAddressKey(configured.replay),
+      nodeKey: replayDestination.nodeKey,
+      selectedRailKey: replayDestination.selectedRailKey,
+      traitDialogTarget: configured.trait,
+      inspectorSubject: replayDestination.inspectorSubject,
+    });
+  });
+
   it('routes nested trait owners to their containing Fields, Ephyra, Ship, and Shop workbenches', () => {
     for (const document of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
       const workspace = project(document);

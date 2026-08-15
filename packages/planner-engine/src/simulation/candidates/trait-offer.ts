@@ -125,6 +125,22 @@ export interface EvaluatedEchoLastRunBoonDomain {
 export type EchoLastRunBoonDomainEvaluation =
   CandidateContextUnavailable | EvaluatedEchoLastRunBoonDomain;
 
+export interface EchoLastRewardDomainQuery {
+  readonly kind: 'echoLastRewardDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+}
+export interface EvaluatedEchoLastRewardDomain {
+  readonly kind: 'echoLastRewardDomain';
+  readonly result: {
+    readonly rewardType: string;
+    readonly defaultValue: import('../../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+  };
+}
+export type EchoLastRewardDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedEchoLastRewardDomain;
+
 export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly kind: 'traitAcquisitionTarget';
   readonly result: {
@@ -698,6 +714,30 @@ export function evaluateEchoLastRunBoonDomain(
       candidates,
       candidatesByOption,
       ...(appendCandidate === undefined ? {} : { appendCandidate }),
+    }),
+  });
+}
+
+export function evaluateEchoLastRewardDomain(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: EchoLastRewardDomainQuery,
+): EchoLastRewardDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const branches = capability.echoLastReward(query.value, query.optionKey);
+  const first = branches[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const identity = JSON.stringify(first);
+  if (!branches.every((branch) => JSON.stringify(branch) === identity))
+    return unavailableForTraitOffer(evaluation, query.trait);
+  return Object.freeze({
+    kind: 'echoLastRewardDomain',
+    result: Object.freeze({
+      rewardType: first.recreation.offer.rewardType,
+      defaultValue: first.defaultValue,
     }),
   });
 }

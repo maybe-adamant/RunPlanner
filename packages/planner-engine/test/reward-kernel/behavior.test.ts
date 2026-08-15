@@ -197,6 +197,37 @@ describe('source support', () => {
   });
 });
 
+describe('Echo last-reward acquisition history', () => {
+  it('retains the latest eligible exact source while ignoring nonparticipating pickups and Blind Box identity', () => {
+    let history = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
+      kind: 'resource',
+      gameName: 'GiftDrop',
+    });
+    expect(history.lastRewardRecreation).toEqual({
+      offer: { rewardType: 'GiftDrop' },
+      producerLifecycleKey: 'EchoLastReward',
+    });
+
+    history = applyConcreteAcquisition(rewardKernelCatalog, history, {
+      kind: 'consumable',
+      gameName: 'BlindBoxLoot',
+    });
+    expect(history.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
+
+    history = applyConcreteAcquisition(rewardKernelCatalog, history, {
+      kind: 'loot',
+      gameName: 'ZeusUpgrade',
+    });
+    expect(history.lastRewardRecreation?.offer.rewardType).toBe('ZeusUpgrade');
+
+    history = applyConcreteAcquisition(rewardKernelCatalog, history, {
+      kind: 'consumable',
+      gameName: 'HealBigDrop',
+    });
+    expect(history.lastRewardRecreation?.offer.rewardType).toBe('ZeusUpgrade');
+  });
+});
+
 describe('locally valid complete offer domains', () => {
   it('enumerates payload-free, one-source, and ordered distinct-pair offers in declaration order', () => {
     expect(locallyValidRewardOffers(rewardKernelCatalog, 'MaxHealthDrop')).toEqual([
@@ -885,13 +916,18 @@ describe('ordered shop transitions', () => {
       baseFacts,
     );
     expect(witnesses).not.toHaveLength(0);
+    const rejectedHistory = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      historyFromSources(initialSources),
+      { kind: 'resource', gameName: 'GiftDrop' },
+    );
     const rejectedOrder = simulateShopPurchases(
       rewardKernelCatalog,
       profile,
       authored,
       witnesses[0]!,
       [0, 1],
-      historyFromSources(initialSources),
+      rejectedHistory,
       baseFacts,
     );
     const results = simulateShopPurchases(
@@ -904,6 +940,7 @@ describe('ordered shop transitions', () => {
       baseFacts,
     );
     expect(rejectedOrder).toEqual([]);
+    expect(rejectedHistory.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
     expect(results).toHaveLength(1);
     expect(results[0]?.entryOrder).toEqual([1, 0]);
     expect(results[0]?.acquisitions.map((acquisition) => acquisition.event.role)).toEqual([

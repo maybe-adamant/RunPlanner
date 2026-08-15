@@ -6,7 +6,13 @@ export type AcquisitionKind = 'consumable' | 'loot' | 'resource';
 export type HistoryProjectionKey = 'consumableAndUse' | 'lootAndUse';
 export type OfferProjectionKey = 'devotionSpacing' | 'none';
 export type ProducerLifecyclePointKey =
-  'afterCombat' | 'afterUnwrap' | 'beforeCombat' | 'purchase' | 'roomRewardPickup' | 'roomExit';
+  | 'afterCombat'
+  | 'afterUnwrap'
+  | 'beforeCombat'
+  | 'echoReplay'
+  | 'purchase'
+  | 'roomRewardPickup'
+  | 'roomExit';
 export type SourceSupportPolicyKey = 'devotionAcquiredPair' | 'ordinaryBoonPeer' | 'ordinaryNoPeer';
 
 export type LevelResolutionEffect =
@@ -53,6 +59,11 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly historyProjection: HistoryProjectionKey;
   /** Source GoldConversionEligible capability, independent of the reward category. */
   readonly goldConversionEligible: boolean;
+  /** Exact source-backed reconstruction used when this settled pickup becomes Echo's LastReward. */
+  readonly lastRewardRecreation?: {
+    readonly offer: ResolvedRewardOffer;
+    readonly producerLifecycleKey: 'EchoLastReward';
+  };
   readonly levelResolutionEffect?: LevelResolutionEffect;
   /** A concrete pickup can contribute base elements without becoming a trait. */
   readonly elementContributions?: Readonly<
@@ -191,6 +202,8 @@ export interface RewardHistoryState {
   readonly lootTypeHistory: Readonly<Record<string, number>>;
   readonly lootBiomeRecord: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
+  /** Latest actually-settled source whose effective LastRewardEligible value is true. */
+  readonly lastRewardRecreation?: ConcreteAcquisitionDeclaration['lastRewardRecreation'];
   /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */
   readonly traitFacts: TraitDerivedFacts;
   readonly lastDevotionDepth?: number;

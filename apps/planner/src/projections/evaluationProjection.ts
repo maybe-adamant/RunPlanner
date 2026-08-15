@@ -308,6 +308,14 @@ const findingCopy = {
     title: 'Boon Boon Boon outcome is unavailable',
     description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
   },
+  echoLastRewardChildMissing: {
+    title: 'Create the Reward Reward Reward replay',
+    description: 'Create the acquisition decisions required by the latest replayable source.',
+  },
+  echoLastRewardChildUnavailable: {
+    title: 'Reward Reward Reward replay is stale',
+    description: 'Reset or repair the acquisition decisions for the latest replayable source.',
+  },
   fullTraitOfferWidthRequired: {
     title: 'Three choices are required',
     description: 'This offer still has enough ordinary traits to fill all three choices.',
@@ -683,6 +691,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Pom Pom Pom target`;
     case 'echoLastRunBoon':
       return `${biomeLabel} · Boon Boon Boon outcomes`;
+    case 'echoLastReward':
+      return `${biomeLabel} · Reward Reward Reward replay`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
     case 'completionRoom':

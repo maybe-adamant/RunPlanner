@@ -279,6 +279,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       lootTypeHistory: orderedRecord(history.lootTypeHistory),
       lootBiomeRecord: orderedRecord(history.lootBiomeRecord),
       consumableRecord: orderedRecord(history.consumableRecord),
+      lastRewardRecreation: history.lastRewardRecreation,
       traitFacts: history.traitFacts,
       lastDevotionDepth: history.lastDevotionDepth,
     },
@@ -728,6 +729,7 @@ export function settleEncounterTraitOffer(
   deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
+  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
 ): EncounterTraitOfferSettlement {
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
   const settledBranch = ((): RewardBranchState => {
@@ -767,8 +769,13 @@ export function settleEncounterTraitOffer(
       origin,
       traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
       traitContext: Object.freeze({
+        ...(loadout === undefined ? {} : loadout),
         manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
         circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
+        echoLastRewardAvailable: branch.history.lastRewardRecreation !== undefined,
+        ...(branch.history.lastRewardRecreation === undefined
+          ? {}
+          : { echoLastRewardRecreation: branch.history.lastRewardRecreation }),
         ...(effectiveDeathDefianceCondition === undefined
           ? {}
           : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
@@ -1091,6 +1098,7 @@ export function processEncounterTraitOffer(
   deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
+  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
 ): RewardBranchState {
   return settleEncounterTraitOffer(
     catalog,
@@ -1104,6 +1112,7 @@ export function processEncounterTraitOffer(
     deathDefianceConditionMet,
     acquisitionRole,
     freshRarityOverride,
+    loadout,
   ).branch;
 }
 

@@ -1,65 +1,84 @@
 import type { RawConcreteAcquisitionDeclaration } from './types';
 
+function lastReward(rewardType: string) {
+  return Object.freeze({
+    lastRewardRecreation: Object.freeze({
+      rewardType,
+      producerLifecycleKey: 'EchoLastReward' as const,
+    }),
+  });
+}
+
 export const acquisitions = [
   {
     gameName: 'AphroditeUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('AphroditeUpgrade'),
   },
   {
     gameName: 'ApolloUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('ApolloUpgrade'),
   },
   {
     gameName: 'AresUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('AresUpgrade'),
   },
   {
     gameName: 'DemeterUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('DemeterUpgrade'),
   },
   {
     gameName: 'HephaestusUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('HephaestusUpgrade'),
   },
   {
     gameName: 'HeraUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('HeraUpgrade'),
   },
   {
     gameName: 'HestiaUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('HestiaUpgrade'),
   },
   {
     gameName: 'PoseidonUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('PoseidonUpgrade'),
   },
   {
     gameName: 'ZeusUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('ZeusUpgrade'),
   },
   {
     gameName: 'HermesUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('HermesUpgrade'),
   },
   {
     gameName: 'StackUpgrade',
@@ -67,6 +86,7 @@ export const acquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 1 },
     goldConversionEligible: true,
+    ...lastReward('StackUpgrade'),
   },
   {
     gameName: 'StackUpgradeBig',
@@ -74,6 +94,7 @@ export const acquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 2 },
     goldConversionEligible: true,
+    ...lastReward('StackUpgradeBig'),
   },
   {
     gameName: 'StackUpgradeTriple',
@@ -81,30 +102,35 @@ export const acquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 3 },
     goldConversionEligible: true,
+    ...lastReward('StackUpgradeTriple'),
   },
   {
     gameName: 'WeaponUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    ...lastReward('WeaponUpgrade'),
   },
   {
     gameName: 'SpellDrop',
     kind: 'loot',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('SpellDrop'),
   },
   {
     gameName: 'MaxHealthDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MaxHealthDrop'),
   },
   {
     gameName: 'MaxHealthDropBig',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MaxHealthDropBig'),
   },
   {
     gameName: 'MaxHealthDropSmall',
@@ -123,12 +149,14 @@ export const acquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MaxManaDrop'),
   },
   {
     gameName: 'MaxManaDropBig',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MaxManaDropBig'),
   },
   {
     gameName: 'MaxManaDropSmall',
@@ -137,11 +165,17 @@ export const acquisitions = [
     goldConversionEligible: true,
   },
   { gameName: 'Currency', kind: 'consumable', historyProjection: 'consumableAndUse' },
-  { gameName: 'RoomMoneyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  {
+    gameName: 'RoomMoneyDrop',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    ...lastReward('RoomMoneyDrop'),
+  },
   {
     gameName: 'RoomMoneyTripleDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    ...lastReward('RoomMoneyTripleDrop'),
   },
   { gameName: 'RoomMoneyTinyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
@@ -149,12 +183,14 @@ export const acquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('TalentDrop'),
   },
   {
     gameName: 'TalentBigDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('TalentBigDrop'),
   },
   {
     gameName: 'MinorTalentDrop',
@@ -208,37 +244,47 @@ export const acquisitions = [
     historyProjection: 'consumableAndUse',
   },
   { gameName: 'InfernalContractBoon', kind: 'loot', historyProjection: 'lootAndUse' },
-  { gameName: 'TrialUpgrade', kind: 'loot', historyProjection: 'lootAndUse' },
+  {
+    gameName: 'TrialUpgrade',
+    kind: 'loot',
+    historyProjection: 'lootAndUse',
+    ...lastReward('TrialUpgrade'),
+  },
   { gameName: 'BlindBoxLoot', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'GiftDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('GiftDrop'),
   },
   {
     gameName: 'MetaCurrencyDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MetaCurrencyDrop'),
   },
   {
     gameName: 'MetaCurrencyBigDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MetaCurrencyBigDrop'),
   },
   {
     gameName: 'MetaCardPointsCommonDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MetaCardPointsCommonDrop'),
   },
   {
     gameName: 'MetaCardPointsCommonBigDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    ...lastReward('MetaCardPointsCommonBigDrop'),
   },
   { gameName: 'WeaponPointsRareDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'CardUpgradePointsDrop', kind: 'resource', historyProjection: 'consumableAndUse' },

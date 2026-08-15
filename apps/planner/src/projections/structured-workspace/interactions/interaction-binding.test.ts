@@ -5,6 +5,7 @@ import {
   createBatchRewardStoreAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
+  createEchoLastRewardAddress,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
@@ -528,6 +529,76 @@ describe('structured workspace interaction binding', () => {
     expect(['ZeusWeaponBoon', 'ApolloWeaponBoon']).not.toContain(
       domain?.appendCandidate?.value.traitKey,
     );
+  });
+
+  it('binds the exact Echo replay owner to existing acquisition candidate products', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = createGoldenFGHIProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const bridge = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const rewardOffer = Object.freeze({
+      ...defaultOffer,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'EchoLastReward' }),
+        defaultOffer.options[1],
+        defaultOffer.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: rewardOffer,
+    });
+
+    const bound = bind(project, 'Underworld', 'H');
+    const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
+    const replay = interaction?.optionDomain(rewardOffer, 'option1').echoLastReward;
+    const replayOwner = createEchoLastRewardAddress(trait, 'option1');
+    expect(replay?.control.address).toEqual(replayOwner);
+    const domain = replay?.forOffer(rewardOffer).load();
+    expect(domain).toMatchObject({
+      rewardType: 'WeaponUpgrade',
+      rewardLabel: 'Hammer',
+      defaultValue: {
+        conversion: 'normal',
+        traitOffer: { kind: 'traits', giverKey: 'WeaponUpgrade' },
+      },
+    });
+    expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(replayOwner))).toBe(
+      true,
+    );
+    if (domain === undefined) throw new Error('Echo replay domain is missing');
+    const intent = replay?.intentFor(rewardOffer, domain.defaultValue).command;
+    expect(intent).toMatchObject({
+      kind: 'ReplaceTraitOffer',
+      trait,
+    });
+    if (intent?.kind !== 'ReplaceTraitOffer' || intent.value.kind !== 'traits')
+      throw new Error('Echo replay intent is malformed');
+    expect(intent.value.options[0]).toEqual({
+      traitKey: 'EchoLastReward',
+      echoLastReward: domain.defaultValue,
+    });
   });
 
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {
