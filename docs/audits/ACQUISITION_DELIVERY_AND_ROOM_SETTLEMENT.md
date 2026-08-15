@@ -3,10 +3,11 @@
 ## Status and scope
 
 **Complete for the game facts needed to canonicalize currently modeled reward
-acquisitions, correct Shop-backed settlement, and model Narcissus pickups.**
-Schema 20 now delivers that boundary. Shrine delivery, Well behavior,
-composite-room delivery additions, Echo, and other dropped-item families remain
-explicitly scoped follow-up work rather than gaps in the current contract.
+acquisitions, correct Shop-backed settlement, model Narcissus pickups, and
+settle Echo's replayed and duplicated acquisitions.** Schema 35 now delivers
+that boundary. Shrine delivery, Well behavior, other composite-room delivery
+additions, and other dropped-item families remain explicitly scoped follow-up
+work rather than gaps in the current contract.
 
 This is a source-backed audit of the boundary between an action that produces
 an item and the later acquisition that changes run history. It was prompted by
@@ -813,7 +814,9 @@ The following remain open for focused follow-up work:
 
 These gaps do not weaken the delivered conclusion: producer selection and
 concrete acquisition are already separate in the game. The first-class ordered
-settlement seam now owns Shop `roomExit` acquisition and Narcissus pickups
-without the historical prototype's nesting. Later Shrine delivery must extend
-that seam while preserving multiple lifecycle checkpoints; it must not move
-every acquisition to one universal end-of-room phase.
+settlement seam now owns Shop `roomExit` acquisition, Narcissus pickups, Echo's
+mandatory last-reward recreation, and Gold Gold Gold's declaration-derived
+supplemental Shop entry without the historical prototype's nesting or a second
+purchase order. Later Shrine delivery must extend that seam while preserving
+multiple lifecycle checkpoints; it must not move every acquisition to one
+universal end-of-room phase.

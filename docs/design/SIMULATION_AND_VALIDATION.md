@@ -397,6 +397,30 @@ therefore produces a Heroic Athena child, while Athena already spawned before a
 same-encounter Cherished reward remains Epic and consumed. No generic effect
 interpreter replaces the trait, acquisition, encounter, or lifecycle folds.
 
+Echo is folded through those same chronological authorities. All eight outer
+identities enter rarityless trait history before their selected disposition is
+applied. Pom mutates one exact greatest-level target or settles a legal no-op;
+Boon directly equips one giver-preserving authored previous-run approximation
+and advances only that resolved source's loot history; Reward recreates the
+latest exact eligible acquisition before outgoing settlement; and Gold remains
+pending solely as its equipped one-use trait until the first eligible World
+Shop purchase creates and settles its immediate free duplicate. Candidate
+evaluation consumes the same pre-decision and settlement frontiers as selected
+simulation, including branch agreement for derived replay children.
+
+Gift snapshots the current keepsake key on its exact outer acquisition. At each
+later biome start the declaration-owned schedule either applies the supported
+rank-I transition or records/retains the appropriate no-op: Fig Leaf applies
+its collapsed `max(existing, 1)` once, Calling Card and Time Piece add two
+charges every biome, Experimental Hammer waits until the captured keepsake is
+no longer current and then consumes one selected-or-exhausted attempt, and all
+other eligible keys are effect-neutral. The keepsake ledger retains every
+successful temporary Hammer as a distinct acquisition-identity-keyed instance;
+qualifying encounter completion decrements all active instances and expires
+only those that reach zero. Branch equivalence includes the captured Gift key,
+replay count, exact replay descriptor, pending Gold trait, and complete Hammer
+collection rather than reconstructing them from presentation state.
+
 Judgment is a repeated transition at each reached Boss
 `encounterCompleted` point. Its selected canonical inactive-card set is
 validated and applied after the Boss and before Postboss or later-biome state;

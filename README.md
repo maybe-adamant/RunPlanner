@@ -54,6 +54,14 @@ source-backed four-rank effect profiles, simulation, findings, and Run State.
 Cherished Heirloom advances the current supported effect on acquisition and
 uses rank IV (`Heroic`) when a supported keepsake is equipped later.
 
+Echo is supported as a player-rarityless eight-choice Story provider. Its
+direct, previous-run-boon approximation, exact last-reward replay, World Shop
+duplication, and captured-keepsake replay effects all use the existing trait,
+reward, acquisition-site, keepsake, candidate, finding, and Run State
+authorities. Gift Gift Gift replays the four supported eligible effects at
+biome start and retains the other eligible keepsakes as effect-neutral captured
+history until their individual effect slices are implemented.
+
 ## Architecture
 
 The repository is split by ownership:
@@ -144,6 +152,8 @@ copied elsewhere.
   [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md).
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
+  [trait-offer pools and dependencies](docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md),
+  [acquisition delivery and room settlement](docs/audits/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md),
   [Arcana and Fear audit](docs/audits/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md),
   [keepsake audit](docs/audits/KEEPSAKE_GAME_DATA_AUDIT.md),
   [Echo Gift Gift Gift keepsake audit](docs/audits/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md),
@@ -163,7 +173,8 @@ copied elsewhere.
   Commit 5a prompt removal, the re-anchor program, and the four Commit 5b
   presentation slices are complete. Campaign B made candidate artifacts
   explicit, Campaign C separated the justified authored-core authorities, and
-  Campaign D retained the coherent ordered history and reward folds. Commit 5c
+  Campaign D retained the coherent ordered history and reward folds. Echo's
+  eight-choice delivery is complete through authored schema 35. Commit 5c
   completed the schema-11 exact Shop purchase order across the engine,
   projection, and UI. The ranked Hub follow-up and manual Shop UX acceptance
   close Phase 7. Phase 8 is complete with the successful `v0.1.0` tagged

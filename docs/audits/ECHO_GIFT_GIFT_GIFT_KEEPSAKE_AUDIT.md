@@ -7,12 +7,11 @@ This document isolates the game behavior of Echo's
 `EchoRepeatKeepsakeBoon` (Gift Gift Gift) for the keepsakes whose effects are
 implemented or deliberately deferred by the planner.
 
-The planner disposition was reassessed at schema 30 and commit `25e25e2` after
-the supported-keepsake and Cherished Heirloom phase. The planner now owns the
+The planner disposition was implemented at schema 35 and commit `5920482`
+after the supported-keepsake and Cherished Heirloom phase. The planner owns the
 current keepsake identity, ordered replacements, removed keys, all six
-supported rank profiles, and a biome-start keepsake-state transition. Gift is
-therefore no longer blocked on a missing keepsake-history model. Its delivery
-remains future Echo work.
+supported rank profiles, the captured Gift identity, its replay count, and the
+biome-start keepsake-state transition.
 
 This is not an implementation plan. It records source chronology, exact
 rank-I replay values, repetition behavior, bounded planner simplifications,
@@ -33,7 +32,7 @@ The detailed matrix covers:
 The 13 intentionally effect-neutral keepsakes remain outside the detailed
 effect matrix. They still participate in ordinary equip/retain/replace history,
 removed-key and no-return legality, Fated/Unfated state, and Run State identity.
-The planned Echo slice may retain an eligible captured identity for them, but
+The implemented Echo slice retains an eligible captured identity for them, but
 their biome-start Gift transition remains an explicit no-op until their own
 effect slice. Discordant Bell is still mentioned because the game explicitly
 excludes it from Gift Gift Gift.
@@ -252,10 +251,10 @@ exists.
 ## Planner Boundary
 
 Gift Gift Gift requires an immutable acquisition-time keepsake identity, not a
-new rack control. The schema-30 keepsake state now supplies the exact current
+new rack control. The schema-35 keepsake state supplies the exact current
 identity at Echo acquisition and the existing route boundary supplies the
-biome-start frontier. The Echo delivery plan must add only the Gift-owned
-state that cannot be derived later:
+biome-start frontier. The implementation adds only the Gift-owned state that
+cannot be derived later:
 
 - the immutable captured keepsake key;
 - whether a one-shot replay has occurred;
@@ -271,6 +270,23 @@ effect until their dedicated keepsake slice.
 It must not derive replay policy from React labels, treat the newly equipped
 keepsake as Echo's target, or interpret every keepsake through a generic
 callback registry.
+
+## Current Planner Disposition
+
+Schema 35 implements the audited boundary. Gift is unavailable for the four
+exact exclusions. A valid selection snapshots the current key on the equipped
+rarityless Echo trait, and later rack changes do not retarget it. Fig Leaf and
+Experimental Hammer use their one-shot schedules; Calling Card and Time Piece
+apply their rank-I value on every succeeding biome; other eligible identities
+remain captured, visible, and effect-neutral.
+
+The reached Experimental Hammer replay owns the shared selected-compatible or
+explicit exhausted authored result at the succeeding biome-start address.
+Successful ordinary and Echo Hammer acquisitions are retained as distinct
+instances with independent use counts and expiry. Candidate evaluation,
+persistence, findings, workspace interaction, and Run State consume the same
+chronological products. No authored captured-key flag outside trait history,
+generic effect registry, or React keepsake-key policy was introduced.
 
 ## Audit Conclusions
 

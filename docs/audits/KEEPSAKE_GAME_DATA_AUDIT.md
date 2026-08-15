@@ -931,7 +931,7 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The keepsake model is current through authored schema 30. All 33 identities
+The keepsake model is current through authored schema 35. All 33 identities
 participate in mandatory route-start selection, reached nonfinal Postboss
 retain-or-replace frontiers, ordered history, no-return legality, and their
 declared Fated role. Jeweled Pom, Experimental Hammer, Calling Card, Time Piece,
@@ -947,8 +947,16 @@ remaining 27 identities create no individual simulated gameplay effect, but
 still participate fully in identity history, no-return, Fated policy, and Run
 State.
 
+Gift Gift Gift now captures all 29 source-eligible identities at Echo
+acquisition. Fig Leaf and Experimental Hammer apply their rank-I replay once,
+Calling Card and Time Piece add their rank-I charges at every succeeding biome,
+and the other eligible identities remain effect-neutral while preserving
+history and Run State. The four exact source exclusions are Gorgon Amulet,
+Jeweled Pom, Discordant Bell, and Aromatic Phial. Experimental Hammer's authored
+equip result now permits explicit exhaustion on every equip path, and each
+successful acquisition owns an independent temporary-Hammer instance.
+
 The implementation retains one branch-owned keepsake state and routes each
 effect through its existing trait, acquisition, encounter, or lifecycle
 authority. It has no generic effect registry, second route history, authored
-rank, or React-owned keepsake-key policy. Echo and Gift Gift Gift remain
-deferred under their focused audit and plan.
+rank, or React-owned keepsake-key policy.

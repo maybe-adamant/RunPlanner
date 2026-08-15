@@ -218,6 +218,12 @@ dispatch only the persisted Athena identities and selection. Cherished Heirloom
 uses the ordinary trait-offer control; it adds no action button or keepsake-rank
 control.
 
+Gift Gift Gift's captured identity and replay status are Run State facts, not a
+rack editor. The only authored replay child is a reached Experimental Hammer
+result at the succeeding biome-start owner. It reuses the shared keepsake-equip
+result interaction and is contained by that biome's entry inspector; a dormant
+future result publishes no marker, interaction, or finding destination.
+
 ## Application Projection Boundary
 
 The application projects a structured workspace from:
@@ -721,6 +727,18 @@ updates this child in the existing dialog, while dormant detail remains owned
 by authored state. A reached Boss completion similarly publishes one exact
 Judgment child control and interaction from its completion address, not a room
 occurrence or route-settings substitute.
+
+A selected Echo option follows the same active-child rule. Pom, Boon, and
+Reward each publish one exact child in the containing trait inspector; Reward's
+generated acquisition descendants route back to that same owner. A reached
+Gold duplicate appears immediately after its paid source in the containing
+Shop Acquisitions workbench and reuses the generic acquisition interactions.
+Gift's reached Hammer child uses the biome-start keepsake result described
+above. Each active child has one marker, bound semantic interaction, and exact
+finding destination. Switching the outer Echo row or making a generated child
+unreached retains structurally valid authored detail without publishing a
+phantom destination. React renders these supported products and never decides
+Echo legality from provider, reward, trait, or keepsake names.
 
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the

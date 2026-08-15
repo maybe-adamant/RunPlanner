@@ -162,6 +162,20 @@ result of Cherished Heirloom are never authored: ordinary selection is fixed at
 Epic and simulation derives both Cherished transitions from catalog facts and
 canonical trait history.
 
+Schema 35 closes Echo's active authored children without adding effect state to
+the project. Pom persists one selected greatest-level target or the explicit
+empty-domain `null` result. Boon persists one to three distinct trait-key rows
+whose giver identity and equipped rarity are explicit, plus only the selected
+trait's declaration-owned acquisition detail. Reward persists only the exact
+recreated acquisition's conversion, trait-offer, and level children; the
+replayed source descriptor remains derived history. A reached Gold duplicate
+is a sparse `pickupEntries` child at the existing Shop `roomExit` site and is
+not a member of its authored order. Gift's captured keepsake, replay schedule,
+and replay count remain chronological trait history; only a reached
+Experimental Hammer replay persists its selected-compatible or explicit
+exhausted result beneath that succeeding biome's start address. Dormant Echo
+option detail remains structurally retained but is not active authorship.
+
 ## Common Decision Model
 
 ```ts
@@ -345,6 +359,10 @@ Shop offers remain owned by Shop inventory, while a declaration-produced
 pickup stores its exact reward, trait-offer, and level-resolution children in
 the site's `pickupEntries`. Mandatory singleton room rewards have derived
 participation and order, so they do not create redundant persisted site state.
+Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
+duplicate, may also own sparse acquisition-time children at that site. Their
+participation and position are derived from chronological settlement and they
+must not enter the authored `order`.
 `ReplaceAcquisitionOrder` replaces one complete site order;
 `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
 pickup. Neither command may infer entries from room names or rendered rows.
