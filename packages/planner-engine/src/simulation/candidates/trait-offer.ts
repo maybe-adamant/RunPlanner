@@ -85,6 +85,22 @@ export interface EvaluatedCirceResolutionDomain {
 export type CirceResolutionDomainEvaluation =
   CandidateContextUnavailable | EvaluatedCirceResolutionDomain;
 
+export interface EchoPomTargetDomainQuery {
+  readonly kind: 'echoPomTargetDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+}
+export interface EvaluatedEchoPomTargetDomain {
+  readonly kind: 'echoPomTargetDomain';
+  readonly result: {
+    readonly traitKeys: readonly string[];
+    readonly emptyNoOpAllowed: boolean;
+  };
+}
+export type EchoPomTargetDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedEchoPomTargetDomain;
+
 export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly kind: 'traitAcquisitionTarget';
   readonly result: {
@@ -555,4 +571,26 @@ export function evaluateCirceResolutionDomain(
   );
   if (!equivalent) return unavailableForTraitOffer(evaluation, query.trait);
   return Object.freeze({ kind: 'circeResolutionDomain', result: first });
+}
+
+export function evaluateEchoPomTargetDomain(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: EchoPomTargetDomainQuery,
+): EchoPomTargetDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const values = capability.echoPomTargets(query.value, query.optionKey);
+  const first = values[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const equivalent = values.every(
+    (value) => value.length === first.length && value.every((key, index) => key === first[index]),
+  );
+  if (!equivalent) return unavailableForTraitOffer(evaluation, query.trait);
+  return Object.freeze({
+    kind: 'echoPomTargetDomain',
+    result: Object.freeze({ traitKeys: first, emptyNoOpAllowed: first.length === 0 }),
+  });
 }

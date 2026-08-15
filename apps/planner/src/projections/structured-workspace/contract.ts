@@ -28,6 +28,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
   type CirceResolutionAddress,
+  type EchoPomTargetAddress,
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
@@ -222,6 +223,8 @@ export interface WorkspaceTraitOfferControl {
   readonly rewardOwner: SemanticAddress;
   /** Present only for this offer's currently selected Circe special option. */
   readonly circeResolution?: WorkspaceCirceResolutionControl;
+  /** Present only for the currently selected Echo Pom row. */
+  readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
@@ -244,6 +247,13 @@ export interface WorkspaceCirceResolutionControl {
   readonly value?: AuthoredCirceResolution;
 }
 
+export interface WorkspaceEchoPomTargetControl {
+  readonly address: EchoPomTargetAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly value?: string | null;
+}
+
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -262,6 +272,7 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
   /** Candidate-backed exact outcome editor for a selected Circe option only. */
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
+  readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
 }
 
 export interface WorkspaceCirceResolutionDomain {
@@ -281,6 +292,22 @@ export interface WorkspaceCirceResolutionInteraction {
   /** Binds the current draft before handing its loader to the sole React adapter. */
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceCirceResolutionDomain | undefined;
+  };
+}
+
+export interface WorkspaceEchoPomTargetDomain {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly emptyNoOpAllowed: boolean;
+}
+
+export interface WorkspaceEchoPomTargetInteraction {
+  readonly control: WorkspaceEchoPomTargetControl;
+  readonly intentFor: (
+    offer: AuthoredTraitOfferTraits,
+    targetTraitKey: string | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceEchoPomTargetDomain | undefined;
   };
 }
 

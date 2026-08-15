@@ -1,6 +1,7 @@
 import {
   createOccurrenceAddress,
   createCirceResolutionAddress,
+  createEchoPomTargetAddress,
   optionIndex,
   semanticAddressKey,
   type OccurrenceId,
@@ -1758,6 +1759,19 @@ export function bindWorkspaceInteractions(
               ...(option?.circeResolution === undefined ? {} : { value: option.circeResolution }),
             })
           : undefined;
+      const echoPomControl =
+        value.selectedOptionKey === optionKey &&
+        declaration?.selectedDisposition.kind === 'echo' &&
+        declaration.selectedDisposition.effect === 'doubleLevel'
+          ? Object.freeze({
+              address: createEchoPomTargetAddress(control.address, optionKey),
+              marker: control.echoPomTarget?.marker ?? control.marker,
+              optionKey,
+              ...(option === undefined || !('echoPomTarget' in option)
+                ? {}
+                : { value: option.echoPomTarget }),
+            })
+          : undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
         hasTargetPicker,
@@ -1816,6 +1830,48 @@ export function bindWorkspaceInteractions(
                             }),
                           ),
                         ),
+                      });
+                    },
+                  }),
+              }),
+            }),
+        ...(echoPomControl === undefined
+          ? {}
+          : {
+              echoPomTarget: Object.freeze({
+                control: echoPomControl,
+                intentFor: (offer: AuthoredTraitOfferTraits, targetTraitKey: string | null) => {
+                  const index = optionIndex(optionKey);
+                  const existing = offer.options[index];
+                  if (existing === undefined)
+                    throw new StructuredWorkspaceProjectionContractError(
+                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
+                    );
+                  const options = [...offer.options];
+                  options[index] = Object.freeze({ ...existing, echoPomTarget: targetTraitKey });
+                  return ordinaryTraitOfferIntentFor(
+                    control.address,
+                    Object.freeze({
+                      ...offer,
+                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                    }),
+                  );
+                },
+                forOffer: (offer: AuthoredTraitOfferTraits) =>
+                  Object.freeze({
+                    load: () => {
+                      const evaluated = candidates.echoPomTarget(control.address, offer, optionKey);
+                      if (evaluated.kind !== 'echoPomTargetDomain') return undefined;
+                      return Object.freeze({
+                        choices: Object.freeze(
+                          evaluated.result.traitKeys.map((key) =>
+                            Object.freeze({
+                              label: catalog.traits.byKey[key]?.label ?? key,
+                              value: key,
+                            }),
+                          ),
+                        ),
+                        emptyNoOpAllowed: evaluated.result.emptyNoOpAllowed,
                       });
                     },
                   }),

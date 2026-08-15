@@ -60,6 +60,11 @@ export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 
  * modeled run effect. Pickup detail remains owned by the acquisition entry. */
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
+  | {
+      /** Echo always equips the outer fixed-Common identity before this closed effect settles. */
+      readonly kind: 'echo';
+      readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel';
+    }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
   | {

@@ -95,6 +95,8 @@ export const hEncounterDefinitions = [
     label: 'Echo story',
     kind: 'story',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Echo',
+    traitOfferProducer: { kind: 'traitOffer', giverKey: 'Echo' },
   },
   {
     key: 'BossInfestedCerberus01',

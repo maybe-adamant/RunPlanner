@@ -16,6 +16,7 @@ function rewardControlMarkers(control: {
   readonly traitOffers?: readonly {
     readonly marker: WorkspaceMarker;
     readonly circeResolution?: { readonly marker: WorkspaceMarker };
+    readonly echoPomTarget?: { readonly marker: WorkspaceMarker };
   }[];
   readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
@@ -24,6 +25,7 @@ function rewardControlMarkers(control: {
     ...(control.traitOffers ?? []).flatMap((trait) => [
       trait.marker,
       ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+      ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
     ]),
     ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
@@ -43,6 +45,7 @@ function workspacePostOutgoingAcquisitionMarkers(
       ...(entry.rewardControl?.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
       ]),
       ...(entry.rewardControl?.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
@@ -127,6 +130,9 @@ export function workspaceOccurrenceOwnedMarkers(
             ...(phase.traitOffer.circeResolution === undefined
               ? []
               : [phase.traitOffer.circeResolution.marker]),
+            ...(phase.traitOffer.echoPomTarget === undefined
+              ? []
+              : [phase.traitOffer.echoPomTarget.marker]),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -135,6 +141,7 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+        ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
@@ -191,6 +198,7 @@ export function workspaceHubMainRewardMarkers(
         ...(room.roomLocal.control?.traitOffers ?? []).flatMap((trait) => [
           trait.marker,
           ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+          ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ]),
         ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);

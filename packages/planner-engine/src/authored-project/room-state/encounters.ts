@@ -253,6 +253,7 @@ function decodeEncounterTraitOffer(
     const hasRarity = option.rarity !== undefined;
     const hasTarget = option.targetTraitKey !== undefined;
     const hasCirceResolution = option.circeResolution !== undefined;
+    const hasEchoPomTarget = 'echoPomTarget' in option;
     expectExactKeys(
       option,
       [
@@ -260,6 +261,7 @@ function decodeEncounterTraitOffer(
         ...(hasRarity ? ['rarity'] : []),
         ...(hasTarget ? ['targetTraitKey'] : []),
         ...(hasCirceResolution ? ['circeResolution'] : []),
+        ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -383,18 +385,42 @@ function decodeEncounterTraitOffer(
           `unknown trait ${targetTraitKey}`,
         );
     }
+    let echoPomTarget: string | null | undefined;
+    if (hasEchoPomTarget) {
+      if (option.echoPomTarget !== null && typeof option.echoPomTarget !== 'string')
+        failProjectDocument(
+          `${path}.options.${optionKey}.echoPomTarget`,
+          'must be a trait key or null',
+        );
+      echoPomTarget = option.echoPomTarget as string | null;
+      if (echoPomTarget !== null && catalog.traits.byKey[echoPomTarget] === undefined)
+        failProjectDocument(
+          `${path}.options.${optionKey}.echoPomTarget`,
+          `unknown trait ${echoPomTarget}`,
+        );
+      if (
+        trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'doubleLevel'
+      )
+        failProjectDocument(
+          `${path}.options.${optionKey}.echoPomTarget`,
+          'is supported only by Echo Pom',
+        );
+    }
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
             traitKey,
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
+            ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
           }
         : {
             traitKey,
             rarity: rarity as NonNullable<AuthoredTraitOption['rarity']>,
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
+            ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
           };
     options.push(Object.freeze(decodedOption));
   }

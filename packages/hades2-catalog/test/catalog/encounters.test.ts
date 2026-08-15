@@ -7,6 +7,19 @@ function input(): RawCatalogInput {
 }
 
 describe('encounter envelope catalog', () => {
+  it('binds the H Bridge Echo story to its provider and NPC presentation', () => {
+    const built = createCatalog(declarations);
+    expect(built.encounterDefinitions.byKey.Story_Echo_01).toMatchObject({
+      key: 'Story_Echo_01',
+      kind: 'story',
+      npcPresentationKey: 'Echo',
+      traitOfferProducer: { kind: 'traitOffer', giverKey: 'Echo' },
+    });
+    expect(built.rooms.byKey.H_Bridge01?.encounterSlotBindings).toEqual([
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Echo_01' },
+    ]);
+  });
+
   it('publishes the complete declaration-owned Gorgon matrix', () => {
     const built = createCatalog(declarations);
     const definitions = built.encounterDefinitions.byKey;

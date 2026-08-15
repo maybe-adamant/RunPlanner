@@ -223,6 +223,14 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'reward', message: 'Time Piece cannot convert this acquisition here.' };
     case 'targetRoomSupportEmpty':
       return { kind: 'room', message: 'No room can be offered when this door appears.' };
+    case 'echoPomTargetMissing':
+      return {
+        kind: 'trait',
+        message: 'Choose a greatest-level trait, or record that no eligible target exists.',
+      };
+    case 'echoPomNoTargetUnavailable':
+    case 'echoPomTargetUnavailable':
+      return { kind: 'trait', message: 'Choose a greatest-level Pom-eligible trait.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',

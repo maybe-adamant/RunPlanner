@@ -8,6 +8,7 @@ import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   createCirceResolutionAddress,
+  createEchoPomTargetAddress,
   createLevelResolutionAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
@@ -68,6 +69,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
   isPomEligibleTrait,
+  echoPomGreatestLevelTraitKeys,
   evaluateReachedTraitOffer,
   assessTraitOfferBeforeRarification,
   evaluateReachedLevelResolution,
@@ -693,6 +695,267 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
   }
 }
 
+export interface EncounterTraitOfferSettlement {
+  readonly branch: RewardBranchState;
+  /** Exact post-outer/pre-effect branch retained when an authored child blocks settlement. */
+  readonly blockedChild?: {
+    readonly address: SemanticAddress;
+    readonly branch: RewardBranchState;
+  };
+}
+
+/** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
+export function settleEncounterTraitOffer(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  origin: SemanticAddress,
+  offer: AuthoredTraitOffer,
+  sequence: number,
+  lifecyclePoint: string,
+  findings?: Map<string, FindingRegionEntry>,
+  findingChronology?: FindingChronology,
+  deathDefianceConditionMet?: boolean,
+  acquisitionRole = 'selection',
+  freshRarityOverride?: import('../../catalog-schema').TraitRarity,
+): EncounterTraitOfferSettlement {
+  let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
+  const settledBranch = ((): RewardBranchState => {
+    if (offer.kind === 'fallbackGold') {
+      return applyTraitOfferForAcquisition(
+        catalog,
+        branch,
+        {
+          origin,
+          traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
+          ...(deathDefianceConditionMet === undefined
+            ? {}
+            : { traitContext: Object.freeze({ deathDefianceConditionMet }) }),
+        },
+        acquisitionRole,
+        lifecyclePoint,
+        sequence,
+        findings,
+        findingChronology,
+      );
+    }
+    const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+    const disposition =
+      selected === undefined
+        ? undefined
+        : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+    const resolution = selected?.circeResolution;
+    const preChoiceTraitHistory = branch.traitHistory ?? createTraitHistoryState();
+    const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
+    const circeDomain =
+      disposition?.kind === 'circe'
+        ? circeResolutionDomain(catalog, branch.arcanaFear, disposition.effect)
+        : undefined;
+    const source = {
+      origin,
+      traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
+      traitContext: Object.freeze({
+        manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
+        circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
+        ...(deathDefianceConditionMet === undefined ? {} : { deathDefianceConditionMet }),
+        ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
+      }),
+    } as const;
+    // Record the exact pre-effect frontier before validating Circe's authored
+    // child. Circe's ordinary offer findings stay provisional until that child
+    // is valid, so the child remains the first blocking repair owner.
+    const provisionalFindings =
+      disposition?.kind === 'circe' && findings !== undefined
+        ? new Map<string, FindingRegionEntry>()
+        : findings;
+    const applied = applyTraitOfferForAcquisition(
+      catalog,
+      branch,
+      source,
+      acquisitionRole,
+      lifecyclePoint,
+      sequence,
+      provisionalFindings,
+      findingChronology,
+    );
+    const preEffect: RewardBranchState = Object.freeze({
+      ...branch,
+      ...(applied.traitEvaluations === undefined
+        ? {}
+        : { traitEvaluations: applied.traitEvaluations }),
+    });
+    const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
+      if (findings !== undefined)
+        addTraitChildFinding(
+          findings,
+          createCirceResolutionAddress(
+            createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole),
+            offer.selectedOptionKey,
+          ),
+          lifecyclePoint,
+          sequence,
+          code,
+          selected?.traitKey,
+          detail,
+          findingChronology,
+        );
+      return preEffect;
+    };
+    if (disposition?.kind === 'circe') {
+      if (disposition.effect === 'activateArcana') {
+        if (resolution?.kind !== 'activateArcana') return rejectCirce('circeResolutionMissing');
+        if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
+          return rejectCirce(
+            'circeResolutionWrongCardinality',
+            `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
+          );
+        if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
+          return rejectCirce('circeResolutionTargetUnavailable');
+      } else if (disposition.effect === 'promoteArcana') {
+        if (resolution?.kind !== 'promoteArcana') return rejectCirce('circeResolutionMissing');
+        if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
+          return rejectCirce(
+            'circeResolutionWrongCardinality',
+            `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
+          );
+        if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
+          return rejectCirce('circeResolutionTargetUnavailable');
+      } else {
+        if (!circeDomain!.outerAvailable) return rejectCirce('circeOptionUnavailable');
+        if (resolution?.kind !== 'disableFear' || resolution.vowKey === null)
+          return rejectCirce('circeResolutionMissing');
+        if (!circeDomain!.vowKeys.includes(resolution.vowKey))
+          return rejectCirce('circeResolutionTargetUnavailable');
+      }
+    }
+    if (
+      findings !== undefined &&
+      provisionalFindings !== undefined &&
+      provisionalFindings !== findings
+    )
+      for (const [key, entry] of provisionalFindings) findings.set(key, entry);
+    if (
+      disposition?.kind === 'echo' &&
+      disposition.effect === 'doubleLevel' &&
+      selected !== undefined &&
+      applied.traitHistory !== undefined &&
+      applied.traitHistory !== branch.traitHistory
+    ) {
+      const appliedTraitHistory = applied.traitHistory;
+      const domain = echoPomGreatestLevelTraitKeys(catalog, preChoiceTraitHistory);
+      const hasTarget = 'echoPomTarget' in selected;
+      const target = selected.echoPomTarget;
+      const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
+        const address = createEchoPomTargetAddress(owner, offer.selectedOptionKey);
+        blockedChild = Object.freeze({ address, branch: applied });
+        if (findings !== undefined)
+          addTraitChildFinding(
+            findings,
+            address,
+            lifecyclePoint,
+            sequence,
+            code,
+            selected.traitKey,
+            detail,
+            findingChronology,
+          );
+        return applied;
+      };
+      if (!hasTarget) return reject('echoPomTargetMissing');
+      if (target === null) {
+        return domain.length === 0
+          ? applied
+          : reject('echoPomNoTargetUnavailable', domain.join(','));
+      }
+      if (target === undefined || !domain.includes(target))
+        return reject('echoPomTargetUnavailable', target);
+      const equipped = preChoiceTraitHistory.equippedTraits[target];
+      if (equipped?.level === undefined) return reject('echoPomTargetUnavailable', target);
+      const event = Object.freeze({
+        kind: 'levelMutation' as const,
+        owner: createEchoPomTargetAddress(owner, offer.selectedOptionKey),
+        acquisitionRole,
+        sequence,
+        acquisitionPoint: lifecyclePoint,
+        sourceTraitKey: selected.traitKey,
+        targetTraitKey: target,
+        oldLevel: equipped.level,
+        newLevel: equipped.level * 2,
+      });
+      const traitHistory = foldTraitHistoryEvents(catalog, [...appliedTraitHistory.events, event]);
+      return Object.freeze({
+        ...applied,
+        history: attachTraitHistory(applied.history, traitHistory),
+        traitHistory,
+      });
+    }
+    if (
+      applied.traitHistory === branch.traitHistory ||
+      disposition?.kind !== 'circe' ||
+      selected === undefined
+    )
+      return applied;
+    const evidence = {
+      owner,
+      sequence,
+    };
+    if (disposition.effect === 'activateArcana') {
+      const domain = circeResolutionDomain(
+        catalog,
+        applied.arcanaFear,
+        disposition.effect,
+        applied.keepsakes.fatedStatus,
+      );
+      if (
+        resolution?.kind !== 'activateArcana' ||
+        resolution.arcanaKeys.length !== domain.requiredCount
+      )
+        return applied;
+      if (resolution.arcanaKeys.length === 0) return applied;
+      const outcome = activateTemporaryArcana(
+        catalog,
+        applied.arcanaFear,
+        resolution.arcanaKeys,
+        evidence,
+      );
+      return outcome.legal
+        ? Object.freeze({
+            ...applied,
+            arcanaFear: outcome.state,
+            keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
+          })
+        : applied;
+    }
+    if (disposition.effect === 'promoteArcana') {
+      const domain = circeResolutionDomain(
+        catalog,
+        applied.arcanaFear,
+        disposition.effect,
+        applied.keepsakes.fatedStatus,
+      );
+      if (
+        resolution?.kind !== 'promoteArcana' ||
+        resolution.arcanaKeys.length !== domain.requiredCount
+      )
+        return applied;
+      const outcome = promoteArcana(catalog, applied.arcanaFear, resolution.arcanaKeys, evidence);
+      return outcome.legal
+        ? Object.freeze({
+            ...applied,
+            arcanaFear: outcome.state,
+            keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
+          })
+        : applied;
+    }
+    if (resolution?.kind !== 'disableFear' || resolution.vowKey === null) return applied;
+    const outcome = suppressFearVow(catalog, applied.arcanaFear, resolution.vowKey, evidence);
+    return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+  })();
+  return Object.freeze({
+    branch: settledBranch,
+    ...(blockedChild === undefined ? {} : { blockedChild }),
+  });
+}
+
 /** Evaluates one selected encounter-local trait offer at its completion point. */
 export function processEncounterTraitOffer(
   catalog: Catalog,
@@ -707,182 +970,22 @@ export function processEncounterTraitOffer(
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
 ): RewardBranchState {
-  if (offer.kind === 'fallbackGold') {
-    return applyTraitOfferForAcquisition(
-      catalog,
-      branch,
-      {
-        origin,
-        traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-        ...(deathDefianceConditionMet === undefined
-          ? {}
-          : { traitContext: Object.freeze({ deathDefianceConditionMet }) }),
-      },
-      acquisitionRole,
-      lifecyclePoint,
-      sequence,
-      findings,
-      findingChronology,
-    );
-  }
-  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
-  const disposition =
-    selected === undefined
-      ? undefined
-      : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-  const resolution = selected?.circeResolution;
-  const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
-  const circeDomain =
-    disposition?.kind === 'circe'
-      ? circeResolutionDomain(catalog, branch.arcanaFear, disposition.effect)
-      : undefined;
-  const source = {
-    origin,
-    traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-    traitContext: Object.freeze({
-      manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
-      circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
-      ...(deathDefianceConditionMet === undefined ? {} : { deathDefianceConditionMet }),
-      ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
-    }),
-  } as const;
-  // Record the exact pre-effect frontier before validating Circe's authored
-  // child. Circe's ordinary offer findings stay provisional until that child
-  // is valid, so the child remains the first blocking repair owner.
-  const provisionalFindings =
-    disposition?.kind === 'circe' && findings !== undefined
-      ? new Map<string, FindingRegionEntry>()
-      : findings;
-  const applied = applyTraitOfferForAcquisition(
+  return settleEncounterTraitOffer(
     catalog,
     branch,
-    source,
-    acquisitionRole,
+    origin,
+    offer,
+    sequence,
     lifecyclePoint,
-    sequence,
-    provisionalFindings,
+    findings,
     findingChronology,
-  );
-  const preEffect: RewardBranchState = Object.freeze({
-    ...branch,
-    ...(applied.traitEvaluations === undefined
-      ? {}
-      : { traitEvaluations: applied.traitEvaluations }),
-  });
-  const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
-    if (findings !== undefined)
-      addCirceResolutionFinding(
-        findings,
-        createCirceResolutionAddress(
-          createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole),
-          offer.selectedOptionKey,
-        ),
-        lifecyclePoint,
-        sequence,
-        code,
-        selected?.traitKey,
-        detail,
-        findingChronology,
-      );
-    return preEffect;
-  };
-  if (disposition?.kind === 'circe') {
-    if (disposition.effect === 'activateArcana') {
-      if (resolution?.kind !== 'activateArcana') return rejectCirce('circeResolutionMissing');
-      if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
-        return rejectCirce(
-          'circeResolutionWrongCardinality',
-          `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
-        );
-      if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
-        return rejectCirce('circeResolutionTargetUnavailable');
-    } else if (disposition.effect === 'promoteArcana') {
-      if (resolution?.kind !== 'promoteArcana') return rejectCirce('circeResolutionMissing');
-      if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)
-        return rejectCirce(
-          'circeResolutionWrongCardinality',
-          `${circeDomain!.requiredCount}:${resolution.arcanaKeys.length}`,
-        );
-      if (resolution.arcanaKeys.some((key) => !circeDomain!.arcanaKeys.includes(key)))
-        return rejectCirce('circeResolutionTargetUnavailable');
-    } else {
-      if (!circeDomain!.outerAvailable) return rejectCirce('circeOptionUnavailable');
-      if (resolution?.kind !== 'disableFear' || resolution.vowKey === null)
-        return rejectCirce('circeResolutionMissing');
-      if (!circeDomain!.vowKeys.includes(resolution.vowKey))
-        return rejectCirce('circeResolutionTargetUnavailable');
-    }
-  }
-  if (
-    findings !== undefined &&
-    provisionalFindings !== undefined &&
-    provisionalFindings !== findings
-  )
-    for (const [key, entry] of provisionalFindings) findings.set(key, entry);
-  if (
-    applied.traitHistory === branch.traitHistory ||
-    disposition?.kind !== 'circe' ||
-    selected === undefined
-  )
-    return applied;
-  const evidence = {
-    owner,
-    sequence,
-  };
-  if (disposition.effect === 'activateArcana') {
-    const domain = circeResolutionDomain(
-      catalog,
-      applied.arcanaFear,
-      disposition.effect,
-      applied.keepsakes.fatedStatus,
-    );
-    if (
-      resolution?.kind !== 'activateArcana' ||
-      resolution.arcanaKeys.length !== domain.requiredCount
-    )
-      return applied;
-    if (resolution.arcanaKeys.length === 0) return applied;
-    const outcome = activateTemporaryArcana(
-      catalog,
-      applied.arcanaFear,
-      resolution.arcanaKeys,
-      evidence,
-    );
-    return outcome.legal
-      ? Object.freeze({
-          ...applied,
-          arcanaFear: outcome.state,
-          keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
-        })
-      : applied;
-  }
-  if (disposition.effect === 'promoteArcana') {
-    const domain = circeResolutionDomain(
-      catalog,
-      applied.arcanaFear,
-      disposition.effect,
-      applied.keepsakes.fatedStatus,
-    );
-    if (
-      resolution?.kind !== 'promoteArcana' ||
-      resolution.arcanaKeys.length !== domain.requiredCount
-    )
-      return applied;
-    const outcome = promoteArcana(catalog, applied.arcanaFear, resolution.arcanaKeys, evidence);
-    return outcome.legal
-      ? Object.freeze({
-          ...applied,
-          arcanaFear: outcome.state,
-          keepsakes: refreshKeepsakeFatedStatus(catalog, applied.keepsakes, outcome.state),
-        })
-      : applied;
-  }
-  if (resolution?.kind !== 'disableFear' || resolution.vowKey === null) return applied;
-  const outcome = suppressFearVow(catalog, applied.arcanaFear, resolution.vowKey, evidence);
-  return outcome.legal ? Object.freeze({ ...applied, arcanaFear: outcome.state }) : applied;
+    deathDefianceConditionMet,
+    acquisitionRole,
+    freshRarityOverride,
+  ).branch;
 }
 
-function addCirceResolutionFinding(
+function addTraitChildFinding(
   findings: Map<string, FindingRegionEntry>,
   origin: SemanticAddress,
   lifecyclePoint: string,

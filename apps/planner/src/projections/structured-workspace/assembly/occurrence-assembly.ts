@@ -14,6 +14,7 @@ import {
   createGorgonPhaseAddress,
   materializeGorgonAthenaOffer,
   createCirceResolutionAddress,
+  createEchoPomTargetAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
@@ -697,6 +698,27 @@ function activeEncounterPhasesForOwner(
                       ? {}
                       : { value: selected.circeResolution }),
                   });
+            const echoPomTarget =
+              authoredTraitOffer.kind !== 'traits' ||
+              selectedDisposition?.kind !== 'echo' ||
+              selectedDisposition.effect !== 'doubleLevel'
+                ? undefined
+                : Object.freeze({
+                    address: createEchoPomTargetAddress(
+                      traitAddress,
+                      authoredTraitOffer.selectedOptionKey,
+                    ),
+                    marker: input.markerDestinations.marker(
+                      createEchoPomTargetAddress(
+                        traitAddress,
+                        authoredTraitOffer.selectedOptionKey,
+                      ),
+                    ),
+                    optionKey: authoredTraitOffer.selectedOptionKey,
+                    ...(selected === undefined || !('echoPomTarget' in selected)
+                      ? {}
+                      : { value: selected.echoPomTarget }),
+                  });
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               address: traitAddress,
@@ -705,6 +727,7 @@ function activeEncounterPhasesForOwner(
               offer: authoredTraitOffer,
               rewardOwner: address,
               ...(circeResolution === undefined ? {} : { circeResolution }),
+              ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
               ...(authoredTraitOffer.kind === 'traits' &&
               traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
                 ? {

@@ -110,6 +110,8 @@ import {
   beginRewardRoom,
   countedBinding,
   initializeRewardBranches,
+  mergeEquivalentRewardBranches,
+  settleEncounterTraitOffer,
   settleProducerAcquisitionSite,
   settleOwnedAcquisitionSite,
   processOfferGenerationCohort,
@@ -913,7 +915,17 @@ interface BiomeRewardEvaluationAssembly {
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
+  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
+}
+
+export interface TraitChildSettlementCheckpoint {
+  readonly branches: readonly RewardBranch[];
+  readonly runStateSnapshots: readonly DecisionRunStateSnapshot[];
+}
+
+export interface TraitChildSettlementCheckpoints {
+  readonly at: (address: SemanticAddress) => TraitChildSettlementCheckpoint | undefined;
 }
 
 function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
@@ -1287,6 +1299,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const acquisitionOrderContexts = new Map<string, AcquisitionOrderCandidateContext>();
   const runStateSnapshotsByOwner = new Map<string, DecisionRunStateSnapshot>();
+  const traitChildSettlementBuilders = new Map<
+    string,
+    {
+      readonly occurrenceOwner: SemanticAddress;
+      readonly branches: RewardBranchState[];
+      readonly runStateSnapshots: Map<string, DecisionRunStateSnapshot>;
+    }
+  >();
   const hubDecisionsBySource = new Map(
     snapshot.decisions
       .filter(
@@ -1331,25 +1351,37 @@ export function evaluateBiomeRewardsAssemblyInternal(
         : []
       ).map((offer) => offer.offer.rewardType),
     );
-    const snapshot = createRunState({
-      catalog,
-      owner,
-      historyView: view,
-      branches,
-      enteredBiomeCount,
-      rewardFacts: (branchHistory) =>
-        rewardFacts(
-          catalog,
-          source,
-          source,
-          declaration,
-          view,
-          branchHistory,
-          enteredBiomeCount,
-          currentShopNames,
-        ),
-    });
+    const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
+      createRunState({
+        catalog,
+        owner,
+        historyView: view,
+        branches: checkpointBranches,
+        enteredBiomeCount,
+        rewardFacts: (branchHistory) =>
+          rewardFacts(
+            catalog,
+            source,
+            source,
+            declaration,
+            view,
+            branchHistory,
+            enteredBiomeCount,
+            currentShopNames,
+          ),
+      });
+    const snapshot = snapshotFor(branches);
     if (snapshot !== undefined) runStateSnapshotsByOwner.set(ownerKey, snapshot);
+    for (const checkpoint of traitChildSettlementBuilders.values()) {
+      if (
+        semanticAddressKey(checkpoint.occurrenceOwner) !== semanticAddressKey(source.origin) ||
+        checkpoint.runStateSnapshots.has(ownerKey)
+      )
+        continue;
+      const checkpointSnapshot = snapshotFor(checkpoint.branches);
+      if (checkpointSnapshot !== undefined)
+        checkpoint.runStateSnapshots.set(ownerKey, checkpointSnapshot);
+    }
   }
 
   function recordTargetSlotHistory(origin: TargetAddress, historySequence: number): void {
@@ -3372,25 +3404,37 @@ export function evaluateBiomeRewardsAssemblyInternal(
             phaseOwner,
             event.phaseKey,
           );
-          branches = Object.freeze(
-            branches.map((branch) =>
-              processEncounterTraitOffer(
-                catalog,
-                branch,
-                phaseAddress,
-                authoredEncounterOffer,
+          const settlements = branches.map((branch) =>
+            settleEncounterTraitOffer(
+              catalog,
+              branch,
+              phaseAddress,
+              authoredEncounterOffer,
+              event.sequence,
+              'encounterCompleted',
+              findings,
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
                 event.sequence,
-                'encounterCompleted',
-                findings,
-                rewardFindingChronologyForRoom(
-                  snapshot,
-                  room.origin,
-                  event.sequence,
-                  'localRoomLifecycle',
-                ),
+                'localRoomLifecycle',
               ),
             ),
           );
+          for (const settlement of settlements) {
+            const checkpoint = settlement.blockedChild;
+            if (checkpoint === undefined) continue;
+            const key = semanticAddressKey(checkpoint.address);
+            const current = traitChildSettlementBuilders.get(key);
+            if (current === undefined)
+              traitChildSettlementBuilders.set(key, {
+                occurrenceOwner: room.origin,
+                branches: [checkpoint.branch],
+                runStateSnapshots: new Map(),
+              });
+            else current.branches.push(checkpoint.branch);
+          }
+          branches = Object.freeze(settlements.map((settlement) => settlement.branch));
         }
         const matchingRewards =
           room.kind === 'authored'
@@ -3495,6 +3539,22 @@ export function evaluateBiomeRewardsAssemblyInternal(
     [...runStateSnapshotsByOwner.values()],
     [...runStateSnapshotsByOwner.values()],
   );
+  const traitChildSettlementProducts = new Map(
+    [...traitChildSettlementBuilders].map(([key, checkpoint]) =>
+      Object.freeze([
+        key,
+        Object.freeze({
+          branches: Object.freeze(
+            mergeEquivalentRewardBranches(checkpoint.branches).map(publicRewardBranch),
+          ),
+          runStateSnapshots: Object.freeze([...checkpoint.runStateSnapshots.values()]),
+        }),
+      ] as const),
+    ),
+  );
+  const traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints = Object.freeze({
+    at: (address: SemanticAddress) => traitChildSettlementProducts.get(semanticAddressKey(address)),
+  });
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
@@ -3537,6 +3597,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       catalog,
       acquisitionConversionContexts,
     ),
+    traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),
   });
 }

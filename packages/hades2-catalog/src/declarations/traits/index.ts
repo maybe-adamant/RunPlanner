@@ -20,6 +20,7 @@ import { narcissusGiver, narcissusTraits } from './narcissus';
 import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade';
 import { arcanaTraits } from './arcana';
 import { circeGiver, circeTraits } from './circe';
+import { echoGiver, echoTraits } from './echo';
 
 const weapons = [
   {
@@ -108,6 +109,7 @@ const aspects = [
 const traits = [
   ...arcanaTraits,
   ...circeTraits,
+  ...echoTraits,
   ...aphroditeTraits,
   ...arachneTraits,
   ...artemisTraits,
@@ -149,6 +151,7 @@ const givers = [
   medeaGiver,
   narcissusGiver,
   circeGiver,
+  echoGiver,
   weaponUpgradeGiver,
 ] as const;
 

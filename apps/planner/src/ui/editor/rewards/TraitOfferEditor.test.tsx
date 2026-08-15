@@ -12,6 +12,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   createCirceResolutionAddress,
+  createEchoPomTargetAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -199,6 +200,108 @@ describe('trait offer editor', () => {
       application.dispose();
     },
   );
+
+  it('renders the bound greatest-level Echo Pom domain and saves its exact target', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (base === undefined) throw new Error('trait offer interaction is missing');
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'EchoDoubleLevelBoon',
+          rarity: 'Common' as const,
+          echoPomTarget: null,
+        }),
+        Object.freeze({ traitKey: 'DiminishingDodgeBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon', rarity: 'Common' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+      deathDefianceConditionMet: false,
+    });
+    const control = Object.freeze({
+      address: createEchoPomTargetAddress(base.owner, 'option1'),
+      marker: Object.freeze({
+        address: createEchoPomTargetAddress(base.owner, 'option1'),
+        assessment: 'assessed' as const,
+        findingCount: 0,
+        focusKey: 'test-echo-pom-target',
+      }),
+      optionKey: 'option1' as const,
+      value: null,
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+            ? {}
+            : {
+                echoPomTarget: Object.freeze({
+                  control,
+                  intentFor: () =>
+                    Object.freeze({
+                      command: Object.freeze({
+                        kind: 'ReplaceTraitOffer' as const,
+                        trait: base.owner,
+                        value: draft,
+                      }),
+                    }),
+                  forOffer: () =>
+                    Object.freeze({
+                      load: () =>
+                        Object.freeze({
+                          choices: Object.freeze([
+                            Object.freeze({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
+                            Object.freeze({ label: 'Heaven Strike', value: 'ZeusWeaponBoon' }),
+                          ]),
+                          emptyNoOpAllowed: false,
+                        }),
+                    }),
+                }),
+              }),
+        }),
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Pom Pom Pom target'), 'ApolloWeaponBoon');
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.options[0]).toMatchObject({
+      traitKey: 'EchoDoubleLevelBoon',
+      echoPomTarget: 'ApolloWeaponBoon',
+    });
+    application.dispose();
+  });
 
   it('does not evaluate trait eligibility during render', () => {
     const events: ApplicationEvaluationEvent[] = [];

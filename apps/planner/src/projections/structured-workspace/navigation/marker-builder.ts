@@ -75,6 +75,7 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
             routeKey: input.routeKey,
             ...(address.kind === 'traitOffer' ? { traitDialogTarget: address } : {}),
             ...(address.kind === 'circeResolution' ? { traitDialogTarget: address.trait } : {}),
+            ...(address.kind === 'echoPomTarget' ? { traitDialogTarget: address.trait } : {}),
             ...(address.kind === 'levelResolution' ? { levelResolutionDialogTarget: address } : {}),
           }),
         );

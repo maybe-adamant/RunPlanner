@@ -236,6 +236,14 @@ describe('evaluation presentation', () => {
     expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Experimental Hammer result');
   });
 
+  it('presents the missing Echo Pom child with both legal settlement shapes', () => {
+    expect(presentFinding(finding('echoPomTargetMissing'))).toEqual({
+      title: 'Choose the Echo Pom target',
+      description:
+        'Choose a greatest-level Pom-eligible trait, or record that no eligible target exists.',
+    });
+  });
+
   it('indexes every finding directly under its semantic owner', () => {
     const target = createTargetAddress(
       biome,

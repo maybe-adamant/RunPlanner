@@ -17,6 +17,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceCirceResolutionDomain,
+  type WorkspaceEchoPomTargetDomain,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -65,7 +66,12 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
     interaction.giver.key,
     interaction.choices.map((choice) => choice.value).join(','),
     interaction.value.options
-      .map((option) => `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`)
+      .map(
+        (option) =>
+          `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}:${
+            'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
+          }`,
+      )
       .join(','),
     interaction.value.selectedOptionKey,
     interaction.value.deathDefianceConditionMet === true ? 'dd' : 'no-dd',
@@ -236,6 +242,16 @@ function TraitOfferOptionEditor({
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
   }, [circeController, circeLoadable]);
   const circeDomain = circeLoaded.result;
+  const echoPom = loadable.echoPomTarget;
+  const echoPomLoadable = useMemo(() => echoPom?.forOffer(value), [echoPom, value]);
+  const echoPomController = useWorkspaceInteractionController<
+    WorkspaceEchoPomTargetDomain | undefined
+  >();
+  const echoPomLoaded = echoPomController.observe(echoPomLoadable);
+  useEffect(() => {
+    if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
+  }, [echoPomController, echoPomLoadable]);
+  const echoPomDomain = echoPomLoaded.result;
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -292,6 +308,41 @@ function TraitOfferOptionEditor({
             onUpdate(replaceOption(value, index, { ...option, circeResolution: resolution }))
           }
         />
+      )}
+      {echoPom === undefined || echoPomDomain === undefined ? null : (
+        <label className="trait-circe-resolution">
+          Pom Pom Pom target
+          {echoPomDomain.emptyNoOpAllowed ? (
+            <button
+              onClick={() =>
+                onUpdate(replaceOption(value, index, { ...option, echoPomTarget: null }))
+              }
+              type="button"
+            >
+              Record no eligible target
+            </button>
+          ) : (
+            <select
+              aria-label="Pom Pom Pom target"
+              onChange={(event) =>
+                onUpdate(
+                  replaceOption(value, index, {
+                    ...option,
+                    echoPomTarget: event.target.value,
+                  }),
+                )
+              }
+              value={'echoPomTarget' in option ? (option.echoPomTarget ?? '') : ''}
+            >
+              <option value="">Choose a greatest-level trait</option>
+              {echoPomDomain.choices.map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </label>
       )}
       <button
         disabled={!rarifySupported}

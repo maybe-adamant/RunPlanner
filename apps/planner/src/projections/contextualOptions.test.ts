@@ -358,6 +358,21 @@ describe('contextual option projection', () => {
     );
   });
 
+  it('explains both legal repairs for a missing Echo Pom child', () => {
+    expect(
+      explainCandidateEvaluation(
+        catalog,
+        invalidReward({
+          code: 'echoPomTargetMissing',
+          severity: 'error',
+          phase: 'rewardGeneration',
+          origin: target,
+          evidence: {},
+        }),
+      )?.message,
+    ).toBe('Choose a greatest-level trait, or record that no eligible target exists.');
+  });
+
   it('presents typed room, requirement, sibling, bag, and store reasons without finding codes', () => {
     const requirement = roomTarget([
       {

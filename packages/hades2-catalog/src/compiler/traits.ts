@@ -70,6 +70,7 @@ const SELECTED_DISPOSITIONS = [
   'producePickups',
   'noOp',
   'circe',
+  'echo',
 ] as const;
 type RawTraitRequirement = {
   readonly kind: string;
@@ -120,6 +121,17 @@ function normalizeSelectedDisposition(
       effect: closedValue(
         value.effect,
         ['activateArcana', 'promoteArcana', 'disableFear'] as const,
+        `${path}.effect`,
+      ),
+    });
+  }
+  if (kind === 'echo') {
+    if (Object.keys(value).length !== 2) fail(path, 'echo requires only kind and effect');
+    return Object.freeze({
+      kind,
+      effect: closedValue(
+        value.effect,
+        ['numericNoOp', 'survive', 'doubleLevel'] as const,
         `${path}.effect`,
       ),
     });

@@ -40,6 +40,7 @@ import {
   evaluateReachedLevelResolution,
   pomEligibleTargetKeys,
   type TraitHistoryState,
+  echoPomGreatestLevelTraitKeys,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
@@ -106,6 +107,11 @@ export interface TraitOfferCandidateCapability {
     readonly vowKeys: readonly string[];
     readonly outerAvailable: boolean;
   }[];
+  /** Exact selected Echo-Pom greatest-level domains for surviving branches. */
+  readonly echoPomTargets: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => readonly (readonly string[])[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -562,6 +568,19 @@ export function createTraitOfferCandidateArtifacts(
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
               return [circeResolutionDomain(catalog, context.arcanaFear, effect.effect)];
+            }),
+          ),
+        echoPomTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              if (value.kind === 'fallbackGold') return [];
+              const option = value.options[optionIndex(optionKey)];
+              const disposition =
+                option === undefined
+                  ? undefined
+                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (disposition?.kind !== 'echo' || disposition.effect !== 'doubleLevel') return [];
+              return [echoPomGreatestLevelTraitKeys(catalog, context.before)];
             }),
           ),
       });

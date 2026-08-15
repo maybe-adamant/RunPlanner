@@ -287,6 +287,19 @@ const findingCopy = {
     title: 'Circe trait is unavailable',
     description: 'This Circe trait has no removable configured Vow at this point.',
   },
+  echoPomTargetMissing: {
+    title: 'Choose the Echo Pom target',
+    description:
+      'Choose a greatest-level Pom-eligible trait, or record that no eligible target exists.',
+  },
+  echoPomNoTargetUnavailable: {
+    title: 'Echo Pom has eligible targets',
+    description: 'Choose a greatest-level Pom-eligible trait instead of recording no target.',
+  },
+  echoPomTargetUnavailable: {
+    title: 'Echo Pom target is unavailable',
+    description: 'Choose a Pom-eligible trait tied at the greatest pre-Echo level.',
+  },
   fullTraitOfferWidthRequired: {
     title: 'Three choices are required',
     description: 'This offer still has enough ordinary traits to fill all three choices.',
@@ -658,6 +671,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Acquisition`;
     case 'circeResolution':
       return `${biomeLabel} · Circe outcome`;
+    case 'echoPomTarget':
+      return `${biomeLabel} · Pom Pom Pom target`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
     case 'completionRoom':

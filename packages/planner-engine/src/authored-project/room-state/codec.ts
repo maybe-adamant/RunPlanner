@@ -219,6 +219,7 @@ function decodeTraitOffers(
           ...(option.rarity === undefined ? [] : ['rarity']),
           ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
           ...(option.circeResolution === undefined ? [] : ['circeResolution']),
+          ...('echoPomTarget' in option ? ['echoPomTarget'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -348,12 +349,36 @@ function decodeTraitOffers(
             'does not match the Circe trait policy',
           );
       }
+      const hasEchoPomTarget = 'echoPomTarget' in option;
+      let echoPomTarget: string | null | undefined;
+      if (hasEchoPomTarget) {
+        if (option.echoPomTarget !== null && typeof option.echoPomTarget !== 'string')
+          failProjectDocument(
+            `${rolePath}.options.${key}.echoPomTarget`,
+            'must be a trait key or null',
+          );
+        echoPomTarget = option.echoPomTarget as string | null;
+        if (echoPomTarget !== null && catalog.traits.byKey[echoPomTarget] === undefined)
+          failProjectDocument(
+            `${rolePath}.options.${key}.echoPomTarget`,
+            `unknown trait ${echoPomTarget}`,
+          );
+        if (
+          trait.selectedDisposition.kind !== 'echo' ||
+          trait.selectedDisposition.effect !== 'doubleLevel'
+        )
+          failProjectDocument(
+            `${rolePath}.options.${key}.echoPomTarget`,
+            'is supported only by Echo Pom',
+          );
+      }
       options.push(
         Object.freeze({
           traitKey,
           ...(rarity === undefined ? {} : { rarity }),
           ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
           ...(circeResolution === undefined ? {} : { circeResolution }),
+          ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
         }),
       );
     }
