@@ -3,8 +3,9 @@
 ## Status
 
 Source-fact audit completed against the installed Hades II scripts on
-2026-08-12 and amended on 2026-08-13 with the exact encounter-use decrement
-boundary. This document records the ordinary keepsake inventory, rank model,
+2026-08-12, amended on 2026-08-13 with the exact encounter-use decrement
+boundary, and amended on 2026-08-14 with Experimental Hammer's exhausted equip
+result. This document records the ordinary keepsake inventory, rank model,
 equip/swap lifecycle, and the effect surfaces that may contact systems already
 modeled by the planner.
 
@@ -496,12 +497,16 @@ rarity and a charge remain.
 
 ### Experimental Hammer lifecycle
 
-At rank III, Experimental Hammer grants one random eligible Hammer trait when
-the keepsake is equipped. The game builds the domain from the ordinary Weapon
-Upgrade trait set, applies current trait eligibility, and excludes Hammer traits
-the player already has. Under the planner's authored-possibility model, the
-random result can be recorded as one choice from that exact weapon/aspect-valid
-domain.
+At rank III, Experimental Hammer attempts to grant one random eligible Hammer
+trait when the keepsake is equipped. The game builds the domain from the
+ordinary Weapon Upgrade trait set, applies current trait eligibility, and
+excludes Hammer traits the player already has. When that domain is empty,
+`AddRandomHammer` returns after the keepsake itself has already been equipped;
+the acquisition callback is not retried later. Under the planner's
+authored-possibility model, the result is therefore either one choice from the
+exact weapon/aspect-valid domain or an explicit consumed no-result when that
+domain is empty. Missing authored result state remains incomplete and is not
+equivalent to exhaustion.
 
 The acquired Hammer is a separate equipped trait with 20 encounter uses. The
 source decrement is broader than combat or encounter depth. At encounter end,
@@ -562,10 +567,11 @@ does not remove or refresh the granted Hammer. Its remaining encounter duration
 continues until expiry. Retaining the keepsake likewise does not grant another
 Hammer at each biome start.
 
-The effect therefore requires one authored Hammer result at the pre-route or
-postboss equip frontier and one derived encounter-counted equipped-trait
-lifetime. It does not require a recurring reward, a Hammer rarity, or a generic
-keepsake-effect interpreter.
+The effect therefore requires one authored equip result at the pre-route or
+postboss frontier: a compatible Hammer key when the exact domain is nonempty or
+an explicit exhausted result when it is empty. Only a selected Hammer creates a
+derived encounter-counted equipped-trait lifetime. The effect does not require
+a recurring reward, a Hammer rarity, or a generic keepsake-effect interpreter.
 
 ### Encounter-altering keepsake lifecycles
 
