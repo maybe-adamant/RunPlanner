@@ -99,9 +99,7 @@ function bind(
     evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
     (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(projectAssembly, phase),
-    (phase) =>
-      encounterPhaseGorgonSupportForProjectEvaluationAssembly(projectAssembly, phase)?.supported ===
-      true,
+    (phase) => encounterPhaseGorgonSupportForProjectEvaluationAssembly(projectAssembly, phase),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -116,13 +114,18 @@ function bind(
     rooms: readonly {
       readonly encounterPhases: readonly {
         readonly traitOffer?: import('../contract').WorkspaceTraitOfferControl;
+        readonly gorgonAthena?: import('../contract').WorkspaceTraitOfferControl;
       }[];
     }[],
   ) => {
-    for (const room of rooms)
-      for (const phase of room.encounterPhases)
+    for (const room of rooms) {
+      for (const phase of room.encounterPhases) {
         if (phase.traitOffer !== undefined)
           traitControls.set(semanticAddressKey(phase.traitOffer.address), phase.traitOffer);
+        if (phase.gorgonAthena !== undefined)
+          traitControls.set(semanticAddressKey(phase.gorgonAthena.address), phase.gorgonAthena);
+      }
+    }
   };
   for (const node of assembly.nodes) {
     if (node.kind === 'occurrenceWorkbench') appendEncounterTraits([node.room]);
@@ -189,6 +192,52 @@ describe('structured workspace interaction binding', () => {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
       value: true,
+    });
+  });
+
+  it('binds the Gorgon child editor to author decisions only', () => {
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
+      'Combat',
+    );
+    let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    const { interactions } = bind(project, 'Surface', 'P');
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.owner.owner.kind === 'gorgonPhase',
+    );
+    if (interaction === undefined || interaction.value.kind !== 'traits')
+      throw new Error('Gorgon Athena interaction is missing');
+    expect(interaction.rarityEditable).toBe(false);
+    expect(interaction.value.options.every((option) => option.rarity === 'Epic')).toBe(true);
+
+    const changed = {
+      ...interaction.value,
+      options: [
+        interaction.value.options[2]!,
+        interaction.value.options[0]!,
+        interaction.value.options[1]!,
+      ],
+      selectedOptionKey: 'option2' as const,
+      rarificationActions: ['option1' as const],
+      deathDefianceConditionMet: true,
+    } satisfies AuthoredTraitOfferTraits;
+    expect(interaction.intentFor(changed).command).toEqual({
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: interaction.owner,
+      value: {
+        traitKeys: changed.options.map((option) => option.traitKey),
+        selectedOptionKey: 'option2',
+      },
     });
   });
 

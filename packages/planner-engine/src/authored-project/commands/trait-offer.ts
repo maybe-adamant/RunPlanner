@@ -7,6 +7,7 @@ import {
   traitOfferSupportsExhaustion,
   traitOfferOption,
   optionIndex,
+  type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../traits';
@@ -21,6 +22,31 @@ import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
+
+function validateGorgonAthenaOffer(
+  catalog: Catalog,
+  value: AuthoredGorgonAthenaOffer,
+  command: TraitOfferCommand,
+): AuthoredGorgonAthenaOffer {
+  const effect = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+  )?.effect;
+  const giver =
+    effect?.kind === 'gorgonAmulet' ? catalog.traitGivers.byKey[effect.providerKey] : undefined;
+  if (
+    giver === undefined ||
+    value.traitKeys.length !== 3 ||
+    new Set(value.traitKeys).size !== 3 ||
+    value.traitKeys.some((traitKey) => !giver.traitKeys.includes(traitKey))
+  )
+    failCommand(command, 'Gorgon Athena requires three distinct Athena trait identities');
+  if (!['option1', 'option2', 'option3'].includes(value.selectedOptionKey))
+    failCommand(command, 'selected option must be option1, option2, or option3');
+  return Object.freeze({
+    traitKeys: Object.freeze([...value.traitKeys]) as readonly [string, string, string],
+    selectedOptionKey: value.selectedOptionKey,
+  });
+}
 
 function reconcileSelectedPickupEntries(
   catalog: Catalog,
@@ -571,27 +597,6 @@ export function applyTraitOfferCommand(
       phaseKey,
       occurrence.gameName,
     );
-    const existing = isGorgon ? phaseGorgon?.athenaOffer : phaseOffers?.[encounterKey];
-    if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
-    const gorgonKeepsake = isGorgon
-      ? catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === 'gorgonAmulet')
-      : undefined;
-    const gorgonEffect = gorgonKeepsake?.effect;
-    const gorgonRarityLevel =
-      gorgonEffect?.kind === 'gorgonAmulet' && gorgonKeepsake !== undefined
-        ? gorgonEffect.rarityLevelByRank[gorgonKeepsake.rank]
-        : undefined;
-    const gorgonRarity =
-      gorgonRarityLevel === undefined ? undefined : catalog.traitRarityOrder[gorgonRarityLevel - 1];
-    const expectedProducer = isGorgon
-      ? gorgonEffect?.kind === 'gorgonAmulet'
-        ? { giverKey: gorgonEffect.providerKey }
-        : undefined
-      : catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
-    if (expectedProducer === undefined)
-      failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
-    if (existing.giverKey !== expectedProducer.giverKey)
-      failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
     if (
       phaseKey.trim().length === 0 ||
       command.trait.acquisitionRole !== (isGorgon ? 'gorgonAthena' : 'selection')
@@ -603,49 +608,58 @@ export function applyTraitOfferCommand(
     ) {
       failCommand(command, 'selected option must be option1, option2, or option3');
     }
-    if (
-      command.kind === 'ReplaceTraitSelection' &&
-      (existing.kind !== 'traits' ||
-        traitOfferOption(existing, command.selectedOptionKey) === undefined)
-    )
-      failCommand(command, 'selected option is not materialized by this trait offer');
-    const value =
-      command.kind === 'ReplaceTraitSelection'
-        ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
-        : validateOffer(catalog, command.value, command, isGorgon);
-    if (value.giverKey !== expectedProducer.giverKey)
-      failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
+    let nextEncounters: RoomOccurrence['encounters'];
     if (isGorgon) {
+      const existing = phaseGorgon?.athenaOffer;
+      if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
+      if (command.kind === 'ReplaceTraitOffer')
+        failCommand(command, 'Gorgon Athena persists only its bound author decisions');
+      const value =
+        command.kind === 'ReplaceTraitSelection'
+          ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
+          : validateGorgonAthenaOffer(catalog, command.value, command);
+      if (sameOccurrenceValue(value, existing)) return document;
+      nextEncounters = Object.freeze({
+        ...currentEncounters,
+        gorgonResultByPhase: Object.freeze({
+          ...(currentEncounters.gorgonResultByPhase ?? {}),
+          [phaseKey]: Object.freeze({
+            ...(phaseGorgon ?? { deathDefianceConditionMet: false }),
+            athenaOffer: value,
+          }),
+        }),
+      });
+    } else {
+      if (command.kind === 'ReplaceGorgonAthenaOffer')
+        failCommand(command, 'Gorgon Athena decisions require a Gorgon phase owner');
+      const existing = phaseOffers?.[encounterKey];
+      if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
+      const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+      if (expectedProducer === undefined)
+        failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
+      if (existing.giverKey !== expectedProducer.giverKey)
+        failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
       if (
-        value.kind !== 'traits' ||
-        value.options.length !== 3 ||
-        gorgonEffect?.kind !== 'gorgonAmulet' ||
-        gorgonRarity === undefined ||
-        value.options.some((option) => option.rarity !== gorgonRarity) ||
-        value.deathDefianceConditionMet !== undefined
-      ) {
-        failCommand(command, 'Gorgon Athena requires three fixed Epic options without DD context');
-      }
+        command.kind === 'ReplaceTraitSelection' &&
+        (existing.kind !== 'traits' ||
+          traitOfferOption(existing, command.selectedOptionKey) === undefined)
+      )
+        failCommand(command, 'selected option is not materialized by this trait offer');
+      const value =
+        command.kind === 'ReplaceTraitSelection'
+          ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
+          : validateOffer(catalog, command.value, command, false);
+      if (value.giverKey !== expectedProducer.giverKey)
+        failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
+      if (sameOccurrenceValue(value, existing)) return document;
+      nextEncounters = Object.freeze({
+        ...currentEncounters,
+        traitOffersByPhase: Object.freeze({
+          ...(currentEncounters.traitOffersByPhase ?? {}),
+          [phaseKey]: Object.freeze({ ...(phaseOffers ?? {}), [encounterKey]: value }),
+        }),
+      });
     }
-    if (sameOccurrenceValue(value, existing)) return document;
-    const nextEncounters = isGorgon
-      ? Object.freeze({
-          ...currentEncounters,
-          gorgonResultByPhase: Object.freeze({
-            ...(currentEncounters.gorgonResultByPhase ?? {}),
-            [phaseKey]: Object.freeze({
-              ...(phaseGorgon ?? { deathDefianceConditionMet: false }),
-              athenaOffer: value,
-            }),
-          }),
-        })
-      : Object.freeze({
-          ...currentEncounters,
-          traitOffersByPhase: Object.freeze({
-            ...(currentEncounters.traitOffersByPhase ?? {}),
-            [phaseKey]: Object.freeze({ ...(phaseOffers ?? {}), [encounterKey]: value }),
-          }),
-        });
     if (encounterOwner.kind === 'occurrence') {
       const reconciled = reconcileSelectedPickupEntries(
         catalog,
@@ -694,6 +708,8 @@ export function applyTraitOfferCommand(
   if (existing.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }
+  if (command.kind === 'ReplaceGorgonAthenaOffer')
+    failCommand(command, 'Gorgon Athena decisions require a Gorgon phase owner');
   if (
     command.kind === 'ReplaceTraitSelection' &&
     !['option1', 'option2', 'option3'].includes(command.selectedOptionKey)

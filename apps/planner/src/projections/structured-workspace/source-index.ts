@@ -38,6 +38,7 @@ import type {
   CanonicalLocalChildRoom,
   EncounterPhaseSequenceStatus,
   FigLeafPhaseCandidateSupport,
+  GorgonPhaseCandidateSupport,
   CanonicalTarget,
   MaterializedBiomePrefix,
   ProjectBiomeEvaluation,
@@ -72,7 +73,7 @@ export interface WorkspaceBiomeSource {
     phase: EncounterPhaseAddress,
   ) => FigLeafPhaseCandidateSupport | undefined;
   /** Exact engine-published reached/pending Gorgon capability. */
-  readonly gorgonSupport: (phase: EncounterPhaseAddress) => boolean;
+  readonly gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
@@ -574,7 +575,7 @@ function createWorkspaceBiomeSource(
   evaluation: ProjectBiomeEvaluation | undefined,
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
-  gorgonSupport: (phase: EncounterPhaseAddress) => boolean,
+  gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -727,7 +728,8 @@ export function createWorkspaceProjectSourceIndex(
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined = () =>
     undefined,
-  gorgonSupport: (phase: EncounterPhaseAddress) => boolean = () => false,
+  gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined = () =>
+    undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(

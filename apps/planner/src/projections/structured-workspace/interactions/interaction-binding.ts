@@ -12,6 +12,7 @@ import {
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
+  type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -55,6 +56,7 @@ import type {
   WorkspaceHubVisitOrderProposal,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
+  WorkspaceCommandIntent,
   WorkspaceRewardControl,
   WorkspaceRewardInteraction,
   WorkspaceTraitOfferControl,
@@ -123,6 +125,36 @@ function traitOfferIntentFor(
   owner: TraitOfferAddress,
   value: AuthoredTraitOffer,
 ): ReturnType<WorkspaceTraitOfferInteraction['intentFor']> {
+  if (owner.owner.kind === 'gorgonPhase') {
+    if (value.kind !== 'traits' || value.options.length !== 3) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} requires exactly three Gorgon Athena traits`,
+      );
+    }
+    return Object.freeze({
+      command: Object.freeze({
+        kind: 'ReplaceGorgonAthenaOffer' as const,
+        trait: owner,
+        value: Object.freeze({
+          traitKeys: Object.freeze(value.options.map((option) => option.traitKey)) as readonly [
+            string,
+            string,
+            string,
+          ],
+          selectedOptionKey: value.selectedOptionKey,
+        }),
+      }),
+    });
+  }
+  return Object.freeze({
+    command: Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value }),
+  });
+}
+
+function ordinaryTraitOfferIntentFor(
+  owner: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+): WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>> {
   return Object.freeze({
     command: Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value }),
   });
@@ -1746,7 +1778,7 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, circeResolution: resolution });
-                  return traitOfferIntentFor(
+                  return ordinaryTraitOfferIntentFor(
                     control.address,
                     Object.freeze({
                       ...offer,
@@ -1829,6 +1861,7 @@ export function bindWorkspaceInteractions(
         key,
         load,
         owner: control.address,
+        rarityEditable: control.rarityEditable !== false,
         optionDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>

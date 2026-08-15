@@ -218,13 +218,10 @@ export function createStructuredWorkspaceProjection(
         (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(assembly, phase),
         (phase) => {
           try {
-            return (
-              encounterPhaseGorgonSupportForProjectEvaluationAssembly(assembly, phase)
-                ?.supported === true
-            );
+            return encounterPhaseGorgonSupportForProjectEvaluationAssembly(assembly, phase);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
-              return false;
+              return undefined;
             }
             throw error;
           }

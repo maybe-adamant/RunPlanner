@@ -1,7 +1,11 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
-import type { AuthoredLevelResolution, AuthoredTraitOffer } from './traits';
+import type {
+  AuthoredGorgonAthenaOffer,
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+} from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 29 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 30 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -92,7 +96,7 @@ export interface ShipCombatState {
 export interface AuthoredGorgonPhaseResult {
   readonly deathDefianceConditionMet: boolean;
   /** Conditional ordinary Athena offer; omitted while dormant. */
-  readonly athenaOffer?: AuthoredTraitOffer;
+  readonly athenaOffer?: AuthoredGorgonAthenaOffer;
 }
 
 export type SideRoomGeneration = 'generated' | 'notGenerated';

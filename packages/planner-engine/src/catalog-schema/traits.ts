@@ -60,6 +60,7 @@ export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 
  * modeled run effect. Pickup detail remains owned by the acquisition entry. */
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
+  | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
   | {
       readonly kind: 'producePickups';

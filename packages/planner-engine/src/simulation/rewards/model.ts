@@ -17,6 +17,7 @@ import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './r
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
+import type { TraitRarity } from '../../catalog-schema';
 
 export interface FigLeafPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
@@ -30,6 +31,8 @@ export interface FigLeafPhaseCandidateSupport {
 export interface GorgonPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
   readonly supported: boolean;
+  /** Encounter-start snapshot; absent when no pending appearance reached this phase. */
+  readonly rarity?: TraitRarity;
 }
 
 interface RewardEventBase {

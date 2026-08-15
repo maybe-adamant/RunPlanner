@@ -96,13 +96,13 @@ function arachneStoryProject(): ProjectDocument {
   });
 }
 
-describe('schema-22 occurrence-owned additional-exit persistence', () => {
+describe('schema-30 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(29);
+    expect(decoded.schemaVersion).toBe(30);
   });
 
   it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
@@ -136,7 +136,7 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 29 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 30 });
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -223,24 +223,53 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
       phase,
       value: true,
     });
+    const encodedOffer = gorgonResults(
+      occurrence(encoded(withOffer), 'P', pOccurrenceId('P_Combat03', 1, 1)),
+    ).Combat as JsonRecord;
+    expect(encodedOffer.athenaOffer).toEqual({
+      traitKeys: ['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon'],
+      selectedOptionKey: 'option1',
+    });
+
     const malformedOffer = encoded(withOffer);
     const offerResult = gorgonResults(
       occurrence(malformedOffer, 'P', pOccurrenceId('P_Combat03', 1, 1)),
     ).Combat as JsonRecord;
     const offer = offerResult.athenaOffer as JsonRecord;
-    offer.options = (offer.options as unknown[]).slice(0, 1);
+    offer.traitKeys = (offer.traitKeys as unknown[]).slice(0, 1);
     expect(() => decodeProjectDocument(malformedOffer, catalog)).toThrow(
-      'requires exactly three options',
+      'must contain exactly three distinct Athena trait identities',
     );
 
-    const duplicateContext = encoded(withOffer);
+    const duplicateTraits = encoded(withOffer);
     const duplicateResult = gorgonResults(
-      occurrence(duplicateContext, 'P', pOccurrenceId('P_Combat03', 1, 1)),
+      occurrence(duplicateTraits, 'P', pOccurrenceId('P_Combat03', 1, 1)),
     ).Combat as JsonRecord;
-    (duplicateResult.athenaOffer as JsonRecord).deathDefianceConditionMet = true;
-    expect(() => decodeProjectDocument(duplicateContext, catalog)).toThrow(
-      'athenaOffer.deathDefianceConditionMet: is not a project document field',
+    (duplicateResult.athenaOffer as JsonRecord).traitKeys = [
+      'InvulnerabilityDashBoon',
+      'InvulnerabilityDashBoon',
+      'FocusLastStandBoon',
+    ];
+    expect(() => decodeProjectDocument(duplicateTraits, catalog)).toThrow(
+      'must contain exactly three distinct Athena trait identities',
     );
+
+    for (const extraField of [
+      'giverKey',
+      'kind',
+      'options',
+      'rarificationActions',
+      'deathDefianceConditionMet',
+    ]) {
+      const legacyField = encoded(withOffer);
+      const result = gorgonResults(occurrence(legacyField, 'P', pOccurrenceId('P_Combat03', 1, 1)))
+        .Combat as JsonRecord;
+      (result.athenaOffer as JsonRecord)[extraField] =
+        extraField === 'rarificationActions' || extraField === 'options' ? [] : 'legacy';
+      expect(() => decodeProjectDocument(legacyField, catalog)).toThrow(
+        `athenaOffer.${extraField}: is not a project document field`,
+      );
+    }
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
@@ -315,14 +344,21 @@ describe('schema-22 occurrence-owned additional-exit persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 29, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 30, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 29, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 30, received 21');
+  });
+
+  it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
+    const document = encoded(createRepresentativeNOPProject());
+    document.schemaVersion = 29;
+
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 30, received 29');
   });
 
   it.each([

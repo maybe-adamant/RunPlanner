@@ -67,8 +67,11 @@ import {
   type ProgressiveBiomeContext,
 } from './progressive/biome';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
-import type { BiomeRewardSimulation } from './rewards/model';
-import type { FigLeafPhaseCandidateSupport } from './rewards/model';
+import type {
+  BiomeRewardSimulation,
+  FigLeafPhaseCandidateSupport,
+  GorgonPhaseCandidateSupport,
+} from './rewards/model';
 import {
   publishRunStateThroughCoverage,
   type DecisionRunStateOwner,
@@ -392,7 +395,7 @@ export function encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
 export function encounterPhaseGorgonSupportForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   phase: EncounterPhaseAddress,
-): { readonly supported: boolean } | undefined {
+): GorgonPhaseCandidateSupport | undefined {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
     ?.encounters.gorgonAt(phase);

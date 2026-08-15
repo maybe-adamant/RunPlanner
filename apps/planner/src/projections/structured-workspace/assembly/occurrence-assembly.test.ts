@@ -25,6 +25,7 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
   simulateProjectAssembly,
+  type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -59,7 +60,7 @@ function biomeSource(
   biomeKey: string,
   gorgonSupport?: (
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
-  ) => boolean,
+  ) => GorgonPhaseCandidateSupport | undefined,
 ) {
   const assembly = simulateProjectAssembly(catalog, project);
   const source = createWorkspaceProjectSourceIndex(
@@ -97,7 +98,7 @@ function assemble(
   occurrenceId: OccurrenceId,
   gorgonSupport?: (
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
-  ) => boolean,
+  ) => GorgonPhaseCandidateSupport | undefined,
 ) {
   const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
@@ -220,9 +221,7 @@ describe('structured workspace occurrence assembly', () => {
     ).toBe(true);
     const support = (
       candidate: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
-    ) =>
-      encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate)
-        ?.supported === true;
+    ) => encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate);
     const pending = assemble(
       project,
       'Surface',
@@ -253,13 +252,24 @@ describe('structured workspace occurrence assembly', () => {
       'P',
       pOccurrenceId('P_Combat12', 8, 1),
       (candidate) =>
-        encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate)
-          ?.supported === true,
+        encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate),
     ).assembly.node.room.encounterPhases.find(
       (candidate) => candidate.address.phaseKey === 'Combat',
     );
     expect(retained?.gorgonCondition).toMatchObject({ supported: false, selected: true });
-    expect(retained?.gorgonAthena).toBeDefined();
+    expect(retained?.gorgonAthena).toMatchObject({
+      rarityEditable: false,
+      offer: {
+        kind: 'traits',
+        giverKey: 'Athena',
+        selectedOptionKey: 'option1',
+      },
+    });
+    if (retained?.gorgonAthena?.offer.kind !== 'traits')
+      throw new Error('retained Gorgon Athena offer is missing');
+    expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === 'Epic')).toBe(
+      true,
+    );
   });
 
   it('returns immutable ordinary and fixed workbenches with their exact marker destinations', () => {

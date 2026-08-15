@@ -343,6 +343,10 @@ export const demeterTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'advanceCurrentKeepsake',
+      rankBonus: 1,
+    },
   },
   {
     key: 'GoodStuffBoon',

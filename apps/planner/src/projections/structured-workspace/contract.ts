@@ -217,6 +217,8 @@ export interface WorkspaceTraitOfferControl {
   readonly giver: TraitGiverDeclaration;
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer;
+  /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
+  readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
   /** Present only for this offer's currently selected Circe special option. */
   readonly circeResolution?: WorkspaceCirceResolutionControl;
@@ -288,12 +290,15 @@ export interface WorkspaceTraitOfferInteraction {
   readonly giver: TraitGiverDeclaration;
   readonly intentFor: (
     value: AuthoredTraitOffer,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }>
+  >;
   readonly key: string;
   readonly load: (
     value?: AuthoredTraitOffer,
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
+  readonly rarityEditable: boolean;
   readonly optionDomain: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
@@ -1306,6 +1311,7 @@ export interface WorkspaceRunStatePresentation {
     readonly figLeafRemainingUses?: number;
     readonly figLeafActivatedThisBiome?: boolean;
     readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
+    readonly gorgonRarity?: import('@run-planner/engine/catalog-schema').TraitRarity;
   };
   readonly arcana: readonly {
     readonly key: string;
