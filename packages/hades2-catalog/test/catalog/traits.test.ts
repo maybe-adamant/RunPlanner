@@ -284,6 +284,7 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'EchoDeathDefianceRefill',
     'DiminishingDodgeBoon',
     'DiminishingHealthAndManaBoon',
+    'EchoLastRunBoon',
     'EchoDoubleLevelBoon',
   ],
   Circe: [
@@ -926,6 +927,7 @@ describe('trait offer catalog closure', () => {
     aspects: catalog.aspects,
     traits: catalog.traits,
     givers: catalog.traitGivers,
+    echoLastRunBoon: catalog.echoLastRunBoon,
     offerContexts: catalog.traitOfferContexts,
     rarityOrder: catalog.traitRarityOrder,
     baseElements: catalog.traitBaseElements,
@@ -935,7 +937,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(372);
+    expect(traits?.traits.values).toHaveLength(373);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -956,7 +958,7 @@ describe('trait offer catalog closure', () => {
       ['Medea', 8],
       ['Narcissus', 9],
       ['Circe', 9],
-      ['Echo', 4],
+      ['Echo', 5],
       ['WeaponUpgrade', 92],
     ]);
     expect(
@@ -1004,13 +1006,14 @@ describe('trait offer catalog closure', () => {
     }
   });
 
-  it('declares the Gate A Echo matrix as rarityless with closed dispositions', () => {
+  it('declares the landed Echo matrix as rarityless with closed dispositions', () => {
     const giver = traits.givers.byKey.Echo;
     expect(giver?.rarityPolicy).toEqual({ kind: 'none' });
     expect(giver?.traitKeys).toEqual([
       'EchoDeathDefianceRefill',
       'DiminishingDodgeBoon',
       'DiminishingHealthAndManaBoon',
+      'EchoLastRunBoon',
       'EchoDoubleLevelBoon',
     ]);
     expect(giver?.defaultOffer).toEqual({
@@ -1044,11 +1047,105 @@ describe('trait offer catalog closure', () => {
         disposition: { kind: 'echo', effect: 'numericNoOp' },
       },
       {
+        key: 'EchoLastRunBoon',
+        rarityDomain: { kind: 'none' },
+        disposition: { kind: 'echo', effect: 'lastRunBoon' },
+      },
+      {
         key: 'EchoDoubleLevelBoon',
         rarityDomain: { kind: 'none' },
         disposition: { kind: 'echo', effect: 'doubleLevel' },
       },
     ]);
+  });
+
+  it('declares Echo Boon as the exact source-resolved 13-provider union', () => {
+    const variants = traits.echoLastRunBoon.variants.values;
+    expect([...new Set(variants.map((variant) => variant.giverKey))]).toEqual([
+      'Aphrodite',
+      'Apollo',
+      'Ares',
+      'Demeter',
+      'Hephaestus',
+      'Hera',
+      'Hestia',
+      'Poseidon',
+      'Zeus',
+      'Hermes',
+      'Artemis',
+      'Athena',
+      'Dionysus',
+    ]);
+    expect(variants).toHaveLength(236);
+    expect(
+      variants.every((variant) => {
+        const trait = traits.traits.byKey[variant.traitKey];
+        return trait?.rarityDomain.kind === 'ranked';
+      }),
+    ).toBe(true);
+    expect(traits.echoLastRunBoon.variants.byKey['Hades:CastProjectileBoon']).toBeUndefined();
+    expect(traits.echoLastRunBoon.variants.byKey['Aphrodite:SprintEchoBoon']).toEqual({
+      key: 'Aphrodite:SprintEchoBoon',
+      giverKey: 'Aphrodite',
+      traitKey: 'SprintEchoBoon',
+      lootHistorySource: 'AphroditeUpgrade',
+    });
+    expect(traits.echoLastRunBoon.variants.byKey['Zeus:SprintEchoBoon']).toEqual({
+      key: 'Zeus:SprintEchoBoon',
+      giverKey: 'Zeus',
+      traitKey: 'SprintEchoBoon',
+      lootHistorySource: 'ZeusUpgrade',
+    });
+    expect(traits.echoLastRunBoon.variants.byKey['Artemis:SupportingFireBoon']).toEqual(
+      expect.not.objectContaining({ lootHistorySource: expect.anything() }),
+    );
+    expect(
+      variants
+        .filter(
+          (variant) => traits.traits.byKey[variant.traitKey]?.targetedAcquisition !== undefined,
+        )
+        .map((variant) => variant.key),
+    ).toEqual(['Hera:BoonDecayBoon']);
+    expect(
+      variants
+        .filter(
+          (variant) =>
+            traits.traits.byKey[variant.traitKey]?.selectedDisposition.kind ===
+            'advanceCurrentKeepsake',
+        )
+        .map((variant) => variant.key),
+    ).toEqual(['Demeter:KeepsakeLevelBoon', 'Hera:KeepsakeLevelBoon']);
+  });
+
+  it('rejects duplicate and rarityless Echo-last-run sources at the catalog boundary', () => {
+    const duplicateSource = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        echoLastRunBoon: {
+          ...declarations.traitCatalog.echoLastRunBoon,
+          sources: [
+            ...declarations.traitCatalog.echoLastRunBoon.sources,
+            { giverKey: 'Apollo', lootHistorySource: 'ApolloUpgrade' },
+          ],
+        },
+      },
+    };
+    expect(() => createCatalog(duplicateSource)).toThrow(/distinct participating givers/);
+
+    const raritylessSource = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        echoLastRunBoon: {
+          ...declarations.traitCatalog.echoLastRunBoon,
+          sources: [{ giverKey: 'Echo' }],
+        },
+      },
+    };
+    expect(() => createCatalog(raritylessSource)).toThrow(
+      /Echo cannot participate in Echo's last-run domain/,
+    );
   });
 
   it('rejects an unknown Echo disposition effect at the raw declaration boundary', () => {

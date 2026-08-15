@@ -41,6 +41,7 @@ import {
   pomEligibleTargetKeys,
   type TraitHistoryState,
   echoPomGreatestLevelTraitKeys,
+  echoLastRunBoonOutcomes,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
@@ -112,6 +113,11 @@ export interface TraitOfferCandidateCapability {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => readonly (readonly string[])[];
+  /** Exact selected Echo-last-run outcome domains for surviving branches. */
+  readonly echoLastRunBoon: (
+    value: AuthoredTraitOffer,
+    optionKey: TraitOptionKey,
+  ) => readonly (readonly import('./traits').EchoLastRunBoonOutcome[])[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -581,6 +587,25 @@ export function createTraitOfferCandidateArtifacts(
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'doubleLevel') return [];
               return [echoPomGreatestLevelTraitKeys(catalog, context.before)];
+            }),
+          ),
+        echoLastRunBoon: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              if (value.kind === 'fallbackGold') return [];
+              const option = value.options[optionIndex(optionKey)];
+              const disposition =
+                option === undefined
+                  ? undefined
+                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              if (disposition?.kind !== 'echo' || disposition.effect !== 'lastRunBoon') return [];
+              return [
+                echoLastRunBoonOutcomes(
+                  catalog,
+                  context.before,
+                  traitOfferCandidateContext(context.context, value),
+                ),
+              ];
             }),
           ),
       });

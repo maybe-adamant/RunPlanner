@@ -442,6 +442,58 @@ export interface TraitOfferContext {
   /** The declaration-resolved provider for the addressed acquisition role. */
   readonly resolvedProviderKey?: string;
   readonly manualArcanaGraspCost?: number;
+  /** Direct sources such as Echo may forbid the ordinary replacement path. */
+  readonly ordinarySlotReplacement?: 'forbidden';
+}
+
+export interface EchoLastRunBoonOutcome {
+  readonly option: import('../authored-project/traits').AuthoredEchoLastRunBoonOption;
+  readonly effectiveRarity: TraitRarity;
+  readonly assessment: TraitAssessment;
+  readonly targetTraitKeys: readonly string[];
+}
+
+/** Exact source-resolved Echo-last-run union at one pre-Echo trait frontier. */
+export function echoLastRunBoonOutcomes(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  context: Pick<TraitOfferContext, 'deathDefianceConditionMet'> = {},
+): readonly EchoLastRunBoonOutcome[] {
+  return Object.freeze(
+    catalog.echoLastRunBoon.variants.values.flatMap((variant) => {
+      const trait = catalog.traits.byKey[variant.traitKey];
+      if (trait?.rarityDomain.kind !== 'ranked') return [];
+      return trait.rarityDomain.equippedRarities.map((rarity) => {
+        const effectiveRarity =
+          rarity === 'Common' && history.minimumScalableGodTraitRarity === 'Rare'
+            ? ('Rare' as const)
+            : rarity;
+        return Object.freeze({
+          option: Object.freeze({
+            giverKey: variant.giverKey,
+            traitKey: variant.traitKey,
+            rarity,
+          }),
+          effectiveRarity,
+          targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
+          assessment: assessTraitOption(
+            catalog,
+            variant.traitKey,
+            history,
+            {
+              resolvedProviderKey: variant.giverKey,
+              freshRarityOverride: effectiveRarity,
+              ordinarySlotReplacement: 'forbidden',
+              ...(context.deathDefianceConditionMet === undefined
+                ? {}
+                : { deathDefianceConditionMet: context.deathDefianceConditionMet }),
+            },
+            effectiveRarity,
+          ),
+        });
+      });
+    }),
+  );
 }
 
 export interface TraitAssessmentFinding {
@@ -1335,6 +1387,12 @@ export function assessTraitOption(
   ) {
     findings.push({ code: 'rarityBelowActiveFloor', traitKey, detail: 'Rare' });
   }
+  if (
+    trait.selectedDisposition.kind === 'echo' &&
+    trait.selectedDisposition.effect === 'lastRunBoon' &&
+    !echoLastRunBoonOutcomes(catalog, history, context).some((outcome) => outcome.assessment.legal)
+  )
+    findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRunBoonEmpty' });
   const occupied =
     trait.ordinaryBoonSlot === undefined
       ? undefined
@@ -1344,6 +1402,7 @@ export function assessTraitOption(
     : undefined;
   const priority = giver === undefined ? false : giver.priorityTraitKeys.includes(traitKey);
   const replacementEligible =
+    context.ordinarySlotReplacement !== 'forbidden' &&
     occupied !== undefined &&
     occupied.traitKey !== traitKey &&
     giver?.providerKind === 'olympian' &&
@@ -1381,7 +1440,11 @@ export function assessTraitOption(
         requiredRarity,
       });
     }
-  } else if (occupied !== undefined && trait.ordinaryBoonSlot !== undefined) {
+  } else if (
+    context.ordinarySlotReplacement !== 'forbidden' &&
+    occupied !== undefined &&
+    trait.ordinaryBoonSlot !== undefined
+  ) {
     findings.push({
       code: 'replacementUnavailable',
       traitKey,

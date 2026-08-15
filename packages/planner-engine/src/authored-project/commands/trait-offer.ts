@@ -7,6 +7,7 @@ import {
   traitOfferSupportsExhaustion,
   traitOfferOption,
   optionIndex,
+  normalizeAuthoredEchoLastRunBoon,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -207,6 +208,21 @@ function validateOffer(
       )
         failCommand(command, `unknown Echo Pom target ${String(option.echoPomTarget)}`);
     }
+    if ('echoLastRunBoon' in option) {
+      if (
+        trait.selectedDisposition.kind !== 'echo' ||
+        trait.selectedDisposition.effect !== 'lastRunBoon'
+      )
+        failCommand(command, `${option.traitKey} does not support Echo Boon Boon Boon outcomes`);
+      try {
+        normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon);
+      } catch (error) {
+        failCommand(
+          command,
+          error instanceof Error ? error.message : 'invalid Echo Boon Boon Boon outcomes',
+        );
+      }
+    }
   }
   const conditionApplicable =
     !omitDeathDefianceContext &&
@@ -227,7 +243,15 @@ function validateOffer(
     options: Object.freeze(
       value.options.map((option) => {
         const resolution = option.circeResolution;
-        if (resolution === undefined) return Object.freeze({ ...option });
+        const echoLastRunBoon =
+          'echoLastRunBoon' in option
+            ? normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon)
+            : undefined;
+        if (resolution === undefined)
+          return Object.freeze({
+            ...option,
+            ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+          });
         if (resolution.kind === 'disableFear')
           return Object.freeze({
             ...option,

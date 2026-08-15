@@ -63,7 +63,7 @@ export type TraitSelectedDisposition =
   | {
       /** Echo always equips the outer rarityless identity before this closed effect settles. */
       readonly kind: 'echo';
-      readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel';
+      readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon';
     }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
   | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
@@ -205,6 +205,19 @@ export interface TraitGiverDeclaration {
   readonly denialParticipates?: boolean;
 }
 
+/** One giver-preserving source variant in Echo's audited previous-run approximation. */
+export interface EchoLastRunBoonVariantDeclaration {
+  readonly key: string;
+  readonly giverKey: string;
+  readonly traitKey: string;
+  /** Present only when source `GetLootSourceName` records this provider. */
+  readonly lootHistorySource?: string;
+}
+
+export interface EchoLastRunBoonCatalog {
+  readonly variants: CatalogCollection<EchoLastRunBoonVariantDeclaration>;
+}
+
 export interface TraitOfferContextDeclaration {
   readonly key: TraitOfferContextKey;
   readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
@@ -222,4 +235,5 @@ export interface TraitCatalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
+  readonly echoLastRunBoon: EchoLastRunBoonCatalog;
 }

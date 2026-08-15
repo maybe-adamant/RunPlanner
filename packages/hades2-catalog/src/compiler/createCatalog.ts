@@ -147,6 +147,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     aspects: traitCatalog.aspects,
     traits: traitCatalog.traits,
     traitGivers: traitCatalog.givers,
+    echoLastRunBoon: traitCatalog.echoLastRunBoon,
     traitOfferContexts: traitCatalog.offerContexts,
     traitRarityOrder: traitCatalog.rarityOrder,
     traitElements: traitCatalog.elements,

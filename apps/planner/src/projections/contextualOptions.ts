@@ -231,6 +231,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'echoPomNoTargetUnavailable':
     case 'echoPomTargetUnavailable':
       return { kind: 'trait', message: 'Choose a greatest-level Pom-eligible trait.' };
+    case 'echoLastRunBoonMissing':
+      return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
+    case 'echoLastRunBoonOptionUnavailable':
+      return { kind: 'trait', message: 'Choose a currently eligible previous-run boon outcome.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',

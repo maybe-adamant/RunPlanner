@@ -478,10 +478,23 @@ must not synthesize a generic Boon, Pom, or consumable alias.
 The planner can support Boon Boon Boon without pretending to know the previous
 run. The authored approximation is one to three source-resolved
 `{giver, trait, rarity}` outcomes from the source-valid Echo domain that remain
-legal at Echo's current pre-offer state, followed by one direct selection. This
-is explicitly a user-authored stand-in for the unknown prior-run cache; it is
-not evidence those traits appeared in a previous run and it must not force all
-three options through a fictional Echo giver.
+legal at Echo's current pre-offer state, followed by one direct selection. A
+row also retains only the declaration-owned selected-acquisition detail needed
+to settle that exact trait. In the current participating union this adds an
+optional target solely for `BoonDecayBoon`; its acquisition chooses one exact
+eligible core-god/superchargeable target. Only the three Hephaestus targets
+carry the additional cooldown and level restrictions. `KeepsakeLevelBoon`
+needs no additional row field and reuses its current-keepsake transition when
+selected. This is explicitly a user-authored stand-in for the unknown prior-run
+cache; it is not evidence those traits appeared in a previous run and it must
+not force all three options through a fictional Echo giver.
+
+Every authored row is revalidated against the same pre-Echo frontier before
+the selected row settles. That frontier includes Echo's authored
+Death-Defiance condition, so Athena's `DeathDefianceRefillBoon` participates
+exactly when that condition is true. One invalid selected or unselected row
+retains the outer acquisition and child for repair without recording any
+nested trait or loot-source history.
 
 A single-provider trait contributes one outcome variant. A Duo trait present in
 both participating giver inventories contributes two variants, one for each
@@ -492,7 +505,9 @@ two rows in one offer. Selecting a Duo variant increments exactly that one
 giver's loot history and equips one copy of the trait; it never adds both gods.
 The authored rarity must belong to the trait's exact equipped-rarity domain,
 including Heroic, Legendary, and Duo. The active rarity floor changes only a
-Common result to Rare.
+Common result to Rare. Direct settlement bypasses ordinary offer composition,
+replacement composition, Calling Card actions, and Vow of Denial's unselected
+row bans while retaining the selected trait's own acquisition behavior.
 
 The source-valid domain is closed over the giver inventories already recorded
 in this audit. `IsGodTrait(..., { ForShop = true, ForLastRunBoon = true })`
@@ -1196,8 +1211,8 @@ moving any lifecycle, authored-state, or simulation policy into declarations:
 | Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                            |
 | offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                      |
 
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 372
-unique included trait declarations, 290 memberships across 20 non-Hammer
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 373
+unique included trait declarations, 291 memberships across 20 non-Hammer
 givers, 92 Hammer memberships under the twenty-first giver, and one
 loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
 spell/talent operands remain exact keys
@@ -1206,9 +1221,9 @@ Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
 providers. Narcissus's nine choices remain effect-backed rather than persistent
 inventory. Circe's nine rarityless choices are production catalog entries;
 its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
-simulation contract. Echo's Survive, Evade, Fight, and Pom identities are
-production rarityless catalog entries; the remaining four choices stay gated
-behind their replay, prior-run, pending-Shop, and keepsake authorities. Spell
+simulation contract. Echo's Survive, Evade, Fight, Pom, and Boon identities are
+production rarityless catalog entries; the remaining three choices stay gated
+behind their replay, pending-Shop, and keepsake authorities. Spell
 and Talent providers remain outside
 the production trait catalog. Other source
 predicates retain the dispositions above or the previously recorded
@@ -1218,7 +1233,7 @@ claim.
 
 ## Implemented Offer Disposition
 
-Schema 31 retains this audit's giver membership, requirements, rarity domains,
+Schema 32 retains this audit's giver membership, requirements, rarity domains,
 priority sets, and exact replacement targets. The earlier fixed-triple text is
 historical baseline only: Olympian and Hermes outcomes now support one to three
 materialized traits or Fallback Gold according to the source-backed exhaustion

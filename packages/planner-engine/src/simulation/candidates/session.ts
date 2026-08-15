@@ -90,12 +90,16 @@ import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoPomTargetDomain,
+  evaluateEchoLastRunBoonDomain,
   type CirceResolutionDomainEvaluation,
   type CirceResolutionDomainQuery,
   type EvaluatedCirceResolutionDomain,
   type EvaluatedEchoPomTargetDomain,
   type EchoPomTargetDomainEvaluation,
   type EchoPomTargetDomainQuery,
+  type EchoLastRunBoonDomainQuery,
+  type EchoLastRunBoonDomainEvaluation,
+  type EvaluatedEchoLastRunBoonDomain,
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
@@ -156,7 +160,8 @@ export type ProjectCandidateSessionQuery =
   | TraitOfferFocusedOptionCandidateQuery
   | TraitAcquisitionTargetDomainQuery
   | CirceResolutionDomainQuery
-  | EchoPomTargetDomainQuery;
+  | EchoPomTargetDomainQuery
+  | EchoLastRunBoonDomainQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -192,7 +197,8 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedTraitOfferFocusedOptionCandidate
   | EvaluatedTraitAcquisitionTargetDomain
   | EvaluatedCirceResolutionDomain
-  | EvaluatedEchoPomTargetDomain;
+  | EvaluatedEchoPomTargetDomain
+  | EvaluatedEchoLastRunBoonDomain;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -219,6 +225,8 @@ export interface ProjectCandidateSession {
     (queries: readonly CirceResolutionDomainQuery[]): readonly CirceResolutionDomainEvaluation[];
     (query: EchoPomTargetDomainQuery): EchoPomTargetDomainEvaluation;
     (queries: readonly EchoPomTargetDomainQuery[]): readonly EchoPomTargetDomainEvaluation[];
+    (query: EchoLastRunBoonDomainQuery): EchoLastRunBoonDomainEvaluation;
+    (queries: readonly EchoLastRunBoonDomainQuery[]): readonly EchoLastRunBoonDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
     (query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
@@ -451,6 +459,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'echoLastRunBoonDomain':
+      return evaluateEchoLastRunBoonDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
   }
   return assertNever(query);
 }
@@ -487,6 +504,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly EchoPomTargetDomainQuery[],
   ): readonly EchoPomTargetDomainEvaluation[];
+  function evaluate(query: EchoLastRunBoonDomainQuery): EchoLastRunBoonDomainEvaluation;
+  function evaluate(
+    queries: readonly EchoLastRunBoonDomainQuery[],
+  ): readonly EchoLastRunBoonDomainEvaluation[];
   function evaluate(query: ProjectCandidateSessionQuery): ProjectCandidateSessionEvaluation;
   function evaluate(
     queries: readonly ProjectCandidateSessionQuery[],

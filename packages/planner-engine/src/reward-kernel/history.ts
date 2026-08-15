@@ -62,6 +62,18 @@ function increment(
   return Object.freeze({ ...record, [key]: (record[key] ?? 0) + 1 });
 }
 
+/** Records one source-resolved direct loot interaction without fabricating a pickup. */
+export function recordLootTypeHistorySource(
+  history: RewardHistoryState,
+  source: string,
+): RewardHistoryState {
+  if (source.trim().length === 0) throw new Error('loot history source must not be blank');
+  return Object.freeze({
+    ...history,
+    lootTypeHistory: increment(history.lootTypeHistory, source),
+  });
+}
+
 export function applyOfferProjection(
   catalog: RewardKernelCatalog,
   history: RewardHistoryState,

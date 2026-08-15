@@ -29,6 +29,9 @@ import {
   type TraitOfferAddress,
   type CirceResolutionAddress,
   type EchoPomTargetAddress,
+  type EchoLastRunBoonAddress,
+  type AuthoredEchoLastRunBoonOffer,
+  type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
@@ -225,6 +228,7 @@ export interface WorkspaceTraitOfferControl {
   readonly circeResolution?: WorkspaceCirceResolutionControl;
   /** Present only for the currently selected Echo Pom row. */
   readonly echoPomTarget?: WorkspaceEchoPomTargetControl;
+  readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
@@ -254,6 +258,13 @@ export interface WorkspaceEchoPomTargetControl {
   readonly value?: string | null;
 }
 
+export interface WorkspaceEchoLastRunBoonControl {
+  readonly address: EchoLastRunBoonAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly value?: AuthoredEchoLastRunBoonOffer;
+}
+
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -273,6 +284,7 @@ export interface WorkspaceTraitOptionDomainInteraction {
   /** Candidate-backed exact outcome editor for a selected Circe option only. */
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
+  readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
 }
 
 export interface WorkspaceCirceResolutionDomain {
@@ -308,6 +320,33 @@ export interface WorkspaceEchoPomTargetInteraction {
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoPomTargetDomain | undefined;
+  };
+}
+
+export interface WorkspaceEchoLastRunBoonCandidate {
+  readonly label: string;
+  readonly value: AuthoredEchoLastRunBoonOption;
+  readonly effectiveRarity: TraitRarity;
+  readonly supported: boolean;
+  readonly targetChoices: readonly WorkspaceInteractionChoice<string>[];
+}
+
+export interface WorkspaceEchoLastRunBoonDomain {
+  readonly candidates: readonly WorkspaceEchoLastRunBoonCandidate[];
+  /** Engine-owned distinctness domain for each existing authored row. */
+  readonly candidatesByOption: readonly (readonly WorkspaceEchoLastRunBoonCandidate[])[];
+  /** Engine-selected first supported trait identity not already present. */
+  readonly appendCandidate?: WorkspaceEchoLastRunBoonCandidate;
+}
+
+export interface WorkspaceEchoLastRunBoonInteraction {
+  readonly control: WorkspaceEchoLastRunBoonControl;
+  readonly intentFor: (
+    offer: AuthoredTraitOfferTraits,
+    value: AuthoredEchoLastRunBoonOffer,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceEchoLastRunBoonDomain | undefined;
   };
 }
 

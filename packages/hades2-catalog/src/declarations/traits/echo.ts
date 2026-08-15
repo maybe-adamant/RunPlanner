@@ -35,6 +35,13 @@ export const echoTraits = [
   },
   {
     ...raritylessEchoTrait,
+    key: 'EchoLastRunBoon',
+    label: 'Boon Boon Boon',
+    offerRequirements: [],
+    selectedDisposition: { kind: 'echo', effect: 'lastRunBoon' },
+  },
+  {
+    ...raritylessEchoTrait,
     key: 'EchoDoubleLevelBoon',
     label: 'Pom Pom Pom',
     offerRequirements: [],

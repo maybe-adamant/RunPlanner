@@ -13,6 +13,7 @@ import type {
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   TraitElement,
+  EchoLastRunBoonCatalog,
   TraitRarity,
   WeaponDeclaration,
 } from '@run-planner/engine/catalog-schema';
@@ -131,7 +132,7 @@ function normalizeSelectedDisposition(
       kind,
       effect: closedValue(
         value.effect,
-        ['numericNoOp', 'survive', 'doubleLevel'] as const,
+        ['numericNoOp', 'survive', 'doubleLevel', 'lastRunBoon'] as const,
         `${path}.effect`,
       ),
     });
@@ -1091,6 +1092,98 @@ function normalizeContexts(
   return collection;
 }
 
+function normalizeEchoLastRunBoon(
+  raw: RawTraitCatalogInput['echoLastRunBoon'],
+  traits: CatalogCollection<TraitDeclaration>,
+  givers: CatalogCollection<TraitGiverDeclaration>,
+): EchoLastRunBoonCatalog {
+  const value = requireObject(
+    raw,
+    'echoLastRunBoon',
+  ) as unknown as RawTraitCatalogInput['echoLastRunBoon'];
+  const actualKeys = Object.keys(value).sort();
+  if (
+    actualKeys.length !== 2 ||
+    actualKeys[0] !== 'excludedTraitKeys' ||
+    actualKeys[1] !== 'sources'
+  )
+    fail('echoLastRunBoon', 'must contain exactly excludedTraitKeys and sources');
+  const excludedTraitKeys = freezeUniqueStrings(
+    requireArray(value.excludedTraitKeys, 'echoLastRunBoon.excludedTraitKeys') as readonly string[],
+    'echoLastRunBoon.excludedTraitKeys',
+  );
+  for (const [index, traitKey] of excludedTraitKeys.entries()) {
+    if (traits.byKey[traitKey] === undefined)
+      fail(`echoLastRunBoon.excludedTraitKeys[${index}]`, `unknown trait ${traitKey}`);
+  }
+  const sources = requireArray(value.sources, 'echoLastRunBoon.sources').map((entry, index) => {
+    const path = `echoLastRunBoon.sources[${index}]`;
+    const source = requireObject(entry, path) as {
+      readonly giverKey?: unknown;
+      readonly lootHistorySource?: unknown;
+    };
+    const expectedKeys =
+      source.lootHistorySource === undefined ? ['giverKey'] : ['giverKey', 'lootHistorySource'];
+    const keys = Object.keys(source).sort();
+    if (
+      keys.length !== expectedKeys.length ||
+      keys.some((key, keyIndex) => key !== [...expectedKeys].sort()[keyIndex])
+    )
+      fail(path, `must contain exactly ${expectedKeys.join(' and ')}`);
+    if (typeof source.giverKey !== 'string') fail(`${path}.giverKey`, 'must be a string');
+    const giverKey = requireNonEmpty(source.giverKey, `${path}.giverKey`);
+    const giver = givers.byKey[giverKey];
+    if (giver === undefined) fail(`${path}.giverKey`, `unknown giver ${giverKey}`);
+    if (giver.providerKind === 'hammer' || giver.rarityPolicy.kind === 'none')
+      fail(`${path}.giverKey`, `${giverKey} cannot participate in Echo's last-run domain`);
+    return Object.freeze({
+      giver,
+      ...(source.lootHistorySource === undefined
+        ? {}
+        : typeof source.lootHistorySource !== 'string'
+          ? fail(`${path}.lootHistorySource`, 'must be a string')
+          : {
+              lootHistorySource: requireNonEmpty(
+                source.lootHistorySource,
+                `${path}.lootHistorySource`,
+              ),
+            }),
+    });
+  });
+  if (
+    sources.length === 0 ||
+    new Set(sources.map((source) => source.giver.key)).size !== sources.length
+  )
+    fail('echoLastRunBoon.sources', 'must contain distinct participating givers');
+  const participantTraitKeys = new Set(sources.flatMap((source) => [...source.giver.traitKeys]));
+  for (const traitKey of excludedTraitKeys) {
+    if (!participantTraitKeys.has(traitKey))
+      fail('echoLastRunBoon.excludedTraitKeys', `${traitKey} is not in a participating giver`);
+  }
+  const variants = sources.flatMap(({ giver, lootHistorySource }) =>
+    giver.traitKeys.flatMap((traitKey) => {
+      if (excludedTraitKeys.includes(traitKey)) return [];
+      const trait = traits.byKey[traitKey];
+      if (trait?.rarityDomain.kind !== 'ranked')
+        fail(
+          'echoLastRunBoon.sources',
+          `${giver.key}.${traitKey} must have a ranked rarity domain`,
+        );
+      return [
+        Object.freeze({
+          key: `${giver.key}:${traitKey}`,
+          giverKey: giver.key,
+          traitKey,
+          ...(lootHistorySource === undefined ? {} : { lootHistorySource }),
+        }),
+      ];
+    }),
+  );
+  return Object.freeze({
+    variants: createCollection(variants, 'echoLastRunBoon.variants', (variant) => variant.key),
+  });
+}
+
 export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const declaredDeferred = freezeUniqueStrings(
     requireArray(input.deferredTraitKeys, 'deferredTraitKeys') as readonly string[],
@@ -1107,6 +1200,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     }
   }
   const givers = normalizeGivers(input.givers, traits, weapons, aspects);
+  const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);
   const offerContexts = normalizeContexts(input.offerContexts);
   return Object.freeze({
     rarityOrder: Object.freeze(['Common', 'Rare', 'Epic', 'Heroic'] as const),
@@ -1117,5 +1211,6 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     aspects,
     traits,
     givers,
+    echoLastRunBoon,
   });
 }

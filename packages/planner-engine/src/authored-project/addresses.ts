@@ -222,6 +222,12 @@ export interface EchoPomTargetAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** Echo Boon Boon Boon's complete mixed-provider child beneath the selected outer row. */
+export interface EchoLastRunBoonAddress extends BiomeOwnedAddress {
+  readonly kind: 'echoLastRunBoon';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+}
 export interface LevelResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'levelResolution';
   readonly owner: TraitOfferOwnerAddress;
@@ -263,6 +269,7 @@ export type SemanticAddress =
   | AcquisitionRoleAddress
   | CirceResolutionAddress
   | EchoPomTargetAddress
+  | EchoLastRunBoonAddress
   | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
@@ -669,6 +676,18 @@ export function createEchoPomTargetAddress(
     optionKey,
   });
 }
+export function createEchoLastRunBoonAddress(
+  trait: TraitOfferAddress,
+  optionKey: EchoLastRunBoonAddress['optionKey'],
+): EchoLastRunBoonAddress {
+  return Object.freeze({
+    kind: 'echoLastRunBoon',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+  });
+}
 export function createLevelResolutionAddress(
   ownerAddress: TraitOfferOwnerAddress,
   acquisitionRole: string,
@@ -753,6 +772,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
     case 'circeResolution':
     case 'echoPomTarget':
+    case 'echoLastRunBoon':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
     case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);

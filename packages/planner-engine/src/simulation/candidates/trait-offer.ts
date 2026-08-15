@@ -101,6 +101,30 @@ export interface EvaluatedEchoPomTargetDomain {
 export type EchoPomTargetDomainEvaluation =
   CandidateContextUnavailable | EvaluatedEchoPomTargetDomain;
 
+export interface EchoLastRunBoonDomainQuery {
+  readonly kind: 'echoLastRunBoonDomain';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly optionKey: TraitOptionKey;
+}
+export interface EvaluatedEchoLastRunBoonCandidate {
+  readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
+  readonly effectiveRarity: import('../../catalog-schema').TraitRarity;
+  readonly supported: boolean;
+  readonly branchSupport: readonly boolean[];
+  readonly targetTraitKeys: readonly string[];
+}
+export interface EvaluatedEchoLastRunBoonDomain {
+  readonly kind: 'echoLastRunBoonDomain';
+  readonly result: {
+    readonly candidates: readonly EvaluatedEchoLastRunBoonCandidate[];
+    readonly candidatesByOption: readonly (readonly EvaluatedEchoLastRunBoonCandidate[])[];
+    readonly appendCandidate?: EvaluatedEchoLastRunBoonCandidate;
+  };
+}
+export type EchoLastRunBoonDomainEvaluation =
+  CandidateContextUnavailable | EvaluatedEchoLastRunBoonDomain;
+
 export interface EvaluatedTraitAcquisitionTargetCandidate {
   readonly kind: 'traitAcquisitionTarget';
   readonly result: {
@@ -592,5 +616,88 @@ export function evaluateEchoPomTargetDomain(
   return Object.freeze({
     kind: 'echoPomTargetDomain',
     result: Object.freeze({ traitKeys: first, emptyNoOpAllowed: first.length === 0 }),
+  });
+}
+
+export function evaluateEchoLastRunBoonDomain(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: EchoLastRunBoonDomainQuery,
+): EchoLastRunBoonDomainEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const branches = capability.echoLastRunBoon(query.value, query.optionKey);
+  const first = branches[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const candidates = Object.freeze(
+    first.map((outcome) => {
+      const branchSupport = Object.freeze(
+        branches.map(
+          (branch) =>
+            branch.find(
+              (candidate) =>
+                candidate.option.giverKey === outcome.option.giverKey &&
+                candidate.option.traitKey === outcome.option.traitKey &&
+                candidate.option.rarity === outcome.option.rarity,
+            )?.assessment.legal === true,
+        ),
+      );
+      const targetTraitKeys = Object.freeze([
+        ...new Set(
+          branches.flatMap(
+            (branch) =>
+              branch.find(
+                (candidate) =>
+                  candidate.option.giverKey === outcome.option.giverKey &&
+                  candidate.option.traitKey === outcome.option.traitKey &&
+                  candidate.option.rarity === outcome.option.rarity,
+              )?.targetTraitKeys ?? [],
+          ),
+        ),
+      ]);
+      return Object.freeze({
+        option: outcome.option,
+        effectiveRarity: outcome.effectiveRarity,
+        supported: branchSupport.some(Boolean),
+        branchSupport,
+        targetTraitKeys,
+      });
+    }),
+  );
+  const child =
+    query.value.kind === 'traits'
+      ? query.value.options[optionIndex(query.optionKey)]?.echoLastRunBoon
+      : undefined;
+  const candidatesByOption = Object.freeze(
+    (child?.options ?? []).map((existing, index) =>
+      Object.freeze(
+        candidates.filter(
+          (candidate) =>
+            (candidate.supported &&
+              !child?.options.some(
+                (other, otherIndex) =>
+                  otherIndex !== index && other.traitKey === candidate.option.traitKey,
+              )) ||
+            (candidate.option.giverKey === existing.giverKey &&
+              candidate.option.traitKey === existing.traitKey &&
+              candidate.option.rarity === existing.rarity),
+        ),
+      ),
+    ),
+  );
+  const appendCandidate = candidates.find(
+    (candidate) =>
+      candidate.supported &&
+      !child?.options.some((existing) => existing.traitKey === candidate.option.traitKey),
+  );
+  return Object.freeze({
+    kind: 'echoLastRunBoonDomain',
+    result: Object.freeze({
+      candidates,
+      candidatesByOption,
+      ...(appendCandidate === undefined ? {} : { appendCandidate }),
+    }),
   });
 }
