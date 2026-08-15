@@ -720,10 +720,11 @@ one generic trait-outcome mechanism:
   requires canonical history to retain the exact replayable source identity,
   not merely the latest reward-history event. The recreated item settles before
   Echo's exits become usable.
-- Boon Boon Boon directly equips one selected trait. It does not spawn a
-  pickup and therefore remains in trait-offer authority. Because the real game
-  reads the previous run's rarity cache, the planner may use an explicit
-  cross-provider authored approximation without manufacturing prior-run state.
+- Boon Boon Boon first acquires its fixed-Common outer Echo identity, then
+  directly equips one selected nested trait. It does not spawn a pickup and
+  therefore remains in trait-offer authority. Because the real game reads the
+  previous run's rarity cache, the planner may use an explicit cross-provider
+  authored approximation without manufacturing prior-run state.
 - Gold Gold Gold equips `EchoDoubleShop`, whose one remaining use is itself the
   pending state. During later World Shop settlement, the first eligible
   purchased entry recreates a mandatory acquisition immediately after itself
@@ -738,11 +739,20 @@ shops no longer observe the effect. Once the duplicate materializes, its exact
 acquisition entry owns its child state and does not retain an invented permanent
 link to Echo.
 
+All eight selected Echo menu identities are themselves acquired fixed-Common
+traits before these effect-specific contacts run. Source-hidden Reward, Boon,
+Survive, and Pom therefore remain in trait history even though their callbacks
+produce a pickup, nested trait, collapsed Death Defiance restoration, or Pom
+mutation. Boon leaves both the outer Echo identity and the selected nested
+trait; Gold later removes only its exact one-use outer acquisition.
+
 ## Durable boundary invariants
 
 1. Selecting a direct equipped trait does not manufacture a scheduled pickup.
 2. Selecting a drop-producing benefit emits only its declared supported
-   pickups; the outer descriptor does not enter equipped-trait history.
+   pickups. Whether its outer descriptor also enters equipped-trait history is
+   source-owned: Narcissus choice descriptors do not, while every selected Echo
+   identity does before its callback settles.
 3. Pickup-owned trait offers and level resolutions are evaluated only when
    that pickup is due and acquired.
 4. Current outgoing doors are generated from the correct pre-interaction
