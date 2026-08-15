@@ -12,6 +12,7 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
   createGoldenFGHProject,
   createCompleteFGProject,
+  goldenGBiome,
   goldenGOccurrenceId,
   createRepresentativeNOPProject,
   pBiome,
@@ -27,6 +28,9 @@ import {
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  evaluateBiomeCompleteness,
+  materializeBiome,
+  simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
@@ -40,12 +44,18 @@ import {
   assessGorgonEligibility,
   attestGorgonBranchState,
 } from '../../src/simulation/keepsakes';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
+import {
+  initializeRewardBranches,
+  processEncounterTraitOffer,
+} from '../../src/simulation/rewards/processing';
+import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
+import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
 } from '../../src/authored-project';
@@ -55,6 +65,92 @@ import { nBiome } from '../authored-project/support/configured-projects';
 
 describe('Gorgon Amulet lifecycle', () => {
   const fear = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+
+  function cherishedPrerequisiteHistory() {
+    return foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'traitOffer' as const,
+        owner: { kind: 'project' as const },
+        acquisitionRole: 'demeterSeed',
+        sequence: 1,
+        giverKey: 'Demeter',
+        options: [{ traitKey: 'DemeterWeaponBoon', rarity: 'Common' as const }],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'prerequisiteSeed',
+      },
+      {
+        kind: 'traitOffer' as const,
+        owner: { kind: 'project' as const },
+        acquisitionRole: 'heraSeed',
+        sequence: 2,
+        giverKey: 'Hera',
+        options: [{ traitKey: 'HeraCastBoon', rarity: 'Common' as const }],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'prerequisiteSeed',
+      },
+    ]);
+  }
+
+  function cherishedOffer() {
+    return {
+      kind: 'traits' as const,
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'KeepsakeLevelBoon', rarity: 'Duo' as const },
+        { traitKey: 'DemeterSpecialBoon', rarity: 'Common' as const },
+        { traitKey: 'DemeterSprintBoon', rarity: 'Common' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: [] as const,
+    };
+  }
+
+  function evaluateGWithGorgonSeed(
+    project: ReturnType<typeof createCompleteFGProject>,
+    seed: ReturnType<typeof initializeRewardBranches>[number],
+  ) {
+    const baseline = simulateProject(catalog, createCompleteFGProject());
+    const underworld = baseline.routes.find((route) => route.routeKey === 'Underworld');
+    const previous = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
+    const gEvaluation = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const plan = route?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (
+      previous?.authoring !== 'complete' ||
+      previous.validity !== 'valid' ||
+      gEvaluation?.authoring !== 'complete' ||
+      gEvaluation.validity !== 'valid' ||
+      route === undefined ||
+      plan === undefined
+    )
+      throw new Error('missing valid F-to-G Gorgon fixture');
+    const completeness = evaluateBiomeCompleteness(catalog, goldenGBiome, plan);
+    if (completeness.completion !== 'complete') throw new Error('G fixture is incomplete');
+    const snapshot = materializeBiome(
+      catalog,
+      goldenGBiome,
+      completeness,
+      route.loadout,
+      plan.bossCompletionArcanaKeys,
+      undefined,
+      plan.keepsakeEquipResults,
+    );
+    const traitHistory = seed.traitHistory ?? cherishedPrerequisiteHistory();
+    const initialBranches = previous.rewards.branches.map((branch) => ({
+      ...branch,
+      history: attachTraitHistory(branch.history, traitHistory),
+      traitHistory,
+      keepsakes: seed.keepsakes,
+    }));
+    return evaluateBiomeRewardsAssemblyInternal(
+      catalog,
+      snapshot,
+      gEvaluation.history,
+      2,
+      route.loadout,
+      initialBranches,
+    ).simulation;
+  }
 
   it('starts pending, consumes once, and never reactivates', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
@@ -223,6 +319,83 @@ describe('Gorgon Amulet lifecycle', () => {
       expect(evaluated.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(rarity);
     },
   );
+
+  it.each([
+    ['prior Cherished', true, 'Heroic'],
+    ['same-encounter Cherished reward', false, 'Epic'],
+  ] as const)('preserves the real Gorgon snapshot for %s', (_label, priorCherished, rarity) => {
+    const phase = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(1, 1) },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    if (!priorCherished) {
+      const incoming = createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(1, 1));
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: incoming,
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+        },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(incoming, 'source'),
+        value: cherishedOffer(),
+      });
+    }
+
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    if (route === undefined) throw new Error('missing Underworld route');
+    const arcanaFear = createArcanaFearState(catalog, route.loadout);
+    const initialized = initializeRewardBranches(
+      undefined,
+      arcanaFear,
+      catalog,
+      'AthenaEncounterKeepsake',
+    )[0]!;
+    const before = cherishedPrerequisiteHistory();
+    const seeded = {
+      ...initialized,
+      history: attachTraitHistory(initialized.history, before),
+      traitHistory: before,
+    };
+    const acquired = priorCherished
+      ? processEncounterTraitOffer(
+          catalog,
+          seeded,
+          createEncounterPhaseAddress(
+            createBiomeAddress('Underworld', 'F'),
+            { kind: 'occurrence', occurrenceId: createOccurrenceId('prior-cherished') },
+            'Encounter',
+          ),
+          cherishedOffer(),
+          3,
+          'encounterCompleted',
+        )
+      : seeded;
+    const result = evaluateGWithGorgonSeed(project, acquired);
+    expect(result.branches).not.toHaveLength(0);
+    expect(result.branches.every((branch) => branch.keepsakes.gorgon?.status === 'consumed')).toBe(
+      true,
+    );
+    expect(
+      result.branches.every(
+        (branch) => branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity === rarity,
+      ),
+    ).toBe(true);
+    expect(
+      result.branches.every(
+        (branch) => branch.traitHistory?.equippedTraits.KeepsakeLevelBoon !== undefined,
+      ),
+    ).toBe(true);
+  });
 
   it('atomically creates the authored child and preserves it when the condition is cleared', () => {
     const phase = createEncounterPhaseAddress(

@@ -213,6 +213,10 @@ on acquisition roles, and Fig Leaf plus Gorgon controls remain on exact
 encounter phases. Each reached product has one bound interaction, finding
 destination, and containing inspector; dormant detail publishes none. React
 renders those products without switching on keepsake keys to decide legality.
+Reached Gorgon offers display their encounter-snapshotted rarity read-only and
+dispatch only the persisted Athena identities and selection. Cherished Heirloom
+uses the ordinary trait-offer control; it adds no action button or keepsake-rank
+control.
 
 ## Application Projection Boundary
 

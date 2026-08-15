@@ -196,13 +196,21 @@ normalization rejects missing, duplicate, unknown, or misclassified entries.
 The planner assumes the inventory is unlocked and does not represent profile
 progression or authored rank choice.
 
-Effect coverage is deliberately narrower than identity coverage. Jeweled Pom,
-Experimental Hammer, Calling Card, Time Piece, Fig Leaf, and Gorgon Amulet own
-one closed data-only descriptor containing only the rank-III facts consumed by
-their respective engine transitions. The other 27 identities remain legal
-selection and Fated-history participants without an individual gameplay-effect
-descriptor. Adding a later effect means extending this closed supported set and
-its owning domain transition; it does not add a generic callback registry.
+Effect coverage is deliberately narrower than identity coverage. Six
+declarations own closed data-only four-rank profiles (`Common`, `Rare`, `Epic`,
+`Heroic`): Jeweled Pom levels are `1/2/3/4`, Experimental Hammer encounter uses
+are `10/15/20/30`, Calling Card charges are `2/4/6/8`, Time Piece charges are
+`2/3/4/5`, Fig Leaf biome uses are `1/2/3/4`, and Gorgon Amulet rarity levels
+are `1/2/3/4`. Ordinary player selection remains fixed at `Epic`; the profiles
+are catalog facts, not authored rank choices.
+
+Cherished Heirloom declares one closed selected disposition that equips the Duo
+trait and advances the current supported keepsake by one rank. The other 27
+identities remain legal selection, chronology, no-return, and Fated-history
+participants without an individual gameplay-effect descriptor. Adding a later
+effect means extending the closed supported union and its owning transitions;
+declarations never carry callbacks and no generic keepsake-effect registry is
+introduced.
 
 Keepsake-dependent capability facts stay with the declaration family that
 answers the engine's concrete question. Calling Card menu participation belongs

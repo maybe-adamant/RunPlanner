@@ -728,10 +728,11 @@ occupies the room's combat phase.
 
 Athena then publishes her ordinary three-option trait offer. Rank III supplies
 a rarity-level bonus of three, which makes every ordinary Athena option at
-least Epic. The current Athena provider has no higher fresh-offer rarity in its
-ordinary domain, so the planner's Gorgon Amulet offer rows are fixed Epic. The
-offer otherwise reuses Athena's existing trait prerequisites and selection
-lifecycle.
+least Epic. The planner derives Gorgon rarity from its chronological keepsake
+rank: an ordinary rank-III appearance is Epic and a rank-IV appearance under
+prior Cherished Heirloom is Heroic. The reached encounter snapshots that rarity
+for all three rows. The offer otherwise reuses Athena's existing trait
+prerequisites and selection lifecycle.
 
 Gorgon Amulet is not permanent. If it is replaced before finding an eligible
 encounter, its pending appearance is lost. After Athena appears, the exhausted
@@ -924,17 +925,24 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The ordinary keepsake slice is implemented through authored schema 29. All 33
-identities participate in mandatory route-start selection, reached nonfinal
-Postboss retain-or-replace frontiers, ordered history, no-return legality, and
-their declared Fated role. Jeweled Pom, Experimental Hammer, Calling Card, Time
-Piece, Fig Leaf, and Gorgon Amulet additionally implement the effect contracts
-audited above. The remaining 27 identities create no individual simulated
-gameplay effect; they are not complete no-ops because their identity still
-participates in chronology, no-return, and Fated policy.
+The keepsake model is current through authored schema 30. All 33 identities
+participate in mandatory route-start selection, reached nonfinal Postboss
+retain-or-replace frontiers, ordered history, no-return legality, and their
+declared Fated role. Jeweled Pom, Experimental Hammer, Calling Card, Time Piece,
+Fig Leaf, and Gorgon Amulet additionally own complete rank-I through rank-IV
+profiles and implement the effect contracts audited above. Ordinary player
+selection remains fixed at rank III.
+
+Cherished Heirloom is complete for those six effects: acquisition advances the
+current supported effect according to its exact reconstruction rule, and a
+later supported equip uses rank IV while the Duo remains active. Gorgon uses the
+schema-30 phase child and a chronologically snapped Epic or Heroic rarity. The
+remaining 27 identities create no individual simulated gameplay effect, but
+still participate fully in identity history, no-return, Fated policy, and Run
+State.
 
 The implementation retains one branch-owned keepsake state and routes each
 effect through its existing trait, acquisition, encounter, or lifecycle
-authority. It does not contain a generic effect registry, a second route
-history, or React-owned keepsake-key policy. Rank-sensitive extensions and Echo
-remain separate slices governed by their focused audits.
+authority. It has no generic effect registry, second route history, authored
+rank, or React-owned keepsake-key policy. Echo and Gift Gift Gift remain
+deferred under their focused audit and plan.

@@ -87,6 +87,78 @@ export function keepsakeRankForEquip(
   }
 }
 
+/**
+ * Applies Cherished Heirloom's acquisition-time reconstruction to the current
+ * supported keepsake only. Equip-time products deliberately remain outside
+ * this transition: Fig Leaf and Experimental Hammer are explicit no-ops, and
+ * missing retained ledgers are never recreated.
+ */
+export function advanceCurrentKeepsake(
+  catalog: Catalog,
+  state: KeepsakeState,
+  rankBonus: 1,
+): KeepsakeState {
+  const keepsake = catalog.keepsakes.byKey[state.currentKey];
+  const effect = keepsake?.effect;
+  if (keepsake === undefined || effect === undefined) return state;
+  const advancedRank: KeepsakeRank =
+    keepsake.rank === 'Epic' && rankBonus === 1 ? 'Heroic' : keepsake.rank;
+  switch (effect.kind) {
+    case 'gorgonAmulet':
+      return state.gorgon?.status === 'pending'
+        ? Object.freeze({
+            ...state,
+            gorgon: Object.freeze({
+              status: 'pending' as const,
+              rarity: gorgonRarityForRank(catalog, effect, advancedRank),
+            }),
+          })
+        : state;
+    case 'figLeaf':
+      return state;
+    case 'experimentalHammer':
+      return state;
+    case 'jeweledPom':
+      return state.jeweledPom === undefined
+        ? state
+        : Object.freeze({
+            ...state,
+            jeweledPom: Object.freeze({
+              ...state.jeweledPom,
+              levels: effect.subsequentEligibleTraitLevelsByRank[advancedRank],
+            }),
+          });
+    case 'callingCard':
+      return state.callingCard === undefined
+        ? state
+        : Object.freeze({
+            ...state,
+            callingCard: Object.freeze({
+              remainingCharges:
+                state.callingCard.remainingCharges +
+                (effect.rarificationChargesByRank[advancedRank] -
+                  effect.rarificationChargesByRank[keepsake.rank]),
+            }),
+          });
+    case 'timePiece':
+      return state.timePiece === undefined
+        ? state
+        : Object.freeze({
+            ...state,
+            timePiece: Object.freeze({
+              remainingCharges:
+                state.timePiece.remainingCharges +
+                (effect.conversionChargesByRank[advancedRank] -
+                  effect.conversionChargesByRank[keepsake.rank]),
+            }),
+          });
+    default: {
+      const exhaustive: never = effect;
+      return exhaustive;
+    }
+  }
+}
+
 function gorgonRarityForRank(
   catalog: Catalog,
   effect: Extract<

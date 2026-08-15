@@ -46,11 +46,13 @@ additional exit on declared N/F/G/P source rooms: it may be skipped or selected,
 enters a concrete Chaos room, then resumes through a fresh ordinary host target.
 All detours preserve normal-door takeover and completion ownership.
 
-Both routes author one mandatory rank-III keepsake and reached nonfinal
-Postboss retain-or-replace frontiers. All 33 ordinary identities participate in
-chronology, no-return legality, and Fated policy. Jeweled Pom, Experimental
-Hammer, Calling Card, Time Piece, Fig Leaf, and Gorgon Amulet additionally have
-their source-backed effect decisions, simulation, findings, and Run State.
+Both routes author one mandatory fixed rank-III (`Epic`) keepsake and reached
+nonfinal Postboss retain-or-replace frontiers. All 33 ordinary identities
+participate in chronology, no-return legality, and Fated policy. Jeweled Pom,
+Experimental Hammer, Calling Card, Time Piece, Fig Leaf, and Gorgon Amulet add
+source-backed four-rank effect profiles, simulation, findings, and Run State.
+Cherished Heirloom advances the current supported effect on acquisition and
+uses rank IV (`Heroic`) when a supported keepsake is equipped later.
 
 ## Architecture
 
