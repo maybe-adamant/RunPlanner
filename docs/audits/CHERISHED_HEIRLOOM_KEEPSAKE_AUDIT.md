@@ -291,8 +291,9 @@ use remains available.
 
 ## Planner Disposition
 
-Cherished Heirloom should not be implemented as a generic "replace rank III
-values with rank IV values" mutation. The source transition has three parts:
+Cherished Heirloom is implemented for the six supported keepsake effects
+without a generic "replace rank III values with rank IV values" mutation. The
+implemented source transition has three parts:
 
 1. resolve the current `GameState.LastAwardTrait` only;
 2. run that declaration's exact rank-III to rank-IV advance transition while
@@ -300,11 +301,19 @@ values with rank IV values" mutation. The source transition has three parts:
 3. resolve later player equips from rank III to rank IV while the boon remains
    active, only for declarations with a rank-IV row.
 
-The per-keepsake matrix above is the authority for the scoped set. A later
-implementation may expose typed transition descriptors, but it must not hide
-these differences behind a generic callback registry, introduce authored
-player ranks, or mutate retained effects belonging to a previously unequipped
-keepsake.
+For Gorgon Amulet, Fig Leaf, Experimental Hammer, Jeweled Pom, Calling Card, and
+Time Piece, the catalog owns complete four-rank profiles and one closed
+Cherished capability. The engine applies the exact current-effect matrix after
+ordinary selected acquisition, resolves later legal equips at rank IV from
+canonical trait history, preserves removed ledgers, and snapshots Gorgon rarity
+at encounter start. It does not use a callback registry or authored player
+ranks.
+
+The remaining audited rows are source evidence, not implemented behavior.
+Transcendent Embryo, Aromatic Phial, Concave Stone, Crystal Figurine, Moon Beam,
+and the Olympian reward-steering keepsakes retain the dispositions above for
+their own future effect slices. Cherished currently gives those effect-neutral
+identities no individual gameplay mutation.
 
 ## Audit Conclusions
 

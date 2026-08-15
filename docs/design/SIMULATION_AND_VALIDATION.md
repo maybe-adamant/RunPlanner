@@ -375,17 +375,27 @@ selection candidates and Run State consume it rather than reconstructing state
 from the current slot key.
 
 The six supported effects remain independent transitions through their owning
-authorities: Jeweled Pom directly acquires its authored Hades result and applies
-its prospective +3 trait levels; Experimental Hammer directly acquires one
-compatible rarityless Hammer and advances 20 declaration-owned encounter uses;
-Calling Card consumes six retained charges through ordered offer-row actions;
-Time Piece consumes four retained charges through exact pre-acquisition
-conversions; Fig Leaf consumes three retained uses on exact phases with one
-success per biome; and Gorgon Amulet carries `pending`, `consumed`, or `expired`
-while attaching one conditional fixed-Epic Athena offer to an exact phase.
-Identity-only keepsakes still affect chronology, no-return legality, and Fated
-policy but create no individual effect state. No generic effect interpreter
-replaces the trait, acquisition, encounter, or lifecycle folds.
+authorities. An ordinary Epic equip produces Jeweled Pom +3 prospective levels,
+20 Experimental Hammer encounter uses, six Calling Card charges, four Time
+Piece charges, three Fig Leaf biome uses, or one pending Epic Gorgon Athena
+appearance. Identity-only keepsakes still affect chronology, no-return legality,
+and Fated policy but create no individual effect state.
+
+Cherished Heirloom enters canonical equipped-trait history through the ordinary
+selected acquisition fold. Exactly once after that successful acquisition, it
+advances only the current declaration: pending Gorgon becomes Heroic;
+consumed/expired Gorgon, Fig Leaf, and Experimental Hammer remain unchanged;
+Jeweled Pom becomes prospectively +4 without another Hades acquisition;
+Calling Card gains two remaining charges; and Time Piece gains one. Retained
+ledgers belonging to removed keepsakes are untouched. While the Duo remains
+equipped, a later legal rack replacement initializes an incoming supported
+keepsake directly from its Heroic profile; retention, invalid replacement, and
+biome start do not replay either transition.
+
+Gorgon snapshots its pending rarity when the encounter begins. Prior Cherished
+therefore produces a Heroic Athena child, while Athena already spawned before a
+same-encounter Cherished reward remains Epic and consumed. No generic effect
+interpreter replaces the trait, acquisition, encounter, or lifecycle folds.
 
 Judgment is a repeated transition at each reached Boss
 `encounterCompleted` point. Its selected canonical inactive-card set is

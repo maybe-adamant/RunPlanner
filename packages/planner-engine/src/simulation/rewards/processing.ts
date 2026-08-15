@@ -90,6 +90,7 @@ import {
   suppressFearVow,
 } from '../arcana-fear';
 import {
+  advanceCurrentKeepsake,
   createKeepsakeState,
   assessExperimentalHammerEquipResult,
   equipExperimentalHammer,
@@ -658,11 +659,20 @@ function applyTraitOfferForAcquisition(
             newLevel: (applied.history.equippedTraits[selected.traitKey]?.level ?? 1) + pomLevels,
           }),
         ]);
+  const selectedDisposition =
+    selected === undefined
+      ? undefined
+      : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+  const keepsakes =
+    selectedDisposition?.kind === 'advanceCurrentKeepsake'
+      ? advanceCurrentKeepsake(catalog, effectiveBranch.keepsakes, selectedDisposition.rankBonus)
+      : effectiveBranch.keepsakes;
   return Object.freeze({
     ...effectiveBranch,
     history: attachTraitHistory(branch.history, traitHistory),
     traitHistory,
     traitEvaluations,
+    keepsakes,
   });
 }
 

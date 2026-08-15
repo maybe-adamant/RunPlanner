@@ -154,6 +154,14 @@ choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
 exact encounter phases. This preserves one semantic owner for every authored
 effect decision rather than creating a keepsake-owned catch-all result bag.
 
+Schema 30 gives Gorgon Amulet one strict phase-local Athena child. It persists
+only three ordered distinct Athena trait identities and the selected option
+key. Athena provider, offer kind, and reached rarity are derived; the Death
+Defiance condition remains on the parent Gorgon phase. Keepsake rank and the
+result of Cherished Heirloom are never authored: ordinary selection is fixed at
+Epic and simulation derives both Cherished transitions from catalog facts and
+canonical trait history.
+
 ## Common Decision Model
 
 ```ts

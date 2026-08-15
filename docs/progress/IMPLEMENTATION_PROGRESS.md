@@ -12,30 +12,39 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The ordinary keepsake delivery is complete through authored schema 29. Gate A
-(`539d781`) established the exact 33-identity rank-III selection timeline,
-Postboss retain-or-replace chronology, no-return legality, and derived Fated
-state. Gates B-G added Jeweled Pom (`0cfd242`), Experimental Hammer (`9209936`),
-Calling Card (`df47929`), Time Piece (`b30f90f`), Fig Leaf (`d6d98ab`, with
-source and workspace corrections `5239e30` and `93d4806`), and Gorgon Amulet
-(`8932f8d`). Later hardening fixed the Experimental Hammer empty-room matrix
-(`3b925d6`) and Blind Box conversion boundary (`6b8c723`).
+The keepsake delivery is current through authored schema 30. The original
+ordinary Gate A (`539d781`) established the exact 33-identity rank-III selection
+timeline, Postboss retain-or-replace chronology, no-return legality, and derived
+Fated state. Gates B-G added Jeweled Pom (`0cfd242`), Experimental Hammer
+(`9209936`), Calling Card (`df47929`), Time Piece (`b30f90f`), Fig Leaf
+(`d6d98ab`, with source and workspace corrections `5239e30` and `93d4806`), and
+Gorgon Amulet (`8932f8d`). Later hardening fixed the Experimental Hammer
+empty-room matrix (`3b925d6`) and Blind Box conversion boundary (`6b8c723`).
 
-The catalog owns the exact inventory and effect capabilities; the authored
-model owns exact selections and effect children; one branch-owned keepsake
-ledger drives candidates, selected simulation, findings, and Run State. The
-closure audit corrected shared Jeweled Pom copy on Experimental Hammer findings
-and retained the exact blocked Postboss equip-result candidate through
-progressive clamping. Each supported child now has one engine-backed control
-and exact completion inspector; an unavailable replacement publishes neither.
-After those corrections the closure found no React keepsake-key policy, generic
-effect registry, parallel route history, duplicate state fold, or production
-audit scaffold. Durable catalog, authored, lifecycle, simulation, workspace,
-UX, and source-audit contracts now own the result, and the temporary
-implementation plan is retired. The final closure gate passed all three
-workspace typechecks, 147 test files and 1,580 tests, lint, formatting, and the
-production build. Rank-sensitive extensions, Cherished Heirloom, and Echo
-remain separate focused slices.
+The supported-rank and Cherished follow-up is complete in the working delivery
+through Gate C. Gate A (`d48430b`) declared exact four-rank profiles for the six
+supported effects while retaining fixed Epic ordinary selection. Gate B
+(`c5679a1`) implemented Heroic later equips under active Cherished and corrected
+the Gorgon child to schema 30. Gate C applies the exact current-effect advance
+only after ordinary selected acquisition: pending Gorgon becomes Heroic,
+Fig Leaf and Experimental Hammer remain unchanged, Jeweled Pom becomes
+prospectively +4, Calling Card gains two charges, and Time Piece gains one.
+Removed ledgers remain isolated, repeated progressive evaluation does not replay
+the transition, and Gorgon retains its encounter-start Epic or Heroic snapshot.
+Independent review added regressions for Calling Card spend-before-advance,
+missing supported ledgers, and displayed-but-unselected Cherished; all passed
+without a production correction.
+
+The catalog owns the exact inventory, profiles, and closed Cherished capability;
+the authored model owns exact selections and effect children; one branch-owned
+keepsake ledger drives candidates, selected simulation, findings, and Run State.
+There is no authored keepsake rank, generic effect registry, parallel route
+history, duplicate state fold, or React keepsake-key policy. Durable catalog,
+authored, simulation, workspace, UX, and source-audit contracts own the settled
+result, and the temporary delivery plan is retired. The single final closure
+gate passed all three workspace typechecks, 149 test files and 1,631 tests,
+lint, formatting, and the production build. Echo and Gift Gift Gift remain
+separate deferred work.
 
 Trait-offer exhaustion and the two reward-facing Fear Vows are complete.
 Schema 22 persists one-to-three Olympian/Hermes trait outcomes or mutually
