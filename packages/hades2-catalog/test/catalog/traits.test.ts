@@ -940,7 +940,7 @@ describe('trait offer catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(376);
+    expect(traits?.traits.values).toHaveLength(377);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -1091,6 +1091,20 @@ describe('trait offer catalog closure', () => {
         },
       },
     ]);
+  });
+
+  it('declares Infernal Contract as rarityless and Travel Deal as one exact ranked restock', () => {
+    expect(traits.traits.byKey.InfernalContractBoon).toMatchObject({
+      rarityDomain: { kind: 'none' },
+      blockStacking: true,
+      blockInRunRarify: true,
+      excludeFromRarityCount: true,
+    });
+    expect(traits.traits.byKey.RestockBoon?.selectedDisposition).toEqual({
+      kind: 'worldShopRestock',
+      refillCount: 1,
+      discountByRarity: { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 },
+    });
   });
 
   it('compiler-closes All Together to the exact immutable four-pair direct-grant matrix', () => {

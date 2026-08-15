@@ -308,6 +308,12 @@ export interface RawRoomDeclaration {
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren?: readonly RawLocalChildDescriptor[];
+  readonly infernalContractReward?: {
+    readonly entryKey: 'infernalContractReward';
+    readonly producerLifecycleKey: string;
+    readonly rewardTypes: readonly [string, string, string, string, string];
+    readonly defaultRewardType: string;
+  };
 }
 
 export interface RawGeneratedProgressionDeclaration {

@@ -731,7 +731,7 @@ describe('structured workspace occurrence assembly', () => {
         ),
         purchased: false,
         toggleOfferKeys: ['MajorNonBoon'],
-        proposalOfferKeys: [[], ['MajorNonBoon']],
+        proposalOfferKeys: [[], ['Boon'], ['MajorNonBoon'], ['Minor']],
       },
       rewardControl: {
         owner: { address: createShopOfferAddress(goldenFBiome, shop, 'MajorNonBoon') },
@@ -767,7 +767,14 @@ describe('structured workspace occurrence assembly', () => {
     const projected = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
       semanticAddressKey(candidateSite) !== semanticAddressKey(site)
         ? []
-        : [{ address: duplicate, sourceOfferKey: 'Boon', defaultValue: source.reward }],
+        : [
+            {
+              address: duplicate,
+              kind: 'echoShopDuplicate' as const,
+              sourceOfferKey: 'Boon',
+              defaultValue: source.reward,
+            },
+          ],
     );
     const result = projected.assembly;
 
@@ -798,6 +805,182 @@ describe('structured workspace occurrence assembly', () => {
       focusAddress: duplicate,
       nodeKey: result.node.key,
     });
+  });
+
+  it('counts active Contract and generated Travel opportunities but never the disabled placeholder', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const shopOccurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+    const shop = shopOccurrence?.state.kind === 'shop' ? shopOccurrence.state.shop : undefined;
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopId),
+      'roomExit',
+    );
+    const contract =
+      shopOccurrence?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward;
+    const refillDefault = shop?.offers.MajorNonBoon?.reward;
+    if (contract === undefined || refillDefault === undefined)
+      throw new Error('Gate B Shop defaults are missing');
+    const contractAddress = createAcquisitionEntryAddress(site, 'infernalContractReward');
+    const travelAddress = createAcquisitionEntryAddress(site, 'travelDealRefill');
+    const projectWith = (entries: Parameters<typeof assemble>[5]) =>
+      assemble(project, 'Underworld', 'F', shopId, undefined, entries).assembly.node.room.roomLocal;
+
+    const contractOnly = projectWith((candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [
+            {
+              address: contractAddress,
+              kind: 'infernalContractReward' as const,
+              defaultValue: contract,
+              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
+            },
+          ],
+    );
+    expect(contractOnly).toMatchObject({
+      kind: 'shop',
+      totalOpportunityCount: 4,
+      supplementalOffers: [
+        {
+          kind: 'infernalContractReward',
+          rewardControl: { rewardTypes: ['BlindBoxLoot', 'StackUpgrade'] },
+        },
+      ],
+    });
+
+    const placeholder = projectWith((candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [
+            {
+              address: contractAddress,
+              kind: 'infernalContractReward' as const,
+              defaultValue: contract,
+              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
+            },
+            { address: travelAddress, kind: 'travelDealPlaceholder' as const },
+          ],
+    );
+    expect(placeholder).toMatchObject({
+      kind: 'shop',
+      totalOpportunityCount: 4,
+      supplementalOffers: [{ kind: 'travelDealPlaceholder' }, { kind: 'infernalContractReward' }],
+    });
+
+    const active = projectWith((candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [
+            {
+              address: contractAddress,
+              kind: 'infernalContractReward' as const,
+              defaultValue: contract,
+              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
+            },
+            {
+              address: travelAddress,
+              kind: 'travelDealRefill' as const,
+              sourceOfferKey: 'MajorNonBoon',
+              slotIndex: 1,
+              defaultValue: refillDefault,
+              rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'],
+            },
+          ],
+    );
+    expect(active).toMatchObject({
+      kind: 'shop',
+      totalOpportunityCount: 5,
+      supplementalOffers: [
+        {
+          kind: 'travelDealRefill',
+          sourceOfferKey: 'MajorNonBoon',
+          rewardControl: { rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'] },
+        },
+        { kind: 'infernalContractReward' },
+      ],
+    });
+  });
+
+  it('projects an Echo duplicate immediately after its Travel refill source', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
+    const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
+    const occurrence = base.routes
+      .flatMap((route) => route.biomes)
+      .find((plan) => plan.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+    const source =
+      occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon?.reward : undefined;
+    if (source === undefined) throw new Error('F Preboss Boon default is missing');
+    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:travelDealRefill');
+    const project: ProjectDocument = {
+      ...base,
+      routes: base.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((biome): typeof biome => {
+                const topology = biome.topology;
+                return biome.biomeKey !== 'F' || topology === null
+                  ? biome
+                  : {
+                      ...biome,
+                      topology: {
+                        ...topology,
+                        occurrences: topology.occurrences.map((candidate): typeof candidate =>
+                          candidate.occurrenceId !== shopId
+                            ? candidate
+                            : {
+                                ...candidate,
+                                acquisitionSites: {
+                                  ...(candidate.acquisitionSites ?? {}),
+                                  roomExit: {
+                                    order: ['MajorNonBoon', 'travelDealRefill'],
+                                    pickupEntries: {
+                                      travelDealRefill: source,
+                                      'echoDoubleShop:travelDealRefill': source,
+                                    },
+                                  },
+                                },
+                              },
+                        ),
+                      },
+                    };
+              }),
+            },
+      ),
+    };
+    const result = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
+      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
+        ? []
+        : [
+            {
+              address: createAcquisitionEntryAddress(site, 'travelDealRefill'),
+              kind: 'travelDealRefill' as const,
+              sourceOfferKey: 'MajorNonBoon',
+              slotIndex: 1,
+              defaultValue: source,
+              rewardTypes: ['RandomLoot'],
+            },
+            {
+              address: duplicate,
+              kind: 'echoShopDuplicate' as const,
+              sourceOfferKey: 'travelDealRefill',
+              defaultValue: source,
+            },
+          ],
+    ).assembly.node.room;
+    expect(result.acquisitions?.entries.map((entry) => entry.key)).toEqual([
+      'MajorNonBoon',
+      'travelDealRefill',
+      'echoDoubleShop:travelDealRefill',
+    ]);
   });
 
   it('projects the Narcissus pickup as an unpicked, dormant room-exit acquisition', () => {

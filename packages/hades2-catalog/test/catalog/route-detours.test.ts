@@ -214,6 +214,7 @@ describe('route detour catalog declarations', () => {
     expect(catalog.rewards.acquisitions.byKey.InfernalContractBoon).toMatchObject({
       kind: 'loot',
       historyProjection: 'lootAndUse',
+      grantedTraitKey: 'InfernalContractBoon',
     });
     expect(catalog.rewards.rewardTypes.byKey).not.toHaveProperty('GemPointsBigDrop');
   });

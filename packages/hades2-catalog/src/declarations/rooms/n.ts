@@ -1535,6 +1535,18 @@ export const nRooms = [
         },
       },
     },
+    infernalContractReward: {
+      entryKey: 'infernalContractReward',
+      producerLifecycleKey: 'ZagPedestal',
+      rewardTypes: [
+        'BlindBoxLoot',
+        'StackUpgradeBig',
+        'StackUpgrade',
+        'TalentBigDrop',
+        'TalentDrop',
+      ],
+      defaultRewardType: 'BlindBoxLoot',
+    },
     prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',

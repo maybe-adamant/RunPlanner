@@ -3,6 +3,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createAcquisitionSiteAddress,
@@ -26,7 +27,11 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -47,6 +52,9 @@ import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSe
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createFMidshopPomFrontierProject,
+  fMidshopPomShopId,
+  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
@@ -122,6 +130,246 @@ function emptyFProject(): ProjectDocument {
     name: 'Occurrence workbench empty F',
     configuredBiomeCounts: { Underworld: 1 },
   });
+}
+
+function travelDealGPrebossProject(): ProjectDocument {
+  const sourceOccurrenceId = createOccurrenceId('golden-g-b1-e1');
+  const incoming = createIncomingRewardAddress(goldenGBiome, sourceOccurrenceId);
+  let project = createCompleteFGProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: incoming,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(incoming, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Common' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+}
+
+function contractTravelFShopsProject(): {
+  readonly project: ProjectDocument;
+  readonly midshopId: OccurrenceId;
+  readonly prebossId: OccurrenceId;
+} {
+  const hermesId = createOccurrenceId('midshop-pom-b4-e1');
+  const midshopId = fMidshopPomShopId;
+  const contractId = createOccurrenceId('gate-b-ui-f-contract');
+  const minibossId = createOccurrenceId('gate-b-ui-f-miniboss');
+  const prebossId = createOccurrenceId('gate-b-ui-f-preboss');
+  const source = (occurrenceId: OccurrenceId) => ({ kind: 'occurrence' as const, occurrenceId });
+  let project = createFMidshopPomFrontierProject();
+  const hermesReward = createIncomingRewardAddress(goldenFBiome, hermesId);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: hermesReward,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(hermesReward, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Common' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional: createAdditionalExitAddress(goldenFBiome, midshopId, 'zagreusContract'),
+    occurrenceId: contractId,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(midshopId)),
+    storeKey: 'RunProgress',
+  });
+  for (const [exitKey, occurrenceId, gameName, value] of [
+    [
+      'exit1',
+      createOccurrenceId('gate-b-ui-f-normal-1'),
+      'F_MiniBoss01',
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    ],
+    [
+      'exit2',
+      createOccurrenceId('gate-b-ui-f-normal-2'),
+      'F_MiniBoss02',
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    ],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, source(midshopId), exitKey),
+      occurrenceId,
+      gameName,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      value,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, source(midshopId)),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(contractId)),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(contractId)),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenFBiome, source(contractId), 'exit1'),
+    occurrenceId: minibossId,
+    gameName: 'F_MiniBoss03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, minibossId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(goldenFBiome, minibossId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Aphrodite',
+      options: [
+        { traitKey: 'AphroditeCastBoon', rarity: 'Rare' },
+        { traitKey: 'AphroditeSprintBoon', rarity: 'Rare' },
+        { traitKey: 'AphroditeManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(minibossId)),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(minibossId)),
+    storeKey: 'RunProgress',
+  });
+  const late1 = createOccurrenceId('gate-b-ui-f-late-1');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenFBiome, source(minibossId), 'exit1'),
+    occurrenceId: late1,
+    gameName: 'F_Combat11',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, late1),
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(late1)),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(late1)),
+    storeKey: 'RunProgress',
+  });
+  const late2 = createOccurrenceId('gate-b-ui-f-late-2');
+  const late2Peer = createOccurrenceId('gate-b-ui-f-late-2-peer');
+  for (const [exitKey, occurrenceId, value] of [
+    ['exit1', late2, { rewardType: 'RoomMoneyDrop' }],
+    ['exit2', late2Peer, { rewardType: 'WeaponUpgrade' }],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, source(late1), exitKey),
+      occurrenceId,
+      gameName: 'F_Combat12',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      value,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, source(late1)),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(late2)),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(late2)),
+    storeKey: 'MetaProgress',
+  });
+  const late3 = createOccurrenceId('gate-b-ui-f-late-3');
+  const late3Peer = createOccurrenceId('gate-b-ui-f-late-3-peer');
+  for (const [exitKey, occurrenceId, rewardType] of [
+    ['exit1', late3, 'MetaCardPointsCommonDrop'],
+    ['exit2', late3Peer, 'MetaCurrencyDrop'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, source(late2), exitKey),
+      occurrenceId,
+      gameName: 'F_Combat14',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      value: { rewardType },
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, source(late2)),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  const prebossFreeId = createOccurrenceId('gate-b-ui-f-preboss-free');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(late3)),
+    gameName: 'F_PreBoss01',
+    targetOccurrenceIds: { exit1: prebossId, exit2: prebossFreeId },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, prebossFreeId),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, source(late3)),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  return { project: authorLegalTraitOffers(project), midshopId, prebossId };
 }
 
 function authoredAnomalyProject(): {
@@ -1571,6 +1819,151 @@ describe('OccurrenceWorkbench', () => {
     expect(order()).toEqual(['MajorNonBoon', 'Boon']);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 3,
+    );
+  }, 15_000);
+
+  it('authors the Travel Deal refill through the Shop checkbox and one acquisition chronology', async () => {
+    const shopId = createOccurrenceId('golden-g-preboss-shop');
+    const project = travelDealGPrebossProject();
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceById(shopId));
+    const order = () => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'G',
+        shopId,
+      );
+      if (state.kind !== 'shop') throw new Error('F Preboss Shop state is missing');
+      return view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+        ?.acquisitionSites?.roomExit?.order;
+    };
+
+    expect(screen.getByText('3 opportunities')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Purchase order needs one paid Shop offer before this refill can be edited.',
+      ),
+    ).toBeTruthy();
+    await view.user.click(screen.getByLabelText('Purchase Offer 2'));
+    const refill = await screen.findByRole('checkbox', {
+      name: 'Purchase Travel Deal refill after Offer 2',
+    });
+    expect(screen.getByText('4 opportunities')).toBeTruthy();
+    expect((refill as HTMLInputElement).checked).toBe(false);
+    expect(order()).toEqual(['MajorNonBoon']);
+    const refillShopRow = screen.getByText('Travel Deal refill after Offer 2').closest('tr');
+    const refillRewardRow = refillShopRow?.nextElementSibling;
+    if (!(refillRewardRow instanceof HTMLElement))
+      throw new Error('Travel Deal refill reward row is missing');
+    const refillReward = within(refillRewardRow).getByRole('button', { name: 'Reward' });
+    await view.user.click(refillReward);
+    const refillChoices = await screen.findByRole('listbox');
+    await view.user.click(within(refillChoices).getByText('Max Health'));
+    expect(order()).toEqual(['MajorNonBoon']);
+    const materializedRefill =
+      occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'G',
+        shopId,
+      ).kind === 'shop'
+        ? view.application.store
+            .getState()
+            .projectWorkspace.history.present.routes.find(
+              (route) => route.routeKey === 'Underworld',
+            )
+            ?.biomes.find((biome) => biome.biomeKey === 'G')
+            ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+            ?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill
+        : undefined;
+    expect(materializedRefill?.offer).toEqual({ rewardType: 'MaxHealthDrop' });
+
+    await view.user.click(refill);
+    expect(order()).toEqual(['MajorNonBoon', 'travelDealRefill']);
+    await view.user.click(screen.getByLabelText('Purchase Offer 3'));
+    expect(order()).toEqual(['MajorNonBoon', 'travelDealRefill', 'Minor']);
+
+    const refillEntry = screen
+      .getAllByText('Travel Deal refill after Offer 2')
+      .map((label) => label.closest('.acquisition-entry'))
+      .find((entry): entry is HTMLElement => entry !== null);
+    if (refillEntry === undefined) throw new Error('Travel Deal acquisition entry is missing');
+    await view.user.click(within(refillEntry).getByRole('button', { name: 'Move later' }));
+    expect(order()).toEqual(['MajorNonBoon', 'Minor', 'travelDealRefill']);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(order()).toEqual(['MajorNonBoon', 'travelDealRefill', 'Minor']);
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(order()).toEqual(['MajorNonBoon', 'Minor', 'travelDealRefill']);
+  }, 15_000);
+
+  it('edits both supplemental rewards in their rendered Preboss order', async () => {
+    const { project, midshopId, prebossId } = contractTravelFShopsProject();
+    const entryKinds = (candidate: ProjectDocument, occurrenceId: OccurrenceId) =>
+      derivedAcquisitionEntriesForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, candidate),
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, occurrenceId),
+          'roomExit',
+        ),
+      ).map((entry) => entry.kind);
+    expect(entryKinds(project, midshopId)).toEqual(['travelDealPlaceholder']);
+    expect(entryKinds(project, prebossId)).toEqual([
+      'infernalContractReward',
+      'travelDealPlaceholder',
+    ]);
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(prebossId));
+    const shopRowLabels = () =>
+      [...document.querySelectorAll<HTMLTableCellElement>('tr.shop-offer > th')].map(
+        (cell) => cell.textContent,
+      );
+    expect(shopRowLabels()).toEqual([
+      'Offer 1',
+      'Offer 2',
+      'Offer 3',
+      'Travel Deal refill',
+      'Infernal Contract reward',
+    ]);
+
+    const contractRow = screen.getByText('Infernal Contract reward').closest('tr');
+    const contractRewardRow = contractRow?.nextElementSibling;
+    if (!(contractRewardRow instanceof HTMLElement))
+      throw new Error('Infernal Contract reward editor is missing');
+    await view.user.click(within(contractRewardRow).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Pom of Power'));
+
+    await view.user.click(screen.getByLabelText('Purchase Offer 2'));
+    const refillLabel = await screen.findByText('Travel Deal refill after Offer 2');
+    expect(shopRowLabels()).toEqual([
+      'Offer 1',
+      'Offer 2',
+      'Offer 3',
+      'Travel Deal refill after Offer 2',
+      'Infernal Contract reward',
+    ]);
+    const refillRewardRow = refillLabel.closest('tr')?.nextElementSibling;
+    if (!(refillRewardRow instanceof HTMLElement))
+      throw new Error('Travel Deal reward editor is missing');
+    const refillReward = within(refillRewardRow).getByRole('button', { name: 'Reward' });
+    const replacementLabel = refillReward.textContent?.includes('Max Health')
+      ? 'Max Magick'
+      : 'Max Health';
+    await view.user.click(refillReward);
+    await view.user.click(within(await screen.findByRole('listbox')).getByText(replacementLabel));
+
+    const authored = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === prebossId)
+      ?.acquisitionSites?.roomExit?.pickupEntries;
+    expect(authored?.infernalContractReward?.offer).toEqual({ rewardType: 'StackUpgrade' });
+    expect(authored?.travelDealRefill?.offer.rewardType).toBe(
+      replacementLabel === 'Max Health' ? 'MaxHealthDrop' : 'MaxManaDrop',
     );
   }, 15_000);
 

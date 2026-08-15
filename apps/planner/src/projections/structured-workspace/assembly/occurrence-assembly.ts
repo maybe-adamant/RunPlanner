@@ -30,6 +30,9 @@ import {
   type SemanticAddress,
   type AuthoredRewardState,
   type LevelResolutionAddress,
+  shopAcquisitionOrderProposals,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
 import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
 import type {
@@ -123,8 +126,12 @@ export interface WorkspaceOccurrenceAssemblyInput {
     site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress,
   ) => readonly {
     readonly address: import('@run-planner/engine/authored-project').AcquisitionEntryAddress;
-    readonly sourceOfferKey: string;
-    readonly defaultValue: AuthoredRewardState;
+    readonly kind:
+      'echoShopDuplicate' | 'infernalContractReward' | 'travelDealPlaceholder' | 'travelDealRefill';
+    readonly sourceOfferKey?: string;
+    readonly slotIndex?: number;
+    readonly defaultValue?: AuthoredRewardState;
+    readonly rewardTypes?: readonly string[];
   }[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
@@ -1177,6 +1184,8 @@ function roomLocalForOccurrence(
           kind: 'shop' as const,
           materialized: false,
           offers: Object.freeze([]),
+          supplementalOffers: Object.freeze([]),
+          totalOpportunityCount: 0,
           acquisitionOrder: Object.freeze([]),
         });
       }
@@ -1189,9 +1198,39 @@ function roomLocalForOccurrence(
       const acquisitionOrder = Object.freeze([
         ...(occurrence.acquisitionSites?.roomExit?.order ?? []),
       ]);
+      const acquisitionSite = createAcquisitionSiteAddress(
+        createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+        'roomExit',
+      );
+      const derivedEntries = input.derivedAcquisitionEntries?.(acquisitionSite) ?? [];
+      const contractCapability = derivedEntries.find(
+        (entry) => entry.kind === 'infernalContractReward',
+      );
+      const travelCapability = derivedEntries.find(
+        (entry) => entry.kind === 'travelDealRefill' || entry.kind === 'travelDealPlaceholder',
+      );
+      const selectedContract = acquisitionOrder.includes(INFERNAL_CONTRACT_ENTRY_KEY);
+      const selectedTravel = acquisitionOrder.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY);
+      const activeSupplementalKeys = Object.freeze([
+        ...(contractCapability === undefined && !selectedContract
+          ? []
+          : [INFERNAL_CONTRACT_ENTRY_KEY]),
+        ...(travelCapability?.kind !== 'travelDealRefill' && !selectedTravel
+          ? []
+          : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
+      ]);
+      const completeProposals = shopAcquisitionOrderProposals(
+        acquisitionOrder,
+        Object.freeze([...profile.slots.values.map((slot) => slot.key), ...activeSupplementalKeys]),
+        travelCapability?.sourceOfferKey,
+      );
       const purchasedKeys = new Set<string>();
       for (const offerKey of acquisitionOrder) {
-        if (shop.offers[offerKey] === undefined) {
+        if (
+          shop.offers[offerKey] === undefined &&
+          offerKey !== INFERNAL_CONTRACT_ENTRY_KEY &&
+          offerKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY
+        ) {
           throw new StructuredWorkspaceProjectionContractError(
             `${room.gameName} acquisition order has unknown entry ${offerKey}`,
           );
@@ -1218,12 +1257,12 @@ function roomLocalForOccurrence(
           slot.key,
         );
         const purchaseIndex = acquisitionOrder.indexOf(slot.key);
-        const withoutSlot = Object.freeze(
-          acquisitionOrder.filter((offerKey) => offerKey !== slot.key),
-        );
-        const toggleOfferKeys = Object.freeze(
-          purchaseIndex < 0 ? [...acquisitionOrder, slot.key] : [...withoutSlot],
-        );
+        const toggleOfferKeys =
+          completeProposals.find((proposal) =>
+            purchaseIndex < 0
+              ? proposal.includes(slot.key) && proposal.length > acquisitionOrder.length
+              : !proposal.includes(slot.key),
+          ) ?? acquisitionOrder;
         return Object.freeze({
           key: slot.key,
           label: slot.label,
@@ -1232,11 +1271,162 @@ function roomLocalForOccurrence(
             marker: input.markerDestinations.marker(purchaseAddress),
             purchased: purchaseIndex >= 0,
             toggleOfferKeys,
-            proposalOfferKeys: Object.freeze([acquisitionOrder, toggleOfferKeys]),
+            proposalOfferKeys: completeProposals,
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
       });
+      const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
+      const supplementalOffers = Object.freeze(
+        [
+          ...(contractCapability === undefined && !selectedContract
+            ? []
+            : [
+                (() => {
+                  const address = createAcquisitionEntryAddress(
+                    acquisitionSite,
+                    INFERNAL_CONTRACT_ENTRY_KEY,
+                  );
+                  const authored = pickupEntries[INFERNAL_CONTRACT_ENTRY_KEY];
+                  if (authored === undefined) {
+                    throw new StructuredWorkspaceProjectionContractError(
+                      `${room.gameName} contract opportunity has no structural child`,
+                    );
+                  }
+                  if (contractCapability?.rewardTypes === undefined) {
+                    throw new StructuredWorkspaceProjectionContractError(
+                      `${room.gameName} contract opportunity has no attested reward domain`,
+                    );
+                  }
+                  const toggleOfferKeys =
+                    completeProposals.find((proposal) =>
+                      selectedContract
+                        ? !proposal.includes(INFERNAL_CONTRACT_ENTRY_KEY)
+                        : proposal.includes(INFERNAL_CONTRACT_ENTRY_KEY),
+                    ) ?? acquisitionOrder;
+                  return Object.freeze({
+                    kind: 'infernalContractReward' as const,
+                    key: INFERNAL_CONTRACT_ENTRY_KEY,
+                    label: 'Infernal Contract reward',
+                    materialized: true,
+                    purchase: Object.freeze({
+                      address,
+                      marker: input.markerDestinations.marker(address),
+                      purchased: selectedContract,
+                      toggleOfferKeys,
+                      proposalOfferKeys: completeProposals,
+                    }),
+                    rewardControl: rewardControl(
+                      input,
+                      { kind: 'acquisitionEntry' as const, address },
+                      undefined,
+                      authored.offer,
+                      authored,
+                      contractCapability.rewardTypes,
+                    ) as WorkspaceExplicitRewardControl,
+                  });
+                })(),
+              ]),
+          ...(selectedTravel && travelCapability?.kind !== 'travelDealRefill'
+            ? [
+                (() => {
+                  const address = createAcquisitionEntryAddress(
+                    acquisitionSite,
+                    TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                  );
+                  return Object.freeze({
+                    kind: 'travelDealInvalid' as const,
+                    key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                    label: 'Travel Deal refill' as const,
+                    explanation:
+                      'This selected refill has no active triggering purchase. Remove it from the acquisition order to repair the Shop.',
+                    purchase: Object.freeze({
+                      address,
+                      marker: input.markerDestinations.marker(address),
+                      purchased: true,
+                      toggleOfferKeys: Object.freeze(
+                        acquisitionOrder.filter(
+                          (candidate) => candidate !== TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                        ),
+                      ),
+                      proposalOfferKeys: completeProposals,
+                    }),
+                  });
+                })(),
+              ]
+            : travelCapability === undefined
+              ? []
+              : travelCapability.kind === 'travelDealPlaceholder'
+                ? [
+                    Object.freeze({
+                      kind: 'travelDealPlaceholder' as const,
+                      key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                      label: 'Travel Deal refill' as const,
+                      explanation:
+                        'Purchase order needs one paid Shop offer before this refill can be edited.',
+                    }),
+                  ]
+                : travelCapability.defaultValue === undefined ||
+                    travelCapability.sourceOfferKey === undefined
+                  ? []
+                  : [
+                      (() => {
+                        const address = createAcquisitionEntryAddress(
+                          acquisitionSite,
+                          TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                        );
+                        const authored =
+                          pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] ??
+                          travelCapability.defaultValue;
+                        if (travelCapability.rewardTypes === undefined) {
+                          throw new StructuredWorkspaceProjectionContractError(
+                            `${room.gameName} Travel refill has no attested reward domain`,
+                          );
+                        }
+                        const sourceOfferLabel =
+                          offers.find((offer) => offer.key === travelCapability.sourceOfferKey)
+                            ?.label ?? travelCapability.sourceOfferKey;
+                        const toggleOfferKeys =
+                          completeProposals.find((proposal) =>
+                            selectedTravel
+                              ? !proposal.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY)
+                              : proposal.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY),
+                          ) ?? acquisitionOrder;
+                        return Object.freeze({
+                          kind: 'travelDealRefill' as const,
+                          key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                          label: `Travel Deal refill after ${sourceOfferLabel}`,
+                          sourceOfferKey: travelCapability.sourceOfferKey,
+                          materialized: pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] !== undefined,
+                          defaultValue: travelCapability.defaultValue,
+                          purchase: Object.freeze({
+                            address,
+                            marker: input.markerDestinations.marker(address),
+                            purchased: selectedTravel,
+                            toggleOfferKeys,
+                            proposalOfferKeys: completeProposals,
+                          }),
+                          rewardControl: rewardControl(
+                            input,
+                            { kind: 'acquisitionEntry' as const, address },
+                            undefined,
+                            authored.offer,
+                            authored,
+                            travelCapability.rewardTypes,
+                          ) as WorkspaceExplicitRewardControl,
+                        });
+                      })(),
+                    ]),
+        ].sort((left, right) =>
+          left.kind === right.kind
+            ? 0
+            : left.kind === 'infernalContractReward'
+              ? 1
+              : right.kind === 'infernalContractReward'
+                ? -1
+                : 0,
+        ),
+      );
       return Object.freeze({
         kind: 'shop' as const,
         materialized: true,
@@ -1248,6 +1438,12 @@ function roomLocalForOccurrence(
               }) as WorkspaceShopConditionControl,
             }),
         offers: Object.freeze(offers),
+        supplementalOffers,
+        totalOpportunityCount:
+          offers.length +
+          supplementalOffers.filter(
+            (offer) => offer.kind !== 'travelDealPlaceholder' && offer.kind !== 'travelDealInvalid',
+          ).length,
         acquisitionOrder,
       });
     }
@@ -1470,13 +1666,27 @@ function occurrenceInteractionRequirements(
       if (!shop.materialized || shop.offers.length === 0) {
         return Object.freeze(requirements);
       }
+      const travelRefill = shop.supplementalOffers.find(
+        (
+          offer,
+        ): offer is Extract<
+          (typeof shop.supplementalOffers)[number],
+          { readonly kind: 'travelDealRefill' }
+        > => offer.kind === 'travelDealRefill',
+      );
       requirements.push(
         Object.freeze({
           kind: 'acquisitionOrder' as const,
           owner: room.acquisitions?.site ?? createAcquisitionSiteAddress(room.address, 'roomExit'),
-          proposalEntryKeys: acquisitionOrderProposals(
+          proposalEntryKeys: shopAcquisitionOrderProposals(
             shop.acquisitionOrder,
-            shop.offers.map((offer) => offer.key),
+            Object.freeze([
+              ...shop.offers.map((offer) => offer.key),
+              ...shop.supplementalOffers.flatMap((offer) =>
+                offer.kind === 'travelDealPlaceholder' ? [] : [offer.key],
+              ),
+            ]),
+            travelRefill?.sourceOfferKey,
           ),
           selectedEntryKeys: shop.acquisitionOrder,
         }),
@@ -1679,27 +1889,17 @@ export function assembleWorkspaceOccurrence(
                 const acquisitionSite = createAcquisitionSiteAddress(address, 'roomExit');
                 const derivedEntries =
                   input.derivedAcquisitionEntries?.(acquisitionSite) ?? Object.freeze([]);
-                return Object.freeze(
-                  roomLocal.acquisitionOrder
-                    .flatMap((entryKey) => {
-                      const offer = roomLocal.offers.find(
-                        (candidate) => candidate.key === entryKey,
-                      );
-                      if (offer === undefined) return [];
-                      return [
-                        Object.freeze({
-                          key: offer.key,
-                          address: createAcquisitionEntryAddress(acquisitionSite, offer.key),
-                          label: offer.label,
-                          rewardControl: offer.rewardControl,
-                        }),
-                        ...derivedEntries.filter((entry) => entry.sourceOfferKey === offer.key),
-                      ];
-                    })
-                    .map((entry) => {
-                      if (!('defaultValue' in entry)) return entry;
-                      const authored = pickupSite?.[entry.address.entryKey] ?? entry.defaultValue;
-                      return Object.freeze({
+                const echoEntriesForSource = (sourceOfferKey: string) =>
+                  derivedEntries.flatMap((entry) => {
+                    if (
+                      entry.kind !== 'echoShopDuplicate' ||
+                      entry.sourceOfferKey !== sourceOfferKey ||
+                      entry.defaultValue === undefined
+                    )
+                      return [];
+                    const authored = pickupSite?.[entry.address.entryKey] ?? entry.defaultValue;
+                    return [
+                      Object.freeze({
                         key: entry.address.entryKey,
                         address: entry.address,
                         label: 'Free duplicate',
@@ -1710,8 +1910,48 @@ export function assembleWorkspaceOccurrence(
                           authored.offer,
                           authored,
                         ) as WorkspaceExplicitRewardControl,
-                      });
-                    }),
+                      }),
+                    ];
+                  });
+                return Object.freeze(
+                  roomLocal.acquisitionOrder.flatMap((entryKey) => {
+                    const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
+                    if (offer !== undefined) {
+                      return [
+                        Object.freeze({
+                          key: offer.key,
+                          address: createAcquisitionEntryAddress(acquisitionSite, offer.key),
+                          label: offer.label,
+                          rewardControl: offer.rewardControl,
+                        }),
+                        ...echoEntriesForSource(offer.key),
+                      ];
+                    }
+                    const supplemental = roomLocal.supplementalOffers.find(
+                      (
+                        candidate,
+                      ): candidate is Exclude<
+                        (typeof roomLocal.supplementalOffers)[number],
+                        { readonly kind: 'travelDealPlaceholder' | 'travelDealInvalid' }
+                      > =>
+                        candidate.kind !== 'travelDealPlaceholder' &&
+                        candidate.kind !== 'travelDealInvalid' &&
+                        candidate.key === entryKey,
+                    );
+                    return supplemental === undefined
+                      ? []
+                      : [
+                          Object.freeze({
+                            key: supplemental.key,
+                            address: supplemental.purchase.address,
+                            label: supplemental.label,
+                            rewardControl: supplemental.rewardControl,
+                          }),
+                          ...(supplemental.kind === 'travelDealRefill'
+                            ? echoEntriesForSource(supplemental.key)
+                            : []),
+                        ];
+                  }),
                 );
               })(),
             }),
@@ -1759,6 +1999,19 @@ export function assembleWorkspaceOccurrence(
       entry.rewardControl?.owner.kind !== 'acquisitionEntry' ? [] : [entry.rewardControl],
     ),
   );
+  const acquisitionRewardControlKeys = new Set(
+    acquisitionRewardControls.map((control) => semanticAddressKey(control.owner.address)),
+  );
+  const dormantSupplementalRewardControls = Object.freeze(
+    roomSummary.roomLocal.kind !== 'shop'
+      ? []
+      : roomSummary.roomLocal.supplementalOffers.flatMap((offer) =>
+          (offer.kind !== 'infernalContractReward' && offer.kind !== 'travelDealRefill') ||
+          acquisitionRewardControlKeys.has(semanticAddressKey(offer.rewardControl.owner.address))
+            ? []
+            : [offer.rewardControl],
+        ),
+  );
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
@@ -1776,6 +2029,10 @@ export function assembleWorkspaceOccurrence(
     node,
     occurrenceInteractionRequirements: localInteractionRequirements,
     roomControls,
-    rewardControls: Object.freeze([...rewardControls, ...acquisitionRewardControls]),
+    rewardControls: Object.freeze([
+      ...rewardControls,
+      ...acquisitionRewardControls,
+      ...dormantSupplementalRewardControls,
+    ]),
   });
 }

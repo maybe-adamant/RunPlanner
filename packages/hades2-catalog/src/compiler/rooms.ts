@@ -718,6 +718,54 @@ export function normalizeRooms(
         }
       }
     }
+    const infernalContractReward = (() => {
+      const raw = room.infernalContractReward;
+      if (raw === undefined) return undefined;
+      if (
+        room.kind !== 'Preboss' ||
+        room.mode.kind !== 'authored' ||
+        room.mode.templateKey !== 'Preboss' ||
+        incomingReward.kind !== 'shop'
+      )
+        fail(`${path}.infernalContractReward`, 'requires an authored Preboss Shop');
+      if (raw.entryKey !== 'infernalContractReward')
+        fail(`${path}.infernalContractReward.entryKey`, 'must be infernalContractReward');
+      const expected = [
+        'BlindBoxLoot',
+        'StackUpgradeBig',
+        'StackUpgrade',
+        'TalentBigDrop',
+        'TalentDrop',
+      ] as const;
+      if (
+        raw.rewardTypes.length !== expected.length ||
+        expected.some((rewardType, index) => raw.rewardTypes[index] !== rewardType)
+      )
+        fail(`${path}.infernalContractReward.rewardTypes`, 'must match ZagPedestalOptions');
+      if (raw.defaultRewardType !== 'BlindBoxLoot')
+        fail(`${path}.infernalContractReward.defaultRewardType`, 'must be BlindBoxLoot');
+      const lifecycle = rewards.producerLifecycles.byKey[raw.producerLifecycleKey];
+      if (
+        lifecycle === undefined ||
+        expected.some((rewardType) => lifecycle.rewardTypes.byKey[rewardType] === undefined)
+      )
+        fail(
+          `${path}.infernalContractReward.producerLifecycleKey`,
+          'must support the pedestal pool',
+        );
+      return Object.freeze({
+        entryKey: 'infernalContractReward' as const,
+        producerLifecycleKey: lifecycle.key,
+        rewardTypes: Object.freeze([...expected]) as unknown as readonly [
+          string,
+          string,
+          string,
+          string,
+          string,
+        ],
+        defaultRewardType: 'BlindBoxLoot',
+      });
+    })();
 
     return Object.freeze({
       gameName: room.gameName,
@@ -777,10 +825,31 @@ export function normalizeRooms(
           return normalized;
         },
       ),
+      ...(infernalContractReward === undefined ? {} : { infernalContractReward }),
     });
   });
 
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
+  const expectedContractDestinations = new Set([
+    'F_PreBoss01',
+    'G_PreBoss01',
+    'H_PreBoss01',
+    'I_PreBoss02',
+    'N_PreBoss01',
+    'O_PreBoss01',
+    'P_PreBoss01',
+    'Q_PreBoss01',
+  ]);
+  for (const room of collection.values) {
+    if (
+      expectedContractDestinations.has(room.gameName) !==
+      (room.infernalContractReward !== undefined)
+    )
+      fail(
+        `rooms.${room.gameName}.infernalContractReward`,
+        'must match the supported qualifying destination matrix',
+      );
+  }
   collection.values.forEach((room, roomIndex) => {
     room.additionalExits.forEach((exit, exitIndex) => {
       if (exit.kind !== 'zagreusContract') return;

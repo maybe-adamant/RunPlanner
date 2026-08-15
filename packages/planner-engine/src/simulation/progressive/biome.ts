@@ -13,6 +13,7 @@ import {
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
+  type AcquisitionEntryAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -28,6 +29,7 @@ import {
   createKeepsakeSelectionCandidateArtifacts,
   type BiomeCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
+  type DerivedAcquisitionEntryCandidateArtifacts,
 } from '../candidate-artifacts';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
@@ -236,6 +238,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'acquisitionEntry':
       return address;
     case 'traitOffer':
     case 'levelResolution':
@@ -489,6 +492,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
   const blockedAcquisitionAt: AcquisitionRoleAddress | undefined =
     blockedAt.kind === 'acquisitionRole' ? blockedAt : undefined;
+  const blockedDerivedAcquisitionAt: AcquisitionEntryAddress | undefined =
+    blockedAt.kind === 'acquisitionEntry' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
@@ -670,6 +675,40 @@ function retainBlockedRegionProducts(
               ? blockedAcquisitionCapability
               : retainedArtifacts.acquisitionConversions.at(address),
         });
+  const blockedDerivedAcquisitionCapability =
+    blockedDerivedAcquisitionAt === undefined
+      ? undefined
+      : (selectedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt) ??
+        blockedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt));
+  const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
+    blockedDerivedAcquisitionAt === undefined || blockedDerivedAcquisitionCapability === undefined
+      ? retainedArtifacts.derivedAcquisitionEntries
+      : Object.freeze({
+          at: (address: AcquisitionEntryAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedDerivedAcquisitionAt)
+              ? blockedDerivedAcquisitionCapability
+              : retainedArtifacts.derivedAcquisitionEntries.at(address),
+          entriesAt: (site: import('../../authored-project/addresses').AcquisitionSiteAddress) => {
+            const retained = retainedArtifacts.derivedAcquisitionEntries.entriesAt(site);
+            if (
+              semanticAddressKey(site) !== semanticAddressKey(blockedDerivedAcquisitionAt.site) ||
+              retained.some(
+                (entry) =>
+                  semanticAddressKey(entry.address) ===
+                  semanticAddressKey(blockedDerivedAcquisitionAt),
+              )
+            ) {
+              return retained;
+            }
+            return Object.freeze([
+              ...retained,
+              Object.freeze({
+                address: blockedDerivedAcquisitionAt,
+                capability: blockedDerivedAcquisitionCapability,
+              }),
+            ]);
+          },
+        });
   const rewardOwner = ancestors.rewardOwner;
   const rewardCapability =
     rewardOwner === undefined
@@ -761,6 +800,7 @@ function retainBlockedRegionProducts(
     keepsakeSelections,
     keepsakeEquipResults,
     acquisitionConversions,
+    derivedAcquisitionEntries,
   );
   return Object.freeze({
     rewards:
@@ -1818,6 +1858,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.keepsakeSelections,
       evaluated.candidateArtifacts.keepsakeEquipResults,
       evaluated.candidateArtifacts.acquisitionConversions,
+      evaluated.candidateArtifacts.derivedAcquisitionEntries,
     ),
   });
 }
@@ -1954,6 +1995,7 @@ function clampSelectedProducts(
       retainedInteractions.keepsakeSelections,
       retainedInteractions.keepsakeEquipResults,
       retainedInteractions.acquisitionConversions,
+      retainedInteractions.derivedAcquisitionEntries,
     ),
   });
 }

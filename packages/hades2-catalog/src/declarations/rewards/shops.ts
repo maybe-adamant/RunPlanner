@@ -12,7 +12,13 @@ import {
 import type { RawRewardKernelInput, RawShopOptionEntryDeclaration } from './types';
 
 function option(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryDeclaration {
-  return declaration;
+  return {
+    ...declaration,
+    purchaseInteraction: declaration.purchaseInteraction ?? {
+      kind: 'fixed',
+      gameName: declaration.rewardType,
+    },
+  };
 }
 
 const worldGroups = [
@@ -23,6 +29,7 @@ const worldGroups = [
       option({
         key: 'RandomLoot',
         rewardType: 'RandomLoot',
+        purchaseInteraction: { kind: 'resolvedOfferSource' },
       }),
       option({
         key: 'BlindBoxLoot',
@@ -35,6 +42,7 @@ const worldGroups = [
       option({
         key: 'ShopHermesUpgrade',
         rewardType: 'ShopHermesUpgrade',
+        purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
         requirement: shopHermesLegal,
       }),
     ],
@@ -46,11 +54,13 @@ const worldGroups = [
       option({
         key: 'WeaponUpgradeDropEarly',
         rewardType: 'WeaponUpgradeDrop',
+        purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
         requirement: hammerEarly,
       }),
       option({
         key: 'WeaponUpgradeDropLate',
         rewardType: 'WeaponUpgradeDrop',
+        purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
         requirement: hammerLate,
       }),
       option({
@@ -156,6 +166,7 @@ export const shops = [
           option({
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'StackUpgradeBig',
@@ -171,6 +182,7 @@ export const shops = [
           option({
             key: 'RandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'BlindBoxLoot',
@@ -232,6 +244,7 @@ export const shops = [
           option({
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
+            purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
           option({
@@ -242,6 +255,7 @@ export const shops = [
           option({
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'MaxHealthDropBig',
@@ -298,6 +312,7 @@ export const shops = [
           option({
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'StackUpgradeBig',
@@ -307,6 +322,7 @@ export const shops = [
           option({
             key: 'RandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'BlindBoxLoot',
@@ -377,6 +393,7 @@ export const shops = [
           option({
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
+            purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
           option({
@@ -387,6 +404,7 @@ export const shops = [
           option({
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           option({
             key: 'MaxHealthDropBig',

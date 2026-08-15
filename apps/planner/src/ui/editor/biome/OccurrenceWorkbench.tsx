@@ -614,6 +614,7 @@ function ShopWorkbench({
         </label>
       )}
       <div className="shop-table-scroll">
+        <p>{room.totalOpportunityCount} opportunities</p>
         <table className="shop-offer-table">
           <thead>
             <tr>
@@ -660,6 +661,84 @@ function ShopWorkbench({
                 </tr>
               </Fragment>
             ))}
+            {room.supplementalOffers.map((offer) =>
+              offer.kind === 'travelDealPlaceholder' ? (
+                <tr className="shop-offer shop-offer-disabled" key={offer.key}>
+                  <th scope="row">{offer.label}</th>
+                  <td>{offer.explanation}</td>
+                </tr>
+              ) : offer.kind === 'travelDealInvalid' ? (
+                <tr className="shop-offer shop-offer-invalid" key={offer.key}>
+                  <th scope="row">
+                    <span>{offer.label}</span>
+                    <small>{offer.explanation}</small>
+                  </th>
+                  <ShopPurchaseControl
+                    address={offer.purchase.address}
+                    interactions={interactions}
+                    label={offer.label}
+                    onChange={(offerKeys) =>
+                      dispatch(
+                        authoredProjectCommandDispatched({
+                          kind: 'ReplaceAcquisitionOrder',
+                          site: createAcquisitionSiteAddress(occurrence, 'roomExit'),
+                          entryKeys: offerKeys,
+                        }),
+                      )
+                    }
+                    purchased={true}
+                    toggleOfferKeys={offer.purchase.toggleOfferKeys}
+                  />
+                </tr>
+              ) : (
+                <Fragment key={offer.key}>
+                  <tr className="shop-offer" key={`${offer.key}:purchase`}>
+                    <th scope="row">
+                      <div className="owner-markers">
+                        <span>{offer.label}</span>
+                        <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
+                      </div>
+                    </th>
+                    <ShopPurchaseControl
+                      address={offer.purchase.address}
+                      interactions={interactions}
+                      label={offer.label}
+                      onChange={(offerKeys) =>
+                        dispatch(
+                          offer.kind === 'travelDealRefill' &&
+                            !offer.materialized &&
+                            offer.defaultValue !== undefined &&
+                            offerKeys.includes(offer.key)
+                            ? authoredProjectCommandDispatched({
+                                kind: 'PurchaseTravelDealRefill',
+                                site: createAcquisitionSiteAddress(occurrence, 'roomExit'),
+                                entryKeys: offerKeys,
+                                defaultValue: offer.defaultValue,
+                              })
+                            : authoredProjectCommandDispatched({
+                                kind: 'ReplaceAcquisitionOrder',
+                                site: createAcquisitionSiteAddress(occurrence, 'roomExit'),
+                                entryKeys: offerKeys,
+                              }),
+                        )
+                      }
+                      purchased={offer.purchase.purchased}
+                      toggleOfferKeys={offer.purchase.toggleOfferKeys}
+                    />
+                  </tr>
+                  <tr className="shop-offer-reward" key={`${offer.key}:reward`}>
+                    <td colSpan={2}>
+                      <RewardControlEditor
+                        control={offer.rewardControl}
+                        idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
+                        interactions={interactions}
+                        showAcquisitionChildren={false}
+                      />
+                    </td>
+                  </tr>
+                </Fragment>
+              ),
+            )}
           </tbody>
         </table>
       </div>

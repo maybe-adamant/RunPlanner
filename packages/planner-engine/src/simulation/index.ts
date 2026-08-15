@@ -277,6 +277,7 @@ export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
   countedRewardTypeDomain,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,

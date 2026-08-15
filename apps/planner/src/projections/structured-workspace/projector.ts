@@ -12,6 +12,7 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -221,6 +222,16 @@ export function createStructuredWorkspaceProjection(
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return undefined;
+            }
+            throw error;
+          }
+        },
+        (site) => {
+          try {
+            return derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return Object.freeze([]);
             }
             throw error;
           }

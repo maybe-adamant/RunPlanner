@@ -28,6 +28,7 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly elementContributions?: Readonly<
     Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>
   >;
+  readonly grantedTraitKey?: string;
 }
 
 export interface RawAcquisitionRoleDeclaration {
@@ -65,6 +66,9 @@ export interface RawShopOptionEntryDeclaration {
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;
   readonly acquisitionLifecycle?: readonly AcquisitionLifecycleBinding[];
+  readonly purchaseInteraction?:
+    | { readonly kind: 'fixed'; readonly gameName: string }
+    | { readonly kind: 'resolvedOfferSource' };
 }
 
 export interface RawShopGroupDeclaration {

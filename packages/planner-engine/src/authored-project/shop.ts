@@ -5,6 +5,31 @@ import type { AuthoredRewardState, RoomOccurrence, RouteWeaponAspectLoadout } fr
 import { createDefaultAcquisitionRewardState } from './traits';
 
 const ECHO_SHOP_DUPLICATE_PREFIX = 'echoDoubleShop:';
+export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
+export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
+
+export function createDefaultInfernalContractEntries(
+  catalog: Catalog,
+  roomGameName: string,
+  loadout: RouteWeaponAspectLoadout,
+): Readonly<Record<string, AuthoredRewardState>> {
+  const descriptor = catalog.rooms.byKey[roomGameName]?.infernalContractReward;
+  if (descriptor === undefined) return Object.freeze({});
+  const rewardType = catalog.rewards.rewardTypes.byKey[descriptor.defaultRewardType];
+  if (rewardType === undefined)
+    throw new Error(`unknown contract reward ${descriptor.defaultRewardType}`);
+  return Object.freeze({
+    [descriptor.entryKey]: createDefaultAcquisitionRewardState(
+      catalog,
+      Object.freeze({
+        rewardType: rewardType.gameName,
+        ...(rewardType.defaultPayload === undefined ? {} : { payload: rewardType.defaultPayload }),
+      }),
+      loadout,
+      { kind: 'producerLifecycle', key: descriptor.producerLifecycleKey },
+    ),
+  });
+}
 
 export function createEchoShopDuplicateEntryKey(offerKey: string): string {
   if (offerKey.length === 0) throw new Error('Echo Shop duplicate source key must not be empty');
@@ -44,6 +69,19 @@ export function echoShopDuplicateOfferMatches(
   );
 }
 
+/** Exact paid Shop source eligible to own an Echo duplicate. */
+export function echoShopDuplicateSourceReward(
+  occurrence: RoomOccurrence,
+  sourceKey: string,
+): AuthoredRewardState | undefined {
+  if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) return undefined;
+  const initial = occurrence.state.shop.offers[sourceKey]?.reward;
+  if (initial !== undefined) return initial;
+  return sourceKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+    ? occurrence.acquisitionSites?.roomExit?.pickupEntries?.[sourceKey]
+    : undefined;
+}
+
 /** Declaration-complete fresh detail for one derived duplicate of an authored Shop offer. */
 export function createDefaultEchoShopDuplicateEntry(
   catalog: Catalog,
@@ -53,7 +91,8 @@ export function createDefaultEchoShopDuplicateEntry(
 ): AuthoredRewardState | undefined {
   const offerKey = echoShopDuplicateSourceOfferKey(entryKey);
   const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
-  const source = offerKey === undefined ? undefined : shop?.offers[offerKey]?.reward;
+  const source =
+    offerKey === undefined ? undefined : echoShopDuplicateSourceReward(occurrence, offerKey);
   if (shop === undefined || source === undefined) return undefined;
   return createDefaultAcquisitionRewardState(
     catalog,
@@ -75,6 +114,67 @@ export function authoredAcquisitionEntry(
   return (
     occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey] ??
     createDefaultEchoShopDuplicateEntry(catalog, occurrence, entryKey, loadout)
+  );
+}
+
+export function isShopSupplementalEntryKey(entryKey: string): boolean {
+  return (
+    entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
+    entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+    echoShopDuplicateSourceOfferKey(entryKey) !== undefined
+  );
+}
+
+/** Complete Shop chronology proposals, including the singleton refill's source dependency. */
+export function shopAcquisitionOrderProposals(
+  order: readonly string[],
+  activeEntryKeys: readonly string[],
+  travelSourceOfferKey?: string,
+): readonly (readonly string[])[] {
+  const proposals: string[][] = [[...order]];
+  for (const entryKey of activeEntryKeys) {
+    const index = order.indexOf(entryKey);
+    if (index >= 0) {
+      proposals.push(
+        order.filter(
+          (candidate) =>
+            candidate !== entryKey &&
+            !(entryKey === travelSourceOfferKey && candidate === TRAVEL_DEAL_REFILL_ENTRY_KEY),
+        ),
+      );
+      continue;
+    }
+    if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
+      const sourceIndex =
+        travelSourceOfferKey === undefined ? -1 : order.indexOf(travelSourceOfferKey);
+      if (sourceIndex >= 0) {
+        proposals.push([
+          ...order.slice(0, sourceIndex + 1),
+          TRAVEL_DEAL_REFILL_ENTRY_KEY,
+          ...order.slice(sourceIndex + 1),
+        ]);
+      }
+      continue;
+    }
+    proposals.push([...order, entryKey]);
+  }
+  for (let index = 0; index < order.length - 1; index += 1) {
+    const swapped = [...order];
+    [swapped[index], swapped[index + 1]] = [swapped[index + 1]!, swapped[index]!];
+    const refillIndex = swapped.indexOf(TRAVEL_DEAL_REFILL_ENTRY_KEY);
+    const sourceIndex =
+      travelSourceOfferKey === undefined ? -1 : swapped.indexOf(travelSourceOfferKey);
+    if (refillIndex >= 0 && (sourceIndex < 0 || refillIndex <= sourceIndex)) continue;
+    proposals.push(swapped);
+  }
+  const seen = new Set<string>();
+  return Object.freeze(
+    proposals.flatMap((proposal) => {
+      const key = JSON.stringify(proposal);
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [Object.freeze(proposal)];
+    }),
   );
 }
 

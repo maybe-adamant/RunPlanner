@@ -311,6 +311,14 @@ function normalizeAcquisitions(
         ...(acquisition.elementContributions === undefined
           ? {}
           : { elementContributions: Object.freeze(acquisition.elementContributions) }),
+        ...(acquisition.grantedTraitKey === undefined
+          ? {}
+          : {
+              grantedTraitKey: requireNonEmpty(
+                acquisition.grantedTraitKey,
+                `acquisitions[${index}].grantedTraitKey`,
+              ),
+            }),
       }),
     ),
     'acquisitions',
@@ -670,6 +678,28 @@ function normalizeShopOption(
     'purchase',
     path,
   );
+  const rawInteraction = raw.purchaseInteraction;
+  if (rawInteraction === undefined) fail(`${path}.purchaseInteraction`, 'is required');
+  const purchaseInteraction =
+    rawInteraction.kind === 'resolvedOfferSource'
+      ? Object.freeze({ kind: 'resolvedOfferSource' as const })
+      : rawInteraction.kind === 'fixed'
+        ? Object.freeze({
+            kind: 'fixed' as const,
+            gameName: requireNonEmpty(
+              rawInteraction.gameName,
+              `${path}.purchaseInteraction.gameName`,
+            ),
+          })
+        : fail(`${path}.purchaseInteraction.kind`, 'must be fixed or resolvedOfferSource');
+  if (
+    purchaseInteraction.kind === 'resolvedOfferSource' &&
+    rewardType.sourceResolution?.kind !== 'offer'
+  )
+    fail(
+      `${path}.purchaseInteraction`,
+      'resolvedOfferSource requires offer-time source resolution',
+    );
   return Object.freeze({
     key: requireNonEmpty(raw.key, `${path}.key`),
     defaultOffer,
@@ -692,6 +722,7 @@ function normalizeShopOption(
           ),
         }),
     acquisitionLifecycle,
+    purchaseInteraction,
   });
 }
 
@@ -753,6 +784,7 @@ function normalizeShops(
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
 ): CatalogCollection<ShopProfileDeclaration> {
   const echoDuplicateKeyPrefix = 'echoDoubleShop:';
+  const reservedSupplementalKeys = new Set(['infernalContractReward', 'travelDealRefill']);
   return createCollection(
     raw.map((profile, profileIndex): ShopProfileDeclaration => {
       const path = `shops[${profileIndex}]`;
@@ -826,6 +858,8 @@ function normalizeShops(
           const slotKey = requireNonEmpty(slot.key, `${slotPath}.key`);
           if (slotKey.startsWith(echoDuplicateKeyPrefix))
             fail(`${slotPath}.key`, `must not use reserved prefix ${echoDuplicateKeyPrefix}`);
+          if (reservedSupplementalKeys.has(slotKey))
+            fail(`${slotPath}.key`, `must not use reserved supplemental key ${slotKey}`);
           return Object.freeze({
             key: slotKey,
             label: requireNonEmpty(slot.label, `${slotPath}.label`),

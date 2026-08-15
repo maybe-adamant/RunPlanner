@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'f1fe5ac16e1d9a66'],
-  ['G', '27a3be2046145f9e'],
-  ['H', '2682f239df6de08c'],
-  ['I', 'a5c86692638dfa17'],
-  ['N', '744c8dedce768777'],
-  ['O', 'a8608092419b3bf3'],
-  ['P', 'f1c17393ab3f3ee8'],
-  ['Q', 'bfe05a21a478e86f'],
+  ['F', 'a8a39561c1a63cc6'],
+  ['G', 'de3df3d8994c6fd2'],
+  ['H', '84874d55ef8143e8'],
+  ['I', 'd643cc2b75f9b8a7'],
+  ['N', '4d59515550ccfe07'],
+  ['O', 'a888b5f10a097993'],
+  ['P', '14dd862d52be7b08'],
+  ['Q', '80a5598eb3206f8f'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -290,6 +290,68 @@ describe('catalog regression coverage retained through unified decisions', () =>
     expect(sideBinding?.kind).toBe('set');
     if (sideBinding?.kind === 'set') expect(sideBinding.encounterSetKey).toBe('NEncountersSubRoom');
     expect(catalog.rooms.byKey.F_Opening01?.advancesExperimentalHammerUses).toBe(true);
+  });
+
+  it('publishes the exact planner-supported Infernal Contract destination matrix', () => {
+    const expected = [
+      'F_PreBoss01',
+      'G_PreBoss01',
+      'H_PreBoss01',
+      'I_PreBoss02',
+      'N_PreBoss01',
+      'O_PreBoss01',
+      'P_PreBoss01',
+      'Q_PreBoss01',
+    ];
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.infernalContractReward !== undefined)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual([...expected].sort());
+    for (const gameName of expected) {
+      expect(catalog.rooms.byKey[gameName]?.infernalContractReward).toEqual({
+        entryKey: 'infernalContractReward',
+        producerLifecycleKey: 'ZagPedestal',
+        rewardTypes: [
+          'BlindBoxLoot',
+          'StackUpgradeBig',
+          'StackUpgrade',
+          'TalentBigDrop',
+          'TalentDrop',
+        ],
+        defaultRewardType: 'BlindBoxLoot',
+      });
+    }
+    expect(catalog.rooms.byKey.I_PreBoss01).toBeUndefined();
+    for (const midshop of ['F_Shop01', 'G_Shop01', 'O_Shop01', 'P_Shop01']) {
+      expect(catalog.rooms.byKey[midshop]?.infernalContractReward, midshop).toBeUndefined();
+    }
+  });
+
+  it('binds Travel Deal to every supported World Shop profile, including Midshops', () => {
+    expect(
+      Object.fromEntries(
+        catalog.rooms.values.flatMap((room) =>
+          room.incomingReward.kind === 'shop'
+            ? [[room.gameName, room.incomingReward.shopProfileKey]]
+            : [],
+        ),
+      ),
+    ).toEqual({
+      F_Shop01: 'WorldShop',
+      F_PreBoss01: 'WorldShop',
+      G_Shop01: 'WorldShop',
+      G_PreBoss01: 'WorldShop',
+      H_PreBoss01: 'WorldShop',
+      I_PreBoss02: 'I_WorldShop',
+      N_PreBoss01: 'WorldShop',
+      O_Shop01: 'WorldShop',
+      O_PreBoss01: 'WorldShop',
+      P_Shop01: 'WorldShop',
+      P_PreBoss01: 'WorldShop',
+      Q_PreBoss01: 'Q_WorldShop',
+    });
   });
 
   it.each(prebossPolicies)(

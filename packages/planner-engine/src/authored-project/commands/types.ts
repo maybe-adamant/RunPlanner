@@ -291,6 +291,13 @@ export type AcquisitionSiteCommand =
       readonly kind: 'ReplaceAcquisitionEntryOffer';
       readonly entry: AcquisitionEntryAddress;
       readonly value: ResolvedRewardOffer;
+    }
+  | {
+      /** Atomically materializes and purchases the singleton derived Travel Deal refill. */
+      readonly kind: 'PurchaseTravelDealRefill';
+      readonly site: AcquisitionSiteAddress;
+      readonly defaultValue: import('../model').AuthoredRewardState;
+      readonly entryKeys: readonly string[];
     };
 
 export type EncounterOccurrenceCommand =

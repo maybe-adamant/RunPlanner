@@ -121,8 +121,11 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;
-    readonly sourceOfferKey: string;
-    readonly defaultValue: import('../../authored-project/model').AuthoredRewardState;
+    readonly kind: import('./processing').DerivedAcquisitionEntryFrontier['kind'];
+    readonly sourceOfferKey?: string;
+    readonly slotIndex?: number;
+    readonly defaultValue?: import('../../authored-project/model').AuthoredRewardState;
+    readonly rewardTypes?: readonly string[];
   }[];
 }
 

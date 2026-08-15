@@ -231,8 +231,11 @@ export interface BiomeCandidateArtifacts {
 }
 
 export interface DerivedAcquisitionEntryCandidateCapability {
-  readonly sourceOfferKey: string;
-  readonly defaultValue: import('../authored-project/model').AuthoredRewardState;
+  readonly kind: import('./rewards/processing').DerivedAcquisitionEntryFrontier['kind'];
+  readonly sourceOfferKey?: string;
+  readonly slotIndex?: number;
+  readonly defaultValue?: import('../authored-project/model').AuthoredRewardState;
+  readonly rewardTypes?: readonly string[];
 }
 export interface DerivedAcquisitionEntryCandidateArtifacts {
   readonly at: (
@@ -251,16 +254,24 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
   const first = frontiers[0];
   if (first === undefined) return undefined;
   if (
+    frontiers.length !== first.branchCohortSize ||
     frontiers.some(
       (frontier) =>
+        frontier.kind !== first.kind ||
+        frontier.branchCohortSize !== first.branchCohortSize ||
         frontier.sourceOfferKey !== first.sourceOfferKey ||
-        JSON.stringify(frontier.defaultValue) !== JSON.stringify(first.defaultValue),
+        frontier.slotIndex !== first.slotIndex ||
+        JSON.stringify(frontier.defaultValue) !== JSON.stringify(first.defaultValue) ||
+        JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes),
     )
   )
     return undefined;
   return Object.freeze({
-    sourceOfferKey: first.sourceOfferKey,
-    defaultValue: first.defaultValue,
+    kind: first.kind,
+    ...(first.sourceOfferKey === undefined ? {} : { sourceOfferKey: first.sourceOfferKey }),
+    ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
+    ...(first.defaultValue === undefined ? {} : { defaultValue: first.defaultValue }),
+    ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
   });
 }
 export function createDerivedAcquisitionEntryCandidateArtifacts(

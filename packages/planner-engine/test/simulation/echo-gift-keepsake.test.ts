@@ -499,7 +499,7 @@ describe('Echo Gift Gift Gift', () => {
     expect(exhausted.result.selectedPossible).toBe(true);
   });
 
-  it('persists only the biome-owned Hammer resolution through strict schema 36 and undo/redo', () => {
+  it('persists only the biome-owned Hammer resolution through strict schema 37 and undo/redo', () => {
     const { project } = route();
     const address = createKeepsakeEquipResultAddress(replayOwner, 'experimentalHammer');
     const selected = applyProjectCommand(project, catalog, {

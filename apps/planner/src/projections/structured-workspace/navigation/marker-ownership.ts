@@ -87,12 +87,22 @@ export function workspaceLocalDetailMarkers(
         ]),
       );
     case 'shop':
-      return Object.freeze(
-        roomLocal.offers.flatMap((offer) => [
+      return Object.freeze([
+        ...roomLocal.offers.flatMap((offer) => [
           offer.purchase.marker,
           ...rewardControlMarkers(offer.rewardControl),
         ]),
-      );
+        ...roomLocal.supplementalOffers.flatMap((offer) =>
+          offer.kind === 'travelDealPlaceholder'
+            ? []
+            : [
+                offer.purchase.marker,
+                ...(offer.kind === 'travelDealInvalid'
+                  ? []
+                  : rewardControlMarkers(offer.rewardControl)),
+              ],
+        ),
+      ]);
   }
 }
 

@@ -62,6 +62,7 @@ export function prepareAcquisitionOrderCandidateContext({
           facts: (branchHistory, shopNames = new Set()) =>
             facts(candidateRoom, branchHistory, shopNames),
           fail,
+          materializeTravelDefault: true,
         },
         candidateFindings,
       ).branches;

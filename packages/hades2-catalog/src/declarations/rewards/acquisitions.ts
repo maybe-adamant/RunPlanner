@@ -243,7 +243,12 @@ export const acquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
   },
-  { gameName: 'InfernalContractBoon', kind: 'loot', historyProjection: 'lootAndUse' },
+  {
+    gameName: 'InfernalContractBoon',
+    kind: 'loot',
+    historyProjection: 'lootAndUse',
+    grantedTraitKey: 'InfernalContractBoon',
+  },
   {
     gameName: 'TrialUpgrade',
     kind: 'loot',

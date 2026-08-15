@@ -147,6 +147,11 @@ export const hermesTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'worldShopRestock',
+      refillCount: 1,
+      discountByRarity: { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 },
+    },
   },
   {
     key: 'LuckyBoon',

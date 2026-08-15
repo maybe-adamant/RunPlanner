@@ -11,6 +11,7 @@ import {
   createRewardBagState,
   createRewardHistoryState,
   evaluateShopGenerationSupport,
+  evaluateShopPurchaseAtSlot,
   factsWithHistory,
   findShopGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
@@ -626,6 +627,32 @@ describe('ordered shop transitions', () => {
         additionalRequirements,
       ),
     ).toEqual([]);
+    expect(
+      evaluateShopPurchaseAtSlot(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        witness,
+        1,
+        [0, 1, 2],
+        createRewardHistoryState(),
+        blockedFacts,
+        additionalRequirements,
+      ),
+    ).toBeUndefined();
+    expect(
+      evaluateShopPurchaseAtSlot(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        witness,
+        1,
+        [0, 1, 2],
+        createRewardHistoryState(),
+        supportedFacts,
+        additionalRequirements,
+      ),
+    ).toBeDefined();
   });
 
   it.each([

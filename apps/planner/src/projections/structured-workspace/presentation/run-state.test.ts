@@ -45,6 +45,19 @@ describe('Run State presentation', () => {
             sourceRole: 'directTraitGrant',
             traitKey: 'ElementalDamageBoon',
           },
+          InfernalContractBoon: {
+            giverKey: 'InfernalContractBoon',
+            providerKind: 'npc',
+            sourceRole: 'directTraitGrant',
+            traitKey: 'InfernalContractBoon',
+          },
+          RestockBoon: {
+            giverKey: 'Hermes',
+            providerKind: 'hermes',
+            rarity: 'Epic',
+            sourceRole: 'self',
+            traitKey: 'RestockBoon',
+          },
           EchoRepeatKeepsakeBoon: {
             traitKey: 'EchoRepeatKeepsakeBoon',
             giverKey: 'Echo',
@@ -210,6 +223,15 @@ describe('Run State presentation', () => {
           label: 'Martial Art',
           level: 1,
           traitKey: 'ElementalDamageBoon',
+        },
+        {
+          label: 'Infernal Contract',
+          traitKey: 'InfernalContractBoon',
+        },
+        {
+          label: 'Travel Deal',
+          rarity: 'Epic',
+          traitKey: 'RestockBoon',
         },
         {
           label: 'Gift Gift Gift',

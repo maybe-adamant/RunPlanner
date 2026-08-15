@@ -805,6 +805,18 @@ export const hRooms = [
       shopProfileKey: 'WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
+    infernalContractReward: {
+      entryKey: 'infernalContractReward',
+      producerLifecycleKey: 'ZagPedestal',
+      rewardTypes: [
+        'BlindBoxLoot',
+        'StackUpgradeBig',
+        'StackUpgrade',
+        'TalentBigDrop',
+        'TalentDrop',
+      ],
+      defaultRewardType: 'BlindBoxLoot',
+    },
     prebossBatchPolicy: {
       kind: 'takeOverNormalDoors',
       remainingOffers: {

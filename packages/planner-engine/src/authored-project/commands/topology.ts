@@ -40,6 +40,7 @@ import {
   selectedExitContinuation,
   selectedExitKey,
 } from '../topology/query';
+import { createDefaultInfernalContractEntries } from '../shop';
 import {
   failCommand,
   requireOccurrence,
@@ -203,6 +204,7 @@ function defaultOccurrence(
     pickupProducer === undefined
       ? Object.freeze({})
       : createDefaultSelectedPickupEntries(catalog, pickupProducer.traitKey, loadout);
+  const contractEntries = createDefaultInfernalContractEntries(catalog, room.gameName, loadout);
   return Object.freeze({
     occurrenceId,
     gameName: room.gameName,
@@ -210,7 +212,12 @@ function defaultOccurrence(
     ...(state.kind === 'shop' && state.shop !== undefined
       ? {
           acquisitionSites: Object.freeze({
-            roomExit: Object.freeze({ order: Object.freeze([]) }),
+            roomExit: Object.freeze({
+              order: Object.freeze([]),
+              ...(Object.keys(contractEntries).length === 0
+                ? {}
+                : { pickupEntries: contractEntries }),
+            }),
           }),
         }
       : Object.keys(pickupEntries).length > 0

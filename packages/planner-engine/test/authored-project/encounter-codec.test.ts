@@ -14,6 +14,7 @@ import {
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   createCompleteFGProject,
   createRepresentativeNOPProject,
@@ -147,14 +148,65 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
   return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
 }
 
-describe('schema-36 occurrence-owned encounter persistence', () => {
+describe('schema-37 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(36);
+    expect(decoded.schemaVersion).toBe(37);
   });
+
+  it.each(['infernalContractReward', 'travelDealRefill'] as const)(
+    'rejects reserved initial Shop slot key %s at the schema-37 codec boundary',
+    (reservedKey) => {
+      const world = catalog.rewards.shops.byKey.WorldShop;
+      const first = world?.slots.values[0];
+      if (world === undefined || first === undefined) throw new Error('missing World Shop');
+      const replacement = Object.freeze({ ...first, key: reservedKey });
+      const slotValues = Object.freeze([replacement, ...world.slots.values.slice(1)]);
+      const malformedWorld = Object.freeze({
+        ...world,
+        slots: Object.freeze({
+          values: slotValues,
+          byKey: Object.freeze(
+            Object.fromEntries(slotValues.map((slot) => [slot.key, slot] as const)),
+          ),
+        }),
+      });
+      const shopValues = Object.freeze(
+        catalog.rewards.shops.values.map((shop) =>
+          shop.key === world.key ? malformedWorld : shop,
+        ),
+      );
+      const malformedCatalog: Catalog = Object.freeze({
+        ...catalog,
+        rewards: Object.freeze({
+          ...catalog.rewards,
+          shops: Object.freeze({
+            values: shopValues,
+            byKey: Object.freeze(
+              Object.fromEntries(shopValues.map((shop) => [shop.key, shop] as const)),
+            ),
+          }),
+        }),
+      });
+      const document = encoded(createCompleteFGProject());
+      const topology = biome(document, 'Underworld', 'F').topology as JsonRecord;
+      const shop = (topology.occurrences as JsonRecord[]).find(
+        (candidate) => candidate.gameName === 'F_PreBoss01',
+      );
+      const state = shop?.state as JsonRecord | undefined;
+      const inventory = (state?.shop as JsonRecord | undefined)?.offers as JsonRecord | undefined;
+      if (inventory === undefined) throw new Error('missing encoded F Preboss Shop');
+      inventory[reservedKey] = inventory.Boon;
+      delete inventory.Boon;
+
+      expect(() => decodeProjectDocument(document, malformedCatalog)).toThrow(
+        `${reservedKey} is reserved for a supplemental Shop entry`,
+      );
+    },
+  );
 
   it('schema-28 round-trips an exact ordered Calling Card ledger, including repeated rows', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
@@ -187,7 +239,7 @@ describe('schema-36 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 36 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 37 });
   });
 
   it('round-trips the exact All Together map, legal null, and one semantic set edit', () => {
@@ -284,7 +336,7 @@ describe('schema-36 occurrence-owned encounter persistence', () => {
   it('rejects schema 35 rather than inventing an All Together child migration', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 35;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 35');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 37, received 35');
   });
 
   it('requires an exact persisted conversion disposition map for every reward role', () => {
@@ -492,28 +544,28 @@ describe('schema-36 occurrence-owned encounter persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 37, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 37, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 37, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 36, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 37, received 30');
   });
 
   it.each([
