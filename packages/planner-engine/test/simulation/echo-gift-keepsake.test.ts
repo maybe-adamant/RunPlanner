@@ -617,6 +617,19 @@ describe('Echo Gift Gift Gift', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
+    // Derive the reached history before replacing the target: replacement
+    // correctly clears its authored reward leaf in schema 42.
+    const reachedH = simulateProject(catalog, project).routes[0]?.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    );
+    if (
+      reachedH === undefined ||
+      !('rewards' in reachedH) ||
+      reachedH.rewards.branches[0] === undefined
+    )
+      throw new Error('expected reached forced H miniboss frontier');
+    const before = reachedH.rewards.branches[0].traitHistory ?? createTraitHistoryState();
+    const loadout = project.routes[0]!.loadout;
     // Echo lengthens this characterized route into H's forced-miniboss window.
     // Reauthor only that target and its Boon leaf: retaining H_Combat05's old
     // Apollo leaf after changing the room would be chronologically false.
@@ -625,15 +638,8 @@ describe('Echo Gift Gift Gift', () => {
       occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
       gameName: 'H_MiniBoss02',
     });
-    const invalidH = simulateProject(catalog, project).routes[0]?.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    );
-    if (invalidH?.authoring !== 'complete' || invalidH.rewards.branches[0] === undefined)
-      throw new Error('expected reached forced H miniboss frontier');
-    const before = invalidH.rewards.branches[0].traitHistory ?? createTraitHistoryState();
-    const loadout = project.routes[0]!.loadout;
     const replacement = catalog.traitGivers.values
-      .filter((giver) => giver.providerKind === 'olympian' && giver.key !== 'Apollo')
+      .filter((giver) => giver.key === 'Apollo')
       .map((giver) => ({
         giver,
         traitKeys: giver.traitKeys.filter((traitKey) => {

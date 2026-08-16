@@ -50,6 +50,7 @@ export function prepareAcquisitionOrderCandidateContext({
             ? {}
             : { deathDefianceConditionMet: entryState.deathDefianceConditionMet }),
           offers: entryState.offers,
+          unresolvedOffers: entryState.unresolvedOffers,
           order: Object.freeze([...order]),
         }),
       });
@@ -63,7 +64,6 @@ export function prepareAcquisitionOrderCandidateContext({
           facts: (branchHistory, shopNames = new Set()) =>
             facts(candidateRoom, branchHistory, shopNames),
           fail,
-          materializeDerivedShopEntryDefaults: true,
         },
         candidateFindings,
       ).branches;

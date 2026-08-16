@@ -93,7 +93,7 @@ export function applyLevelResolutionCommand(
   if (owner.kind === 'acquisitionEntry') {
     const site = occurrence.acquisitionSites?.roomExit;
     const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
-    if (site === undefined || pickup === undefined)
+    if (site === undefined || pickup === undefined || pickup === null)
       failCommand(command, `missing pickup entry ${owner.entryKey}`);
     const nextPickup = updateLevelResolutionReward(
       pickup,

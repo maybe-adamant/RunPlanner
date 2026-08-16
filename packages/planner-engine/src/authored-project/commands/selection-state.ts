@@ -4,7 +4,7 @@ import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { failCommand, type LocatedBiome } from './contract';
 import type { ProjectCommand } from './types';
-import { createDefaultInfernalContractEntries } from '../shop';
+import { createInfernalContractEntries } from '../shop';
 
 function entryRole(
   room: RoomDeclaration,
@@ -75,11 +75,7 @@ export function reconcileNormalTargetEntryStates(
                 ...(room.infernalContractReward === undefined
                   ? {}
                   : {
-                      pickupEntries: createDefaultInfernalContractEntries(
-                        catalog,
-                        room.gameName,
-                        located.loadout,
-                      ),
+                      pickupEntries: createInfernalContractEntries(catalog, room.gameName),
                     }),
               }),
             }),

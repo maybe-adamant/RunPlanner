@@ -11,17 +11,23 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
   createTargetAddress,
+  createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   ProjectCommandContractError,
   redoProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
+import {
+  composeBiomeHistoryPrefix,
+  materializeBiomePrefix,
+  simulateProject,
+} from '@run-planner/engine/simulation';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import {
@@ -862,6 +868,28 @@ describe('authored-project commands and topology', () => {
       occurrenceId: openingId,
       gameName: 'F_Opening01',
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, openingId),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(fBiome, openingId), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
     const openingDecision = createExitDecisionAddress(fBiome, {
       kind: 'occurrence',
       occurrenceId: openingId,
@@ -873,13 +901,18 @@ describe('authored-project commands and topology', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
       rewardStore: createBatchRewardStoreAddress(fBiome, openingDecision.source),
-      storeKey: 'RunProgress',
+      storeKey: 'MetaProgress',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(fBiome, openingDecision.source, 'exit1'),
       occurrenceId: sourceId,
       gameName: 'F_Combat02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, sourceId),
+      value: { rewardType: 'MetaCurrencyDrop' },
     });
     const sourceDecision = createExitDecisionAddress(fBiome, {
       kind: 'occurrence',
@@ -905,6 +938,16 @@ describe('authored-project commands and topology', () => {
       target: createTargetAddress(fBiome, sourceDecision.source, 'exit2'),
       occurrenceId: nextId,
       gameName: 'F_Combat04',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, priorId),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, nextId),
+      value: { rewardType: 'MaxManaDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
@@ -1036,13 +1079,16 @@ describe('authored-project commands and topology', () => {
       parent: { occurrenceId: nextId },
     });
     expect(historyPrefix).not.toBeNull();
-    const enteredOccurrenceIds =
-      historyPrefix?.events.flatMap((event) =>
-        event.kind === 'roomEntered' && event.origin.kind === 'occurrence'
-          ? [event.origin.occurrenceId]
-          : [],
-      ) ?? [];
-    expect(enteredOccurrenceIds).toContain(nextId);
+    const evaluated = simulateProject(catalog, reanchored).routes[0]?.biomes[0];
+    if (evaluated === undefined || !('history' in evaluated)) {
+      throw new Error('re-anchor simulation did not retain its reached history');
+    }
+    const enteredOccurrenceIds = evaluated.history.events.flatMap((event) =>
+      event.kind === 'roomEntered' && event.origin.kind === 'occurrence'
+        ? [event.origin.occurrenceId]
+        : [],
+    );
+    expect(enteredOccurrenceIds, JSON.stringify(evaluated.findings)).toContain(nextId);
     expect(enteredOccurrenceIds).not.toContain(priorId);
   });
 

@@ -7,7 +7,9 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createAcquisitionSiteAddress,
+  createIncomingRewardAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -365,7 +367,33 @@ describe('workspace candidate interaction families', () => {
         occurrenceId: goldenFStartId,
       },
     );
-    const project = applyProjectCommand(started, catalog, { decision: owner, kind: 'CreateBatch' });
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const authoredReward = applyProjectCommand(started, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    const authoredTrait = applyProjectCommand(authoredReward, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const project = applyProjectCommand(authoredTrait, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
     const interaction = services.structuredWorkspace
       .project(simulateProjectAssembly(catalog, project))
       .interactions.rooms.get(

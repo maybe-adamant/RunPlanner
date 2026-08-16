@@ -788,14 +788,21 @@ function evaluateBiomeAssembly(
     seed,
     figLeafState,
   );
-  if (composed.kind === 'blocked') {
+  if (composed.kind !== 'complete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
     if (progressive === null) {
       throw new ProjectSimulationContractError(
-        `${plan.biomeKey} encounter block has no materialized progressive prefix`,
+        `${plan.biomeKey} lifecycle block has no materialized progressive prefix`,
       );
     }
-    const blockedAt = progressive.evaluation.blockedAt ?? composed.block.blockedAt;
+    const blockedAt =
+      progressive.evaluation.blockedAt ??
+      (composed.kind === 'blocked' ? composed.block.blockedAt : composed.blockedAt);
+    if (blockedAt === undefined) {
+      throw new ProjectSimulationContractError(
+        `${plan.biomeKey} lifecycle block has no semantic repair owner`,
+      );
+    }
     const assessmentPrefix =
       progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix;
     const reconciledRewards = reconcileRunStateAvailability(
@@ -985,8 +992,10 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
 function routeStatus(
   configuredBiomeCount: number,
   evaluations: readonly ProjectBiomeEvaluation[],
+  routeStartBlock: 'incomplete' | 'invalid' | null,
 ): ProjectRouteEvaluation['status'] {
   if (configuredBiomeCount === 0) return 'empty';
+  if (routeStartBlock !== null) return routeStartBlock;
   if (evaluations.some((evaluation) => evaluation.validity === 'invalid')) {
     return 'invalid';
   }
@@ -1038,6 +1047,7 @@ function evaluateRouteAssembly(
   const findings: SemanticFinding[] = [];
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
+  let routeStartBlock: 'incomplete' | 'invalid' | null = null;
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
     string,
@@ -1069,6 +1079,7 @@ function evaluateRouteAssembly(
     );
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
+      routeStartBlock = 'incomplete';
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultMissing',
@@ -1093,6 +1104,7 @@ function evaluateRouteAssembly(
             route.loadout,
           ).legal)
     ) {
+      routeStartBlock = 'invalid';
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultUnavailable',
@@ -1117,7 +1129,10 @@ function evaluateRouteAssembly(
       }),
     );
   }
-  for (const [index, plan] of route.biomes.entries()) {
+  if (routeStartBlock !== null) {
+    blockedSuffix = Object.freeze(route.biomes.map((biome) => biome.biomeKey));
+  }
+  for (const [index, plan] of routeStartBlock === null ? route.biomes.entries() : []) {
     const previous = evaluations.at(-1);
     if (previous?.authoring === 'incomplete' && previous.validity !== 'invalid') {
       throw new ProjectSimulationContractError('incomplete biome cannot seed route continuation');
@@ -1159,7 +1174,7 @@ function evaluateRouteAssembly(
   return Object.freeze({
     evaluation: Object.freeze({
       routeKey: route.routeKey,
-      status: routeStatus(route.biomes.length, frozenEvaluations),
+      status: routeStatus(route.biomes.length, frozenEvaluations, routeStartBlock),
       configuredBiomeKeys: Object.freeze(route.biomes.map((biome) => biome.biomeKey)),
       biomes: frozenEvaluations,
       processing,
@@ -1218,9 +1233,9 @@ export function simulateProjectAssembly(
     status:
       summary.configuredBiomeCount === 0
         ? 'empty'
-        : summary.invalidBiomeCount > 0
+        : routes.some((route) => route.status === 'invalid')
           ? 'invalid'
-          : summary.incompleteBiomeCount > 0
+          : routes.some((route) => route.status === 'incomplete')
             ? 'incomplete'
             : 'valid',
     projectId: project.projectId,

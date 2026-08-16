@@ -659,10 +659,7 @@ describe('Narcissus pickup producer', () => {
     ]);
     const occurrence = narcissusOccurrence(project);
     const entry = occurrence.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon;
-    expect(entry).toMatchObject({
-      offer: { rewardType: 'BlindBoxLoot' },
-      traitOffersByAcquisitionRole: expect.any(Object),
-    });
+    expect(entry).toBeNull();
     let simulation = simulateProject(catalog, project);
     let g = simulation.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -686,6 +683,29 @@ describe('Narcissus pickup producer', () => {
       value: {
         rewardType: 'BlindBoxLoot',
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(
+            createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+            'roomExit',
+          ),
+          'mysteryBoon',
+        ),
+        'hiddenSource',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
       },
     });
     project = applyProjectCommand(project, catalog, {
@@ -752,6 +772,20 @@ describe('Narcissus pickup producer', () => {
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
       },
     });
+    completed = applyProjectCommand(completed, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(entry, 'hiddenSource'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
     const occurrence = narcissusOccurrence(completed);
     const incomplete = applyProjectCommand(completed, catalog, {
       kind: 'RemoveExitDecision',
@@ -764,7 +798,6 @@ describe('Narcissus pickup producer', () => {
     expect(narcissusOccurrence(incomplete).acquisitionSites?.roomExit?.pickupEntries).toEqual(
       occurrence.acquisitionSites?.roomExit?.pickupEntries,
     );
-    const completeG = evaluatedG(completed);
     const incompleteG = evaluatedG(incomplete);
     expect(incompleteG.authoring).toBe('incomplete');
     const selectedChild = (project: ProjectDocument) =>
@@ -783,7 +816,6 @@ describe('Narcissus pickup producer', () => {
       });
     expect(selectedChild(incomplete)).toEqual(selectedChild(completed));
     expect(childFindings(incomplete)).toEqual(childFindings(completed));
-    expect(incompleteG.rewards.branches).toEqual(completeG.rewards.branches);
     const candidateValue = {
       rewardType: 'BlindBoxLoot' as const,
       payload: { kind: 'BoonSource' as const, source: 'HestiaUpgrade' as const },
@@ -958,7 +990,6 @@ describe('Narcissus pickup producer', () => {
       site: entry.site,
       entryKeys: ['mysteryBoon'],
     });
-    project = authorLegalTraitOffers(project);
     const session = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
@@ -971,12 +1002,26 @@ describe('Narcissus pickup producer', () => {
       session.evaluate({ kind: 'acquisitionEntryOffer', entry, value: replacement }),
     ).toMatchObject({
       kind: 'acquisitionEntryOffer',
-      result: { supported: true },
+      result: { supported: false },
     });
-    const applied = applyProjectCommand(project, catalog, {
+    let applied = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry,
       value: replacement,
+    });
+    applied = applyProjectCommand(applied, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(entry, 'hiddenSource'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     expect(
       narcissusOccurrence(applied).acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon
@@ -986,9 +1031,8 @@ describe('Narcissus pickup producer', () => {
       .routes.find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
     if (appliedG?.authoring !== 'complete') throw new Error('applied Narcissus G did not simulate');
-    // Candidate support means the exact entry fold retains a branch. The
-    // command may still expose an invalid default child for repair, but it
-    // must not erase the reachable acquisition product.
+    // Completing the exact entry-owned reward and fresh trait offer retains
+    // the reachable acquisition product.
     expect(appliedG.rewards.branches.length).toBeGreaterThan(0);
     expect(
       session.evaluate({
@@ -997,6 +1041,52 @@ describe('Narcissus pickup producer', () => {
         value: { rewardType: 'MaxHealthDrop' },
       }),
     ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: false } });
+  });
+
+  it('publishes an active unpicked payload frontier without acquiring or blocking its candidate', () => {
+    const project = selectNarcissus(createCompleteFGProject(), [
+      'NarcissusI',
+      'NarcissusB',
+      'NarcissusC',
+    ]);
+    const occurrence = narcissusOccurrence(project);
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        'roomExit',
+      ),
+      'mysteryBoon',
+    );
+    expect(occurrence.acquisitionSites?.roomExit?.order).toEqual([]);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluated = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    expect(evaluated?.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardMissing', origin: entry }),
+    );
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    expect(
+      session.evaluate({
+        kind: 'acquisitionEntryOffer',
+        entry,
+        value: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+        },
+      }),
+    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
+    expect(
+      evaluated !== undefined &&
+        'rewards' in evaluated &&
+        evaluated.rewards.branches.some((branch) =>
+          branch.events.some(
+            (event) =>
+              event.kind === 'concreteAcquisition' &&
+              event.settlement?.entry.entryKey === 'mysteryBoon',
+          ),
+        ),
+    ).toBe(false);
   });
 
   it('locates a selected pickup producer across every encounter phase', () => {

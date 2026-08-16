@@ -26,7 +26,7 @@ import {
 import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 
-import { createDefaultDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 import { createCompleteNProject } from '../support/complete-n-project';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -264,9 +264,11 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
       (candidate.source as { occurrenceId?: string }).occurrenceId === 'zagreus-shop',
   );
   if (shopDecision === undefined) throw new Error('missing Zagreus Midshop decision');
-  const contractOffer = (
-    catalog.rooms.byKey.C_Boss01?.incomingReward as { kind: 'fixed'; offer: unknown }
-  ).offer as Parameters<typeof createDefaultDispositionByAcquisitionRole>[1];
+  const contractBinding = catalog.rooms.byKey.C_Boss01?.incomingReward;
+  if (contractBinding?.kind !== 'fixed') throw new Error('C_Boss01 must have a fixed reward');
+  const contractOffer = Object.freeze({
+    rewardType: contractBinding.rewardType,
+  }) as Parameters<typeof createNormalDispositionByAcquisitionRole>[1];
   encoded.topology.occurrences.push({
     occurrenceId: 'zagreus-contract',
     gameName: 'C_Boss01',
@@ -274,7 +276,7 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
       kind: 'fixed',
       reward: {
         offer: contractOffer,
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
+        dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(
           catalog,
           contractOffer,
         ),
@@ -471,22 +473,15 @@ function rewardWheelProject(): ProjectDocument {
     rewardStoreKey: 'RunProgress',
     targets: [{ exitKey: 'exit1', occurrenceId: 'o-wheel-combat', gameName: 'O_Combat01' }],
   });
-  const ship = document.routes[1]?.biomes[1]?.topology?.occurrences.find(
-    (occurrence) => occurrence.occurrenceId === 'o-wheel-combat',
-  );
-  if (ship?.state.kind !== 'shipCombat') throw new Error('missing ShipCombat wheel state');
-  const wheel = ship.state.wheels.wheel1;
-  const [offerKey, offer] = Object.entries(wheel?.offers ?? {})[0] ?? [];
-  if (offerKey === undefined || offer === undefined) throw new Error('missing wheel offer');
   return applyProjectCommand(document, catalog, {
     kind: 'ReplaceRewardWheelOffer',
     offer: createRewardWheelOfferAddress(
       oBiome,
       createOccurrenceId('o-wheel-combat'),
       'wheel1',
-      offerKey,
+      'offer1',
     ),
-    value: offer.offer,
+    value: { rewardType: 'MaxHealthDrop' },
   });
 }
 

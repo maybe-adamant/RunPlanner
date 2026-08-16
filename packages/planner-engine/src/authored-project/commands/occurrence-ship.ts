@@ -12,12 +12,7 @@ import {
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShipOccurrenceCommand } from './types';
-import {
-  createDefaultLevelResolutions,
-  createDefaultTraitOffers,
-  producerLevelEffectSource,
-} from '../traits';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
+import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 
 function requireWheel(
   catalog: Catalog,
@@ -127,36 +122,16 @@ export function applyShipOccurrenceCommand(
         if (offer === undefined || !descriptor.offerKeys.includes(command.offer.offerKey)) {
           failCommand(command, `unknown wheel offer ${command.offer.offerKey}`);
         }
-        if (sameOccurrenceValue(offer.offer, command.value)) return document;
+        if (offer !== null && sameOccurrenceValue(offer.offer, command.value)) return document;
         replacement = Object.freeze({
           ...wheel,
           offers: Object.freeze({
             ...wheel.offers,
-            [command.offer.offerKey]: Object.freeze({
-              offer: command.value,
-              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-                catalog,
-                command.value,
-              ),
-              traitOffersByAcquisitionRole: createDefaultTraitOffers(
-                catalog,
-                command.value,
-                located.loadout,
-              ),
-              ...(createDefaultLevelResolutions(
-                catalog,
-                command.value,
-                producerLevelEffectSource(descriptor.reward),
-              ) === undefined
-                ? {}
-                : {
-                    levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                      catalog,
-                      command.value,
-                      producerLevelEffectSource(descriptor.reward),
-                    ),
-                  }),
-            }),
+            [command.offer.offerKey]: createUnresolvedAcquisitionRewardState(
+              catalog,
+              command.value,
+              producerLevelEffectSource(descriptor.reward),
+            ),
           }),
         });
       }

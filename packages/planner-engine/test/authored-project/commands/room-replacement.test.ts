@@ -40,7 +40,7 @@ function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBio
 }
 
 describe('authored-project room replacement commands', () => {
-  it('installs replacement Shop Hammer defaults for the exact route loadout', () => {
+  it('leaves replacement Shop inventory unresolved after a route loadout change', () => {
     const initial = fProject();
     const initialLoadout = initial.routes.find((route) => route.routeKey === 'Underworld')?.loadout;
     const replacementWeapon = catalog.weapons.values.find(
@@ -92,16 +92,7 @@ describe('authored-project room replacement commands', () => {
     if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
       throw new Error('replacement did not create an active Shop');
     }
-    const hammer = occurrence.state.shop.offers.MajorNonBoon?.reward;
-    const expected =
-      catalog.traitGivers.byKey.WeaponUpgrade?.defaultsByLoadout?.[
-        `${loadout.weaponKey}:${loadout.aspectKey}`
-      ];
-    const authoredHammer = Object.values(hammer?.traitOffersByAcquisitionRole ?? {})[0];
-    if (authoredHammer?.kind !== 'traits') throw new Error('expected a trait offer');
-    expect(hammer?.offer.rewardType).toBe('WeaponUpgradeDrop');
-    expect(authoredHammer?.giverKey).toBe('WeaponUpgrade');
-    expect(authoredHammer?.options).toEqual(expected?.options);
+    expect(occurrence.state.shop.offers.MajorNonBoon?.reward).toBeNull();
   });
 
   it('changes only declared start choices, retains the occurrence identity, and noops unchanged input', () => {

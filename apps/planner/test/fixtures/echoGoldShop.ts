@@ -11,9 +11,8 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  assessTraitOption,
-  createTraitHistoryState,
-  simulateProject,
+  createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures';
 
@@ -41,65 +40,44 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTarget),
     gameName: 'H_MiniBoss02',
   });
-  const h = simulateProject(catalog, project).routes[0]?.biomes.find(
-    (biome) => biome.biomeKey === 'H',
+  const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTarget);
+  const rewardSession = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
   );
-  if (h?.authoring !== 'complete' || h.rewards.branches[0] === undefined)
-    throw new Error('expected reached forced H miniboss frontier');
-  const before = h.rewards.branches[0].traitHistory ?? createTraitHistoryState();
-  const loadout = project.routes[0]!.loadout;
   const replacement = catalog.traitGivers.values
-    .filter((giver) => giver.providerKind === 'olympian' && giver.key !== 'Apollo')
+    .filter((giver) => giver.providerKind === 'olympian')
     .map((giver) => ({
       giver,
-      traitKeys: giver.traitKeys.filter((traitKey) => {
-        const trait = catalog.traits.byKey[traitKey];
-        return (
-          trait?.rarityDomain.kind === 'ranked' &&
-          trait.rarityDomain.freshOfferRarities.includes('Common') &&
-          trait.targetedAcquisition === undefined &&
-          assessTraitOption(
-            catalog,
-            traitKey,
-            before,
-            { ...loadout, resolvedProviderKey: giver.key, deathDefianceConditionMet: false },
-            'Common',
-          ).legal
-        );
-      }),
+      offer: {
+        rewardType: 'Boon' as const,
+        payload: { kind: 'BoonSource' as const, source: `${giver.key}Upgrade` },
+      },
     }))
-    .find((candidate) => candidate.traitKeys.length >= 3);
-  const [first, second, third] = replacement?.traitKeys ?? [];
-  if (
-    replacement === undefined ||
-    first === undefined ||
-    second === undefined ||
-    third === undefined
-  )
-    throw new Error('no truthful forced-miniboss Boon leaf');
-  const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTarget);
+    .find(({ offer }) => {
+      const evaluation = rewardSession.evaluate({
+        kind: 'incomingReward',
+        reward: forcedReward,
+        value: offer,
+      });
+      return evaluation.kind === 'incomingReward' && evaluation.result.supported;
+    });
+  if (replacement === undefined) throw new Error('no candidate-supported H miniboss Boon');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: forcedReward,
-    value: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: `${replacement.giver.key}Upgrade` },
-    },
+    value: replacement.offer,
   });
+  const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
+  const traitDraft = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).traitOfferStartingDraft(forcedTrait, replacement.giver.key);
+  if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(forcedReward, 'source'),
-    value: {
-      kind: 'traits',
-      giverKey: replacement.giver.key,
-      options: [
-        { traitKey: first, rarity: 'Common' },
-        { traitKey: second, rarity: 'Common' },
-        { traitKey: third, rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-      rarificationActions: [],
-    },
+    trait: forcedTrait,
+    value: traitDraft,
   });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',

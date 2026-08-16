@@ -18,12 +18,6 @@ import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import { requireCountedBinding } from '../room-state/declaration';
 import {
-  createDefaultLevelResolutions,
-  createDefaultTraitOffers,
-  producerLevelEffectSource,
-} from '../traits';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
-import {
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
   selectedExitKey,
@@ -272,7 +266,7 @@ function switchTargetToAnomaly(
   if (!descriptor.replaceableTargetRoomGameNames.includes(rememberedRoom.gameName)) {
     failCommand(command, `${rememberedRoom.gameName} is not an Anomaly-replaceable target`);
   }
-  const rememberedBinding = requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
+  requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
   const replacementRoom = requireAnomalyRoom(
     catalog,
     descriptor.defaultReplacementRoomGameName,
@@ -285,31 +279,7 @@ function switchTargetToAnomaly(
     anomalyReplacement: Object.freeze({ replacedRoomGameName: rememberedRoom.gameName }),
     state: Object.freeze({
       kind: 'anomaly',
-      reward: Object.freeze({
-        offer: occurrence.state.reward.offer,
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-          catalog,
-          occurrence.state.reward.offer,
-        ),
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(
-          catalog,
-          occurrence.state.reward.offer,
-          located.loadout,
-        ),
-        ...(createDefaultLevelResolutions(
-          catalog,
-          occurrence.state.reward.offer,
-          producerLevelEffectSource(rememberedBinding),
-        ) === undefined
-          ? {}
-          : {
-              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                catalog,
-                occurrence.state.reward.offer,
-                producerLevelEffectSource(rememberedBinding),
-              ),
-            }),
-      }),
+      reward: occurrence.state.reward,
       success: true,
     }),
     encounters: createDefaultRoomEncounterState(
@@ -402,7 +372,7 @@ function revertAnomaly(
     command.occurrence.occurrenceId,
     command,
   );
-  const rememberedBinding = requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
+  requireCountedBinding(rememberedRoom, rememberedRoom.gameName);
   const withoutOutgoing = removeOutgoingDecision(topology, occurrence.occurrenceId);
   return updateTopology(
     document,
@@ -414,31 +384,7 @@ function revertAnomaly(
         gameName: rememberedRoom.gameName,
         state: Object.freeze({
           kind: 'counted',
-          reward: Object.freeze({
-            offer: occurrence.state.reward.offer,
-            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-              catalog,
-              occurrence.state.reward.offer,
-            ),
-            traitOffersByAcquisitionRole: createDefaultTraitOffers(
-              catalog,
-              occurrence.state.reward.offer,
-              located.loadout,
-            ),
-            ...(createDefaultLevelResolutions(
-              catalog,
-              occurrence.state.reward.offer,
-              producerLevelEffectSource(rememberedBinding),
-            ) === undefined
-              ? {}
-              : {
-                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                    catalog,
-                    occurrence.state.reward.offer,
-                    producerLevelEffectSource(rememberedBinding),
-                  ),
-                }),
-          }),
+          reward: occurrence.state.reward,
         }),
         encounters: createDefaultRoomEncounterState(
           catalog,

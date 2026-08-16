@@ -6,9 +6,8 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
-import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import { createUnresolvedAcquisitionRewardState } from '../traits';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -32,37 +31,21 @@ export function applyIncomingRewardCommand(
     failCommand(command, `${room.gameName} has no reward binding`);
   if (
     'reward' in occurrence.state &&
+    occurrence.state.reward !== null &&
     sameOccurrenceValue(occurrence.state.reward.offer, command.value)
   )
     return document;
   let state: RoomOccurrence['state'];
-  const loadout = located.loadout;
   if (occurrence.state.kind === 'fixed') {
     if (
       room.incomingReward.kind !== 'fixed' ||
-      command.value.rewardType !== room.incomingReward.offer.rewardType
+      command.value.rewardType !== room.incomingReward.rewardType
     ) {
       failCommand(command, `${occurrence.gameName} has a fixed reward type`);
     }
     state = Object.freeze({
       kind: 'fixed',
-      reward: Object.freeze({
-        offer: command.value,
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-          catalog,
-          command.value,
-        ),
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
-        ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
-          ? {}
-          : {
-              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                catalog,
-                command.value,
-                levelEffectSource,
-              ),
-            }),
-      }),
+      reward: createUnresolvedAcquisitionRewardState(catalog, command.value, levelEffectSource),
     });
   } else if (
     occurrence.state.kind === 'counted' ||
@@ -72,23 +55,7 @@ export function applyIncomingRewardCommand(
   ) {
     state = Object.freeze({
       ...occurrence.state,
-      reward: Object.freeze({
-        offer: command.value,
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-          catalog,
-          command.value,
-        ),
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, command.value, loadout),
-        ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) === undefined
-          ? {}
-          : {
-              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                catalog,
-                command.value,
-                levelEffectSource,
-              ),
-            }),
-      }),
+      reward: createUnresolvedAcquisitionRewardState(catalog, command.value, levelEffectSource),
     });
   } else {
     failCommand(command, `${occurrence.gameName} has no replaceable incoming reward`);

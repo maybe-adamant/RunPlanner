@@ -216,14 +216,14 @@ export interface WorkspaceRewardInteraction {
   readonly intentFor: (offer: ResolvedRewardOffer) => WorkspaceRewardCommandIntent;
   readonly key: string;
   readonly owner: RewardCandidateOwner['address'];
-  readonly choiceLabel: (step: RewardPickerStep, offer: ResolvedRewardOffer) => string;
+  readonly choiceLabel: (step: RewardPickerStep, offer?: ResolvedRewardOffer) => string;
   readonly load: () => Promise<ProjectedRewardDomain>;
   readonly model: (
     domain: ProjectedRewardDomain,
     step: RewardPickerStep,
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ) => ContextualPickerModel<ResolvedRewardOffer>;
-  readonly selected: ResolvedRewardOffer;
+  readonly selected: ResolvedRewardOffer | null;
   readonly summary: (offer: ResolvedRewardOffer) => string;
 }
 
@@ -234,7 +234,7 @@ export interface WorkspaceTraitOfferControl {
   readonly address: TraitOfferAddress;
   readonly giver: TraitGiverDeclaration;
   readonly marker: WorkspaceMarker;
-  readonly offer: AuthoredTraitOffer;
+  readonly offer: AuthoredTraitOffer | null;
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
   readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
@@ -406,7 +406,9 @@ export interface WorkspaceEchoLastRunBoonInteraction {
 export interface WorkspaceEchoLastRewardDomain {
   readonly rewardType: string;
   readonly rewardLabel: string;
-  readonly defaultValue: AuthoredEchoLastRewardAcquisition;
+  readonly initialValue: AuthoredEchoLastRewardAcquisition;
+  readonly traitOfferDraft?: AuthoredTraitOffer;
+  readonly levelResolutionDraft?: import('@run-planner/engine/authored-project').AuthoredLevelResolution;
   readonly goldSupported: boolean;
   readonly traitOptionDomains: readonly TraitOptionDomainProjection[];
   readonly traitRarityEditable: boolean;
@@ -459,7 +461,7 @@ export interface WorkspaceTraitOfferInteraction {
       { readonly kind: 'ReplaceTraitSelection' | 'ReplaceAcquisitionDisposition' }
     >
   >;
-  readonly value: AuthoredTraitOffer;
+  readonly value: AuthoredTraitOffer | null;
   /** Exact engine-backed traits draft for returning from Fallback Gold. */
   readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
   readonly nextTraitOfferDraft?: (
@@ -841,8 +843,6 @@ export interface WorkspaceAcquisitionConversionInteraction {
   /** Gold is enabled only when every reached engine branch supports it. */
   readonly timePieceSupported: boolean;
   readonly artificerSupported: boolean;
-  readonly artificerDefaultReplacement?: import('@run-planner/engine/authored-project').AuthoredRewardState;
-  /** Complete declaration defaults used to seed the generated reward editor. */
   readonly artificerReplacementOptions: readonly import('@run-planner/engine/authored-project').AuthoredRewardState[];
   readonly artificerReplacementControl?: WorkspaceExplicitRewardControl;
   readonly intentFor: (
@@ -979,8 +979,12 @@ export type WorkspaceRoomPickerControl =
     };
 
 interface WorkspaceRewardControlBase {
+  /** Direct payload authoring for a declaration-fixed type whose payload remains unresolved. */
+  readonly authoringStartStep?: Exclude<RewardPickerStep, 'type' | 'spurned'>;
+  /** Transient factual type seed for that unresolved payload; never persisted independently. */
+  readonly authoringSeed?: ResolvedRewardOffer;
   readonly marker: WorkspaceMarker;
-  readonly offer: ResolvedRewardOffer;
+  readonly offer: ResolvedRewardOffer | null;
   readonly owner: RewardCandidateOwner;
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
@@ -988,13 +992,13 @@ interface WorkspaceRewardControlBase {
   readonly derivedShopEntryEdit?: {
     readonly site: AcquisitionSiteAddress;
     readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
-    readonly defaultValue: AuthoredRewardState;
+    readonly sourceOfferKey: string;
   };
   /** Nested generated reward edited atomically through its source disposition. */
   readonly artificerReplacementEdit?: {
     readonly acquisition: AcquisitionRoleAddress;
     readonly options: readonly AuthoredRewardState[];
-    readonly replacement: AuthoredRewardState;
+    readonly replacement: AuthoredRewardState | null;
   };
 }
 
@@ -1121,7 +1125,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly purchase: WorkspaceShopPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
-      readonly defaultValue?: AuthoredRewardState;
       readonly participationLabel: 'Picked up';
     }
   | {
@@ -1131,7 +1134,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly purchase: WorkspaceShopPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
-      readonly defaultValue: AuthoredRewardState;
       readonly sourceOfferKey: string;
       readonly participationLabel: 'Purchased';
     }
@@ -1142,7 +1144,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly purchase: WorkspaceShopPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
-      readonly defaultValue: AuthoredRewardState;
       readonly sourceOfferKey: string;
       readonly eligibleSourceOfferKeys: readonly string[];
       readonly participationLabel: 'Picked up';
@@ -1275,7 +1276,7 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'fixed';
       readonly marker: WorkspaceMarker;
-      readonly offer: ResolvedRewardOffer;
+      readonly offer: ResolvedRewardOffer | null;
       readonly summary: string;
       readonly control?: WorkspaceExplicitRewardControl;
     }

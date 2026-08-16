@@ -17,6 +17,7 @@ function rewardSummary(
   control: WorkspaceRewardControl,
   interactions: WorkspaceInteractionCatalog,
 ): string {
+  if (control.offer === null) return 'Choose reward';
   return requireWorkspaceInteraction(
     interactions.rewards,
     workspaceInteractionKey(control.owner.address),

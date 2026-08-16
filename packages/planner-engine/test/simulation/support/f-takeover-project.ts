@@ -6,10 +6,11 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
-  createLevelResolutionAddress,
   createOccurrenceId,
   createProjectDocument,
+  createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
@@ -26,11 +27,33 @@ export function createFProject(projectId = 'f-takeover-project'): ProjectDocumen
 }
 
 export function createFStart(project = createFProject()): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+  const started = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: fBiome,
     occurrenceId: fStartId,
     gameName: 'F_Opening01',
+  });
+  const rewarded = applyProjectCommand(started, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fBiome, fStartId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  return applyProjectCommand(rewarded, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(fBiome, fStartId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
   });
 }
 
@@ -62,11 +85,16 @@ export function createFOpeningTarget(
   project = createFOpeningBatch(),
   gameName = 'F_Combat02',
 ): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+  const targeted = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(fBiome, fDecision().source, 'exit1'),
     occurrenceId: fCombatId,
     gameName,
+  });
+  return applyProjectCommand(targeted, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fBiome, fCombatId),
+    value: { rewardType: gameName === 'F_Combat01' ? 'MaxHealthDrop' : 'MetaCurrencyDrop' },
   });
 }
 
@@ -116,6 +144,11 @@ export function createCompleteFTakeoverProject(
 ): ProjectDocument {
   let project = createFOpeningTarget();
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fBiome, fCombatId),
+    value: { rewardType: 'MetaCurrencyDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: fDecision(fCombatId),
     gameName: 'F_PreBoss01',
@@ -124,21 +157,66 @@ export function createCompleteFTakeoverProject(
       exit2: createOccurrenceId('f-takeover-preboss-free'),
     },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLevelResolution',
-    levelResolution: createLevelResolutionAddress(
-      createIncomingRewardAddress(fBiome, fCombatId),
-      'self',
-    ),
-    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
-  });
-  return selectFCombatExit(project, selectedExitKey);
+  project = selectFCombatExit(project, selectedExitKey);
+  if (selectedExitKey === 'exit1') {
+    for (const [offerKey, value] of Object.entries({
+      Boon: {
+        rewardType: 'RandomLoot' as const,
+        payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+      },
+      MajorNonBoon: { rewardType: 'RoomRewardHealDrop' as const },
+      Minor: { rewardType: 'MaxManaDrop' as const },
+    })) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(
+          fBiome,
+          createOccurrenceId('f-takeover-preboss-shop'),
+          offerKey,
+        ),
+        value,
+      });
+    }
+  }
+  if (selectedExitKey === 'exit2') {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, createOccurrenceId('f-takeover-preboss-free')),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(fBiome, createOccurrenceId('f-takeover-preboss-free')),
+        'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+          { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+          { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+  }
+  return project;
 }
 
 /** A complete physical takeover batch whose normal exit remains unselected. */
 export function createUnselectedFTakeoverProject(): ProjectDocument {
   let project = createFOpeningTarget();
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fBiome, fCombatId),
+    value: { rewardType: 'MetaCurrencyDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: fDecision(fCombatId),
     gameName: 'F_PreBoss01',
@@ -147,12 +225,5 @@ export function createUnselectedFTakeoverProject(): ProjectDocument {
       exit2: createOccurrenceId('f-takeover-preboss-free'),
     },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLevelResolution',
-    levelResolution: createLevelResolutionAddress(
-      createIncomingRewardAddress(fBiome, fCombatId),
-      'self',
-    ),
-    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
-  });
+  return project;
 }

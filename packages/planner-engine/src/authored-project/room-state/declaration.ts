@@ -8,7 +8,7 @@ import type {
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import { encounterEnvelopeSlots } from './encounters';
 import { failProjectDocument } from '../validation';
-import type { TraitOfferDefaultsContext } from '../traits';
+import type { TraitOfferLoadoutContext } from '../traits';
 
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
@@ -16,7 +16,7 @@ export interface RoomStateContext {
   readonly role: RoomOccurrenceRole;
   readonly resolvedStoreKey?: string;
   readonly entryActive: boolean;
-  readonly loadout: TraitOfferDefaultsContext;
+  readonly loadout: TraitOfferLoadoutContext;
   /** Required only while constructing a Fields occurrence inside its selected batch. */
   readonly activeCageCount?: number;
   /**

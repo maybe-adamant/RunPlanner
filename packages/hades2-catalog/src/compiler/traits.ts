@@ -859,8 +859,6 @@ function collectCoreGodTraitKeys(raw: RawTraitCatalogInput['givers']): ReadonlyS
 function normalizeGivers(
   raw: RawTraitCatalogInput['givers'],
   traits: CatalogCollection<TraitDeclaration>,
-  weapons: CatalogCollection<WeaponDeclaration>,
-  aspects: CatalogCollection<AspectDeclaration>,
 ): CatalogCollection<TraitGiverDeclaration> {
   const declarations = requireArray(raw, 'givers').map(
     (value, index) =>
@@ -868,6 +866,18 @@ function normalizeGivers(
   );
   const values = declarations.map((giver, index) => {
     const path = `givers[${index}]`;
+    const allowedKeys = new Set([
+      'key',
+      'label',
+      'providerKind',
+      'traitKeys',
+      'priorityTraitKeys',
+      'rarityPolicy',
+      'defaultOffer',
+      'denialParticipates',
+    ]);
+    const unsupportedKey = Object.keys(giver).find((key) => !allowedKeys.has(key));
+    if (unsupportedKey !== undefined) fail(`${path}.${unsupportedKey}`, 'is not supported');
     if (giver.denialParticipates !== undefined)
       requireBoolean(giver.denialParticipates, `${path}.denialParticipates`);
     const priorityTraitKeys = freezeUniqueStrings(
@@ -999,8 +1009,6 @@ function normalizeGivers(
     } else if (priorityTraitKeys.length !== 0) {
       fail(`${path}.priorityTraitKeys`, 'non-Olympian givers must not declare priority traits');
     }
-    if (providerKind === 'hammer' && giver.defaultsByLoadout === undefined)
-      fail(`${path}.defaultsByLoadout`, 'must cover every loadout');
     if (providerKind !== 'hammer' && giver.defaultOffer === undefined)
       fail(`${path}.defaultOffer`, 'is required');
     const defaultOffer =
@@ -1046,51 +1054,6 @@ function normalizeGivers(
         fail(`${path}.defaultOffer`, 'Olympian defaults must include Melee or Secondary traits');
       }
     }
-    const defaultsByLoadout: Record<string, TraitOfferDefaults> = {};
-    if (giver.defaultsByLoadout !== undefined) {
-      const rawDefaultsByLoadout = requireObject(
-        giver.defaultsByLoadout,
-        `${path}.defaultsByLoadout`,
-      ) as unknown as NonNullable<RawTraitGiverDeclaration['defaultsByLoadout']>;
-      const expectedLoadouts = new Set(
-        weapons.values.flatMap((weapon) =>
-          weapon.aspectKeys.map((aspectKey) => `${weapon.key}:${aspectKey}`),
-        ),
-      );
-      for (const loadout of Object.keys(rawDefaultsByLoadout)) {
-        if (!expectedLoadouts.has(loadout))
-          fail(`${path}.defaultsByLoadout.${loadout}`, 'unknown loadout');
-      }
-      for (const weapon of weapons.values) {
-        for (const aspectKey of weapon.aspectKeys) {
-          const loadout = `${weapon.key}:${aspectKey}`;
-          const defaults = rawDefaultsByLoadout[loadout];
-          if (defaults === undefined) fail(`${path}.defaultsByLoadout`, `missing ${loadout}`);
-          const normalized = normalizeDefaults(
-            defaults,
-            { traitKeys },
-            traits,
-            `${path}.defaultsByLoadout.${loadout}`,
-          );
-          validateDefaultPolicy(normalized, `${path}.defaultsByLoadout.${loadout}`);
-          for (const option of normalized.options) {
-            const aspect = aspects.byKey[aspectKey];
-            const trait = traits.byKey[option.traitKey];
-            if (
-              aspect === undefined ||
-              trait?.hammerCompatibility?.weaponKey !== weapon.key ||
-              !trait.hammerCompatibility.aspectKeys.includes(aspect.key)
-            ) {
-              fail(
-                `${path}.defaultsByLoadout.${loadout}`,
-                `option ${option.traitKey} is incompatible`,
-              );
-            }
-          }
-          defaultsByLoadout[loadout] = normalized;
-        }
-      }
-    }
     return Object.freeze({
       key: requireNonEmpty(giver.key, `${path}.key`),
       label: requireNonEmpty(giver.label, `${path}.label`),
@@ -1101,9 +1064,6 @@ function normalizeGivers(
       rarityPolicy: frozenRarityPolicy,
       ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
       ...(defaultOffer === undefined ? {} : { defaultOffer }),
-      ...(Object.keys(defaultsByLoadout).length === 0
-        ? {}
-        : { defaultsByLoadout: Object.freeze(defaultsByLoadout) }),
     });
   });
   const denialKeys = values.filter((giver) => giver.denialParticipates).map((giver) => giver.key);
@@ -1377,7 +1337,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
       fail('deferredTraitKeys', `${key} is also an included trait`);
     }
   }
-  const givers = normalizeGivers(input.givers, traits, weapons, aspects);
+  const givers = normalizeGivers(input.givers, traits);
   validateDirectTraitSets(traits, givers);
   validateTravelDeal(traits);
   const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);

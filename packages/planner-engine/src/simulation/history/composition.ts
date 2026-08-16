@@ -83,6 +83,11 @@ export type EncounterValidatedPrefixHistory =
 export type EncounterValidatedBiomeHistory =
   | { readonly kind: 'complete'; readonly history: CanonicalBiomeHistory }
   | {
+      readonly kind: 'rewardBlocked';
+      readonly history: BiomeHistoryPrefix;
+      readonly blockedAt: import('../../authored-project/addresses').SemanticAddress;
+    }
+  | {
       readonly kind: 'blocked';
       readonly history: BiomeHistoryPrefix;
       readonly block: EncounterHistoryBlock;
@@ -108,6 +113,16 @@ export class EncounterLifecycleBlocked extends Error {
 
   get blockedAt() {
     return this.preparation.blockedAt!;
+  }
+}
+
+/** Stops history composition before an entered lifecycle whose producer has
+ * not been authored. Reward evaluation owns the unresolved frontier and its
+ * finding; history must retain only the exact pre-leaf prefix. */
+class RewardAuthorshipBlocked extends Error {
+  constructor(readonly blockedAt: import('../../authored-project/addresses').SemanticAddress) {
+    super('reward authorship blocks room lifecycle');
+    this.name = 'RewardAuthorshipBlocked';
   }
 }
 
@@ -247,6 +262,9 @@ export function appendRoomLifecycle(
   if (!room.entered) {
     fail(`unentered room cannot execute a lifecycle`);
   }
+  if ('unresolvedIncomingReward' in room && room.unresolvedIncomingReward !== undefined) {
+    throw new RewardAuthorshipBlocked(room.unresolvedIncomingReward.origin);
+  }
   const authoringRoom: EncounterAuthoringRoom | undefined =
     room.kind === 'authored' || room.kind === 'localChild' ? room : undefined;
   const beforeEncounterPreparation = writer.validatesEncounterResolution
@@ -354,6 +372,12 @@ function composeBiomeHistoryPrefixResult({
   try {
     compose(segmentWriter(builder));
   } catch (error) {
+    if (error instanceof RewardAuthorshipBlocked) {
+      return Object.freeze({
+        kind: 'complete',
+        history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+      });
+    }
     if (!(error instanceof EncounterLifecycleBlocked)) throw error;
     const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
     return Object.freeze({
@@ -496,6 +520,13 @@ function composeBiomeHistoryEnvelopeResult<
       });
     }
   } catch (error) {
+    if (error instanceof RewardAuthorshipBlocked) {
+      return Object.freeze({
+        kind: 'rewardBlocked',
+        history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+        blockedAt: error.blockedAt,
+      });
+    }
     if (!(error instanceof EncounterLifecycleBlocked)) throw error;
     const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
     return Object.freeze({

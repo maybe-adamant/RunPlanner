@@ -53,6 +53,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   reachedTraitOffers,
+  authorLegalTraitOffers,
   prepareLegalPomTraitOffers,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures';
@@ -101,6 +102,7 @@ function allTogetherFindingFixture() {
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
+    project = authorLegalTraitOffers(project);
     const prepared = prepareLegalPomTraitOffers(project);
     project = prepared.project;
     const trace = reachedTraitOffers(project).find(
@@ -332,7 +334,7 @@ describe('planner history interaction', () => {
     const savedInteraction = application
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
-    if (savedInteraction?.value.kind !== 'traits')
+    if (savedInteraction?.value?.kind !== 'traits')
       throw new Error('saved Artemis offer must contain traits');
     expect(savedInteraction.value.selectedOptionKey).toBe('option2');
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
@@ -343,7 +345,7 @@ describe('planner history interaction', () => {
     const restoredInteraction = application
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
-    if (restoredInteraction?.value.kind !== 'traits') {
+    if (restoredInteraction?.value?.kind !== 'traits') {
       throw new Error('restored Artemis offer must contain traits');
     }
     expect(restoredInteraction.value.selectedOptionKey).toBe('option1');
@@ -429,7 +431,8 @@ describe('planner history interaction', () => {
     const target = traitInteraction.owner;
     if (target.owner.kind !== 'incomingReward') throw new Error('incoming trait owner is missing');
     const initialValue = traitInteraction.value;
-    if (initialValue.kind !== 'traits') throw new Error('incoming trait fixture must offer traits');
+    if (initialValue?.kind !== 'traits')
+      throw new Error('incoming trait fixture must offer traits');
     const replacementSource = traitInteraction.giver.key === 'Ares' ? 'ZeusUpgrade' : 'AresUpgrade';
     const view = renderPlannerForInteraction({ application });
 
@@ -458,9 +461,10 @@ describe('planner history interaction', () => {
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
-    const replacementValue = replacement.value;
-    if (replacementValue.kind !== 'traits')
-      throw new Error('replacement trait interaction must offer traits');
+    expect(replacement.value).toBeNull();
+    const replacementValue = replacement.traitsStartingDraft?.();
+    if (replacementValue?.kind !== 'traits')
+      throw new Error('replacement trait interaction must provide a transient traits draft');
     await waitFor(() =>
       expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
         application.catalog.traits.byKey[replacementValue.options[0]?.traitKey ?? '']?.label,
@@ -477,7 +481,7 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (restored === undefined) throw new Error('restored trait interaction is missing');
     const restoredValue = restored.value;
-    if (restoredValue.kind !== 'traits')
+    if (restoredValue?.kind !== 'traits')
       throw new Error('restored trait interaction must offer traits');
     await waitFor(() =>
       expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
@@ -536,14 +540,17 @@ describe('planner history interaction', () => {
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
     if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
-    const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
-    if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
-    for (const [index, option] of corrected.options.entries()) {
+    const correctedTraitKeys = [
+      'DaggerBlinkAoETrait',
+      'DaggerSpecialJumpTrait',
+      'DaggerSpecialLineTrait',
+    ] as const;
+    for (const [index, traitKey] of correctedTraitKeys.entries()) {
       await view.user.click(within(dialog).getByLabelText(`option${index + 1} trait`));
       const choice = screen
-        .getAllByText(application.catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey)
+        .getAllByText(application.catalog.traits.byKey[traitKey]?.label ?? traitKey)
         .find((element) => element.closest('[cmdk-item]') !== null);
-      if (choice === undefined) throw new Error(`Hammer picker has no ${option.traitKey} choice`);
+      if (choice === undefined) throw new Error(`Hammer picker has no ${traitKey} choice`);
       await view.user.click(choice);
     }
     const save = within(dialog).getByRole('button', { name: 'Save trait offer' });
@@ -578,14 +585,14 @@ describe('planner history interaction', () => {
       application.store.getState().projectWorkspace.assembly,
       site,
     ).find((entry) => entry.kind === 'echoDoubleShopReward');
-    if (derived?.defaultValue === undefined) throw new Error('Gold default is missing');
+    if (derived?.sourceOfferKey === undefined) throw new Error('Gold source offer is missing');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'SelectDerivedShopEntry',
         site,
         entryKey: 'echoDoubleShopReward',
+        sourceOfferKey: derived.sourceOfferKey,
         entryKeys: ['Minor', 'echoDoubleShopReward'],
-        defaultValue: derived.defaultValue,
       }),
     );
     application.store.dispatch(
@@ -900,22 +907,24 @@ describe('route loadout interaction', () => {
 
   it('authors the Jeweled Pom result and its local Death Defiance condition at route start', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Starting keepsake' }),
       'HadesAndPersephoneKeepsake',
     );
 
-    const active = application.store.getState().projectWorkspace.history.present;
-    const missingResult = {
-      ...active,
-      routes: active.routes.map((route) => {
-        if (route.routeKey !== 'Underworld') return route;
-        const { keepsakeEquipResults, ...loadout } = route.loadout;
-        expect(keepsakeEquipResults?.jeweledPom).toBeDefined();
-        return { ...route, loadout };
-      }),
-    };
-    application.store.dispatch(authoredProjectReplaced(missingResult));
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .keepsakeEquipResults?.jeweledPom,
+    ).toBeUndefined();
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.routes[0],
+    ).toMatchObject({
+      status: 'incomplete',
+      biomes: [],
+      processing: { active: null, blockedSuffix: ['F'] },
+      summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
+    });
 
     const result = await screen.findByRole('combobox', { name: 'Jeweled Pom result' });
     expect(result).toHaveProperty('value', '');
@@ -949,6 +958,9 @@ describe('route loadout interaction', () => {
       traitKey: 'HadesDeathDefianceDamageBoon',
       deathDefianceConditionMet: true,
     });
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+    ).toHaveLength(1);
 
     await user.click(condition);
     expect(condition).toHaveProperty('checked', false);
@@ -959,35 +971,24 @@ describe('route loadout interaction', () => {
 
   it('repairs the route-start Experimental Hammer result through its projected control', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'Starting keepsake' }),
       'TempHammerKeepsake',
     );
 
-    const route = application.store
-      .getState()
-      .projectWorkspace.history.present.routes.find(
-        (candidate) => candidate.routeKey === 'Underworld',
-      );
-    const defaultResult = route?.loadout.keepsakeEquipResults?.experimentalHammer;
-    const defaultTraitKey = defaultResult?.kind === 'selected' ? defaultResult.traitKey : undefined;
-    if (defaultTraitKey === undefined) throw new Error('Hammer default is missing');
-
-    const active = application.store.getState().projectWorkspace.history.present;
-    application.store.dispatch(
-      authoredProjectReplaced({
-        ...active,
-        routes: active.routes.map((candidate) => {
-          if (candidate.routeKey !== 'Underworld') return candidate;
-          const loadout = { ...candidate.loadout };
-          delete loadout.keepsakeEquipResults;
-          return {
-            ...candidate,
-            loadout,
-          };
-        }),
-      }),
-    );
+    expect(
+      application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
+        .keepsakeEquipResults?.experimentalHammer,
+    ).toBeUndefined();
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.routes[0],
+    ).toMatchObject({
+      status: 'incomplete',
+      biomes: [],
+      processing: { active: null, blockedSuffix: ['F'] },
+      summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
+    });
 
     const result = await screen.findByRole('combobox', { name: 'Experimental Hammer result' });
     expect(result).toHaveProperty('value', '');
@@ -997,14 +998,29 @@ describe('route loadout interaction', () => {
         (candidate) => candidate.code === 'keepsakeEquipResultMissing',
       );
     if (finding === undefined) throw new Error('missing Hammer finding is absent');
-    await user.selectOptions(result, defaultTraitKey);
+    const authoredTraitKey = 'StaffDoubleAttackTrait';
+    result.focus();
+    await waitFor(() =>
+      expect(
+        within(result)
+          .getByRole('option', { name: 'Wicked Thrasher' })
+          .getAttribute('data-candidate-support'),
+      ).toBe('possible'),
+    );
+    await user.selectOptions(result, authoredTraitKey);
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
         .keepsakeEquipResults?.experimentalHammer,
-    ).toEqual({ kind: 'selected', traitKey: defaultTraitKey });
+    ).toEqual({ kind: 'selected', traitKey: authoredTraitKey });
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+    ).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(result).toHaveProperty('value', '');
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
+    ).toHaveLength(0);
   });
 
   it('navigates to and repairs the reached I Gift Hammer child', async () => {

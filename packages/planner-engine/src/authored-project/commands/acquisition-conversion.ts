@@ -9,7 +9,7 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { AcquisitionDispositionCommand } from './types';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../reward-state';
 import { fieldsActionKey } from '../fields-actions';
 import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
@@ -19,13 +19,13 @@ function updateReward(
   role: string,
   value: AcquisitionDisposition,
 ): AuthoredRewardState {
-  const defaults = createDefaultDispositionByAcquisitionRole(catalog, reward.offer);
-  const roleKeys = Object.keys(defaults);
+  const normalDisposition = createNormalDispositionByAcquisitionRole(catalog, reward.offer);
+  const roleKeys = Object.keys(normalDisposition);
   if (!roleKeys.includes(role)) throw new Error(`${role} is not an acquisition role`);
   return Object.freeze({
     ...reward,
     dispositionByAcquisitionRole: Object.freeze({
-      ...defaults,
+      ...normalDisposition,
       ...reward.dispositionByAcquisitionRole,
       [role]: value,
     }),
@@ -52,15 +52,17 @@ export function applyAcquisitionDispositionCommand(
   }
   if (command.value.kind === 'artificer') {
     const runProgress = catalog.rewards.stores.byKey.RunProgress;
-    const rewardType = command.value.replacement.offer.rewardType;
+    const rewardType = command.value.replacement?.offer.rewardType;
     if (
-      runProgress === undefined ||
-      rewardType === 'Devotion' ||
-      rewardType === 'SpellDrop' ||
-      !runProgress.entries.some((entry) => entry.rewardType === rewardType)
+      command.value.replacement !== null &&
+      (runProgress === undefined ||
+        rewardType === 'Devotion' ||
+        rewardType === 'SpellDrop' ||
+        !runProgress.entries.some((entry) => entry.rewardType === rewardType))
     )
       failCommand(command, 'Artificer replacement must be an eligible RunProgress reward');
     if (
+      command.value.replacement !== null &&
       Object.values(command.value.replacement.dispositionByAcquisitionRole).some(
         (disposition) => disposition.kind === 'artificer',
       )
@@ -105,7 +107,8 @@ export function applyAcquisitionDispositionCommand(
     case 'acquisitionEntry': {
       const site = occurrence.acquisitionSites?.roomExit;
       const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
-      if (site === undefined || entry === undefined) failCommand(command, 'missing pickup entry');
+      if (site === undefined || entry === undefined || entry === null)
+        failCommand(command, 'missing or unresolved pickup entry');
       return updateOccurrenceTopology(
         document,
         located,
@@ -122,6 +125,8 @@ export function applyAcquisitionDispositionCommand(
         case 'anomaly':
         case 'ephyraCombat':
         case 'freeReward':
+          if (occurrence.state.reward === null)
+            failCommand(command, 'cannot edit acquisition disposition before reward authorship');
           state = Object.freeze({ ...occurrence.state, reward: replace(occurrence.state.reward) });
           break;
         default:
@@ -138,6 +143,8 @@ export function applyAcquisitionDispositionCommand(
               : undefined;
         const reward = rewards?.[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing local reward ${owner.slotKey}`);
+        if (reward === null)
+          failCommand(command, 'cannot edit acquisition disposition before reward authorship');
         const nextReward = replace(reward);
         const retainedArtificerChronology =
           reward.dispositionByAcquisitionRole[role]?.kind === 'artificer' &&
@@ -210,7 +217,16 @@ export function applyAcquisitionDispositionCommand(
           ...occurrence.state,
           sideRooms: Object.freeze({
             ...ephyra.sideRooms,
-            [owner.slotKey]: Object.freeze({ ...side, reward: replace(side.reward) }),
+            [owner.slotKey]: Object.freeze({
+              ...side,
+              reward:
+                side.reward === null
+                  ? failCommand(
+                      command,
+                      'cannot edit acquisition disposition before reward authorship',
+                    )
+                  : replace(side.reward),
+            }),
           }),
         });
       } else {
@@ -227,6 +243,8 @@ export function applyAcquisitionDispositionCommand(
           command,
           `missing reward wheel offer ${owner.wheelKey}/${owner.offerKey}`,
         );
+      if (reward === null)
+        failCommand(command, 'cannot edit acquisition disposition before reward authorship');
       state = Object.freeze({
         ...occurrence.state,
         wheels: Object.freeze({
@@ -244,6 +262,8 @@ export function applyAcquisitionDispositionCommand(
         return failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
       const entry = occurrence.state.shop.offers[owner.offerKey];
       if (entry === undefined) return failCommand(command, `missing Shop offer ${owner.offerKey}`);
+      if (entry.reward === null)
+        failCommand(command, 'cannot edit acquisition disposition before reward authorship');
       state = Object.freeze({
         ...occurrence.state,
         shop: Object.freeze({

@@ -85,6 +85,32 @@ describe('fine-grained finding routing', () => {
     ).not.toThrow();
   });
 
+  it('accepts an exact fine owner rendered by the active authoring frontier', () => {
+    const frontierKey = 'active-authoring-frontier';
+    const frontierRoutes = [
+      {
+        biomes: [
+          {
+            biomeKey: biome.biomeKey,
+            frontier: { marker: { focusKey: frontierKey } },
+            nodes: [],
+          },
+        ],
+        routeKey: biome.routeKey,
+      },
+    ] as unknown as readonly WorkspaceRoute[];
+    expect(() =>
+      assertFineGrainedFindingDestination(
+        owner,
+        destination({
+          inspectorSubject: { kind: 'frontier', frontierFocusKey: frontierKey },
+          nodeKey: semanticAddressKey(owner),
+        }),
+        frontierRoutes,
+      ),
+    ).not.toThrow();
+  });
+
   it('requires the exact subject node to exist in the routed biome', () => {
     expect(() =>
       assertFineGrainedFindingDestination(

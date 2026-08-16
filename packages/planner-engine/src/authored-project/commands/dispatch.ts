@@ -15,10 +15,7 @@ import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
-import {
-  applyAcquisitionSiteCommand,
-  materializeDerivedShopEntryDefault,
-} from './acquisition-site';
+import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
 import { applyBossCompletionCommand } from './boss-completion';
 import { applyKeepsakeCommand } from './keepsake';
@@ -151,7 +148,7 @@ function applyUnchecked(
       )
         failCommand(command, 'payload edit must belong to the addressed derived Shop entry');
       const located = locateBiome(document, catalog, command);
-      const materialized = materializeDerivedShopEntryDefault(document, catalog, located, command);
+      const materialized = materializeDerivedShopEntry(document, catalog, located, command);
       return applyUnchecked(materialized, catalog, command.edit);
     }
     case 'ReplaceTraitOffer':

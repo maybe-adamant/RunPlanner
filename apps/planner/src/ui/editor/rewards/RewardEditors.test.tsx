@@ -99,7 +99,7 @@ function projectRewardOffer(project: ProjectDocument): ResolvedRewardOffer {
     .flatMap((route) => route.biomes)
     .flatMap((plan) => plan.topology?.occurrences ?? [])
     .find((candidate) => candidate.occurrenceId === firstReward.occurrenceId);
-  if (occurrence?.state.kind !== 'counted') {
+  if (occurrence?.state.kind !== 'counted' || occurrence.state.reward === null) {
     throw new Error('Reward lifecycle harness has no counted occurrence');
   }
   return occurrence.state.reward.offer;
@@ -165,7 +165,7 @@ describe('reward editor projections', () => {
     if (room?.incomingReward.kind !== 'countedChoice') {
       throw new Error('F_Combat03 counted reward binding is missing');
     }
-    const boon = room.incomingReward.defaultOffersByStore.RunProgress!;
+    const boon = projectRewardOffer(project);
     const user = userEvent.setup();
     render(
       <CountedRewardEditor
@@ -448,6 +448,26 @@ describe('reward editor projections', () => {
     await user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
 
     expect(await screen.findByText('Eventual God')).toBeTruthy();
+  });
+
+  it('opens an unresolved declaration-fixed Blind Box directly at its total source picker', async () => {
+    const project = createGoldenFGHIProject();
+    const user = userEvent.setup();
+    render(
+      <RewardValueEditor
+        candidateOwner={blindBoxOwner}
+        idPrefix="unresolved-blind-box"
+        initialStep="source"
+        interactions={interactionsFor(project)}
+        offer={null}
+        onReplace={() => undefined}
+        unresolvedSeed={{ rewardType: 'BlindBoxLoot' }}
+      />,
+    );
+
+    await user.click(screen.getByLabelText('Reward'));
+    expect(await screen.findByText('Eventual God')).toBeTruthy();
+    expect((await screen.findByRole('listbox')).textContent).not.toBe('');
   });
 
   it('commits one complete Devotion offer only after both Gods are chosen', async () => {

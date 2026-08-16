@@ -151,6 +151,14 @@ const findingCopy = {
     title: 'Reward details are invalid',
     description: 'The selected reward and its configured details do not form a valid offer.',
   },
+  rewardMissing: {
+    title: 'Choose a reward',
+    description: 'This active reward has not been authored yet.',
+  },
+  traitOfferMissing: {
+    title: 'Choose a trait offer',
+    description: 'This generated trait offer has not been authored yet.',
+  },
   rewardSourceUnavailable: {
     title: 'Reward source is unavailable',
     description: 'The selected reward source cannot be offered at this point in the route.',

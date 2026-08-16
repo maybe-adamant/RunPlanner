@@ -166,10 +166,39 @@ export function supportedTraitOffer(
  */
 export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocument {
   let current = project;
-  for (let pass = 0; pass < 32; pass += 1) {
+  for (let pass = 0; pass < 96; pass += 1) {
     const assembly = preparedCandidateProjectFor(current).assembly;
     const evaluation = assembly.evaluation;
     const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const missing = evaluation.routes
+      .flatMap((route) => route.findings)
+      .find(
+        (finding) => finding.code === 'traitOfferMissing' && finding.origin.kind === 'traitOffer',
+      );
+    if (missing !== undefined && missing.origin.kind === 'traitOffer') {
+      let authored: ProjectDocument | undefined;
+      for (const giver of catalog.traitGivers.values) {
+        const draft = session.traitOfferStartingDraft(missing.origin, giver.key);
+        if (draft === undefined) continue;
+        try {
+          authored = applyProjectCommand(current, catalog, {
+            kind: 'ReplaceTraitOffer',
+            trait: missing.origin,
+            value: draft,
+          });
+          break;
+        } catch {
+          // The command is the authority for the one provider bound to this
+          // generic fixture address; other candidate giver probes are ignored.
+        }
+      }
+      if (authored === undefined)
+        throw new Error(
+          `trait fixture could not author the reached missing offer ${JSON.stringify(missing.origin)}`,
+        );
+      current = authored;
+      continue;
+    }
     const invalids = evaluation.routes.flatMap((route) =>
       route.biomes.flatMap((biome) =>
         'rewards' in biome

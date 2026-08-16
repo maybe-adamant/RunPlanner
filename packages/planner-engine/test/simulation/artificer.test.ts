@@ -16,7 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
   artificerStatus,
   createArcanaFearState,
@@ -67,10 +67,14 @@ function facts(enteredBiomes = 3): RewardKernelFacts {
 function replacement(
   rewardType: 'MaxHealthDrop' | 'MaxManaDrop' | 'RoomMoneyDrop' | 'WeaponUpgrade',
 ) {
-  return createDefaultAcquisitionRewardState(catalog, { rewardType }, artificerLoadout, {
-    kind: 'producerLifecycle',
-    key: 'RoomReward',
-  });
+  return createUnresolvedAcquisitionRewardState(
+    catalog,
+    { rewardType },
+    {
+      kind: 'producerLifecycle',
+      key: 'RoomReward',
+    },
+  );
 }
 
 function initialBranches(): readonly RewardBranchState[] {
@@ -93,10 +97,9 @@ function convert(
   const occurrenceId = createOccurrenceId(`artificer-${index}`);
   const origin = createIncomingRewardAddress(biome, occurrenceId);
   const siteOwner = createOccurrenceAddress(biome, occurrenceId);
-  const sourceReward = createDefaultAcquisitionRewardState(
+  const sourceReward = createUnresolvedAcquisitionRewardState(
     catalog,
     { rewardType: 'GiftDrop' },
-    artificerLoadout,
     { kind: 'producerLifecycle', key: 'RoomReward' },
   );
   const authored = Object.freeze({
@@ -345,10 +348,9 @@ describe('The Artificer', () => {
     const occurrenceId = createOccurrenceId('artificer-optional');
     const siteOwner = createOccurrenceAddress(biome, occurrenceId);
     const source = Object.freeze({
-      ...createDefaultAcquisitionRewardState(
+      ...createUnresolvedAcquisitionRewardState(
         catalog,
         { rewardType: 'MetaCurrencyDrop' },
-        artificerLoadout,
         { kind: 'producerLifecycle', key: 'NarcissusPickup' },
       ),
       dispositionByAcquisitionRole: Object.freeze({

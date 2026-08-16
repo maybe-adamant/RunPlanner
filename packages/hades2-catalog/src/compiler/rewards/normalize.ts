@@ -9,9 +9,7 @@ import type {
   ProducerLifecycleProfileDeclaration,
   ProducerLifecyclePointKey,
   ProducerRewardLifecycleDeclaration,
-  ResolvedRewardOffer,
   RewardKernelCatalog,
-  RewardPayload,
   RewardStoreDeclaration,
   RewardTypeDeclaration,
   ShopGroupDeclaration,
@@ -34,7 +32,6 @@ const ACQUISITION_KINDS = ['consumable', 'loot', 'resource'] as const;
 const HISTORY_PROJECTIONS = ['consumableAndUse', 'lootAndUse'] as const;
 const OFFER_PROJECTIONS = ['devotionSpacing', 'none'] as const;
 const PAYLOAD_DOMAIN_KINDS = ['distinctPair', 'oneOf'] as const;
-const PAYLOAD_KINDS = ['BoonSource', 'DevotionPair'] as const;
 const ROLE_RESOLUTION_KINDS = ['fixed', 'payloadSource', 'self'] as const;
 const PAYLOAD_SOURCE_FIELDS = ['chosenSource', 'source', 'spurnedSource'] as const;
 const SOURCE_RESOLUTION_KINDS = ['acquisitionRole', 'offer'] as const;
@@ -67,22 +64,6 @@ function requireClosedValue<const Values extends readonly string[]>(
     fail(path, `must be one of ${values.join(', ')}`);
   }
   return value as Values[number];
-}
-
-function clonePayload(payload: RewardPayload, path: string): RewardPayload {
-  requireClosedValue(payload.kind, PAYLOAD_KINDS, `${path}.kind`);
-  if (payload.kind === 'BoonSource') {
-    return Object.freeze({
-      kind: 'BoonSource',
-      source: requireNonEmpty(payload.source, `${path}.source`),
-    });
-  }
-  const chosenSource = requireNonEmpty(payload.chosenSource, `${path}.chosenSource`);
-  const spurnedSource = requireNonEmpty(payload.spurnedSource, `${path}.spurnedSource`);
-  if (chosenSource === spurnedSource) {
-    fail(path, 'chosenSource and spurnedSource must be distinct');
-  }
-  return Object.freeze({ kind: 'DevotionPair', chosenSource, spurnedSource });
 }
 
 function normalizeRoleResolution(
@@ -356,24 +337,6 @@ function normalizeAcquisitions(
   );
 }
 
-function payloadMatchesDomain(
-  payload: RewardPayload,
-  domain: PayloadDomainDeclaration,
-  domains: CatalogCollection<PayloadDomainDeclaration>,
-): boolean {
-  if (domain.kind === 'oneOf') {
-    return payload.kind === 'BoonSource' && domain.values.includes(payload.source);
-  }
-  const values = domains.byKey[domain.valueDomain];
-  return (
-    values?.kind === 'oneOf' &&
-    payload.kind === 'DevotionPair' &&
-    payload.chosenSource !== payload.spurnedSource &&
-    values.values.includes(payload.chosenSource) &&
-    values.values.includes(payload.spurnedSource)
-  );
-}
-
 function normalizeRewardTypes(
   raw: readonly RawRewardTypeDeclaration[],
   domains: CatalogCollection<PayloadDomainDeclaration>,
@@ -408,9 +371,6 @@ function normalizeRewardTypes(
       ...(rewardType.payloadDomain === undefined
         ? {}
         : { payloadDomain: requireNonEmpty(rewardType.payloadDomain, `${path}.payloadDomain`) }),
-      ...(rewardType.defaultPayload === undefined
-        ? {}
-        : { defaultPayload: clonePayload(rewardType.defaultPayload, `${path}.defaultPayload`) }),
       ...(rewardType.sourceSupport === undefined
         ? {}
         : {
@@ -464,16 +424,6 @@ function normalizeRewardTypes(
       rewardType.payloadDomain === undefined ? undefined : domains.byKey[rewardType.payloadDomain];
     if (rewardType.payloadDomain !== undefined && domain === undefined) {
       fail(`${path}.payloadDomain`, `unknown payload domain ${rewardType.payloadDomain}`);
-    }
-    if ((domain === undefined) !== (rewardType.defaultPayload === undefined)) {
-      fail(`${path}.defaultPayload`, 'must exist exactly when payloadDomain exists');
-    }
-    if (
-      domain !== undefined &&
-      rewardType.defaultPayload !== undefined &&
-      !payloadMatchesDomain(rewardType.defaultPayload, domain, domains)
-    ) {
-      fail(`${path}.defaultPayload`, `does not match payload domain ${domain.key}`);
     }
     if ((rewardType.sourceSupport === undefined) !== (rewardType.sourceResolution === undefined)) {
       fail(path, 'sourceSupport and sourceResolution must be declared together');
@@ -630,21 +580,6 @@ function normalizeAndValidateRequirement(
   return normalized;
 }
 
-function normalizeOffer(
-  rewardTypeName: string,
-  rewardTypes: CatalogCollection<RewardTypeDeclaration>,
-  path: string,
-): ResolvedRewardOffer {
-  const rewardType = rewardTypes.byKey[rewardTypeName];
-  if (rewardType === undefined) {
-    fail(path, `unknown reward type ${rewardTypeName}`);
-  }
-  return Object.freeze({
-    rewardType: rewardType.gameName,
-    ...(rewardType.defaultPayload === undefined ? {} : { payload: rewardType.defaultPayload }),
-  });
-}
-
 function normalizeStores(
   raw: RawRewardKernelInput['stores'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
@@ -676,15 +611,7 @@ function normalizeStores(
               }),
         });
       });
-      const defaultOffer = normalizeOffer(
-        store.defaultRewardType,
-        rewardTypes,
-        `${path}.defaultRewardType`,
-      );
-      if (!entries.some((entry) => entry.rewardType === defaultOffer.rewardType)) {
-        fail(`${path}.defaultOffer`, 'reward type must be present in the store');
-      }
-      return Object.freeze({ key: store.key, defaultOffer, entries: Object.freeze(entries) });
+      return Object.freeze({ key: store.key, entries: Object.freeze(entries) });
     }),
     'stores',
     (store) => store.key,
@@ -696,10 +623,9 @@ function normalizeShopOption(
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   path: string,
 ): ShopOptionEntry {
-  const defaultOffer = normalizeOffer(raw.rewardType, rewardTypes, `${path}.rewardType`);
-  const rewardType = rewardTypes.byKey[defaultOffer.rewardType];
+  const rewardType = rewardTypes.byKey[raw.rewardType];
   if (rewardType === undefined) {
-    fail(`${path}.rewardType`, `unknown reward type ${defaultOffer.rewardType}`);
+    fail(`${path}.rewardType`, `unknown reward type ${raw.rewardType}`);
   }
   const acquisitionLifecycle = normalizeAcquisitionLifecycle(
     raw.acquisitionLifecycle,
@@ -731,7 +657,7 @@ function normalizeShopOption(
     );
   return Object.freeze({
     key: requireNonEmpty(raw.key, `${path}.key`),
-    defaultOffer,
+    rewardType: rewardType.gameName,
     ...(raw.requirement === undefined
       ? {}
       : {
@@ -848,7 +774,7 @@ function normalizeShops(
             (option) => option.key,
           );
           const groupRewardTypes = Object.freeze([
-            ...new Set(options.values.map((option) => option.defaultOffer.rewardType)),
+            ...new Set(options.values.map((option) => option.rewardType)),
           ]);
           return Object.freeze({
             key: requireNonEmpty(group.key, `${groupPath}.key`),
@@ -866,7 +792,6 @@ function normalizeShops(
       if (profile.slots.length !== expectedGroupKeys.length) {
         fail(`${path}.slots`, `must declare exactly ${expectedGroupKeys.length} emitted slots`);
       }
-      const defaultOptionsByGroup = new Map<string, Set<string>>();
       const slots = createCollection(
         profile.slots.map((slot, slotIndex): ShopSlotDeclaration => {
           const slotPath = `${path}.slots[${slotIndex}]`;
@@ -879,23 +804,6 @@ function normalizeShops(
           if (group === undefined) {
             fail(`${slotPath}.groupKey`, `unknown shop group ${groupKey}`);
           }
-          const defaultOptionKey = requireNonEmpty(
-            slot.defaultOptionKey,
-            `${slotPath}.defaultOptionKey`,
-          );
-          const defaultOption = group.options.byKey[defaultOptionKey];
-          if (defaultOption === undefined) {
-            fail(
-              `${slotPath}.defaultOptionKey`,
-              `unknown option ${defaultOptionKey} in ${groupKey}`,
-            );
-          }
-          const usedDefaults = defaultOptionsByGroup.get(groupKey) ?? new Set<string>();
-          if (usedDefaults.has(defaultOptionKey)) {
-            fail(`${slotPath}.defaultOptionKey`, `duplicates ${defaultOptionKey} in ${groupKey}`);
-          }
-          usedDefaults.add(defaultOptionKey);
-          defaultOptionsByGroup.set(groupKey, usedDefaults);
           const slotKey = requireNonEmpty(slot.key, `${slotPath}.key`);
           if (slotKey.startsWith(echoDuplicateKeyPrefix))
             fail(`${slotPath}.key`, `must not use reserved prefix ${echoDuplicateKeyPrefix}`);
@@ -905,8 +813,6 @@ function normalizeShops(
             key: slotKey,
             label: requireNonEmpty(slot.label, `${slotPath}.label`),
             groupKey,
-            defaultOptionKey,
-            defaultOffer: defaultOption.defaultOffer,
           });
         }),
         `${path}.slots`,

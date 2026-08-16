@@ -24,7 +24,6 @@ import {
   type LevelResolutionAddress,
   type AcquisitionSiteAddress,
   type AcquisitionEntryAddress,
-  type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -107,7 +106,6 @@ export interface WorkspaceBiomeSource {
       | 'travelDealRefill';
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
-    readonly defaultValue?: AuthoredRewardState;
     readonly rewardTypes?: readonly string[];
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];

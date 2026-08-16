@@ -45,6 +45,7 @@ import {
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
+  createCombat08ArtificerRegressionProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -220,7 +221,7 @@ describe('structured workspace interaction binding', () => {
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.owner.owner.kind === 'gorgonPhase',
     );
-    if (interaction === undefined || interaction.value.kind !== 'traits')
+    if (interaction === undefined || interaction.value?.kind !== 'traits')
       throw new Error('Gorgon Athena interaction is missing');
     expect(interaction.rarityEditable).toBe(false);
     expect(interaction.value.options.every((option) => option.rarity === 'Epic')).toBe(true);
@@ -250,9 +251,9 @@ describe('structured workspace interaction binding', () => {
     const { interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) =>
-        candidate.giver.providerKind === 'olympian' && candidate.value.kind === 'traits',
+        candidate.giver.providerKind === 'olympian' && candidate.value?.kind === 'traits',
     );
-    if (interaction === undefined || interaction.value.kind !== 'traits') {
+    if (interaction === undefined || interaction.value?.kind !== 'traits') {
       throw new Error('Olympian trait interaction is missing');
     }
     const removed = Object.freeze({
@@ -535,7 +536,7 @@ describe('structured workspace interaction binding', () => {
     });
     const dormant = bind(dormantProject, 'Underworld', 'F', undefined, candidateSession);
     const dormantInteraction = dormant.interactions.traitOffers.get(semanticAddressKey(trait));
-    if (dormantInteraction?.value.kind !== 'traits') throw new Error('dormant offer is missing');
+    if (dormantInteraction?.value?.kind !== 'traits') throw new Error('dormant offer is missing');
     expect(
       dormantInteraction.optionDomain(dormantInteraction.value, 'option1').allTogetherSets,
     ).toBeUndefined();
@@ -683,16 +684,22 @@ describe('structured workspace interaction binding', () => {
     expect(domain).toMatchObject({
       rewardType: 'WeaponUpgrade',
       rewardLabel: 'Hammer',
-      defaultValue: {
+      initialValue: {
         disposition: { kind: 'normal' },
-        traitOffer: { kind: 'traits', giverKey: 'WeaponUpgrade' },
+        traitOffer: null,
       },
+      traitOfferDraft: { kind: 'traits', giverKey: 'WeaponUpgrade' },
     });
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(replayOwner))).toBe(
       true,
     );
     if (domain === undefined) throw new Error('Echo replay domain is missing');
-    const intent = replay?.intentFor(rewardOffer, domain.defaultValue).command;
+    if (domain.traitOfferDraft === undefined) throw new Error('Echo replay trait draft is missing');
+    const authoredReplay = Object.freeze({
+      ...domain.initialValue,
+      traitOffer: domain.traitOfferDraft,
+    });
+    const intent = replay?.intentFor(rewardOffer, authoredReplay).command;
     expect(intent).toMatchObject({
       kind: 'ReplaceTraitOffer',
       trait,
@@ -701,7 +708,7 @@ describe('structured workspace interaction binding', () => {
       throw new Error('Echo replay intent is malformed');
     expect(intent.value.options[0]).toEqual({
       traitKey: 'EchoLastReward',
-      echoLastReward: domain.defaultValue,
+      echoLastReward: authoredReplay,
     });
   });
 
@@ -721,8 +728,8 @@ describe('structured workspace interaction binding', () => {
     if (
       interaction === undefined ||
       sibling === undefined ||
-      interaction.value.kind !== 'traits' ||
-      sibling.value.kind !== 'traits'
+      interaction.value?.kind !== 'traits' ||
+      sibling.value?.kind !== 'traits'
     ) {
       throw new Error('focused trait interaction fixtures are missing');
     }
@@ -786,7 +793,7 @@ describe('structured workspace interaction binding', () => {
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
-    if (interaction === undefined || interaction.value.kind !== 'traits')
+    if (interaction === undefined || interaction.value?.kind !== 'traits')
       throw new Error('ranked trait interaction is missing');
     const draft = Object.freeze({
       ...interaction.value,
@@ -828,7 +835,8 @@ describe('structured workspace interaction binding', () => {
     const hammer = [...interactions.traitOffers.values()].find(
       (interaction) => interaction.giver.providerKind === 'hammer',
     );
-    if (hammer === undefined) throw new Error('Hammer trait interaction fixture is missing');
+    if (hammer?.value?.kind !== 'traits')
+      throw new Error('Hammer trait interaction fixture is missing');
     const largestDeclaredHammer = Object.values(catalog.traitGivers.byKey)
       .filter((giver) => giver.providerKind === 'hammer')
       .sort((left, right) => right.traitKeys.length - left.traitKeys.length)[0];
@@ -2152,8 +2160,12 @@ describe('structured workspace interaction binding', () => {
         visible: true,
         timePieceSupported: true,
         artificerSupported: true,
-        artificerDefaultReplacement: expect.any(Object),
+        artificerReplacementOptions: expect.any(Array),
       });
+      expect(
+        interactions.acquisitionConversions.get(semanticAddressKey(acquisition))
+          ?.artificerReplacementOptions.length,
+      ).toBeGreaterThan(0);
       const unreached = createAcquisitionRoleAddress(
         createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
         'self',
@@ -2163,6 +2175,115 @@ describe('structured workspace interaction binding', () => {
       ).toBe(false);
     },
   );
+
+  it('keeps the attached Decision 3 F_Combat08 Artificer replacement unresolved and editable', () => {
+    const first = goldenFOccurrenceId(1, 1);
+    const secondSelected = goldenFOccurrenceId(2, 1);
+    const thirdSelected = goldenFOccurrenceId(3, 2);
+    const acquisition = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(goldenFBiome, thirdSelected),
+      'self',
+    );
+    const attached = createCombat08ArtificerRegressionProject();
+    const route = attached.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const f = route?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const opening = f?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === goldenFStartId,
+    );
+    const combat = f?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === thirdSelected,
+    );
+    const selectedDecision = f?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.some((target) => target.occurrenceId === thirdSelected),
+    );
+    expect(route?.loadout).toMatchObject({
+      manualArcanaKeys: expect.arrayContaining(['MetaToRunUpgrade']),
+      fearRanks: {
+        BoonSkipShrineUpgrade: 1,
+        BanUnpickedBoonsShrineUpgrade: 1,
+      },
+    });
+    expect(opening?.state).toMatchObject({
+      reward: { offer: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } } },
+    });
+    expect(combat).toMatchObject({
+      gameName: 'F_Combat08',
+      state: {
+        reward: {
+          offer: { rewardType: 'MetaCardPointsCommonDrop' },
+          dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+        },
+      },
+    });
+    if (selectedDecision?.kind !== 'exit' || selectedDecision.normal.kind !== 'batch') {
+      throw new Error('Combat08 attachment lost its selected Decision 3 batch');
+    }
+    expect(selectedDecision.selection).toEqual({ kind: 'normal', exitKey: 'exit2' });
+    expect(selectedDecision.normal.targets).toHaveLength(2);
+    expect(selectedDecision.normal.targets[1]).toMatchObject({
+      exitKey: 'exit2',
+      occurrenceId: thirdSelected,
+    });
+    const fEvaluation = simulateProjectAssembly(catalog, attached)
+      .evaluation.routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (fEvaluation === undefined || !('rewards' in fEvaluation)) {
+      throw new Error('Combat08 attachment did not reach its F reward history');
+    }
+    expect(
+      fEvaluation.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'artificerConversion' &&
+            semanticAddressKey(event.origin) ===
+              semanticAddressKey(createIncomingRewardAddress(goldenFBiome, first)),
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      fEvaluation.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) ===
+              semanticAddressKey(createIncomingRewardAddress(goldenFBiome, secondSelected)) &&
+            event.acquisition.acquisition.gameName === 'ApolloUpgrade',
+        ),
+      ),
+    ).toBe(true);
+    const project = applyProjectCommand(attached, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer', replacement: null },
+    });
+    let interactions: ReturnType<typeof bind>['interactions'] | undefined;
+    expect(() => {
+      interactions = bind(project, 'Underworld', 'F').interactions;
+    }).not.toThrow();
+    const conversion = interactions?.acquisitionConversions.get(semanticAddressKey(acquisition));
+    expect(conversion).toMatchObject({
+      owner: acquisition,
+      visible: true,
+      artificerSupported: true,
+      artificerReplacementControl: expect.objectContaining({
+        offer: null,
+      }),
+    });
+    expect(conversion).not.toHaveProperty('artificerDefaultReplacement');
+    expect(conversion?.artificerReplacementOptions.length).toBeGreaterThan(0);
+    const replacement = conversion?.artificerReplacementOptions[0];
+    if (replacement === undefined) throw new Error('Combat08 Artificer options are missing');
+    expect(conversion?.intentFor({ kind: 'artificer', replacement })).toMatchObject({
+      command: {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer', replacement },
+      },
+    });
+  });
 
   it('reuses ordinary Hammer and Pom child interactions for an Artificer replacement', () => {
     const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
@@ -2204,7 +2325,6 @@ describe('structured workspace interaction binding', () => {
                   timePieceConvertible: true,
                   artificerSupported: true,
                   artificerConvertible: true,
-                  artificerDefaultReplacement: hammer,
                   artificerReplacementOptions: replacementOptions,
                   artificerReplacementAddress: replacementAddress,
                   branchCount: 1,
@@ -2247,9 +2367,12 @@ describe('structured workspace interaction binding', () => {
     const hammerInteraction = hammerBound.traitOffers.get(
       semanticAddressKey(hammerControl.address),
     );
-    if (hammerInteraction?.value.kind !== 'traits')
+    if (hammerInteraction === undefined || hammerInteraction.value !== null)
       throw new Error('Artificer Hammer child interaction is missing');
-    expect(hammerInteraction.selectedIntent('option2')).toEqual({
+    const hammerDraft = hammerInteraction.traitsStartingDraft?.();
+    if (hammerDraft === undefined) throw new Error('Artificer Hammer draft is missing');
+    const authoredHammer = Object.freeze({ ...hammerDraft, selectedOptionKey: 'option2' as const });
+    expect(hammerInteraction.intentFor(authoredHammer)).toEqual({
       command: {
         kind: 'ReplaceAcquisitionDisposition',
         acquisition,
@@ -2259,7 +2382,7 @@ describe('structured workspace interaction binding', () => {
             ...hammer,
             traitOffersByAcquisitionRole: {
               ...hammer.traitOffersByAcquisitionRole,
-              self: { ...hammerInteraction.value, selectedOptionKey: 'option2' },
+              [hammerControl.address.acquisitionRole]: authoredHammer,
             },
           },
         },

@@ -135,7 +135,9 @@ export interface EvaluatedEchoLastRewardDomain {
   readonly kind: 'echoLastRewardDomain';
   readonly result: {
     readonly rewardType: string;
-    readonly defaultValue: import('../../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+    readonly initialValue: import('../../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+    readonly traitOfferDraft?: import('../../authored-project/traits').AuthoredTraitOffer;
+    readonly levelResolutionDraft?: import('../../authored-project/traits').AuthoredLevelResolution;
   };
 }
 export type EchoLastRewardDomainEvaluation =
@@ -754,7 +756,11 @@ export function evaluateEchoLastRewardDomain(
     kind: 'echoLastRewardDomain',
     result: Object.freeze({
       rewardType: first.recreation.offer.rewardType,
-      defaultValue: first.defaultValue,
+      initialValue: first.initialValue,
+      ...(first.traitOfferDraft === undefined ? {} : { traitOfferDraft: first.traitOfferDraft }),
+      ...(first.levelResolutionDraft === undefined
+        ? {}
+        : { levelResolutionDraft: first.levelResolutionDraft }),
     }),
   });
 }

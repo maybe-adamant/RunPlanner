@@ -8,11 +8,11 @@ import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewar
 export type RewardPickerStep = 'type' | 'source' | 'chosen' | 'spurned';
 
 export interface RewardPickerProjectionService {
-  readonly choiceLabel: (step: RewardPickerStep, offer: ResolvedRewardOffer) => string;
+  readonly choiceLabel: (step: RewardPickerStep, offer?: ResolvedRewardOffer) => string;
   readonly project: (
     domain: ProjectedRewardDomain,
     step: RewardPickerStep,
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ) => ContextualPickerModel<ResolvedRewardOffer>;
   readonly summary: (offer: ResolvedRewardOffer) => string;
 }
@@ -86,19 +86,19 @@ function aggregateEvaluation(
 
 function payloadOptions(
   domain: ProjectedRewardDomain,
-  selected: ResolvedRewardOffer,
+  selected: ResolvedRewardOffer | undefined,
   step: Exclude<RewardPickerStep, 'type'>,
 ): {
   readonly mode: AssessmentMode;
   readonly options: readonly ProjectedRewardDomainOption[];
 } {
-  const candidates = domain.offers.filter(
-    (candidate) => candidate.value.rewardType === selected.rewardType,
-  );
+  const rewardType =
+    selected?.rewardType ?? (domain.types.length === 1 ? domain.types[0]?.key : undefined);
+  const candidates =
+    rewardType === undefined
+      ? Object.freeze([])
+      : domain.offers.filter((candidate) => candidate.value.rewardType === rewardType);
   if (step === 'source') {
-    if (selected.payload?.kind !== 'BoonSource') {
-      throw new Error('Reward source step requires a selected single-source reward');
-    }
     return {
       mode: 'exact',
       options: Object.freeze(
@@ -119,11 +119,9 @@ function payloadOptions(
       ),
     };
   }
-  if (selected.payload?.kind !== 'DevotionPair') {
-    throw new Error(`${step} source step requires a selected Devotion pair`);
-  }
-  const selectedPair = selected.payload;
+  const selectedPair = selected?.payload?.kind === 'DevotionPair' ? selected.payload : undefined;
   if (step === 'spurned') {
+    if (selectedPair === undefined) return { mode: 'exact', options: Object.freeze([]) };
     return {
       mode: 'exact',
       options: Object.freeze(
@@ -163,6 +161,7 @@ function payloadOptions(
           groupedCandidates.find(
             (candidate) =>
               candidate.value.payload?.kind === 'DevotionPair' &&
+              selectedPair !== undefined &&
               candidate.value.payload.spurnedSource === selectedPair.spurnedSource,
           ) ?? representative;
         return Object.freeze({
@@ -181,7 +180,7 @@ function payloadOptions(
 function stepOptions(
   domain: ProjectedRewardDomain,
   step: RewardPickerStep,
-  selected: ResolvedRewardOffer,
+  selected?: ResolvedRewardOffer,
 ): {
   readonly mode: AssessmentMode;
   readonly options: readonly ProjectedRewardDomainOption[];
@@ -198,7 +197,8 @@ function stepOptions(
   }
 }
 
-function selectedKey(step: RewardPickerStep, offer: ResolvedRewardOffer): string {
+function selectedKey(step: RewardPickerStep, offer?: ResolvedRewardOffer): string | undefined {
+  if (offer === undefined) return undefined;
   if (step === 'type') {
     return offer.rewardType;
   }
@@ -211,24 +211,24 @@ function selectedKey(step: RewardPickerStep, offer: ResolvedRewardOffer): string
   if (step === 'spurned' && offer.payload?.kind === 'DevotionPair') {
     return offer.payload.spurnedSource;
   }
-  throw new Error(`Reward ${offer.rewardType} has no ${step} selection`);
+  return undefined;
 }
 
 function projectedOffer(
   option: ProjectedRewardDomainOption,
   mode: AssessmentMode,
   step: RewardPickerStep,
-  selected: ResolvedRewardOffer,
+  selected?: ResolvedRewardOffer,
 ): ResolvedRewardOffer {
   if (mode === 'exact') {
     return option.offer;
   }
-  if (step === 'type' && option.key === selected.rewardType) {
+  if (step === 'type' && selected !== undefined && option.key === selected.rewardType) {
     return selected;
   }
   if (
     step === 'chosen' &&
-    selected.payload?.kind === 'DevotionPair' &&
+    selected?.payload?.kind === 'DevotionPair' &&
     option.key !== selected.payload.spurnedSource
   ) {
     return Object.freeze({
@@ -255,14 +255,17 @@ export function createRewardPickerProjection(
     options: readonly ProjectedRewardDomainOption[],
     mode: AssessmentMode,
     step: RewardPickerStep,
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ): CachedCandidates => {
     let bySelection = candidateCache.get(options);
     if (bySelection === undefined) {
       bySelection = new Map();
       candidateCache.set(options, bySelection);
     }
-    const cacheKey = mode === 'exact' ? `${mode}:${step}` : `${mode}:${step}:${offerKey(selected)}`;
+    const cacheKey =
+      mode === 'exact'
+        ? `${mode}:${step}`
+        : `${mode}:${step}:${selected === undefined ? '__unresolved__' : offerKey(selected)}`;
     const existing = bySelection.get(cacheKey);
     if (existing !== undefined) {
       return existing;
@@ -285,19 +288,19 @@ export function createRewardPickerProjection(
   };
 
   const service: RewardPickerProjectionService = {
-    choiceLabel(step: RewardPickerStep, offer: ResolvedRewardOffer) {
+    choiceLabel(step: RewardPickerStep, offer?: ResolvedRewardOffer) {
       switch (step) {
         case 'type':
           return 'Reward type';
         case 'source':
-          return hasEventualSource(catalog, offer) ? 'Eventual God' : 'God';
+          return offer !== undefined && hasEventualSource(catalog, offer) ? 'Eventual God' : 'God';
         case 'chosen':
           return 'Chosen God';
         case 'spurned':
           return 'Spurned God';
       }
     },
-    project(domain: ProjectedRewardDomain, step: RewardPickerStep, selected: ResolvedRewardOffer) {
+    project(domain: ProjectedRewardDomain, step: RewardPickerStep, selected?: ResolvedRewardOffer) {
       const resolved = stepOptions(domain, step, selected);
       const selectedValue = selectedKey(step, selected);
       const projected = candidates(resolved.options, resolved.mode, step, selected);

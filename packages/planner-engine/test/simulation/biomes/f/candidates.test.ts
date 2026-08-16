@@ -41,7 +41,12 @@ import {
 } from '../../support/f-generation-project';
 
 const validPrefixBatches: readonly FGenerationBatchSpec[] = Object.freeze([
-  { targets: ['F_Combat02'], pickedExitIndex: 1 },
+  {
+    targets: ['F_Combat02'],
+    pickedExitIndex: 1,
+    storeKey: 'MetaProgress',
+    offers: [{ rewardType: 'MetaCurrencyDrop' }],
+  },
   {
     targets: ['F_Combat03', 'F_Combat03'],
     pickedExitIndex: 1,
@@ -321,7 +326,8 @@ describe('F candidate support', () => {
       throw new Error('F Shop prefix did not materialize its declaration-owned inventory');
     }
     const [offerKey, offer] = Object.entries(shop.state.shop.offers)[0] ?? [];
-    if (offerKey === undefined || offer === undefined) throw new Error('F Shop has no offer');
+    if (offerKey === undefined || offer === undefined || offer.reward === null)
+      throw new Error('F Shop has no offer');
 
     const evaluation = simulateProject(catalog, project);
     expect(evaluation.status).toBe('incomplete');
@@ -569,12 +575,16 @@ describe('F candidate support', () => {
     const shop = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === 'f-takeover-preboss-shop',
     );
-    if (combat?.state.kind !== 'counted') throw new Error('F fixture has no counted combat reward');
+    if (combat?.state.kind !== 'counted' || combat.state.reward === null) {
+      throw new Error('F fixture has no authored counted combat reward');
+    }
     if (shop?.state.kind !== 'shop' || shop.state.shop === undefined) {
       throw new Error('F fixture has no selected Preboss Shop');
     }
     const [offerKey, offer] = Object.entries(shop.state.shop.offers)[0] ?? [];
-    if (offerKey === undefined || offer === undefined) throw new Error('F Shop has no offer');
+    if (offerKey === undefined || offer === undefined || offer.reward === null) {
+      throw new Error('F Shop has no authored offer');
+    }
     const results = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
@@ -606,7 +616,7 @@ describe('F candidate support', () => {
     ]);
   });
 
-  it('does not assess a target after the first invalid selected decision', () => {
+  it('retains an exact target candidate before the first unresolved trait leaf', () => {
     const project = createFGenerationProject();
     const evaluation = simulateProject(catalog, project);
     const target = fGenerationTargetAddress(fGenerationBaselineBatches, 3, 1);
@@ -621,15 +631,6 @@ describe('F candidate support', () => {
         target,
         gameName: 'F_Combat04',
       }),
-    ).toMatchObject({
-      kind: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: {
-        kind: 'coverageNotReached',
-        requiredOwner: target,
-        requiredCheckpoint: 'afterTargetGeneration',
-        coverage: { kind: 'prefix' },
-      },
-    });
+    ).toMatchObject({ kind: 'roomTarget', result: { pressure: { selectedPossible: true } } });
   });
 });

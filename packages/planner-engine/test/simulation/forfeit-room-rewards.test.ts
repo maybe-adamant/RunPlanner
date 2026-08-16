@@ -5,6 +5,7 @@ import {
   createIncomingRewardAddress,
   createRouteAddress,
   createTraitOfferAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -55,8 +56,21 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
       expect(branch.arcanaFear.events).toContainEqual(
         expect.objectContaining({ kind: 'ordinaryRoomRewardForfeited', rewardType }),
       );
-      expect(branch.events.some((event) => event.kind === 'concreteAcquisition')).toBe(false);
-      expect(rewards.selectedTraitOffers).toHaveLength(0);
+      expect(
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            semanticAddressKey(event.origin) ===
+              semanticAddressKey(createIncomingRewardAddress(biome, goldenFStartId)),
+        ),
+      ).toBe(false);
+      expect(
+        rewards.selectedTraitOffers.some(
+          (offer) =>
+            semanticAddressKey(offer.address.owner) ===
+            semanticAddressKey(createIncomingRewardAddress(biome, goldenFStartId)),
+        ),
+      ).toBe(false);
     },
   );
 
@@ -105,12 +119,27 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
     const rewards = rewardsFor(project);
     const branch = rewards.branches[0]!;
     expect(branch.bags.RunProgress?.remainingEntryCounts).toBeDefined();
-    expect(branch.events.some((event) => event.kind === 'concreteAcquisition')).toBe(false);
-    expect(rewards.selectedTraitOffers).toEqual([]);
+    expect(
+      branch.events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(owner),
+      ),
+    ).toBe(false);
+    expect(
+      rewards.selectedTraitOffers.some(
+        (offer) => semanticAddressKey(offer.address.owner) === semanticAddressKey(owner),
+      ),
+    ).toBe(false);
     expect(rewards.findings).not.toContainEqual(
       expect.objectContaining({ origin: createTraitOfferAddress(owner, 'source') }),
     );
-    expect(branch.traitHistory?.events ?? []).toHaveLength(0);
+    expect(
+      (branch.traitHistory?.events ?? []).some(
+        (event) =>
+          'owner' in event && semanticAddressKey(event.owner) === semanticAddressKey(owner),
+      ),
+    ).toBe(false);
   });
 
   it('keeps the veto in the progressive candidate frontier without exposing its dormant trait child', () => {

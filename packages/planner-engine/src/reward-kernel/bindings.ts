@@ -1,4 +1,3 @@
-import type { ResolvedRewardOffer } from './model';
 import type { RequirementExpression } from '../requirements/model';
 
 export interface CountedRewardBinding {
@@ -7,13 +6,12 @@ export interface CountedRewardBinding {
   readonly eligibleRewardTypes: readonly string[];
   readonly ineligibleRewardTypes: readonly string[];
   readonly allowedRewardTypes: readonly string[];
-  readonly defaultOffersByStore: Readonly<Record<string, ResolvedRewardOffer>>;
   readonly producerLifecycleKey: string;
 }
 
 export interface FixedRewardBinding {
   readonly kind: 'fixed';
-  readonly offer: ResolvedRewardOffer;
+  readonly rewardType: string;
   readonly producerLifecycleKey: string;
 }
 
@@ -23,7 +21,7 @@ export interface NoneRewardBinding {
 
 export interface ShopRewardBinding {
   readonly kind: 'shop';
-  readonly offer: ResolvedRewardOffer;
+  readonly rewardType: string;
   readonly shopProfileKey: string;
   readonly producerLifecycleKey: string;
   readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;

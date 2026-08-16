@@ -6,10 +6,8 @@ import type {
 } from '@run-planner/engine/reward-kernel';
 import type {
   ProducerLifecycleProfileDeclaration,
-  ResolvedRewardOffer,
   RewardKernelCatalog,
   RewardStoreDeclaration,
-  RewardTypeDeclaration,
 } from '@run-planner/engine/reward-kernel';
 
 import type { RawRewardProducerBinding } from '../declarations';
@@ -20,13 +18,6 @@ import {
   rejectEncounterHistoryRequirements,
   validateRequirementReferences,
 } from './requirements';
-
-function defaultOffer(rewardType: RewardTypeDeclaration): ResolvedRewardOffer {
-  return Object.freeze({
-    rewardType: rewardType.gameName,
-    ...(rewardType.defaultPayload === undefined ? {} : { payload: rewardType.defaultPayload }),
-  });
-}
 
 function requireProducerLifecycle(
   rewards: RewardKernelCatalog,
@@ -77,15 +68,11 @@ export function normalizeRewardBinding(
       `${path}.ineligibleRewardTypes`,
     );
     const storeRewardTypes = new Set<string>();
-    const storeRewardTypesByKey = new Map<string, ReadonlySet<string>>();
-    const storesByKey = new Map<string, RewardStoreDeclaration>();
     for (const [index, storeKey] of storeKeys.entries()) {
       const store = rewards.stores.byKey[storeKey];
       if (store === undefined) {
         fail(`${path}.storeKeys[${index}]`, `unknown reward store ${storeKey}`);
       }
-      storesByKey.set(storeKey, store);
-      storeRewardTypesByKey.set(storeKey, new Set(store.entries.map((entry) => entry.rewardType)));
       for (const entry of store.entries) {
         storeRewardTypes.add(entry.rewardType);
       }
@@ -119,35 +106,6 @@ export function normalizeRewardBinding(
     if (allowedRewardTypes.length === 0) {
       fail(path, 'filters remove every reward type');
     }
-    const rawDefaults = raw.defaultRewardTypesByStore ?? {};
-    for (const storeKey of Object.keys(rawDefaults)) {
-      if (!storeKeys.includes(storeKey)) {
-        fail(
-          `${path}.defaultRewardTypesByStore.${storeKey}`,
-          `${storeKey} is not a referenced store`,
-        );
-      }
-    }
-    const defaultOffersByStore: Record<string, ResolvedRewardOffer> = {};
-    for (const storeKey of storeKeys) {
-      const store = storesByKey.get(storeKey) as RewardStoreDeclaration;
-      const rewardTypeName = rawDefaults[storeKey] ?? store.defaultOffer.rewardType;
-      if (!storeRewardTypesByKey.get(storeKey)?.has(rewardTypeName)) {
-        fail(
-          `${path}.defaultRewardTypesByStore.${storeKey}`,
-          `${rewardTypeName} is not produced by ${storeKey}`,
-        );
-      }
-      if (!allowedRewardTypes.includes(rewardTypeName)) {
-        fail(
-          `${path}.defaultRewardTypesByStore.${storeKey}`,
-          `${rewardTypeName} is removed by this producer's filters`,
-        );
-      }
-      defaultOffersByStore[storeKey] = defaultOffer(
-        rewards.rewardTypes.byKey[rewardTypeName] as RewardTypeDeclaration,
-      );
-    }
     requireProducerLifecycle(
       rewards,
       raw.producerLifecycleKey,
@@ -160,7 +118,6 @@ export function normalizeRewardBinding(
       eligibleRewardTypes,
       ineligibleRewardTypes,
       allowedRewardTypes,
-      defaultOffersByStore: Object.freeze(defaultOffersByStore),
       producerLifecycleKey: raw.producerLifecycleKey,
     });
   }
@@ -177,7 +134,7 @@ export function normalizeRewardBinding(
     );
     return Object.freeze({
       kind: 'fixed',
-      offer: defaultOffer(rewardType),
+      rewardType: rewardType.gameName,
       producerLifecycleKey: raw.producerLifecycleKey,
     }) satisfies FixedRewardBinding;
   }
@@ -228,7 +185,7 @@ export function normalizeRewardBinding(
   );
   return Object.freeze({
     kind: 'shop',
-    offer: defaultOffer(shop),
+    rewardType: shop.gameName,
     shopProfileKey: raw.shopProfileKey,
     producerLifecycleKey: raw.producerLifecycleKey,
     ...(Object.keys(additionalOptionRequirements).length === 0

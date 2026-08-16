@@ -19,9 +19,10 @@ interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly offer: ResolvedRewardOffer;
+  readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
+  readonly unresolvedSeed?: ResolvedRewardOffer;
 }
 
 interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'candidateOwner'> {
@@ -30,7 +31,7 @@ interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'candida
 
 interface RewardInteraction {
   readonly context: object;
-  readonly seed: ResolvedRewardOffer;
+  readonly seed?: ResolvedRewardOffer;
   readonly step: RewardPickerStep;
 }
 
@@ -49,8 +50,9 @@ export function RewardValueEditor({
   offer,
   onReplace,
   initialStep = 'type',
+  unresolvedSeed,
 }: RewardValueEditorProps) {
-  const authoredOfferKey = offerKey(offer);
+  const authoredOfferKey = offer === null ? '__unresolved__' : offerKey(offer);
   const resolver = requireWorkspaceInteraction(
     interactions.rewards,
     workspaceInteractionKey(candidateOwner.address),
@@ -64,19 +66,19 @@ export function RewardValueEditor({
   const interactionMatchesContext = interaction === undefined || interaction.context === context;
   const active = interactionMatchesContext ? interaction : undefined;
 
-  const begin = (seed: ResolvedRewardOffer, step: RewardPickerStep): void => {
+  const begin = (seed: ResolvedRewardOffer | undefined, step: RewardPickerStep): void => {
     domain.activate();
     setInteraction(
       Object.freeze({
         context,
-        seed,
+        ...(seed === undefined ? {} : { seed }),
         step,
       }),
     );
   };
 
   const startInteraction = (): void => {
-    begin(offer, initialStep);
+    begin(offer ?? unresolvedSeed, initialStep);
   };
 
   const cancelInteraction = (): void => {
@@ -120,13 +122,14 @@ export function RewardValueEditor({
     active === undefined || domain.result === undefined
       ? emptyModel
       : resolver.model(domain.result, active.step, active.seed);
-  const summary = resolver.summary(active?.seed ?? offer);
+  const activeOffer = active?.seed ?? offer ?? undefined;
+  const summary = activeOffer === undefined ? 'Choose reward' : resolver.summary(activeOffer);
 
   return (
     <div className="reward-value-editor">
       <ContextualPicker
         cancelLabel="Cancel"
-        choiceLabel={resolver.choiceLabel(active?.step ?? 'type', active?.seed ?? offer)}
+        choiceLabel={resolver.choiceLabel(active?.step ?? 'type', activeOffer)}
         closeOnSelect={false}
         id={`${idPrefix}-reward`}
         label="Reward"
@@ -155,6 +158,7 @@ export function CountedRewardEditor({
   interactions,
   onReplace,
   initialStep,
+  unresolvedSeed,
 }: CountedRewardEditorProps) {
   return (
     <RewardValueEditor
@@ -164,6 +168,7 @@ export function CountedRewardEditor({
       offer={offer}
       onReplace={onReplace}
       {...(initialStep === undefined ? {} : { initialStep })}
+      {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
     />
   );
 }

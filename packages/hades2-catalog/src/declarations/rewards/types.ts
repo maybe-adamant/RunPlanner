@@ -8,7 +8,6 @@ import type {
   OfferProjectionKey,
   PayloadDomainDeclaration,
   ProducerLifecyclePointKey,
-  RewardPayload,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
 } from '@run-planner/engine/reward-kernel';
@@ -42,7 +41,6 @@ export interface RawRewardTypeDeclaration {
   readonly gameName: string;
   readonly label: string;
   readonly payloadDomain?: string;
-  readonly defaultPayload?: RewardPayload;
   readonly sourceSupport?: SourceSupportPolicyKey;
   readonly sourceResolution?: SourceResolutionPoint;
   readonly offerProjection?: OfferProjectionKey;
@@ -57,7 +55,6 @@ export interface RawRewardStoreEntryDeclaration {
 
 export interface RawRewardStoreDeclaration {
   readonly key: string;
-  readonly defaultRewardType: string;
   readonly entries: readonly RawRewardStoreEntryDeclaration[];
 }
 
@@ -82,7 +79,6 @@ export interface RawShopSlotDeclaration {
   readonly key: string;
   readonly label: string;
   readonly groupKey: string;
-  readonly defaultOptionKey: string;
 }
 
 export interface RawShopProfileDeclaration {

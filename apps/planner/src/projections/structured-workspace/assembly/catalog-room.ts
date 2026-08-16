@@ -17,18 +17,18 @@ export function requireWorkspaceRoom(catalog: Catalog, gameName: string): RoomDe
 export function resolveWorkspaceFixedRewardOffer(
   room: RoomDeclaration,
   state: Extract<AuthoredRoomState, { readonly kind: 'fixed' }>,
-): ResolvedRewardOffer {
+): ResolvedRewardOffer | null {
   if (room.incomingReward.kind !== 'fixed') {
     throw new StructuredWorkspaceProjectionContractError(
       `${room.gameName} fixed state has ${room.incomingReward.kind} reward binding`,
     );
   }
-  return Object.freeze({
-    rewardType: room.incomingReward.offer.rewardType,
-    ...(state.reward.offer.payload === undefined
-      ? room.incomingReward.offer.payload === undefined
-        ? {}
-        : { payload: room.incomingReward.offer.payload }
-      : { payload: state.reward.offer.payload }),
-  });
+  return state.reward === null
+    ? null
+    : Object.freeze({
+        rewardType: room.incomingReward.rewardType,
+        ...(state.reward.offer.payload === undefined
+          ? {}
+          : { payload: state.reward.offer.payload }),
+      });
 }

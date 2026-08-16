@@ -172,29 +172,35 @@ function localIncomingReward(
   room: RoomDeclaration,
   state: EphyraSideRoomState,
   loadout?: RouteWeaponAspectLoadout,
-): CanonicalResolvedIncomingReward {
+): Pick<CanonicalLocalChildRoom, 'incomingReward' | 'unresolvedIncomingReward'> {
   if (loadout === undefined || loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
     fail(`${room.gameName} side-room materialization requires a route loadout`);
   }
   const binding = requireCountedBinding(room);
   const resolvedStoreKey = room.forcedRewardStoreKey ?? room.individualRewardStoreKey;
   if (resolvedStoreKey === undefined) fail(`${room.gameName} has no resolved side-room store`);
-  return Object.freeze({
+  const base = Object.freeze({
     origin: createLocalRewardAddress(biome, parentOccurrenceId, groupKey, slot.slotKey),
-    kind: 'resolved',
     producerKind: 'countedChoice',
     instanceProvenance: 'free',
     producerLifecycleKey: binding.producerLifecycleKey,
-    offer: state.reward.offer,
-    traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
-    levelResolutionsByAcquisitionRole: state.reward.levelResolutionsByAcquisitionRole,
-    dispositionByAcquisitionRole: state.reward.dispositionByAcquisitionRole,
-    traitContext: Object.freeze({
-      ...loadout,
-      blockGiftBoons: room.blockGiftBoons,
-      devotionNoDuo: state.reward.offer.rewardType === 'Devotion',
-    }),
     resolvedStoreKey,
+  });
+  if (state.reward === null) return Object.freeze({ unresolvedIncomingReward: base });
+  return Object.freeze({
+    incomingReward: Object.freeze({
+      ...base,
+      kind: 'resolved' as const,
+      offer: state.reward.offer,
+      traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
+      levelResolutionsByAcquisitionRole: state.reward.levelResolutionsByAcquisitionRole,
+      dispositionByAcquisitionRole: state.reward.dispositionByAcquisitionRole,
+      traitContext: Object.freeze({
+        ...loadout,
+        blockGiftBoons: room.blockGiftBoons,
+        devotionNoDuo: state.reward.offer.rewardType === 'Devotion',
+      }),
+    }),
   });
 }
 
@@ -223,7 +229,7 @@ function materializeLocalSlots(
       if (sideRoom.mode.kind !== 'authored' || sideRoom.mode.templateKey !== 'EphyraSideRoom') {
         fail(`${sideRoom.gameName} is not an Ephyra side room`);
       }
-      const incomingReward =
+      const incoming =
         authored.generation === 'generated'
           ? localIncomingReward(
               biome,
@@ -235,8 +241,8 @@ function materializeLocalSlots(
               loadout,
             )
           : undefined;
-      if (incomingReward !== undefined) {
-        requireLifecycle(catalog, sideRoom, 'EphyraSideRoom', incomingReward);
+      if (incoming?.incomingReward !== undefined) {
+        requireLifecycle(catalog, sideRoom, 'EphyraSideRoom', incoming.incomingReward);
       }
       return Object.freeze({
         kind: 'localChild',
@@ -265,7 +271,7 @@ function materializeLocalSlots(
         lifecycleProfileKey: 'EphyraSideRoom',
         counterEffects: sideRoom.counters,
         entered: authored.enteredOrdinal !== null,
-        ...(incomingReward === undefined ? {} : { incomingReward }),
+        ...(incoming ?? {}),
       });
     }),
   );

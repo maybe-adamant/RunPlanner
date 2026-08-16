@@ -113,7 +113,7 @@ function enteredNLocalProject(): ProjectDocument {
     reward: createIncomingRewardAddress(nBiome, nCombatId),
     value: {
       rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
     },
   });
   project = applyProjectCommand(project, catalog, {
@@ -130,6 +130,11 @@ function enteredNLocalProject(): ProjectDocument {
     kind: 'ReplaceLocalReward',
     reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     value: { rewardType: 'MaxHealthDropSmall' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
@@ -169,7 +174,7 @@ describe('authored encounter occurrence commands', () => {
       pIntroPhase,
     );
 
-    expect(support).toMatchObject({
+    expect(support, JSON.stringify(assembly.evaluation.findings)).toMatchObject({
       active: true,
       selectedEncounterKey: 'GeneratedP_PreCombat',
       selectedPossible: true,

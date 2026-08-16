@@ -39,10 +39,9 @@ const runProgressEntries = [
 ] as const;
 
 export const stores = [
-  { key: 'RunProgress', defaultRewardType: 'Boon', entries: runProgressEntries },
+  { key: 'RunProgress', entries: runProgressEntries },
   {
     key: 'MetaProgress',
-    defaultRewardType: 'GiftDrop',
     entries: [
       { rewardType: 'GiftDrop' },
       { rewardType: 'MetaCurrencyDrop', requirement: smallEnteredBiomes },
@@ -61,7 +60,6 @@ export const stores = [
   },
   {
     key: 'HubRewards',
-    defaultRewardType: 'Boon',
     entries: [
       { rewardType: 'MaxHealthDropBig' },
       { rewardType: 'MaxManaDropBig' },
@@ -77,7 +75,6 @@ export const stores = [
   },
   {
     key: 'SubRoomRewards',
-    defaultRewardType: 'MaxManaDropSmall',
     entries: [
       { rewardType: 'MaxManaDropSmall' },
       { rewardType: 'MaxHealthDropSmall' },
@@ -106,7 +103,6 @@ export const stores = [
   },
   {
     key: 'SubRoomRewardsHard',
-    defaultRewardType: 'MaxHealthDrop',
     entries: [
       { rewardType: 'MaxHealthDrop' },
       { rewardType: 'MaxHealthDrop' },
@@ -120,7 +116,6 @@ export const stores = [
   },
   {
     key: 'FieldsOptionalRewards',
-    defaultRewardType: 'MaxManaDropSmall',
     entries: [
       { rewardType: 'MaxManaDropSmall' },
       { rewardType: 'MaxManaDropSmall' },
@@ -145,7 +140,6 @@ export const stores = [
   },
   {
     key: 'TartarusRewards',
-    defaultRewardType: 'RoomMoneyTripleDrop',
     entries: [
       { rewardType: 'RoomMoneyTripleDrop' },
       { rewardType: 'StackUpgradeTriple', requirement: stackLegal },
@@ -160,7 +154,6 @@ export const stores = [
   },
   {
     key: 'TyphonBossRewards',
-    defaultRewardType: 'Boon',
     entries: [
       { rewardType: 'Boon', allowDuplicates: true },
       { rewardType: 'Boon', allowDuplicates: true },

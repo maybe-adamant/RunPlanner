@@ -100,10 +100,9 @@ describe('reward-kernel declaration parity', () => {
       TartarusRewards: [6, 7, 8],
       TyphonBossRewards: [0, 1],
     });
-    expect(rewardKernelCatalog.stores.byKey.RunProgress?.defaultOffer).toEqual({
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-    });
+    expect(rewardKernelCatalog.stores.byKey.RunProgress?.entries[0]?.rewardType).toBe(
+      'MaxHealthDrop',
+    );
 
     const expectedEntries = {
       RunProgress: [
@@ -247,7 +246,7 @@ describe('reward-kernel declaration parity', () => {
     ).toBe(true);
     expect(
       rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.MajorNonBoon?.options.values
-        .filter((entry) => entry.defaultOffer.rewardType === 'WeaponUpgradeDrop')
+        .filter((entry) => entry.rewardType === 'WeaponUpgradeDrop')
         .map((entry) => entry.key),
     ).toEqual(['WeaponUpgradeDropEarly', 'WeaponUpgradeDropLate']);
     expect(
@@ -259,128 +258,25 @@ describe('reward-kernel declaration parity', () => {
     ]);
     expect(
       rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.options.byKey.RandomLoot
-        ?.defaultOffer,
-    ).toEqual({
-      rewardType: 'RandomLoot',
-      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-    });
+        ?.rewardType,
+    ).toBe('RandomLoot');
     expect(
       Object.fromEntries(
         rewardKernelCatalog.shops.values.map((profile) => [
           profile.key,
-          profile.slots.values.map((slot) => ({
-            key: slot.key,
-            label: slot.label,
-            groupKey: slot.groupKey,
-            defaultOptionKey: slot.defaultOptionKey,
-            defaultRewardType: slot.defaultOffer.rewardType,
-          })),
+          profile.slots.values.map((slot) => slot.groupKey),
         ]),
       ),
     ).toEqual({
-      WorldShop: [
-        {
-          key: 'Boon',
-          label: 'Offer 1',
-          groupKey: 'Boon',
-          defaultOptionKey: 'RandomLoot',
-          defaultRewardType: 'RandomLoot',
-        },
-        {
-          key: 'MajorNonBoon',
-          label: 'Offer 2',
-          groupKey: 'MajorNonBoon',
-          defaultOptionKey: 'WeaponUpgradeDropEarly',
-          defaultRewardType: 'WeaponUpgradeDrop',
-        },
-        {
-          key: 'Minor',
-          label: 'Offer 3',
-          groupKey: 'Minor',
-          defaultOptionKey: 'MaxManaDrop',
-          defaultRewardType: 'MaxManaDrop',
-        },
-      ],
-      I_WorldShop: [
-        {
-          key: 'BoostedBoon',
-          label: 'Offer 1',
-          groupKey: 'BoostedBoon',
-          defaultOptionKey: 'BoostedRandomLoot',
-          defaultRewardType: 'RandomLoot',
-        },
-        {
-          key: 'MixedProgress',
-          label: 'Offer 2',
-          groupKey: 'MixedProgress',
-          defaultOptionKey: 'RandomLoot',
-          defaultRewardType: 'RandomLoot',
-        },
-        {
-          key: 'Survival',
-          label: 'Offer 3',
-          groupKey: 'Survival',
-          defaultOptionKey: 'HealBigDrop',
-          defaultRewardType: 'HealBigDrop',
-        },
-        {
-          key: 'PremiumProgress',
-          label: 'Offer 4',
-          groupKey: 'PremiumProgress',
-          defaultOptionKey: 'ShopHermesUpgrade',
-          defaultRewardType: 'ShopHermesUpgrade',
-        },
-        {
-          key: 'MetaProgress',
-          label: 'Offer 5',
-          groupKey: 'MetaProgress',
-          defaultOptionKey: 'WeaponPointsRareDrop',
-          defaultRewardType: 'WeaponPointsRareDrop',
-        },
-      ],
+      WorldShop: ['Boon', 'MajorNonBoon', 'Minor'],
+      I_WorldShop: ['BoostedBoon', 'MixedProgress', 'Survival', 'PremiumProgress', 'MetaProgress'],
       Q_WorldShop: [
-        {
-          key: 'MixedProgress1',
-          label: 'Offer 1',
-          groupKey: 'MixedProgress',
-          defaultOptionKey: 'BoostedRandomLoot',
-          defaultRewardType: 'RandomLoot',
-        },
-        {
-          key: 'MixedProgress2',
-          label: 'Offer 2',
-          groupKey: 'MixedProgress',
-          defaultOptionKey: 'StackUpgradeBig',
-          defaultRewardType: 'StackUpgradeBig',
-        },
-        {
-          key: 'LargeSurvival',
-          label: 'Offer 3',
-          groupKey: 'LargeSurvival',
-          defaultOptionKey: 'HealBigDrop',
-          defaultRewardType: 'HealBigDrop',
-        },
-        {
-          key: 'Survival',
-          label: 'Offer 4',
-          groupKey: 'Survival',
-          defaultOptionKey: 'HealBigDrop',
-          defaultRewardType: 'HealBigDrop',
-        },
-        {
-          key: 'PremiumProgress',
-          label: 'Offer 5',
-          groupKey: 'PremiumProgress',
-          defaultOptionKey: 'ShopHermesUpgrade',
-          defaultRewardType: 'ShopHermesUpgrade',
-        },
-        {
-          key: 'MetaProgress',
-          label: 'Offer 6',
-          groupKey: 'MetaProgress',
-          defaultOptionKey: 'WeaponPointsRareDrop',
-          defaultRewardType: 'WeaponPointsRareDrop',
-        },
+        'MixedProgress',
+        'MixedProgress',
+        'LargeSurvival',
+        'Survival',
+        'PremiumProgress',
+        'MetaProgress',
       ],
     });
     expect(
@@ -594,7 +490,6 @@ describe('reward-kernel declaration parity', () => {
       .map((rewardType) => ({
         gameName: rewardType.gameName,
         payloadDomain: rewardType.payloadDomain,
-        defaultPayload: rewardType.defaultPayload,
         sourceSupport: rewardType.sourceSupport,
         sourceResolution: rewardType.sourceResolution,
         offerProjection: rewardType.offerProjection,
@@ -604,7 +499,6 @@ describe('reward-kernel declaration parity', () => {
       {
         gameName: 'Boon',
         payloadDomain: 'BoonSource',
-        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         sourceSupport: 'ordinaryBoonPeer',
         sourceResolution: { kind: 'offer' },
         offerProjection: 'none',
@@ -618,11 +512,6 @@ describe('reward-kernel declaration parity', () => {
       {
         gameName: 'Devotion',
         payloadDomain: 'DevotionPair',
-        defaultPayload: {
-          kind: 'DevotionPair',
-          chosenSource: 'ApolloUpgrade',
-          spurnedSource: 'ZeusUpgrade',
-        },
         sourceSupport: 'devotionAcquiredPair',
         sourceResolution: { kind: 'offer' },
         offerProjection: 'devotionSpacing',
@@ -648,7 +537,6 @@ describe('reward-kernel declaration parity', () => {
       {
         gameName: 'RandomLoot',
         payloadDomain: 'BoonSource',
-        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         sourceSupport: 'ordinaryNoPeer',
         sourceResolution: { kind: 'offer' },
         offerProjection: 'none',
@@ -662,7 +550,6 @@ describe('reward-kernel declaration parity', () => {
       {
         gameName: 'BlindBoxLoot',
         payloadDomain: 'BoonSource',
-        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         sourceSupport: 'ordinaryNoPeer',
         sourceResolution: { kind: 'acquisitionRole', role: 'hiddenSource' },
         offerProjection: 'none',
@@ -679,12 +566,6 @@ describe('reward-kernel declaration parity', () => {
         ],
       },
     ]);
-    expect(
-      rewardKernelCatalog.rewardTypes.values
-        .filter((rewardType) => rewardType.defaultPayload !== undefined)
-        .map((rewardType) => rewardType.gameName),
-    ).toEqual(sourceBearing.map((rewardType) => rewardType.gameName));
-
     for (const acquisition of rewardKernelCatalog.acquisitions.values) {
       if (acquisition.gameName === 'BlindBoxLoot') {
         continue;
@@ -1111,8 +992,17 @@ describe('reward-kernel declaration parity', () => {
           shop.key === 'WorldShop'
             ? {
                 ...shop,
-                slots: shop.slots.map((slot, index) =>
-                  index === 0 ? { ...slot, defaultOptionKey: 'missing' } : slot,
+                groups: shop.groups.map((group, groupIndex) =>
+                  groupIndex === 0
+                    ? {
+                        ...group,
+                        options: group.options.map((option, optionIndex) =>
+                          optionIndex === 0
+                            ? { ...option, rewardType: 'missingRewardType' }
+                            : option,
+                        ),
+                      }
+                    : group,
                 ),
               }
             : shop,
@@ -1159,7 +1049,6 @@ describe('reward-kernel declaration parity', () => {
     if (
       boon === undefined ||
       boon.payloadDomain === undefined ||
-      boon.defaultPayload === undefined ||
       boon.sourceSupport === undefined
     ) {
       throw new Error('Boon test declaration is missing');
@@ -1168,7 +1057,6 @@ describe('reward-kernel declaration parity', () => {
       gameName: boon.gameName,
       label: boon.label,
       payloadDomain: boon.payloadDomain,
-      defaultPayload: boon.defaultPayload,
       sourceSupport: boon.sourceSupport,
       acquisitionRoles: boon.acquisitionRoles,
     };
@@ -1191,13 +1079,6 @@ describe('reward-kernel declaration parity', () => {
             domain.key === 'BoonSource' ? { ...domain, kind: 'unknownDomain' } : domain,
           ),
         }),
-      ],
-      [
-        'payload kind',
-        replaceRewardType('Boon', (rewardType) => ({
-          ...rewardType,
-          defaultPayload: { kind: 'unknownPayload', source: 'ApolloUpgrade' },
-        })),
       ],
       [
         'acquisition kind',

@@ -675,7 +675,6 @@ export const oRooms = [
         'TalentBigDrop',
         'TalentDrop',
       ],
-      defaultRewardType: 'BlindBoxLoot',
     },
     prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },

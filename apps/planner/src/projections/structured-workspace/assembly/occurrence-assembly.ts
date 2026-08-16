@@ -40,6 +40,7 @@ import {
   type FieldsCombatState,
   type LevelResolutionAddress,
   shopAcquisitionOrderProposals,
+  selectedPickupProducer,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -123,8 +124,8 @@ type WorkspaceDerivedAcquisitionEntry = {
     | 'travelDealRefill';
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
-  readonly defaultValue?: AuthoredRewardState;
   readonly rewardTypes?: readonly string[];
+  readonly fixedReward?: AuthoredRewardState;
   readonly eligibleSourceOfferKeys?: readonly string[];
 };
 
@@ -207,14 +208,27 @@ function traitOfferControls(
         `${semanticAddressKey(owner.address)} has trait role ${acquisitionRole} without an in-scope giver`,
       );
     }
+    const giver = input.catalog.traitGivers.byKey[giverKey];
+    if (giver === undefined) continue;
+    const address = createTraitOfferAddress(owner.address, acquisitionRole);
+    if (offer === null) {
+      controls.push(
+        Object.freeze({
+          acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
+          address,
+          giver,
+          marker: input.markerDestinations.marker(address),
+          offer: null,
+          rewardOwner: owner.address,
+        }),
+      );
+      continue;
+    }
     if (giverKey !== offer.giverKey) {
       throw new StructuredWorkspaceProjectionContractError(
         `${semanticAddressKey(owner.address)} trait role ${acquisitionRole} has giver ${offer.giverKey}, expected ${giverKey}`,
       );
     }
-    const giver = input.catalog.traitGivers.byKey[giverKey];
-    if (giver === undefined) continue;
-    const address = createTraitOfferAddress(owner.address, acquisitionRole);
     const selected =
       offer.kind === 'traits' ? traitOfferOption(offer, offer.selectedOptionKey) : undefined;
     const selectedDisposition =
@@ -353,20 +367,51 @@ function rewardControl(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
   binding: CountedRewardBinding | undefined,
-  offer: ResolvedRewardOffer,
-  authoredReward: AuthoredRewardState,
-  explicitRewardTypes: readonly string[] = Object.freeze([offer.rewardType]),
+  offer: ResolvedRewardOffer | null,
+  authoredReward: AuthoredRewardState | null,
+  explicitRewardTypes: readonly string[] = Object.freeze(offer === null ? [] : [offer.rewardType]),
   derivedShopEntryEdit?: WorkspaceRewardControl['derivedShopEntryEdit'],
 ): WorkspaceRewardControl {
+  const fixedRewardType =
+    offer === null && explicitRewardTypes.length === 1 ? explicitRewardTypes[0] : undefined;
+  const fixedPayloadDomain =
+    fixedRewardType === undefined
+      ? undefined
+      : input.catalog.rewards.rewardTypes.byKey[fixedRewardType]?.payloadDomain;
+  const fixedPayloadDeclaration =
+    fixedPayloadDomain === undefined
+      ? undefined
+      : input.catalog.rewards.payloadDomains.byKey[fixedPayloadDomain];
+  const authoringStartStep =
+    fixedPayloadDeclaration?.kind === 'oneOf'
+      ? ('source' as const)
+      : fixedPayloadDeclaration?.kind === 'distinctPair'
+        ? ('chosen' as const)
+        : undefined;
+  const authoringSeed =
+    authoringStartStep === undefined || fixedRewardType === undefined
+      ? undefined
+      : Object.freeze({ rewardType: fixedRewardType });
   return binding === undefined
     ? Object.freeze({
         kind: 'explicitReward' as const,
+        ...(authoringStartStep === undefined ? {} : { authoringStartStep }),
+        ...(authoringSeed === undefined ? {} : { authoringSeed }),
         marker: input.markerDestinations.marker(owner.address),
         offer,
         owner,
-        traitOffers: traitOfferControls(input, owner, authoredReward),
-        levelResolutions: levelResolutionControls(input, owner, authoredReward),
-        conversions: conversionControls(input, owner, authoredReward),
+        traitOffers:
+          authoredReward === null
+            ? Object.freeze([])
+            : traitOfferControls(input, owner, authoredReward),
+        levelResolutions:
+          authoredReward === null
+            ? Object.freeze([])
+            : levelResolutionControls(input, owner, authoredReward),
+        conversions:
+          authoredReward === null
+            ? Object.freeze([])
+            : conversionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
         ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       })
@@ -376,9 +421,18 @@ function rewardControl(
         marker: input.markerDestinations.marker(owner.address),
         offer,
         owner: owner as CountedRewardCandidateOwner,
-        traitOffers: traitOfferControls(input, owner, authoredReward),
-        levelResolutions: levelResolutionControls(input, owner, authoredReward),
-        conversions: conversionControls(input, owner, authoredReward),
+        traitOffers:
+          authoredReward === null
+            ? Object.freeze([])
+            : traitOfferControls(input, owner, authoredReward),
+        levelResolutions:
+          authoredReward === null
+            ? Object.freeze([])
+            : levelResolutionControls(input, owner, authoredReward),
+        conversions:
+          authoredReward === null
+            ? Object.freeze([])
+            : conversionControls(input, owner, authoredReward),
         ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       });
 }
@@ -425,7 +479,7 @@ function controlsForOccurrence(
         input,
         { kind: 'incomingReward', address: incoming },
         incomingRewardBinding(room, state),
-        state.reward.offer,
+        state.reward?.offer ?? null,
         state.reward,
       ),
     );
@@ -471,7 +525,7 @@ function controlsForOccurrence(
             input,
             { kind: 'localReward', address },
             sideRoom.incomingReward,
-            side.reward.offer,
+            side.reward?.offer ?? null,
             side.reward,
           ),
         );
@@ -493,7 +547,13 @@ function controlsForOccurrence(
           slotKey,
         );
         controls.push(
-          rewardControl(input, { kind: 'localReward', address }, group.reward, offer.offer, offer),
+          rewardControl(
+            input,
+            { kind: 'localReward', address },
+            group.reward,
+            offer?.offer ?? null,
+            offer,
+          ),
         );
       }
       const optionalDescriptor = room.fieldsOptionalRewards;
@@ -523,7 +583,7 @@ function controlsForOccurrence(
             input,
             { kind: 'localReward', address },
             optionalDescriptor.reward,
-            reward.offer,
+            reward?.offer ?? null,
             reward,
           ),
         );
@@ -553,7 +613,7 @@ function controlsForOccurrence(
               input,
               { kind: 'rewardWheelOffer', address },
               declaration.reward,
-              offer.offer,
+              offer?.offer ?? null,
               offer,
             ),
           );
@@ -586,7 +646,7 @@ function controlsForOccurrence(
             input,
             { kind: 'shopOffer', address },
             undefined,
-            shopOffer.reward.offer,
+            shopOffer.reward?.offer ?? null,
             shopOffer.reward,
             group.rewardTypes,
           ),
@@ -596,7 +656,12 @@ function controlsForOccurrence(
     }
     case 'fixed': {
       const offer = resolveWorkspaceFixedRewardOffer(room, occurrence.state);
-      const rewardType = input.catalog.rewards.rewardTypes.byKey[offer.rewardType];
+      const fixedRewardType =
+        room.incomingReward.kind === 'fixed' ? room.incomingReward.rewardType : undefined;
+      const rewardType =
+        fixedRewardType === undefined
+          ? undefined
+          : input.catalog.rewards.rewardTypes.byKey[fixedRewardType];
       if (rewardType?.payloadDomain !== undefined) {
         controls.push(
           rewardControl(
@@ -605,7 +670,7 @@ function controlsForOccurrence(
             undefined,
             offer,
             occurrence.state.reward,
-            Object.freeze([offer.rewardType]),
+            Object.freeze([fixedRewardType!]),
           ),
         );
       }
@@ -1005,7 +1070,7 @@ interface ShopSupplementalAssemblyContext {
   readonly completeProposals: readonly (readonly string[])[];
   readonly input: WorkspaceOccurrenceAssemblyInput;
   readonly offers: readonly { readonly key: string; readonly label: string }[];
-  readonly pickupEntries: Readonly<Record<string, AuthoredRewardState>>;
+  readonly pickupEntries: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly roomGameName: string;
 }
 
@@ -1080,11 +1145,7 @@ function derivedRewardSupplementalOffer(
           explanation: 'Purchase order needs one paid Shop offer before this refill can be edited.',
         });
   }
-  if (
-    capability.kind !== activeKind ||
-    capability.defaultValue === undefined ||
-    capability.sourceOfferKey === undefined
-  ) {
+  if (capability.kind !== activeKind || capability.sourceOfferKey === undefined) {
     return undefined;
   }
   if (capability.rewardTypes === undefined) {
@@ -1102,14 +1163,14 @@ function derivedRewardSupplementalOffer(
     context.completeProposals.find((proposal) =>
       selected ? !proposal.includes(entryKey) : proposal.includes(entryKey),
     ) ?? context.acquisitionOrder;
-  const authored = context.pickupEntries[entryKey] ?? capability.defaultValue;
-  const materialized = context.pickupEntries[entryKey] !== undefined;
+  const authored = context.pickupEntries[entryKey] ?? capability.fixedReward ?? null;
+  const materialized = Object.hasOwn(context.pickupEntries, entryKey);
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
   const projectedReward = rewardControl(
     context.input,
     { kind: 'acquisitionEntry' as const, address },
     undefined,
-    authored.offer,
+    authored?.offer ?? null,
     authored,
     capability.rewardTypes,
     materialized
@@ -1117,7 +1178,7 @@ function derivedRewardSupplementalOffer(
       : Object.freeze({
           site: context.acquisitionSite,
           entryKey,
-          defaultValue: capability.defaultValue,
+          sourceOfferKey: capability.sourceOfferKey,
         }),
   ) as WorkspaceExplicitRewardControl;
   const purchase = supplementalPurchase(context, entryKey, selected, toggleOfferKeys);
@@ -1135,7 +1196,6 @@ function derivedRewardSupplementalOffer(
       sourceOfferKey: capability.sourceOfferKey,
       eligibleSourceOfferKeys,
       materialized,
-      defaultValue: capability.defaultValue,
       participationLabel: 'Picked up' as const,
       purchase,
       rewardControl: projectedReward,
@@ -1147,7 +1207,6 @@ function derivedRewardSupplementalOffer(
     label: `Travel Deal refill after ${sourceOfferLabel}`,
     sourceOfferKey: capability.sourceOfferKey,
     materialized,
-    defaultValue: capability.defaultValue,
     participationLabel: 'Purchased' as const,
     purchase,
     rewardControl: projectedReward,
@@ -1192,7 +1251,7 @@ function contractSupplementalOffer(
       context.input,
       { kind: 'acquisitionEntry' as const, address },
       undefined,
-      authored.offer,
+      authored?.offer ?? null,
       authored,
       capability.rewardTypes,
     ) as WorkspaceExplicitRewardControl,
@@ -1340,7 +1399,10 @@ function roomLocalForOccurrence(
       return Object.freeze({ kind: 'none' as const });
     case 'fixed': {
       const offer = resolveWorkspaceFixedRewardOffer(room, occurrence.state);
-      const rewardType = input.catalog.rewards.rewardTypes.byKey[offer.rewardType];
+      const rewardType =
+        room.incomingReward.kind === 'fixed'
+          ? input.catalog.rewards.rewardTypes.byKey[room.incomingReward.rewardType]
+          : undefined;
       const control =
         rewardType?.payloadDomain === undefined
           ? undefined
@@ -1349,7 +1411,7 @@ function roomLocalForOccurrence(
         kind: 'fixed' as const,
         marker: input.markerDestinations.marker(incoming),
         offer,
-        summary: summarizeRewardOffer(input.catalog, offer),
+        summary: offer === null ? 'Choose reward' : summarizeRewardOffer(input.catalog, offer),
         ...(control === undefined ? {} : { control }),
       });
     }
@@ -2112,6 +2174,7 @@ export function assembleWorkspaceOccurrence(
       : (() => {
           const site = createAcquisitionSiteAddress(address, 'roomExit');
           const order = occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]);
+          const pickupProducer = selectedPickupProducer(input.catalog, occurrence.encounters);
           return Object.freeze({
             site,
             marker: input.markerDestinations.marker(site),
@@ -2119,7 +2182,10 @@ export function assembleWorkspaceOccurrence(
             entries: Object.freeze(
               [...order, ...Object.keys(pickupSite).filter((key) => !order.includes(key))].map(
                 (key) => {
-                  const reward = pickupSite[key]!;
+                  const reward = pickupSite[key] ?? null;
+                  const fixedRewardType = pickupProducer?.disposition.pickups.find(
+                    (pickup) => pickup.key === key,
+                  )?.rewardType;
                   const entry = createAcquisitionEntryAddress(site, key);
                   const selected = order.includes(key);
                   const toggleEntryKeys = Object.freeze(
@@ -2129,19 +2195,18 @@ export function assembleWorkspaceOccurrence(
                     key,
                     address: entry,
                     label:
-                      input.catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.label ??
-                      reward.offer.rewardType,
-                    ...(selected
-                      ? {
-                          rewardControl: rewardControl(
-                            input,
-                            { kind: 'acquisitionEntry' as const, address: entry },
-                            undefined,
-                            reward.offer,
-                            reward,
-                          ) as WorkspaceExplicitRewardControl,
-                        }
-                      : {}),
+                      reward === null
+                        ? 'Choose reward'
+                        : (input.catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]
+                            ?.label ?? reward.offer.rewardType),
+                    rewardControl: rewardControl(
+                      input,
+                      { kind: 'acquisitionEntry' as const, address: entry },
+                      undefined,
+                      reward?.offer ?? null,
+                      reward,
+                      fixedRewardType === undefined ? Object.freeze([]) : [fixedRewardType],
+                    ) as WorkspaceExplicitRewardControl,
                     participation: Object.freeze({
                       label: 'Picked up' as const,
                       selected,

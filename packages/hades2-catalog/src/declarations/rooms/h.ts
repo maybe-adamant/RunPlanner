@@ -862,7 +862,6 @@ export const hRooms = [
         'TalentBigDrop',
         'TalentDrop',
       ],
-      defaultRewardType: 'BlindBoxLoot',
     },
     prebossBatchPolicy: {
       kind: 'takeOverNormalDoors',

@@ -12,6 +12,7 @@ import {
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
+  createShopOfferAddress,
   createTraitOfferAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -27,6 +28,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  authorSurfaceWorldShop,
   createCompleteFGProject,
   createGoldenFGHProject,
   createRepresentativeNProject,
@@ -60,6 +62,24 @@ function legalOProject() {
     occurrence: createOccurrenceAddress(biome, oOccurrenceIds.devotion),
     gameName: 'O_Shop01',
   });
+  project = authorSurfaceWorldShop(project, biome, oOccurrenceIds.devotion);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createShopOfferAddress(biome, oOccurrenceIds.devotion, 'Boon'),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceRewardWheelOffer',
     offer: createRewardWheelOfferAddress(biome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
@@ -82,6 +102,34 @@ function legalIProject() {
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'I'),
+        createOccurrenceId('i-miniboss'),
+      ),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      createBiomeAddress('Underworld', 'I'),
+      createOccurrenceId('i-combat13-offered'),
+    ),
+    value: { rewardType: 'RoomMoneyTripleDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(
       createBiomeAddress('Underworld', 'I'),
@@ -90,12 +138,47 @@ function legalIProject() {
     value: { rewardType: 'WeaponUpgrade' },
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'I'),
+        createOccurrenceId('i-combat06'),
+      ),
+      'self',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'WeaponUpgrade',
+      options: [
+        { traitKey: 'StaffDoubleAttackTrait' },
+        { traitKey: 'StaffLongAttackTrait' },
+        { traitKey: 'StaffDashAttackTrait' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(
       createBiomeAddress('Underworld', 'I'),
       createOccurrenceId('i-combat07'),
     ),
     value: { rewardType: 'StackUpgradeTriple' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution: createLevelResolutionAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'I'),
+        createOccurrenceId('i-combat07'),
+      ),
+      'self',
+    ),
+    value: {
+      kind: 'choice',
+      offeredTraitKeys: ['ZeusWeaponBoon'],
+      selectedTraitKey: 'ZeusWeaponBoon',
+    },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
@@ -142,6 +225,25 @@ function incompleteFPrefixProject() {
     occurrenceId: startId,
     gameName: 'F_Opening01',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, startId),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, startId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   const opening = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: startId });
   project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: opening });
   project = applyProjectCommand(project, catalog, {
@@ -154,6 +256,11 @@ function incompleteFPrefixProject() {
     target: createTargetAddress(biome, opening.source, 'exit1'),
     occurrenceId: createOccurrenceId('f-prefix-combat'),
     gameName: 'F_Combat02',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
+    value: { rewardType: 'GiftDrop' },
   });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceLevelResolution',
@@ -398,6 +505,7 @@ describe('unified biome simulation', () => {
       biome.history.rooms.flatMap((room) =>
         room.origin.kind === 'occurrence' ? [room.origin.occurrenceId] : [],
       ),
+      JSON.stringify(biome.findings),
     ).toContain('f-prefix-combat');
     expect(biome.roomGeneration.ordinary.forcePressure).toHaveLength(1);
     const candidates = createPreparedProjectCandidateSession(
@@ -560,7 +668,9 @@ describe('unified biome simulation', () => {
     });
     if (biome.authoring !== 'complete') throw new Error('I should remain structurally complete');
     expect(biome.validity).toBe('invalid');
-    expect(biome.findings).toContainEqual(expect.objectContaining({ code: 'missingPomTarget' }));
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({ code: 'pomTargetUnavailable' }),
+    );
     if (!('materializedPrefix' in biome)) {
       throw new Error('I should retain a blocked materialized prefix');
     }

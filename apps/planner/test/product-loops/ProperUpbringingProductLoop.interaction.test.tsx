@@ -9,6 +9,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
+  type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '@run-planner/engine/authored-project';
 import { simulateProject, type SelectedTraitOfferAssessment } from '@run-planner/engine/simulation';
@@ -42,11 +43,10 @@ function prepareProperUpbringingFixture() {
   const original = createGoldenFGHIProject();
   let authored = original;
   const rewriteWithGiver = (
-    trace: SelectedTraitOfferAssessment,
+    address: TraitOfferAddress,
     giverKey: string,
     preferredTraitKey: string,
   ) => {
-    const address = createTraitOfferAddress(trace.address.owner, trace.acquisitionRole);
     const value = supportedTraitOffer(authored, address, giverKey, preferredTraitKey);
     if (value === undefined) throw new Error(`Missing supported ${preferredTraitKey} offer`);
     const completedValue =
@@ -104,14 +104,11 @@ function prepareProperUpbringingFixture() {
     });
     const prepared = prepareLegalPomTraitOffers(authored);
     authored = prepared.project;
-    const trace = prepared.offers.find(
-      (candidate) =>
-        semanticAddressKey(candidate.address.owner) === semanticAddressKey(plan.address) &&
-        candidate.acquisitionRole === plan.role,
+    authored = rewriteWithGiver(
+      createTraitOfferAddress(plan.address, plan.role),
+      'Hera',
+      plan.traitKey,
     );
-    if (trace === undefined)
-      throw new Error(`Hera preparation offer was not reached: ${plan.role}`);
-    authored = rewriteWithGiver(trace, 'Hera', plan.traitKey);
   }
   const properReward = createIncomingRewardAddress(
     goldenHBiome,
@@ -122,15 +119,10 @@ function prepareProperUpbringingFixture() {
     reward: properReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
   });
-  const activationTrace = reachedTraitOffers(authored).find(
-    (trace) =>
-      semanticAddressKey(trace.address.owner) === semanticAddressKey(properReward) &&
-      trace.acquisitionRole === 'source',
-  );
-  if (activationTrace === undefined) throw new Error('No prepared activation frontier found');
+  const activationAddress = createTraitOfferAddress(properReward, 'source');
   const activationValue = supportedTraitOffer(
     authored,
-    activationTrace.address,
+    activationAddress,
     'Hera',
     'ElementalRarityUpgradeBoon',
   );
@@ -138,9 +130,10 @@ function prepareProperUpbringingFixture() {
     throw new Error('Proper Upbringing supported offer is not available');
   authored = applyProjectCommand(authored, application.catalog, {
     kind: 'ReplaceTraitOffer',
-    trait: activationTrace.address,
+    trait: activationAddress,
     value: activationValue,
   });
+  authored = prepareLegalPomTraitOffers(authored).project;
   let stale:
     | {
         readonly address: TraitOfferOwnerAddress;
@@ -150,7 +143,7 @@ function prepareProperUpbringingFixture() {
     | undefined;
   const staleSession = traitCandidateSession(authored);
   for (const trace of reachedTraitOffers(authored)) {
-    if (semanticAddressKey(trace.address) === semanticAddressKey(activationTrace.address)) continue;
+    if (semanticAddressKey(trace.address) === semanticAddressKey(activationAddress)) continue;
     if (trace.offer.kind !== 'traits') continue;
     const repaired = supportedTraitOffer(
       authored,

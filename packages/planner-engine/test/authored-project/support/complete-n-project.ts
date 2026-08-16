@@ -12,6 +12,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
   type ProjectDocument,
@@ -33,6 +34,31 @@ export function createCompleteNProject(): ProjectDocument {
       occurrenceId: createOccurrenceId('round-trip-n-opening'),
     },
   );
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-opening')),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-opening')),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Aphrodite',
+      options: [
+        { traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+        { traitKey: 'AphroditeSpecialBoon', rarity: 'Common' },
+        { traitKey: 'AphroditeCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   const openingDecision = createExitDecisionAddress(nBiome, {
     kind: 'occurrence',
     occurrenceId: createOccurrenceId('round-trip-n-opening'),
@@ -46,6 +72,31 @@ export function createCompleteNProject(): ProjectDocument {
     target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
     occurrenceId: createOccurrenceId('round-trip-n-prehub'),
     gameName: 'N_PreHub01',
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-prehub')),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-prehub')),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option2',
+    },
   });
   const preHubDecision = createExitDecisionAddress(nBiome, {
     kind: 'occurrence',
@@ -69,26 +120,26 @@ export function createCompleteNProject(): ProjectDocument {
     });
   }
   for (const [slotKey, value] of Object.entries({
-    combat01: {
+    combat01: { rewardType: 'MaxHealthDropBig' },
+    combat02: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource' as const, source: 'AphroditeUpgrade' },
     },
-    combat02: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource' as const, source: 'AresUpgrade' },
-    },
     combat03: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
-    },
-    combat04: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
     },
-    combat05: { rewardType: 'MaxHealthDropBig' },
-    combat06: { rewardType: 'MaxManaDropBig' },
+    combat04: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    combat05: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'AresUpgrade' },
+    },
+    combat06: { rewardType: 'HermesUpgrade' },
     combat07: { rewardType: 'WeaponUpgrade' },
-    combat08: { rewardType: 'HermesUpgrade' },
+    combat08: { rewardType: 'MaxManaDropBig' },
     combat09: { rewardType: 'SpellDrop' },
   } as const)) {
     document = applyProjectCommand(document, catalog, {
@@ -97,12 +148,41 @@ export function createCompleteNProject(): ProjectDocument {
       value,
     });
   }
+  for (const [slotKey, giverKey, options] of [
+    ['combat02', 'Aphrodite', ['AphroditeWeaponBoon', 'AphroditeSpecialBoon', 'AphroditeCastBoon']],
+    ['combat03', 'Zeus', ['ZeusManaBoltBoon', 'BoltRetaliateBoon', 'FocusLightningBoon']],
+    ['combat04', 'Apollo', ['ApolloCastBoon', 'ApolloSprintBoon', 'ApolloManaBoon']],
+    [
+      'combat05',
+      'Ares',
+      ['MissingHealthCritBoon', 'LowHealthLifestealBoon', 'OmegaDelayedDamageBoon'],
+    ],
+    ['combat06', 'Hermes', ['SprintShieldBoon', 'SorcerySpeedBoon', 'DodgeChanceBoon']],
+  ] as const) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, createOccurrenceId(`round-trip-n-${slotKey}`)),
+        slotKey === 'combat06' ? 'self' : 'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey,
+        options: [
+          { traitKey: options[0], rarity: 'Common' },
+          { traitKey: options[1], rarity: 'Common' },
+          { traitKey: options[2], rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+  }
   document = applyProjectCommand(document, catalog, {
     kind: 'ReplaceHubVisitOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
     hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06'],
   });
-  return applyProjectCommand(document, catalog, {
+  document = applyProjectCommand(document, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: createExitDecisionAddress(nBiome, {
       kind: 'hubDecision',
@@ -110,6 +190,37 @@ export function createCompleteNProject(): ProjectDocument {
     }),
     gameName: 'N_PreBoss01',
     targetOccurrenceIds: { preboss: createOccurrenceId('round-trip-n-preboss') },
+  });
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' as const },
+    },
+    MajorNonBoon: { rewardType: 'MaxHealthDrop' as const },
+    Minor: { rewardType: 'MaxManaDrop' as const },
+  })) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(nBiome, createOccurrenceId('round-trip-n-preboss'), offerKey),
+      value,
+    });
+  }
+  return applyProjectCommand(document, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createShopOfferAddress(nBiome, createOccurrenceId('round-trip-n-preboss'), 'Boon'),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
   });
 }
 
@@ -139,7 +250,7 @@ export function createEnteredNLocalProject(): ProjectDocument {
     reward: createIncomingRewardAddress(nBiome, nCombatId),
     value: {
       rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
     },
   });
   project = applyProjectCommand(project, catalog, {
@@ -156,6 +267,11 @@ export function createEnteredNLocalProject(): ProjectDocument {
     kind: 'ReplaceLocalReward',
     reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     value: { rewardType: 'MaxHealthDropSmall' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {

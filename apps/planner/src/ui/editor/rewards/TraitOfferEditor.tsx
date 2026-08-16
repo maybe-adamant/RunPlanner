@@ -121,6 +121,7 @@ function traitOfferLoadable(
 }
 
 function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
+  if (interaction.value === null) return `${interaction.giver.key}|unresolved`;
   if (interaction.value.kind === 'fallbackGold') {
     return `${interaction.giver.key}|fallbackGold`;
   }
@@ -333,14 +334,15 @@ function EchoLastRewardEditor({
       <fieldset className="trait-circe-resolution">
         <legend>Reward Reward Reward replay</legend>
         <p>Latest replayable source: {domain.rewardLabel}</p>
-        <button onClick={() => onSelect(domain.defaultValue)} type="button">
+        <button onClick={() => onSelect(domain.initialValue)} type="button">
           Create replay decisions
         </button>
       </fieldset>
     );
   }
-  const traitOffer = value.traitOffer?.kind === 'traits' ? value.traitOffer : undefined;
-  const level = value.levelResolution;
+  const presentedTraitOffer = value.traitOffer ?? domain.traitOfferDraft;
+  const traitOffer = presentedTraitOffer?.kind === 'traits' ? presentedTraitOffer : undefined;
+  const level = value.levelResolution ?? domain.levelResolutionDraft;
   const updateTraitOffer = (next: AuthoredTraitOfferTraits): void =>
     onSelect(Object.freeze({ ...value, traitOffer: next }));
   return (
@@ -535,7 +537,7 @@ function EchoLastRewardEditor({
           </select>
         </label>
       ) : null}
-      <button onClick={() => onSelect(domain.defaultValue)} type="button">
+      <button onClick={() => onSelect(domain.initialValue)} type="button">
         Reset replay decisions
       </button>
     </fieldset>
@@ -900,16 +902,18 @@ export function TraitOfferLauncher({
     workspaceInteractionKey(control.address),
   );
   const selected =
-    control.offer.kind === 'traits'
+    control.offer?.kind === 'traits'
       ? control.offer.options[OPTION_KEYS.indexOf(control.offer.selectedOptionKey)]
       : undefined;
   const label =
-    control.offer.kind === 'fallbackGold'
-      ? 'Fallback Gold'
-      : selected === undefined
-        ? 'Choose trait'
-        : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
-          selected.traitKey);
+    control.offer === null
+      ? 'Choose trait'
+      : control.offer.kind === 'fallbackGold'
+        ? 'Fallback Gold'
+        : selected === undefined
+          ? 'Choose trait'
+          : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
+            selected.traitKey);
   const rarity = selected?.rarity === undefined ? '' : ` · ${selected.rarity}`;
   return (
     <button
@@ -937,12 +941,37 @@ export function TraitOfferEditor({
     interactions.traitOffers,
     workspaceInteractionKey(address),
   );
-  const [value, setValue] = useState<AuthoredTraitOffer>(interaction.value);
+  const initialValue = interaction.value ?? interaction.traitsStartingDraft?.();
+  if (initialValue === undefined) {
+    return (
+      <div className="trait-offer-editor" role="status">
+        This trait offer is not available at the current route frontier.
+      </div>
+    );
+  }
+  return (
+    <LoadedTraitOfferEditor
+      initialValue={initialValue}
+      interaction={interaction}
+      key={traitOfferRevision(interaction)}
+      {...(onCommit === undefined ? {} : { onCommit })}
+    />
+  );
+}
+
+function LoadedTraitOfferEditor({
+  initialValue,
+  interaction,
+  onCommit,
+}: {
+  readonly initialValue: AuthoredTraitOffer;
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly onCommit?: (value: AuthoredTraitOffer) => void;
+}) {
+  const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
-  const [loadable, setLoadable] = useState(() =>
-    traitOfferLoadable(interaction, interaction.value),
-  );
+  const [loadable, setLoadable] = useState(() => traitOfferLoadable(interaction, initialValue));
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -984,15 +1013,6 @@ export function TraitOfferEditor({
     () => (value.kind === 'traits' ? interaction.nextTraitOfferDraft?.(value) : undefined),
     [interaction, value],
   );
-  const authoritativeInteractionRef = useRef(interaction);
-  useEffect(() => {
-    if (authoritativeInteractionRef.current === interaction) return;
-    authoritativeInteractionRef.current = interaction;
-    const nextLoadable = traitOfferLoadable(interaction, interaction.value);
-    setValue(interaction.value);
-    setLoadable(nextLoadable);
-    controller.activate(nextLoadable);
-  }, [controller, interaction]);
   useEffect(() => {
     controller.activate(loadable);
     // Activation is deliberately tied to the opened dialog, not to render.

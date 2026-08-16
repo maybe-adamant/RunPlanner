@@ -134,12 +134,24 @@ export function assertFineGrainedFindingDestination(
           .find((route) => route.routeKey === destination.routeKey)
           ?.biomes.find((biome) => biome.biomeKey === destination.biomeKey)
           ?.nodes.find((node) => node.key === destination.nodeKey);
+  const exactFrontier =
+    destination?.routeKey === undefined ||
+    destination.biomeKey === undefined ||
+    destination.inspectorSubject?.kind !== 'frontier'
+      ? undefined
+      : routes
+          .find((route) => route.routeKey === destination.routeKey)
+          ?.biomes.find((biome) => biome.biomeKey === destination.biomeKey)?.frontier?.marker
+          .focusKey === destination.inspectorSubject.frontierFocusKey;
   if (
     semanticAddressKey(destination.ownerAddress) !== key ||
     destination.region !== 'structure' ||
-    destination.inspectorSubject?.kind !== 'node' ||
-    destination.inspectorSubject.nodeKey !== destination.nodeKey ||
-    exactNode === undefined
+    !(
+      (destination.inspectorSubject?.kind === 'node' &&
+        destination.inspectorSubject.nodeKey === destination.nodeKey &&
+        exactNode !== undefined) ||
+      exactFrontier === true
+    )
   ) {
     throw new StructuredWorkspaceProjectionContractError(
       `${key} finding has no exact workspace inspector destination`,

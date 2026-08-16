@@ -38,9 +38,18 @@ describe('authored-project Ship occurrence commands', () => {
       value,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitSelection',
+      kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(offer, 'source'),
-      selectedOptionKey: 'option2',
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
     });
 
     expect(

@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 41 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 42 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -14,16 +14,16 @@ export type OccurrenceId = string & {
 };
 
 export interface ShopOfferState {
-  readonly reward: AuthoredRewardState;
+  readonly reward: AuthoredRewardState | null;
 }
 
-export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer>>;
+export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer | null>>;
 export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;
 
 export type AcquisitionDisposition =
   | { readonly kind: 'normal' }
   | { readonly kind: 'timePiece' }
-  | { readonly kind: 'artificer'; readonly replacement: AuthoredRewardState };
+  | { readonly kind: 'artificer'; readonly replacement: AuthoredRewardState | null };
 
 export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
@@ -80,14 +80,14 @@ export interface ShopState {
 export interface AuthoredAcquisitionSiteState {
   readonly order: readonly string[];
   /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
-  readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
+  readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
 }
 
 export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
-  readonly cages: Readonly<Record<string, AuthoredRewardState>>;
+  readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly optionalRewardCount: number;
-  readonly optionalRewards: Readonly<Record<string, AuthoredRewardState>>;
+  readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly actionOrder: readonly FieldsCombatAction[];
 }
 
@@ -105,7 +105,7 @@ export type FieldsCombatAction =
 export interface RewardWheelState {
   readonly storeKey: string;
   readonly offerCount: number;
-  readonly offers: Readonly<Record<string, AuthoredRewardState>>;
+  readonly offers: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly pickedOfferIndex: number;
 }
 
@@ -145,13 +145,13 @@ export interface RoomEncounterState {
 export interface EphyraSideRoomState {
   readonly generation: SideRoomGeneration;
   readonly enteredOrdinal: number | null;
-  readonly reward: AuthoredRewardState;
+  readonly reward: AuthoredRewardState | null;
   readonly encounters: RoomEncounterState;
 }
 
 export interface EphyraCombatState {
   readonly kind: 'ephyraCombat';
-  readonly reward: AuthoredRewardState;
+  readonly reward: AuthoredRewardState | null;
   readonly sideRooms: Readonly<Record<string, EphyraSideRoomState>>;
 }
 
@@ -162,20 +162,20 @@ export interface EphyraCombatState {
  */
 export interface AnomalyRoomState {
   readonly kind: 'anomaly';
-  readonly reward: AuthoredRewardState;
+  readonly reward: AuthoredRewardState | null;
   readonly success: boolean;
 }
 
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
-  | { readonly kind: 'fixed'; readonly reward: AuthoredRewardState }
-  | { readonly kind: 'counted'; readonly reward: AuthoredRewardState }
+  | { readonly kind: 'fixed'; readonly reward: AuthoredRewardState | null }
+  | { readonly kind: 'counted'; readonly reward: AuthoredRewardState | null }
   | AnomalyRoomState
   | EphyraCombatState
   | FieldsCombatState
   | ShipCombatState
   | { readonly kind: 'shop'; readonly shop?: ShopState }
-  | { readonly kind: 'freeReward'; readonly reward: AuthoredRewardState };
+  | { readonly kind: 'freeReward'; readonly reward: AuthoredRewardState | null };
 
 export type BatchRewardStoreState =
   | { readonly kind: 'authoredBaseStore'; readonly baseRewardStoreKey: string | null }

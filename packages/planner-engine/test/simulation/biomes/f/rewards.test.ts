@@ -94,6 +94,59 @@ function replaceIncoming(
   });
 }
 
+function authorOpening(project: ProjectDocument, occurrenceId: OccurrenceId): ProjectDocument {
+  const rewarded = replaceIncoming(project, occurrenceId, {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+  });
+  return applyProjectCommand(rewarded, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+}
+
+function authorWorldShop(project: ProjectDocument, occurrenceId: OccurrenceId): ProjectDocument {
+  let next = project;
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    MajorNonBoon: { rewardType: 'WeaponUpgradeDrop' },
+    Minor: { rewardType: 'MaxManaDrop' },
+  } satisfies Readonly<Record<string, ResolvedRewardOffer>>)) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, occurrenceId, offerKey),
+      value,
+    });
+  }
+  return applyProjectCommand(next, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createShopOfferAddress(biome, occurrenceId, 'Boon'), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+        { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+}
+
 function addBatch(
   project: ProjectDocument,
   parentId: OccurrenceId,
@@ -125,13 +178,18 @@ function addBatch(
       next = replaceIncoming(next, target.id, target.offer);
     }
   }
-  return targets.length > 1
-    ? applyProjectCommand(next, catalog, {
-        kind: 'SetExitSelection',
-        selection: createExitSelectionAddress(biome, decision.source),
-        value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
-      })
-    : next;
+  if (targets.length > 1) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, decision.source),
+      value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
+    });
+  }
+  const selectedTarget = targets[pickedExitIndex - 1];
+  if (selectedTarget?.gameName === 'F_Shop01') {
+    next = authorWorldShop(next, selectedTarget.id);
+  }
+  return next;
 }
 
 function addTakeover(
@@ -160,11 +218,34 @@ function addTakeover(
       value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
     });
   }
+  if (pickedExitIndex === 1) {
+    next = authorWorldShop(next, targetIds[0]!);
+  }
+  if (targetIds.length > 1) {
+    next = replaceIncoming(next, targetIds[1]!, {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    });
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(biome, targetIds[1]!), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+          { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+          { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+  }
   return next;
 }
 
-function evaluate(project: ProjectDocument) {
-  project = authorLegalTraitOffers(project);
+function evaluate(project: ProjectDocument, authorTraits = true) {
+  if (authorTraits) project = authorLegalTraitOffers(project);
   const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
   const history = composeBiomeHistory(catalog, snapshot);
   return {
@@ -204,11 +285,35 @@ function ratioBoundaryProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
-  project = addBatch(project, start, 'MetaProgress', [{ id: meta, gameName: 'F_Combat02' }]);
+  project = authorOpening(project, start);
+  project = addBatch(project, start, 'MetaProgress', [
+    { id: meta, gameName: 'F_Combat02', offer: { rewardType: 'GiftDrop' } },
+  ]);
   project = addBatch(project, meta, 'RunProgress', [
-    { id: run, gameName: 'F_Combat03' },
+    {
+      id: run,
+      gameName: 'F_Combat03',
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+      },
+    },
     { id: runPeer, gameName: 'F_Combat07', offer: { rewardType: 'MaxHealthDrop' } },
   ]);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, run), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   project = addBatch(project, run, 'MetaProgress', [
     { id: mixed, gameName: 'F_Combat04', offer: { rewardType: 'MetaCurrencyDrop' } },
     {
@@ -239,6 +344,7 @@ function refillProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
+  project = authorOpening(project, start);
   let parent = start;
   rooms.forEach((id, index) => {
     project = addBatch(project, parent, 'MetaProgress', [
@@ -320,7 +426,9 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     gameName: 'F_Opening01',
   });
   project = replaceIncoming(project, start, { rewardType: 'WeaponUpgrade' });
-  project = addBatch(project, start, 'MetaProgress', [{ id: meta, gameName: 'F_Combat02' }]);
+  project = addBatch(project, start, 'MetaProgress', [
+    { id: meta, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
+  ]);
   project = addBatch(project, meta, 'RunProgress', [
     { id: boon, gameName: 'F_Combat03' },
     { id: createOccurrenceId('same-room-peer-1'), gameName: 'F_Story01' },
@@ -383,6 +491,7 @@ function shopTimingProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
+  project = authorOpening(project, start);
   project = addBatch(project, start, 'MetaProgress', [
     {
       id: first,
@@ -492,9 +601,11 @@ function invalidShopOfferProject(): ProjectDocument {
     gameName: 'F_Opening01',
   });
   project = replaceIncoming(project, start, { rewardType: 'WeaponUpgrade' });
-  project = addBatch(project, start, 'MetaProgress', [{ id: first, gameName: 'F_Combat02' }]);
+  project = addBatch(project, start, 'MetaProgress', [
+    { id: first, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
+  ]);
   project = addBatch(project, first, 'RunProgress', [
-    { id: source, gameName: 'F_Combat03' },
+    { id: source, gameName: 'F_Combat03', offer: { rewardType: 'MaxManaDrop' } },
     { id: peer, gameName: 'F_Story01' },
   ]);
   return addTakeover(project, source, [
@@ -515,6 +626,7 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
+  project = authorOpening(project, start);
   project = addBatch(project, start, 'MetaProgress', [
     {
       id: combat,
@@ -545,6 +657,26 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
       },
     },
   ]);
+  for (const [occurrenceId, giverKey, options] of [
+    [combat, 'Poseidon', ['PoseidonWeaponBoon', 'PoseidonSpecialBoon', 'PoseidonCastBoon']],
+    [miniboss1, 'Hestia', ['HestiaWeaponBoon', 'HestiaSprintBoon', 'HestiaManaBoon']],
+    [miniboss2, 'Zeus', ['ZeusWeaponBoon', 'ZeusSprintBoon', 'ZeusManaBoon']],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey,
+        options: options.map((traitKey) => ({ traitKey, rarity: 'Common' })) as [
+          { traitKey: string; rarity: 'Common' },
+          { traitKey: string; rarity: 'Common' },
+          { traitKey: string; rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+  }
   project = addBatch(project, miniboss2, 'MetaProgress', [{ id: shop, gameName: 'F_Shop01' }]);
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
@@ -552,6 +684,20 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
     value: {
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'hiddenSource'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'DemeterWeaponBoon', rarity: 'Common' },
+        { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+        { traitKey: 'CastNovaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
     },
   });
   project = applyProjectCommand(project, catalog, {
@@ -582,7 +728,10 @@ function devotionProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
-  project = addBatch(project, start, 'MetaProgress', [{ id: meta1, gameName: 'F_Combat02' }]);
+  project = authorOpening(project, start);
+  project = addBatch(project, start, 'MetaProgress', [
+    { id: meta1, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
+  ]);
   project = addBatch(project, meta1, 'RunProgress', [
     {
       id: run1,
@@ -762,7 +911,7 @@ describe('F reward-history simulation', () => {
   });
 
   it('replays a later forced target store across earlier ordinary peers', () => {
-    let project = ratioBoundaryProject();
+    let project = authorLegalTraitOffers(ratioBoundaryProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-mixed-peer')),
@@ -772,14 +921,14 @@ describe('F reward-history simulation', () => {
     if (forcedBinding?.kind !== 'countedChoice') {
       throw new Error('F_Combat01 must retain its counted reward binding');
     }
-    const forcedOffer = forcedBinding.defaultOffersByStore.RunProgress;
-    if (forcedOffer === undefined) throw new Error('F_Combat01 must default from RunProgress');
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed-peer'), forcedOffer);
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed'), {
+    project = replaceIncoming(project, createOccurrenceId('ratio-mixed-peer'), {
       rewardType: 'MaxHealthDrop',
     });
+    project = replaceIncoming(project, createOccurrenceId('ratio-mixed'), {
+      rewardType: 'MaxManaDrop',
+    });
 
-    const result = evaluate(project);
+    const result = evaluate(project, false);
     const batch = result.snapshot.decisions[2];
     if (batch?.kind !== 'batch') throw new Error('ratio fixture lost its third batch');
 
@@ -1072,7 +1221,11 @@ describe('F reward-history simulation', () => {
 
   it('retains the blocked Shop acquisition-order repair while withholding its suffix', () => {
     const batches = [
-      { targets: ['F_Combat02'], pickedExitIndex: 1 },
+      {
+        targets: ['F_Combat02'],
+        pickedExitIndex: 1,
+        offers: [{ rewardType: 'GiftDrop' }],
+      },
       {
         targets: ['F_Combat03', 'F_Combat03'],
         pickedExitIndex: 1,
@@ -1388,6 +1541,7 @@ describe('F reward-history simulation', () => {
       occurrenceId: start,
       gameName: 'F_Opening01',
     });
+    project = authorOpening(project, start);
     project = addBatch(project, start, 'MetaProgress', [
       { id: replacedCombat, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
     ]);

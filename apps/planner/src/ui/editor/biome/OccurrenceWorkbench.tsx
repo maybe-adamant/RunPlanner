@@ -905,7 +905,6 @@ function ShopWorkbench({
                           (offer.kind === 'travelDealRefill' ||
                             offer.kind === 'echoDoubleShopReward') &&
                             !offer.materialized &&
-                            offer.defaultValue !== undefined &&
                             offerKeys.includes(offer.key)
                             ? authoredProjectCommandDispatched({
                                 kind: 'SelectDerivedShopEntry',
@@ -915,7 +914,7 @@ function ShopWorkbench({
                                     ? 'travelDealRefill'
                                     : 'echoDoubleShopReward',
                                 entryKeys: offerKeys,
-                                defaultValue: offer.defaultValue,
+                                sourceOfferKey: offer.sourceOfferKey,
                               })
                             : authoredProjectCommandDispatched({
                                 kind: 'ReplaceAcquisitionOrder',
@@ -1014,10 +1013,18 @@ export function AcquisitionsWorkbench({
                 control={entry.rewardControl}
                 idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
                 interactions={interactions}
-                showOffer={entry.rewardControl.offer.payload !== undefined}
-                offerStartStep={
-                  entry.rewardControl.offer.payload?.kind === 'BoonSource' ? 'source' : 'chosen'
+                showOffer={
+                  entry.rewardControl.offer?.payload !== undefined ||
+                  entry.rewardControl.offer === null
                 }
+                {...(entry.rewardControl.offer === null
+                  ? {}
+                  : {
+                      offerStartStep:
+                        entry.rewardControl.offer.payload?.kind === 'BoonSource'
+                          ? ('source' as const)
+                          : ('chosen' as const),
+                    })}
               />
             )}
           </div>

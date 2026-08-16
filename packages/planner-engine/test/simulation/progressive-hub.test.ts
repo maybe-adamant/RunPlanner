@@ -69,6 +69,28 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     biome: nBiome,
     occurrenceId: opening,
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, opening),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(nBiome, opening), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Aphrodite',
+      options: [
+        { traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
+        { traitKey: 'AphroditeSpecialBoon', rarity: 'Common' },
+        { traitKey: 'AphroditeCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   const openingDecision = createExitDecisionAddress(nBiome, {
     kind: 'occurrence',
     occurrenceId: opening,
@@ -82,6 +104,14 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
     occurrenceId: preHub,
     gameName: 'N_PreHub01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, preHub),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -147,6 +177,23 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
         value,
       });
     }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, createOccurrenceId('progressive-n-combat05')),
+        'self',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+          { traitKey: 'SorcerySpeedBoon', rarity: 'Common' },
+          { traitKey: 'DodgeChanceBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
   }
   return authorLegalTraitOffers(project);
 }
@@ -340,7 +387,7 @@ describe('Hub progressive biome evaluation', () => {
     });
     const biome = nEvaluation(project);
 
-    expect(biome.coverage).toMatchObject({
+    expect(biome.coverage, JSON.stringify(biome.findings)).toMatchObject({
       kind: 'prefix',
       through: {
         owner: createHubVisitAddress(nBiome, 'hub', 1),

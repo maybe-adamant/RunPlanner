@@ -19,7 +19,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
-import { createDefaultDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 
 import {
   fBiome,
@@ -156,14 +156,15 @@ describe('authored-project route detour commands', () => {
       .flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((occurrence) => occurrence.occurrenceId === target);
     if (encodedAnomaly === undefined) throw new Error('encoded Anomaly occurrence is missing');
-    const encodedReward = encodedAnomaly.state.reward as Record<string, unknown>;
     const infernalContractOffer = { rewardType: 'InfernalContractBoon' } as const;
-    encodedReward.offer = infernalContractOffer;
-    encodedReward.dispositionByAcquisitionRole = createDefaultDispositionByAcquisitionRole(
-      catalog,
-      infernalContractOffer,
-    );
-    encodedReward.traitOffersByAcquisitionRole = {};
+    encodedAnomaly.state.reward = {
+      offer: infernalContractOffer,
+      dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(
+        catalog,
+        infernalContractOffer,
+      ),
+      traitOffersByAcquisitionRole: {},
+    };
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       /InfernalContractBoon is filtered from this room/,
     );

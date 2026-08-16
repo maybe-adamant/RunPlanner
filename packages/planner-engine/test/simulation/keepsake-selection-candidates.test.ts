@@ -15,6 +15,7 @@ import {
   createArcanaFearState,
   createPreparedProjectCandidateSession,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -317,18 +318,50 @@ describe('keepsake selection candidates', () => {
       selection: start,
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
-    startProject = {
-      ...startProject,
-      routes: startProject.routes.map((route) => {
-        if (route.routeKey !== 'Underworld') return route;
-        const { keepsakeEquipResults: _discarded, ...loadout } = route.loadout;
-        void _discarded;
-        return { ...route, loadout };
-      }),
-    };
     const startResult = createKeepsakeEquipResultAddress(start, 'jeweledPom');
-    expect(simulateProjectAssembly(catalog, startProject).evaluation.findings).toContainEqual(
+    const missingStart = simulateProjectAssembly(catalog, startProject);
+    expect(missingStart.evaluation).toMatchObject({
+      status: 'incomplete',
+      summary: {
+        evaluatedBiomeCount: 0,
+        validatedBiomeCount: 0,
+        blockedBiomeCount: 2,
+        eligibleForExecutionPlan: false,
+      },
+    });
+    expect(missingStart.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: startResult }),
+    );
+    expect(missingStart.evaluation.routes[0]).toMatchObject({
+      status: 'incomplete',
+      biomes: [],
+      processing: { completeValidPrefix: [], active: null, blockedSuffix: ['F', 'G'] },
+      summary: {
+        evaluatedBiomeCount: 0,
+        validatedBiomeCount: 0,
+        blockedBiomeCount: 2,
+        eligibleForExecutionPlan: false,
+      },
+    });
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(missingStart, startResult),
+    ).toBeDefined();
+    const completedStart = applyProjectCommand(startProject, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: startResult,
+      value: { traitKey: 'HadesLifestealBoon' },
+    });
+    const resumedStart = simulateProjectAssembly(catalog, completedStart).evaluation.routes[0];
+    expect(resumedStart).toMatchObject({
+      status: 'valid',
+      processing: { completeValidPrefix: ['F', 'G'], active: null, blockedSuffix: [] },
+      summary: { evaluatedBiomeCount: 2, validatedBiomeCount: 2, eligibleForExecutionPlan: true },
+    });
+    const resumedF = resumedStart?.biomes[0];
+    if (resumedF === undefined || !('rewards' in resumedF))
+      throw new Error('completed route-start Jeweled Pom did not resume F');
+    expect(resumedF.rewards.branches[0]?.traitHistory?.equippedTraits).toHaveProperty(
+      'HadesLifestealBoon',
     );
     startProject = applyProjectCommand(
       applyProjectCommand(startProject, catalog, {
@@ -360,18 +393,6 @@ describe('keepsake selection candidates', () => {
       selection: fPostboss,
       value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
     });
-    postbossProject = {
-      ...postbossProject,
-      routes: postbossProject.routes.map((route) => ({
-        ...route,
-        biomes: route.biomes.map((biome) => {
-          if (route.routeKey !== 'Underworld' || biome.biomeKey !== 'F') return biome;
-          const { keepsakeEquipResults: _discarded, ...withoutResult } = biome;
-          void _discarded;
-          return withoutResult;
-        }),
-      })),
-    };
     const postbossResult = createKeepsakeEquipResultAddress(fPostboss, 'jeweledPom');
     expect(simulateProjectAssembly(catalog, postbossProject).evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: postbossResult }),
@@ -395,6 +416,7 @@ describe('keepsake selection candidates', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
+    project = withPomResult(project, createRouteStartKeepsakeSelectionAddress('Underworld'));
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,

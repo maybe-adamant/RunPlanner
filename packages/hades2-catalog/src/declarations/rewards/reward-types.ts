@@ -1,16 +1,5 @@
 import type { RawConcreteAcquisitionDeclaration, RawRewardTypeDeclaration } from './types';
 
-const boonDefault = Object.freeze({
-  kind: 'BoonSource' as const,
-  source: 'ApolloUpgrade',
-});
-
-const devotionDefault = Object.freeze({
-  kind: 'DevotionPair' as const,
-  chosenSource: 'ApolloUpgrade',
-  spurnedSource: 'ZeusUpgrade',
-});
-
 function directReward(
   gameName: string,
   label: string,
@@ -80,7 +69,6 @@ export const rewardTypes = [
     gameName: 'Boon',
     label: 'Boon',
     payloadDomain: 'BoonSource',
-    defaultPayload: boonDefault,
     sourceSupport: 'ordinaryBoonPeer',
     sourceResolution: { kind: 'offer' },
     acquisitionRoles: [
@@ -94,7 +82,6 @@ export const rewardTypes = [
     gameName: 'Devotion',
     label: 'Trial',
     payloadDomain: 'DevotionPair',
-    defaultPayload: devotionDefault,
     sourceSupport: 'devotionAcquiredPair',
     sourceResolution: { kind: 'offer' },
     offerProjection: 'devotionSpacing',
@@ -113,7 +100,6 @@ export const rewardTypes = [
     gameName: 'RandomLoot',
     label: 'Boon',
     payloadDomain: 'BoonSource',
-    defaultPayload: boonDefault,
     sourceSupport: 'ordinaryNoPeer',
     sourceResolution: { kind: 'offer' },
     acquisitionRoles: [
@@ -127,7 +113,6 @@ export const rewardTypes = [
     gameName: 'BlindBoxLoot',
     label: 'Mystery Boon',
     payloadDomain: 'BoonSource',
-    defaultPayload: boonDefault,
     sourceSupport: 'ordinaryNoPeer',
     sourceResolution: { kind: 'acquisitionRole', role: 'hiddenSource' },
     acquisitionRoles: [

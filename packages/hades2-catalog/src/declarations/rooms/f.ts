@@ -1043,7 +1043,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         'TalentBigDrop',
         'TalentDrop',
       ],
-      defaultRewardType: 'BlindBoxLoot',
     },
     prebossBatchPolicy: {
       kind: 'takeOverNormalDoors',

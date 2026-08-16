@@ -132,7 +132,7 @@ export {
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredEchoLastRewardAcquisition,
-  createDefaultEchoLastRewardAcquisition,
+  createUnresolvedEchoLastRewardAcquisition,
   type AuthoredCirceResolution,
   type EquippedTrait,
   type TraitOptionKey,
@@ -141,7 +141,7 @@ export {
 export {
   shopProfileUsesDeathDefianceCondition,
   shopAcquisitionOrderProposals,
-  createDefaultInfernalContractEntries,
+  createInfernalContractEntries,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,

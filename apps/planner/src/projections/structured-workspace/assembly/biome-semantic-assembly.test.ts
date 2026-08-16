@@ -14,6 +14,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -466,6 +467,29 @@ describe('structured workspace biome semantic assembly', () => {
       gameName: 'F_Opening01',
       kind: 'CreateStart',
       occurrenceId: openingId,
+    });
+    const openingReward = createIncomingRewardAddress(goldenFBiome, openingId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: openingReward,
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(openingReward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     project = applyProjectCommand(project, catalog, {
       decision: openingDecision,

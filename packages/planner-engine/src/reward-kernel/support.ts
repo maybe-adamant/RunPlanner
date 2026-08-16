@@ -160,7 +160,7 @@ export function supportedPayloads(
 ): readonly RewardPayload[] {
   switch (rewardType.sourceSupport) {
     case undefined:
-      return rewardType.defaultPayload === undefined ? [] : [rewardType.defaultPayload];
+      return [];
     case 'ordinaryBoonPeer':
       return [...ordinaryPeerSupport(catalog, rewardType, facts, peers)].map((source) => ({
         kind: 'BoonSource',

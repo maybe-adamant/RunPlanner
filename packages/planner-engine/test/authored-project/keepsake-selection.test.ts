@@ -8,6 +8,7 @@ import {
   createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -60,7 +61,7 @@ describe('keepsake authored selections', () => {
     );
   });
 
-  it('installs declaration-owned Jeweled Pom defaults and restores dormant authored results', () => {
+  it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'jeweled-pom-defaults',
       name: 'Jeweled Pom defaults',
@@ -79,9 +80,7 @@ describe('keepsake authored selections', () => {
     expect(
       project.routes.find((route) => route.routeKey === 'Underworld')?.loadout.keepsakeEquipResults
         ?.jeweledPom,
-    ).toEqual({
-      traitKey: 'HadesLifestealBoon',
-    });
+    ).toBeUndefined();
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceJeweledPomEquipResult',
@@ -132,11 +131,68 @@ describe('keepsake authored selections', () => {
     expect(
       project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0]
         ?.keepsakeEquipResults?.jeweledPom,
-    ).toEqual({
-      traitKey: 'HadesLifestealBoon',
+    ).toBeUndefined();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: createKeepsakeEquipResultAddress(postboss, 'jeweledPom'),
+      value: { traitKey: 'HadesLifestealBoon' },
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: postboss,
+      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: postboss,
+      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+    });
+    expect(
+      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0]
+        ?.keepsakeEquipResults?.jeweledPom,
+    ).toEqual({ traitKey: 'HadesLifestealBoon' });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
+  });
+
+  it('retains an authored Experimental Hammer result across dormancy and loadout invalidation', () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'hammer-result-retention',
+      name: 'Hammer result retention',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'TempHammerKeepsake',
+    });
+    expect(project.routes[0]?.loadout.keepsakeEquipResults?.experimentalHammer).toBeUndefined();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result: createKeepsakeEquipResultAddress(start, 'experimentalHammer'),
+      value: { kind: 'selected', traitKey: 'StaffLongAttackTrait' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'TempHammerKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Underworld'),
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerBackstabAspect',
+    });
+    expect(project.routes[0]?.loadout.keepsakeEquipResults?.experimentalHammer).toEqual({
+      kind: 'selected',
+      traitKey: 'StaffLongAttackTrait',
+    });
   });
 });

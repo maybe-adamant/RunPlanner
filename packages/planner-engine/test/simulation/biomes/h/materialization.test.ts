@@ -37,7 +37,6 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures';
-import { createDefaultAcquisitionRewardState } from '../../../../src/authored-project/traits';
 
 const biome = createBiomeAddress('Underworld', 'H');
 
@@ -139,6 +138,40 @@ function catalogWithNarrowFieldsOptionalSupport(
           candidate.gameName === gameName ? replacement : candidate,
         ),
       ),
+    }),
+  });
+}
+
+function catalogWithSingleFieldsMaxManaEntry(): Catalog {
+  const store = catalog.rewards.stores.byKey.FieldsOptionalRewards;
+  if (store === undefined) throw new Error('catalog has no Fields optional reward store');
+  let retainedMaxMana = false;
+  const replacement = Object.freeze({
+    ...store,
+    entries: Object.freeze(
+      store.entries.filter((entry) => {
+        if (entry.rewardType !== 'MaxManaDropSmall') return true;
+        if (retainedMaxMana) return false;
+        retainedMaxMana = true;
+        return true;
+      }),
+    ),
+  });
+  return Object.freeze({
+    ...catalog,
+    rewards: Object.freeze({
+      ...catalog.rewards,
+      stores: Object.freeze({
+        values: Object.freeze(
+          catalog.rewards.stores.values.map((candidate) =>
+            candidate.key === replacement.key ? replacement : candidate,
+          ),
+        ),
+        byKey: Object.freeze({
+          ...catalog.rewards.stores.byKey,
+          [replacement.key]: replacement,
+        }),
+      }),
     }),
   });
 }
@@ -595,14 +628,6 @@ describe('H Fields materialization', () => {
       route: createRouteAddress('Underworld'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    const hammer = createDefaultAcquisitionRewardState(
-      catalog,
-      { rewardType: 'WeaponUpgrade' },
-      traitContext(project),
-      { kind: 'producerLifecycle', key: 'RoomReward' },
-    );
-    const defaultHammerOffer = hammer.traitOffersByAcquisitionRole.self;
-    if (defaultHammerOffer?.kind !== 'traits') throw new Error('Hammer trait offer is missing');
     for (const [index, slotKey] of sources.entries()) {
       const owner = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey);
       project = applyProjectCommand(project, catalog, {
@@ -618,26 +643,29 @@ describe('H Fields materialization', () => {
         value: {
           kind: 'artificer',
           replacement: Object.freeze({
-            ...hammer,
+            offer: { rewardType: 'WeaponUpgrade' },
             traitOffersByAcquisitionRole: Object.freeze({
               self: Object.freeze({
-                ...defaultHammerOffer,
+                kind: 'traits',
+                giverKey: 'WeaponUpgrade',
                 options: Object.freeze(
                   index === 0
-                    ? [
+                    ? ([
                         { traitKey: 'StaffAttackRecoveryTrait' },
                         { traitKey: 'StaffPowershotTrait' },
                         { traitKey: 'StaffFastSpecialTrait' },
-                      ]
-                    : [
+                      ] as const)
+                    : ([
                         { traitKey: 'StaffJumpSpecialTrait' },
                         { traitKey: 'StaffExAoETrait' },
                         { traitKey: 'StaffSecondStageTrait' },
-                      ],
-                ) as typeof defaultHammerOffer.options,
+                      ] as const),
+                ),
                 selectedOptionKey: 'option1',
+                rarificationActions: Object.freeze([]),
               }),
             }),
+            dispositionByAcquisitionRole: Object.freeze({ self: { kind: 'normal' as const } }),
           }),
         },
       });
@@ -651,7 +679,7 @@ describe('H Fields materialization', () => {
         const disposition =
           authoredState.optionalRewards[slotKey]?.dispositionByAcquisitionRole.self;
         return disposition?.kind === 'artificer'
-          ? disposition.replacement.traitOffersByAcquisitionRole.self?.kind === 'traits'
+          ? disposition.replacement?.traitOffersByAcquisitionRole.self?.kind === 'traits'
             ? disposition.replacement.traitOffersByAcquisitionRole.self.selectedOptionKey
             : undefined
           : undefined;
@@ -715,12 +743,11 @@ describe('H Fields materialization', () => {
   it('keeps a cage-owned Artificer replacement as a required dependent action', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
-    const replacement = createDefaultAcquisitionRewardState(
-      catalog,
-      { rewardType: 'RoomMoneyDrop' },
-      traitContext(createGoldenFGHProject()),
-      { kind: 'producerLifecycle', key: 'RoomReward' },
-    );
+    const replacement = Object.freeze({
+      offer: { rewardType: 'RoomMoneyDrop' as const },
+      traitOffersByAcquisitionRole: Object.freeze({}),
+      dispositionByAcquisitionRole: Object.freeze({ self: { kind: 'normal' as const } }),
+    });
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(cage, 'self'),
@@ -786,7 +813,7 @@ describe('H Fields materialization', () => {
       {
         kind: 'localReward',
         reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
-        value: reward.offer,
+        value: reward!.offer,
       },
       {
         kind: 'localReward',
@@ -835,6 +862,41 @@ describe('H Fields materialization', () => {
         .find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((candidate) => candidate.biomeKey === 'H'),
     ).toMatchObject({ authoring: 'complete', validity: 'valid' });
+  });
+
+  it('discards a failed first Fields completion before accepting a later sibling proposal', () => {
+    const combat02 = createOccurrenceId('golden-h-combat02');
+    const combat09 = createOccurrenceId('golden-h-combat09');
+    const combat05 = createOccurrenceId('golden-h-combat05');
+    let project = createGoldenFGHProject();
+    for (const [occurrenceId, optionalRewardCount] of [
+      [combat02, 0],
+      [combat09, 0],
+      [combat05, 4],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsOptionalRewardCount',
+        occurrence: createOccurrenceAddress(biome, occurrenceId),
+        optionalRewardCount,
+      });
+    }
+    // With one Max Magick store entry, optional3 consumes the focused value;
+    // optional4's first same-value proposal fails before its next proposal
+    // completes the cohort.
+    const narrowedCatalog = catalogWithSingleFieldsMaxManaEntry();
+    const result = createPreparedProjectCandidateSession(
+      narrowedCatalog,
+      simulateProjectAssembly(narrowedCatalog, project),
+    ).evaluate({
+      kind: 'localReward',
+      reward: createLocalRewardAddress(biome, combat05, 'optionalRewards', 'optional3'),
+      value: { rewardType: 'MaxManaDropSmall' },
+    });
+
+    expect(result).toMatchObject({
+      kind: 'localReward',
+      result: { supported: true, findings: [] },
+    });
   });
 
   it('settles only active cage slots at their exact local reward sites', () => {
@@ -1008,20 +1070,29 @@ describe('H Fields materialization', () => {
       lifecycleProfileKey: 'FieldsCombatRoom',
       encounterEnvelopeKey: 'FieldsEncounter',
     });
-    expect(minCombat?.localRewards?.map((reward) => reward.slotKey)).toEqual(['cage1', 'cage2']);
-    expect(minCombat?.localRewards?.[1]).toMatchObject({
+    expect(minCombat?.unresolvedLocalRewards?.map((reward) => reward.slotKey)).toEqual([
+      'cage1',
+      'cage2',
+    ]);
+    expect(minCombat?.unresolvedLocalRewards?.[1]).toMatchObject({
       groupKey: 'cages',
       encounterPhaseKey: 'Cage02',
       resolvedStoreKey: 'RunProgress',
     });
-    expect(semanticAddressKey(minCombat!.localRewards![1]!.origin)).toBe(
+    expect(semanticAddressKey(minCombat!.unresolvedLocalRewards![1]!.origin)).toBe(
       '["localReward","Underworld","H","h-materialized-combat02","cages","cage2"]',
     );
 
-    expect(batches[2]?.targets.every((target) => target.room.localRewards === undefined)).toBe(
-      true,
+    expect(
+      batches[2]?.targets.every(
+        (target) =>
+          target.room.localRewards === undefined &&
+          target.room.unresolvedLocalRewards === undefined,
+      ),
+    ).toBe(true);
+    expect(batches[1]?.targets.map((target) => target.room.unresolvedLocalRewards?.length)).toEqual(
+      [2, 2],
     );
-    expect(batches[1]?.targets.map((target) => target.room.localRewards?.length)).toEqual([2, 2]);
     expect(batches[1]?.targets.map((target) => target.room.encounterEnvelopeKey)).toEqual([
       'FieldsEncounter',
       'FieldsEncounter',
@@ -1037,7 +1108,7 @@ describe('H Fields materialization', () => {
       cages: { cage1: expect.any(Object), cage2: expect.any(Object), cage3: expect.any(Object) },
     });
     expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(minCombat?.localRewards)).toBe(true);
+    expect(Object.isFrozen(minCombat?.unresolvedLocalRewards)).toBe(true);
   });
 
   it('materializes a supported three-cage Max without changing dormant leaves', () => {
@@ -1063,12 +1134,12 @@ describe('H Fields materialization', () => {
         { slotKey: 'Cage03', encounterKey: 'GeneratedH' },
       ],
     });
-    expect(maxCombat?.localRewards?.map((reward) => reward.slotKey)).toEqual([
+    expect(maxCombat?.unresolvedLocalRewards?.map((reward) => reward.slotKey)).toEqual([
       'cage1',
       'cage2',
       'cage3',
     ]);
-    expect(semanticAddressKey(maxCombat!.localRewards![2]!.origin)).toBe(
+    expect(semanticAddressKey(maxCombat!.unresolvedLocalRewards![2]!.origin)).toBe(
       '["localReward","Underworld","H","h-materialized-combat05","cages","cage3"]',
     );
   });

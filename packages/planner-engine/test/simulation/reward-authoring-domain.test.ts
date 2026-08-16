@@ -260,10 +260,6 @@ function oSourceOfferCatalog(): Catalog {
     allowedRewardTypes: Object.freeze([
       ...new Set([...run.entries, ...meta.entries].map((entry) => entry.rewardType)),
     ]),
-    defaultOffersByStore: Object.freeze({
-      RunProgress: run.defaultOffer,
-      MetaProgress: meta.defaultOffer,
-    }),
   });
   const unforced = { ...original };
   delete unforced.forcedRewardStoreKey;
@@ -329,9 +325,6 @@ function sourceOfferPointProject(testCatalog: Catalog): {
   const authoringCatalog = catalogWithRoom(
     Object.freeze({ ...targetDeclaration, forcedRewardStoreKey: 'RunProgress' }),
   );
-  // Creation needs one atomic counted default before source-offer materialization exists.
-  // The subsequent semantic edit is non-noop and therefore decodes the complete document
-  // against testCatalog, proving the final fixture is coherent with the resolution catalog.
   project = applyProjectCommand(project, authoringCatalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(oBiome, shipSource, 'exit1'),
@@ -343,7 +336,7 @@ function sourceOfferPointProject(testCatalog: Catalog): {
   project = applyProjectCommand(project, testCatalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(oBiome, targetId),
-    value: testCatalog.rewards.stores.byKey.MetaProgress!.defaultOffer,
+    value: { rewardType: 'TalentDrop' },
   });
   return { project, binding, targetId };
 }
@@ -430,10 +423,6 @@ describe('counted reward authoring domains', () => {
           [...ordinaryStore.entries, ...hardStore.entries].map((entry) => entry.rewardType),
         ),
       ]),
-      defaultOffersByStore: Object.freeze({
-        SubRoomRewards: ordinaryStore.defaultOffer,
-        SubRoomRewardsHard: hardStore.defaultOffer,
-      }),
     });
     const fallbackCatalog = catalogWithRoom(
       Object.freeze({

@@ -141,9 +141,26 @@ describe('F room possibility and generation validation', () => {
 
   it('evaluates entered-miniboss mutual exclusion from the later target history', () => {
     const batches = fGenerationBaselineBatches.map((batch, index): FGenerationBatchSpec => {
-      if (index === 5) return { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 1 };
-      if (index === 6) return { targets: ['F_MiniBoss02'], pickedExitIndex: 1 };
-      if (index === 7) return { targets: [batch.targets[0]!], pickedExitIndex: 1 };
+      if (index === 5)
+        return {
+          targets: ['F_MiniBoss01', 'F_Combat20'],
+          pickedExitIndex: 1,
+          ...(batch.offers === undefined ? {} : { offers: batch.offers }),
+        };
+      if (index === 6)
+        return {
+          targets: ['F_MiniBoss02'],
+          pickedExitIndex: 1,
+          offers: [
+            { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+          ],
+        };
+      if (index === 7)
+        return {
+          targets: [batch.targets[0]!],
+          pickedExitIndex: 1,
+          ...(batch.offers === undefined ? {} : { offers: batch.offers }),
+        };
       return batch;
     });
     const result = evaluate(createFGenerationProject(batches));
@@ -162,7 +179,13 @@ describe('F room possibility and generation validation', () => {
 
   it('rejects an ordinary room when the required forced pool is active', () => {
     const batches = fGenerationBaselineBatches.map((batch, index) =>
-      index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
+      index === 5
+        ? {
+            targets: ['F_Combat20', 'F_MiniBoss01'],
+            pickedExitIndex: 2,
+            ...(batch.offers === undefined ? {} : { offers: batch.offers }),
+          }
+        : batch,
     );
     const result = evaluate(createFGenerationProject(batches));
     const target = fGenerationTargetAddress(batches, 6, 1);
@@ -183,9 +206,26 @@ describe('F room possibility and generation validation', () => {
 
   it('separates creation caps from entered appearance caps', () => {
     const batches = fGenerationBaselineBatches.map((batch, index): FGenerationBatchSpec => {
-      if (index === 4) return { targets: ['F_Combat06', 'F_Story01'], pickedExitIndex: 1 };
-      if (index === 7) return { targets: ['F_Combat12', 'F_Story01'], pickedExitIndex: 1 };
-      if (index === 8) return { targets: ['F_Combat14', 'F_Combat11'], pickedExitIndex: 1 };
+      if (index === 4)
+        return {
+          targets: ['F_Combat06', 'F_Story01'],
+          pickedExitIndex: 1,
+          storeKey: 'MetaProgress',
+          offers: [{ rewardType: 'MetaCurrencyDrop' }, undefined],
+        };
+      if (index === 7)
+        return {
+          targets: ['F_Combat12', 'F_Story01'],
+          pickedExitIndex: 1,
+          offers: [{ rewardType: 'WeaponUpgrade' }, undefined],
+        };
+      if (index === 8)
+        return {
+          targets: ['F_Combat14', 'F_Combat11'],
+          pickedExitIndex: 1,
+          storeKey: 'MetaProgress',
+          ...(batch.offers === undefined ? {} : { offers: batch.offers }),
+        };
       return batch;
     });
     const result = evaluate(createFGenerationProject(batches));

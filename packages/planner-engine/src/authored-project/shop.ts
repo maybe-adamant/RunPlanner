@@ -1,46 +1,27 @@
 import type { Catalog } from '../catalog-schema';
 import type { RequirementExpression } from '../requirements';
 import type { ResolvedRewardOffer } from '../reward-kernel';
-import type { AuthoredRewardState, RoomOccurrence, RouteWeaponAspectLoadout } from './model';
-import { createDefaultAcquisitionRewardState } from './traits';
+import type { AuthoredRewardState, RoomOccurrence } from './model';
 
 export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
 export const ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY = 'echoDoubleShopReward' as const;
 
-export function createDefaultInfernalContractEntries(
+export function createInfernalContractEntries(
   catalog: Catalog,
   roomGameName: string,
-  loadout: RouteWeaponAspectLoadout,
-): Readonly<Record<string, AuthoredRewardState>> {
+): Readonly<Record<string, AuthoredRewardState | null>> {
   const descriptor = catalog.rooms.byKey[roomGameName]?.infernalContractReward;
   if (descriptor === undefined) return Object.freeze({});
-  const rewardType = catalog.rewards.rewardTypes.byKey[descriptor.defaultRewardType];
-  if (rewardType === undefined)
-    throw new Error(`unknown contract reward ${descriptor.defaultRewardType}`);
-  return Object.freeze({
-    [descriptor.entryKey]: createDefaultAcquisitionRewardState(
-      catalog,
-      Object.freeze({
-        rewardType: rewardType.gameName,
-        ...(rewardType.defaultPayload === undefined ? {} : { payload: rewardType.defaultPayload }),
-      }),
-      loadout,
-      { kind: 'producerLifecycle', key: descriptor.producerLifecycleKey },
-    ),
-  });
+  return Object.freeze({ [descriptor.entryKey]: null });
 }
 
 export function echoShopDuplicateOffer(
   catalog: Catalog,
   source: ResolvedRewardOffer,
-): ResolvedRewardOffer {
+): ResolvedRewardOffer | null {
   const declaration = catalog.rewards.rewardTypes.byKey[source.rewardType];
-  if (declaration?.sourceResolution?.kind !== 'acquisitionRole') return source;
-  return Object.freeze({
-    rewardType: source.rewardType,
-    ...(declaration.defaultPayload === undefined ? {} : { payload: declaration.defaultPayload }),
-  });
+  return declaration?.sourceResolution?.kind === 'acquisitionRole' ? null : source;
 }
 
 /** A hidden-source reward is freshly resolved by the duplicate acquisition;
@@ -62,7 +43,7 @@ export function authoredAcquisitionEntry(
   _catalog: Catalog,
   occurrence: RoomOccurrence,
   entryKey: string,
-): AuthoredRewardState | undefined {
+): AuthoredRewardState | null | undefined {
   return occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey];
 }
 

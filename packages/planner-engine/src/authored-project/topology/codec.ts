@@ -18,7 +18,7 @@ import type {
   RoomOccurrence,
   AuthoredRewardState,
 } from '../model';
-import { decodeRewardState, decodeRoomState } from '../room-state/codec';
+import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
 import { optionIndex } from '../traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -75,7 +75,7 @@ interface OccurrenceOwner {
 
 function isActiveArtificerReplacement(
   key: string,
-  entries: Readonly<Record<string, AuthoredRewardState>> | undefined,
+  entries: Readonly<Record<string, AuthoredRewardState | null>> | undefined,
 ): boolean {
   const parsed = parseArtificerReplacementEntryKey(key);
   return (
@@ -270,7 +270,7 @@ function decodeAcquisitionSites(
     string,
     {
       readonly order: readonly string[];
-      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
+      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
     }
   >
 > {
@@ -279,7 +279,7 @@ function decodeAcquisitionSites(
     string,
     {
       readonly order: readonly string[];
-      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState>>;
+      readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
     }
   > = {};
   for (const [pointKey, rawSite] of Object.entries(sites)) {
@@ -317,7 +317,7 @@ function decodeAcquisitionSites(
               ),
             ).map(([key, raw]) => [
               key,
-              decodeRewardState(
+              decodeNullableRewardState(
                 raw,
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
@@ -1471,7 +1471,10 @@ export function decodeBiomeTopology(
       )) {
         if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
           const descriptor = room.infernalContractReward;
-          if (descriptor === undefined || !descriptor.rewardTypes.includes(entry.offer.rewardType))
+          if (
+            descriptor === undefined ||
+            (entry !== null && !descriptor.rewardTypes.includes(entry.offer.rewardType))
+          )
             failProjectDocument(
               `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
               'must be a declared Infernal Contract pedestal reward',
@@ -1535,7 +1538,15 @@ export function decodeBiomeTopology(
         const entries = acquisitionSites?.roomExit?.pickupEntries ?? {};
         if (
           Object.keys(entries).length !== expected.length ||
-          expected.some((pickup) => entries[pickup.key]?.offer.rewardType !== pickup.rewardType)
+          expected.some((pickup) => {
+            const entry = entries[pickup.key];
+            return (
+              entry === undefined ||
+              (entry === null
+                ? catalog.rewards.rewardTypes.byKey[pickup.rewardType]?.payloadDomain === undefined
+                : entry.offer.rewardType !== pickup.rewardType)
+            );
+          })
         )
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,

@@ -113,7 +113,6 @@ export interface RewardTypeDeclaration {
   readonly gameName: string;
   readonly label: string;
   readonly payloadDomain?: string;
-  readonly defaultPayload?: RewardPayload;
   readonly sourceSupport?: SourceSupportPolicyKey;
   readonly sourceResolution?: SourceResolutionPoint;
   readonly offerProjection: OfferProjectionKey;
@@ -129,13 +128,12 @@ export interface RewardStoreEntry {
 
 export interface RewardStoreDeclaration {
   readonly key: string;
-  readonly defaultOffer: ResolvedRewardOffer;
   readonly entries: readonly RewardStoreEntry[];
 }
 
 export interface ShopOptionEntry {
   readonly key: string;
-  readonly defaultOffer: ResolvedRewardOffer;
+  readonly rewardType: string;
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;
   readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
@@ -156,8 +154,6 @@ export interface ShopSlotDeclaration {
   readonly key: string;
   readonly label: string;
   readonly groupKey: string;
-  readonly defaultOptionKey: string;
-  readonly defaultOffer: ResolvedRewardOffer;
 }
 
 export interface ShopProfileDeclaration {

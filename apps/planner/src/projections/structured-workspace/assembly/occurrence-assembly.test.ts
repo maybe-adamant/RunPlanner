@@ -269,7 +269,7 @@ describe('structured workspace occurrence assembly', () => {
         selectedOptionKey: 'option1',
       },
     });
-    if (retained?.gorgonAthena?.offer.kind !== 'traits')
+    if (retained?.gorgonAthena?.offer?.kind !== 'traits')
       throw new Error('retained Gorgon Athena offer is missing');
     expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === 'Epic')).toBe(
       true,
@@ -793,8 +793,8 @@ describe('structured workspace occurrence assembly', () => {
       kind: 'SelectDerivedShopEntry',
       site,
       entryKey: 'echoDoubleShopReward',
+      sourceOfferKey: 'Boon',
       entryKeys: ['Minor', 'Boon', 'MajorNonBoon', 'echoDoubleShopReward'],
-      defaultValue: source.reward,
     });
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const projected = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
@@ -805,7 +805,6 @@ describe('structured workspace occurrence assembly', () => {
               address: duplicate,
               kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'Boon',
-              defaultValue: source.reward,
               rewardTypes: ['RandomLoot'],
               eligibleSourceOfferKeys: ['Minor', 'Boon', 'MajorNonBoon'],
             },
@@ -867,11 +866,7 @@ describe('structured workspace occurrence assembly', () => {
       createOccurrenceAddress(goldenFBiome, shopId),
       'roomExit',
     );
-    const contract =
-      shopOccurrence?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward;
-    const refillDefault = shop?.offers.MajorNonBoon?.reward;
-    if (contract === undefined || refillDefault === undefined)
-      throw new Error('Gate B Shop defaults are missing');
+    if (shop === undefined) throw new Error('Gate B Shop state is missing');
     const contractAddress = createAcquisitionEntryAddress(site, 'infernalContractReward');
     const travelAddress = createAcquisitionEntryAddress(site, 'travelDealRefill');
     const projectWith = (entries: Parameters<typeof assemble>[5]) =>
@@ -884,7 +879,6 @@ describe('structured workspace occurrence assembly', () => {
             {
               address: contractAddress,
               kind: 'infernalContractReward' as const,
-              defaultValue: contract,
               rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
             },
           ],
@@ -907,7 +901,6 @@ describe('structured workspace occurrence assembly', () => {
             {
               address: contractAddress,
               kind: 'infernalContractReward' as const,
-              defaultValue: contract,
               rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
             },
             { address: travelAddress, kind: 'travelDealPlaceholder' as const },
@@ -926,7 +919,6 @@ describe('structured workspace occurrence assembly', () => {
             {
               address: contractAddress,
               kind: 'infernalContractReward' as const,
-              defaultValue: contract,
               rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
             },
             {
@@ -934,7 +926,6 @@ describe('structured workspace occurrence assembly', () => {
               kind: 'travelDealRefill' as const,
               sourceOfferKey: 'MajorNonBoon',
               slotIndex: 1,
-              defaultValue: refillDefault,
               rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'],
             },
           ],
@@ -1017,14 +1008,12 @@ describe('structured workspace occurrence assembly', () => {
               kind: 'travelDealRefill' as const,
               sourceOfferKey: 'MajorNonBoon',
               slotIndex: 1,
-              defaultValue: source,
               rewardTypes: ['RandomLoot'],
             },
             {
               address: duplicate,
               kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'travelDealRefill',
-              defaultValue: source,
               rewardTypes: ['RandomLoot'],
               eligibleSourceOfferKeys: ['travelDealRefill'],
             },
@@ -1037,7 +1026,7 @@ describe('structured workspace occurrence assembly', () => {
     ]);
   });
 
-  it('projects the Narcissus pickup as an unpicked, dormant room-exit acquisition', () => {
+  it('projects the active Narcissus reward editor before its independent pickup choice', () => {
     const project = createGoldenFGHIProject();
     const occurrence = project.routes
       .flatMap((route) => route.biomes)
@@ -1054,7 +1043,11 @@ describe('structured workspace occurrence assembly', () => {
         },
       ],
     });
-    expect(result.node.room.acquisitions?.entries[0]?.rewardControl).toBeUndefined();
+    expect(result.node.room.acquisitions?.entries[0]?.rewardControl).toMatchObject({
+      kind: 'explicitReward',
+      offer: { rewardType: 'StoreRewardRandomStack' },
+      rewardTypes: ['StoreRewardRandomStack'],
+    });
     expect(result.occurrenceInteractionRequirements).toContainEqual(
       expect.objectContaining({ kind: 'acquisitionOrder' }),
     );
@@ -1114,7 +1107,7 @@ describe('structured workspace occurrence assembly', () => {
     ]);
   });
 
-  it('projects one picked Narcissus pickup with its exact entry-owned payload control', () => {
+  it('projects one picked Narcissus pickup with its fixed type and unresolved payload', () => {
     let project = createCompleteFGProject();
     const occurrence = project.routes
       .flatMap((route) => route.biomes)
@@ -1161,9 +1154,12 @@ describe('structured workspace occurrence assembly', () => {
         kind: 'acquisitionEntry',
         address: createAcquisitionEntryAddress(site, 'mysteryBoon'),
       },
-      offer: { rewardType: 'BlindBoxLoot' },
+      offer: null,
+      rewardTypes: ['BlindBoxLoot'],
+      authoringStartStep: 'source',
+      authoringSeed: { rewardType: 'BlindBoxLoot' },
     });
-    expect(entry?.rewardControl?.traitOffers).toHaveLength(1);
+    expect(entry?.rewardControl?.traitOffers).toEqual([]);
   });
 
   it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {

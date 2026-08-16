@@ -5,13 +5,17 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
 
 export const fGenerationBiome = createBiomeAddress('Underworld', 'F');
 export const fGenerationStartId = createOccurrenceId('possibility-start');
@@ -31,16 +35,53 @@ export interface FGenerationProjectOptions {
 }
 
 export const fGenerationBaselineBatches: readonly FGenerationBatchSpec[] = Object.freeze([
-  { targets: ['F_Combat02'], pickedExitIndex: 1 },
-  { targets: ['F_Combat03', 'F_Combat03'], pickedExitIndex: 1 },
-  { targets: ['F_Combat04', 'F_Combat04'], pickedExitIndex: 1 },
-  { targets: ['F_Combat05', 'F_Combat11'], pickedExitIndex: 1 },
-  { targets: ['F_Combat06', 'F_Combat06'], pickedExitIndex: 1 },
-  { targets: ['F_MiniBoss01', 'F_MiniBoss02'], pickedExitIndex: 1 },
-  { targets: ['F_Combat11'], pickedExitIndex: 1 },
-  { targets: ['F_Combat12', 'F_Combat12'], pickedExitIndex: 1 },
-  { targets: ['F_Combat14', 'F_Combat14'], pickedExitIndex: 1 },
-  { targets: ['F_Combat15', 'F_Combat15'], pickedExitIndex: 1 },
+  { targets: ['F_Combat02'], pickedExitIndex: 1, offers: [{ rewardType: 'MetaCurrencyDrop' }] },
+  {
+    targets: ['F_Combat03', 'F_Combat03'],
+    pickedExitIndex: 1,
+    offers: [{ rewardType: 'MaxHealthDrop' }, { rewardType: 'MaxManaDrop' }],
+  },
+  {
+    targets: ['F_Combat04', 'F_Combat04'],
+    pickedExitIndex: 1,
+    offers: [{ rewardType: 'RoomMoneyDrop' }, { rewardType: 'WeaponUpgrade' }],
+  },
+  {
+    targets: ['F_Combat05', 'F_Combat11'],
+    pickedExitIndex: 1,
+    offers: [{ rewardType: 'HermesUpgrade' }, { rewardType: 'SpellDrop' }],
+  },
+  {
+    targets: ['F_Combat06', 'F_Combat06'],
+    pickedExitIndex: 1,
+    storeKey: 'MetaProgress',
+    offers: [{ rewardType: 'MetaCurrencyDrop' }, { rewardType: 'MetaCardPointsCommonDrop' }],
+  },
+  {
+    targets: ['F_MiniBoss01', 'F_MiniBoss02'],
+    pickedExitIndex: 1,
+    offers: [
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    ],
+  },
+  { targets: ['F_Combat11'], pickedExitIndex: 1, offers: [{ rewardType: 'MaxManaDrop' }] },
+  {
+    targets: ['F_Combat12', 'F_Combat12'],
+    pickedExitIndex: 1,
+    offers: [{ rewardType: 'WeaponUpgrade' }, { rewardType: 'HermesUpgrade' }],
+  },
+  {
+    targets: ['F_Combat14', 'F_Combat14'],
+    pickedExitIndex: 1,
+    storeKey: 'MetaProgress',
+    offers: [{ rewardType: 'MetaCurrencyDrop' }, { rewardType: 'MetaCardPointsCommonDrop' }],
+  },
+  {
+    targets: ['F_Combat15', 'F_Combat15'],
+    pickedExitIndex: 1,
+    offers: [{ rewardType: 'RoomMoneyDrop' }, { rewardType: 'SpellDrop' }],
+  },
 ]);
 
 export function fGenerationOccurrenceId(batchIndex: number, exitIndex: number) {
@@ -92,6 +133,31 @@ export function createFGenerationProject(
     occurrenceId: fGenerationStartId,
     gameName: 'F_Opening01',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(fGenerationBiome, fGenerationStartId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(fGenerationBiome, fGenerationStartId),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
 
   for (const [offset, batch] of batches.entries()) {
     const batchIndex = offset + 1;
@@ -135,9 +201,30 @@ export function createFGenerationProject(
         value: { kind: 'normal', exitKey: `exit${batch.pickedExitIndex}` },
       });
     }
+    const selectedIndex = batch.targets.length === 1 ? 1 : batch.pickedExitIndex;
+    if (selectedIndex !== undefined && batch.targets[selectedIndex - 1] === 'F_Shop01') {
+      for (const [offerKey, value] of Object.entries({
+        Boon: {
+          rewardType: 'RandomLoot' as const,
+          payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+        },
+        MajorNonBoon: { rewardType: 'RoomRewardHealDrop' as const },
+        Minor: { rewardType: 'MaxManaDrop' as const },
+      })) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceShopOffer',
+          offer: createShopOfferAddress(
+            fGenerationBiome,
+            fGenerationOccurrenceId(batchIndex, selectedIndex),
+            offerKey,
+          ),
+          value,
+        });
+      }
+    }
   }
 
-  if (options.includeTakeover === false) return project;
+  if (options.includeTakeover === false) return authorLegalTraitOffers(project);
 
   const finalBatch = batches.at(-1);
   if (finalBatch === undefined) throw new Error('F generation fixture needs one ordinary batch');
@@ -163,11 +250,29 @@ export function createFGenerationProject(
     gameName: 'F_PreBoss01',
     targetOccurrenceIds,
   });
-  return finalRoom.exits.length > 1
-    ? applyProjectCommand(project, catalog, {
-        kind: 'SetExitSelection',
-        selection: createExitSelectionAddress(fGenerationBiome, finalSource),
-        value: { kind: 'normal', exitKey: 'exit1' },
-      })
-    : project;
+  if (finalRoom.exits.length > 1) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fGenerationBiome, finalSource),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+  }
+  const prebossShopId = targetOccurrenceIds.exit1;
+  if (prebossShopId !== undefined) {
+    for (const [offerKey, value] of Object.entries({
+      Boon: {
+        rewardType: 'RandomLoot' as const,
+        payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+      },
+      MajorNonBoon: { rewardType: 'RoomRewardHealDrop' as const },
+      Minor: { rewardType: 'MaxManaDrop' as const },
+    })) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(fGenerationBiome, prebossShopId, offerKey),
+        value,
+      });
+    }
+  }
+  return authorLegalTraitOffers(project);
 }

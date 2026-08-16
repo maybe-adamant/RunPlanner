@@ -172,7 +172,7 @@ describe('candidate session', () => {
     const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === 'f-takeover-combat',
     );
-    if (occurrence?.state.kind !== 'counted') {
+    if (occurrence?.state.kind !== 'counted' || occurrence.state.reward === null) {
       throw new Error('F fixture must retain a counted combat reward');
     }
     const result = createPreparedProjectCandidateSession(
@@ -199,7 +199,7 @@ describe('candidate session', () => {
       throw new Error('F fixture must retain a selected Preboss shop');
     }
     const [offerKey, offer] = Object.entries(occurrence.state.shop.offers)[0] ?? [];
-    if (offerKey === undefined || offer === undefined)
+    if (offerKey === undefined || offer === undefined || offer.reward === null)
       throw new Error('F Preboss shop has no offer');
     const results = createPreparedProjectCandidateSession(
       catalog,

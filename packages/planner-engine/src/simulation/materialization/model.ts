@@ -35,7 +35,7 @@ export interface CanonicalResolvedIncomingReward {
   readonly instanceProvenance: 'free' | 'paid';
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
-  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
@@ -53,7 +53,7 @@ export interface CanonicalShopOffer {
   readonly offerKey: string;
   readonly offerOrigin: ShopOfferAddress;
   readonly offer: ResolvedRewardOffer;
-  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
@@ -65,6 +65,10 @@ export interface CanonicalShopEntryState {
   readonly profileKey: string;
   readonly deathDefianceConditionMet?: boolean;
   readonly offers: readonly CanonicalShopOffer[];
+  readonly unresolvedOffers: readonly {
+    readonly offerKey: string;
+    readonly offerOrigin: ShopOfferAddress;
+  }[];
   /** Exact room-exit membership and chronology, owned by the occurrence site. */
   readonly order: readonly string[];
 }
@@ -76,7 +80,7 @@ export interface CanonicalLocalReward {
   readonly encounterPhaseKey: string;
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
-  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
@@ -91,7 +95,7 @@ export interface CanonicalFieldsOptionalReward {
   readonly slotKey: string;
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
-  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
@@ -103,7 +107,7 @@ export interface CanonicalRewardWheelOffer {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
   readonly offer: ResolvedRewardOffer;
-  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
@@ -118,6 +122,11 @@ export interface CanonicalRewardWheel {
   readonly producerLifecycleKey: string;
   readonly storeKey: string;
   readonly offers: readonly CanonicalRewardWheelOffer[];
+  readonly unresolvedOffers: readonly {
+    readonly origin: RewardWheelOfferAddress;
+    readonly offerKey: string;
+    readonly picked: boolean;
+  }[];
   readonly pickedOfferIndex: number;
 }
 
@@ -141,15 +150,40 @@ export interface CanonicalAuthoredRoom {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
+  readonly unresolvedIncomingReward?: Omit<
+    CanonicalResolvedIncomingReward,
+    | 'kind'
+    | 'offer'
+    | 'traitOffersByAcquisitionRole'
+    | 'levelResolutionsByAcquisitionRole'
+    | 'dispositionByAcquisitionRole'
+    | 'traitContext'
+  >;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly unresolvedLocalRewards?: readonly Omit<
+    CanonicalLocalReward,
+    | 'offer'
+    | 'traitOffersByAcquisitionRole'
+    | 'levelResolutionsByAcquisitionRole'
+    | 'dispositionByAcquisitionRole'
+    | 'traitContext'
+  >[];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
+  readonly unresolvedFieldsOptionalRewards?: readonly Omit<
+    CanonicalFieldsOptionalReward,
+    | 'offer'
+    | 'traitOffersByAcquisitionRole'
+    | 'levelResolutionsByAcquisitionRole'
+    | 'dispositionByAcquisitionRole'
+    | 'traitContext'
+  >[];
   readonly fieldsActions?: readonly FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly pickupSite?: {
     readonly order: readonly string[];
     readonly entries: Readonly<
-      Record<string, import('../../authored-project/model').AuthoredRewardState>
+      Record<string, import('../../authored-project/model').AuthoredRewardState | null>
     >;
   };
 }
@@ -196,6 +230,15 @@ export interface CanonicalLocalChildRoom {
   readonly entered: boolean;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
+  readonly unresolvedIncomingReward?: Omit<
+    CanonicalResolvedIncomingReward,
+    | 'kind'
+    | 'offer'
+    | 'traitOffersByAcquisitionRole'
+    | 'levelResolutionsByAcquisitionRole'
+    | 'dispositionByAcquisitionRole'
+    | 'traitContext'
+  >;
 }
 
 export type CanonicalRoom = CanonicalAuthoredRoom | CanonicalCompletionRoom;

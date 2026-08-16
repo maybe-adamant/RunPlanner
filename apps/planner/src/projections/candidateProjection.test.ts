@@ -132,7 +132,11 @@ describe('candidate projection', () => {
       (candidate) => candidate.gameName === 'F_Combat03',
     );
     const room = catalog.rooms.byKey.F_Combat03;
-    if (occurrence?.state.kind !== 'counted' || room?.incomingReward.kind !== 'countedChoice') {
+    if (
+      occurrence?.state.kind !== 'counted' ||
+      occurrence.state.reward === null ||
+      room?.incomingReward.kind !== 'countedChoice'
+    ) {
       throw new Error('F counted reward fixture is missing');
     }
     const domain = session.countedRewardTypes(

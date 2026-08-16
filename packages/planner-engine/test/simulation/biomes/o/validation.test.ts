@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authorLegalTraitOffers,
+  authorSurfaceWorldShop,
   createRepresentativeNOProject,
   oBiome,
   oOccurrenceIds,
@@ -152,6 +153,7 @@ describe('selected O validation', () => {
       gameName: 'O_PreBoss01',
       targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
     });
+    project = authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.preboss);
 
     const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
@@ -539,7 +541,7 @@ describe('selected O validation', () => {
       {
         kind: 'rewardWheelOffer',
         offer: createRewardWheelOfferAddress(oBiome, occurrence.occurrenceId, 'wheel1', 'offer1'),
-        value: offer.offer,
+        value: offer!.offer,
       },
       {
         kind: 'rewardWheelPicked',
@@ -565,6 +567,11 @@ describe('selected O validation', () => {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel,
       offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',
@@ -668,7 +675,7 @@ describe('selected O validation', () => {
     });
   });
 
-  it('keeps Combat2 authorable after earlier Ship offers exhaust the default Boon entries', () => {
+  it('keeps Combat2 authorable while exposing its newly active unresolved wheel leaf', () => {
     let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
@@ -694,7 +701,7 @@ describe('selected O validation', () => {
         selectedPossible: true,
         findings: [
           expect.objectContaining({
-            code: 'rewardBagEntryUnavailable',
+            code: 'rewardMissing',
             origin: expect.objectContaining({
               kind: 'rewardWheelOffer',
               occurrenceId: oOccurrenceIds.combat07,

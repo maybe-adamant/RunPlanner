@@ -24,7 +24,7 @@ import type {
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
-import { createDefaultSelectedPickupEntries, selectedPickupProducer } from '../traits';
+import { createSelectedPickupEntries, selectedPickupProducer } from '../traits';
 import {
   admitsTerminalTakeoverEnvelope,
   hostContinuationExitForDetourRoom,
@@ -41,7 +41,7 @@ import {
   selectedExitKey,
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields-actions';
-import { createDefaultInfernalContractEntries } from '../shop';
+import { createInfernalContractEntries } from '../shop';
 import {
   failCommand,
   requireOccurrence,
@@ -206,8 +206,8 @@ function defaultOccurrence(
   const pickupEntries =
     pickupProducer === undefined
       ? Object.freeze({})
-      : createDefaultSelectedPickupEntries(catalog, pickupProducer.traitKey, loadout);
-  const contractEntries = createDefaultInfernalContractEntries(catalog, room.gameName, loadout);
+      : createSelectedPickupEntries(catalog, pickupProducer.traitKey);
+  const contractEntries = createInfernalContractEntries(catalog, room.gameName);
   return Object.freeze({
     occurrenceId,
     gameName: room.gameName,

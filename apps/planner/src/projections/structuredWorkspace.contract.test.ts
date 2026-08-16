@@ -20,7 +20,9 @@ import {
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createProjectDocument,
+  createRewardWheelOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type ProjectDocument,
@@ -939,7 +941,35 @@ describe('structured workspace overlay contract', () => {
 
   it('closes persisted trait children for every representative reward owner', () => {
     const ownerKinds = new Set<string>();
-    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+    const wheelOwner = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer1',
+    );
+    let surface = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: wheelOwner,
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    surface = applyProjectCommand(surface, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(wheelOwner, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    for (const project of [createGoldenFGHIProject(), surface]) {
       const projected = projection().project(simulateProjectAssembly(catalog, project));
       for (const route of project.routes) {
         for (const plan of route.biomes) {

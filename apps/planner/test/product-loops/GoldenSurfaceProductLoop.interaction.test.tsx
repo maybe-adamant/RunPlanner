@@ -5,7 +5,6 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
-  createExitSelectionAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
@@ -756,7 +755,8 @@ describe('surface product loop', () => {
     const interaction = application
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(traitAddress));
-    if (interaction === undefined) throw new Error('replacement trait interaction is missing');
+    if (interaction?.value?.kind !== 'traits')
+      throw new Error('replacement trait interaction is missing');
     const prepared = prepareTraitOptionDomain(
       application.catalog,
       interaction.giver,
@@ -778,15 +778,7 @@ describe('surface product loop', () => {
 
   it('retains and repairs a reached Hammer after a route loadout change', async () => {
     const application = createApplication();
-    let authored = createRepresentativeNOPQProject();
-    authored = applyProjectCommand(authored, application.catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(pBiome, {
-        kind: 'occurrence',
-        occurrenceId: pOccurrenceId('P_Combat07', 4, 1),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let authored = createRepresentativeNOPQShopTraitProject();
     authored = applyProjectCommand(authored, application.catalog, {
       kind: 'ReplaceRouteLoadout',
       route: { kind: 'route', routeKey: 'Surface' },
@@ -821,14 +813,17 @@ describe('surface product loop', () => {
       .selectStructuredWorkspace(application.store.getState())
       .interactions.traitOffers.get(semanticAddressKey(invalid.origin));
     if (interaction === undefined) throw new Error('invalid Hammer interaction is missing');
-    const corrected = interaction.giver.defaultsByLoadout?.['WeaponDagger:DaggerBackstabAspect'];
-    if (corrected === undefined) throw new Error('Dagger Hammer defaults are missing');
-    for (const [index, option] of corrected.options.entries()) {
+    const correctedTraitKeys = [
+      'DaggerBlinkAoETrait',
+      'DaggerSpecialJumpTrait',
+      'DaggerSpecialLineTrait',
+    ] as const;
+    for (const [index, traitKey] of correctedTraitKeys.entries()) {
       await view.user.click(within(dialog).getByLabelText(`option${index + 1} trait`));
       const choice = screen
-        .getAllByText(application.catalog.traits.byKey[option.traitKey]?.label ?? option.traitKey)
+        .getAllByText(application.catalog.traits.byKey[traitKey]?.label ?? traitKey)
         .find((element) => element.closest('[cmdk-item]') !== null);
-      if (choice === undefined) throw new Error(`Hammer picker has no ${option.traitKey} choice`);
+      if (choice === undefined) throw new Error(`Hammer picker has no ${traitKey} choice`);
       await view.user.click(choice);
     }
     const save = within(dialog).getByRole('button', { name: 'Save trait offer' });

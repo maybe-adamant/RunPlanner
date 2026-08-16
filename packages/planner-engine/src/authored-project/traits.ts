@@ -1,7 +1,7 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { RoomEncounterState } from './model';
-import { createDefaultDispositionByAcquisitionRole } from './reward-state';
+import { createNormalDispositionByAcquisitionRole } from './reward-state';
 import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
@@ -82,7 +82,7 @@ export function withDefaultTraitOptionDetail(
 
 export interface AuthoredEchoLastRewardAcquisition {
   readonly disposition: { readonly kind: 'normal' | 'timePiece' };
-  readonly traitOffer?: AuthoredTraitOffer;
+  readonly traitOffer?: AuthoredTraitOffer | null;
   readonly levelResolution?: AuthoredLevelResolution;
 }
 
@@ -136,15 +136,14 @@ export function normalizeAuthoredEchoLastReward(
   });
 }
 
-export function createDefaultEchoLastRewardAcquisition(
+export function createUnresolvedEchoLastRewardAcquisition(
   catalog: Catalog,
   recreation: NonNullable<
     import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
   >,
-  loadout: TraitOfferDefaultsContext,
 ): AuthoredEchoLastRewardAcquisition {
-  const traitOffer = createDefaultTraitOffers(catalog, recreation.offer, loadout).self;
-  const levelResolution = createDefaultLevelResolutions(
+  const traitOffer = createUnresolvedTraitOffers(catalog, recreation.offer).self;
+  const levelResolution = createUnresolvedLevelResolutions(
     catalog,
     recreation.offer,
     producerLevelEffectSource({ producerLifecycleKey: recreation.producerLifecycleKey }),
@@ -241,8 +240,8 @@ export type AuthoredLevelResolution =
     }
   | { readonly kind: 'random'; readonly targetTraitKey: string | null };
 
-/** The declaration-owned Pom child is deliberately incomplete by default. */
-export function createDefaultLevelResolutions(
+/** Constructs declaration-shaped, deliberately unresolved Pom children. */
+export function createUnresolvedLevelResolutions(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   source: LevelResolutionEffectSource,
@@ -262,7 +261,7 @@ export function createDefaultLevelResolutions(
   return Object.keys(result).length === 0 ? undefined : Object.freeze(result);
 }
 
-export interface TraitOfferDefaultsContext {
+export interface TraitOfferLoadoutContext {
   readonly weaponKey: string;
   readonly aspectKey: string;
 }
@@ -385,50 +384,26 @@ export function traitGiverForAcquisitionRole(
   return source === undefined ? undefined : giverForAcquisition(catalog, source)?.key;
 }
 
-/** Returns one complete authored child for every in-scope acquisition role. */
-export function createDefaultTraitOffers(
+/**
+ * Creates the exact acquisition-role shape for a newly authored concrete
+ * reward without inventing a generated trait offer. Known providers own an
+ * explicit unresolved value; roles without a trait giver remain absent.
+ */
+export function createUnresolvedTraitOffers(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
-  loadout: TraitOfferDefaultsContext,
-): Readonly<Record<string, AuthoredTraitOffer>> {
+): Readonly<Record<string, AuthoredTraitOffer | null>> {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
-  const result: Record<string, AuthoredTraitOffer> = {};
-  for (const role of declaration.acquisitionRoles.values) {
-    let gameName: string | undefined;
-    if (role.resolution.kind === 'self') gameName = declaration.gameName;
-    else if (role.resolution.kind === 'fixed') gameName = role.resolution.acquisition.gameName;
-    else {
-      const field = role.resolution.field;
-      const payload = offer.payload;
-      const value = payload?.[field as keyof typeof payload];
-      if (typeof value === 'string') gameName = value;
-    }
-    if (gameName === undefined) continue;
-    const giver = giverForAcquisition(catalog, gameName);
-    if (giver === undefined) continue;
-    const defaults =
-      giver.defaultsByLoadout?.[`${loadout.weaponKey}:${loadout.aspectKey}`] ?? giver.defaultOffer;
-    if (defaults === undefined) continue;
-    result[role.key] = Object.freeze({
-      kind: 'traits',
-      giverKey: giver.key,
-      options: Object.freeze(
-        defaults.options.map((option) => withDefaultTraitOptionDetail(catalog, option)),
-      ) as AuthoredTraitOfferTraits['options'],
-      selectedOptionKey:
-        defaults.selectedOption === 0
-          ? 'option1'
-          : defaults.selectedOption === 1
-            ? 'option2'
-            : 'option3',
-      rarificationActions: Object.freeze([]),
-      ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
-        ? { deathDefianceConditionMet: false }
-        : {}),
-    });
-  }
-  return Object.freeze(result);
+  return Object.freeze(
+    Object.fromEntries(
+      declaration.acquisitionRoles.values.flatMap((role) =>
+        traitGiverForAcquisitionRole(catalog, offer, role.key) === undefined
+          ? []
+          : [[role.key, null] as const],
+      ),
+    ),
+  );
 }
 
 /** Creates the declaration-owned default for an encounter-local field-NPC offer. */
@@ -523,59 +498,75 @@ export function materializeGorgonAthenaOffer(
   });
 }
 
-/** Complete entry-owned defaults for one selected pickup-producing descriptor.
- * This is intentionally generic over the declaration disposition; no caller
- * needs a provider-name switch. */
-export function createDefaultSelectedPickupEntries(
+/**
+ * Constructs every fixed pickup identity for one selected producer. Variable
+ * payloads and acquisition-owned child authorship remain unresolved.
+ */
+export function createSelectedPickupEntries(
   catalog: Catalog,
   selectedTraitKey: string,
-  loadout: TraitOfferDefaultsContext,
-): Readonly<Record<string, import('./model').AuthoredRewardState>> {
+): Readonly<Record<string, import('./model').AuthoredRewardState | null>> {
   const disposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   if (disposition?.kind !== 'producePickups') return Object.freeze({});
-  const entries: Record<string, import('./model').AuthoredRewardState> = {};
+  const entries: Record<string, import('./model').AuthoredRewardState | null> = {};
   for (const pickup of disposition.pickups) {
     const declaration = catalog.rewards.rewardTypes.byKey[pickup.rewardType];
     if (declaration === undefined) throw new Error(`unknown pickup reward ${pickup.rewardType}`);
-    const offer = Object.freeze({
-      rewardType: pickup.rewardType,
-      ...(declaration.defaultPayload === undefined ? {} : { payload: declaration.defaultPayload }),
-    });
-    entries[pickup.key] = createDefaultPickupRewardState(
-      catalog,
-      offer,
-      loadout,
-      disposition.producerLifecycleKey,
-    );
+    entries[pickup.key] =
+      declaration.payloadDomain === undefined
+        ? createUnresolvedPickupRewardState(
+            catalog,
+            Object.freeze({ rewardType: pickup.rewardType }),
+            disposition.producerLifecycleKey,
+          )
+        : null;
   }
   return Object.freeze(entries);
 }
 
 /** One command-complete pickup entry for a fixed reward identity and payload. */
-export function createDefaultPickupRewardState(
+export function createUnresolvedPickupRewardState(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
-  loadout: TraitOfferDefaultsContext,
   producerLifecycleKey: string,
 ): import('./model').AuthoredRewardState {
-  return createDefaultAcquisitionRewardState(catalog, offer, loadout, {
+  return createUnresolvedAcquisitionRewardState(catalog, offer, {
     kind: 'producerLifecycle',
     key: producerLifecycleKey,
   });
 }
 
 /** One command-complete reward state for a reached concrete acquisition source. */
-export function createDefaultAcquisitionRewardState(
+export function createUnresolvedAcquisitionRewardState(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
-  loadout: TraitOfferDefaultsContext,
   levelEffectSource: LevelResolutionEffectSource,
 ): import('./model').AuthoredRewardState {
-  const levels = createDefaultLevelResolutions(catalog, offer, levelEffectSource);
+  return createUnresolvedAcquisitionRewardStateForEffect(catalog, offer, levelEffectSource);
+}
+
+/** Exact unresolved child state for an engine-derived World Shop acquisition. */
+export function createUnresolvedShopAcquisitionRewardState(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  shopProfileKey: string,
+): import('./model').AuthoredRewardState {
+  return createUnresolvedAcquisitionRewardStateForEffect(catalog, offer, {
+    kind: 'shopProfile',
+    key: shopProfileKey,
+  });
+}
+
+function createUnresolvedAcquisitionRewardStateForEffect(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  levelEffectSource: LevelResolutionEffectSource,
+): import('./model').AuthoredRewardState {
+  const levels = createUnresolvedLevelResolutions(catalog, offer, levelEffectSource);
   return Object.freeze({
     offer,
-    dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-    traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
+    dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(catalog, offer),
+    traitOffersByAcquisitionRole: createUnresolvedTraitOffers(catalog, offer),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
   });
 }
