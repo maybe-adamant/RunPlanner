@@ -731,6 +731,16 @@ offers.
 described above. Their specific later-biome rules move with the corresponding
 implementation slice.
 
+Supplemental Shop opportunities do not alter those profile slot counts.
+Qualifying Shops may additionally expose fixed `infernalContractReward`,
+`travelDealRefill`, and `echoDoubleShopReward` entries under the existing
+`roomExit` acquisition site. Contract is a free declaration-owned pedestal;
+Travel is a paid replacement derived from the first accepted paid purchase
+when Travel Deal was already equipped; Gold is a free pickup derived from the
+first accepted paid non-`SpellDrop` purchase while its one-use Echo trait is
+equipped. The three stable keys share the ordinary acquisition-site vocabulary
+without becoming initial inventory slots.
+
 Shop state is entry-materialized rather than door-offer state. Every picked
 shop occurrence must own a complete value for every slot in its declared
 profile. An unpicked shop occurrence may omit that state entirely; if it was
@@ -766,12 +776,21 @@ sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
 
-Purchase membership and chronology are one occurrence-owned exact acquisition-site order, not Shop state or a simulation witness. A Blind Box
+Purchase and pickup participation plus chronology are one occurrence-owned
+exact acquisition-site order, not Shop state or a simulation witness. A Blind Box
 offer persists its intended eventual `BoonSource`, but source support is not
 validated while the box is merely offered. When the box is purchased, the
 simulator applies the one authored order, evaluates each purchase against the
 history from earlier authored purchases, and never retries another permutation.
 It retains ordinary reward-source possibility branches within that fixed order.
+
+Payload and order are deliberately separate. A dormant Travel or Gold entry
+may persist its complete reward and nested acquisition detail while absent from
+the order. Engine-owned derived-entry defaults and candidate products let one
+semantic command edit that payload without selecting it, or apply one complete
+site-level participation/order proposal. Travel/Gold dependencies are
+normalized together, so a source removal, rebind, move, or dependent removal
+is atomic and no row publishes a conflicting local order.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
@@ -831,11 +850,14 @@ opts into last-reward replay, then creates one mandatory Echo-room acquisition
 from that exact recreation descriptor. A loot source owns a fresh offer and a
 consumable reuses its ordinary pickup path; replay does not synthesize a
 generic Boon, Pom, or consumable alias. Gold Gold Gold instead observes the
-equipped one-use Echo trait while folding a World Shop's authored purchase
-order. The first purchased non-`SpellDrop` entry is followed immediately by
-one free declaration-derived acquisition at the same site, after which the
-exact Echo trait acquisition is removed. That supplemental entry is not a
-purchase and never enters the authored Shop order.
+equipped one-use Echo trait while folding a World Shop's authored order. Once
+the Shop kernel accepts the first paid non-`SpellDrop` source, Gold consumes
+the exact Echo acquisition and materializes the singleton free duplicate from
+pre-source-acquisition history before that paid entry's acquisition roles run.
+Materialization does not acquire the duplicate: its complete supplemental row
+may remain unpicked and later joins the same authored order at the player's
+chosen position. Pre-kernel rejection leaves Gold armed; invalid nested detail
+after an accepted paid source does not roll consumption back.
 
 Both paths keep acquisition-time choices with the reached concrete entry.
 Blind Box recreation retains the box as the acquisition while resolving a
@@ -843,6 +865,10 @@ fresh hidden source independently; a Gold duplicate of Nectar follows the Shop
 duplicate profile and does not invent the run-progress Pom effect. Missing or
 context-invalid active children remain exact finding-backed repair owners,
 while dormant or not-yet-generated entries publish no acquisition child.
+Ordinary Gold payloads remain frozen after materialization. Pom alone
+regenerates its `StackOnly` options at pickup when at least one stored target is
+no longer equipped; if every stored target remains, its materialized options
+stay fixed.
 
 Fixed and forced producers do not borrow requirements from a same-named
 counted bag entry. A forced Devotion is validated as a fixed Devotion producer,

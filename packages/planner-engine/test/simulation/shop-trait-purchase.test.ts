@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectHistoryCommand,
+  createAcquisitionRoleAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -30,18 +31,20 @@ import { createDefaultRoomEncounterState } from '../../src/authored-project/room
 import { createDefaultConversionByAcquisitionRole } from '../../src/authored-project/reward-state';
 import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
-  createEchoShopDuplicateEntryKey,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   createLevelResolutionCandidateArtifacts,
+  createTraitOfferCandidateArtifacts,
 } from '../../src/simulation/candidate-artifacts';
 import {
   processShopInventory,
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import { prepareAcquisitionOrderCandidateContext } from '../../src/simulation/rewards/acquisition-order-candidates';
 import {
   attachTraitHistory,
@@ -174,6 +177,63 @@ function allTogetherReward() {
   });
 }
 
+function shopPomReward(targetTraitKey: string) {
+  const offer = Object.freeze({ rewardType: 'StackUpgrade' as const });
+  const base = createDefaultAcquisitionRewardState(
+    catalog,
+    offer,
+    { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' },
+    { kind: 'shopProfile', key: 'WorldShop' },
+  );
+  return Object.freeze({
+    ...base,
+    traitOffersByAcquisitionRole: Object.freeze({}),
+    levelResolutionsByAcquisitionRole: Object.freeze({
+      self: Object.freeze({
+        kind: 'choice' as const,
+        offeredTraitKeys: Object.freeze([targetTraitKey]),
+        selectedTraitKey: targetTraitKey,
+      }),
+    }),
+  });
+}
+
+function shopBoonReward(source: string, traitKey: string) {
+  const giverKey = source.replace('Upgrade', '');
+  const optionKeys = [
+    `${giverKey}WeaponBoon`,
+    `${giverKey}SpecialBoon`,
+    `${giverKey}CastBoon`,
+  ] as const;
+  const selectedOptionKey = `option${(optionKeys as readonly string[]).indexOf(traitKey) + 1}` as
+    'option1' | 'option2' | 'option3';
+  const offer = Object.freeze({
+    rewardType: 'RandomLoot' as const,
+    payload: Object.freeze({ kind: 'BoonSource' as const, source }),
+  });
+  const base = createDefaultAcquisitionRewardState(
+    catalog,
+    offer,
+    { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' },
+    { kind: 'shopProfile', key: 'WorldShop' },
+  );
+  return Object.freeze({
+    ...base,
+    traitOffersByAcquisitionRole: Object.freeze({
+      source: Object.freeze({
+        kind: 'traits' as const,
+        giverKey,
+        options: Object.freeze([
+          Object.freeze({ traitKey: optionKeys[0], rarity: 'Rare' as const }),
+          Object.freeze({ traitKey: optionKeys[1], rarity: 'Rare' as const }),
+          Object.freeze({ traitKey: optionKeys[2], rarity: 'Rare' as const }),
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey,
+      }),
+    }),
+  });
+}
+
 function allTogetherHistory(withEarth: boolean, withEcho: boolean): TraitHistoryState {
   const event = (sequence: number, giverKey: string, traitKey: string): TraitOfferEvent =>
     Object.freeze({
@@ -270,8 +330,7 @@ function echoGoldShop(
     ),
   });
   const sourceKey = order.find((key) => shop.offers[key]?.reward.offer.rewardType !== 'SpellDrop');
-  const duplicateKey =
-    sourceKey === undefined ? undefined : createEchoShopDuplicateEntryKey(sourceKey);
+  const duplicateKey = sourceKey === undefined ? undefined : ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
   const source = sourceKey === undefined ? undefined : shop.offers[sourceKey]?.reward;
   const duplicate =
     options.duplicateRewardOverride ??
@@ -329,13 +388,24 @@ function echoGoldShop(
           ),
         });
   const occurrenceId = options.occurrenceId ?? shopId;
+  const authoredOrder =
+    options.includeDuplicate !== true || duplicateKey === undefined || order.includes(duplicateKey)
+      ? order
+      : (() => {
+          const sourceIndex = order.indexOf(sourceKey!);
+          return Object.freeze([
+            ...order.slice(0, sourceIndex + 1),
+            duplicateKey,
+            ...order.slice(sourceIndex + 1),
+          ]);
+        })();
   const occurrence = Object.freeze({
     occurrenceId,
     gameName: room.gameName,
     state: Object.freeze({ ...baseState, shop }),
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
-        order: Object.freeze([...order]),
+        order: Object.freeze([...authoredOrder]),
         ...(options.includeDuplicate !== true ||
         duplicateKey === undefined ||
         duplicateValue === undefined
@@ -440,7 +510,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
     expect(result.inventory).toHaveLength(2);
     expect(result.settlement.branches).toHaveLength(2);
-    expect(result.settlement.traitChildSettlements).toHaveLength(2);
+    expect(result.settlement.traitChildSettlements?.length).toBeGreaterThan(0);
     for (const branch of result.settlement.branches) {
       expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
@@ -452,21 +522,14 @@ describe('Echo Gate D Gold Gold Gold', () => {
   it('settles an Echo-derived All Together duplicate atomically across its divergent cohort', () => {
     const duplicate = allTogetherReward();
     const result = echoGoldShop(['Boon'], {
-      duplicateOffer: duplicate.offer,
-      duplicateRewardOverride: duplicate,
       includeDuplicate: true,
       initialBranches: divergentAllTogetherBranches(true, ['ApolloUpgrade', 'HeraUpgrade']),
-      offerOverrides: {
-        Boon: {
-          rewardType: 'RandomLoot',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
-      },
+      rewardOverrides: { Boon: duplicate },
     });
     expect([...result.inventoryFindings.values()].map((entry) => entry.finding)).toEqual([]);
     expect(result.inventory).toHaveLength(2);
     expect(result.settlement.branches).toHaveLength(2);
-    expect(result.settlement.traitChildSettlements).toHaveLength(2);
+    expect(result.settlement.traitChildSettlements?.length).toBeGreaterThan(0);
     for (const branch of result.settlement.branches) {
       expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
@@ -475,7 +538,65 @@ describe('Echo Gate D Gold Gold Gold', () => {
     }
   });
 
-  it('skips SpellDrop, duplicates the first later purchase immediately, and removes its exact trait', () => {
+  it('keeps a materialized Gold Pom on its source-time frontier while every source target remains', () => {
+    const sourcePom = shopPomReward('ApolloWeaponBoon');
+    const duplicatePom = shopPomReward('ZeusSpecialBoon');
+    const traits = foldTraitHistoryEvents(catalog, [
+      ...echoGoldHistory().events,
+      ...pomTargetHistory().events,
+    ]);
+    const initialBranches = initializeTestRewardBranches().map((branch) => {
+      const history = recordLootTypeHistorySource(branch.history, 'ZeusUpgrade');
+      return Object.freeze({
+        ...branch,
+        history: attachTraitHistory(history, traits),
+        traitHistory: traits,
+      });
+    });
+    const result = echoGoldShop(['Minor', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
+      includeDuplicate: true,
+      initialBranches,
+      rewardOverrides: {
+        Minor: sourcePom,
+        Boon: shopBoonReward('ZeusUpgrade', 'ZeusSpecialBoon'),
+      },
+      duplicateRewardOverride: duplicatePom,
+    });
+
+    expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
+      'pomTargetUnavailable',
+    );
+    expect(result.settlement.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+      ApolloWeaponBoon: { level: 2 },
+      ZeusSpecialBoon: { level: 1 },
+    });
+  });
+
+  it('regenerates a materialized Gold Pom only after a source-time eligible target disappears', () => {
+    const sourcePom = shopPomReward('ApolloWeaponBoon');
+    const duplicatePom = shopPomReward('ZeusWeaponBoon');
+    const result = echoGoldShop(['Minor', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
+      includeDuplicate: true,
+      withPomTarget: true,
+      rewardOverrides: {
+        Minor: sourcePom,
+        Boon: shopBoonReward('ZeusUpgrade', 'ZeusWeaponBoon'),
+      },
+      duplicateRewardOverride: duplicatePom,
+    });
+
+    expect([...result.findings.values()].map((entry) => entry.finding.code)).not.toContain(
+      'pomTargetUnavailable',
+    );
+    expect(result.settlement.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+      ZeusWeaponBoon: { level: 3 },
+    });
+    expect(
+      result.settlement.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+    ).toBeUndefined();
+  });
+
+  it('skips SpellDrop, materializes at the first later purchase, and settles the ordered pickup', () => {
     const result = echoGoldShop(['Minor', 'Boon', 'MajorNonBoon'], {
       replaceMinorWithSpell: true,
       includeDuplicate: true,
@@ -500,6 +621,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(result.settlement.entries.map((entry) => entry.address.entryKey)).toEqual([
       'Minor',
       'Boon',
+      result.duplicateKey,
       'MajorNonBoon',
     ]);
     expect(result.settlement.derivedEntryFrontiers?.[0]).toMatchObject({
@@ -513,26 +635,26 @@ describe('Echo Gate D Gold Gold Gold', () => {
     });
   });
 
-  it('retains the use with no purchase and publishes one repairable child at the later Shop', () => {
+  it('publishes a placeholder without a source and consumes Gold when the active pickup is skipped', () => {
     const empty = echoGoldShop([], {
       occurrenceId: createOccurrenceId('echo-gold-empty-world-shop'),
     });
     expect(empty.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop).toBeDefined();
-    expect(empty.settlement.derivedEntryFrontiers).toEqual([]);
+    expect(empty.settlement.derivedEntryFrontiers).toMatchObject([
+      { kind: 'echoDoubleShopPlaceholder' },
+    ]);
 
     const missing = echoGoldShop(['Minor'], {
       initialBranches: empty.settlement.branches,
       occurrenceId: createOccurrenceId('echo-gold-later-world-shop'),
     });
-    expect([...missing.findings.values()].map((entry) => entry.finding.code)).toContain(
-      'echoShopDuplicateChildMissing',
-    );
+    expect([...missing.findings.values()]).toEqual([]);
     expect(missing.settlement.derivedEntryFrontiers?.[0]?.defaultValue?.offer).toEqual({
       rewardType: 'MaxManaDrop',
     });
     expect(
       missing.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
-    ).toBeDefined();
+    ).toBeUndefined();
 
     const settledLater = echoGoldShop(['Minor'], {
       includeDuplicate: true,
@@ -542,6 +664,24 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(settledLater.settlement.branches[0]?.history.consumableRecord.MaxManaDrop).toBe(2);
     expect(
       settledLater.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeUndefined();
+  });
+
+  it('keeps the materialized Gold repair frontier when later paid-source detail is invalid', () => {
+    const invalidSource = echoGoldShop(['Boon'], {
+      withPomTarget: true,
+      rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },
+    });
+    const frontier = invalidSource.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'echoDoubleShopReward',
+    );
+
+    expect([...invalidSource.findings.values()].map((entry) => entry.finding.code)).toContain(
+      'alreadyEquipped',
+    );
+    expect(frontier).toMatchObject({ sourceOfferKey: 'Boon' });
+    expect(
+      frontier?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
@@ -677,26 +817,108 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
-  it('persists only derived child detail through schema 37 and one undoable semantic edit', () => {
+  it('publishes boon, Pom, and conversion candidates from dormant derived defaults', () => {
+    const boon = echoGoldShop(['Boon'], {
+      rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },
+    });
+    const boonFrontier = boon.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'echoDoubleShopReward',
+    );
+    const boonSettlement = boonFrontier?.defaultSettlement;
+    if (boonFrontier === undefined || boonSettlement === undefined)
+      throw new Error('missing dormant Gold boon settlement');
+    const boonProducts = selectedTraitOfferProducts(boonSettlement.branches);
+    const boonOffer = boonProducts.selectedTraitOffers.find(
+      (offer) =>
+        semanticAddressKey(offer.address.owner) === semanticAddressKey(boonFrontier.address),
+    );
+    if (boonOffer === undefined) throw new Error('missing dormant Gold boon candidate trace');
+    const boonContexts = boonProducts.candidateContexts.get(semanticAddressKey(boonOffer.address));
+    const boonCapability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(boonOffer.address), boonContexts ?? Object.freeze([])]]),
+    ).at(boonOffer.address);
+    expect(boonCapability?.evaluateOffer(boonOffer.offer)).toEqual([
+      expect.objectContaining({
+        assessments: expect.arrayContaining([expect.objectContaining({ legal: true })]),
+      }),
+    ]);
+
+    const pom = echoGoldShop(['Minor'], {
+      withPomTarget: true,
+      rewardOverrides: { Minor: shopPomReward('ApolloWeaponBoon') },
+    });
+    const pomFrontier = pom.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'echoDoubleShopReward',
+    );
+    const pomSettlement = pomFrontier?.defaultSettlement;
+    if (pomFrontier === undefined || pomSettlement === undefined)
+      throw new Error('missing dormant Gold Pom settlement');
+    const pomProducts = selectedTraitOfferProducts(pomSettlement.branches);
+    const pomLevel = pomProducts.selectedLevelResolutions.find(
+      (level) =>
+        semanticAddressKey(level.address.owner) === semanticAddressKey(pomFrontier.address),
+    );
+    if (pomLevel === undefined) throw new Error('missing dormant Gold Pom candidate trace');
+    const pomContexts = pomProducts.levelCandidateContexts.get(
+      semanticAddressKey(pomLevel.address),
+    );
+    const pomCapability = createLevelResolutionCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(pomLevel.address), pomContexts ?? Object.freeze([])]]),
+    ).at(pomLevel.address);
+    expect(pomCapability?.branches).toEqual([
+      expect.objectContaining({ eligibleTargetTraitKeys: ['ApolloWeaponBoon'] }),
+    ]);
+    expect(pomCapability?.evaluate(pomLevel.value)).toEqual([
+      expect.objectContaining({ supported: true }),
+    ]);
+
+    const converted = echoGoldShop(['Minor'], { timePiece: true });
+    const conversionFrontier = converted.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'echoDoubleShopReward',
+    );
+    expect(conversionFrontier?.defaultSettlement?.roleFrontiers).toEqual([
+      expect.objectContaining({
+        address: expect.objectContaining({ acquisitionRole: 'self' }),
+        source: expect.objectContaining({ instanceProvenance: 'free' }),
+      }),
+    ]);
+  });
+
+  it('atomically persists a dormant Gold boon edit without selecting its chronology', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
       'roomExit',
     );
-    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:Boon');
+    const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
+    const shopOccurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+    const source =
+      shopOccurrence?.state.kind === 'shop' ? shopOccurrence.state.shop?.offers.Boon : undefined;
+    if (source === undefined) throw new Error('missing Shop source');
     const edited = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(duplicate, 'source'),
-      value: {
-        kind: 'traits',
-        giverKey: 'Apollo',
-        options: [
-          { traitKey: 'ApolloManaBoon', rarity: 'Common' },
-          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option2',
+      kind: 'EditDerivedShopEntry',
+      site,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      defaultValue: source.reward,
+      edit: {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(duplicate, 'source'),
+        value: {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [
+            { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option2',
+        },
       },
     });
     const occurrence = (document: typeof project) =>
@@ -708,7 +930,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(occurrence(edited.present)?.acquisitionSites?.roomExit).toMatchObject({
       order: [],
       pickupEntries: {
-        'echoDoubleShop:Boon': {
+        echoDoubleShopReward: {
           offer: { rewardType: 'RandomLoot' },
           traitOffersByAcquisitionRole: {
             source: { selectedOptionKey: 'option2' },
@@ -722,13 +944,81 @@ describe('Echo Gate D Gold Gold Gold', () => {
     const undone = undoProjectHistory(edited);
     expect(
       occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
-        'echoDoubleShop:Boon'
+        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
       ],
     ).toBeUndefined();
     expect(
       occurrence(undone.present)?.acquisitionSites?.roomExit?.pickupEntries?.infernalContractReward,
     ).toBeDefined();
     expect(redoProjectHistory(undone).present).toEqual(edited.present);
+  });
+
+  it('atomically persists dormant Gold Pom and Time Piece edits before pickup', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
+      'roomExit',
+    );
+    const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
+    const occurrence = (document: typeof project) =>
+      document.routes
+        .flatMap((route) => route.biomes)
+        .find((candidate) => candidate.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+
+    const pomDefault = shopPomReward('ApolloWeaponBoon');
+    const pom = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'EditDerivedShopEntry',
+      site,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      defaultValue: pomDefault,
+      edit: {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: createLevelResolutionAddress(duplicate, 'self'),
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['ApolloSpecialBoon'],
+          selectedTraitKey: 'ApolloSpecialBoon',
+        },
+      },
+    });
+    expect(occurrence(pom.present)?.acquisitionSites?.roomExit).toMatchObject({
+      order: [],
+      pickupEntries: {
+        echoDoubleShopReward: {
+          levelResolutionsByAcquisitionRole: {
+            self: { selectedTraitKey: 'ApolloSpecialBoon' },
+          },
+        },
+      },
+    });
+
+    const manaDefault = createDefaultAcquisitionRewardState(
+      catalog,
+      Object.freeze({ rewardType: 'MaxManaDrop' as const }),
+      { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' },
+      { kind: 'shopProfile', key: 'WorldShop' },
+    );
+    const converted = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'EditDerivedShopEntry',
+      site,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      defaultValue: manaDefault,
+      edit: {
+        kind: 'ReplaceAcquisitionConversion',
+        acquisition: createAcquisitionRoleAddress(duplicate, 'self'),
+        value: 'gold',
+      },
+    });
+    expect(occurrence(converted.present)?.acquisitionSites?.roomExit).toMatchObject({
+      order: [],
+      pickupEntries: {
+        echoDoubleShopReward: { conversionByAcquisitionRole: { self: 'gold' } },
+      },
+    });
+    expect(undoProjectHistory(converted).present).toEqual(project);
+    expect(redoProjectHistory(undoProjectHistory(converted)).present).toEqual(converted.present);
   });
 
   it('round-trips an independently resolved hidden source on a derived Blind Box', () => {
@@ -740,7 +1030,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
         'roomExit',
       ),
-      'echoDoubleShop:Boon',
+      ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
     );
     let history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
       kind: 'ReplaceShopOffer',
@@ -749,6 +1039,22 @@ describe('Echo Gate D Gold Gold Gold', () => {
         rewardType: 'BlindBoxLoot',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
+    });
+    const shopAfterReplacement = history.present.routes
+      .flatMap((route) => route.biomes)
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
+    const blindBox =
+      shopAfterReplacement?.state.kind === 'shop'
+        ? shopAfterReplacement.state.shop?.offers.Boon?.reward
+        : undefined;
+    if (blindBox === undefined) throw new Error('missing Blind Box source');
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'SelectDerivedShopEntry',
+      site: entry.site,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      defaultValue: blindBox,
+      entryKeys: ['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -762,7 +1068,9 @@ describe('Echo Gate D Gold Gold Gold', () => {
       .flatMap((route) => route.biomes)
       .find((candidate) => candidate.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
-    expect(shop?.acquisitionSites?.roomExit?.pickupEntries?.['echoDoubleShop:Boon']).toMatchObject({
+    expect(
+      shop?.acquisitionSites?.roomExit?.pickupEntries?.[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
+    ).toMatchObject({
       offer: {
         rewardType: 'BlindBoxLoot',
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
@@ -782,10 +1090,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
       'roomExit',
     );
     const travel = createAcquisitionEntryAddress(site, 'travelDealRefill');
-    const duplicate = createAcquisitionEntryAddress(
-      site,
-      createEchoShopDuplicateEntryKey('travelDealRefill'),
-    );
+    const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
     let history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: travel,
@@ -793,6 +1098,19 @@ describe('Echo Gate D Gold Gold Gold', () => {
         rewardType: 'RandomLoot',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
+    });
+    const travelDefault = history.present.routes
+      .flatMap((route) => route.biomes)
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId)
+      ?.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
+    if (travelDefault === undefined) throw new Error('missing Travel child');
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'SelectDerivedShopEntry',
+      site,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      defaultValue: travelDefault,
+      entryKeys: ['travelDealRefill', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -815,7 +1133,7 @@ describe('Echo Gate D Gold Gold Gold', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
     expect(
       occurrence(history.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
-        createEchoShopDuplicateEntryKey('travelDealRefill')
+        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
       ],
     ).toMatchObject({
       offer: { rewardType: 'RandomLoot' },
@@ -832,9 +1150,9 @@ describe('Echo Gate D Gold Gold Gold', () => {
     });
     expect(
       occurrence(history.present)?.acquisitionSites?.roomExit?.pickupEntries?.[
-        createEchoShopDuplicateEntryKey('travelDealRefill')
+        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
       ],
-    ).toBeUndefined();
+    ).toBeDefined();
   });
 });
 

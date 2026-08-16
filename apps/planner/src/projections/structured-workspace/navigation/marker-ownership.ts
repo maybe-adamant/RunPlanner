@@ -93,13 +93,11 @@ export function workspaceLocalDetailMarkers(
           ...rewardControlMarkers(offer.rewardControl),
         ]),
         ...roomLocal.supplementalOffers.flatMap((offer) =>
-          offer.kind === 'travelDealPlaceholder'
+          !('purchase' in offer)
             ? []
             : [
                 offer.purchase.marker,
-                ...(offer.kind === 'travelDealInvalid'
-                  ? []
-                  : rewardControlMarkers(offer.rewardControl)),
+                ...(!('rewardControl' in offer) ? [] : rewardControlMarkers(offer.rewardControl)),
               ],
         ),
       ]);

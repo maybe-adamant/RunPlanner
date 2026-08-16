@@ -677,12 +677,19 @@ same normalized vocabulary before Phase 3 begins.
 
 ## Current Planner Disposition
 
-Schema 35 retains exact concrete acquisition identity through Echo's two
+Schema 38 retains exact concrete acquisition identity through Echo's two
 reward-facing effects. Reward Reward Reward folds the latest successfully
 settled effective `LastRewardEligible` recreation descriptor and settles the
 mandatory recreated entry through the ordinary acquisition roles. This keeps
 replayed Nectar on its opted-in run-progress path and keeps Blind Box identity
 separate from its resolved source.
+
+World Shop profiles retain only their declaration-owned initial slots.
+Infernal Contract, Travel Deal, and Gold use fixed supplemental entry keys in
+the existing room-exit settlement site: Contract is a free pedestal, Travel is
+a paid refill, and Gold is a free later pickup. Payload/participation and the
+single authored chronology are separate products; Contract never enters paid
+purchase policy, and Travel/Gold keep distinct source-time frontiers.
 
 Gold Gold Gold's first purchased non-`SpellDrop` World Shop entry consumes the
 exact one-use trait and materializes one separate free object. The source does
@@ -697,6 +704,10 @@ has a later conditional regeneration contact: `CreateBoonLootButtons` reruns
 interaction.
 Blind Box resolves its hidden loot on interaction in the game. The planner may
 instead fully author that result on the derived Gold row, provided the later
-site order stores only chronology. Schema 37 still collapses materialization
-and pickup into one immediate supplemental settlement; this is a known model
-discrepancy reserved for the focused Gold chronology correction.
+site order stores only chronology. The stable `echoDoubleShopReward` payload
+may therefore be edited before pickup and remains separate from its order
+membership. The Shop kernel's accepted paid removal consumes Gold and freezes
+the pre-source-acquisition materialization even when later nested source detail
+is invalid; rejection before that checkpoint leaves the trait armed. Ordinary
+payloads remain frozen, while Pom regenerates only under the audited
+existential missing-`StackOnly` condition.

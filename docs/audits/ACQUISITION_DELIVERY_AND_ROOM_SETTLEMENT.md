@@ -4,7 +4,7 @@
 
 **Complete for the game facts needed to canonicalize currently modeled reward
 acquisitions, correct Shop-backed settlement, model Narcissus pickups, and
-settle Echo's replayed and duplicated acquisitions.** Schema 35 now delivers
+settle Echo's replayed and duplicated acquisitions.** Schema 38 now delivers
 that boundary. Shrine delivery, Well behavior, other composite-room delivery
 additions, and other dropped-item families remain explicitly scoped follow-up
 work rather than gaps in the current contract.
@@ -741,12 +741,23 @@ one generic trait-outcome mechanism:
   regenerates a `StackOnly` option set at interaction if any stored target is no
   longer equipped.
 
-Gold therefore extends one reached Shop site with a supplemental pickup in the
-existing site order; it does not justify a Shop-private order or a separate Echo
-pending map. The equipped-trait history must expose one-use consumption at the
-source purchase so later purchases and shops no longer observe the effect. The
-materialized duplicate then owns its exact child state and may settle at a
-later position in that same order.
+Gold therefore extends one reached Shop site with the stable
+`echoDoubleShopReward` supplemental pickup; it does not justify a Shop-private
+order or a separate Echo pending map. The equipped-trait history exposes
+one-use consumption after the source purchase passes the Shop kernel but before
+its acquisition roles, so later purchases and shops no longer observe the
+effect. The materialized duplicate owns its exact child state independently of
+participation and joins the existing site order only when picked up. A rejected
+purchase leaves Gold armed, while invalid nested source detail after accepted
+removal does not undo consumption or materialization.
+
+Infernal Contract and Travel Deal use the same delivered settlement seam
+without sharing Gold's timing policy. Contract contributes a fixed free pickup
+only at a qualifying Shop destination and never becomes a paid trigger. Travel
+contributes one paid refill derived from the first accepted paid purchase when
+already equipped. Both may interleave with Gold and ordinary purchases through
+the one room-exit order; their payloads and provenance remain independently
+owned.
 
 All eight selected Echo menu identities are themselves acquired
 player-rarityless traits before these effect-specific contacts run.
@@ -769,7 +780,8 @@ trait; Gold later removes only its exact one-use outer acquisition.
    history and are never regenerated from settlement results.
 5. Each optional concrete item has one acquired/not-acquired participation
    fact. Presentation may label it purchased or picked up according to the
-   interaction; that label does not decide chronology.
+   interaction; payload authorship may precede participation, and neither label
+   nor payload presence decides chronology.
 6. Every participating item appears exactly once in its checkpoint's shared
    settlement order; every nonparticipating item appears zero times.
 7. Immediate Shop and Well acquisitions affect the room settlement product
@@ -811,8 +823,8 @@ trait; Gold later removes only its exact one-use outer acquisition.
 
 The following remain open for focused follow-up work:
 
-- the default insertion position when a newly purchased or picked-up item joins
-  an existing authored settlement order;
+- default insertion for future acquisition families that have not yet declared
+  an engine-owned complete site-order proposal;
 - the exact encounter countdown for every Shrine item, including rooms that
   ignore encounter uses, multi-encounter rooms, boss exceptions, and forced
   completion rooms;
@@ -824,7 +836,9 @@ These gaps do not weaken the delivered conclusion: producer selection and
 concrete acquisition are already separate in the game. The first-class ordered
 settlement seam now owns Shop `roomExit` acquisition, Narcissus pickups, Echo's
 mandatory last-reward recreation, and Gold Gold Gold's declaration-derived
-supplemental Shop entry without the historical prototype's nesting or a second
-purchase order. Later Shrine delivery must extend that seam while preserving
+supplemental Shop entry. Travel and Gold publish one shared complete proposal
+product over their source dependencies, while payload edits use the same
+derived-entry materialization command without changing order. Later Shrine
+delivery must extend that seam while preserving
 multiple lifecycle checkpoints; it must not move every acquisition to one
 universal end-of-room phase.

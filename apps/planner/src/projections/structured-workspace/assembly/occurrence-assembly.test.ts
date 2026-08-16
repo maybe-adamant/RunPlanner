@@ -744,35 +744,41 @@ describe('structured workspace occurrence assembly', () => {
     expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
   });
 
-  it('projects a reached Echo Shop duplicate after its paid source without adding purchase policy', () => {
+  it('projects a reached Gold duplicate as one supplemental row and ordered peer pickup', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenFBiome, shopId),
       'roomExit',
     );
     let project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['Minor', 'Boon', 'MajorNonBoon'],
-    });
-    const occurrence = project.routes
+    const initialOccurrence = project.routes
       .flatMap((route) => route.biomes)
       .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
     const source =
-      occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon : undefined;
+      initialOccurrence?.state.kind === 'shop'
+        ? initialOccurrence.state.shop?.offers.Boon
+        : undefined;
     if (source === undefined) throw new Error('selected Shop Boon is missing');
-    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:Boon');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectDerivedShopEntry',
+      site,
+      entryKey: 'echoDoubleShopReward',
+      entryKeys: ['Minor', 'Boon', 'MajorNonBoon', 'echoDoubleShopReward'],
+      defaultValue: source.reward,
+    });
+    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const projected = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
       semanticAddressKey(candidateSite) !== semanticAddressKey(site)
         ? []
         : [
             {
               address: duplicate,
-              kind: 'echoShopDuplicate' as const,
+              kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'Boon',
               defaultValue: source.reward,
+              rewardTypes: ['RandomLoot'],
+              eligibleSourceOfferKeys: ['Minor', 'Boon', 'MajorNonBoon'],
             },
           ],
     );
@@ -781,22 +787,35 @@ describe('structured workspace occurrence assembly', () => {
     expect(result.node.room.acquisitions?.entries.map((entry) => entry.key)).toEqual([
       'Minor',
       'Boon',
-      'echoDoubleShop:Boon',
       'MajorNonBoon',
+      'echoDoubleShopReward',
     ]);
-    const derived = result.node.room.acquisitions?.entries[2];
+    const derived = result.node.room.acquisitions?.entries[3];
     expect(derived).toMatchObject({
       address: duplicate,
-      label: 'Free duplicate',
-      rewardControl: {
-        kind: 'explicitReward',
-        owner: { kind: 'acquisitionEntry', address: duplicate },
-        rewardTypes: ['RandomLoot'],
-      },
+      label: 'Gold Gold Gold duplicate of Offer 1',
     });
+    expect(derived?.rewardControl).toBeUndefined();
     expect(result.node.room.roomLocal.kind).toBe('shop');
     if (result.node.room.roomLocal.kind !== 'shop') throw new Error('Shop summary is missing');
-    expect(result.node.room.roomLocal.acquisitionOrder).toEqual(['Minor', 'Boon', 'MajorNonBoon']);
+    expect(result.node.room.roomLocal.acquisitionOrder).toEqual([
+      'Minor',
+      'Boon',
+      'MajorNonBoon',
+      'echoDoubleShopReward',
+    ]);
+    expect(result.node.room.roomLocal.supplementalOffers).toContainEqual(
+      expect.objectContaining({
+        kind: 'echoDoubleShopReward',
+        participationLabel: 'Picked up',
+        sourceOfferKey: 'Boon',
+        rewardControl: expect.objectContaining({
+          kind: 'explicitReward',
+          owner: { kind: 'acquisitionEntry', address: duplicate },
+          rewardTypes: ['RandomLoot'],
+        }),
+      }),
+    );
     expect(result.occurrenceInteractionRequirements).toEqual([
       expect.objectContaining({ kind: 'acquisitionOrder' }),
     ]);
@@ -905,7 +924,7 @@ describe('structured workspace occurrence assembly', () => {
     });
   });
 
-  it('projects an Echo duplicate immediately after its Travel refill source', () => {
+  it('projects a Gold duplicate ordered after its Travel refill source', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const occurrenceAddress = createOccurrenceAddress(goldenFBiome, shopId);
@@ -917,7 +936,7 @@ describe('structured workspace occurrence assembly', () => {
     const source =
       occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers.Boon?.reward : undefined;
     if (source === undefined) throw new Error('F Preboss Boon default is missing');
-    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShop:travelDealRefill');
+    const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const project: ProjectDocument = {
       ...base,
       routes: base.routes.map((route) =>
@@ -941,10 +960,14 @@ describe('structured workspace occurrence assembly', () => {
                                 acquisitionSites: {
                                   ...(candidate.acquisitionSites ?? {}),
                                   roomExit: {
-                                    order: ['MajorNonBoon', 'travelDealRefill'],
+                                    order: [
+                                      'MajorNonBoon',
+                                      'travelDealRefill',
+                                      'echoDoubleShopReward',
+                                    ],
                                     pickupEntries: {
                                       travelDealRefill: source,
-                                      'echoDoubleShop:travelDealRefill': source,
+                                      echoDoubleShopReward: source,
                                     },
                                   },
                                 },
@@ -970,16 +993,18 @@ describe('structured workspace occurrence assembly', () => {
             },
             {
               address: duplicate,
-              kind: 'echoShopDuplicate' as const,
+              kind: 'echoDoubleShopReward' as const,
               sourceOfferKey: 'travelDealRefill',
               defaultValue: source,
+              rewardTypes: ['RandomLoot'],
+              eligibleSourceOfferKeys: ['travelDealRefill'],
             },
           ],
     ).assembly.node.room;
     expect(result.acquisitions?.entries.map((entry) => entry.key)).toEqual([
       'MajorNonBoon',
       'travelDealRefill',
-      'echoDoubleShop:travelDealRefill',
+      'echoDoubleShopReward',
     ]);
   });
 

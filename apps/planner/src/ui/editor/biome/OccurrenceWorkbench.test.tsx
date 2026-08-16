@@ -80,6 +80,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
 
 afterEach(() => {
   cleanup();
@@ -141,7 +142,7 @@ function travelDealGPrebossProject(): ProjectDocument {
     reward: incoming,
     value: { rewardType: 'HermesUpgrade' },
   });
-  return applyProjectCommand(project, catalog, {
+  const result = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(incoming, 'self'),
     value: {
@@ -155,6 +156,7 @@ function travelDealGPrebossProject(): ProjectDocument {
       selectedOptionKey: 'option1',
     },
   });
+  return result;
 }
 
 function contractTravelFShopsProject(): {
@@ -1752,7 +1754,7 @@ describe('OccurrenceWorkbench', () => {
       'P',
       occurrenceById(pOccurrenceIds.prebossShop),
     );
-    expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
+    expect(screen.getAllByText('Participation')).not.toHaveLength(0);
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     expect(screen.queryByLabelText('Customize')).toBeNull();
   });
@@ -1899,6 +1901,70 @@ describe('OccurrenceWorkbench', () => {
     expect(order()).toEqual(['MajorNonBoon', 'travelDealRefill', 'Minor']);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(order()).toEqual(['MajorNonBoon', 'Minor', 'travelDealRefill']);
+  }, 15_000);
+
+  it('edits, picks up, and weaves Gold through the shared Shop product with undo and redo', async () => {
+    const shopId = createOccurrenceId('golden-h-preboss-shop');
+    const project = createEchoGoldHPrebossProject();
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
+    const authoredSite = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'H')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+        ?.acquisitionSites?.roomExit;
+
+    expect(
+      screen.getByText(
+        'Purchase order needs one paid non-Spell Shop offer before this duplicate can be edited.',
+      ),
+    ).toBeTruthy();
+    await view.user.click(screen.getByLabelText('Purchase Offer 3'));
+    const pickedUp = await screen.findByRole('checkbox', {
+      name: 'Pick up Gold Gold Gold duplicate of Offer 3',
+    });
+    expect((pickedUp as HTMLInputElement).checked).toBe(false);
+    expect(authoredSite()?.order).toEqual(['Minor']);
+    expect(authoredSite()?.pickupEntries?.echoDoubleShopReward).toBeUndefined();
+
+    const goldShopRow = screen.getByText('Gold Gold Gold duplicate of Offer 3').closest('tr');
+    const goldRewardRow = goldShopRow?.nextElementSibling;
+    if (!(goldRewardRow instanceof HTMLElement)) throw new Error('Gold reward row is missing');
+    const conversion = within(goldRewardRow).getByLabelText(/Time Piece/) as HTMLSelectElement;
+    await view.user.selectOptions(conversion, 'gold');
+    expect(authoredSite()?.order).toEqual(['Minor']);
+    expect(
+      authoredSite()?.pickupEntries?.echoDoubleShopReward?.conversionByAcquisitionRole.self,
+    ).toBe('gold');
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredSite()?.order).toEqual(['Minor']);
+    expect(authoredSite()?.pickupEntries?.echoDoubleShopReward).toBeUndefined();
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(
+      authoredSite()?.pickupEntries?.echoDoubleShopReward?.conversionByAcquisitionRole.self,
+    ).toBe('gold');
+
+    await view.user.click(pickedUp);
+    expect(authoredSite()?.order).toEqual(['Minor', 'echoDoubleShopReward']);
+    expect(authoredSite()?.pickupEntries?.echoDoubleShopReward).toBeDefined();
+    expect(screen.getAllByText('Gold Gold Gold duplicate of Offer 3')).not.toHaveLength(0);
+
+    await view.user.click(screen.getByLabelText('Purchase Offer 2'));
+    expect(authoredSite()?.order).toEqual(['Minor', 'echoDoubleShopReward', 'MajorNonBoon']);
+    const goldAcquisition = screen
+      .getAllByText('Gold Gold Gold duplicate of Offer 3')
+      .map((label) => label.closest('.acquisition-entry'))
+      .find((entry): entry is HTMLElement => entry !== null);
+    if (goldAcquisition === undefined) throw new Error('Gold chronology entry is missing');
+    expect(within(goldAcquisition).queryByRole('button', { name: 'Reward' })).toBeNull();
+    await view.user.click(within(goldAcquisition).getByRole('button', { name: 'Move later' }));
+    expect(authoredSite()?.order).toEqual(['Minor', 'MajorNonBoon', 'echoDoubleShopReward']);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredSite()?.order).toEqual(['Minor', 'echoDoubleShopReward', 'MajorNonBoon']);
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(authoredSite()?.order).toEqual(['Minor', 'MajorNonBoon', 'echoDoubleShopReward']);
   }, 15_000);
 
   it('edits both supplemental rewards in their rendered Preboss order', async () => {

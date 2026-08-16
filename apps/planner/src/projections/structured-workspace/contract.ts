@@ -82,6 +82,10 @@ export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
+export type WorkspacePayloadEditIntent<Command extends ProjectCommand> = WorkspaceCommandIntent<
+  Command | Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>
+>;
+
 export interface WorkspaceMarker {
   readonly address: SemanticAddress;
   readonly assessment: WorkspaceAssessment;
@@ -318,7 +322,9 @@ export interface WorkspaceAllTogetherSetInteraction {
   readonly control: WorkspaceAllTogetherSetControl;
   readonly intentFor: (
     value: string | null,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAllTogetherSet' }>>;
+  ) => WorkspacePayloadEditIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAllTogetherSet' }>
+  >;
   readonly offerFor: (
     offer: AuthoredTraitOfferTraits,
     value: string | null,
@@ -341,7 +347,7 @@ export interface WorkspaceCirceResolutionInteraction {
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
     resolution: AuthoredCirceResolution,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   /** Binds the current draft before handing its loader to the sole React adapter. */
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceCirceResolutionDomain | undefined;
@@ -358,7 +364,7 @@ export interface WorkspaceEchoPomTargetInteraction {
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
     targetTraitKey: string | null,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoPomTargetDomain | undefined;
   };
@@ -385,7 +391,7 @@ export interface WorkspaceEchoLastRunBoonInteraction {
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
     value: AuthoredEchoLastRunBoonOffer,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoLastRunBoonDomain | undefined;
   };
@@ -408,7 +414,7 @@ export interface WorkspaceEchoLastRewardInteraction {
   readonly intentFor: (
     offer: AuthoredTraitOfferTraits,
     value: AuthoredEchoLastRewardAcquisition,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoLastRewardDomain | undefined;
   };
@@ -420,7 +426,7 @@ export interface WorkspaceTraitOfferInteraction {
   readonly giver: TraitGiverDeclaration;
   readonly intentFor: (
     value: AuthoredTraitOffer,
-  ) => WorkspaceCommandIntent<
+  ) => WorkspacePayloadEditIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }>
   >;
   readonly key: string;
@@ -437,7 +443,9 @@ export interface WorkspaceTraitOfferInteraction {
   readonly traitLabel: (traitKey: string) => string;
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>>;
+  ) => WorkspacePayloadEditIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>
+  >;
   readonly value: AuthoredTraitOffer;
   /** Exact engine-backed traits draft for returning from Fallback Gold. */
   readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
@@ -453,7 +461,9 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly acquisitionRoleLabel: string;
   readonly intentFor: (
     value: AuthoredLevelResolution,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>>;
+  ) => WorkspacePayloadEditIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>
+  >;
   readonly key: string;
   /** Declaration-owned increment displayed beside the exact Pom control. */
   readonly levelCount?: number;
@@ -598,7 +608,8 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceLocalReward'
         | 'ReplaceRewardWheelOffer'
         | 'ReplaceShopOffer'
-        | 'ReplaceAcquisitionEntryOffer';
+        | 'ReplaceAcquisitionEntryOffer'
+        | 'EditDerivedShopEntry';
     }
   >
 >;
@@ -813,7 +824,7 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly goldSupported: boolean;
   readonly intentFor: (
     value: 'normal' | 'gold',
-  ) => WorkspaceCommandIntent<
+  ) => WorkspacePayloadEditIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionConversion' }>
   >;
   readonly key: string;
@@ -951,6 +962,11 @@ interface WorkspaceRewardControlBase {
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];
   readonly conversions?: readonly WorkspaceAcquisitionConversionControl[];
+  readonly derivedShopEntryEdit?: {
+    readonly site: AcquisitionSiteAddress;
+    readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
+    readonly defaultValue: AuthoredRewardState;
+  };
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
@@ -1011,17 +1027,18 @@ export interface WorkspaceShopOfferDescriptor {
 
 export type WorkspaceShopSupplementalDescriptor =
   | {
-      readonly kind: 'travelDealPlaceholder';
-      readonly key: 'travelDealRefill';
-      readonly label: 'Travel Deal refill';
+      readonly kind: 'travelDealPlaceholder' | 'echoDoubleShopPlaceholder';
+      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly label: string;
       readonly explanation: string;
     }
   | {
-      readonly kind: 'travelDealInvalid';
-      readonly key: 'travelDealRefill';
-      readonly label: 'Travel Deal refill';
+      readonly kind: 'travelDealInvalid' | 'echoDoubleShopInvalid';
+      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly label: string;
       readonly explanation: string;
       readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly participationLabel: 'Purchased' | 'Picked up';
     }
   | {
       readonly kind: 'infernalContractReward';
@@ -1031,6 +1048,7 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
       readonly defaultValue?: AuthoredRewardState;
+      readonly participationLabel: 'Picked up';
     }
   | {
       readonly kind: 'travelDealRefill';
@@ -1041,6 +1059,19 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly materialized: boolean;
       readonly defaultValue: AuthoredRewardState;
       readonly sourceOfferKey: string;
+      readonly participationLabel: 'Purchased';
+    }
+  | {
+      readonly kind: 'echoDoubleShopReward';
+      readonly key: 'echoDoubleShopReward';
+      readonly label: string;
+      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly materialized: boolean;
+      readonly defaultValue: AuthoredRewardState;
+      readonly sourceOfferKey: string;
+      readonly eligibleSourceOfferKeys: readonly string[];
+      readonly participationLabel: 'Picked up';
     };
 
 export interface WorkspaceShopConditionControl {

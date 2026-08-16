@@ -5,17 +5,20 @@ import {
   applyProjectCommand,
   createAllTogetherSetAddress,
   createDefaultAllTogetherResult,
+  createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createRouteAddress,
   createTraitOfferAddress,
   createShopOfferAddress,
   semanticAddressKey,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { derivedAcquisitionEntriesForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -36,6 +39,7 @@ import {
   createGoldenEchoGiftHammerPendingProject,
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
+import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 import {
   createCompleteFGProject,
@@ -552,6 +556,75 @@ describe('planner history interaction', () => {
           (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(invalid.origin),
         ),
     ).toBe(false);
+  });
+
+  it('opens an exact Gold payload finding at the derived Shop inventory row', async () => {
+    const application = createApplication();
+    const shop = createOccurrenceAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+      createOccurrenceId('golden-h-preboss-shop'),
+    );
+    const site = createAcquisitionSiteAddress(shop, 'roomExit');
+    const gold = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
+    application.store.dispatch(authoredProjectReplaced(createEchoGoldHPrebossProject()));
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAcquisitionOrder',
+        site,
+        entryKeys: ['Minor'],
+      }),
+    );
+    const derived = derivedAcquisitionEntriesForProjectEvaluationAssembly(
+      application.store.getState().projectWorkspace.assembly,
+      site,
+    ).find((entry) => entry.kind === 'echoDoubleShopReward');
+    if (derived?.defaultValue === undefined) throw new Error('Gold default is missing');
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'SelectDerivedShopEntry',
+        site,
+        entryKey: 'echoDoubleShopReward',
+        entryKeys: ['Minor', 'echoDoubleShopReward'],
+        defaultValue: derived.defaultValue,
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: gold,
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    );
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'shopPurchaseUnavailable' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(gold),
+      );
+    if (finding === undefined) throw new Error('exact Gold payload finding is missing');
+
+    const view = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings)
+      .getAllByRole('button')
+      .find((button) => button.textContent?.includes('Shop purchase is unavailable'));
+    if (findingButton === undefined) throw new Error('Gold finding is not presented');
+    await view.user.click(findingButton);
+
+    await waitFor(() =>
+      expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(gold),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .focusByOwner.get(semanticAddressKey(gold)),
+    ).toMatchObject({ ownerAddress: gold, biomeKey: 'H' });
+    const marker = document.getElementById(semanticOwnerElementId(gold));
+    expect(marker).toBeTruthy();
+    expect(marker?.closest('tr')?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
+    expect(marker?.closest('tr')?.nextElementSibling?.textContent).toContain('Max Health');
   });
 
   it('opens and focuses the exact All Together set control from its finding', async () => {

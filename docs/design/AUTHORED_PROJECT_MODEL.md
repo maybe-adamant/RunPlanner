@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 22 Boundary
+## Schema 38 Boundary
 
-Schema 22 is the sole persisted authored-project contract. The codec rejects
+Schema 38 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -162,15 +162,17 @@ result of Cherished Heirloom are never authored: ordinary selection is fixed at
 Epic and simulation derives both Cherished transitions from catalog facts and
 canonical trait history.
 
-Schema 35 closes Echo's active authored children without adding effect state to
+Schema 38 closes Echo's active authored children without adding effect state to
 the project. Pom persists one selected greatest-level target or the explicit
 empty-domain `null` result. Boon persists one to three distinct trait-key rows
 whose giver identity and equipped rarity are explicit, plus only the selected
 trait's declaration-owned acquisition detail. Reward persists only the exact
 recreated acquisition's conversion, trait-offer, and level children; the
-replayed source descriptor remains derived history. A reached Gold duplicate
-is a sparse `pickupEntries` child at the existing Shop `roomExit` site and is
-not a member of its authored order. Gift's captured keepsake, replay schedule,
+replayed source descriptor remains derived history. Gold uses the sole stable
+`echoDoubleShopReward` key: its complete payload may persist sparsely in
+`pickupEntries` before participation, and it enters the existing Shop
+`roomExit.order` only when picked up. No source selector or source-keyed Gold
+child is persisted. Gift's captured keepsake, replay schedule,
 and replay count remain chronological trait history; only a reached
 Experimental Hammer replay persists its selected-compatible or explicit
 exhausted result beneath that succeeding biome's start address. Dormant Echo
@@ -360,12 +362,20 @@ pickup stores its exact reward, trait-offer, and level-resolution children in
 the site's `pickupEntries`. Mandatory singleton room rewards have derived
 participation and order, so they do not create redundant persisted site state.
 Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
-duplicate, may also own sparse acquisition-time children at that site. Their
-participation and position are derived from chronological settlement and they
-must not enter the authored `order`.
+duplicate and Travel Deal's refill, may also own sparse acquisition-time
+children at that site. A dormant payload may exist without participating;
+selection adds its fixed key to the same authored `order`, whose position alone
+owns chronology. Infernal Contract uses its own fixed supplemental key and the
+same site rather than extending declaration-owned Shop inventory.
 `ReplaceAcquisitionOrder` replaces one complete site order;
 `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
 pickup. Neither command may infer entries from room names or rendered rows.
+`EditDerivedShopEntry` atomically installs one engine-supplied complete default
+for a dormant Travel or Gold row and applies one nested reward, trait, level, or
+conversion edit without changing `roomExit.order`. `SelectDerivedShopEntry`
+atomically materializes the same default and applies one engine-supplied
+complete participation/order proposal. These are one shared command family,
+not effect-specific state or a second Shop chronology.
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or
@@ -424,6 +434,13 @@ selected key, rarity, target, Circe resolution, or Death Defiance condition.
 Only Olympian and Hermes givers support sparse or fallback outcomes. Defaults
 for every giver remain complete three-option trait outcomes, and an upstream
 edit may retain a context-invalid outcome for explicit repair.
+
+When the selected trait is All Together, that exact option additionally owns
+one complete result keyed by its four declaration-owned sets. Each value is one
+member of its pair or `null` for an exhausted pair. No generic direct-effect
+bag, provider-history choice, or separate child offer is persisted. A semantic
+command replaces one set result while ordinary trait selection and undo/redo
+retain ownership of the complete outer option.
 
 ### Concrete Encounter Selections
 
@@ -528,7 +545,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 22;
+  schemaVersion: 38;
   projectId: string;
   name: string;
   catalogVersion: string;

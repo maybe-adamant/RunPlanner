@@ -619,7 +619,7 @@ function ShopWorkbench({
           <thead>
             <tr>
               <th scope="col">Offer</th>
-              <th scope="col">Purchased</th>
+              <th scope="col">Participation</th>
             </tr>
           </thead>
           <tbody>
@@ -662,12 +662,13 @@ function ShopWorkbench({
               </Fragment>
             ))}
             {room.supplementalOffers.map((offer) =>
-              offer.kind === 'travelDealPlaceholder' ? (
+              offer.kind === 'travelDealPlaceholder' ||
+              offer.kind === 'echoDoubleShopPlaceholder' ? (
                 <tr className="shop-offer shop-offer-disabled" key={offer.key}>
                   <th scope="row">{offer.label}</th>
                   <td>{offer.explanation}</td>
                 </tr>
-              ) : offer.kind === 'travelDealInvalid' ? (
+              ) : offer.kind === 'travelDealInvalid' || offer.kind === 'echoDoubleShopInvalid' ? (
                 <tr className="shop-offer shop-offer-invalid" key={offer.key}>
                   <th scope="row">
                     <span>{offer.label}</span>
@@ -677,6 +678,7 @@ function ShopWorkbench({
                     address={offer.purchase.address}
                     interactions={interactions}
                     label={offer.label}
+                    participationLabel={offer.participationLabel}
                     onChange={(offerKeys) =>
                       dispatch(
                         authoredProjectCommandDispatched({
@@ -690,7 +692,7 @@ function ShopWorkbench({
                     toggleOfferKeys={offer.purchase.toggleOfferKeys}
                   />
                 </tr>
-              ) : (
+              ) : 'rewardControl' in offer ? (
                 <Fragment key={offer.key}>
                   <tr className="shop-offer" key={`${offer.key}:purchase`}>
                     <th scope="row">
@@ -703,15 +705,21 @@ function ShopWorkbench({
                       address={offer.purchase.address}
                       interactions={interactions}
                       label={offer.label}
+                      participationLabel={offer.participationLabel}
                       onChange={(offerKeys) =>
                         dispatch(
-                          offer.kind === 'travelDealRefill' &&
+                          (offer.kind === 'travelDealRefill' ||
+                            offer.kind === 'echoDoubleShopReward') &&
                             !offer.materialized &&
                             offer.defaultValue !== undefined &&
                             offerKeys.includes(offer.key)
                             ? authoredProjectCommandDispatched({
-                                kind: 'PurchaseTravelDealRefill',
+                                kind: 'SelectDerivedShopEntry',
                                 site: createAcquisitionSiteAddress(occurrence, 'roomExit'),
+                                entryKey:
+                                  offer.kind === 'travelDealRefill'
+                                    ? 'travelDealRefill'
+                                    : 'echoDoubleShopReward',
                                 entryKeys: offerKeys,
                                 defaultValue: offer.defaultValue,
                               })
@@ -732,12 +740,12 @@ function ShopWorkbench({
                         control={offer.rewardControl}
                         idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                         interactions={interactions}
-                        showAcquisitionChildren={false}
+                        showAcquisitionChildren={offer.kind === 'echoDoubleShopReward'}
                       />
                     </td>
                   </tr>
                 </Fragment>
-              ),
+              ) : null,
             )}
           </tbody>
         </table>

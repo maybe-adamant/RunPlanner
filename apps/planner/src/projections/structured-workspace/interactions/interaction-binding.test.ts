@@ -348,9 +348,12 @@ describe('structured workspace interaction binding', () => {
       kind: 'activateArcana',
       arcanaKeys: ['ChanneledCast'],
     });
+    const redCommand = redIntent?.command;
     expect(
-      (redIntent?.command.value as AuthoredTraitOfferTraits | undefined)?.options[2]
-        ?.circeResolution,
+      (redCommand?.kind === 'ReplaceTraitOffer' && redCommand.value.kind === 'traits'
+        ? redCommand.value.options[2]
+        : undefined
+      )?.circeResolution,
     ).toEqual(directOffer.options[2]?.circeResolution);
 
     const blackDraft = Object.freeze({ ...directOffer, selectedOptionKey: 'option3' as const });
@@ -440,9 +443,11 @@ describe('structured workspace interaction binding', () => {
     });
     expect(pom?.control.marker.findingCount).toBeGreaterThan(0);
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
+    const pomCommand = pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command;
     expect(
-      (pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command.value as AuthoredTraitOfferTraits)
-        .options[2],
+      pomCommand?.kind === 'ReplaceTraitOffer' && pomCommand.value.kind === 'traits'
+        ? pomCommand.value.options[2]
+        : undefined,
     ).toMatchObject({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: 'ApolloWeaponBoon' });
   });
 

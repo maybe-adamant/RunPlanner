@@ -62,6 +62,17 @@ authorities. Gift Gift Gift replays the four supported eligible effects at
 biome start and retains the other eligible keepsakes as effect-neutral captured
 history until their individual effect slices are implemented.
 
+Hera's All Together, the Zagreus Infernal Contract, and Hermes's Travel Deal
+are also supported through authored schema 38. All Together resolves one exact
+rarityless Infusion from each non-exhausted declaration-owned pair without
+changing god-pool history. Qualifying World Shops retain their declaration-owned initial
+inventory and add the free Contract pedestal, one source-derived Travel refill,
+and Echo's stable `echoDoubleShopReward` pickup as supplemental rows. Payload
+and participation are authored on those rows, while one shared Acquisitions
+order owns chronology; Gold materializes from the first accepted paid
+non-Spell purchase before that source's acquisition effects and may be picked
+up later among the other room entries.
+
 ## Architecture
 
 The repository is split by ownership:
@@ -176,11 +187,14 @@ copied elsewhere.
   presentation slices are complete. Campaign B made candidate artifacts
   explicit, Campaign C separated the justified authored-core authorities, and
   Campaign D retained the coherent ordered history and reward folds. Echo's
-  eight-choice delivery is complete through authored schema 35. Commit 5c
-  completed the schema-11 exact Shop purchase order across the engine,
-  projection, and UI. The ranked Hub follow-up and manual Shop UX acceptance
-  close Phase 7. Phase 8 is complete with the successful `v0.1.0` tagged
-  Windows portable release.
+  eight-choice delivery, All Together, Infernal Contract, Travel Deal, and the
+  corrected Gold Shop chronology are complete through authored schema 38.
+  Shop inventory, supplemental reward payloads, purchase/pickup participation,
+  and room-local chronology remain distinct supported products. The ranked Hub
+  follow-up and manual Shop UX acceptance close Phase 7. Phase 8 is complete
+  with the successful `v0.1.0` tagged Windows portable release. Fields minor
+  rewards, Artificer, Wells, and exact Surface Shop delivery timing remain
+  focused follow-up work.
 
 ## Source Evidence
 

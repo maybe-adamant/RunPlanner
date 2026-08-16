@@ -31,6 +31,7 @@ import {
   type AuthoredRewardState,
   type LevelResolutionAddress,
   shopAcquisitionOrderProposals,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '@run-planner/engine/authored-project';
@@ -127,11 +128,16 @@ export interface WorkspaceOccurrenceAssemblyInput {
   ) => readonly {
     readonly address: import('@run-planner/engine/authored-project').AcquisitionEntryAddress;
     readonly kind:
-      'echoShopDuplicate' | 'infernalContractReward' | 'travelDealPlaceholder' | 'travelDealRefill';
+      | 'echoDoubleShopPlaceholder'
+      | 'echoDoubleShopReward'
+      | 'infernalContractReward'
+      | 'travelDealPlaceholder'
+      | 'travelDealRefill';
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly defaultValue?: AuthoredRewardState;
     readonly rewardTypes?: readonly string[];
+    readonly eligibleSourceOfferKeys?: readonly string[];
   }[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
@@ -336,6 +342,7 @@ function rewardControl(
   offer: ResolvedRewardOffer,
   authoredReward: AuthoredRewardState,
   explicitRewardTypes: readonly string[] = Object.freeze([offer.rewardType]),
+  derivedShopEntryEdit?: WorkspaceRewardControl['derivedShopEntryEdit'],
 ): WorkspaceRewardControl {
   return binding === undefined
     ? Object.freeze({
@@ -347,6 +354,7 @@ function rewardControl(
         levelResolutions: levelResolutionControls(input, owner, authoredReward),
         conversions: conversionControls(input, owner, authoredReward),
         rewardTypes: Object.freeze([...explicitRewardTypes]),
+        ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       })
     : Object.freeze({
         kind: 'countedReward' as const,
@@ -357,6 +365,7 @@ function rewardControl(
         traitOffers: traitOfferControls(input, owner, authoredReward),
         levelResolutions: levelResolutionControls(input, owner, authoredReward),
         conversions: conversionControls(input, owner, authoredReward),
+        ...(derivedShopEntryEdit === undefined ? {} : { derivedShopEntryEdit }),
       });
 }
 
@@ -1209,8 +1218,13 @@ function roomLocalForOccurrence(
       const travelCapability = derivedEntries.find(
         (entry) => entry.kind === 'travelDealRefill' || entry.kind === 'travelDealPlaceholder',
       );
+      const goldCapability = derivedEntries.find(
+        (entry) =>
+          entry.kind === 'echoDoubleShopReward' || entry.kind === 'echoDoubleShopPlaceholder',
+      );
       const selectedContract = acquisitionOrder.includes(INFERNAL_CONTRACT_ENTRY_KEY);
       const selectedTravel = acquisitionOrder.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY);
+      const selectedGold = acquisitionOrder.includes(ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
       const activeSupplementalKeys = Object.freeze([
         ...(contractCapability === undefined && !selectedContract
           ? []
@@ -1218,18 +1232,43 @@ function roomLocalForOccurrence(
         ...(travelCapability?.kind !== 'travelDealRefill' && !selectedTravel
           ? []
           : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
+        ...(goldCapability?.kind !== 'echoDoubleShopReward' && !selectedGold
+          ? []
+          : [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]),
+      ]);
+      const derivedDependencies = Object.freeze([
+        ...(travelCapability?.kind === 'travelDealRefill' &&
+        travelCapability.sourceOfferKey !== undefined
+          ? [
+              Object.freeze({
+                kind: 'fixedSource' as const,
+                entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                sourceOfferKey: travelCapability.sourceOfferKey,
+              }),
+            ]
+          : []),
+        ...(goldCapability?.eligibleSourceOfferKeys === undefined
+          ? []
+          : [
+              Object.freeze({
+                kind: 'firstEligibleSource' as const,
+                entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                eligibleSourceOfferKeys: goldCapability.eligibleSourceOfferKeys,
+              }),
+            ]),
       ]);
       const completeProposals = shopAcquisitionOrderProposals(
         acquisitionOrder,
         Object.freeze([...profile.slots.values.map((slot) => slot.key), ...activeSupplementalKeys]),
-        travelCapability?.sourceOfferKey,
+        derivedDependencies,
       );
       const purchasedKeys = new Set<string>();
       for (const offerKey of acquisitionOrder) {
         if (
           shop.offers[offerKey] === undefined &&
           offerKey !== INFERNAL_CONTRACT_ENTRY_KEY &&
-          offerKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY
+          offerKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+          offerKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
         ) {
           throw new StructuredWorkspaceProjectionContractError(
             `${room.gameName} acquisition order has unknown entry ${offerKey}`,
@@ -1309,6 +1348,7 @@ function roomLocalForOccurrence(
                     key: INFERNAL_CONTRACT_ENTRY_KEY,
                     label: 'Infernal Contract reward',
                     materialized: true,
+                    participationLabel: 'Picked up' as const,
                     purchase: Object.freeze({
                       address,
                       marker: input.markerDestinations.marker(address),
@@ -1340,6 +1380,7 @@ function roomLocalForOccurrence(
                     label: 'Travel Deal refill' as const,
                     explanation:
                       'This selected refill has no active triggering purchase. Remove it from the acquisition order to repair the Shop.',
+                    participationLabel: 'Purchased' as const,
                     purchase: Object.freeze({
                       address,
                       marker: input.markerDestinations.marker(address),
@@ -1399,6 +1440,7 @@ function roomLocalForOccurrence(
                           sourceOfferKey: travelCapability.sourceOfferKey,
                           materialized: pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] !== undefined,
                           defaultValue: travelCapability.defaultValue,
+                          participationLabel: 'Purchased' as const,
                           purchase: Object.freeze({
                             address,
                             marker: input.markerDestinations.marker(address),
@@ -1413,18 +1455,138 @@ function roomLocalForOccurrence(
                             authored.offer,
                             authored,
                             travelCapability.rewardTypes,
+                            pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] === undefined
+                              ? Object.freeze({
+                                  site: acquisitionSite,
+                                  entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                                  defaultValue: travelCapability.defaultValue,
+                                })
+                              : undefined,
                           ) as WorkspaceExplicitRewardControl,
                         });
                       })(),
                     ]),
-        ].sort((left, right) =>
-          left.kind === right.kind
-            ? 0
-            : left.kind === 'infernalContractReward'
-              ? 1
-              : right.kind === 'infernalContractReward'
-                ? -1
-                : 0,
+          ...(selectedGold && goldCapability?.kind !== 'echoDoubleShopReward'
+            ? [
+                (() => {
+                  const address = createAcquisitionEntryAddress(
+                    acquisitionSite,
+                    ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                  );
+                  return Object.freeze({
+                    kind: 'echoDoubleShopInvalid' as const,
+                    key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                    label: 'Gold Gold Gold duplicate',
+                    explanation:
+                      'This selected duplicate has no active eligible paid source. Clear Picked up to repair the Shop.',
+                    participationLabel: 'Picked up' as const,
+                    purchase: Object.freeze({
+                      address,
+                      marker: input.markerDestinations.marker(address),
+                      purchased: true,
+                      toggleOfferKeys: Object.freeze(
+                        acquisitionOrder.filter(
+                          (candidate) => candidate !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                        ),
+                      ),
+                      proposalOfferKeys: completeProposals,
+                    }),
+                  });
+                })(),
+              ]
+            : goldCapability === undefined
+              ? []
+              : goldCapability.kind === 'echoDoubleShopPlaceholder'
+                ? [
+                    Object.freeze({
+                      kind: 'echoDoubleShopPlaceholder' as const,
+                      key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                      label: 'Gold Gold Gold duplicate',
+                      explanation:
+                        'Purchase order needs one paid non-Spell Shop offer before this duplicate can be edited.',
+                    }),
+                  ]
+                : goldCapability.defaultValue === undefined ||
+                    goldCapability.sourceOfferKey === undefined
+                  ? []
+                  : [
+                      (() => {
+                        const address = createAcquisitionEntryAddress(
+                          acquisitionSite,
+                          ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                        );
+                        const authored =
+                          pickupEntries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY] ??
+                          goldCapability.defaultValue;
+                        if (goldCapability.rewardTypes === undefined) {
+                          throw new StructuredWorkspaceProjectionContractError(
+                            `${room.gameName} Gold duplicate has no attested reward domain`,
+                          );
+                        }
+                        if (goldCapability.eligibleSourceOfferKeys === undefined) {
+                          throw new StructuredWorkspaceProjectionContractError(
+                            `${room.gameName} Gold duplicate has no attested source domain`,
+                          );
+                        }
+                        const sourceOfferLabel =
+                          offers.find((offer) => offer.key === goldCapability.sourceOfferKey)
+                            ?.label ??
+                          (goldCapability.sourceOfferKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+                            ? 'Travel Deal refill'
+                            : goldCapability.sourceOfferKey);
+                        const toggleOfferKeys =
+                          completeProposals.find((proposal) =>
+                            selectedGold
+                              ? !proposal.includes(ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
+                              : proposal.includes(ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
+                          ) ?? acquisitionOrder;
+                        return Object.freeze({
+                          kind: 'echoDoubleShopReward' as const,
+                          key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                          label: `Gold Gold Gold duplicate of ${sourceOfferLabel}`,
+                          sourceOfferKey: goldCapability.sourceOfferKey,
+                          eligibleSourceOfferKeys: goldCapability.eligibleSourceOfferKeys,
+                          materialized:
+                            pickupEntries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY] !== undefined,
+                          defaultValue: goldCapability.defaultValue,
+                          participationLabel: 'Picked up' as const,
+                          purchase: Object.freeze({
+                            address,
+                            marker: input.markerDestinations.marker(address),
+                            purchased: selectedGold,
+                            toggleOfferKeys,
+                            proposalOfferKeys: completeProposals,
+                          }),
+                          rewardControl: rewardControl(
+                            input,
+                            { kind: 'acquisitionEntry' as const, address },
+                            undefined,
+                            authored.offer,
+                            authored,
+                            goldCapability.rewardTypes,
+                            pickupEntries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY] === undefined
+                              ? Object.freeze({
+                                  site: acquisitionSite,
+                                  entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                                  defaultValue: goldCapability.defaultValue,
+                                })
+                              : undefined,
+                          ) as WorkspaceExplicitRewardControl,
+                        });
+                      })(),
+                    ]),
+        ].sort(
+          (left, right) =>
+            (left.kind.startsWith('travelDeal')
+              ? 0
+              : left.kind.startsWith('echoDoubleShop')
+                ? 1
+                : 2) -
+            (right.kind.startsWith('travelDeal')
+              ? 0
+              : right.kind.startsWith('echoDoubleShop')
+                ? 1
+                : 2),
         ),
       );
       return Object.freeze({
@@ -1442,7 +1604,11 @@ function roomLocalForOccurrence(
         totalOpportunityCount:
           offers.length +
           supplementalOffers.filter(
-            (offer) => offer.kind !== 'travelDealPlaceholder' && offer.kind !== 'travelDealInvalid',
+            (offer) =>
+              offer.kind !== 'travelDealPlaceholder' &&
+              offer.kind !== 'travelDealInvalid' &&
+              offer.kind !== 'echoDoubleShopPlaceholder' &&
+              offer.kind !== 'echoDoubleShopInvalid',
           ).length,
         acquisitionOrder,
       });
@@ -1674,6 +1840,14 @@ function occurrenceInteractionRequirements(
           { readonly kind: 'travelDealRefill' }
         > => offer.kind === 'travelDealRefill',
       );
+      const goldReward = shop.supplementalOffers.find(
+        (
+          offer,
+        ): offer is Extract<
+          (typeof shop.supplementalOffers)[number],
+          { readonly kind: 'echoDoubleShopReward' }
+        > => offer.kind === 'echoDoubleShopReward',
+      );
       requirements.push(
         Object.freeze({
           kind: 'acquisitionOrder' as const,
@@ -1683,10 +1857,31 @@ function occurrenceInteractionRequirements(
             Object.freeze([
               ...shop.offers.map((offer) => offer.key),
               ...shop.supplementalOffers.flatMap((offer) =>
-                offer.kind === 'travelDealPlaceholder' ? [] : [offer.key],
+                offer.kind === 'travelDealPlaceholder' || offer.kind === 'echoDoubleShopPlaceholder'
+                  ? []
+                  : [offer.key],
               ),
             ]),
-            travelRefill?.sourceOfferKey,
+            Object.freeze([
+              ...(travelRefill === undefined
+                ? []
+                : [
+                    Object.freeze({
+                      kind: 'fixedSource' as const,
+                      entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+                      sourceOfferKey: travelRefill.sourceOfferKey,
+                    }),
+                  ]),
+              ...(goldReward === undefined
+                ? []
+                : [
+                    Object.freeze({
+                      kind: 'firstEligibleSource' as const,
+                      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                      eligibleSourceOfferKeys: goldReward.eligibleSourceOfferKeys,
+                    }),
+                  ]),
+            ]),
           ),
           selectedEntryKeys: shop.acquisitionOrder,
         }),
@@ -1887,32 +2082,6 @@ export function assembleWorkspaceOccurrence(
                   : ('postOutgoing' as const),
               entries: (() => {
                 const acquisitionSite = createAcquisitionSiteAddress(address, 'roomExit');
-                const derivedEntries =
-                  input.derivedAcquisitionEntries?.(acquisitionSite) ?? Object.freeze([]);
-                const echoEntriesForSource = (sourceOfferKey: string) =>
-                  derivedEntries.flatMap((entry) => {
-                    if (
-                      entry.kind !== 'echoShopDuplicate' ||
-                      entry.sourceOfferKey !== sourceOfferKey ||
-                      entry.defaultValue === undefined
-                    )
-                      return [];
-                    const authored = pickupSite?.[entry.address.entryKey] ?? entry.defaultValue;
-                    return [
-                      Object.freeze({
-                        key: entry.address.entryKey,
-                        address: entry.address,
-                        label: 'Free duplicate',
-                        rewardControl: rewardControl(
-                          input,
-                          { kind: 'acquisitionEntry' as const, address: entry.address },
-                          undefined,
-                          authored.offer,
-                          authored,
-                        ) as WorkspaceExplicitRewardControl,
-                      }),
-                    ];
-                  });
                 return Object.freeze(
                   roomLocal.acquisitionOrder.flatMap((entryKey) => {
                     const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
@@ -1924,7 +2093,6 @@ export function assembleWorkspaceOccurrence(
                           label: offer.label,
                           rewardControl: offer.rewardControl,
                         }),
-                        ...echoEntriesForSource(offer.key),
                       ];
                     }
                     const supplemental = roomLocal.supplementalOffers.find(
@@ -1932,10 +2100,18 @@ export function assembleWorkspaceOccurrence(
                         candidate,
                       ): candidate is Exclude<
                         (typeof roomLocal.supplementalOffers)[number],
-                        { readonly kind: 'travelDealPlaceholder' | 'travelDealInvalid' }
+                        {
+                          readonly kind:
+                            | 'travelDealPlaceholder'
+                            | 'travelDealInvalid'
+                            | 'echoDoubleShopPlaceholder'
+                            | 'echoDoubleShopInvalid';
+                        }
                       > =>
                         candidate.kind !== 'travelDealPlaceholder' &&
                         candidate.kind !== 'travelDealInvalid' &&
+                        candidate.kind !== 'echoDoubleShopPlaceholder' &&
+                        candidate.kind !== 'echoDoubleShopInvalid' &&
                         candidate.key === entryKey,
                     );
                     return supplemental === undefined
@@ -1945,11 +2121,10 @@ export function assembleWorkspaceOccurrence(
                             key: supplemental.key,
                             address: supplemental.purchase.address,
                             label: supplemental.label,
-                            rewardControl: supplemental.rewardControl,
+                            ...(supplemental.kind === 'echoDoubleShopReward'
+                              ? {}
+                              : { rewardControl: supplemental.rewardControl }),
                           }),
-                          ...(supplemental.kind === 'travelDealRefill'
-                            ? echoEntriesForSource(supplemental.key)
-                            : []),
                         ];
                   }),
                 );
@@ -2006,7 +2181,9 @@ export function assembleWorkspaceOccurrence(
     roomSummary.roomLocal.kind !== 'shop'
       ? []
       : roomSummary.roomLocal.supplementalOffers.flatMap((offer) =>
-          (offer.kind !== 'infernalContractReward' && offer.kind !== 'travelDealRefill') ||
+          (offer.kind !== 'infernalContractReward' &&
+            offer.kind !== 'travelDealRefill' &&
+            offer.kind !== 'echoDoubleShopReward') ||
           acquisitionRewardControlKeys.has(semanticAddressKey(offer.rewardControl.owner.address))
             ? []
             : [offer.rewardControl],

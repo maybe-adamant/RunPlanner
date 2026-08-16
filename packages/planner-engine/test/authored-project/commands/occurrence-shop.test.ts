@@ -133,7 +133,11 @@ describe('authored-project Shop occurrence commands', () => {
 
   it('requires a declaration-owned offer in materialized Shop inventory', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
-    for (const reservedKey of ['infernalContractReward', 'travelDealRefill'] as const) {
+    for (const reservedKey of [
+      'infernalContractReward',
+      'travelDealRefill',
+      'echoDoubleShopReward',
+    ] as const) {
       expect(() =>
         applyProjectCommand(createCompleteNProject(), catalog, {
           kind: 'ReplaceShopOffer',

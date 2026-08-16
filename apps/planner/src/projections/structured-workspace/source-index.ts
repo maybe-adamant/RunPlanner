@@ -100,11 +100,16 @@ export interface WorkspaceBiomeSource {
   readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
     readonly address: AcquisitionEntryAddress;
     readonly kind:
-      'echoShopDuplicate' | 'infernalContractReward' | 'travelDealPlaceholder' | 'travelDealRefill';
+      | 'echoDoubleShopPlaceholder'
+      | 'echoDoubleShopReward'
+      | 'infernalContractReward'
+      | 'travelDealPlaceholder'
+      | 'travelDealRefill';
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly defaultValue?: AuthoredRewardState;
     readonly rewardTypes?: readonly string[];
+    readonly eligibleSourceOfferKeys?: readonly string[];
   }[];
   readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
     | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }

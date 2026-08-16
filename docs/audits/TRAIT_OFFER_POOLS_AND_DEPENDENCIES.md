@@ -547,15 +547,18 @@ an empty authored child while recording this stricter-than-source boundary.
 
 Gold Gold Gold needs no parallel pending-effect record. `EchoDoubleShop`
 itself is the equipped pending state. The first eligible purchased World Shop
-entry consumes that one-use trait and materializes a separate free duplicate;
+entry consumes that one-use trait after Shop-kernel acceptance and materializes
+a separate free duplicate before the paid entry's acquisition roles;
 the duplicate may be interacted with later among other room acquisitions.
 `SpellDrop` neither triggers nor consumes it. With no later eligible World Shop
 purchase, the trait remains equipped. The duplicate is created from the
 pre-source-acquisition branch: the paid source identity is known, but its boon
 choice or consumable effect has not yet entered history. Wells use separate
-purchase paths and are not part of this effect. The planner's focused
-correction represents the materialized duplicate as one derived Shop row plus
-one entry in the existing site order, not as another pending-effect ledger. Pom
+purchase paths and are not part of this effect. The current planner represents
+the materialized duplicate as the stable
+`echoDoubleShopReward` Shop row. Its complete payload may be authored while
+dormant; selecting `Picked up` separately adds that key to the existing site
+order. No source-keyed child, second order, or pending-effect ledger exists. Pom
 duplicates retain the exact `StackOnly` interaction exception: if a stored
 target disappeared before pickup, the final visible Pom options regenerate
 from the pickup frontier.
@@ -1241,7 +1244,7 @@ claim.
 
 ## Implemented Offer Disposition
 
-Schema 35 retains this audit's giver membership, requirements, rarity domains,
+Schema 38 retains this audit's giver membership, requirements, rarity domains,
 priority sets, and exact replacement targets. The earlier fixed-triple text is
 historical baseline only: Olympian and Hermes outcomes now support one to three
 materialized traits or Fallback Gold according to the source-backed exhaustion
@@ -1250,3 +1253,11 @@ contract in
 The catalog adds only the exact ten-giver Denial participation fact; ordinary,
 high-tier, replacement, banned, and fallback membership remain derived from
 the progressive engine state rather than copied into these declarations.
+
+All Together's Legendary outer offer uses the same ordinary Hera eligibility
+authority. Its selected result is the closed four-pair direct-grant product
+recorded above; every non-exhausted child enters rarityless trait history and
+does not mutate god-pool history. Travel Deal remains an ordinary ranked Hermes
+offer whose declaration alone owns the one-restock Shop effect and four
+discount facts. Infernal Contract remains a fixed rarityless acquisition rather
+than a selectable giver membership.

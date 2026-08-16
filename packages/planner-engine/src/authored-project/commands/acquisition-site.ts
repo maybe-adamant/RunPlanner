@@ -3,7 +3,7 @@ import type { ProjectDocument } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
-import type { AcquisitionSiteCommand } from './types';
+import type { AcquisitionSiteCommand, DerivedShopEntryEditCommand } from './types';
 import {
   createDefaultAcquisitionRewardState,
   createDefaultPickupRewardState,
@@ -11,10 +11,7 @@ import {
 } from '../traits';
 import {
   authoredAcquisitionEntry,
-  createEchoShopDuplicateEntryKey,
-  echoShopDuplicateOfferMatches,
-  echoShopDuplicateSourceReward,
-  echoShopDuplicateSourceOfferKey,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
@@ -31,7 +28,7 @@ export function applyAcquisitionSiteCommand(
   located: LocatedBiome,
   command: AcquisitionSiteCommand,
 ): ProjectDocument {
-  if (command.kind === 'PurchaseTravelDealRefill') {
+  if (command.kind === 'SelectDerivedShopEntry') {
     if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
       failCommand(command, 'is not an authorable Shop acquisition site');
     const topology = requireTopology(located.plan, command);
@@ -45,10 +42,18 @@ export function applyAcquisitionSiteCommand(
       located.loadout,
       { kind: 'shopProfile', key: profileKey },
     );
-    if (!sameOccurrenceValue(expected, command.defaultValue))
+    if (
+      command.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+      !sameOccurrenceValue(expected, command.defaultValue)
+    )
       failCommand(command, 'must use the declaration-complete derived refill default');
-    if (!command.entryKeys.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY))
-      failCommand(command, 'must include travelDealRefill in the acquisition order');
+    if (
+      command.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+      command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+    )
+      failCommand(command, 'has an unknown derived Shop entry');
+    if (!command.entryKeys.includes(command.entryKey))
+      failCommand(command, `must include ${command.entryKey} in the acquisition order`);
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const nextOccurrence = Object.freeze({
       ...occurrence,
@@ -58,8 +63,7 @@ export function applyAcquisitionSiteCommand(
           order: Object.freeze([...command.entryKeys]),
           pickupEntries: Object.freeze({
             ...pickupEntries,
-            [TRAVEL_DEAL_REFILL_ENTRY_KEY]:
-              pickupEntries[TRAVEL_DEAL_REFILL_ENTRY_KEY] ?? command.defaultValue,
+            [command.entryKey]: pickupEntries[command.entryKey] ?? command.defaultValue,
           }),
         }),
       }),
@@ -73,16 +77,16 @@ export function applyAcquisitionSiteCommand(
     const topology = requireTopology(located.plan, command);
     const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
-    const entry = authoredAcquisitionEntry(
-      catalog,
-      occurrence,
-      command.entry.entryKey,
-      located.loadout,
-    );
+    const entry = authoredAcquisitionEntry(catalog, occurrence, command.entry.entryKey);
     const supplementalEntry =
       command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
-      command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY;
-    if (entry === undefined && command.entry.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY)
+      command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+      command.entry.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
+    if (
+      entry === undefined &&
+      command.entry.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+      command.entry.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+    )
       failCommand(command, 'does not own a materialized pickup entry');
     if (
       !supplementalEntry &&
@@ -91,49 +95,8 @@ export function applyAcquisitionSiteCommand(
     )
       failCommand(command, `must retain declared reward type ${entry.offer.rewardType}`);
     if (entry !== undefined && sameOccurrenceValue(entry.offer, command.value)) return document;
-    const duplicateSourceKey = echoShopDuplicateSourceOfferKey(command.entry.entryKey);
-    const duplicateSource =
-      duplicateSourceKey === undefined
-        ? undefined
-        : echoShopDuplicateSourceReward(occurrence, duplicateSourceKey)?.offer;
-    if (
-      duplicateSourceKey !== undefined &&
-      (duplicateSource === undefined ||
-        !echoShopDuplicateOfferMatches(catalog, duplicateSource, command.value))
-    )
-      failCommand(command, 'Echo Shop duplicate must retain its paid source reward identity');
     const route = document.routes.find((candidate) => candidate.routeKey === site.routeKey);
     if (route === undefined) failCommand(command, `unknown route ${site.routeKey}`);
-    if (duplicateSourceKey !== undefined) {
-      const profileKey =
-        occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
-      if (profileKey === undefined) failCommand(command, 'has no Shop acquisition profile');
-      return updateOccurrenceTopology(
-        document,
-        located,
-        replaceOccurrence(
-          topology,
-          Object.freeze({
-            ...occurrence,
-            acquisitionSites: Object.freeze({
-              ...(occurrence.acquisitionSites ?? {}),
-              roomExit: Object.freeze({
-                order: occurrence.acquisitionSites?.roomExit?.order ?? [],
-                pickupEntries: Object.freeze({
-                  ...pickupEntries,
-                  [command.entry.entryKey]: createDefaultAcquisitionRewardState(
-                    catalog,
-                    command.value,
-                    route.loadout,
-                    { kind: 'shopProfile', key: profileKey },
-                  ),
-                }),
-              }),
-            }),
-          }),
-        ),
-      );
-    }
     if (supplementalEntry) {
       if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
         failCommand(command, 'supplemental entry requires a materialized Shop');
@@ -151,10 +114,6 @@ export function applyAcquisitionSiteCommand(
         source === undefined
           ? ({ kind: 'shopProfile', key: occurrence.state.shop.profileKey } as const)
           : ({ kind: 'producerLifecycle', key: source.producerLifecycleKey } as const);
-      const echoDuplicateKey = createEchoShopDuplicateEntryKey(command.entry.entryKey);
-      const { [echoDuplicateKey]: removedEchoDuplicate, ...remainingPickupEntries } =
-        pickupEntries ?? {};
-      void removedEchoDuplicate;
       return updateOccurrenceTopology(
         document,
         located,
@@ -167,7 +126,7 @@ export function applyAcquisitionSiteCommand(
               roomExit: Object.freeze({
                 order: occurrence.acquisitionSites?.roomExit?.order ?? [],
                 pickupEntries: Object.freeze({
-                  ...remainingPickupEntries,
+                  ...pickupEntries,
                   [command.entry.entryKey]: createDefaultAcquisitionRewardState(
                     catalog,
                     command.value,
@@ -234,8 +193,6 @@ export function applyAcquisitionSiteCommand(
         ? pickupEntries?.[key] !== undefined
         : shopOffers[key] !== undefined || pickupEntries?.[key] !== undefined;
     if (!belongs) failCommand(command, `unknown entry ${key}`);
-    if (echoShopDuplicateSourceOfferKey(key) !== undefined)
-      failCommand(command, 'Echo duplicates cannot participate in the authored order');
     if (seen.has(key)) failCommand(command, `entry ${key} is duplicated`);
     seen.add(key);
   }
@@ -258,4 +215,52 @@ export function applyAcquisitionSiteCommand(
       }),
     ),
   );
+}
+
+/** Persist a derived Shop payload default without selecting it in chronology. */
+export function materializeDerivedShopEntryDefault(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: DerivedShopEntryEditCommand,
+): ProjectDocument {
+  if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
+    failCommand(command, 'is not an authorable Shop acquisition site');
+  const topology = requireTopology(located.plan, command);
+  const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
+  const profileKey =
+    occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
+  if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
+  if (
+    command.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+    command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+  )
+    failCommand(command, 'has an unknown derived Shop entry');
+  const expected = createDefaultAcquisitionRewardState(
+    catalog,
+    command.defaultValue.offer,
+    located.loadout,
+    { kind: 'shopProfile', key: profileKey },
+  );
+  if (
+    command.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+    !sameOccurrenceValue(expected, command.defaultValue)
+  )
+    failCommand(command, 'must use the declaration-complete derived entry default');
+  const site = occurrence.acquisitionSites?.roomExit;
+  if (site?.pickupEntries?.[command.entryKey] !== undefined) return document;
+  const nextOccurrence = Object.freeze({
+    ...occurrence,
+    acquisitionSites: Object.freeze({
+      ...(occurrence.acquisitionSites ?? {}),
+      roomExit: Object.freeze({
+        order: site?.order ?? Object.freeze([]),
+        pickupEntries: Object.freeze({
+          ...(site?.pickupEntries ?? {}),
+          [command.entryKey]: command.defaultValue,
+        }),
+      }),
+    }),
+  });
+  return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
 }

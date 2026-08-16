@@ -684,10 +684,10 @@ one exact finding destination. The occurrence assembler derives these leaves
 from normalized acquisition roles; it does not switch on Hammer names or
 reconstruct lifecycle order. Room, local, wheel, Devotion, and Shop
 projections all reuse the same interaction package. A materialized Shop
-publishes trait and Pom controls only from active entries in its containing
-Acquisitions workbench. Unpurchased inventory exposes only `Purchased`
-membership; it has no acquisition-child control, finding, trait event, or
-equipped-state fold until its entry participates.
+publishes ordinary paid-purchase trait and Pom controls only from active
+entries in its containing Acquisitions workbench. Unpurchased initial inventory
+exposes only `Purchased` membership; it has no acquisition-child control,
+finding, trait event, or equipped-state fold until its entry participates.
 
 The same workbench contains declaration-produced pickups such as Narcissus
 outputs. It derives entry labels, participation, order, reward controls, and
@@ -731,14 +731,29 @@ occurrence or route-settings substitute.
 A selected Echo option follows the same active-child rule. Pom, Boon, and
 Reward each publish one exact child in the containing trait inspector; Reward's
 generated acquisition descendants route back to that same owner. A reached
-Gold duplicate appears immediately after its paid source in the containing
-Shop Acquisitions workbench and reuses the generic acquisition interactions.
+Gold duplicate is the one exception to purchase-first child visibility: its
+stable supplemental Shop row is the sole complete reward editor, including
+boon, Pom, and Time Piece children, before `Picked up` is selected. Those edits
+dispatch the shared derived-Shop-entry command, which atomically persists the
+engine-owned default without adding the key to chronology. The Acquisitions
+workbench shows only the Gold chronology row after pickup participation is
+selected; it never duplicates the reward editor.
 Gift's reached Hammer child uses the biome-start keepsake result described
 above. Each active child has one marker, bound semantic interaction, and exact
 finding destination. Switching the outer Echo row or making a generated child
 unreached retains structurally valid authored detail without publishing a
 phantom destination. React renders these supported products and never decides
 Echo legality from provider, reward, trait, or keepsake names.
+
+A Shop renders its declaration-owned initial slots first, then the shared
+supplemental rows in Travel, Gold, Contract order when present. Travel and Gold
+reuse one `supplementalOffers` projection, one reward-control adapter, and one
+React renderer. Disabled placeholders expose instructions only; active rows
+carry engine-bound defaults, domains, semantic edits, findings, and complete
+participation proposals. One Acquisitions workbench owns the interleavable
+initial, Travel, Gold, and Contract chronology, including atomic source rebind,
+move, and dependent removal. The application does not infer a source or repair
+an order from rendered positions.
 
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the

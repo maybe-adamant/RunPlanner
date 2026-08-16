@@ -113,7 +113,8 @@ export function projectCommandAddress(
     case 'ReplaceShopDeathDefianceCondition':
       return command.shop;
     case 'ReplaceAcquisitionOrder':
-    case 'PurchaseTravelDealRefill':
+    case 'SelectDerivedShopEntry':
+    case 'EditDerivedShopEntry':
       return command.site;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;

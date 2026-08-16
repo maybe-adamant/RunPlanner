@@ -12,8 +12,42 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-Echo's complete eight-choice Story provider is delivered through authored
-schema 35. Gate A added the rarityless provider plus Survive, Evade, Fight, and
+The All Together and Shop-trait phase is complete through authored schema 38.
+The locked audit/plan landed at `da7163d`; All Together landed at `a4c46d8`;
+Infernal Contract and Travel Deal landed at `73f9e13`; and the focused Gold
+chronology contract was locked at `4583db1`. Schema 38 is strict and rejects
+schema 37. It reserves `echoDoubleShopReward` as Gold's sole stable child and
+retains no source-keyed Gold persistence or compatibility decoder.
+
+All Together owns one complete four-pair result, directly grants each selected
+rarityless Infusion, and leaves god-pool history unchanged. Qualifying Shops
+retain their declaration-owned initial slots and use the existing `roomExit`
+site for the free Infernal Contract pedestal, the paid Travel refill, and the
+free Gold pickup. Supplemental payload/participation and chronology are
+separate: dormant Gold detail can be edited through the shared derived-entry
+materialization command without joining `roomExit.order`, while selection
+applies one engine-owned complete site proposal. Travel and Gold share the
+structural derived-entry product, order-proposal family, application
+`supplementalOffers` adapter, reward-control binding, and React renderer while
+retaining their distinct source-time frontiers.
+
+Gold consumes only after the Shop kernel accepts the first paid non-Spell
+source and before that source's acquisition roles. It freezes its payload from
+pre-source-acquisition history even when later nested source detail is invalid;
+pre-kernel rejection leaves it armed. Its later free pickup uses ordinary
+acquisition and Time Piece behavior. Ordinary materialized payloads stay
+frozen; Pom alone regenerates when at least one stored `StackOnly` target has
+disappeared. Initial, Travel, Gold, and Contract entries weave through one
+Acquisitions chronology with atomic source rebind, move, and dependent removal.
+
+The phase deliberately defers Wells, exact Surface Shop delivery timing,
+Fields minor rewards and their room-local chronology, Artificer and Lazuli
+charges, numeric Shop costs/discounts, probability/RNG, challenge switches,
+Shopping NPC purchases, and live-map kit IDs. The intended successor remains
+Narcissus pickup-surface correction, Fields minor pickups/order, then Artificer
+against those completed producer surfaces.
+
+Echo's complete eight-choice Story provider was established in authored schema 35. Gate A added the rarityless provider plus Survive, Evade, Fight, and
 Pom (`adc5a02`), followed by the source-faithful correction that removes
 player-facing rarity from Echo and the other non-god NPC providers (`1a054a3`).
 Gate B added the giver-preserving Boon Boon Boon approximation (`e68b68a`),
@@ -2548,3 +2582,33 @@ lint, all workspace typechecks, formatting, and the production build pass. The
 Echo Gate E reassessment remains retained in its source audits. The
 then-isolated follow-up is now complete through schema 35 as recorded in the
 active frontier above.
+
+The All Together and Shop-trait delivery advances the current authored
+contract from schema 35 through strict schemas 36, 37, and 38. Catalog closure
+adds All Together's four direct sets, the rarityless fixed Infernal Contract,
+the five-member free pedestal, and Travel Deal's one-restock declaration.
+Engine closure separates Shop-kernel acceptance, derived payload
+materialization, paid acquisition, later pickup, and room-local chronology.
+Application closure presents initial slots followed by shared Travel, Gold, and
+Contract supplemental rows, while the one Acquisitions workbench owns their
+interleaving. The Gold correction removes source-keyed children and immediate
+settlement, preserves edit-before-pickup with undo/redo, and routes exact
+findings back to the singleton Gold row and its nested owner.
+
+Primary witnesses cover All Together trait creation and no god-pool mutation;
+Contract destination/pool/conversion rules; Travel's first-paid-purchase
+frontier; Gold's pre-source payload, rejected-purchase inverse, later invalid
+source detail, ordinary freeze and conditional Pom regeneration; combined
+Travel/Gold order rebinding; nested boon/Pom/Time Piece edits before pickup;
+and real application workflows for Contract plus Travel and for later-Shop
+Gold editing, pickup, weaving, undo/redo, and finding focus. No parallel Shop
+order, Gold state map, effect registry, application policy, or React-specific
+legality path remains.
+
+The single authorized phase-closure `npm run check` passed all three workspace
+typechecks, 153 test files and 1,806 tests, lint, repository formatting, and the
+production build (382 transformed modules). Vite retained its existing
+advisory that the single application chunk exceeds 500 kB; this is not a phase
+correctness or build failure. The complete gate was run once after review
+remediation and durable-document absorption and was not rerun after this
+factual append.

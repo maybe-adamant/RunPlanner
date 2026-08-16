@@ -167,7 +167,7 @@ function pickupEntrySource(
   entryKey: string,
   command: TraitOfferCommand,
 ): LocatedTraitReward {
-  const entry = authoredAcquisitionEntry(catalog, occurrence, entryKey, located.loadout);
+  const entry = authoredAcquisitionEntry(catalog, occurrence, entryKey);
   if (entry === undefined) failCommand(command, `missing pickup entry ${entryKey}`);
   if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined)
     return Object.freeze({
@@ -879,7 +879,7 @@ export function applyTraitOfferCommand(
   if (sameOccurrenceValue(value, existing)) return document;
   if (owner.kind === 'acquisitionEntry') {
     const site = occurrence.acquisitionSites?.roomExit;
-    const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
+    const pickup = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
     if (site === undefined || pickup === undefined)
       failCommand(command, `missing pickup entry ${owner.entryKey}`);
     const nextPickup = updateReward(pickup, trait.acquisitionRole, value);

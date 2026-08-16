@@ -236,6 +236,7 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly slotIndex?: number;
   readonly defaultValue?: import('../authored-project/model').AuthoredRewardState;
   readonly rewardTypes?: readonly string[];
+  readonly eligibleSourceOfferKeys?: readonly string[];
 }
 export interface DerivedAcquisitionEntryCandidateArtifacts {
   readonly at: (
@@ -262,7 +263,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         frontier.sourceOfferKey !== first.sourceOfferKey ||
         frontier.slotIndex !== first.slotIndex ||
         JSON.stringify(frontier.defaultValue) !== JSON.stringify(first.defaultValue) ||
-        JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes),
+        JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
+        JSON.stringify(frontier.eligibleSourceOfferKeys) !==
+          JSON.stringify(first.eligibleSourceOfferKeys),
     )
   )
     return undefined;
@@ -272,6 +275,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
     ...(first.defaultValue === undefined ? {} : { defaultValue: first.defaultValue }),
     ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
+    ...(first.eligibleSourceOfferKeys === undefined
+      ? {}
+      : { eligibleSourceOfferKeys: first.eligibleSourceOfferKeys }),
   });
 }
 export function createDerivedAcquisitionEntryCandidateArtifacts(

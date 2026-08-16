@@ -19,7 +19,7 @@ import { createDefaultRoomState } from '../../src/authored-project/room-state/de
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
 import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
-  createEchoShopDuplicateEntryKey,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
@@ -224,8 +224,7 @@ function settle(options: {
           options.echoDuplicateChild === undefined
             ? {}
             : {
-                [createEchoShopDuplicateEntryKey(options.echoDuplicateSourceKey)]:
-                  options.echoDuplicateChild,
+                [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]: options.echoDuplicateChild,
               }),
         }),
       }),
@@ -410,7 +409,13 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       shopAcquisitionOrderProposals(
         ['Boon', 'travelDealRefill', 'Minor'],
         ['Boon', 'Minor', 'travelDealRefill'],
-        'Boon',
+        [
+          {
+            kind: 'fixedSource',
+            entryKey: 'travelDealRefill',
+            sourceOfferKey: 'Boon',
+          },
+        ],
       ),
     ).toEqual([
       ['Boon', 'travelDealRefill', 'Minor'],
@@ -419,6 +424,28 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       ['Boon', 'Minor'],
       ['Boon', 'Minor', 'travelDealRefill'],
     ]);
+  });
+
+  it('repairs Travel removal and Gold rebinding in one complete site-order proposal', () => {
+    const proposals = shopAcquisitionOrderProposals(
+      ['Boon', 'travelDealRefill', 'echoDoubleShopReward', 'Minor'],
+      ['Boon', 'Minor', 'travelDealRefill', 'echoDoubleShopReward'],
+      [
+        {
+          kind: 'fixedSource',
+          entryKey: 'travelDealRefill',
+          sourceOfferKey: 'Boon',
+        },
+        {
+          kind: 'firstEligibleSource',
+          entryKey: 'echoDoubleShopReward',
+          eligibleSourceOfferKeys: ['Boon', 'travelDealRefill', 'Minor'],
+        },
+      ],
+    );
+
+    expect(proposals).toContainEqual(['Minor', 'echoDoubleShopReward']);
+    expect(proposals).not.toContainEqual(['travelDealRefill', 'echoDoubleShopReward', 'Minor']);
   });
 
   it('rebinds the singleton source and indexed slot when a different normal purchase comes first', () => {
@@ -492,7 +519,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const settled = settle({
-      order: ['Minor', 'MajorNonBoon', 'travelDealRefill'],
+      order: ['Minor', 'MajorNonBoon', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
       echo: true,
       travelChild: refill.defaultValue,
@@ -503,12 +530,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect([...settled.findings.values()]).toEqual([]);
     expect(
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
-    ).toEqual([
-      'Minor',
-      'MajorNonBoon',
-      createEchoShopDuplicateEntryKey('MajorNonBoon'),
-      'travelDealRefill',
-    ]);
+    ).toEqual(['Minor', 'MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'travelDealRefill']);
     expect(
       settled.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
@@ -519,7 +541,52 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     ).toHaveLength(1);
   });
 
-  it('lets the Spell-triggered Travel refill own the immediate Echo duplicate', () => {
+  it('keeps Gold armed when the Travel paid entry fails indexed generation support', () => {
+    const spell = createDefaultAcquisitionRewardState(
+      catalog,
+      Object.freeze({ rewardType: 'SpellDrop' as const }),
+      loadout,
+      { kind: 'shopProfile', key: 'WorldShop' },
+    );
+    const impossibleRefill = createDefaultAcquisitionRewardState(
+      catalog,
+      Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
+      loadout,
+      { kind: 'shopProfile', key: 'WorldShop' },
+    );
+    const rejected = settle({
+      order: ['Minor', 'travelDealRefill'],
+      travel: true,
+      echo: true,
+      travelChild: impossibleRefill,
+      shopOfferOverrides: { Minor: spell },
+    });
+    const travel = rejected.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'travelDealRefill',
+    );
+
+    expect(travel?.evaluateOffer?.(impossibleRefill.offer)).toMatchObject({ supported: false });
+    expect([...rejected.findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({
+        code: 'shopPurchaseUnavailable',
+        origin: expect.objectContaining({ entryKey: 'travelDealRefill' }),
+        evidence: { kind: 'travelDealRefillUnavailable' },
+      }),
+    );
+    expect(rejected.settlement.derivedEntryFrontiers ?? []).not.toContainEqual(
+      expect.objectContaining({ kind: 'echoDoubleShopReward' }),
+    );
+    expect(
+      travel?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeDefined();
+    expect(
+      travel?.branchesBeforeEntry[0]?.traitHistory?.events.filter(
+        (event) => event.kind === 'traitRemoval',
+      ),
+    ).toEqual([]);
+  });
+
+  it('lets the Spell-triggered Travel refill own the later Gold duplicate pickup', () => {
     const spell = createDefaultAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'SpellDrop' as const }),
@@ -543,7 +610,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const settled = settle({
-      order: ['Minor', 'travelDealRefill'],
+      order: ['Minor', 'travelDealRefill', 'echoDoubleShopReward'],
       travel: true,
       echo: true,
       travelChild: refill.defaultValue,
@@ -554,13 +621,13 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect([...settled.findings.values()]).toEqual([]);
     expect(
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
-    ).toEqual(['Minor', 'travelDealRefill', createEchoShopDuplicateEntryKey('travelDealRefill')]);
+    ).toEqual(['Minor', 'travelDealRefill', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]);
     expect(
       settled.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
-  it('freezes Travel before the immediate Echo duplicate on the same non-Spell purchase', () => {
+  it('freezes Travel after Gold materialization on the same non-Spell purchase', () => {
     const derived = settle({ order: ['Minor'], travel: true, echo: true });
     const refill = derived.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'travelDealRefill',
@@ -568,7 +635,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     if (refill?.defaultValue === undefined) throw new Error('missing Minor-triggered refill');
     expect(
       refill.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
-    ).toBeDefined();
+    ).toBeUndefined();
     const source = derived.canonical.entryState?.offers.find((offer) => offer.offerKey === 'Minor');
     if (source === undefined) throw new Error('missing Minor Shop source');
     const duplicate = createDefaultAcquisitionRewardState(
@@ -578,7 +645,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const settled = settle({
-      order: ['Minor', 'travelDealRefill'],
+      order: ['Minor', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
       echo: true,
       travelChild: refill.defaultValue,
@@ -588,7 +655,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect([...settled.findings.values()]).toEqual([]);
     expect(
       settled.settlement.roleFrontiers?.map((frontier) => frontier.settlement.entry.entryKey),
-    ).toEqual(['Minor', createEchoShopDuplicateEntryKey('Minor'), 'travelDealRefill']);
+    ).toEqual(['Minor', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'travelDealRefill']);
     expect(
       settled.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();

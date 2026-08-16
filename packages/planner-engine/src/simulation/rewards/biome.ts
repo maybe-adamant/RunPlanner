@@ -11,6 +11,7 @@ import {
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
+  type AcquisitionEntryAddress,
   type AcquisitionSiteOwnerAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
@@ -1187,6 +1188,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     readonly import('./processing').DerivedAcquisitionEntryFrontier[]
   >();
+  const derivedDefaultSettlements: {
+    readonly address: AcquisitionEntryAddress;
+    readonly settlement: NonNullable<
+      import('./processing').DerivedAcquisitionEntryFrontier['defaultSettlement']
+    >;
+  }[] = [];
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
   const blockedGorgonPhases = new Set<string>();
@@ -1213,9 +1220,17 @@ export function evaluateBiomeRewardsAssemblyInternal(
         frontier,
       ]);
       derivedAcquisitionEntryContexts.set(key, combined);
+      if (frontier.defaultSettlement !== undefined) {
+        derivedDefaultSettlements.push(
+          Object.freeze({ address: frontier.address, settlement: frontier.defaultSettlement }),
+        );
+        recordAcquisitionRoleFrontiers(frontier.defaultSettlement.roleFrontiers);
+      }
       const first = combined[0];
       if (
-        (first?.kind !== 'travelDealRefill' && first?.kind !== 'infernalContractReward') ||
+        (first?.kind !== 'travelDealRefill' &&
+          first?.kind !== 'infernalContractReward' &&
+          first?.kind !== 'echoDoubleShopReward') ||
         combined.length !== first.branchCohortSize ||
         combined.some((candidate) => candidate.evaluateOffer === undefined) ||
         producerFrontiers.has(key)
@@ -1235,7 +1250,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           ),
           reachableBranchCount: combined.length,
           acquisitionHorizon:
-            first.kind === 'travelDealRefill'
+            first.kind === 'travelDealRefill' || first.kind === 'echoDoubleShopReward'
               ? ('generationOnly' as const)
               : ('ownEnteredLifecycle' as const),
           owners: Object.freeze([first.address]),
@@ -3956,6 +3971,52 @@ export function evaluateBiomeRewardsAssemblyInternal(
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
   );
+  const derivedTraitCandidateContexts = new Map<string, readonly TraitOfferCandidateContext[]>();
+  const derivedLevelCandidateContexts = new Map<
+    string,
+    readonly {
+      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
+      readonly before: import('../traits').TraitHistoryState;
+      readonly levelCount: number;
+      readonly effectKind: 'choice' | 'random';
+      readonly emptyTargetAllowed?: boolean;
+    }[]
+  >();
+  for (const { address, settlement } of derivedDefaultSettlements) {
+    const candidateProducts = selectedTraitOfferProducts(settlement.branches);
+    for (const offer of candidateProducts.selectedTraitOffers) {
+      if (semanticAddressKey(offer.address.owner) !== semanticAddressKey(address)) continue;
+      const key = semanticAddressKey(offer.address);
+      const contexts = candidateProducts.candidateContexts.get(key) ?? Object.freeze([]);
+      derivedTraitCandidateContexts.set(
+        key,
+        Object.freeze([...(derivedTraitCandidateContexts.get(key) ?? []), ...contexts]),
+      );
+    }
+    for (const level of candidateProducts.selectedLevelResolutions) {
+      if (semanticAddressKey(level.address.owner) !== semanticAddressKey(address)) continue;
+      const key = semanticAddressKey(level.address);
+      const contexts = candidateProducts.levelCandidateContexts.get(key) ?? Object.freeze([]);
+      derivedLevelCandidateContexts.set(
+        key,
+        Object.freeze([...(derivedLevelCandidateContexts.get(key) ?? []), ...contexts]),
+      );
+    }
+  }
+  const traitCandidateContexts = new Map(traitProducts.candidateContexts);
+  for (const [key, contexts] of derivedTraitCandidateContexts) {
+    traitCandidateContexts.set(
+      key,
+      Object.freeze([...(traitCandidateContexts.get(key) ?? []), ...contexts]),
+    );
+  }
+  const levelCandidateContexts = new Map(traitProducts.levelCandidateContexts);
+  for (const [key, contexts] of derivedLevelCandidateContexts) {
+    levelCandidateContexts.set(
+      key,
+      Object.freeze([...(levelCandidateContexts.get(key) ?? []), ...contexts]),
+    );
+  }
   const runStatePublication = publishRunStateThroughCoverage(
     [...runStateSnapshotsByOwner.values()],
     [...runStateSnapshotsByOwner.values()],
@@ -4007,13 +4068,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
       shipLifecycleContexts,
       acquisitionOrderContexts,
     ),
-    traitOfferArtifacts: createTraitOfferCandidateArtifacts(
-      catalog,
-      traitProducts.candidateContexts,
-    ),
+    traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContexts),
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,
-      traitProducts.levelCandidateContexts,
+      levelCandidateContexts,
     ),
     bossCompletionArcanaArtifacts: createBossCompletionArcanaCandidateArtifacts(
       bossCompletionArcanaContexts,

@@ -368,6 +368,24 @@ Travel Deal's trigger depends on that distinction.
 - Surface delivery and Well behavior remain distinct source paths even where a
   bounded planner simplification presents a common first-purchase consequence.
 
+## Current Planner Disposition
+
+Schema 38 implements these World-Shop facts without changing the
+declaration-owned initial slot counts. All Together persists one complete
+four-set result and directly grants each non-exhausted rarityless child without
+god-history mutation. Infernal Contract uses the fixed free
+`infernalContractReward` pickup. Travel Deal derives one paid
+`travelDealRefill` from the first accepted paid purchase when already equipped.
+Echo Gold uses the free `echoDoubleShopReward` pickup. The three supplemental
+entries share the existing room-exit acquisition site; payload/participation
+and chronology remain separate, and Travel/Gold source dependencies are
+resolved by one complete site-order product.
+
+The planner continues to simplify resources and timing only where stated:
+costs and discounts are not simulated, Surface Shop delayed delivery remains
+deferred, and World Shop opportunity counts are presented as initial plus
+supplemental entries rather than physical object placement.
+
 ## Remaining bounded questions
 
 No game-rule probe is required for All Together's pair selection, the contract

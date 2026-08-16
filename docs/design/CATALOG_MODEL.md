@@ -385,7 +385,10 @@ automatic traversal, hidden reward preview, and fresh host-normal target
 generation. The catalog also retains the intentional encounter asymmetry:
 `GeneratedAnomalyB` advances encounter depth; `BossZagreus01` does not.
 `C_Boss01` has a fixed `InfernalContractBoon` acquisition and deliberately
-does not model `GemPointsBigDrop` or `PauseBiomeState`.
+does not model `GemPointsBigDrop` or `PauseBiomeState`. Every qualifying World
+Shop destination declares one free `infernalContractReward` supplemental entry
+with its exact five-member domain and Time Piece capability matrix. This does
+not change the declaration-owned initial Shop slot count.
 
 ## Physical Exit Types
 
@@ -771,7 +774,7 @@ not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
 
-Schema 35 contains 294 memberships across the 20 non-Hammer givers and 92
+Schema 38 contains 294 memberships across the 20 non-Hammer givers and 92
 memberships under the Hammer giver. Echo contributes exactly eight
 player-rarityless identities: Reward, Boon, Survive, Pom, Evade, Fight, Gold,
 and Gift. Their selected dispositions close direct numeric/no-op behavior,
@@ -780,6 +783,16 @@ exact last-reward replay, World Shop duplication with `SpellDrop` excluded, and
 captured-keepsake replay with four exact source exclusions. Echo's ordinary
 internal Epic/Dream-Dive scaling tier is not a player-facing boon rarity and is
 therefore absent from authored and normalized rarity state.
+
+All Together remains an ordinary Legendary Hera member but alone declares the
+closed `directTraitSets` disposition: four named two-trait pairs whose selected
+children are granted without player-facing rarity. Travel Deal remains an
+ordinary ranked Hermes member and alone declares `worldShopRestock`, including
+one refill and its four source-backed discount values. Infernal Contract is a
+separate rarityless fixed acquisition. These declarations are closed facts,
+not a generic callback registry; normalization rejects either selected
+disposition on any other trait and validates every pair, pedestal member,
+destination, and supplemental key.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,

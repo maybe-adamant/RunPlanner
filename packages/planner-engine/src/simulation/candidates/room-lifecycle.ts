@@ -11,7 +11,10 @@ import type {
   RewardWheelState,
   ShipCombatState,
 } from '../../authored-project/model';
-import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
+import {
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../../authored-project/shop';
 import type { SemanticFinding } from '../model';
 import { materializeShipCombatState } from '../materialization';
 import type { EncounterCandidateArtifacts } from '../encounters';
@@ -398,7 +401,8 @@ export function evaluateAcquisitionOrderCandidate(
         ? pickupEntries?.[offerKey] !== undefined
         : shopOffers[offerKey] !== undefined ||
           pickupEntries?.[offerKey] !== undefined ||
-          offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY;
+          offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+          offerKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
     if (!belongs) {
       throw new CandidateEvaluationContractError(
         `acquisition order has no declared entry ${offerKey}`,

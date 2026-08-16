@@ -293,9 +293,10 @@ export type AcquisitionSiteCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      /** Atomically materializes and purchases the singleton derived Travel Deal refill. */
-      readonly kind: 'PurchaseTravelDealRefill';
+      /** Atomically materializes and selects one derived Shop entry. */
+      readonly kind: 'SelectDerivedShopEntry';
       readonly site: AcquisitionSiteAddress;
+      readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
       readonly defaultValue: import('../model').AuthoredRewardState;
       readonly entryKeys: readonly string[];
     };
@@ -356,6 +357,25 @@ export type AcquisitionConversionCommand = {
   readonly value: 'normal' | 'gold';
 };
 
+/** One payload edit whose acquisition-entry default may not be persisted yet. */
+export type DerivedShopEntryPayloadCommand =
+  | Extract<AcquisitionSiteCommand, { readonly kind: 'ReplaceAcquisitionEntryOffer' }>
+  | TraitOfferCommand
+  | LevelResolutionCommand
+  | AcquisitionConversionCommand;
+
+/**
+ * Atomically persists one derived Shop entry's declaration-complete default and
+ * applies its payload edit without changing the Shop acquisition chronology.
+ */
+export type DerivedShopEntryEditCommand = {
+  readonly kind: 'EditDerivedShopEntry';
+  readonly site: AcquisitionSiteAddress;
+  readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
+  readonly defaultValue: import('../model').AuthoredRewardState;
+  readonly edit: DerivedShopEntryPayloadCommand;
+};
+
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
@@ -377,7 +397,8 @@ export type ProjectCommand =
   | AcquisitionSiteCommand
   | TraitOfferCommand
   | LevelResolutionCommand
-  | AcquisitionConversionCommand;
+  | AcquisitionConversionCommand
+  | DerivedShopEntryEditCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

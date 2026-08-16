@@ -1010,20 +1010,21 @@ describe('reward-kernel declaration parity', () => {
           shop.key === 'WorldShop' ? { ...shop, slots: shop.slots.slice(1) } : shop,
         ),
       }),
-      ...(['infernalContractReward', 'travelDealRefill'] as const).map((reservedKey) =>
-        rawInput({
-          ...rewardKernelDeclarations,
-          shops: rewardKernelDeclarations.shops.map((shop) =>
-            shop.key === 'WorldShop'
-              ? {
-                  ...shop,
-                  slots: shop.slots.map((slot, index) =>
-                    index === 0 ? { ...slot, key: reservedKey } : slot,
-                  ),
-                }
-              : shop,
-          ),
-        }),
+      ...(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const).map(
+        (reservedKey) =>
+          rawInput({
+            ...rewardKernelDeclarations,
+            shops: rewardKernelDeclarations.shops.map((shop) =>
+              shop.key === 'WorldShop'
+                ? {
+                    ...shop,
+                    slots: shop.slots.map((slot, index) =>
+                      index === 0 ? { ...slot, key: reservedKey } : slot,
+                    ),
+                  }
+                : shop,
+            ),
+          }),
       ),
       rawInput({
         ...rewardKernelDeclarations,
