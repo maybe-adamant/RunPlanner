@@ -314,10 +314,9 @@ describe('structured workspace decision assembly', () => {
       cageTargetCount: 1,
       doorCageRewardCount: 2,
     });
-    expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.active)).toEqual([
-      true,
-      true,
-      false,
+    expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.key)).toEqual([
+      'cage1',
+      'cage2',
     ]);
   });
 
@@ -394,10 +393,9 @@ describe('structured workspace decision assembly', () => {
     }
 
     expect(retainedWorkbench.room.entered).toBe(false);
-    expect(retainedWorkbench.room.roomLocal.cages.map((cage) => cage.active)).toEqual([
-      true,
-      true,
-      false,
+    expect(retainedWorkbench.room.roomLocal.cages.map((cage) => cage.key)).toEqual([
+      'cage1',
+      'cage2',
     ]);
     const repairOwner = createLocalRewardAddress(
       goldenHBiome,
@@ -406,7 +404,6 @@ describe('structured workspace decision assembly', () => {
       'cage2',
     );
     expect(retainedWorkbench.room.roomLocal.cages[1]).toMatchObject({
-      active: true,
       control: {
         marker: { address: repairOwner },
         owner: { address: repairOwner },
@@ -557,7 +554,8 @@ describe('structured workspace decision assembly', () => {
 
     expect(assembly.batch.fieldsCageOutcome).toBeUndefined();
     expect(assembly.batch.fields).toBeUndefined();
-    expect(fieldsWorkbench.room.roomLocal.cages.every((cage) => !cage.active)).toBe(true);
+    expect(fieldsWorkbench.room.roomLocal.cages).toEqual([]);
+    expect(fieldsWorkbench.room.roomLocal.chronology).toBeUndefined();
   });
 
   it('keeps a retained authored suffix and its focus destinations after an unresolved prefix', () => {

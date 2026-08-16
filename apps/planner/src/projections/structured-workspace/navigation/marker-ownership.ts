@@ -78,7 +78,10 @@ export function workspaceLocalDetailMarkers(
             ]),
           ]);
     case 'fields':
-      return Object.freeze(roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)));
+      return Object.freeze([
+        ...roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)),
+        ...(roomLocal.chronology?.rows.map((row) => row.marker) ?? []),
+      ]);
     case 'ship':
       return Object.freeze(
         roomLocal.wheels.flatMap((wheel) => [

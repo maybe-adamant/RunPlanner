@@ -8,6 +8,7 @@ import type {
   HistoryEvent,
   HistoryLedgers,
   OfferPointView,
+  AcquisitionPointView,
   BiomeHistoryPrefix,
   ProgressiveRoomHistoryViews,
   HistoryStateView,
@@ -50,6 +51,7 @@ interface MutableRoomViews {
   entry?: HistoryStateView;
   preOutgoing?: HistoryStateView;
   readonly offerPoints: OfferPointView[];
+  readonly acquisitionPoints: AcquisitionPointView[];
   readonly targetGenerations: TargetGenerationView[];
   outgoingGeneration?: HistoryStateView;
   postCommit?: HistoryStateView;
@@ -192,6 +194,9 @@ function freezeProgressiveRoomViews(views: MutableRoomViews): ProgressiveRoomHis
     ...(views.offerPoints.length === 0
       ? {}
       : { offerPoints: Object.freeze([...views.offerPoints]) }),
+    ...(views.acquisitionPoints.length === 0
+      ? {}
+      : { acquisitionPoints: Object.freeze([...views.acquisitionPoints]) }),
     ...(views.preOutgoing === undefined ? {} : { preOutgoing: views.preOutgoing }),
     targetGenerations: Object.freeze([...views.targetGenerations]),
     ...(views.outgoingGeneration === undefined
@@ -422,6 +427,7 @@ function foldHistoryEventStream(
           origin: event.origin,
           preparation: stateView(event.sequence, ledgers),
           offerPoints: [],
+          acquisitionPoints: [],
           targetGenerations: [],
         };
         viewsByOrigin.set(key, views);
@@ -746,10 +752,23 @@ function foldHistoryEventStream(
         }
         break;
       }
+      case 'acquisitionPointReached': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.acquisitionPoints.some((candidate) => candidate.point === event.point)) {
+          throw new HistoryFoldContractError(`${event.point} reached more than once in one room`);
+        }
+        views.acquisitionPoints.push(
+          Object.freeze({
+            point: event.point,
+            before: stateView(event.sequence - 1, ledgers),
+            after: stateView(event.sequence, ledgers),
+          }),
+        );
+        break;
+      }
       case 'producerRoleAdvanced':
       case 'producerPointReached':
       case 'roomCommitted':
-      case 'acquisitionPointReached':
         break;
     }
   }

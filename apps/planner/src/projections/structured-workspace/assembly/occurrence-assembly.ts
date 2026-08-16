@@ -5,6 +5,7 @@ import {
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
+  createFieldsActionAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -23,6 +24,10 @@ import {
   traitOfferOption,
   traitGiverUsesOfferContext,
   semanticAddressKey,
+  assessFieldsActionOrder,
+  fieldsActionKey,
+  fieldsActionOrderProposals,
+  fieldsCageActionDomain,
   type BiomeAddress,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
@@ -31,6 +36,8 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
   type AuthoredRewardState,
+  type FieldsCombatAction,
+  type FieldsCombatState,
   type LevelResolutionAddress,
   shopAcquisitionOrderProposals,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -84,6 +91,7 @@ import {
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
+  type WorkspaceFieldsChronology,
   type WorkspaceShopSupplementalDescriptor,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
@@ -473,7 +481,11 @@ function controlsForOccurrence(
     case 'fieldsCombat': {
       const group = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
       if (group?.kind !== 'boundedRewardSlots') break;
+      const activeSlotKeys = new Set(
+        group.slotKeys.slice(0, input.fieldsBatchFacts?.doorCageRewardCount ?? 0),
+      );
       for (const [slotKey, offer] of Object.entries(occurrence.state.cages)) {
+        if (!activeSlotKeys.has(slotKey)) continue;
         const address = createLocalRewardAddress(
           input.biome,
           occurrence.occurrenceId,
@@ -1155,6 +1167,94 @@ function contractSupplementalOffer(
   });
 }
 
+function fieldsActionLabel(
+  action: FieldsCombatAction,
+  ordinals: ReadonlyMap<string, number>,
+): string {
+  const ordinal = ordinals.get(fieldsActionKey(action));
+  if (ordinal === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `Fields action ${fieldsActionKey(action)} has no declaration ordinal`,
+    );
+  }
+  return action.kind === 'completeCage'
+    ? `Complete Cage ${ordinal}`
+    : `Interact with Cage ${ordinal} reward`;
+}
+
+function fieldsChronology(
+  input: WorkspaceOccurrenceAssemblyInput,
+  room: RoomDeclaration,
+  state: FieldsCombatState,
+  activeCageCount: number,
+): WorkspaceFieldsChronology {
+  const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
+  const domain = fieldsCageActionDomain(input.catalog, room);
+  const ordinals = new Map<string, number>();
+  for (const [index, entry] of domain.entries()) {
+    ordinals.set(`complete:${entry.phaseKey}`, index + 1);
+    ordinals.set(`interact:${entry.slotKey}`, index + 1);
+  }
+  const assessment = assessFieldsActionOrder(input.catalog, room, state, activeCageCount);
+  const inactiveKeys = new Set(
+    assessment.issues
+      .filter((issue) => issue.kind === 'inactive')
+      .map((issue) => fieldsActionKey(issue.action)),
+  );
+  const proposals = fieldsActionOrderProposals(input.catalog, room, state, activeCageCount)
+    .filter((proposal) => proposal.structurallyAuthorable || proposal.kind === 'insert')
+    .map((proposal, index) => {
+      const actionKey = fieldsActionKey(proposal.action);
+      const label =
+        proposal.kind === 'remove'
+          ? 'Remove inactive action'
+          : proposal.kind === 'insert'
+            ? `Insert at position ${(proposal.toIndex ?? 0) + 1}`
+            : `Move to position ${(proposal.toIndex ?? 0) + 1}`;
+      return Object.freeze({
+        actionKey,
+        key: `${proposal.kind}:${index}:${actionKey}`,
+        label,
+        order: proposal.order,
+      });
+    });
+  const proposalsByAction = new Map<string, string[]>();
+  for (const proposal of proposals) {
+    proposalsByAction.set(proposal.actionKey, [
+      ...(proposalsByAction.get(proposal.actionKey) ?? []),
+      proposal.key,
+    ]);
+  }
+  const currentKeys = new Set(state.actionOrder.map(fieldsActionKey));
+  const missingActions = assessment.issues.flatMap((issue) =>
+    issue.kind === 'missing' && !currentKeys.has(fieldsActionKey(issue.action))
+      ? [issue.action]
+      : [],
+  );
+  const rows = [...state.actionOrder, ...missingActions].map((action) => {
+    const key = fieldsActionKey(action);
+    const address = createFieldsActionAddress(input.biome, input.occurrence.occurrenceId, key);
+    return Object.freeze({
+      address,
+      key,
+      label: fieldsActionLabel(action, ordinals),
+      marker: input.markerDestinations.marker(address),
+      proposalKeys: Object.freeze(proposalsByAction.get(key) ?? []),
+      state: !currentKeys.has(key)
+        ? ('missing' as const)
+        : inactiveKeys.has(key)
+          ? ('inactive' as const)
+          : ('active' as const),
+    });
+  });
+  return Object.freeze({
+    interactionKey: semanticAddressKey(owner),
+    owner,
+    proposals: Object.freeze(proposals),
+    rows: Object.freeze(rows),
+  });
+}
+
 function roomLocalForOccurrence(
   input: WorkspaceOccurrenceAssemblyInput,
   room: RoomDeclaration,
@@ -1294,45 +1394,41 @@ function roomLocalForOccurrence(
       });
     }
     case 'fieldsCombat': {
+      const fieldsFacts = input.fieldsBatchFacts;
       const group = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
       if (group?.kind !== 'boundedRewardSlots') {
         throw new StructuredWorkspaceProjectionContractError(
           `${room.gameName} Fields state has no bounded cage declaration`,
         );
       }
-      const active = new Set(
-        input.fieldsBatchFacts === undefined
-          ? []
-          : group.slotKeys
-              .slice(0, input.fieldsBatchFacts.doorCageRewardCount)
-              .map((slotKey) =>
-                semanticAddressKey(
-                  createLocalRewardAddress(
-                    input.biome,
-                    occurrence.occurrenceId,
-                    group.key,
-                    slotKey,
-                  ),
-                ),
-              ),
-      );
-      const cages = group.slotKeys.map((slotKey, index) => {
-        const address = createLocalRewardAddress(
-          input.biome,
-          occurrence.occurrenceId,
-          group.key,
-          slotKey,
-        );
-        return Object.freeze({
-          active: active.has(semanticAddressKey(address)),
-          control: requireProjectedRewardControl(controls, address, 'countedReward'),
-          key: slotKey,
-          label: `Cage ${index + 1}`,
+      const cages = group.slotKeys
+        .slice(0, fieldsFacts?.doorCageRewardCount ?? 0)
+        .map((slotKey, index) => {
+          const address = createLocalRewardAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            group.key,
+            slotKey,
+          );
+          return Object.freeze({
+            control: requireProjectedRewardControl(controls, address, 'countedReward'),
+            key: slotKey,
+            label: `Cage ${index + 1}`,
+          });
         });
-      });
       return Object.freeze({
         kind: 'fields' as const,
         cages: Object.freeze(cages),
+        ...(fieldsFacts === undefined
+          ? {}
+          : {
+              chronology: fieldsChronology(
+                input,
+                room,
+                occurrence.state,
+                fieldsFacts.doorCageRewardCount,
+              ),
+            }),
         groupKey: group.key,
       });
     }
@@ -1705,7 +1801,17 @@ function occurrenceInteractionRequirements(
     case 'none':
     case 'fixed':
     case 'incomingReward':
+      return Object.freeze(requirements);
     case 'fields':
+      if (room.roomLocal.chronology !== undefined) {
+        requirements.push(
+          Object.freeze({
+            kind: 'fieldsActionOrder' as const,
+            owner: room.roomLocal.chronology.owner,
+            proposals: room.roomLocal.chronology.proposals,
+          }),
+        );
+      }
       return Object.freeze(requirements);
     case 'ephyra': {
       if (room.roomLocal.sideRooms.kind === 'withheld') return Object.freeze(requirements);

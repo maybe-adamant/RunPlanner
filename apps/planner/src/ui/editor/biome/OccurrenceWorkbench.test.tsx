@@ -1529,6 +1529,139 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
+  it('moves one Fields action through candidate-backed chronology and undo/redo', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    const chronology = screen.getByLabelText('Fields action chronology');
+    const row = within(chronology).getByText('Interact with Cage 1 reward').closest('li');
+    if (row === null) throw new Error('Cage 1 interaction row is missing');
+    const select = within(row).getByRole('combobox', { name: 'Change order' });
+    await view.user.click(select);
+    const move = await within(select).findByRole('option', { name: /Move to position 3/ });
+    await waitFor(() => expect(move.dataset.candidateSupport).toBe('possible'));
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.selectOptions(select, move);
+    await waitFor(() => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      );
+      expect(state).toMatchObject({
+        kind: 'fieldsCombat',
+        actionOrder: [
+          { kind: 'completeCage', phaseKey: 'Cage01' },
+          { kind: 'completeCage', phaseKey: 'Cage02' },
+          { kind: 'interactCageReward', slotKey: 'cage1' },
+          { kind: 'interactCageReward', slotKey: 'cage2' },
+        ],
+      });
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength + 1,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      );
+      expect(state).toMatchObject({
+        kind: 'fieldsCombat',
+        actionOrder: [
+          { kind: 'completeCage', phaseKey: 'Cage01' },
+          { kind: 'interactCageReward', slotKey: 'cage1' },
+          { kind: 'completeCage', phaseKey: 'Cage02' },
+          { kind: 'interactCageReward', slotKey: 'cage2' },
+        ],
+      });
+    });
+
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() => {
+      const state = occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      );
+      expect(state).toMatchObject({
+        kind: 'fieldsCombat',
+        actionOrder: [
+          { kind: 'completeCage', phaseKey: 'Cage01' },
+          { kind: 'completeCage', phaseKey: 'Cage02' },
+          { kind: 'interactCageReward', slotKey: 'cage1' },
+          { kind: 'interactCageReward', slotKey: 'cage2' },
+        ],
+      });
+    });
+  });
+
+  it('keeps retained inactive cage actions as repair rows while hiding their payload', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const decision = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenHStartId,
+    });
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'max',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsActionOrder',
+      occurrence,
+      actionOrder: [
+        { kind: 'completeCage', phaseKey: 'Cage01' },
+        { kind: 'interactCageReward', slotKey: 'cage1' },
+        { kind: 'completeCage', phaseKey: 'Cage02' },
+        { kind: 'interactCageReward', slotKey: 'cage2' },
+        { kind: 'completeCage', phaseKey: 'Cage03' },
+        { kind: 'interactCageReward', slotKey: 'cage3' },
+      ],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'min',
+    });
+
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    expect(
+      within(screen.getByLabelText('Fields cage rewards')).queryByLabelText('Cage 3'),
+    ).toBeNull();
+    const chronology = screen.getByLabelText('Fields action chronology');
+    for (const label of ['Complete Cage 3', 'Interact with Cage 3 reward']) {
+      const row = within(chronology).getByText(label).closest('li');
+      if (row === null) throw new Error(`${label} repair row is missing`);
+      expect(within(row).getByText('inactive')).toBeTruthy();
+      expect(within(row).getByRole('option', { name: 'Remove inactive action' })).toBeTruthy();
+    }
+    const dormantCage = createLocalRewardAddress(goldenHBiome, occurrenceId, 'cages', 'cage3');
+    const workspace = workspaceProjection(view.application);
+    expect(workspace.interactions.rewards.has(semanticAddressKey(dormantCage))).toBe(false);
+    expect(workspace.focusByOwner.has(semanticAddressKey(dormantCage))).toBe(false);
+    const dormantTrait = createTraitOfferAddress(dormantCage, 'source');
+    expect(workspace.interactions.traitOffers.has(semanticAddressKey(dormantTrait))).toBe(false);
+    expect(workspace.focusByOwner.has(semanticAddressKey(dormantTrait))).toBe(false);
+  });
+
   it('keeps unpicked Fields cage rewards on the main room surface', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
@@ -1544,7 +1677,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Customize')).toBeNull();
   });
 
-  it('omits the Fields section when its retained cages are all inactive', () => {
+  it('omits the Fields payload section when no active cage controls are projected', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     renderOccurrenceWorkbench(createGoldenFGHIProject(), 'Underworld', 'H', (biome) => {
       const node = occurrenceById(occurrenceId)(biome);
@@ -1555,7 +1688,7 @@ describe('OccurrenceWorkbench', () => {
           ...node.room,
           roomLocal: {
             ...node.room.roomLocal,
-            cages: node.room.roomLocal.cages.map((cage) => ({ ...cage, active: false })),
+            cages: [],
           },
         },
       };

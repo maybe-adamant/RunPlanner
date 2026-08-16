@@ -100,6 +100,12 @@ function inputWithoutProducer(
     ...(executionInput.encounterPhases === undefined
       ? {}
       : { encounterPhases: executionInput.encounterPhases }),
+    ...(executionInput.fieldsActions === undefined
+      ? {}
+      : { fieldsActions: executionInput.fieldsActions }),
+    ...(executionInput.fieldsCageRewards === undefined
+      ? {}
+      : { fieldsCageRewards: executionInput.fieldsCageRewards }),
     counterEffects: executionInput.counterEffects,
   };
 }
@@ -109,7 +115,7 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
 }
 
 describe('single-room lifecycle execution', () => {
-  it('executes every active Fields encounter phase in declaration order', () => {
+  it('records Fields preparation in declaration order and executes cages in authored action order', () => {
     const events = executeRoomLifecycle(
       catalog,
       inputWithoutProducer({
@@ -120,20 +126,38 @@ describe('single-room lifecycle execution', () => {
           'GeneratedH',
           'GeneratedH',
         ]),
+        fieldsActions: [
+          { kind: 'completeCage', phaseKey: 'Cage02' },
+          { kind: 'interactCageReward', slotKey: 'cage2' },
+          { kind: 'completeCage', phaseKey: 'Cage01' },
+          { kind: 'interactCageReward', slotKey: 'cage1' },
+        ],
+        fieldsCageRewards: [
+          { phaseKey: 'Cage01', slotKey: 'cage1' },
+          { phaseKey: 'Cage02', slotKey: 'cage2' },
+        ],
       }),
     ).events;
 
     expect(
-      events.filter((event) => event.kind === 'encounterStarted').map((event) => event.phaseKey),
+      events.filter((event) => event.kind === 'encounterRecorded').map((event) => event.phaseKey),
     ).toEqual(['Passive', 'Cage01', 'Cage02']);
+    expect(
+      events.filter((event) => event.kind === 'encounterStarted').map((event) => event.phaseKey),
+    ).toEqual(['Passive', 'Cage02', 'Cage01']);
     expect(
       events
         .filter((event) => event.kind === 'encounterDepthAdvanced')
         .map((event) => event.phaseKey),
-    ).toEqual(['Cage01', 'Cage02']);
+    ).toEqual(['Cage02', 'Cage01']);
     expect(
       events.filter((event) => event.kind === 'encounterCompleted').map((event) => event.phaseKey),
-    ).toEqual(['Passive', 'Cage01', 'Cage02']);
+    ).toEqual(['Passive', 'Cage02', 'Cage01']);
+    expect(
+      events
+        .filter((event) => event.kind === 'acquisitionPointReached')
+        .map((event) => event.point),
+    ).toEqual(['cages:cage2', 'cages:cage1']);
   });
 
   it('advances the standard producer role before outgoing generation and commit effects', () => {

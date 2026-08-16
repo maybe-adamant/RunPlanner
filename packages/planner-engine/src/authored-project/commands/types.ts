@@ -229,6 +229,12 @@ export type LocalRewardCommand = {
   readonly value: ResolvedRewardOffer;
 };
 
+export type FieldsOccurrenceCommand = {
+  readonly kind: 'ReplaceFieldsActionOrder';
+  readonly occurrence: OccurrenceAddress;
+  readonly actionOrder: readonly import('../model').FieldsCombatAction[];
+};
+
 export type ShipOccurrenceCommand =
   | {
       readonly kind: 'ReplaceShipEncounterCount';
@@ -379,6 +385,7 @@ export type DerivedShopEntryEditCommand = {
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
   | LocalRewardCommand
+  | FieldsOccurrenceCommand
   | ShipOccurrenceCommand
   | EphyraOccurrenceCommand
   | ShopOccurrenceCommand

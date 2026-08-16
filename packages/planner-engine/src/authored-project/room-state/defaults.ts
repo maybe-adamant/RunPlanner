@@ -34,6 +34,7 @@ import {
 } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
 import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultFieldsActionOrder } from '../fields-actions';
 
 function defaultCountedOffer(
   binding: CountedRewardBinding,
@@ -312,9 +313,13 @@ export function createDefaultRoomState(
     case 'FieldsCombat':
       requireOrdinaryRole(role, room, path);
       {
+        if (context.activeCageCount === undefined) {
+          failProjectDocument(path, 'FieldsCombat default requires the selected active cage count');
+        }
         const cages = defaultFieldsCages(room, path);
         return Object.freeze({
           kind: 'fieldsCombat',
+          actionOrder: createDefaultFieldsActionOrder(catalog, room, context.activeCageCount),
           cages: Object.freeze(
             Object.fromEntries(
               Object.entries(cages).map(([slotKey, offer]) => [

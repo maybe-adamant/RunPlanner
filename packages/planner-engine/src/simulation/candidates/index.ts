@@ -16,6 +16,11 @@ export type {
   FieldsCageOutcomeCandidateSupport,
 } from './fields-cage-outcome';
 export type {
+  EvaluatedFieldsActionOrderCandidate,
+  FieldsActionOrderCandidateQuery,
+  FieldsActionOrderCandidateSupport,
+} from './fields-action-order';
+export type {
   EvaluatedHubSlotCandidate,
   EvaluatedHubVisitOrderCandidate,
   EvaluatedSideRoomEntryOrderCandidate,

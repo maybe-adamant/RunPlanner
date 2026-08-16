@@ -115,6 +115,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceShipEncounterCount':
+    case 'ReplaceFieldsActionOrder':
     case 'ReplaceIncomingReward':
     case 'ReplaceLocalReward':
     case 'ReplaceSideRoomGeneration':

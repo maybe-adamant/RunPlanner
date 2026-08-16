@@ -19,6 +19,11 @@ import {
   type FieldsCageOutcomeCandidateQuery,
 } from './fields-cage-outcome';
 import {
+  evaluateFieldsActionOrderCandidate,
+  type EvaluatedFieldsActionOrderCandidate,
+  type FieldsActionOrderCandidateQuery,
+} from './fields-action-order';
+import {
   evaluateHubSlotCandidate,
   evaluateHubVisitOrderCandidate,
   evaluateSideRoomEntryOrderCandidate,
@@ -138,6 +143,7 @@ import {
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
   | FieldsCageOutcomeCandidateQuery
+  | FieldsActionOrderCandidateQuery
   | HubSlotCandidateQuery
   | HubVisitOrderCandidateQuery
   | IncomingRewardCandidateQuery
@@ -177,6 +183,7 @@ export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
   | EvaluatedBatchRewardStoreCandidate
   | EvaluatedFieldsCageOutcomeCandidate
+  | EvaluatedFieldsActionOrderCandidate
   | EvaluatedHubSlotCandidate
   | EvaluatedHubVisitOrderCandidate
   | EvaluatedIncomingRewardCandidate
@@ -212,10 +219,15 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedEchoLastRewardDomain
   | EvaluatedAllTogetherSetDomain;
 
-export type CandidateEvaluationEvent = {
-  readonly kind: 'queryBatch';
-  readonly queryCount: number;
-};
+export type CandidateEvaluationEvent =
+  | {
+      readonly kind: 'queryBatch';
+      readonly queryCount: number;
+    }
+  | {
+      readonly kind: 'fieldsActionBiomeReplay';
+      readonly owner: import('../../authored-project/addresses').OccurrenceAddress;
+    };
 
 export interface ProjectCandidateSessionOptions {
   readonly observe?: (event: CandidateEvaluationEvent) => void;
@@ -270,6 +282,7 @@ function evaluateCandidateQuery(
   assembly: ProjectEvaluationAssembly,
   candidateArtifacts: ProjectCandidateArtifacts,
   query: ProjectCandidateSessionQuery,
+  observe?: (event: CandidateEvaluationEvent) => void,
 ): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
@@ -328,6 +341,10 @@ function evaluateCandidateQuery(
       return evaluateBatchRewardStoreCandidate(catalog, project, evaluation, query);
     case 'fieldsCageOutcome':
       return evaluateFieldsCageOutcomeCandidate(catalog, project, evaluation, query);
+    case 'fieldsActionOrder':
+      return evaluateFieldsActionOrderCandidate(catalog, project, evaluation, query, (owner) =>
+        observe?.(Object.freeze({ kind: 'fieldsActionBiomeReplay', owner })),
+      );
     case 'hubSlot':
       return evaluateHubSlotCandidate(catalog, project, evaluation, query);
     case 'hubVisitOrder':
@@ -563,12 +580,15 @@ export function createPreparedProjectCandidateSession(
         assembly,
         candidateArtifacts,
         queryOrQueries as ProjectCandidateSessionQuery,
+        options.observe,
       );
     }
     const queries = queryOrQueries as readonly ProjectCandidateSessionQuery[];
     options.observe?.(Object.freeze({ kind: 'queryBatch', queryCount: queries.length }));
     return Object.freeze(
-      queries.map((query) => evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query)),
+      queries.map((query) =>
+        evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query, options.observe),
+      ),
     );
   }
   const traitCapability = (owner: TraitOfferAddress) =>

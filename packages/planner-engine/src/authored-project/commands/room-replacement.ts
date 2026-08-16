@@ -20,6 +20,7 @@ import {
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
+import { fieldsDefaultActiveCageCount } from '../fields-actions';
 
 import {
   failCommand,
@@ -152,11 +153,13 @@ function occurrenceContext(
 function asRoomStateContext(
   context: OccurrenceContext,
   loadout: LocatedBiome['loadout'],
+  activeCageCount?: number,
 ): RoomStateContext {
   return Object.freeze({
     role: context.role,
     entryActive: context.entryActive,
     loadout,
+    ...(activeCageCount === undefined ? {} : { activeCageCount }),
     ...(context.resolvedStoreKey === undefined
       ? {}
       : { resolvedStoreKey: context.resolvedStoreKey }),
@@ -318,7 +321,20 @@ export function applyRoomReplacementCommand(
   const replacementDefault = createDefaultRoomState(
     catalog,
     replacementRoom,
-    asRoomStateContext(context, located.loadout),
+    asRoomStateContext(
+      context,
+      located.loadout,
+      context.owner === undefined
+        ? undefined
+        : fieldsDefaultActiveCageCount({
+            catalog,
+            layout: located.layout,
+            topology: current,
+            decision: context.owner,
+            room: replacementRoom,
+            replacingOccurrenceId: occurrence.occurrenceId,
+          }),
+    ),
   );
   const replacementState = reconcileReplacementRoomState(
     catalog,

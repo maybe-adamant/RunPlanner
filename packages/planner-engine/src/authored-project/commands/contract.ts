@@ -97,6 +97,7 @@ export function projectCommandAddress(
       return command.decision;
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceShipEncounterCount':
+    case 'ReplaceFieldsActionOrder':
       return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;

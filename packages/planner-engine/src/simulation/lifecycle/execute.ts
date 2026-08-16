@@ -330,6 +330,100 @@ function encounterSequenceOperationHandler(
   return next;
 }
 
+function fieldsActionSequenceOperationHandler(
+  operation: RoomLifecycleOperation,
+  context: ExecutionContext,
+  operationIndex: number,
+  state: ExecutionState,
+): ExecutionState {
+  const actions = context.input.fieldsActions;
+  const bindings = context.input.fieldsCageRewards;
+  if (actions === undefined || bindings === undefined) {
+    throw new LifecycleExecutionContractError(
+      `${context.profile.key} requires Fields actions and cage reward bindings`,
+    );
+  }
+  const passive = context.encounterPhases.find((phase) => phase.slotKey === 'Passive');
+  if (passive === undefined) {
+    throw new LifecycleExecutionContractError(`${context.profile.key} has no Passive phase`);
+  }
+  const phaseByKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));
+  const bindingByPhase = new Map(bindings.map((binding) => [binding.phaseKey, binding]));
+  const bindingBySlot = new Map(bindings.map((binding) => [binding.slotKey, binding]));
+  const completionKeys = new Set<string>();
+  const interactionKeys = new Set<string>();
+  const applyEncounterEffects = (
+    next: ExecutionState,
+    encounterPhase: ResolvedEncounterPhase,
+  ): ExecutionState => {
+    const operationContext: OperationContext = {
+      ...context,
+      operationIndex,
+      encounterPhase,
+      ...(encounterPhase.figLeafSkip && encounterPhase.canEncounterSkip
+        ? { figLeafSkipped: true, figLeafSkipOwner: true }
+        : {}),
+    };
+    let result = next;
+    for (const effect of [
+      'recordEncounterStart',
+      'advanceEncounterDepth',
+      'recordEncounterCompletion',
+    ] as const) {
+      result = lifecycleEffectRegistry[effect](operationContext, result);
+    }
+    return result;
+  };
+
+  let next = applyEncounterEffects(state, passive);
+  for (const action of actions) {
+    if (action.kind === 'completeCage') {
+      const phase = phaseByKey.get(action.phaseKey);
+      if (
+        phase === undefined ||
+        phase.slotKey === passive.slotKey ||
+        !bindingByPhase.has(action.phaseKey) ||
+        completionKeys.has(action.phaseKey)
+      ) {
+        throw new LifecycleExecutionContractError(
+          `${context.profile.key} received invalid cage completion ${action.phaseKey}`,
+        );
+      }
+      completionKeys.add(action.phaseKey);
+      next = applyEncounterEffects(next, phase);
+      continue;
+    }
+    const binding = bindingBySlot.get(action.slotKey);
+    if (
+      binding === undefined ||
+      !completionKeys.has(binding.phaseKey) ||
+      interactionKeys.has(action.slotKey)
+    ) {
+      throw new LifecycleExecutionContractError(
+        `${context.profile.key} received unavailable cage interaction ${action.slotKey}`,
+      );
+    }
+    interactionKeys.add(action.slotKey);
+    next = appendEvent(
+      next,
+      { ...context, operationIndex },
+      { kind: 'acquisitionPointReached', point: `cages:${action.slotKey}` },
+    );
+  }
+  if (
+    completionKeys.size !== bindings.length ||
+    interactionKeys.size !== bindings.length ||
+    bindings.some(
+      (binding) => !completionKeys.has(binding.phaseKey) || !interactionKeys.has(binding.slotKey),
+    )
+  ) {
+    throw new LifecycleExecutionContractError(
+      `${context.profile.key} action order does not resolve every active cage`,
+    );
+  }
+  return next;
+}
+
 const operationDispatchRegistry = Object.freeze({
   prepareRoom: defaultOperationHandler,
   materializeOfferPoint: defaultOperationHandler,
@@ -339,6 +433,7 @@ const operationDispatchRegistry = Object.freeze({
   completeEncounter: encounterOperationHandler,
   completeRequiredObjects: defaultOperationHandler,
   runEncounterSequence: encounterSequenceOperationHandler,
+  runFieldsActionSequence: fieldsActionSequenceOperationHandler,
   runRewardEncounterSequence: encounterSequenceOperationHandler,
   advanceProducer: defaultOperationHandler,
   generateOutgoingBatch: defaultOperationHandler,
@@ -437,6 +532,17 @@ function resolveExecutionContext(
   if (hasRequiredObjects !== hasRequiredObjectOperations) {
     throw new LifecycleExecutionContractError(
       `${profile.key} required-object operations do not match lifecycle input`,
+    );
+  }
+  const usesFieldsActions = profile.operations.some(
+    (operation) => operation.kind === 'runFieldsActionSequence',
+  );
+  if (
+    usesFieldsActions !==
+    (input.fieldsActions !== undefined && input.fieldsCageRewards !== undefined)
+  ) {
+    throw new LifecycleExecutionContractError(
+      `${profile.key} Fields action input does not match its lifecycle operations`,
     );
   }
 

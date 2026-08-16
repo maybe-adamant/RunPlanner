@@ -49,11 +49,35 @@ describe('authored room-state defaults', () => {
       }),
     ).toMatchObject({
       kind: 'fieldsCombat',
+      actionOrder: [
+        { kind: 'completeCage', phaseKey: 'Cage01' },
+        { kind: 'interactCageReward', slotKey: 'cage1' },
+        { kind: 'completeCage', phaseKey: 'Cage02' },
+        { kind: 'interactCageReward', slotKey: 'cage2' },
+      ],
       cages: {
         cage1: { offer: { rewardType: expect.any(String) } },
         cage2: { offer: { rewardType: expect.any(String) } },
         cage3: { offer: { rewardType: expect.any(String) } },
       },
+    });
+
+    expect(
+      createDefaultRoomState(catalog, room('H_Combat02'), {
+        role: 'ordinary',
+        entryActive: true,
+        activeCageCount: 3,
+      }),
+    ).toMatchObject({
+      kind: 'fieldsCombat',
+      actionOrder: [
+        { kind: 'completeCage', phaseKey: 'Cage01' },
+        { kind: 'interactCageReward', slotKey: 'cage1' },
+        { kind: 'completeCage', phaseKey: 'Cage02' },
+        { kind: 'interactCageReward', slotKey: 'cage2' },
+        { kind: 'completeCage', phaseKey: 'Cage03' },
+        { kind: 'interactCageReward', slotKey: 'cage3' },
+      ],
     });
 
     expect(

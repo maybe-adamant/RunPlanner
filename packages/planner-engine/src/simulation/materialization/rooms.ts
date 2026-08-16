@@ -73,6 +73,7 @@ interface MaterializedRoomLeaf {
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly fieldsActions?: readonly import('../../authored-project/model').FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly clockworkReward?: 'goal' | 'nonGoal';
@@ -348,6 +349,7 @@ function materializeFieldsCombat(
       ...activeCageSlots.map((slot) => slot.key),
     ]),
     localRewards: Object.freeze(localRewards),
+    fieldsActions: state.actionOrder,
   });
 }
 
@@ -680,6 +682,7 @@ export function materializeAuthoredRoom(
       : { requiredObjects: context.room.requiredObjects }),
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
+    ...(leaf.fieldsActions === undefined ? {} : { fieldsActions: leaf.fieldsActions }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
     ...(context.occurrence.acquisitionSites?.roomExit?.pickupEntries === undefined

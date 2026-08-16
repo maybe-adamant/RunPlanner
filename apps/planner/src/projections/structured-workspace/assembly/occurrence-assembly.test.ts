@@ -598,12 +598,9 @@ describe('structured workspace occurrence assembly', () => {
     if (fields.node.room.roomLocal.kind !== 'fields') throw new Error('Fields surface is missing');
     expect(Object.isFrozen(fields.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(fields.node.room.roomLocal.cages)).toBe(true);
-    expect(
-      fields.node.room.roomLocal.cages.map((cage) => [cage.key, cage.label, cage.active]),
-    ).toEqual([
-      ['cage1', 'Cage 1', true],
-      ['cage2', 'Cage 2', true],
-      ['cage3', 'Cage 3', false],
+    expect(fields.node.room.roomLocal.cages.map((cage) => [cage.key, cage.label])).toEqual([
+      ['cage1', 'Cage 1'],
+      ['cage2', 'Cage 2'],
     ]);
     expect(fields.node.room.roomLocal.cages[0]?.control.owner.address).toEqual(
       createLocalRewardAddress(
@@ -613,6 +610,22 @@ describe('structured workspace occurrence assembly', () => {
         'cage1',
       ),
     );
+    const dormantCage = createLocalRewardAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat02'),
+      'cages',
+      'cage3',
+    );
+    expect(
+      fields.node.room.rewardControls.some(
+        (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(dormantCage),
+      ),
+    ).toBe(false);
+    expect(
+      fields.node.room.localDetailMarkers.some(
+        (marker) => semanticAddressKey(marker.address) === semanticAddressKey(dormantCage),
+      ),
+    ).toBe(false);
     expect(fields.node.room.localDetailMarkers).toContain(
       fields.node.room.roomLocal.cages[0]?.control.marker,
     );
@@ -624,6 +637,22 @@ describe('structured workspace occurrence assembly', () => {
         (cage) => Object.isFrozen(cage) && Object.isFrozen(cage.control),
       ),
     ).toBe(true);
+    const chronology = fields.node.room.roomLocal.chronology;
+    if (chronology === undefined) throw new Error('Fields chronology is withheld');
+    expect(chronology.rows.map((row) => row.label)).toEqual([
+      'Complete Cage 1',
+      'Interact with Cage 1 reward',
+      'Complete Cage 2',
+      'Interact with Cage 2 reward',
+    ]);
+    expect(chronology.proposals.length).toBeGreaterThan(0);
+    expect(fields.node.room.localDetailMarkers).toContain(chronology.rows[0]?.marker);
+    expect(fields.occurrenceInteractionRequirements).toContainEqual(
+      expect.objectContaining({
+        kind: 'fieldsActionOrder',
+        owner: fields.node.room.address,
+      }),
+    );
 
     expect(ship.node.room.roomLocal.kind).toBe('ship');
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');

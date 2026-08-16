@@ -1,5 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { ExitDecision, OccurrenceId, RoomOccurrence } from '../../authored-project/model';
+import { deriveFieldsActiveCageCount } from '../../authored-project/fields-actions';
 
 import type { CanonicalTargetContinuation } from './model';
 
@@ -93,6 +94,7 @@ export function fieldsBatchFacts(
 
   let batchCapacity = layout.progression.batchPolicy.maxDoorCageRewards;
   let cageTargetCount = 0;
+  const targetCapacities: number[] = [];
   for (const target of decision.normal.targets) {
     const room = requireRoom(catalog, requireOccurrence(occurrenceFor, target.occurrenceId));
     if (room.mode.kind !== 'authored' || room.mode.templateKey !== 'FieldsCombat') continue;
@@ -101,15 +103,23 @@ export function fieldsBatchFacts(
       throw new Error(`${room.gameName} has no Fields cage capacity`);
     }
     cageTargetCount += 1;
+    targetCapacities.push(cages.maxActiveSlots);
     batchCapacity = Math.min(batchCapacity, cages.maxActiveSlots);
   }
   const cageOutcome = decision.normal.batchState.cageOutcome;
+  const doorCageRewardCount = deriveFieldsActiveCageCount(
+    decision,
+    layout.progression.batchPolicy,
+    targetCapacities,
+  );
+  if (doorCageRewardCount === undefined) {
+    throw new Error('configured Fields batch lost its active cage count');
+  }
   return Object.freeze({
     cageOutcome,
     batchCapacity,
     cageTargetCount,
-    doorCageRewardCount:
-      cageOutcome === 'min' ? layout.progression.batchPolicy.minDoorCageRewards : batchCapacity,
+    doorCageRewardCount,
   });
 }
 

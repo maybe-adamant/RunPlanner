@@ -21,6 +21,7 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
+import type { FieldsCombatAction } from '../../authored-project/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
 import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -126,6 +127,7 @@ export interface CanonicalAuthoredRoom {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly fieldsActions?: readonly FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly pickupSite?: {

@@ -431,27 +431,119 @@ function FieldsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
-  const activeCages = room.cages.filter((cage) => cage.active);
-  if (activeCages.length === 0) return null;
+  return (
+    <div className="fields-room-editor">
+      {room.cages.length === 0 ? null : (
+        <div aria-label="Fields cage rewards" className="local-reward-editor">
+          {room.cages.map((cage) => (
+            <section aria-label={cage.label} className="local-reward-slot" key={cage.key}>
+              <div className="local-reward-heading">
+                <div className="owner-markers">
+                  <h4>{cage.label}</h4>
+                  <SemanticOwnerMarker address={cage.control.marker.address} />
+                </div>
+              </div>
+              <RewardControlEditor
+                control={cage.control}
+                idPrefix={`room-${cage.control.marker.focusKey}`}
+                interactions={interactions}
+              />
+            </section>
+          ))}
+        </div>
+      )}
+      {room.chronology === undefined ? null : (
+        <FieldsChronologyWorkbench chronology={room.chronology} interactions={interactions} />
+      )}
+    </div>
+  );
+}
+
+function FieldsChronologyWorkbench({
+  chronology,
+  interactions,
+}: {
+  readonly chronology: NonNullable<
+    Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>['chronology']
+  >;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const interaction = requireWorkspaceInteraction(
+    interactions.fieldsActionOrders,
+    chronology.interactionKey,
+  );
+  const candidates = useWorkspaceInteraction(interaction);
+  const executeIntent = useCommandIntent();
+
+  const applyProposal = (proposalKey: string): void => {
+    const proposalIndex = interaction.proposals.findIndex(
+      (proposal) => proposal.key === proposalKey,
+    );
+    if (proposalIndex < 0) return;
+    const evaluated = candidates.result ?? candidates.activate();
+    if (!candidateMayBeAuthored(evaluated?.[proposalIndex])) return;
+    executeIntent(interaction.intentFor(proposalKey));
+  };
 
   return (
-    <div aria-label="Fields cage rewards" className="local-reward-editor">
-      {activeCages.map((cage) => (
-        <section aria-label={cage.label} className="local-reward-slot" key={cage.key}>
-          <div className="local-reward-heading">
-            <div className="owner-markers">
-              <h4>{cage.label}</h4>
-              <SemanticOwnerMarker address={cage.control.marker.address} />
-            </div>
-          </div>
-          <RewardControlEditor
-            control={cage.control}
-            idPrefix={`room-${cage.control.marker.focusKey}`}
-            interactions={interactions}
-          />
-        </section>
-      ))}
-    </div>
+    <section aria-label="Fields action chronology" className="fields-action-chronology">
+      <header className="local-reward-heading">
+        <h4>Room action order</h4>
+        <span className="neutral-status">Passive occurs first</span>
+      </header>
+      <ol className="fields-action-list">
+        {chronology.rows.map((row) => {
+          const proposals = row.proposalKeys.flatMap((proposalKey) => {
+            const index = interaction.proposals.findIndex(
+              (proposal) => proposal.key === proposalKey,
+            );
+            const proposal = interaction.proposals[index];
+            return proposal === undefined ? [] : [{ index, proposal }];
+          });
+          return (
+            <li className="fields-action-row" key={row.key}>
+              <div className="owner-markers">
+                <span>{row.label}</span>
+                <SemanticOwnerMarker address={row.address} />
+                {row.state === 'active' ? null : (
+                  <span className="neutral-status">{row.state}</span>
+                )}
+              </div>
+              <label className="field-control">
+                <span>Change order</span>
+                <select
+                  aria-busy={candidates.pending || undefined}
+                  onChange={(event) => {
+                    applyProposal(event.target.value);
+                    event.target.value = '';
+                  }}
+                  onFocus={candidates.activate}
+                  onPointerDown={candidates.activate}
+                  value=""
+                >
+                  <option disabled value="">
+                    Choose an action
+                  </option>
+                  {proposals.map(({ index, proposal }) => {
+                    const candidate = candidates.result?.[index];
+                    return (
+                      <option
+                        data-candidate-support={candidateSupport(candidate)}
+                        disabled={candidate !== undefined && !candidateMayBeAuthored(candidate)}
+                        key={proposal.key}
+                        value={proposal.key}
+                      >
+                        {presentCandidateLabel(proposal.label, candidate)}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 

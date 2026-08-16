@@ -8,6 +8,8 @@ import {
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createLocalChildGroupAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
@@ -177,7 +179,19 @@ describe('Experimental Hammer', () => {
   });
 
   it('uses every real H encounter completion, including multiple phases owned by one room', () => {
-    const project = createGoldenFGHProject();
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceFieldsActionOrder',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'H'),
+        createOccurrenceId('golden-h-combat02'),
+      ),
+      actionOrder: [
+        { kind: 'completeCage', phaseKey: 'Cage02' },
+        { kind: 'completeCage', phaseKey: 'Cage01' },
+        { kind: 'interactCageReward', slotKey: 'cage1' },
+        { kind: 'interactCageReward', slotKey: 'cage2' },
+      ],
+    });
     const completions = lifecycleCompletions(project, 'H');
     const distinctOwners = new Set(completions.map((event) => JSON.stringify(event.origin)));
     expect(completions.length).toBeGreaterThan(distinctOwners.size);
@@ -203,10 +217,12 @@ describe('Experimental Hammer', () => {
       route(project).loadout,
       [branch],
     ).simulation;
+    const hammerCompletions = completions.filter((event) => event.phaseKey !== 'Passive');
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - completions.length,
+          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
+          20 - hammerCompletions.length,
       ),
     ).toBe(true);
     const combat02Phases = completions
@@ -215,7 +231,7 @@ describe('Experimental Hammer', () => {
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-h-combat02',
       )
       .map((event) => event.phaseKey);
-    expect(combat02Phases).toEqual(['Passive', 'Cage01', 'Cage02']);
+    expect(combat02Phases).toEqual(['Passive', 'Cage02', 'Cage01']);
   });
 
   it('advances through a selected Story primary encounter', () => {

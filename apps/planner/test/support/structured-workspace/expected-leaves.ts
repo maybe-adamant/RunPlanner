@@ -23,6 +23,7 @@ import {
   type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import { fieldsBatchFacts } from '@run-planner/engine/simulation';
 
 import { workspaceSideRoomEntryOrderTestKey, workspaceTestOwnerKey } from './test-keys';
 
@@ -281,7 +282,26 @@ export function expectedWorkspaceLeafRequirements(
         if (group?.kind !== 'boundedRewardSlots') {
           throw new Error(`${room.gameName} Fields state has no bounded cage declaration`);
         }
-        for (const slotKey of group.slotKeys) {
+        const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+        const decision = topology.decisions.find(
+          (candidate): candidate is ExitDecision =>
+            candidate.kind === 'exit' &&
+            candidate.normal.kind === 'batch' &&
+            candidate.normal.targets.some(
+              (target) => target.occurrenceId === occurrence.occurrenceId,
+            ),
+        );
+        const facts =
+          layout === undefined || decision === undefined
+            ? undefined
+            : fieldsBatchFacts(
+                catalog,
+                layout,
+                (occurrenceId) =>
+                  topology.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId),
+                decision,
+              );
+        for (const slotKey of group.slotKeys.slice(0, facts?.doorCageRewardCount ?? 0)) {
           const rewardAddress = createLocalRewardAddress(
             biome,
             occurrence.occurrenceId,
