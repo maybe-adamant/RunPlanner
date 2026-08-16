@@ -188,7 +188,7 @@ function localIncomingReward(
     offer: state.reward.offer,
     traitOffersByAcquisitionRole: state.reward.traitOffersByAcquisitionRole,
     levelResolutionsByAcquisitionRole: state.reward.levelResolutionsByAcquisitionRole,
-    conversionByAcquisitionRole: state.reward.conversionByAcquisitionRole,
+    dispositionByAcquisitionRole: state.reward.dispositionByAcquisitionRole,
     traitContext: Object.freeze({
       ...loadout,
       blockGiftBoons: room.blockGiftBoons,

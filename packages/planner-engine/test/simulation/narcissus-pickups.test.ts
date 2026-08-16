@@ -14,6 +14,7 @@ import {
   createOccurrenceAddress,
   createTraitOfferAddress,
   createProjectHistory,
+  createRouteAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   redoProjectHistory,
@@ -114,6 +115,50 @@ function pickupSite(project: ProjectDocument) {
 }
 
 describe('Narcissus pickup producer', () => {
+  it('converts and later picks up an ordered Narcissus Artificer replacement', () => {
+    let project = selectNarcissus(createGoldenFGHIProject(), [
+      'NarcissusB',
+      'NarcissusC',
+      'NarcissusF',
+    ]);
+    const ashes = pickupEntry(project, 'ashes');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(ashes, 'self'),
+      value: {
+        kind: 'artificer',
+        replacement: Object.freeze({
+          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+          traitOffersByAcquisitionRole: Object.freeze({}),
+          dispositionByAcquisitionRole: Object.freeze({
+            self: Object.freeze({ kind: 'normal' as const }),
+          }),
+        }),
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site: ashes.site,
+      entryKeys: ['ashes', 'artificer:ashes:self'],
+    });
+    const branch = evaluatedG(project).rewards.branches[0];
+    const replacement = createAcquisitionEntryAddress(ashes.site, 'artificer:ashes:self');
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'artificerConversion',
+        origin: ashes,
+      }),
+    );
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({ kind: 'concreteAcquisition', origin: replacement }),
+    );
+  });
+
   it.each([
     ['NarcissusB', 'ashes', 'MetaCardPointsCommonDrop', false],
     ['NarcissusD', 'psyche', 'MemPointsCommonDrop', false],
@@ -161,9 +206,9 @@ describe('Narcissus pickup producer', () => {
         keepsakeKey: 'GoldifyKeepsake',
       });
       convertedProject = applyProjectCommand(convertedProject, catalog, {
-        kind: 'ReplaceAcquisitionConversion',
+        kind: 'ReplaceAcquisitionDisposition',
         acquisition: createAcquisitionRoleAddress(entry, 'self'),
-        value: 'gold',
+        value: { kind: 'timePiece' },
       });
       const converted = evaluatedG(convertedProject).rewards.branches[0];
       expect(converted?.history.useRecord[acquisitionGameName]).toBe(
@@ -245,9 +290,9 @@ describe('Narcissus pickup producer', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(entry, 'self'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     const converted = evaluatedG(project);
     expect(converted.rewards.branches[0]?.history.consumableRecord.LastStandDrop).toBeUndefined();
@@ -308,9 +353,9 @@ describe('Narcissus pickup producer', () => {
     ] as const;
     for (const testCase of cases) {
       const retainedInvalid = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceAcquisitionConversion',
+        kind: 'ReplaceAcquisitionDisposition',
         acquisition: testCase.acquisition,
-        value: 'gold',
+        value: { kind: 'timePiece' },
       });
 
       const g = evaluatedG(retainedInvalid);
@@ -340,7 +385,12 @@ describe('Narcissus pickup producer', () => {
         }),
       ).toMatchObject({
         kind: 'acquisitionConversion',
-        result: { goldSupported: false, goldConvertible: false },
+        result: {
+          timePieceSupported: false,
+          timePieceConvertible: false,
+          artificerSupported: false,
+          artificerConvertible: false,
+        },
       });
     }
   });

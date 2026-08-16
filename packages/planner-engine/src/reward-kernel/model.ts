@@ -59,6 +59,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly historyProjection: HistoryProjectionKey;
   /** Source GoldConversionEligible capability, independent of the reward category. */
   readonly goldConversionEligible: boolean;
+  /** Source MetaConversionEligible capability, before producer/cost overrides. */
+  readonly artificerConversionEligible: boolean;
   /** Exact source-backed reconstruction used when this settled pickup becomes Echo's LastReward. */
   readonly lastRewardRecreation?: {
     readonly offer: ResolvedRewardOffer;
@@ -100,6 +102,8 @@ export interface AcquisitionLifecycleBinding {
   readonly lifecyclePoint: ProducerLifecyclePointKey;
   /** A narrow producer-local override; acquisition declarations retain universal effects. */
   readonly levelResolutionEffect?: LevelResolutionEffect;
+  /** Producer-local instance override, used by Echo's recreated Last Reward. */
+  readonly blocksArtificerConversion?: true;
 }
 
 export type SourceResolutionPoint =

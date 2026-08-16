@@ -44,6 +44,8 @@ export type RewardGenerationFindingCode =
   | 'judgmentOutcomeTargetUnavailable'
   | 'keepsakeUnavailable'
   | 'timePieceConversionUnavailable'
+  | 'artificerConversionUnavailable'
+  | 'artificerReplacementUnavailable'
   | 'keepsakeEquipResultMissing'
   | 'keepsakeEquipResultUnavailable';
 

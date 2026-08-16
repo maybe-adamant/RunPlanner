@@ -10,6 +10,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   encodeProjectDocument,
@@ -36,6 +37,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures';
+import { createDefaultAcquisitionRewardState } from '../../../../src/authored-project/traits';
 
 const biome = createBiomeAddress('Underworld', 'H');
 
@@ -519,9 +521,9 @@ describe('H Fields materialization', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(optional, 'self'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     project = replaceFieldsActions(project, occurrenceId, (order) => [
       { kind: 'interactOptionalReward', slotKey: 'optional1' },
@@ -555,9 +557,9 @@ describe('H Fields materialization', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(optional, 'self'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
 
     const evaluated = simulateProject(catalog, project)
@@ -578,6 +580,171 @@ describe('H Fields materialization', () => {
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(optional),
       ),
     ).toBe(false);
+  });
+
+  it('generates two late Hammers before either optional Fields replacement is picked up', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const sources = ['optional1', 'optional2'] as const;
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    const hammer = createDefaultAcquisitionRewardState(
+      catalog,
+      { rewardType: 'WeaponUpgrade' },
+      traitContext(project),
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+    );
+    const defaultHammerOffer = hammer.traitOffersByAcquisitionRole.self;
+    if (defaultHammerOffer?.kind !== 'traits') throw new Error('Hammer trait offer is missing');
+    for (const [index, slotKey] of sources.entries()) {
+      const owner = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey);
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: owner,
+        value: {
+          rewardType: index === 0 ? 'MetaCurrencyDrop' : 'MetaCardPointsCommonDrop',
+        },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(owner, 'self'),
+        value: {
+          kind: 'artificer',
+          replacement: Object.freeze({
+            ...hammer,
+            traitOffersByAcquisitionRole: Object.freeze({
+              self: Object.freeze({
+                ...defaultHammerOffer,
+                options: Object.freeze(
+                  index === 0
+                    ? [
+                        { traitKey: 'StaffAttackRecoveryTrait' },
+                        { traitKey: 'StaffPowershotTrait' },
+                        { traitKey: 'StaffFastSpecialTrait' },
+                      ]
+                    : [
+                        { traitKey: 'StaffJumpSpecialTrait' },
+                        { traitKey: 'StaffExAoETrait' },
+                        { traitKey: 'StaffSecondStageTrait' },
+                      ],
+                ) as typeof defaultHammerOffer.options,
+                selectedOptionKey: 'option1',
+              }),
+            }),
+          }),
+        },
+      });
+    }
+    const authoredState = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === occurrenceId,
+    )?.state;
+    if (authoredState?.kind !== 'fieldsCombat') throw new Error('multi-Hammer state is missing');
+    expect(
+      sources.map((slotKey) => {
+        const disposition =
+          authoredState.optionalRewards[slotKey]?.dispositionByAcquisitionRole.self;
+        return disposition?.kind === 'artificer'
+          ? disposition.replacement.traitOffersByAcquisitionRole.self?.kind === 'traits'
+            ? disposition.replacement.traitOffersByAcquisitionRole.self.selectedOptionKey
+            : undefined
+          : undefined;
+      }),
+    ).toEqual(['option1', 'option1']);
+    project = replaceFieldsActions(project, occurrenceId, (order) => [
+      ...sources.map((slotKey) => ({ kind: 'interactOptionalReward' as const, slotKey })),
+      ...sources.map((slotKey) => ({
+        kind: 'interactArtificerReplacement' as const,
+        sourceGroup: 'optionalRewards' as const,
+        slotKey,
+        acquisitionRole: 'self',
+      })),
+      ...order,
+    ]);
+    const replacementAddresses = sources.map((slotKey) =>
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey),
+          `optionalRewards:${slotKey}`,
+        ),
+        `artificer:${slotKey}:self`,
+      ),
+    );
+    const simulation = simulateProject(catalog, project);
+    const evaluated = simulation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    expect(evaluated?.authoring).toBe('complete');
+    expect(evaluated?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: createLocalRewardAddress(
+          biome,
+          createOccurrenceId('golden-h-combat09'),
+          'cages',
+          'cage2',
+        ),
+      }),
+    );
+    if (evaluated === undefined || !('rewards' in evaluated))
+      throw new Error('H reward evaluation is missing');
+    const branch = evaluated.rewards.branches[0]!;
+    const conversions = branch.events.filter((event) => event.kind === 'artificerConversion');
+    const hammers = branch.events.filter(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        event.acquisition.acquisition.gameName === 'WeaponUpgrade',
+    );
+    expect(conversions).toHaveLength(2);
+    expect(hammers).toHaveLength(2);
+    expect(hammers.map((event) => event.origin)).toEqual(replacementAddresses);
+    expect(
+      simulation.findings.filter((finding) => finding.code === 'artificerReplacementUnavailable'),
+    ).toEqual([]);
+    expect(Math.max(...conversions.map((event) => event.historySequence))).toBeLessThan(
+      Math.min(...hammers.map((event) => event.historySequence)),
+    );
+  });
+
+  it('keeps a cage-owned Artificer replacement as a required dependent action', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
+    const replacement = createDefaultAcquisitionRewardState(
+      catalog,
+      { rewardType: 'RoomMoneyDrop' },
+      traitContext(createGoldenFGHProject()),
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+    );
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(cage, 'self'),
+      value: { kind: 'artificer', replacement },
+    });
+    const state = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === occurrenceId,
+    )?.state;
+    if (state?.kind !== 'fieldsCombat') throw new Error('Fields cage state is missing');
+    const sourceIndex = state.actionOrder.findIndex(
+      (action) => action.kind === 'interactCageReward' && action.slotKey === 'cage1',
+    );
+    expect(state.actionOrder[sourceIndex + 1]).toEqual({
+      kind: 'interactArtificerReplacement',
+      sourceGroup: 'cages',
+      slotKey: 'cage1',
+      acquisitionRole: 'self',
+    });
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'artificerConversionUnavailable',
+        origin: createAcquisitionRoleAddress(cage, 'self'),
+      }),
+    );
   });
 
   it('keeps Fields Min/Max and cage-local rewards as engine-owned candidate domains', () => {
@@ -726,9 +893,9 @@ describe('H Fields materialization', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(cage, 'self'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     const evaluated = simulateProject(catalog, project)
       .routes.find((route) => route.routeKey === 'Underworld')

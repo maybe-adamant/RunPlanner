@@ -596,36 +596,51 @@ function FieldsChronologyWorkbench({
                   <span className="neutral-status">{row.state}</span>
                 )}
               </div>
-              <label className="field-control">
-                <span>Change order</span>
-                <select
-                  aria-busy={candidates.pending || undefined}
-                  onChange={(event) => {
-                    applyProposal(event.target.value);
-                    event.target.value = '';
-                  }}
-                  onFocus={candidates.activate}
-                  onPointerDown={candidates.activate}
-                  value=""
-                >
-                  <option disabled value="">
-                    Choose an action
-                  </option>
-                  {proposals.map(({ index, proposal }) => {
-                    const candidate = candidates.result?.[index];
-                    return (
-                      <option
-                        data-candidate-support={candidateSupport(candidate)}
-                        disabled={candidate !== undefined && !candidateMayBeAuthored(candidate)}
-                        key={proposal.key}
-                        value={proposal.key}
-                      >
-                        {presentCandidateLabel(proposal.label, candidate)}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
+              {row.participationProposalKey === undefined ? (
+                <label className="field-control">
+                  <span>Change order</span>
+                  <select
+                    aria-busy={candidates.pending || undefined}
+                    onChange={(event) => {
+                      applyProposal(event.target.value);
+                      event.target.value = '';
+                    }}
+                    onFocus={candidates.activate}
+                    onPointerDown={candidates.activate}
+                    value=""
+                  >
+                    <option disabled value="">
+                      Choose an action
+                    </option>
+                    {proposals.map(({ index, proposal }) => {
+                      const candidate = candidates.result?.[index];
+                      return (
+                        <option
+                          data-candidate-support={candidateSupport(candidate)}
+                          disabled={candidate !== undefined && !candidateMayBeAuthored(candidate)}
+                          key={proposal.key}
+                          value={proposal.key}
+                        >
+                          {presentCandidateLabel(proposal.label, candidate)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+              ) : (
+                <label className="purchase-control">
+                  <input
+                    aria-busy={candidates.pending || undefined}
+                    aria-label={`Interact with ${row.label}`}
+                    checked={row.state === 'active'}
+                    onChange={() => applyProposal(row.participationProposalKey!)}
+                    onFocus={candidates.activate}
+                    onPointerDown={candidates.activate}
+                    type="checkbox"
+                  />
+                  Interact
+                </label>
+              )}
             </li>
           );
         })}

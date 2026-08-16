@@ -215,6 +215,14 @@ function normalizeAcquisitions(
     'MetaCardPointsCommonBigDrop',
     'MemPointsCommonDrop',
   ]);
+  const artificerConversionEligible = new Set([
+    'GiftDrop',
+    'MetaCurrencyDrop',
+    'MetaCurrencyBigDrop',
+    'MetaCardPointsCommonDrop',
+    'MetaCardPointsCommonBigDrop',
+    'MemPointsCommonDrop',
+  ]);
   const declaredEligible = raw
     .filter((acquisition, index) => {
       if (
@@ -233,6 +241,24 @@ function normalizeAcquisitions(
   ) {
     fail('acquisitions', 'must declare the exact Time Piece gold-conversion eligibility set');
   }
+  const declaredArtificerEligible = raw
+    .filter((acquisition, index) => {
+      if (
+        acquisition.artificerConversionEligible !== undefined &&
+        typeof acquisition.artificerConversionEligible !== 'boolean'
+      )
+        fail(`acquisitions[${index}].artificerConversionEligible`, 'must be boolean');
+      return acquisition.artificerConversionEligible === true;
+    })
+    .map((acquisition) => acquisition.gameName);
+  if (
+    declaredArtificerEligible.length !== artificerConversionEligible.size ||
+    declaredArtificerEligible.some((gameName) => !artificerConversionEligible.has(gameName)) ||
+    [...artificerConversionEligible].some(
+      (gameName) => !declaredArtificerEligible.includes(gameName),
+    )
+  )
+    fail('acquisitions', 'must declare the exact Artificer conversion eligibility set');
   const lastRewardEligible = new Set([
     'AphroditeUpgrade',
     'ApolloUpgrade',
@@ -290,6 +316,7 @@ function normalizeAcquisitions(
           `acquisitions[${index}].historyProjection`,
         ),
         goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
+        artificerConversionEligible: artificerConversionEligible.has(acquisition.gameName),
         ...(acquisition.lastRewardRecreation === undefined
           ? {}
           : {
@@ -752,6 +779,11 @@ function normalizeAcquisitionLifecycle(
     }
     seenRoles.add(binding.role);
     const effect = binding.levelResolutionEffect;
+    if (
+      binding.blocksArtificerConversion !== undefined &&
+      binding.blocksArtificerConversion !== true
+    )
+      fail(`${bindingPath}.blocksArtificerConversion`, 'must be true when present');
     if (effect !== undefined) {
       requireClosedValue(
         effect.kind,
@@ -773,6 +805,9 @@ function normalizeAcquisitionLifecycle(
         `${bindingPath}.lifecyclePoint`,
       ),
       ...(effect === undefined ? {} : { levelResolutionEffect: Object.freeze({ ...effect }) }),
+      ...(binding.blocksArtificerConversion === true
+        ? { blocksArtificerConversion: true as const }
+        : {}),
     });
   });
   if (seenRoles.size !== rewardType.acquisitionRoles.values.length) {
@@ -1001,11 +1036,12 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
     if (
       lifecycle.length !== 1 ||
       binding?.role !== 'self' ||
-      binding.lifecyclePoint !== 'echoReplay'
+      binding.lifecyclePoint !== 'echoReplay' ||
+      binding.blocksArtificerConversion !== true
     ) {
       fail(
         `producerLifecycles.EchoLastReward.${entry.rewardType}`,
-        'must bind exactly self at echoReplay',
+        'must bind exactly self at echoReplay and block Artificer conversion',
       );
     }
     const effect = binding.levelResolutionEffect;

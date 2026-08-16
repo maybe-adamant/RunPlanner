@@ -348,22 +348,24 @@ function EchoLastRewardEditor({
       <legend>Reward Reward Reward replay</legend>
       <p>Recreated source: {domain.rewardLabel}</p>
       <label>
-        Conversion
+        Disposition
         <select
           aria-label="Reward Reward Reward conversion"
           onChange={(event) =>
             onSelect(
               Object.freeze({
                 ...value,
-                conversion: event.target.value as 'normal' | 'gold',
+                disposition: Object.freeze({
+                  kind: event.target.value as 'normal' | 'timePiece',
+                }),
               }),
             )
           }
-          value={value.conversion}
+          value={value.disposition.kind}
         >
           <option value="normal">Acquire reward</option>
-          {domain.goldSupported || value.conversion === 'gold' ? (
-            <option disabled={!domain.goldSupported} value="gold">
+          {domain.goldSupported || value.disposition.kind === 'timePiece' ? (
+            <option disabled={!domain.goldSupported} value="timePiece">
               Convert to Gold
             </option>
           ) : null}

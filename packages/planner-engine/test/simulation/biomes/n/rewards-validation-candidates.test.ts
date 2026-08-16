@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createExitDecisionAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -12,6 +13,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
+  createRouteAddress,
   createShopOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
@@ -23,7 +25,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
-import { createDefaultConversionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranches,
@@ -738,7 +740,10 @@ describe('N Hub rewards, validation, and candidates', () => {
             ...side,
             reward: Object.freeze({
               offer,
-              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
+                catalog,
+                offer,
+              ),
               traitOffersByAcquisitionRole,
             }),
           }),
@@ -1296,5 +1301,46 @@ describe('N Hub rewards, validation, and candidates', () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it('keeps the Ephyra HubRewards bag independent from an Artificer conversion', () => {
+    const owner = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Surface'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: owner,
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(owner, 'self'),
+      value: {
+        kind: 'artificer',
+        replacement: Object.freeze({
+          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+          traitOffersByAcquisitionRole: Object.freeze({}),
+          dispositionByAcquisitionRole: Object.freeze({
+            self: Object.freeze({ kind: 'normal' as const }),
+          }),
+        }),
+      },
+    });
+    const baseline = validN().biome.rewards.branches[0]?.bags.HubRewards;
+    const converted = completeN(project).biome;
+    const branch = converted.rewards.branches[0];
+    expect(converted.validity).toBe('valid');
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({ kind: 'artificerConversion', origin: owner }),
+    );
+    expect(branch?.bags.HubRewards?.remainingEntryCounts).toEqual(baseline?.remainingEntryCounts);
   });
 });

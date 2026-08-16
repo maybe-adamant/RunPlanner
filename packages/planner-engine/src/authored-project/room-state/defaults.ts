@@ -34,7 +34,7 @@ import {
   type TraitOfferDefaultsContext,
 } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 import { createDefaultFieldsActionOrder } from '../fields-actions';
 
 function defaultCountedOffer(
@@ -79,7 +79,7 @@ function defaultShopState(
     offers[slot.key] = Object.freeze({
       reward: Object.freeze({
         offer: slot.defaultOffer,
-        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
           catalog,
           slot.defaultOffer,
         ),
@@ -159,7 +159,7 @@ function defaultRewardWheel(
           offerKey,
           Object.freeze({
             offer,
-            conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
             traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
             ...(createDefaultLevelResolutions(
               catalog,
@@ -222,7 +222,7 @@ function defaultEphyraCombatState(
           sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
           `${path}.sideRooms.${slot.slotKey}.offer`,
         ),
-        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
           catalog,
           defaultCountedOffer(
             requireCountedBinding(sideRoom, path),
@@ -277,7 +277,7 @@ function defaultEphyraCombatState(
     kind: 'ephyraCombat',
     reward: Object.freeze({
       offer,
-      conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
       ...(createDefaultLevelResolutions(
         catalog,
@@ -311,7 +311,7 @@ export function createDefaultRoomState(
   ) => ({
     reward: Object.freeze({
       offer,
-      conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
       traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
       ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
         ? {}
@@ -345,7 +345,7 @@ export function createDefaultRoomState(
         ) =>
           Object.freeze({
             offer,
-            conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
             traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
             ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
               ? {}
@@ -441,7 +441,7 @@ export function createDefaultRoomState(
         kind: 'fixed',
         reward: Object.freeze({
           offer,
-          conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+          dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
           traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
           ...(createDefaultLevelResolutions(
             catalog,

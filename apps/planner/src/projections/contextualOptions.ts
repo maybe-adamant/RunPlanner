@@ -221,6 +221,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Calling Card cannot rarify this option here.' };
     case 'timePieceConversionUnavailable':
       return { kind: 'reward', message: 'Time Piece cannot convert this acquisition here.' };
+    case 'artificerConversionUnavailable':
+      return { kind: 'reward', message: 'Artificer cannot convert this acquisition here.' };
+    case 'artificerReplacementUnavailable':
+      return { kind: 'reward', message: 'This Artificer replacement is unavailable here.' };
     case 'targetRoomSupportEmpty':
       return { kind: 'room', message: 'No room can be offered when this door appears.' };
     case 'echoPomTargetMissing':

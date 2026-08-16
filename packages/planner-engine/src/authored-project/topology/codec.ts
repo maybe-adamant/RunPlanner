@@ -26,6 +26,7 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 import { decodeRoomEncounterState } from '../room-state/encounters';
+import { parseArtificerReplacementEntryKey } from '../artificer';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
@@ -70,6 +71,18 @@ interface OccurrenceOwner {
   readonly anomalyReplacement?: AnomalyReplacementProvenance;
   readonly rememberedCountedBinding?: CountedRewardBinding;
   readonly path: string;
+}
+
+function isActiveArtificerReplacement(
+  key: string,
+  entries: Readonly<Record<string, AuthoredRewardState>> | undefined,
+): boolean {
+  const parsed = parseArtificerReplacementEntryKey(key);
+  return (
+    parsed !== undefined &&
+    entries?.[parsed.sourceKey]?.dispositionByAcquisitionRole[parsed.acquisitionRole]?.kind ===
+      'artificer'
+  );
 }
 
 interface RawDecision {
@@ -1486,7 +1499,11 @@ export function decodeBiomeTopology(
         );
       for (const entryKey of acquisitionSites.roomExit.order) {
         const supplemental = acquisitionSites.roomExit.pickupEntries?.[entryKey];
-        if (state.shop.offers[entryKey] === undefined && supplemental === undefined) {
+        if (
+          state.shop.offers[entryKey] === undefined &&
+          supplemental === undefined &&
+          !isActiveArtificerReplacement(entryKey, acquisitionSites.roomExit.pickupEntries)
+        ) {
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
             `${entryKey} is not a Shop acquisition entry`,
@@ -1525,7 +1542,7 @@ export function decodeBiomeTopology(
             'does not match selected descriptor pickups',
           );
         for (const key of acquisitionSites?.roomExit?.order ?? []) {
-          if (entries[key] === undefined)
+          if (entries[key] === undefined && !isActiveArtificerReplacement(key, entries))
             failProjectDocument(
               `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
               `${key} is not an active pickup`,

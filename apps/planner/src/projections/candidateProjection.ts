@@ -1166,7 +1166,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
     case 'acquisitionConversion':
-      return evaluation.result.goldSupported;
+      return evaluation.result.timePieceSupported || evaluation.result.artificerSupported;
     default:
       return evaluation.result.selectedPossible;
   }

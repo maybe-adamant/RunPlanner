@@ -4,6 +4,7 @@ import type {
   DecisionRewardBagCount,
   DecisionRunStateSnapshot,
 } from '@run-planner/engine/simulation';
+import { artificerStatus } from '@run-planner/engine/simulation';
 
 import type {
   WorkspaceRunStateBagCondition,
@@ -156,6 +157,7 @@ export function presentRunState(
   const coreTraitKeys = new Set(
     Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),
   );
+  const artificer = artificerStatus(catalog, snapshot.arcanaFear);
   return Object.freeze({
     keepsakes: Object.freeze({
       currentLabel:
@@ -239,6 +241,7 @@ export function presentRunState(
         }),
       ),
     ),
+    ...(artificer === undefined ? {} : { artificer }),
     bags: Object.freeze(
       snapshot.bags.map((bag) =>
         Object.freeze({

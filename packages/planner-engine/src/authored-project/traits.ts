@@ -1,7 +1,7 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../catalog-schema';
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type { RoomEncounterState } from './model';
-import { createDefaultConversionByAcquisitionRole } from './reward-state';
+import { createDefaultDispositionByAcquisitionRole } from './reward-state';
 import { levelResolutionEffectFor } from '../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../reward-kernel/level-effects';
 
@@ -81,7 +81,7 @@ export function withDefaultTraitOptionDetail(
 }
 
 export interface AuthoredEchoLastRewardAcquisition {
-  readonly conversion: 'normal' | 'gold';
+  readonly disposition: { readonly kind: 'normal' | 'timePiece' };
   readonly traitOffer?: AuthoredTraitOffer;
   readonly levelResolution?: AuthoredLevelResolution;
 }
@@ -90,8 +90,8 @@ export function normalizeAuthoredEchoLastReward(
   catalog: Catalog,
   value: AuthoredEchoLastRewardAcquisition,
 ): AuthoredEchoLastRewardAcquisition {
-  if (value.conversion !== 'normal' && value.conversion !== 'gold')
-    throw new Error('Echo last-reward conversion must be normal or gold');
+  if (value.disposition.kind !== 'normal' && value.disposition.kind !== 'timePiece')
+    throw new Error('Echo last-reward disposition must be normal or timePiece');
   const level = value.levelResolution;
   if (level?.kind === 'choice') {
     if (new Set(level.offeredTraitKeys).size !== level.offeredTraitKeys.length)
@@ -118,7 +118,7 @@ export function normalizeAuthoredEchoLastReward(
         })
       : value.traitOffer;
   return Object.freeze({
-    conversion: value.conversion,
+    disposition: Object.freeze({ ...value.disposition }),
     ...(traitOffer === undefined ? {} : { traitOffer }),
     ...(level === undefined
       ? {}
@@ -150,7 +150,7 @@ export function createDefaultEchoLastRewardAcquisition(
     producerLevelEffectSource({ producerLifecycleKey: recreation.producerLifecycleKey }),
   )?.self;
   return Object.freeze({
-    conversion: 'normal',
+    disposition: Object.freeze({ kind: 'normal' as const }),
     ...(traitOffer === undefined ? {} : { traitOffer }),
     ...(levelResolution === undefined ? {} : { levelResolution }),
   });
@@ -574,7 +574,7 @@ export function createDefaultAcquisitionRewardState(
   const levels = createDefaultLevelResolutions(catalog, offer, levelEffectSource);
   return Object.freeze({
     offer,
-    conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+    dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
     traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
   });

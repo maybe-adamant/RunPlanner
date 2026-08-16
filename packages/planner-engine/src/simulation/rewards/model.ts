@@ -57,6 +57,16 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
+      /** Source was destroyed and a separate RunProgress replacement was generated. */
+      readonly kind: 'artificerConversion';
+      readonly acquisition: ConcreteAcquisitionEvent;
+      readonly replacement: ResolvedRewardOffer;
+      readonly settlement?: {
+        readonly site: AcquisitionSiteAddress;
+        readonly entry: AcquisitionEntryAddress;
+      };
+    })
+  | (RewardEventBase & {
       /** Evidence of a Time Piece choice; intentionally no Gold acquisition exists. */
       readonly kind: 'conversionToGold';
       readonly acquisition: ConcreteAcquisitionEvent;

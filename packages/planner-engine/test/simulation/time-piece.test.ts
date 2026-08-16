@@ -76,7 +76,9 @@ function settle(
         offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
-        conversionByAcquisitionRole: { source: value },
+        dispositionByAcquisitionRole: {
+          source: value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
+        },
       },
     },
     (history) => factsWithHistory(facts(), history, new Set()),

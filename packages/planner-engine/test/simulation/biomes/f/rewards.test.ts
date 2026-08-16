@@ -1273,14 +1273,14 @@ describe('F reward-history simulation', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(origin, 'chosenSource'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(origin, 'spurnedSource'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     const result = evaluate(project).rewards;
     const branch = firstBranch(result);
@@ -1293,6 +1293,53 @@ describe('F reward-history simulation', () => {
           semanticAddressKey(event.origin) === semanticAddressKey(origin),
       ),
     ).toHaveLength(0);
+  });
+
+  it('settles an ordinary Artificer replacement at the next mandatory checkpoint', () => {
+    const occurrenceId = createOccurrenceId('ratio-meta');
+    const source = createIncomingRewardAddress(biome, occurrenceId);
+    let project = applyProjectCommand(ratioBoundaryProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: {
+        kind: 'artificer',
+        replacement: Object.freeze({
+          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+          traitOffersByAcquisitionRole: Object.freeze({}),
+          dispositionByAcquisitionRole: Object.freeze({
+            self: Object.freeze({ kind: 'normal' as const }),
+          }),
+        }),
+      },
+    });
+    const result = evaluate(project).rewards;
+    const branch = firstBranch(result);
+    const expected = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(biome, occurrenceId),
+        'roomRewardPickup',
+      ),
+      'artificer:self:self',
+    );
+    const conversion = branch.events.find(
+      (event) =>
+        event.kind === 'artificerConversion' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(source),
+    );
+    const acquired = branch.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(expected),
+    );
+    expect(result.validity).toBe('valid');
+    expect(conversion).toBeDefined();
+    expect(acquired).toBeDefined();
+    expect(branch.events.indexOf(conversion!)).toBeLessThan(branch.events.indexOf(acquired!));
   });
 
   it('settles the selected fixed/free Preboss reward through its declared singleton site', () => {

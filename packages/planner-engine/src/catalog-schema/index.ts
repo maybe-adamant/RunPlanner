@@ -81,6 +81,11 @@ export interface ArcanaCardDeclaration {
   readonly fatedIncompatible: boolean;
   /** Judgment alone declares its rank-scaled post-Boss activation counts. */
   readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
+  /** The Artificer's exact run-local capacity; absent from every other card. */
+  readonly artificerCapacityByRarity?: Readonly<{
+    readonly Epic: 3;
+    readonly Heroic: 4;
+  }>;
 }
 
 export interface FearVowDeclaration {

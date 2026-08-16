@@ -110,6 +110,10 @@ export interface RawArcanaCardDeclaration {
   readonly permanentRank: 3;
   readonly fatedIncompatible?: boolean;
   readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
+  readonly artificerCapacityByRarity?: Readonly<{
+    readonly Epic: 3;
+    readonly Heroic: 4;
+  }>;
 }
 export interface RawFearVowDeclaration {
   readonly key: string;

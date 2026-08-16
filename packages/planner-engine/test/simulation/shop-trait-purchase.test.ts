@@ -26,9 +26,10 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
-import { createDefaultConversionByAcquisitionRole } from '../../src/authored-project/reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../../src/authored-project/reward-state';
 import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -54,6 +55,7 @@ import {
 } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { simulateProject } from '../../src/simulation';
+import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   createRepresentativeNOPQShopTraitProject,
   createGoldenFGHIProject,
@@ -275,7 +277,7 @@ function echoGoldShop(
   options: {
     readonly replaceMinorWithSpell?: boolean;
     readonly includeDuplicate?: boolean;
-    readonly duplicateConversion?: 'normal' | 'gold';
+    readonly duplicateConversion?: 'normal' | 'gold' | 'artificer';
     readonly duplicateSelectOption2?: boolean;
     readonly timePiece?: boolean;
     readonly initialBranches?: Parameters<typeof processShopInventory>[0];
@@ -378,11 +380,23 @@ function echoGoldShop(
       ? selectedDuplicate
       : Object.freeze({
           ...selectedDuplicate,
-          conversionByAcquisitionRole: Object.freeze(
+          dispositionByAcquisitionRole: Object.freeze(
             Object.fromEntries(
-              Object.keys(selectedDuplicate.conversionByAcquisitionRole).map((role) => [
+              Object.keys(selectedDuplicate.dispositionByAcquisitionRole).map((role) => [
                 role,
-                options.duplicateConversion!,
+                options.duplicateConversion === 'gold'
+                  ? ({ kind: 'timePiece' } as const)
+                  : options.duplicateConversion === 'artificer'
+                    ? ({
+                        kind: 'artificer',
+                        replacement: createDefaultAcquisitionRewardState(
+                          catalog,
+                          { rewardType: 'MaxHealthDrop' },
+                          loadout,
+                          { kind: 'producerLifecycle', key: 'RoomReward' },
+                        ),
+                      } as const)
+                    : ({ kind: 'normal' } as const),
               ]),
             ),
           ),
@@ -433,7 +447,14 @@ function echoGoldShop(
       : echoTraits;
   const seeded =
     options.initialBranches ??
-    initializeTestRewardBranches().map((branch) =>
+    initializeTestRewardBranches(
+      options.duplicateConversion === 'artificer'
+        ? createArcanaFearState(catalog, {
+            ...createDefaultRouteLoadout(catalog),
+            manualArcanaKeys: Object.freeze(['MetaToRunUpgrade']),
+          })
+        : undefined,
+    ).map((branch) =>
       Object.freeze({
         ...branch,
         history: attachTraitHistory(branch.history, traits),
@@ -712,6 +733,36 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(
       converted.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
+  });
+
+  it('lets Artificer convert the free Echo Gold duplicate and settle its ordered replacement', () => {
+    const result = echoGoldShop(
+      ['MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'artificer:echoDoubleShopReward:self'],
+      {
+        includeDuplicate: true,
+        duplicateConversion: 'artificer',
+        offerOverrides: { MajorNonBoon: { rewardType: 'GiftDrop' } },
+      },
+    );
+    const branch = result.settlement.branches[0];
+    expect([...result.findings.values()]).toEqual([]);
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'artificerConversion',
+        settlement: expect.objectContaining({
+          entry: expect.objectContaining({ entryKey: result.duplicateKey }),
+        }),
+      }),
+    );
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'concreteAcquisition',
+        origin: expect.objectContaining({
+          kind: 'acquisitionEntry',
+          entryKey: 'artificer:echoDoubleShopReward:self',
+        }),
+      }),
+    );
   });
 
   it('resolves a paid Apollo Blind Box and its free duplicate as a fresh Hestia box', () => {
@@ -1006,15 +1057,15 @@ describe('Echo Gate D Gold Gold Gold', () => {
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       defaultValue: manaDefault,
       edit: {
-        kind: 'ReplaceAcquisitionConversion',
+        kind: 'ReplaceAcquisitionDisposition',
         acquisition: createAcquisitionRoleAddress(duplicate, 'self'),
-        value: 'gold',
+        value: { kind: 'timePiece' },
       },
     });
     expect(occurrence(converted.present)?.acquisitionSites?.roomExit).toMatchObject({
       order: [],
       pickupEntries: {
-        echoDoubleShopReward: { conversionByAcquisitionRole: { self: 'gold' } },
+        echoDoubleShopReward: { dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } },
       },
     });
     expect(undoProjectHistory(converted).present).toEqual(project);
@@ -1178,7 +1229,7 @@ describe('Shop trait acquisition processing', () => {
           Minor: Object.freeze({
             reward: Object.freeze({
               offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
-              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, {
                 rewardType: 'StoreRewardRandomStack',
               }),
               traitOffersByAcquisitionRole: Object.freeze({}),
@@ -1327,7 +1378,7 @@ describe('Shop trait acquisition processing', () => {
               MajorNonBoon: Object.freeze({
                 reward: Object.freeze({
                   offer: Object.freeze({ rewardType: 'GiftDrop' }),
-                  conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                  dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, {
                     rewardType: 'GiftDrop',
                   }),
                   traitOffersByAcquisitionRole: Object.freeze({}),
@@ -1408,7 +1459,7 @@ describe('Shop trait acquisition processing', () => {
           Minor: Object.freeze({
             reward: Object.freeze({
               offer: Object.freeze({ rewardType: 'StoreRewardRandomStack' }),
-              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, {
                 rewardType: 'StoreRewardRandomStack',
               }),
               traitOffersByAcquisitionRole: Object.freeze({}),
@@ -1555,7 +1606,7 @@ describe('Shop trait acquisition processing', () => {
             Minor: Object.freeze({
               reward: Object.freeze({
                 offer: Object.freeze({ rewardType: 'StackUpgrade' }),
-                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, {
                   rewardType: 'StackUpgrade',
                 }),
                 traitOffersByAcquisitionRole: Object.freeze({}),
@@ -1574,7 +1625,7 @@ describe('Shop trait acquisition processing', () => {
                   rewardType: 'RandomLoot',
                   payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
                 }),
-                conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, {
+                dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, {
                   rewardType: 'RandomLoot',
                   payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
                 }),

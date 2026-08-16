@@ -102,7 +102,10 @@ describe('Run State presentation', () => {
         upgradableTraitCount: 0,
       },
       arcanaFear: {
-        arcana: { active: [{ key: 'ChanneledCast', origin: 'temporary', rarity: 'Heroic' }] },
+        arcana: {
+          active: [{ key: 'ChanneledCast', origin: 'temporary', rarity: 'Heroic' }],
+          artificerUses: [],
+        },
         fear: {
           configuredRanks: { EnemyDamageShrineUpgrade: 2, EnemyHealthShrineUpgrade: 1 },
           configuredTotal: 4,

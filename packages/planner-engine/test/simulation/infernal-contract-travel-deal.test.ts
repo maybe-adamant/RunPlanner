@@ -185,11 +185,11 @@ function settle(options: {
       ? selectedContractBase
       : Object.freeze({
           ...selectedContractBase,
-          conversionByAcquisitionRole: Object.freeze(
+          dispositionByAcquisitionRole: Object.freeze(
             Object.fromEntries(
-              Object.keys(selectedContractBase.conversionByAcquisitionRole).map((role) => [
+              Object.keys(selectedContractBase.dispositionByAcquisitionRole).map((role) => [
                 role,
-                'gold' as const,
+                { kind: 'timePiece' as const },
               ]),
             ),
           ),

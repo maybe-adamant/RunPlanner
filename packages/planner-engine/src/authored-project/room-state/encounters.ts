@@ -217,15 +217,17 @@ function decodeEchoLastReward(
   expectExactKeys(
     record,
     [
-      'conversion',
+      'disposition',
       ...(hasTraitOffer ? ['traitOffer'] : []),
       ...(hasLevelResolution ? ['levelResolution'] : []),
     ],
     path,
   );
-  const conversion = expectString(record.conversion, `${path}.conversion`);
-  if (conversion !== 'normal' && conversion !== 'gold')
-    failProjectDocument(`${path}.conversion`, 'must be normal or gold');
+  const dispositionRecord = expectRecord(record.disposition, `${path}.disposition`);
+  expectExactKeys(dispositionRecord, ['kind'], `${path}.disposition`);
+  const dispositionKind = expectString(dispositionRecord.kind, `${path}.disposition.kind`);
+  if (dispositionKind !== 'normal' && dispositionKind !== 'timePiece')
+    failProjectDocument(`${path}.disposition.kind`, 'must be normal or timePiece');
   let traitOffer: AuthoredTraitOffer | undefined;
   if (hasTraitOffer) {
     const rawOffer = expectRecord(record.traitOffer, `${path}.traitOffer`);
@@ -286,7 +288,7 @@ function decodeEchoLastReward(
     } else failProjectDocument(`${path}.levelResolution.kind`, 'must be choice or random');
   }
   return Object.freeze({
-    conversion,
+    disposition: Object.freeze({ kind: dispositionKind }),
     ...(traitOffer === undefined ? {} : { traitOffer }),
     ...(levelResolution === undefined ? {} : { levelResolution }),
   });

@@ -19,7 +19,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
-import { createDefaultConversionByAcquisitionRole } from '../../../src/authored-project/reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 
 import {
   fBiome,
@@ -159,7 +159,7 @@ describe('authored-project route detour commands', () => {
     const encodedReward = encodedAnomaly.state.reward as Record<string, unknown>;
     const infernalContractOffer = { rewardType: 'InfernalContractBoon' } as const;
     encodedReward.offer = infernalContractOffer;
-    encodedReward.conversionByAcquisitionRole = createDefaultConversionByAcquisitionRole(
+    encodedReward.dispositionByAcquisitionRole = createDefaultDispositionByAcquisitionRole(
       catalog,
       infernalContractOffer,
     );

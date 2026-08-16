@@ -153,6 +153,12 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
       </section>
       <section>
         <h3>Arcana</h3>
+        {state.artificer === undefined ? null : (
+          <p>
+            The Artificer: {state.artificer.rarity} · {state.artificer.spent}/
+            {state.artificer.capacity} spent · {state.artificer.remaining} remaining
+          </p>
+        )}
         {state.arcana.length === 0 ? (
           <p>None active</p>
         ) : (

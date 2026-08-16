@@ -133,7 +133,7 @@ export function projectCommandAddress(
       return command.set;
     case 'ReplaceLevelResolution':
       return command.levelResolution;
-    case 'ReplaceAcquisitionConversion':
+    case 'ReplaceAcquisitionDisposition':
       return command.acquisition;
   }
 }

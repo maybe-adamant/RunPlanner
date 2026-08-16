@@ -683,7 +683,7 @@ describe('structured workspace interaction binding', () => {
       rewardType: 'WeaponUpgrade',
       rewardLabel: 'Hammer',
       defaultValue: {
-        conversion: 'normal',
+        disposition: { kind: 'normal' },
         traitOffer: { kind: 'traits', giverKey: 'WeaponUpgrade' },
       },
     });
@@ -2065,9 +2065,9 @@ describe('structured workspace interaction binding', () => {
       keepsakeKey: 'GoldifyKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition,
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
 
     const candidate = services.candidateSessions
@@ -2077,8 +2077,8 @@ describe('structured workspace interaction binding', () => {
       throw new Error(`expected acquisition conversion candidate, received ${candidate.kind}`);
     }
     expect(candidate.result).toMatchObject({
-      goldSupported: false,
-      goldConvertible: false,
+      timePieceSupported: false,
+      timePieceConvertible: false,
       branchCount: expect.any(Number),
     });
     expect(candidate.result.unsupportedEvidence).toEqual(
@@ -2089,9 +2089,17 @@ describe('structured workspace interaction binding', () => {
     const interaction = bind(project, 'Surface', 'P').interactions.acquisitionConversions.get(
       semanticAddressKey(acquisition),
     );
-    expect(interaction).toMatchObject({ owner: acquisition, visible: true, goldSupported: false });
-    expect(interaction?.intentFor('normal')).toEqual({
-      command: { kind: 'ReplaceAcquisitionConversion', acquisition, value: 'normal' },
+    expect(interaction).toMatchObject({
+      owner: acquisition,
+      visible: true,
+      timePieceSupported: false,
+    });
+    expect(interaction?.intentFor({ kind: 'normal' })).toEqual({
+      command: {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'normal' },
+      },
     });
   });
 
@@ -2110,17 +2118,145 @@ describe('structured workspace interaction binding', () => {
     });
     const withTimePiece = bind(project, 'Underworld', 'F').interactions;
     const supported = [...withTimePiece.acquisitionConversions.values()].find(
-      (interaction) => interaction.visible && interaction.goldSupported,
+      (interaction) => interaction.visible && interaction.timePieceSupported,
     );
     expect(supported).toBeDefined();
     if (supported === undefined) throw new Error('Time Piece conversion interaction is missing');
-    expect(supported?.intentFor('gold')).toEqual({
+    expect(supported?.intentFor({ kind: 'timePiece' })).toEqual({
       command: {
-        kind: 'ReplaceAcquisitionConversion',
+        kind: 'ReplaceAcquisitionDisposition',
         acquisition: supported.owner,
-        value: 'gold',
+        value: { kind: 'timePiece' },
       },
     });
+  });
+
+  it('reuses ordinary Hammer and Pom child interactions for an Artificer replacement', () => {
+    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
+    const acquisition = createAcquisitionRoleAddress(source, 'self');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    const initial = bind(project, 'Underworld', 'F').interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    const replacementOptions = initial?.artificerReplacementOptions ?? [];
+    const hammer = replacementOptions.find((option) => option.offer.rewardType === 'WeaponUpgrade');
+    if (hammer === undefined) throw new Error('Artificer Hammer option is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer', replacement: hammer },
+    });
+    const replacementAddress = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+        'roomRewardPickup',
+      ),
+      'artificer:self:self',
+    );
+    const candidateSessionFor = (current: ProjectDocument): CandidateProjectionSession => {
+      const ordinary = services.candidateSessions.bind(simulateProjectAssembly(catalog, current));
+      return Object.freeze({
+        ...ordinary,
+        acquisitionConversion: (owner: typeof acquisition) =>
+          semanticAddressKey(owner) !== semanticAddressKey(acquisition)
+            ? ordinary.acquisitionConversion(owner)
+            : Object.freeze({
+                kind: 'acquisitionConversion' as const,
+                result: Object.freeze({
+                  timePieceSupported: false,
+                  timePieceConvertible: true,
+                  artificerSupported: true,
+                  artificerConvertible: true,
+                  artificerDefaultReplacement: hammer,
+                  artificerReplacementOptions: replacementOptions,
+                  artificerReplacementAddress: replacementAddress,
+                  branchCount: 1,
+                  unsupportedEvidence: Object.freeze([]),
+                }),
+              }),
+        levelResolution: (
+          owner: Parameters<CandidateProjectionSession['levelResolution']>[0],
+          value: Parameters<CandidateProjectionSession['levelResolution']>[1],
+        ) =>
+          semanticAddressKey(owner.owner) !== semanticAddressKey(replacementAddress)
+            ? ordinary.levelResolution(owner, value)
+            : Object.freeze({
+                groups: Object.freeze([
+                  Object.freeze({
+                    key: 'artificer-pom',
+                    branchIndices: Object.freeze([0]),
+                    surface: Object.freeze({
+                      effectKind: 'choice' as const,
+                      levelCount: 1,
+                      eligibleTargetTraitKeys: Object.freeze(['ApolloWeaponBoon']),
+                    }),
+                    evaluations: Object.freeze([]),
+                  }),
+                ]),
+              }),
+      });
+    };
+
+    const hammerBound = bind(
+      project,
+      'Underworld',
+      'F',
+      undefined,
+      candidateSessionFor(project),
+    ).interactions;
+    const conversion = hammerBound.acquisitionConversions.get(semanticAddressKey(acquisition));
+    const hammerControl = conversion?.artificerReplacementControl?.traitOffers?.[0];
+    if (hammerControl === undefined) throw new Error('Artificer Hammer child control is missing');
+    const hammerInteraction = hammerBound.traitOffers.get(
+      semanticAddressKey(hammerControl.address),
+    );
+    if (hammerInteraction?.value.kind !== 'traits')
+      throw new Error('Artificer Hammer child interaction is missing');
+    expect(hammerInteraction.selectedIntent('option2')).toEqual({
+      command: {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: {
+          kind: 'artificer',
+          replacement: {
+            ...hammer,
+            traitOffersByAcquisitionRole: {
+              ...hammer.traitOffersByAcquisitionRole,
+              self: { ...hammerInteraction.value, selectedOptionKey: 'option2' },
+            },
+          },
+        },
+      },
+    });
+
+    const pom = conversion?.artificerReplacementControl?.artificerReplacementEdit?.options.find(
+      (option) => option.offer.rewardType === 'StackUpgrade',
+    );
+    if (pom === undefined) throw new Error('Artificer Pom option is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer', replacement: pom },
+    });
+    const pomBound = bind(
+      project,
+      'Underworld',
+      'F',
+      undefined,
+      candidateSessionFor(project),
+    ).interactions;
+    const pomConversion = pomBound.acquisitionConversions.get(semanticAddressKey(acquisition));
+    const pomControl = pomConversion?.artificerReplacementControl?.levelResolutions?.[0];
+    expect(pomControl).toBeDefined();
+    expect(
+      pomControl === undefined
+        ? undefined
+        : pomBound.levelResolutions.get(semanticAddressKey(pomControl.address)),
+    ).toBeDefined();
   });
 
   it('constructs takeover repair commands from bound existing target identities', () => {

@@ -8,6 +8,7 @@ import {
   createBiomeAddress,
   createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -17,6 +18,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createRouteAddress,
   createProjectDocument,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -759,13 +761,19 @@ describe('OccurrenceWorkbench', () => {
     expect(authoredSite()?.order).toEqual(['psyche']);
     const psycheRow = screen.getByText('Psyche').closest('.acquisition-entry');
     if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
-    await view.user.selectOptions(within(psycheRow).getByLabelText(/Time Piece/), 'gold');
-    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('gold');
+    await view.user.selectOptions(within(psycheRow).getByLabelText(/disposition/), 'timePiece');
+    expect(authoredSite()?.pickupEntries?.psyche?.dispositionByAcquisitionRole.self).toEqual({
+      kind: 'timePiece',
+    });
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('normal');
+    expect(authoredSite()?.pickupEntries?.psyche?.dispositionByAcquisitionRole.self).toEqual({
+      kind: 'normal',
+    });
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('gold');
+    expect(authoredSite()?.pickupEntries?.psyche?.dispositionByAcquisitionRole.self).toEqual({
+      kind: 'timePiece',
+    });
   });
 
   it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
@@ -1593,6 +1601,190 @@ describe('OccurrenceWorkbench', () => {
     ).toBe(true);
   });
 
+  it('authors an optional Fields Artificer pickup, edits its complete child, and settles it later', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const source = createLocalRewardAddress(
+      goldenHBiome,
+      occurrenceId,
+      'optionalRewards',
+      'optional1',
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: source,
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: {
+        kind: 'artificer',
+        replacement: Object.freeze({
+          offer: Object.freeze({ rewardType: 'RoomMoneyDrop' }),
+          traitOffersByAcquisitionRole: Object.freeze({}),
+          dispositionByAcquisitionRole: Object.freeze({
+            self: Object.freeze({ kind: 'normal' as const }),
+          }),
+        }),
+      },
+    });
+    const authoredOccurrence = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    if (authoredOccurrence?.state.kind !== 'fieldsCombat')
+      throw new Error('Fields state is missing');
+    if (
+      !authoredOccurrence.state.actionOrder.some(
+        (action) => action.kind === 'interactOptionalReward' && action.slotKey === 'optional1',
+      )
+    ) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsActionOrder',
+        occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
+        actionOrder: Object.freeze([
+          ...authoredOccurrence.state.actionOrder,
+          Object.freeze({ kind: 'interactOptionalReward' as const, slotKey: 'optional1' }),
+        ]),
+      });
+    }
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'Interact with Optional 1',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    const chronology = screen.getByLabelText('Fields action chronology');
+    const replacementRow = await within(chronology).findByText(
+      'Pick up Optional 1 Artificer replacement',
+    );
+    const replacementInteraction = within(replacementRow.closest('li')!).getByRole('checkbox', {
+      name: 'Interact with Pick up Optional 1 Artificer replacement',
+    });
+    expect((replacementInteraction as HTMLInputElement).checked).toBe(false);
+    const initialWorkspace = workspaceProjection(view.application);
+    const chronologyInteraction = [
+      ...initialWorkspace.interactions.fieldsActionOrders.values(),
+    ].find((interaction) => interaction.owner.occurrenceId === occurrenceId);
+    const participation = chronologyInteraction?.proposals.find(
+      (proposal) =>
+        proposal.actionKey === 'interactArtificer:optionalRewards:optional1:self' &&
+        proposal.defaultParticipation === true,
+    );
+    if (chronologyInteraction === undefined || participation === undefined)
+      throw new Error('optional Artificer participation proposal is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(
+          chronologyInteraction.intentFor(participation.key).command,
+        ),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole('checkbox', {
+            name: 'Interact with Pick up Optional 1 Artificer replacement',
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(true),
+    );
+
+    const workspace = workspaceProjection(view.application);
+    const conversion = workspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(createAcquisitionRoleAddress(source, 'self')),
+    );
+    const replacement = conversion?.artificerReplacementControl;
+    if (replacement === undefined) throw new Error('complete Artificer child is missing');
+    if (conversion === undefined) throw new Error('Artificer conversion is missing');
+    expect(replacement.owner.address).toEqual(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(source, 'optionalRewards:optional1'),
+        'artificer:optional1:self',
+      ),
+    );
+    expect(workspace.focusByOwner.has(semanticAddressKey(replacement.owner.address))).toBe(true);
+    const boon = conversion.artificerReplacementOptions.find(
+      (option) => option.offer.rewardType === 'Boon' && option.offer.payload?.kind === 'BoonSource',
+    );
+    if (boon === undefined) throw new Error('BoonSource replacement option is missing');
+    const rewardInteraction = workspace.interactions.rewards.get(
+      semanticAddressKey(replacement.owner.address),
+    );
+    if (rewardInteraction === undefined) throw new Error('replacement reward interaction missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(rewardInteraction.intentFor(boon.offer).command),
+      ),
+    );
+    expect(
+      occurrenceState(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      ),
+    ).toMatchObject({
+      kind: 'fieldsCombat',
+      optionalRewards: {
+        optional1: {
+          dispositionByAcquisitionRole: {
+            self: { kind: 'artificer', replacement: { offer: boon.offer } },
+          },
+        },
+      },
+    });
+    const editedWorkspace = workspaceProjection(view.application);
+    const editedConversion = editedWorkspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(createAcquisitionRoleAddress(source, 'self')),
+    );
+    const health = editedConversion?.artificerReplacementOptions.find(
+      (option) => option.offer.rewardType === 'MaxHealthDrop',
+    );
+    const editedRewardInteraction =
+      editedConversion?.artificerReplacementControl === undefined
+        ? undefined
+        : editedWorkspace.interactions.rewards.get(
+            semanticAddressKey(editedConversion.artificerReplacementControl.owner.address),
+          );
+    if (health === undefined || editedRewardInteraction === undefined)
+      throw new Error('valid Max Health replacement edit is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(editedRewardInteraction.intentFor(health.offer).command),
+      ),
+    );
+    const edited = view.application.store.getState().projectWorkspace.history.present;
+    const state = occurrenceState(edited, 'Underworld', 'H', occurrenceId);
+    expect(state).toMatchObject({
+      kind: 'fieldsCombat',
+      actionOrder: expect.arrayContaining([
+        { kind: 'interactOptionalReward', slotKey: 'optional1' },
+        {
+          kind: 'interactArtificerReplacement',
+          sourceGroup: 'optionalRewards',
+          slotKey: 'optional1',
+          acquisitionRole: 'self',
+        },
+      ]),
+    });
+    expect(simulateProject(catalog, edited).findings).not.toContainEqual(
+      expect.objectContaining({ code: 'artificerReplacementUnavailable' }),
+    );
+  });
+
   it('moves one Fields action through candidate-backed chronology and undo/redo', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
@@ -1987,7 +2179,7 @@ describe('OccurrenceWorkbench', () => {
         .offer2,
     ).toEqual({
       offer: { rewardType: 'MetaCurrencyDrop' },
-      conversionByAcquisitionRole: { self: 'normal' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
       traitOffersByAcquisitionRole: {},
     });
 
@@ -2195,20 +2387,20 @@ describe('OccurrenceWorkbench', () => {
     const goldShopRow = screen.getByText('Gold Gold Gold duplicate of Offer 3').closest('tr');
     const goldRewardRow = goldShopRow?.nextElementSibling;
     if (!(goldRewardRow instanceof HTMLElement)) throw new Error('Gold reward row is missing');
-    const conversion = within(goldRewardRow).getByLabelText(/Time Piece/) as HTMLSelectElement;
-    await view.user.selectOptions(conversion, 'gold');
+    const conversion = within(goldRewardRow).getByLabelText(/disposition/) as HTMLSelectElement;
+    await view.user.selectOptions(conversion, 'timePiece');
     expect(authoredSite()?.order).toEqual(['Minor']);
     expect(
-      authoredSite()?.pickupEntries?.echoDoubleShopReward?.conversionByAcquisitionRole.self,
-    ).toBe('gold');
+      authoredSite()?.pickupEntries?.echoDoubleShopReward?.dispositionByAcquisitionRole.self,
+    ).toEqual({ kind: 'timePiece' });
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(authoredSite()?.order).toEqual(['Minor']);
     expect(authoredSite()?.pickupEntries?.echoDoubleShopReward).toBeUndefined();
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(
-      authoredSite()?.pickupEntries?.echoDoubleShopReward?.conversionByAcquisitionRole.self,
-    ).toBe('gold');
+      authoredSite()?.pickupEntries?.echoDoubleShopReward?.dispositionByAcquisitionRole.self,
+    ).toEqual({ kind: 'timePiece' });
 
     await view.user.click(pickedUp);
     expect(authoredSite()?.order).toEqual(['Minor', 'echoDoubleShopReward']);

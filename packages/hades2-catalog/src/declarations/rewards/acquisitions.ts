@@ -261,6 +261,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('GiftDrop'),
   },
   {
@@ -268,6 +269,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('MetaCurrencyDrop'),
   },
   {
@@ -275,6 +277,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('MetaCurrencyBigDrop'),
   },
   {
@@ -282,6 +285,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('MetaCardPointsCommonDrop'),
   },
   {
@@ -289,6 +293,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('MetaCardPointsCommonBigDrop'),
   },
   {
@@ -296,6 +301,7 @@ export const acquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    artificerConversionEligible: true,
     ...lastReward('MemPointsCommonDrop'),
   },
   { gameName: 'WeaponPointsRareDrop', kind: 'resource', historyProjection: 'consumableAndUse' },

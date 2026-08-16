@@ -362,11 +362,11 @@ export type LevelResolutionCommand = {
   readonly value: AuthoredLevelResolution;
 };
 
-/** Exact Time Piece disposition on one declaration-owned acquisition role. */
-export type AcquisitionConversionCommand = {
-  readonly kind: 'ReplaceAcquisitionConversion';
+/** Exact closed disposition on one declaration-owned acquisition role. */
+export type AcquisitionDispositionCommand = {
+  readonly kind: 'ReplaceAcquisitionDisposition';
   readonly acquisition: AcquisitionRoleAddress;
-  readonly value: 'normal' | 'gold';
+  readonly value: import('../model').AcquisitionDisposition;
 };
 
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
@@ -374,7 +374,7 @@ export type DerivedShopEntryPayloadCommand =
   | Extract<AcquisitionSiteCommand, { readonly kind: 'ReplaceAcquisitionEntryOffer' }>
   | TraitOfferCommand
   | LevelResolutionCommand
-  | AcquisitionConversionCommand;
+  | AcquisitionDispositionCommand;
 
 /**
  * Atomically persists one derived Shop entry's declaration-complete default and
@@ -410,7 +410,7 @@ export type ProjectCommand =
   | AcquisitionSiteCommand
   | TraitOfferCommand
   | LevelResolutionCommand
-  | AcquisitionConversionCommand
+  | AcquisitionDispositionCommand
   | DerivedShopEntryEditCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<

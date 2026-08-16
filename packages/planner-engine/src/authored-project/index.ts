@@ -1,3 +1,4 @@
+export { artificerReplacementEntryKey, parseArtificerReplacementEntryKey } from './artificer';
 export {
   assessFieldsActionOrder,
   createDefaultFieldsActionOrder,
@@ -198,6 +199,7 @@ export {
   type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRewardState,
+  type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,
   type RouteLoadout,

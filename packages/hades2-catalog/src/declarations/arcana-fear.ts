@@ -10,6 +10,7 @@ const card = (
   activation: RawArcanaCardDeclaration['activation'] = { kind: 'manual' },
   postBossActivationCounts?: RawArcanaCardDeclaration['postBossActivationCounts'],
   fatedIncompatible = false,
+  artificerCapacityByRarity?: RawArcanaCardDeclaration['artificerCapacityByRarity'],
 ): RawArcanaCardDeclaration => ({
   key,
   label,
@@ -21,6 +22,7 @@ const card = (
   permanentRank: 3,
   ...(postBossActivationCounts === undefined ? {} : { postBossActivationCounts }),
   fatedIncompatible,
+  ...(artificerCapacityByRarity === undefined ? {} : { artificerCapacityByRarity }),
 });
 const automatic = (
   rule: Exclude<RawArcanaCardDeclaration['activation'], { readonly kind: 'manual' }>['rule'],
@@ -70,7 +72,18 @@ export const arcanaCards = [
     true,
   ),
   card('StartingGold', 'The Boatman', 'StartingGoldMetaUpgrade', 4, 2, 5),
-  card('MetaToRunUpgrade', 'The Artificer', 'MetaToRunMetaUpgrade', 4, 3, 3),
+  card(
+    'MetaToRunUpgrade',
+    'The Artificer',
+    'MetaToRunMetaUpgrade',
+    4,
+    3,
+    3,
+    { kind: 'manual' },
+    undefined,
+    false,
+    { Epic: 3, Heroic: 4 },
+  ),
   card('RarityBoost', 'Excellence', 'RarityBoostMetaUpgrade', 4, 4, 5),
   card(
     'BonusRarity',

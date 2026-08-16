@@ -485,6 +485,7 @@ export function decodeRewardState(
   catalog: Catalog,
   path: string,
   source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  allowArtificer = true,
 ): AuthoredRewardState {
   const raw = expectRecord(value, path);
   for (const key of Object.keys(raw)) {
@@ -493,7 +494,7 @@ export function decodeRewardState(
         'offer',
         'traitOffersByAcquisitionRole',
         'levelResolutionsByAcquisitionRole',
-        'conversionByAcquisitionRole',
+        'dispositionByAcquisitionRole',
       ].includes(key)
     )
       failProjectDocument(path, `unexpected key ${key}`);
@@ -520,13 +521,14 @@ export function decodeRewardState(
           source,
           `${path}.levelResolutionsByAcquisitionRole`,
         );
-  if (raw.conversionByAcquisitionRole === undefined)
-    failProjectDocument(`${path}.conversionByAcquisitionRole`, 'is required');
-  const conversionByAcquisitionRole = decodeConversionDispositions(
-    raw.conversionByAcquisitionRole,
+  if (raw.dispositionByAcquisitionRole === undefined)
+    failProjectDocument(`${path}.dispositionByAcquisitionRole`, 'is required');
+  const dispositionByAcquisitionRole = decodeAcquisitionDispositions(
+    raw.dispositionByAcquisitionRole,
     catalog,
     offer,
-    `${path}.conversionByAcquisitionRole`,
+    `${path}.dispositionByAcquisitionRole`,
+    allowArtificer,
   );
   return Object.freeze({
     offer,
@@ -537,21 +539,22 @@ export function decodeRewardState(
       `${path}.traitOffersByAcquisitionRole`,
     ),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
-    conversionByAcquisitionRole,
+    dispositionByAcquisitionRole,
   });
 }
 
 /**
- * Time Piece owns a closed disposition for every concrete declaration role.
+ * Each concrete declaration role owns one closed acquisition disposition.
  * The required map is explicit: documents never receive an implicit normal
- * conversion disposition during decoding.
+ * acquisition disposition during decoding.
  */
-function decodeConversionDispositions(
+function decodeAcquisitionDispositions(
   value: unknown,
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   path: string,
-): Readonly<Record<string, 'normal' | 'gold'>> {
+  allowArtificer: boolean,
+): AuthoredRewardState['dispositionByAcquisitionRole'] {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined)
     failProjectDocument(path, `unknown reward type ${offer.rewardType}`);
@@ -563,11 +566,40 @@ function decodeConversionDispositions(
   return Object.freeze(
     Object.fromEntries(
       roles.map((role) => {
-        const disposition = raw[role];
-        if (disposition !== 'normal' && disposition !== 'gold') {
-          failProjectDocument(`${path}.${role}`, 'must be normal or gold');
+        const dispositionPath = `${path}.${role}`;
+        if (raw[role] === undefined)
+          failProjectDocument(dispositionPath, 'is missing acquisition role');
+        const disposition = expectRecord(raw[role], dispositionPath);
+        const kind = expectString(disposition.kind, `${dispositionPath}.kind`);
+        if (kind === 'normal' || kind === 'timePiece') {
+          if (Object.keys(disposition).length !== 1)
+            failProjectDocument(dispositionPath, `unexpected key beside ${kind}`);
+          return [role, Object.freeze({ kind })] as const;
         }
-        return [role, disposition] as const;
+        if (kind !== 'artificer')
+          failProjectDocument(`${dispositionPath}.kind`, 'must be normal, timePiece, or artificer');
+        if (!allowArtificer)
+          failProjectDocument(dispositionPath, 'Artificer replacements cannot recurse');
+        if (Object.keys(disposition).length !== 2 || disposition.replacement === undefined)
+          failProjectDocument(dispositionPath, 'artificer requires exactly one replacement');
+        const replacement = decodeRewardState(
+          disposition.replacement,
+          catalog,
+          `${dispositionPath}.replacement`,
+          { kind: 'producerLifecycle', key: 'RoomReward' },
+          false,
+        );
+        const runProgress = catalog.rewards.stores.byKey.RunProgress;
+        if (
+          replacement.offer.rewardType === 'Devotion' ||
+          replacement.offer.rewardType === 'SpellDrop' ||
+          !runProgress?.entries.some((entry) => entry.rewardType === replacement.offer.rewardType)
+        )
+          failProjectDocument(
+            `${dispositionPath}.replacement.offer.rewardType`,
+            'must be an Artificer-eligible RunProgress reward',
+          );
+        return [role, Object.freeze({ kind: 'artificer' as const, replacement })] as const;
       }),
     ),
   );
@@ -925,11 +957,14 @@ export function decodeRoomState(
   value: unknown,
   catalog: Catalog,
   room: RoomDeclaration,
-  context: Pick<RoomStateContext, 'role' | 'entryActive' | 'rememberedCountedBinding'>,
+  context: Pick<
+    RoomStateContext,
+    'role' | 'entryActive' | 'rememberedCountedBinding' | 'activeCageCount'
+  >,
   path: string,
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
-  const { role, entryActive, rememberedCountedBinding } = context;
+  const { role, entryActive, rememberedCountedBinding, activeCageCount } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
     case 'RewardlessCombat':
@@ -999,6 +1034,26 @@ export function decodeRoomState(
         ...optionalDescriptor.slotKeys
           .slice(0, optionalRewardCount)
           .map((slotKey) => `interactOptional:${slotKey}`),
+        ...domain
+          .slice(0, activeCageCount ?? domain.length)
+          .flatMap((entry) =>
+            Object.entries(cages[entry.slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+              ([role, disposition]) =>
+                disposition.kind === 'artificer'
+                  ? [`interactArtificer:cages:${entry.slotKey}:${role}`]
+                  : [],
+            ),
+          ),
+        ...optionalDescriptor.slotKeys
+          .slice(0, optionalRewardCount)
+          .flatMap((slotKey) =>
+            Object.entries(optionalRewards[slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+              ([role, disposition]) =>
+                disposition.kind === 'artificer'
+                  ? [`interactArtificer:optionalRewards:${slotKey}:${role}`]
+                  : [],
+            ),
+          ),
       ]);
       const seenActions = new Set<string>();
       const actionOrder = expectArray(state.actionOrder, `${path}.actionOrder`).map(
@@ -1023,7 +1078,33 @@ export function decodeRoomState(
                       slotKey: expectString(action.slotKey, `${actionPath}.slotKey`),
                     });
                   })()
-                : failProjectDocument(`${actionPath}.kind`, `unknown Fields action ${kind}`);
+                : kind === 'interactArtificerReplacement'
+                  ? (() => {
+                      expectExactKeys(
+                        action,
+                        ['kind', 'sourceGroup', 'slotKey', 'acquisitionRole'],
+                        actionPath,
+                      );
+                      const sourceGroup = expectString(
+                        action.sourceGroup,
+                        `${actionPath}.sourceGroup`,
+                      );
+                      if (sourceGroup !== 'cages' && sourceGroup !== 'optionalRewards')
+                        failProjectDocument(
+                          `${actionPath}.sourceGroup`,
+                          'must be cages or optionalRewards',
+                        );
+                      return Object.freeze({
+                        kind,
+                        sourceGroup,
+                        slotKey: expectString(action.slotKey, `${actionPath}.slotKey`),
+                        acquisitionRole: expectString(
+                          action.acquisitionRole,
+                          `${actionPath}.acquisitionRole`,
+                        ),
+                      });
+                    })()
+                  : failProjectDocument(`${actionPath}.kind`, `unknown Fields action ${kind}`);
           const key = fieldsActionKey(decoded);
           if (!knownActions.has(key)) {
             failProjectDocument(actionPath, `unknown Fields action identity ${key}`);

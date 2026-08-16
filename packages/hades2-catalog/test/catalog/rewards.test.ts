@@ -26,6 +26,25 @@ function replaceRewardType(
 }
 
 describe('reward-kernel declaration parity', () => {
+  it('declares the exact concrete Artificer source family', () => {
+    expect(
+      rewardKernelCatalog.acquisitions.values
+        .filter((acquisition) => acquisition.artificerConversionEligible)
+        .map((acquisition) => acquisition.gameName)
+        .sort(),
+    ).toEqual(
+      [
+        'GiftDrop',
+        'MemPointsCommonDrop',
+        'MetaCardPointsCommonBigDrop',
+        'MetaCardPointsCommonDrop',
+        'MetaCurrencyBigDrop',
+        'MetaCurrencyDrop',
+      ].sort(),
+    );
+    expect(rewardKernelCatalog.acquisitions.byKey.MemPointsBigDrop).toBeUndefined();
+  });
+
   it('normalizes the complete counted-store inventory and exact progressed MetaProgress bag', () => {
     expect(
       Object.fromEntries(
@@ -839,6 +858,7 @@ describe('reward-kernel declaration parity', () => {
           {
             role: 'self',
             lifecyclePoint: 'echoReplay',
+            blocksArtificerConversion: true,
             ...(rewardType === 'GiftDrop'
               ? { levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 } }
               : {}),
@@ -920,16 +940,23 @@ describe('reward-kernel declaration parity', () => {
       createRewardKernelCatalog(
         mutateEcho((profile) => ({
           ...profile,
-          overrides: [
-            ...(profile.overrides ?? []),
-            {
-              rewardType: 'AphroditeUpgrade',
-              acquisitionLifecycle: [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }],
-            },
-          ],
+          overrides: profile.overrides?.map((override) =>
+            override.rewardType === 'AphroditeUpgrade'
+              ? {
+                  ...override,
+                  acquisitionLifecycle: [
+                    {
+                      role: 'self',
+                      lifecyclePoint: 'roomRewardPickup',
+                      blocksArtificerConversion: true,
+                    },
+                  ],
+                }
+              : override,
+          ),
         })),
       ),
-    ).toThrow('must bind exactly self at echoReplay');
+    ).toThrow('must bind exactly self at echoReplay and block Artificer conversion');
 
     expect(() =>
       createRewardKernelCatalog(
@@ -939,7 +966,13 @@ describe('reward-kernel declaration parity', () => {
             override.rewardType === 'GiftDrop'
               ? {
                   ...override,
-                  acquisitionLifecycle: [{ role: 'self', lifecyclePoint: 'echoReplay' }],
+                  acquisitionLifecycle: [
+                    {
+                      role: 'self',
+                      lifecyclePoint: 'echoReplay',
+                      blocksArtificerConversion: true,
+                    },
+                  ],
                 }
               : override,
           ),
@@ -951,22 +984,24 @@ describe('reward-kernel declaration parity', () => {
       createRewardKernelCatalog(
         mutateEcho((profile) => ({
           ...profile,
-          overrides: [
-            ...(profile.overrides ?? []),
-            {
-              rewardType: 'MaxHealthDrop',
-              acquisitionLifecycle: [
-                {
-                  role: 'self',
-                  lifecyclePoint: 'echoReplay',
-                  levelResolutionEffect: {
-                    kind: 'randomTargetIfAvailable',
-                    levelCount: 1,
-                  },
-                },
-              ],
-            },
-          ],
+          overrides: profile.overrides?.map((override) =>
+            override.rewardType === 'MaxHealthDrop'
+              ? {
+                  ...override,
+                  acquisitionLifecycle: [
+                    {
+                      role: 'self',
+                      lifecyclePoint: 'echoReplay',
+                      blocksArtificerConversion: true,
+                      levelResolutionEffect: {
+                        kind: 'randomTargetIfAvailable',
+                        levelCount: 1,
+                      },
+                    },
+                  ],
+                }
+              : override,
+          ),
         })),
       ),
     ).toThrow('must not apply a level-resolution effect');

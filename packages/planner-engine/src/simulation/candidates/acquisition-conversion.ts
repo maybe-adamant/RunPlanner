@@ -14,9 +14,14 @@ export interface EvaluatedAcquisitionConversionCandidate {
   readonly kind: 'acquisitionConversion';
   readonly result: {
     /** True only when every reached branch can convert this exact role. */
-    readonly goldSupported: boolean;
+    readonly timePieceSupported: boolean;
     /** Declaration plus concrete free/paid provenance, independent of charge/Fated. */
-    readonly goldConvertible: boolean;
+    readonly timePieceConvertible: boolean;
+    readonly artificerSupported: boolean;
+    readonly artificerConvertible: boolean;
+    readonly artificerDefaultReplacement?: import('../../authored-project/model').AuthoredRewardState;
+    readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
+    readonly artificerReplacementAddress?: import('../../authored-project/addresses').AcquisitionEntryAddress;
     readonly branchCount: number;
     readonly unsupportedEvidence: readonly import('../model').FindingEvidence[];
   };
@@ -41,20 +46,42 @@ export function evaluateAcquisitionConversionCandidate(
   return Object.freeze({
     kind: 'acquisitionConversion',
     result: Object.freeze({
-      goldSupported:
-        capability.assessments.length > 0 &&
-        capability.assessments.every((entry) => entry.supported),
-      goldConvertible:
-        capability.assessments.length > 0 &&
-        capability.assessments.every(
+      timePieceSupported:
+        capability.timePieceAssessments.length > 0 &&
+        capability.timePieceAssessments.every((entry) => entry.supported),
+      timePieceConvertible:
+        capability.timePieceAssessments.length > 0 &&
+        capability.timePieceAssessments.every(
           (entry) =>
             entry.evidence.goldConversionEligible === true &&
             entry.evidence.blocksGoldConversion !== true &&
             entry.evidence.instanceProvenance === 'free',
         ),
-      branchCount: capability.assessments.length,
+      artificerSupported:
+        capability.artificerAssessments.length > 0 &&
+        capability.artificerAssessments.every((entry) => entry.supported),
+      artificerConvertible:
+        capability.artificerAssessments.length > 0 &&
+        capability.artificerAssessments.every(
+          (entry) =>
+            entry.evidence.artificerConversionEligible === true &&
+            entry.evidence.blocksArtificerConversion !== true &&
+            entry.evidence.instanceProvenance === 'free',
+        ),
+      ...(capability.artificerDefaultReplacement === undefined
+        ? {}
+        : { artificerDefaultReplacement: capability.artificerDefaultReplacement }),
+      ...(capability.artificerReplacementOptions === undefined
+        ? {}
+        : { artificerReplacementOptions: capability.artificerReplacementOptions }),
+      ...(capability.artificerReplacementAddress === undefined
+        ? {}
+        : { artificerReplacementAddress: capability.artificerReplacementAddress }),
+      branchCount: capability.timePieceAssessments.length,
       unsupportedEvidence: Object.freeze(
-        capability.assessments.filter((entry) => !entry.supported).map((entry) => entry.evidence),
+        [...capability.timePieceAssessments, ...capability.artificerAssessments]
+          .filter((entry) => !entry.supported)
+          .map((entry) => entry.evidence),
       ),
     }),
   });

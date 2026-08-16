@@ -346,7 +346,9 @@ describe('project workspace application state', () => {
       options: Object.freeze([
         Object.freeze({
           traitKey: 'EchoLastReward',
-          echoLastReward: Object.freeze({ conversion: 'normal' as const }),
+          echoLastReward: Object.freeze({
+            disposition: Object.freeze({ kind: 'normal' as const }),
+          }),
         }),
         offer.options[1],
         offer.options[2],
