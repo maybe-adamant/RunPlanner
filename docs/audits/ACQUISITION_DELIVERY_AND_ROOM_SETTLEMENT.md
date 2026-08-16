@@ -728,17 +728,25 @@ one generic trait-outcome mechanism:
   authored approximation without manufacturing prior-run state.
 - Gold Gold Gold equips `EchoDoubleShop`, whose one remaining use is itself the
   pending state. During later World Shop settlement, the first eligible
-  purchased entry recreates a mandatory acquisition immediately after itself
-  and consumes that equipped trait. `SpellDrop` is skipped without consuming
-  the use. A recreated loot source owns a fresh offer; a recreated consumable
-  owns its exact pickup behavior.
+  purchased entry consumes that equipped trait and creates a separate free
+  world object. `SpellDrop` is skipped without consuming the use. Creating the
+  object does not interact with it: the player may make other Shop purchases or
+  pickups before taking the duplicate. A recreated loot source owns the offer
+  generated when `CreateLoot` materializes it; a recreated consumable owns its
+  later pickup behavior. `UseLoot` and `UseConsumableItem` call
+  `RemoveStoreItem` before the purchased item's own acquisition effect settles,
+  so Gold consumption and duplicate generation observe the pre-acquisition
+  branch even though the paid source identity is already known. Pom loot is the
+  closed exception to immutable generated options: `CreateBoonLootButtons`
+  regenerates a `StackOnly` option set at interaction if any stored target is no
+  longer equipped.
 
-Gold therefore extends one reached Shop site with a supplemental pickup; it
-does not justify a Shop-private duplicate order or a separate Echo pending map.
-The equipped-trait history must expose explicit one-use consumption so later
-shops no longer observe the effect. Once the duplicate materializes, its exact
-acquisition entry owns its child state and does not retain an invented permanent
-link to Echo.
+Gold therefore extends one reached Shop site with a supplemental pickup in the
+existing site order; it does not justify a Shop-private order or a separate Echo
+pending map. The equipped-trait history must expose one-use consumption at the
+source purchase so later purchases and shops no longer observe the effect. The
+materialized duplicate then owns its exact child state and may settle at a
+later position in that same order.
 
 All eight selected Echo menu identities are themselves acquired
 player-rarityless traits before these effect-specific contacts run.
