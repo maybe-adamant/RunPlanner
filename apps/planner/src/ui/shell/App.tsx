@@ -1,4 +1,5 @@
 import {
+  assessStartingArcanaGrasp,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createKeepsakeEquipResultAddress,
@@ -467,7 +468,12 @@ function RouteOverview({
         className="route-loadout-section"
       >
         <summary>
-          Arcana <span>{derivedLoadout.activeArcanaKeys.length} active</span>
+          Arcana{' '}
+          <span>
+            {derivedLoadout.activeArcanaKeys.length} active ·{' '}
+            {derivedLoadout.startingArcanaGrasp.cost} /{' '}
+            {derivedLoadout.startingArcanaGrasp.capacity} Grasp
+          </span>
         </summary>
         <div className="arcana-board">
           {arcanaCards.map((card) => {
@@ -475,23 +481,37 @@ function RouteOverview({
             const selected = automatic
               ? derivedLoadout.automaticArcanaKeys.includes(card.key)
               : manualArcanaKeys.includes(card.key);
+            const proposedManualArcanaKeys = selected
+              ? manualArcanaKeys.filter((key) => key !== card.key)
+              : [...manualArcanaKeys, card.key];
+            const proposal = automatic
+              ? undefined
+              : assessStartingArcanaGrasp(catalog, proposedManualArcanaKeys, fearRanks);
+            const exceedsGrasp = !selected && proposal?.legal === false;
             return (
-              <label key={card.key} className="arcana-card-control" data-automatic={automatic}>
+              <label
+                key={card.key}
+                className="arcana-card-control"
+                data-automatic={automatic}
+                title={
+                  exceedsGrasp
+                    ? `${proposal.cost} Grasp exceeds the starting capacity of ${proposal.capacity}`
+                    : undefined
+                }
+              >
                 <span>
                   {card.label}
                   {automatic ? ' (automatic)' : ''}
                 </span>
                 <input
                   checked={selected}
-                  disabled={automatic}
+                  disabled={automatic || exceedsGrasp}
                   onChange={() =>
                     dispatch(
                       authoredProjectCommandDispatched({
                         kind: 'ReplaceManualArcanaSelection',
                         route: createRouteAddress(workspaceRoute.routeKey),
-                        arcanaKeys: selected
-                          ? manualArcanaKeys.filter((key) => key !== card.key)
-                          : [...manualArcanaKeys, card.key],
+                        arcanaKeys: proposedManualArcanaKeys,
                       }),
                     )
                   }
@@ -528,7 +548,16 @@ function RouteOverview({
                 }
               >
                 {Array.from({ length: vow.incrementalFear.length + 1 }, (_, rank) => (
-                  <option key={rank} value={rank}>
+                  <option
+                    key={rank}
+                    value={rank}
+                    disabled={
+                      !assessStartingArcanaGrasp(catalog, manualArcanaKeys, {
+                        ...fearRanks,
+                        [vow.key]: rank,
+                      }).legal
+                    }
+                  >
                     {rank}
                   </option>
                 ))}

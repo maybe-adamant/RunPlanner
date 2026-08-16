@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
+import { assessStartingArcanaGrasp } from '../loadout';
 import type { ProjectDocument } from '../model';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -165,6 +166,13 @@ export function applyProjectStateCommand(
       const keys = catalog.arcanaCards.values
         .filter((card) => seen.has(card.key))
         .map((card) => card.key);
+      const grasp = assessStartingArcanaGrasp(catalog, keys, route.loadout.fearRanks);
+      if (!grasp.legal) {
+        failCommand(
+          command,
+          `manual Arcana cost ${grasp.cost} exceeds starting Grasp capacity ${grasp.capacity}`,
+        );
+      }
       if (
         keys.length === route.loadout.manualArcanaKeys.length &&
         keys.every((key, index) => key === route.loadout.manualArcanaKeys[index])
@@ -193,6 +201,17 @@ export function applyProjectStateCommand(
         command.rank > vow.incrementalFear.length
       )
         failCommand(command, 'invalid Vow rank');
+      const fearRanks = Object.freeze({
+        ...route.loadout.fearRanks,
+        [command.vowKey]: command.rank,
+      });
+      const grasp = assessStartingArcanaGrasp(catalog, route.loadout.manualArcanaKeys, fearRanks);
+      if (!grasp.legal) {
+        failCommand(
+          command,
+          `manual Arcana cost ${grasp.cost} exceeds starting Grasp capacity ${grasp.capacity}`,
+        );
+      }
       if (route.loadout.fearRanks[command.vowKey] === command.rank) return document;
       return {
         ...document,
@@ -202,10 +221,7 @@ export function applyProjectStateCommand(
                 ...candidate,
                 loadout: {
                   ...route.loadout,
-                  fearRanks: Object.freeze({
-                    ...route.loadout.fearRanks,
-                    [command.vowKey]: command.rank,
-                  }),
+                  fearRanks,
                 },
               }
             : candidate,

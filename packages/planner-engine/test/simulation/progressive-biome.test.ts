@@ -10,6 +10,7 @@ import {
   createExitSelectionAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultRouteLoadout,
@@ -57,6 +58,8 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createFConversionFrontierProject,
+  createFInvalidLaterConversionProject,
   authorLegalTraitOffers,
   goldenFBiome,
   goldenFStartId,
@@ -379,6 +382,79 @@ function partialFWithInvalidSiblingAdditionsAndNormalTarget() {
 }
 
 describe('progressive biome evaluation', () => {
+  it.each([
+    { rewardType: 'GiftDrop', label: 'Nectar' },
+    { rewardType: 'MetaCurrencyDrop', label: 'Bones' },
+    { rewardType: 'MetaCardPointsCommonDrop', label: 'Ashes' },
+  ] as const)(
+    'retains reached $rewardType ($label) Artificer and Time Piece conversion contact at a later incomplete frontier',
+    ({ rewardType }) => {
+      const fixture = createFConversionFrontierProject(rewardType);
+      const assembly = simulateProjectAssembly(catalog, fixture.project);
+      const session = createPreparedProjectCandidateSession(catalog, assembly);
+      expect(
+        session.evaluate({ kind: 'acquisitionConversion', acquisition: fixture.acquisition }),
+      ).toMatchObject({
+        kind: 'acquisitionConversion',
+        result: {
+          timePieceSupported: true,
+          timePieceConvertible: true,
+          artificerSupported: true,
+          artificerConvertible: true,
+          artificerDefaultReplacement: expect.any(Object),
+        },
+      });
+      expect(
+        session.evaluate({
+          kind: 'acquisitionConversion',
+          acquisition: fixture.unreachedAcquisition,
+        }),
+      ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    },
+  );
+
+  it('retains the reached Nectar conversion checkpoint when its mutually exclusive Pom child blocks', () => {
+    const fixture = createFConversionFrontierProject('GiftDrop');
+    const project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(fixture.acquisition.owner, 'self'),
+      value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+    });
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    expect(
+      session.evaluate({ kind: 'acquisitionConversion', acquisition: fixture.acquisition }),
+    ).toMatchObject({
+      kind: 'acquisitionConversion',
+      result: { artificerSupported: true, artificerConvertible: true },
+    });
+  });
+
+  it('retains an earlier acquisition conversion capability when a later reward region is invalid', () => {
+    const fixture = createFInvalidLaterConversionProject();
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, fixture.project),
+    );
+    expect(
+      session.evaluate({
+        kind: 'acquisitionConversion',
+        acquisition: fixture.acquisition,
+      }),
+    ).toMatchObject({
+      kind: 'acquisitionConversion',
+      result: { artificerSupported: true, timePieceSupported: true },
+    });
+    expect(
+      session.evaluate({
+        kind: 'acquisitionConversion',
+        acquisition: fixture.unreachedAcquisition,
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
   it('rejects a duplicate sibling trait through the candidate authority', () => {
     const project = authorLegalTraitOffers(createGoldenFGHProject());
     const assembly = simulateProjectAssembly(catalog, project);

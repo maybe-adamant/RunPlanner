@@ -14,6 +14,75 @@ import {
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
 
 describe('authored-project project-state commands', () => {
+  it.each([
+    [
+      0,
+      30,
+      [
+        'ManaOverTime',
+        'StatusVulnerability',
+        'StartingGold',
+        'RarityBoost',
+        'LastStand',
+        'ScreenReroll',
+        'LowManaDamageBonus',
+      ],
+    ],
+    [1, 18, ['ManaOverTime', 'StatusVulnerability', 'StartingGold', 'CastCount']],
+    [2, 12, ['StartingGold', 'LastStand', 'CastCount']],
+    [3, 6, ['StartingGold', 'ChanneledCast']],
+    [4, 0, []],
+  ] as const)(
+    'accepts exactly %s-rank Void capacity %s and rejects one more starting Grasp',
+    (voidRank, capacity, exactSelection) => {
+      const route = createRouteAddress('Underworld');
+      const configured = applyProjectCommand(fProject(), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route,
+        vowKey: 'LimitGraspShrineUpgrade',
+        rank: voidRank,
+      });
+      const exact = applyProjectCommand(configured, catalog, {
+        kind: 'ReplaceManualArcanaSelection',
+        route,
+        arcanaKeys: exactSelection,
+      });
+      expect(exact.routes[0]?.loadout.manualArcanaKeys).toHaveLength(exactSelection.length);
+      expect(() =>
+        applyProjectCommand(exact, catalog, {
+          kind: 'ReplaceManualArcanaSelection',
+          route,
+          arcanaKeys: [...exactSelection, 'HealthRegen'],
+        }),
+      ).toThrow(`exceeds starting Grasp capacity ${capacity}`);
+    },
+  );
+
+  it('rejects a Vow of Void rank that would invalidate the retained starting Arcana selection', () => {
+    const route = createRouteAddress('Underworld');
+    const exactThirty = applyProjectCommand(fProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route,
+      arcanaKeys: [
+        'ManaOverTime',
+        'StatusVulnerability',
+        'StartingGold',
+        'RarityBoost',
+        'LastStand',
+        'ScreenReroll',
+        'LowManaDamageBonus',
+      ],
+    });
+    expect(() =>
+      applyProjectCommand(exactThirty, catalog, {
+        kind: 'ReplaceFearVowRank',
+        route,
+        vowKey: 'LimitGraspShrineUpgrade',
+        rank: 1,
+      }),
+    ).toThrow('manual Arcana cost 30 exceeds starting Grasp capacity 18');
+  });
+
   it('renames the project and preserves identity for an unchanged name', () => {
     const original = fProject();
     const renamed = applyProjectCommand(original, catalog, {

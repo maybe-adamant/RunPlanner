@@ -78,6 +78,11 @@ describe('Arcana and Fear catalog', () => {
       maximumPerBiome: 1,
       qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
     });
+    expect(catalog.fearVows.byKey.LimitGraspShrineUpgrade?.effect).toEqual({
+      kind: 'limitStartingGrasp',
+      baseCapacity: 30,
+      availablePercentByRank: [60, 40, 20, 0],
+    });
     expect(
       catalog.traitGivers.values
         .filter((giver) => giver.denialParticipates)
@@ -253,7 +258,7 @@ describe('Arcana and Fear catalog', () => {
             : vow,
         ),
       }),
-    ).toThrow(/only Vow of Denial or Forfeit may declare an effect/);
+    ).toThrow(/only Vow of Denial, Forfeit, or Void may declare an effect/);
     expect(() =>
       createCatalog({
         ...declarations,
@@ -280,6 +285,23 @@ describe('Arcana and Fear catalog', () => {
         ),
       }),
     ).toThrow(/manual cards must have a positive Grasp cost/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        fearVows: declarations.fearVows.map((vow) =>
+          vow.key === 'LimitGraspShrineUpgrade'
+            ? {
+                ...vow,
+                effect: {
+                  kind: 'limitStartingGrasp' as const,
+                  baseCapacity: 29 as 30,
+                  availablePercentByRank: [60, 40, 20, 0] as const,
+                },
+              }
+            : vow,
+        ),
+      }),
+    ).toThrow(/must limit starting Grasp from 30 by 60, 40, 20, and 0 percent/);
   });
 
   it('copies and freezes the normalized Forfeit effect without retaining caller-owned values', () => {

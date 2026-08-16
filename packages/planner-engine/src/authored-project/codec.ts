@@ -1,5 +1,6 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
+import { assessStartingArcanaGrasp } from './loadout';
 import { decodeBiomeTopology } from './topology/codec';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
@@ -309,6 +310,13 @@ function decodeRoutePlan(
         `must be an integer from 0 through ${vow.incrementalFear.length}`,
       );
     fearRanks[vow.key] = rank;
+  }
+  const grasp = assessStartingArcanaGrasp(catalog, canonicalManualArcanaKeys, fearRanks);
+  if (!grasp.legal) {
+    fail(
+      `${path}.loadout.manualArcanaKeys`,
+      `cost ${grasp.cost} exceeds starting Grasp capacity ${grasp.capacity}`,
+    );
   }
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);

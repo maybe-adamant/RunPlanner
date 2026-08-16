@@ -54,6 +54,7 @@ import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSe
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createFConversionFrontierProject,
   createFMidshopPomFrontierProject,
   fMidshopPomShopId,
   authorLegalTraitOffers,
@@ -520,6 +521,26 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
+    renderStaticOccurrenceWorkbench(
+      createFConversionFrontierProject('GiftDrop').project,
+      'Underworld',
+      'F',
+      occurrenceById(goldenFOccurrenceId(1, 1)),
+    );
+    const disposition = screen.getByRole('combobox', {
+      name: /^Acquisition disposition /,
+    });
+    expect(within(disposition).getByRole('option', { name: 'Acquire normally' })).toBeTruthy();
+    expect(
+      (within(disposition).getByRole('option', { name: 'Artificer' }) as HTMLOptionElement)
+        .disabled,
+    ).toBe(false);
+    expect(
+      screen.getByRole('button', { name: 'Edit Random Pom: No eligible traits' }),
+    ).toBeTruthy();
+  });
+
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {

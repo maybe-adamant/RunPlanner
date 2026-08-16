@@ -161,10 +161,16 @@ describe('Circe selected trait acquisition', () => {
     });
     expect(active.find((card) => card.key === 'CardDraw')).toMatchObject({ rarity: 'Heroic' });
 
-    const exhausted = createArcanaFearState(catalog, {
-      ...createDefaultRouteLoadout(catalog),
-      manualArcanaKeys: catalog.arcanaCards.values.map((card) => card.key),
-    });
+    const exhaustedActivation = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      catalog.arcanaCards.values.map((card) => card.key),
+      { owner: circeOwner.owner, sequence: 0 },
+    );
+    if (!exhaustedActivation.legal) {
+      throw new Error('exhausted Red fixture must use legal run-local Arcana activation');
+    }
+    const exhausted = exhaustedActivation.state;
     const red = processEncounterTraitOffer(
       catalog,
       initializeTestRewardBranches(exhausted)[0]!,

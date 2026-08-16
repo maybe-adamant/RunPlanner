@@ -1155,9 +1155,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
   });
 
   it('does not consume Calling Card or create Vow of Denial bans for the direct nested result', () => {
+    const defaults = createDefaultRouteLoadout(catalog);
     const arcanaFear = createArcanaFearState(catalog, {
-      ...createDefaultRouteLoadout(catalog),
-      fearRanks: { BanUnpickedBoonsShrineUpgrade: 1 },
+      ...defaults,
+      fearRanks: { ...defaults.fearRanks, BanUnpickedBoonsShrineUpgrade: 1 },
     });
     const initialized = initializeTestRewardBranches()[0]!;
     const keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);

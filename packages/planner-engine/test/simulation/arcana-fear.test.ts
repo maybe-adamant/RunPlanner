@@ -21,6 +21,37 @@ import {
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
 describe('progressive Arcana and Fear state', () => {
+  it('keeps Circe and Judgment temporary activation and promotion outside starting Grasp', () => {
+    const defaults = createDefaultRouteLoadout(catalog);
+    const state = createArcanaFearState(catalog, {
+      ...defaults,
+      fearRanks: { ...defaults.fearRanks, LimitGraspShrineUpgrade: 4 },
+    });
+    const owner = createBiomeAddress('Underworld', 'F');
+    const activated = activateTemporaryArcana(catalog, state, ['ManaOverTime', 'CardDraw'], {
+      owner,
+      sequence: 1,
+    });
+    expect(activated).toMatchObject({ legal: true });
+    if (!activated.legal) throw new Error('temporary Arcana should bypass starting Grasp');
+    expect(activated.state.arcana.active).toEqual([
+      { key: 'ManaOverTime', origin: 'temporary', rarity: 'Epic' },
+      { key: 'CardDraw', origin: 'temporary', rarity: 'Epic' },
+    ]);
+    expect(
+      promoteArcana(catalog, activated.state, ['ManaOverTime'], { owner, sequence: 2 }),
+    ).toMatchObject({
+      legal: true,
+      state: {
+        arcana: {
+          active: expect.arrayContaining([
+            { key: 'ManaOverTime', origin: 'temporary', rarity: 'Heroic' },
+          ]),
+        },
+      },
+    });
+  });
+
   it('consumes Forfeit once per biome only while effective, retaining chronology evidence', () => {
     const loadout = createDefaultRouteLoadout(catalog);
     const state = createArcanaFearState(catalog, {

@@ -174,6 +174,10 @@ export const fearVows = [
     kind: 'banUnselectedTraits',
     count: 2,
   }),
-  vow('LimitGraspShrineUpgrade', 'Vow of Void', [1, 1, 1, 2]),
+  vow('LimitGraspShrineUpgrade', 'Vow of Void', [1, 1, 1, 2], true, {
+    kind: 'limitStartingGrasp',
+    baseCapacity: 30,
+    availablePercentByRank: [60, 40, 20, 0],
+  }),
   vow('EnemyEliteShrineUpgrade', 'Vow of Fangs', [2, 3]),
 ] as const;

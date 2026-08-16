@@ -220,6 +220,42 @@ describe('project document codec', () => {
 
   it.each([
     [
+      'the base 30-Grasp capacity',
+      [
+        'ManaOverTime',
+        'StatusVulnerability',
+        'StartingGold',
+        'RarityBoost',
+        'LastStand',
+        'ScreenReroll',
+        'LowManaDamageBonus',
+        'HealthRegen',
+      ],
+      0,
+      30,
+    ],
+    [
+      'the configured Vow of Void capacity',
+      ['ManaOverTime', 'StatusVulnerability', 'StartingGold', 'CastCount'],
+      2,
+      12,
+    ],
+  ] as const)('rejects a starting Arcana selection above %s', (_name, keys, voidRank, capacity) => {
+    const encoded = encodedFStart();
+    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    const loadout = route.loadout as Record<string, unknown>;
+    loadout.manualArcanaKeys = keys;
+    loadout.fearRanks = {
+      ...(loadout.fearRanks as Record<string, number>),
+      LimitGraspShrineUpgrade: voidRank,
+    };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      `exceeds starting Grasp capacity ${capacity}`,
+    );
+  });
+
+  it.each([
+    [
       'an automatic manual Arcana entry',
       (loadout: Record<string, unknown>) => {
         loadout.manualArcanaKeys = ['CardDraw'];
