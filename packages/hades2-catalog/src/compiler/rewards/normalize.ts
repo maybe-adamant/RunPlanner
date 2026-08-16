@@ -784,7 +784,11 @@ function normalizeShops(
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
 ): CatalogCollection<ShopProfileDeclaration> {
   const echoDuplicateKeyPrefix = 'echoDoubleShop:';
-  const reservedSupplementalKeys = new Set(['infernalContractReward', 'travelDealRefill']);
+  const reservedSupplementalKeys = new Set([
+    'infernalContractReward',
+    'travelDealRefill',
+    'echoDoubleShopReward',
+  ]);
   return createCollection(
     raw.map((profile, profileIndex): ShopProfileDeclaration => {
       const path = `shops[${profileIndex}]`;

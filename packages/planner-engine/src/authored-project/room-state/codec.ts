@@ -53,7 +53,11 @@ import {
   TRAIT_OPTION_KEYS,
   traitGiverUsesOfferContext,
 } from '../traits';
-import { INFERNAL_CONTRACT_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import {
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../shop';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
 import { decodeEchoLastRunBoon } from './echo-last-run';
@@ -869,7 +873,11 @@ function decodeShopOffers(
   );
   const offers: Record<string, ShopOfferState> = {};
   for (const slot of profile.slots.values) {
-    if (slot.key === INFERNAL_CONTRACT_ENTRY_KEY || slot.key === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
+    if (
+      slot.key === INFERNAL_CONTRACT_ENTRY_KEY ||
+      slot.key === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+      slot.key === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+    ) {
       failProjectDocument(
         `${path}.offers`,
         `${slot.key} is reserved for a supplemental Shop entry`,

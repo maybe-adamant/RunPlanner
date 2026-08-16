@@ -17,6 +17,7 @@ interface ShopPurchaseControlProps {
   readonly address: AcquisitionEntryAddress;
   readonly label: string;
   readonly purchased: boolean;
+  readonly participationLabel?: 'Purchased' | 'Picked up';
   readonly toggleOfferKeys: readonly string[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onChange: (offerKeys: readonly string[]) => void;
@@ -43,6 +44,7 @@ export function ShopPurchaseControl({
   address,
   label,
   purchased,
+  participationLabel = 'Purchased',
   toggleOfferKeys,
   interactions,
   onChange,
@@ -73,7 +75,7 @@ export function ShopPurchaseControl({
         <label className="purchase-control" htmlFor={checkboxId}>
           <SemanticOwnerMarker address={address} />
           <input
-            aria-label={`Purchase ${label}`}
+            aria-label={`${participationLabel === 'Purchased' ? 'Purchase' : 'Pick up'} ${label}`}
             checked={purchased}
             disabled={projection.result !== undefined && !candidateMayBeAuthored(toggle)}
             id={checkboxId}

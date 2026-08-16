@@ -128,12 +128,14 @@ export {
   shopProfileUsesDeathDefianceCondition,
   shopAcquisitionOrderProposals,
   createDefaultInfernalContractEntries,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from './shop';
 export {
   applyProjectCommand,
   projectCommandAddress,
+  type DerivedShopEntryEditCommand,
   type EncounterOccurrenceCommand,
   type ProjectCommand,
   ProjectCommandContractError,

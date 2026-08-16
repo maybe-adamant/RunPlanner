@@ -77,7 +77,7 @@ export function applyAcquisitionConversionCommand(
       break;
     case 'acquisitionEntry': {
       const site = occurrence.acquisitionSites?.roomExit;
-      const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey, located.loadout);
+      const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
       if (site === undefined || entry === undefined) failCommand(command, 'missing pickup entry');
       return updateOccurrenceTopology(
         document,

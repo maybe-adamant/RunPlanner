@@ -21,8 +21,7 @@ import type {
 import { decodeRewardState, decodeRoomState } from '../room-state/codec';
 import { optionIndex } from '../traits';
 import {
-  echoShopDuplicateOfferMatches,
-  echoShopDuplicateSourceOfferKey,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
@@ -1467,18 +1466,13 @@ export function decodeBiomeTopology(
           continue;
         }
         if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) continue;
-        const sourceKey = echoShopDuplicateSourceOfferKey(entryKey);
-        const source =
-          sourceKey === undefined
-            ? undefined
-            : (state.shop.offers[sourceKey]?.reward ??
-              (sourceKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
-                ? acquisitionSites.roomExit.pickupEntries?.[sourceKey]
-                : undefined));
-        if (
-          source === undefined ||
-          !echoShopDuplicateOfferMatches(catalog, source.offer, entry.offer)
-        )
+        if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) continue;
+        if (entryKey.startsWith('echoDoubleShop:'))
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
+            'source-keyed Echo Shop duplicates are not supported',
+          );
+        else
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries.${entryKey}`,
             'must be a supported supplemental Shop entry',
@@ -1498,11 +1492,6 @@ export function decodeBiomeTopology(
             `${entryKey} is not a Shop acquisition entry`,
           );
         }
-        if (echoShopDuplicateSourceOfferKey(entryKey) !== undefined)
-          failProjectDocument(
-            `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
-            'Echo duplicates cannot participate in the authored order',
-          );
       }
     } else {
       if (

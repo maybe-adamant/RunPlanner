@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-15 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-38 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same explicit biome-evaluation
 products.
@@ -403,10 +403,21 @@ applied. Pom mutates one exact greatest-level target or settles a legal no-op;
 Boon directly equips one giver-preserving authored previous-run approximation
 and advances only that resolved source's loot history; Reward recreates the
 latest exact eligible acquisition before outgoing settlement; and Gold remains
-pending solely as its equipped one-use trait until the first eligible World
-Shop purchase creates and settles its immediate free duplicate. Candidate
-evaluation consumes the same pre-decision and settlement frontiers as selected
-simulation, including branch agreement for derived replay children.
+pending solely as its equipped one-use trait until the first Shop-kernel-
+accepted paid non-Spell purchase consumes it and materializes a free duplicate.
+That duplicate observes pre-source-acquisition history and settles only at its
+later authored pickup position. Candidate evaluation consumes the same pre-
+decision and settlement frontiers as selected simulation, including branch
+agreement for derived replay children.
+
+All Together first equips its ordinary Legendary Hera identity, then directly
+grants the authored rarityless result from each non-exhausted declaration pair;
+those children neither run ordinary offer thresholds nor add a god to loot
+history. Infernal Contract enters trait history through the fixed Zagreus
+acquisition. Travel Deal enters through ordinary Hermes acquisition, and only
+a copy already equipped on Shop entry may derive one refill from that Shop's
+first accepted paid purchase. No Shop acquisition retroactively activates its
+own Travel effect.
 
 Gift snapshots the current keepsake key on its exact outer acquisition. At each
 later biome start the declaration-owned schedule either applies the supported
@@ -1113,6 +1124,26 @@ the exact order, merges equivalent reward-source branches within it, and never
 retries a different order. Those post-settlement histories continue through the
 already-generated picked target; they are not used to revalidate its room or
 incoming reward.
+
+Supplemental entries are folded in that same Shop execution cohort. Contract
+is a free fixed pickup and never becomes a paid source. A paid initial offer or
+paid Travel refill first passes the ordinary Shop purchase kernel. At that
+accepted-removal checkpoint Gold, when armed and the reward is not
+`SpellDrop`, consumes its one-use trait and freezes the duplicate payload from
+the pre-source-acquisition branch; invalid nested source detail afterward does
+not undo that checkpoint. Travel retains its own settled first-purchase refill
+frontier. Their later entries remain independently selectable and weave with
+Contract and other purchases in the one authored site order. A pre-kernel
+rejection produces neither Gold consumption nor a derived Gold frontier.
+
+The candidate artifact for a reached Travel or Gold row contains its attested
+source, declaration-complete default, payload domain, and the shared complete
+site-level order proposals. It may also publish a dormant default settlement
+so nested reward, boon, Pom, or Time Piece edits can materialize the payload
+without selecting the entry. Gold's ordinary payload remains frozen; only a
+Pom whose materialized `StackOnly` set lost at least one target regenerates
+against the later pickup frontier. Branch disagreement withholds the product
+rather than choosing one branch.
 
 Source-bearing shop options use their declared policy at their declared
 resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,

@@ -22,6 +22,7 @@ import {
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
+  type DerivedShopEntryEditCommand,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -101,10 +102,37 @@ import type {
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 
+type BaseRewardPayloadCommand = Extract<
+  ProjectCommand,
+  {
+    readonly kind:
+      | 'ReplaceIncomingReward'
+      | 'ReplaceLocalReward'
+      | 'ReplaceRewardWheelOffer'
+      | 'ReplaceShopOffer'
+      | 'ReplaceAcquisitionEntryOffer';
+  }
+>;
+
+function wrapDerivedShopEntryEdit<Command extends ProjectCommand>(
+  materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
+  intent: WorkspaceCommandIntent<Command>,
+): WorkspaceCommandIntent<Command | DerivedShopEntryEditCommand> {
+  if (materialization === undefined) return intent;
+  return Object.freeze({
+    ...intent,
+    command: Object.freeze({
+      kind: 'EditDerivedShopEntry' as const,
+      ...materialization,
+      edit: intent.command as DerivedShopEntryEditCommand['edit'],
+    }),
+  });
+}
+
 function rewardIntentFor(
   owner: WorkspaceRewardControl['owner'],
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
-): ReturnType<WorkspaceRewardInteraction['intentFor']> {
+): WorkspaceCommandIntent<BaseRewardPayloadCommand> {
   switch (owner.kind) {
     case 'incomingReward':
       return Object.freeze({
@@ -136,7 +164,9 @@ function rewardIntentFor(
 function traitOfferIntentFor(
   owner: TraitOfferAddress,
   value: AuthoredTraitOffer,
-): ReturnType<WorkspaceTraitOfferInteraction['intentFor']> {
+): WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }>
+> {
   if (owner.owner.kind === 'gorgonPhase') {
     if (value.kind !== 'traits' || value.options.length !== 3) {
       throw new StructuredWorkspaceProjectionContractError(
@@ -175,7 +205,7 @@ function ordinaryTraitOfferIntentFor(
 function levelResolutionIntentFor(
   owner: LevelResolutionAddress,
   value: AuthoredLevelResolution,
-): ReturnType<WorkspaceLevelResolutionInteraction['intentFor']> {
+): WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>> {
   return Object.freeze({
     command: Object.freeze({
       kind: 'ReplaceLevelResolution' as const,
@@ -1668,6 +1698,19 @@ export function bindWorkspaceInteractions(
     );
   }
 
+  const derivedShopEntryEdits = new Map<
+    string,
+    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
+  >();
+  for (const control of rewardControls.values()) {
+    if (control.derivedShopEntryEdit !== undefined) {
+      derivedShopEntryEdits.set(
+        semanticAddressKey(control.owner.address),
+        control.derivedShopEntryEdit,
+      );
+    }
+  }
+
   const rewards = new Map<string, WorkspaceRewardInteraction>();
   for (const [key, control] of rewardControls) {
     const rewardTypes =
@@ -1679,7 +1722,11 @@ export function bindWorkspaceInteractions(
       Object.freeze({
         authoredRewardTypes: rewardTypes,
         choiceLabel: services.rewardPicker.choiceLabel,
-        intentFor: (offer: ResolvedRewardOffer) => rewardIntentFor(control.owner, offer),
+        intentFor: (offer: ResolvedRewardOffer) =>
+          wrapDerivedShopEntryEdit(
+            control.derivedShopEntryEdit,
+            rewardIntentFor(control.owner, offer),
+          ),
         key,
         load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer),
         model: services.rewardPicker.project,
@@ -1707,13 +1754,16 @@ export function bindWorkspaceInteractions(
               : { goldSupported: false, visible: conversion.value === 'gold' };
           })(),
           intentFor: (value: 'normal' | 'gold') =>
-            Object.freeze({
-              command: Object.freeze({
-                kind: 'ReplaceAcquisitionConversion' as const,
-                acquisition: conversion.address,
-                value,
+            wrapDerivedShopEntryEdit(
+              control.derivedShopEntryEdit,
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceAcquisitionConversion' as const,
+                  acquisition: conversion.address,
+                  value,
+                }),
               }),
-            }),
+            ),
           key,
           owner: conversion.address,
           value: conversion.value,
@@ -1724,6 +1774,7 @@ export function bindWorkspaceInteractions(
 
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
   for (const [key, control] of traitControls ?? []) {
+    const derivedShopEntryEdit = derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner));
     const traitChoices = Object.freeze(
       control.giver.traitKeys.map((traitKey) => {
         const trait = catalog.traits.byKey[traitKey];
@@ -1846,12 +1897,15 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, circeResolution: resolution });
-                  return ordinaryTraitOfferIntentFor(
-                    control.address,
-                    Object.freeze({
-                      ...offer,
-                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                    }),
+                  return wrapDerivedShopEntryEdit(
+                    derivedShopEntryEdit,
+                    ordinaryTraitOfferIntentFor(
+                      control.address,
+                      Object.freeze({
+                        ...offer,
+                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      }),
+                    ),
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -1903,12 +1957,15 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoPomTarget: targetTraitKey });
-                  return ordinaryTraitOfferIntentFor(
-                    control.address,
-                    Object.freeze({
-                      ...offer,
-                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                    }),
+                  return wrapDerivedShopEntryEdit(
+                    derivedShopEntryEdit,
+                    ordinaryTraitOfferIntentFor(
+                      control.address,
+                      Object.freeze({
+                        ...offer,
+                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      }),
+                    ),
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -1948,12 +2005,15 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoLastRunBoon: child });
-                  return ordinaryTraitOfferIntentFor(
-                    control.address,
-                    Object.freeze({
-                      ...offer,
-                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                    }),
+                  return wrapDerivedShopEntryEdit(
+                    derivedShopEntryEdit,
+                    ordinaryTraitOfferIntentFor(
+                      control.address,
+                      Object.freeze({
+                        ...offer,
+                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      }),
+                    ),
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2022,12 +2082,15 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoLastReward: child });
-                  return ordinaryTraitOfferIntentFor(
-                    control.address,
-                    Object.freeze({
-                      ...offer,
-                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                    }),
+                  return wrapDerivedShopEntryEdit(
+                    derivedShopEntryEdit,
+                    ordinaryTraitOfferIntentFor(
+                      control.address,
+                      Object.freeze({
+                        ...offer,
+                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+                      }),
+                    ),
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2156,13 +2219,16 @@ export function bindWorkspaceInteractions(
                   Object.freeze({
                     control: setControl,
                     intentFor: (result: string | null) =>
-                      Object.freeze({
-                        command: Object.freeze({
-                          kind: 'ReplaceAllTogetherSet' as const,
-                          set: setControl.address,
-                          value: result,
+                      wrapDerivedShopEntryEdit(
+                        derivedShopEntryEdit,
+                        Object.freeze({
+                          command: Object.freeze({
+                            kind: 'ReplaceAllTogetherSet' as const,
+                            set: setControl.address,
+                            value: result,
+                          }),
                         }),
-                      }),
+                      ),
                     offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
                       const index = optionIndex(optionKey);
                       const existing = offer.options[index];
@@ -2255,7 +2321,11 @@ export function bindWorkspaceInteractions(
         acquisitionRoleLabel: control.acquisitionRoleLabel,
         choices: traitChoices,
         giver: control.giver,
-        intentFor: (value: AuthoredTraitOffer) => traitOfferIntentFor(control.address, value),
+        intentFor: (value: AuthoredTraitOffer) =>
+          wrapDerivedShopEntryEdit(
+            derivedShopEntryEdit,
+            traitOfferIntentFor(control.address, value),
+          ),
         key,
         load,
         owner: control.address,
@@ -2263,13 +2333,16 @@ export function bindWorkspaceInteractions(
         optionDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
-          Object.freeze({
-            command: Object.freeze({
-              kind: 'ReplaceTraitSelection' as const,
-              selectedOptionKey,
-              trait: control.address,
+          wrapDerivedShopEntryEdit(
+            derivedShopEntryEdit,
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceTraitSelection' as const,
+                selectedOptionKey,
+                trait: control.address,
+              }),
             }),
-          }),
+          ),
         value: control.offer,
         traitsStartingDraft: () =>
           candidates.traitOfferStartingDraft(control.address, control.giver.key),
@@ -2293,7 +2366,10 @@ export function bindWorkspaceInteractions(
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
         intentFor: (value: AuthoredLevelResolution) =>
-          levelResolutionIntentFor(control.address, value),
+          wrapDerivedShopEntryEdit(
+            derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner)),
+            levelResolutionIntentFor(control.address, value),
+          ),
         key,
         levelCount: control.levelCount,
         load: (value = control.value) => candidates.levelResolution(control.address, value),

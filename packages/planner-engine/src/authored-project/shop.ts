@@ -4,9 +4,9 @@ import type { ResolvedRewardOffer } from '../reward-kernel';
 import type { AuthoredRewardState, RoomOccurrence, RouteWeaponAspectLoadout } from './model';
 import { createDefaultAcquisitionRewardState } from './traits';
 
-const ECHO_SHOP_DUPLICATE_PREFIX = 'echoDoubleShop:';
 export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
+export const ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY = 'echoDoubleShopReward' as const;
 
 export function createDefaultInfernalContractEntries(
   catalog: Catalog,
@@ -29,17 +29,6 @@ export function createDefaultInfernalContractEntries(
       { kind: 'producerLifecycle', key: descriptor.producerLifecycleKey },
     ),
   });
-}
-
-export function createEchoShopDuplicateEntryKey(offerKey: string): string {
-  if (offerKey.length === 0) throw new Error('Echo Shop duplicate source key must not be empty');
-  return `${ECHO_SHOP_DUPLICATE_PREFIX}${offerKey}`;
-}
-
-export function echoShopDuplicateSourceOfferKey(entryKey: string): string | undefined {
-  if (!entryKey.startsWith(ECHO_SHOP_DUPLICATE_PREFIX)) return undefined;
-  const offerKey = entryKey.slice(ECHO_SHOP_DUPLICATE_PREFIX.length);
-  return offerKey.length === 0 ? undefined : offerKey;
 }
 
 export function echoShopDuplicateOffer(
@@ -69,103 +58,88 @@ export function echoShopDuplicateOfferMatches(
   );
 }
 
-/** Exact paid Shop source eligible to own an Echo duplicate. */
-export function echoShopDuplicateSourceReward(
-  occurrence: RoomOccurrence,
-  sourceKey: string,
-): AuthoredRewardState | undefined {
-  if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) return undefined;
-  const initial = occurrence.state.shop.offers[sourceKey]?.reward;
-  if (initial !== undefined) return initial;
-  return sourceKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
-    ? occurrence.acquisitionSites?.roomExit?.pickupEntries?.[sourceKey]
-    : undefined;
-}
-
-/** Declaration-complete fresh detail for one derived duplicate of an authored Shop offer. */
-export function createDefaultEchoShopDuplicateEntry(
-  catalog: Catalog,
-  occurrence: RoomOccurrence,
-  entryKey: string,
-  loadout: RouteWeaponAspectLoadout,
-): AuthoredRewardState | undefined {
-  const offerKey = echoShopDuplicateSourceOfferKey(entryKey);
-  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
-  const source =
-    offerKey === undefined ? undefined : echoShopDuplicateSourceReward(occurrence, offerKey);
-  if (shop === undefined || source === undefined) return undefined;
-  return createDefaultAcquisitionRewardState(
-    catalog,
-    echoShopDuplicateOffer(catalog, source.offer),
-    loadout,
-    {
-      kind: 'shopProfile',
-      key: shop.profileKey,
-    },
-  );
-}
-
 export function authoredAcquisitionEntry(
-  catalog: Catalog,
+  _catalog: Catalog,
   occurrence: RoomOccurrence,
   entryKey: string,
-  loadout: RouteWeaponAspectLoadout,
 ): AuthoredRewardState | undefined {
-  return (
-    occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey] ??
-    createDefaultEchoShopDuplicateEntry(catalog, occurrence, entryKey, loadout)
-  );
+  return occurrence.acquisitionSites?.roomExit?.pickupEntries?.[entryKey];
 }
 
 export function isShopSupplementalEntryKey(entryKey: string): boolean {
   return (
     entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
     entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-    echoShopDuplicateSourceOfferKey(entryKey) !== undefined
+    entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
   );
 }
 
-/** Complete Shop chronology proposals, including the singleton refill's source dependency. */
+export type DerivedShopEntryDependency =
+  | {
+      readonly kind: 'fixedSource';
+      readonly entryKey: typeof TRAVEL_DEAL_REFILL_ENTRY_KEY;
+      readonly sourceOfferKey: string;
+    }
+  | {
+      readonly kind: 'firstEligibleSource';
+      readonly entryKey: typeof ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
+      readonly eligibleSourceOfferKeys: readonly string[];
+    };
+
+function normalizeDerivedShopEntryOrder(
+  proposed: readonly string[],
+  dependencies: readonly DerivedShopEntryDependency[],
+): readonly string[] {
+  let normalized = [...proposed];
+  for (const dependency of dependencies) {
+    const entryIndex = normalized.indexOf(dependency.entryKey);
+    if (entryIndex < 0) continue;
+    const sourceOfferKey =
+      dependency.kind === 'fixedSource'
+        ? dependency.sourceOfferKey
+        : normalized.find(
+            (entryKey) =>
+              entryKey !== dependency.entryKey &&
+              dependency.eligibleSourceOfferKeys.includes(entryKey),
+          );
+    const sourceIndex = sourceOfferKey === undefined ? -1 : normalized.indexOf(sourceOfferKey);
+    if (sourceIndex < 0) {
+      normalized = normalized.filter((entryKey) => entryKey !== dependency.entryKey);
+      continue;
+    }
+    const currentIndex = normalized.indexOf(dependency.entryKey);
+    if (currentIndex > sourceIndex) continue;
+    normalized.splice(currentIndex, 1);
+    const reboundSourceIndex = normalized.indexOf(sourceOfferKey!);
+    normalized.splice(reboundSourceIndex + 1, 0, dependency.entryKey);
+  }
+  return Object.freeze(normalized);
+}
+
+/** Complete Shop chronology proposals over every active derived-entry dependency. */
 export function shopAcquisitionOrderProposals(
   order: readonly string[],
   activeEntryKeys: readonly string[],
-  travelSourceOfferKey?: string,
+  dependencies: readonly DerivedShopEntryDependency[] = Object.freeze([]),
 ): readonly (readonly string[])[] {
-  const proposals: string[][] = [[...order]];
+  const proposals: (readonly string[])[] = [normalizeDerivedShopEntryOrder(order, dependencies)];
   for (const entryKey of activeEntryKeys) {
     const index = order.indexOf(entryKey);
     if (index >= 0) {
       proposals.push(
-        order.filter(
-          (candidate) =>
-            candidate !== entryKey &&
-            !(entryKey === travelSourceOfferKey && candidate === TRAVEL_DEAL_REFILL_ENTRY_KEY),
+        normalizeDerivedShopEntryOrder(
+          order.filter((candidate) => candidate !== entryKey),
+          dependencies,
         ),
       );
       continue;
     }
-    if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
-      const sourceIndex =
-        travelSourceOfferKey === undefined ? -1 : order.indexOf(travelSourceOfferKey);
-      if (sourceIndex >= 0) {
-        proposals.push([
-          ...order.slice(0, sourceIndex + 1),
-          TRAVEL_DEAL_REFILL_ENTRY_KEY,
-          ...order.slice(sourceIndex + 1),
-        ]);
-      }
-      continue;
-    }
-    proposals.push([...order, entryKey]);
+    proposals.push(normalizeDerivedShopEntryOrder([...order, entryKey], dependencies));
   }
   for (let index = 0; index < order.length - 1; index += 1) {
     const swapped = [...order];
     [swapped[index], swapped[index + 1]] = [swapped[index + 1]!, swapped[index]!];
-    const refillIndex = swapped.indexOf(TRAVEL_DEAL_REFILL_ENTRY_KEY);
-    const sourceIndex =
-      travelSourceOfferKey === undefined ? -1 : swapped.indexOf(travelSourceOfferKey);
-    if (refillIndex >= 0 && (sourceIndex < 0 || refillIndex <= sourceIndex)) continue;
-    proposals.push(swapped);
+    proposals.push(normalizeDerivedShopEntryOrder(swapped, dependencies));
   }
   const seen = new Set<string>();
   return Object.freeze(

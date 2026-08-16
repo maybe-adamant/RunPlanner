@@ -2,7 +2,12 @@ import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
 import { ProjectDocumentContractError } from '../validation';
-import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
+import {
+  failCommand,
+  locateBiome,
+  projectCommandAddress,
+  ProjectCommandContractError,
+} from './contract';
 import { applyOccurrenceCommand } from './occurrence';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
@@ -10,11 +15,40 @@ import { applyRouteDetourCommand } from './route-detours';
 import { applyTopologyCommand } from './topology';
 import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
-import { applyAcquisitionSiteCommand } from './acquisition-site';
+import {
+  applyAcquisitionSiteCommand,
+  materializeDerivedShopEntryDefault,
+} from './acquisition-site';
 import { applyAcquisitionConversionCommand } from './acquisition-conversion';
 import { applyBossCompletionCommand } from './boss-completion';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
+import { createAcquisitionEntryAddress, semanticAddressKey } from '../addresses';
+
+function derivedPayloadEntryAddress(
+  command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
+) {
+  switch (command.kind) {
+    case 'ReplaceAcquisitionEntryOffer':
+      return command.entry;
+    case 'ReplaceTraitOffer':
+    case 'ReplaceGorgonAthenaOffer':
+    case 'ReplaceTraitSelection':
+      return command.trait.owner.kind === 'acquisitionEntry' ? command.trait.owner : undefined;
+    case 'ReplaceAllTogetherSet':
+      return command.set.trait.owner.kind === 'acquisitionEntry'
+        ? command.set.trait.owner
+        : undefined;
+    case 'ReplaceLevelResolution':
+      return command.levelResolution.owner.kind === 'acquisitionEntry'
+        ? command.levelResolution.owner
+        : undefined;
+    case 'ReplaceAcquisitionConversion':
+      return command.acquisition.owner.kind === 'acquisitionEntry'
+        ? command.acquisition.owner
+        : undefined;
+  }
+}
 
 function applyUnchecked(
   document: ProjectDocument,
@@ -98,7 +132,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceAcquisitionOrder':
-    case 'PurchaseTravelDealRefill':
+    case 'SelectDerivedShopEntry':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(
         document,
@@ -106,6 +140,18 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
+    case 'EditDerivedShopEntry': {
+      const expectedEntry = createAcquisitionEntryAddress(command.site, command.entryKey);
+      const editedEntry = derivedPayloadEntryAddress(command.edit);
+      if (
+        editedEntry === undefined ||
+        semanticAddressKey(editedEntry) !== semanticAddressKey(expectedEntry)
+      )
+        failCommand(command, 'payload edit must belong to the addressed derived Shop entry');
+      const located = locateBiome(document, catalog, command);
+      const materialized = materializeDerivedShopEntryDefault(document, catalog, located, command);
+      return applyUnchecked(materialized, catalog, command.edit);
+    }
     case 'ReplaceTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
@@ -173,4 +219,8 @@ export function applyProjectCommand(
 }
 
 export { projectCommandAddress, ProjectCommandContractError } from './contract';
-export type { EncounterOccurrenceCommand, ProjectCommand } from './types';
+export type {
+  DerivedShopEntryEditCommand,
+  EncounterOccurrenceCommand,
+  ProjectCommand,
+} from './types';
