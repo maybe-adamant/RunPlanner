@@ -544,6 +544,7 @@ describe('reward-kernel declaration parity', () => {
       MetaCurrencyBigDrop: 'Big Bones',
       MetaCardPointsCommonDrop: 'Ashes',
       MetaCardPointsCommonBigDrop: 'Big Ashes',
+      MemPointsCommonDrop: 'Psyche',
       WeaponPointsRareDrop: 'Nightmare',
       CardUpgradePointsDrop: 'Moon Dust',
       CharonPointsDrop: 'Obol Points',
@@ -770,11 +771,12 @@ describe('reward-kernel declaration parity', () => {
       'MetaCurrencyBigDrop',
       'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonBigDrop',
+      'MemPointsCommonDrop',
       'WeaponPointsRareDrop',
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(52);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(53);
   });
 
   it('declares the exact Echo last-reward replay matrix and recreation lifecycle', () => {
@@ -808,6 +810,7 @@ describe('reward-kernel declaration parity', () => {
       'MetaCurrencyBigDrop',
       'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonBigDrop',
+      'MemPointsCommonDrop',
     ].sort();
     expect(
       rewardKernelCatalog.acquisitions.values
@@ -884,6 +887,18 @@ describe('reward-kernel declaration parity', () => {
         }),
       ),
     ).toThrow('must recreate the exact self acquisition source');
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'MemPointsCommonDrop'
+              ? { ...acquisition, lastRewardRecreation: undefined }
+              : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow('must declare the exact Echo last-reward eligibility set');
   });
 
   it('rejects drift in Echo replay timing and its sole Nectar level effect', () => {
@@ -978,6 +993,35 @@ describe('reward-kernel declaration parity', () => {
     ]);
     expect(rewardKernelCatalog.acquisitions.byKey.GiftDrop?.levelResolutionEffect).toBeUndefined();
     expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
+  });
+
+  it('normalizes the exact Narcissus pickup lifecycle at room exit', () => {
+    expect(
+      rewardKernelCatalog.producerLifecycles.byKey.NarcissusPickup?.rewardTypes.values.map(
+        (reward) => [reward.rewardType, reward.acquisitionLifecycle] as const,
+      ),
+    ).toEqual(
+      [
+        'StoreRewardRandomStack',
+        'MaxManaDrop',
+        'MaxHealthDrop',
+        'Currency',
+        'LastStandDrop',
+        'BlindBoxLoot',
+        'ElementalBoost',
+        'MetaCardPointsCommonDrop',
+        'MemPointsCommonDrop',
+        'MetaCurrencyDrop',
+      ].map((rewardType) => [
+        rewardType,
+        rewardType === 'BlindBoxLoot'
+          ? [
+              { role: 'box', lifecyclePoint: 'roomExit' },
+              { role: 'hiddenSource', lifecyclePoint: 'roomExit' },
+            ]
+          : [{ role: 'self', lifecyclePoint: 'roomExit' }],
+      ]),
+    );
   });
 
   it('normalizes the fixed Contract grant and exact Travel purchase interaction identities', () => {

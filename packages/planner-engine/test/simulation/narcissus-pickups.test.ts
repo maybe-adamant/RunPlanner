@@ -114,6 +114,114 @@ function pickupSite(project: ProjectDocument) {
 }
 
 describe('Narcissus pickup producer', () => {
+  it.each([
+    ['NarcissusB', 'ashes', 'MetaCardPointsCommonDrop', false],
+    ['NarcissusD', 'psyche', 'MemPointsCommonDrop', false],
+    ['NarcissusD', 'maxMana', 'MaxManaDrop', false],
+    ['NarcissusE', 'bones', 'MetaCurrencyDrop', false],
+    ['NarcissusE', 'maxHealth', 'MaxHealthDrop', false],
+    ['NarcissusH', 'lastStand', 'LastStandDrop', true],
+  ] as const)(
+    'settles %s %s normally or through Time Piece as one exact free pickup',
+    (traitKey, entryKey, acquisitionGameName, deathDefianceConditionMet) => {
+      let normalProject = selectNarcissus(
+        createGoldenFGHIProject(),
+        [traitKey, 'NarcissusC', 'NarcissusF'],
+        deathDefianceConditionMet,
+      );
+      const entry = pickupEntry(normalProject, entryKey);
+      const before = evaluatedG(normalProject).rewards.branches[0];
+      normalProject = applyProjectCommand(normalProject, catalog, {
+        kind: 'ReplaceAcquisitionOrder',
+        site: entry.site,
+        entryKeys: [entryKey],
+      });
+      const normal = evaluatedG(normalProject).rewards.branches[0];
+      expect(normal?.history.useRecord[acquisitionGameName]).toBe(
+        (before?.history.useRecord[acquisitionGameName] ?? 0) + 1,
+      );
+      expect(normal?.history.consumableRecord[acquisitionGameName]).toBe(
+        (before?.history.consumableRecord[acquisitionGameName] ?? 0) + 1,
+      );
+      expect(normal?.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'concreteAcquisition',
+          acquisition: expect.objectContaining({
+            acquisition: expect.objectContaining({ gameName: acquisitionGameName }),
+          }),
+          settlement: expect.objectContaining({
+            entry: expect.objectContaining({ entryKey }),
+          }),
+        }),
+      );
+
+      let convertedProject = applyProjectCommand(normalProject, catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      });
+      convertedProject = applyProjectCommand(convertedProject, catalog, {
+        kind: 'ReplaceAcquisitionConversion',
+        acquisition: createAcquisitionRoleAddress(entry, 'self'),
+        value: 'gold',
+      });
+      const converted = evaluatedG(convertedProject).rewards.branches[0];
+      expect(converted?.history.useRecord[acquisitionGameName]).toBe(
+        before?.history.useRecord[acquisitionGameName],
+      );
+      expect(converted?.history.consumableRecord[acquisitionGameName]).toBe(
+        before?.history.consumableRecord[acquisitionGameName],
+      );
+      expect(converted?.keepsakes.timePiece?.remainingCharges).toBe(3);
+      expect(converted?.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'conversionToGold',
+          acquisition: expect.objectContaining({
+            acquisition: expect.objectContaining({ gameName: acquisitionGameName }),
+          }),
+          settlement: expect.objectContaining({ entry: expect.objectContaining({ entryKey }) }),
+        }),
+      );
+    },
+  );
+
+  it('materializes the complete Ashes, Psyche, and Bones producer-owned entry sets', () => {
+    const cases = [
+      [
+        'NarcissusB',
+        {
+          ashes: { offer: { rewardType: 'MetaCardPointsCommonDrop' } },
+        },
+      ],
+      [
+        'NarcissusD',
+        {
+          psyche: { offer: { rewardType: 'MemPointsCommonDrop' } },
+          maxMana: { offer: { rewardType: 'MaxManaDrop' } },
+        },
+      ],
+      [
+        'NarcissusE',
+        {
+          bones: { offer: { rewardType: 'MetaCurrencyDrop' } },
+          maxHealth: { offer: { rewardType: 'MaxHealthDrop' } },
+        },
+      ],
+    ] as const;
+
+    for (const [traitKey, pickupEntries] of cases) {
+      const project = selectNarcissus(createGoldenFGHIProject(), [
+        traitKey,
+        'NarcissusC',
+        'NarcissusF',
+      ]);
+      expect(narcissusOccurrence(project).acquisitionSites?.roomExit).toMatchObject({
+        order: [],
+        pickupEntries,
+      });
+    }
+  });
+
   it('retains absent, normal, and Time Piece converted optional pickup states in the canonical route', () => {
     let project = selectNarcissus(
       createGoldenFGHIProject(),

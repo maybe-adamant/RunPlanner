@@ -91,6 +91,7 @@ export const producerLifecycles = [
       'MetaCurrencyBigDrop',
       'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonBigDrop',
+      'MemPointsCommonDrop',
     ],
     defaultLifecyclePoint: 'echoReplay',
     overrides: [
@@ -116,6 +117,9 @@ export const producerLifecycles = [
       'LastStandDrop',
       'BlindBoxLoot',
       'ElementalBoost',
+      'MetaCardPointsCommonDrop',
+      'MemPointsCommonDrop',
+      'MetaCurrencyDrop',
     ],
     defaultLifecyclePoint: 'roomExit',
   },

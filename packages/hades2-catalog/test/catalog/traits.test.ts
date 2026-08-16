@@ -2214,18 +2214,27 @@ describe('trait offer catalog closure', () => {
         kind: 'producePickups',
         pickups: [{ key: 'pom', rewardType: 'StoreRewardRandomStack' }],
       }),
-      B: { kind: 'noOp' },
+      B: expect.objectContaining({
+        kind: 'producePickups',
+        pickups: [{ key: 'ashes', rewardType: 'MetaCardPointsCommonDrop' }],
+      }),
       C: expect.objectContaining({
         kind: 'producePickups',
         pickups: [{ key: 'currency', rewardType: 'Currency' }],
       }),
       D: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'maxMana', rewardType: 'MaxManaDrop' }],
+        pickups: [
+          { key: 'psyche', rewardType: 'MemPointsCommonDrop' },
+          { key: 'maxMana', rewardType: 'MaxManaDrop' },
+        ],
       }),
       E: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'maxHealth', rewardType: 'MaxHealthDrop' }],
+        pickups: [
+          { key: 'bones', rewardType: 'MetaCurrencyDrop' },
+          { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
+        ],
       }),
       F: { kind: 'noOp' },
       G: expect.objectContaining({

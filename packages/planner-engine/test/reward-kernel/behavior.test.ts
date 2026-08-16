@@ -227,6 +227,23 @@ describe('Echo last-reward acquisition history', () => {
     });
     expect(history.lastRewardRecreation?.offer.rewardType).toBe('ZeusUpgrade');
   });
+
+  it('records producer-owned Psyche as the exact latest Echo recreation without store membership', () => {
+    const history = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
+      kind: 'resource',
+      gameName: 'MemPointsCommonDrop',
+    });
+    expect(history.consumableRecord.MemPointsCommonDrop).toBe(1);
+    expect(history.lastRewardRecreation).toEqual({
+      offer: { rewardType: 'MemPointsCommonDrop' },
+      producerLifecycleKey: 'EchoLastReward',
+    });
+    expect(
+      rewardKernelCatalog.stores.values.flatMap((store) =>
+        store.entries.filter((entry) => entry.rewardType === 'MemPointsCommonDrop'),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('locally valid complete offer domains', () => {

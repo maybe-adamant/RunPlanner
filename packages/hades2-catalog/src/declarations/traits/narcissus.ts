@@ -26,7 +26,11 @@ export const narcissusTraits = [
     key: 'NarcissusB',
     label: 'Heartfelt Condolences',
     offerRequirements: [],
-    selectedDisposition: { kind: 'noOp' },
+    selectedDisposition: {
+      kind: 'producePickups',
+      producerLifecycleKey: 'NarcissusPickup',
+      pickups: [{ key: 'ashes', rewardType: 'MetaCardPointsCommonDrop' }],
+    },
   },
   {
     ...raritylessNpcTrait,
@@ -47,7 +51,10 @@ export const narcissusTraits = [
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
-      pickups: [{ key: 'maxMana', rewardType: 'MaxManaDrop' }],
+      pickups: [
+        { key: 'psyche', rewardType: 'MemPointsCommonDrop' },
+        { key: 'maxMana', rewardType: 'MaxManaDrop' },
+      ],
     },
   },
   {
@@ -58,7 +65,10 @@ export const narcissusTraits = [
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
-      pickups: [{ key: 'maxHealth', rewardType: 'MaxHealthDrop' }],
+      pickups: [
+        { key: 'bones', rewardType: 'MetaCurrencyDrop' },
+        { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
+      ],
     },
   },
   {
