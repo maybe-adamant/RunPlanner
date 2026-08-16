@@ -26,6 +26,7 @@ Primary evidence:
 
 - `RoomDataH.lua`: `BonusRewardStoreName`, `OptionalRewardChances`, cage-count
   bounds, and H room declarations;
+- `Maps/H_Combat*.thing_bin`: concrete `BonusRewardSpawnPoints` memberships;
 - `LootData.lua`: `FieldsOptionalRewards`, `RunProgress`, `HubRewards`, and
   their entry multiplicities;
 - `RoomLogic.lua`: H target preparation, cage-offer generation,
@@ -97,11 +98,32 @@ optional-reward pass:
 
 The Lua source therefore permits zero to four successful rolls before map
 capacity. Each realized count is additionally bounded by the number of
-`BonusRewardSpawnPoints` present on the concrete map. Those map-group
-memberships are not enumerated in the installed script export. Consequently
-the script audit alone does not prove that every supported H map physically
-realizes four optional rewards. A product that locks an exact maximum of three
-or four needs map evidence or a focused live probe.
+`BonusRewardSpawnPoints` present on the concrete map. The installed
+`thing_bin` map assets close that declaration-local capacity:
+
+| Room declaration | Physical spawn points | Effective optional maximum |
+| ---------------- | --------------------: | -------------------------: |
+| `H_Combat01`     |                     4 |                          4 |
+| `H_Combat02`     |                     3 |                          3 |
+| `H_Combat03`     |                     5 |                          4 |
+| `H_Combat04`     |                     7 |                          4 |
+| `H_Combat05`     |                     7 |                          4 |
+| `H_Combat06`     |                     4 |                          4 |
+| `H_Combat07`     |                     3 |                          3 |
+| `H_Combat08`     |                     3 |                          3 |
+| `H_Combat09`     |                     2 |                          2 |
+| `H_Combat10`     |                     4 |                          4 |
+| `H_Combat11`     |                     2 |                          2 |
+| `H_Combat12`     |                     3 |                          3 |
+| `H_Combat13`     |                     2 |                          2 |
+| `H_Combat14`     |                     2 |                          2 |
+| `H_Combat15`     |                     2 |                          2 |
+
+The effective maximum is the lesser of the four chance trials and physical
+spawn-point count. The supported ordinary cage encounters do not set
+`BlockMaxBonusRewards`; the source's reduction belongs to the separate
+`NemesisRandomEvent` room-level encounter and is not an ordinary-H capacity
+rule.
 
 `BlockMaxBonusRewards` can reserve one spawn point for specific encounter
 families when every point would otherwise be used. It is not a generic
@@ -212,6 +234,13 @@ the producer and cost facts above.
 inherits both Gold- and metaprogression-conversion eligibility from
 `BaseMetaRoomReward`. Narcissus's Mystic Secrets explicitly produces that
 identity.
+
+It also declares `LastRewardEligible = true`. Successfully acquiring the
+Psyche pickup therefore makes Psyche the current last reward, and Echo's Reward
+Reward Reward may later recreate a fresh `MemPointsCommonDrop`. Restoring
+Psyche to the planner must extend the exact Echo last-reward recreation matrix;
+silently retaining the previous Ashes/Bones-only resource set would make the
+new concrete acquisition internally inconsistent.
 
 The current installed reward stores contain no `MemPointsCommonDrop` entry:
 it is absent from `MetaProgress`, `RunProgress`, and the other counted bags.
@@ -449,12 +478,15 @@ been spent, the ordinary result naturally displays four remaining charges.
 - Optional Fields pickups are genuinely optional and may be interleaved with
   cage activation and reward acquisition.
 - The script declares four optional chance rolls, while exact physical map
-  capacity remains unproven by the script export.
+  capacity is declaration-owned at two, three, or four after inspecting the
+  installed map assets.
 - Artificer rank III supplies three total uses; rank IV supplies four.
 - Eligibility belongs to a free concrete `BaseMetaRoomReward` instance, not
   just a reward name.
 - Psyche is a concrete Narcissus-produced acquisition identity but is not a
   member of any current counted reward store.
+- Acquired Psyche is LastReward-eligible and can be recreated by Echo without
+  becoming a counted-store entry.
 - Narcissus has exactly six conversion-relevant pickups: Ashes, Psyche, and
   Bones support both systems, while Max Magick, Max Health, and Death Defiance
   support Time Piece only.
@@ -474,12 +506,6 @@ been spent, the ordinary result naturally displays four remaining charges.
   resetting a previously used card.
 
 ## Remaining bounded questions
-
-Before locking a Fields implementation contract, establish the exact
-`BonusRewardSpawnPoints` count for every supported H combat map. The installed
-Lua scripts prove four chance rolls but do not enumerate the map-group members.
-A map asset audit or focused live probe can close whether the supported maximum
-is three or four on each declaration.
 
 The product need not model pickup interaction during an active cage combat if
 it preserves every legal between-encounter and post-encounter acquisition
