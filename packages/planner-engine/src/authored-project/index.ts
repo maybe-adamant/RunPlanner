@@ -237,4 +237,10 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
-export { createDefaultRouteLoadout, deriveRouteLoadout, type DerivedRouteLoadout } from './loadout';
+export {
+  assessStartingArcanaGrasp,
+  createDefaultRouteLoadout,
+  deriveRouteLoadout,
+  type DerivedRouteLoadout,
+  type StartingArcanaGraspAssessment,
+} from './loadout';

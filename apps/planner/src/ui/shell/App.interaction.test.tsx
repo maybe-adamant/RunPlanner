@@ -846,6 +846,39 @@ describe('planner history interaction', () => {
 });
 
 describe('route loadout interaction', () => {
+  it('presents starting Grasp capacity and disables Arcana or Void choices that exceed it', async () => {
+    const { user } = renderPlannerForInteraction();
+    const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
+    const arcanaSummary = arcana.querySelector('summary');
+    if (arcanaSummary === null) throw new Error('Arcana summary is missing');
+    await user.click(arcanaSummary);
+    for (const label of [
+      'The Unseen',
+      'Origination',
+      'The Boatman',
+      'Excellence',
+      'Death',
+      'The Champions',
+      'The Huntress',
+    ]) {
+      await user.click(screen.getByRole('checkbox', { name: label }));
+    }
+
+    expect(arcana.textContent).toContain('30 / 30 Grasp');
+    expect(screen.getByRole('checkbox', { name: 'The Sorceress' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+
+    const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
+    const fearSummary = fear.querySelector('summary');
+    if (fearSummary === null) throw new Error('Fear summary is missing');
+    await user.click(fearSummary);
+    const voidRank = screen.getByRole('combobox', { name: 'Vow of Void rank' });
+    expect(within(voidRank).getByRole('option', { name: '0' })).toHaveProperty('disabled', false);
+    expect(within(voidRank).getByRole('option', { name: '1' })).toHaveProperty('disabled', true);
+  });
+
   it('authors one of the complete starting-keepsake inventory through route settings', async () => {
     const { application, user } = renderPlannerForInteraction();
     const selector = screen.getByRole('combobox', { name: 'Starting keepsake' });

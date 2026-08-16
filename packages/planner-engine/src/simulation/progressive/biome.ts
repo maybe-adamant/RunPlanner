@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import {
+  createAcquisitionRoleAddress,
   createOccurrenceAddress,
   createBiomeAddress,
   type BossCompletionArcanaAddress,
@@ -27,9 +28,13 @@ import {
   createBiomeCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
+  type AcquisitionConversionCandidateArtifacts,
   type BiomeCandidateArtifacts,
+  type BossCompletionArcanaCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
+  type KeepsakeEquipResultCandidateArtifacts,
+  type KeepsakeSelectionCandidateArtifacts,
 } from '../candidate-artifacts';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
@@ -156,6 +161,11 @@ function generation(
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: import('../candidate-artifacts').TraitOfferCandidateArtifacts,
   levelResolutions: import('../candidate-artifacts').LevelResolutionCandidateArtifacts,
+  bossCompletionArcana: BossCompletionArcanaCandidateArtifacts,
+  keepsakeSelections: KeepsakeSelectionCandidateArtifacts,
+  keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts,
+  acquisitionConversions: AcquisitionConversionCandidateArtifacts,
+  derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts,
   encounterBoundary?: EncounterCandidateBoundary,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -204,6 +214,11 @@ function generation(
       encounters.artifacts,
       traitOffers,
       levelResolutions,
+      bossCompletionArcana,
+      keepsakeSelections,
+      keepsakeEquipResults,
+      acquisitionConversions,
+      derivedAcquisitionEntries,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -251,6 +266,24 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     default:
       return undefined;
   }
+}
+
+function acquisitionRoleAncestor(address: SemanticAddress): AcquisitionRoleAddress | undefined {
+  if (address.kind === 'acquisitionRole') return address;
+  const trait =
+    address.kind === 'traitOffer'
+      ? address
+      : address.kind === 'circeResolution' ||
+          address.kind === 'echoPomTarget' ||
+          address.kind === 'echoLastRunBoon' ||
+          address.kind === 'echoLastReward' ||
+          address.kind === 'allTogetherSet'
+        ? address.trait
+        : undefined;
+  if (trait !== undefined) return createAcquisitionRoleAddress(trait.owner, trait.acquisitionRole);
+  return address.kind === 'levelResolution'
+    ? createAcquisitionRoleAddress(address.owner, address.acquisitionRole)
+    : undefined;
 }
 
 function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
@@ -434,6 +467,11 @@ function products(
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
+    rewards.bossCompletionArcanaArtifacts,
+    rewards.keepsakeSelectionArtifacts,
+    rewards.keepsakeEquipResultArtifacts,
+    rewards.acquisitionConversionArtifacts,
+    rewards.derivedAcquisitionEntryArtifacts,
     encounterBoundary,
   );
   return Object.freeze({
@@ -490,8 +528,7 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
   const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =
     blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
-  const blockedAcquisitionAt: AcquisitionRoleAddress | undefined =
-    blockedAt.kind === 'acquisitionRole' ? blockedAt : undefined;
+  const blockedAcquisitionAt = acquisitionRoleAncestor(blockedAt);
   const blockedDerivedAcquisitionAt: AcquisitionEntryAddress | undefined =
     blockedAt.kind === 'acquisitionEntry' ? blockedAt : undefined;
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);

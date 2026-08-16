@@ -202,7 +202,10 @@ copied elsewhere.
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
-  active frontier and chronological delivery record. Phase 7 Slice 4,
+  active frontier and chronological delivery record. The durable
+  [product-polish backlog](docs/progress/PRODUCT_POLISH.md) retains concrete
+  correctness and presentation observations between focused delivery slices.
+  Phase 7 Slice 4,
   Commit 5a prompt removal, the re-anchor program, and the four Commit 5b
   presentation slices are complete. Campaign B made candidate artifacts
   explicit, Campaign C separated the justified authored-core authorities, and

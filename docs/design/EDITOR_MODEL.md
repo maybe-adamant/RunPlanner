@@ -860,10 +860,12 @@ preserved by the engine. React does not calculate target eligibility, manually
 active Arcana cost, Fear totals, or Circe removal policy.
 
 Route settings own the starting loadout controls: manual Arcana toggles and
-declaration-bounded Fear ranks. Ordinary automatic Arcana indicators and the
-derived Fear total are read-only engine products. The same workspace exposes a
-reached Judgment completion control only at its exact derived completion owner;
-there is no route-level Judgment editor.
+declaration-bounded Fear ranks. The engine supplies current starting Grasp
+cost/capacity and assesses each proposed Arcana toggle or Void rank; React only
+disables proposals that the engine rejects. Ordinary automatic Arcana
+indicators and the derived Fear total are read-only engine products. The same
+workspace exposes a reached Judgment completion control only at its exact
+derived completion owner; there is no route-level Judgment editor.
 
 Run State presents the engine-folded banned-trait labels and Forfeit's
 current-biome inactive, available, or consumed status. React neither accumulates

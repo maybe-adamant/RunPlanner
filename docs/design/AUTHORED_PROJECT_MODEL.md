@@ -112,9 +112,12 @@ authored model owns only the player's starting selections; derived automatic
 cards and the configured Fear total are not persisted independently.
 
 The closed route commands replace the complete manual Arcana selection or one
-Vow rank. They validate catalog membership and static rank bounds, preserve all
-topology and downstream authored state, and participate normally in undo/redo.
-They do not validate Grasp capacity or ordinary Vow gameplay effects.
+Vow rank. They validate catalog membership, static rank bounds, and the coupled
+starting-Grasp capacity, preserve all topology and downstream authored state,
+and participate normally in undo/redo. The codec enforces the same capacity, so
+an authored starting loadout cannot retain an impossible manual selection.
+Automatic cards and run-local Arcana grants are not part of this starting limit.
+Other ordinary Vow gameplay effects remain outside these commands.
 
 Circe's selected effect-backed offer detail is authored beneath its exact trait
 option. `activateArcana` stores zero or one canonical card key, `promoteArcana`

@@ -16,9 +16,10 @@ import { suppressFearVow } from '../../src/simulation/arcana-fear';
 const owner = { kind: 'project' } as const;
 
 function denialState() {
+  const defaults = createDefaultRouteLoadout(catalog);
   return createArcanaFearState(catalog, {
-    ...createDefaultRouteLoadout(catalog),
-    fearRanks: { BanUnpickedBoonsShrineUpgrade: 1 },
+    ...defaults,
+    fearRanks: { ...defaults.fearRanks, BanUnpickedBoonsShrineUpgrade: 1 },
   });
 }
 

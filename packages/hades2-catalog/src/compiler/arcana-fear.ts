@@ -138,10 +138,11 @@ export function normalizeFearVows(
     requireBoolean(vow.circeRemovable, `${path}.circeRemovable`);
     const isDenial = vow.key === 'BanUnpickedBoonsShrineUpgrade';
     const isForfeit = vow.key === 'BoonSkipShrineUpgrade';
+    const isVoid = vow.key === 'LimitGraspShrineUpgrade';
     if (isDenial && vow.effect === undefined)
       fail(`${path}.effect`, 'Vow of Denial must declare banUnselectedTraits');
-    if (!isDenial && !isForfeit && vow.effect !== undefined)
-      fail(`${path}.effect`, 'only Vow of Denial or Forfeit may declare an effect');
+    if (!isDenial && !isForfeit && !isVoid && vow.effect !== undefined)
+      fail(`${path}.effect`, 'only Vow of Denial, Forfeit, or Void may declare an effect');
     if (
       isDenial &&
       vow.effect !== undefined &&
@@ -158,6 +159,15 @@ export function normalizeFearVows(
           JSON.stringify(['Boon', 'HermesUpgrade']))
     )
       fail(`${path}.effect`, 'must prevent one ordinary Boon or Hermes acquisition per biome');
+    if (isVoid && vow.effect === undefined)
+      fail(`${path}.effect`, 'Vow of Void must declare limitStartingGrasp');
+    if (
+      isVoid &&
+      (vow.effect?.kind !== 'limitStartingGrasp' ||
+        vow.effect.baseCapacity !== 30 ||
+        JSON.stringify(vow.effect.availablePercentByRank) !== JSON.stringify([60, 40, 20, 0]))
+    )
+      fail(`${path}.effect`, 'must limit starting Grasp from 30 by 60, 40, 20, and 0 percent');
     return Object.freeze({
       ...vow,
       incrementalFear: Object.freeze([...vow.incrementalFear]),
@@ -174,7 +184,20 @@ export function normalizeFearVows(
                 ],
               }),
             }
-          : {}),
+          : isVoid
+            ? {
+                effect: Object.freeze({
+                  kind: 'limitStartingGrasp' as const,
+                  baseCapacity: 30 as const,
+                  availablePercentByRank: Object.freeze([60, 40, 20, 0]) as readonly [
+                    60,
+                    40,
+                    20,
+                    0,
+                  ],
+                }),
+              }
+            : {}),
     });
   });
   if (values.length !== 17) fail('fearVows', 'must declare all 17 Vows');

@@ -99,6 +99,11 @@ export interface FearVowDeclaration {
         readonly kind: 'preventOrdinaryRoomAcquisition';
         readonly maximumPerBiome: 1;
         readonly qualifyingRewardTypes: readonly ['Boon', 'HermesUpgrade'];
+      }
+    | {
+        readonly kind: 'limitStartingGrasp';
+        readonly baseCapacity: 30;
+        readonly availablePercentByRank: readonly [60, 40, 20, 0];
       };
 }
 

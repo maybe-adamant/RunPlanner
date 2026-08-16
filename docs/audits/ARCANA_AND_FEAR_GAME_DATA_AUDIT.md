@@ -21,6 +21,7 @@ Primary evidence:
 - `EncounterLogic.lua`
 - `CombatLogic.lua`
 - `ShrineLogic.lua`
+- `HubPresentation.lua`
 - English `TraitText.en.sjson`
 
 The relevant game state is split across two authorities:
@@ -249,8 +250,12 @@ effect that changes which configured Vow is active during an ordinary run.
 
 ## Cross-Domain Interaction
 
-Vow of Void changes the available Grasp percentage. This can constrain which
-manual Arcana configuration the player can actually bring into the run. It
+Vow of Void changes the available Grasp percentage. Its inactive value is
+`100`; ranks I through IV declare `60`, `40`, `20`, and `0`. The exit guard
+compares the equipped-card cost ratio against that percentage. With the
+planner's fully progressed 30-Grasp baseline, the exact starting capacities
+are therefore 30, 18, 12, 6, and 0 at ranks zero through IV. This constrains
+which manual Arcana configuration the player can actually bring into the run. It
 does not change the Arcana automatic-activation predicates themselves, and
 Black Night disabling it does not retroactively replace the player's starting
 manual Arcana selection.
@@ -292,12 +297,14 @@ route history, and Forfeit records one ordinary-room acquisition veto per
 biome. Black Night stops future effects but does not erase prior bans or
 restore an already vetoed acquisition.
 
-Catalog declarations own card/Vow data, the two closed effect payloads, exact
+Catalog declarations own card/Vow data, the three closed effect payloads, exact
 Denial participation, and Judgment's rarity-scaled count; the engine owns the
 progressive state, target domains, exact authored outcomes, banned history, and
-Forfeit usage. Grasp capacity, Vow of Void's capacity effect, Fated mode,
-permanent card advancement, and every other ordinary Vow gameplay effect remain
-deliberately out of scope.
+Forfeit usage. The catalog also owns Void's source percentages and the fixed
+30-Grasp baseline; the engine rejects starting manual selections above the
+configured capacity without applying that limit to automatic or run-local
+Arcana grants. Fated mode, permanent card advancement, and every other ordinary
+Vow gameplay effect remain deliberately out of scope.
 
 Schema 41 adds the Artificer's supported reward-facing effect without changing
 the pre-run loadout model. The catalog owns Epic capacity three and Heroic

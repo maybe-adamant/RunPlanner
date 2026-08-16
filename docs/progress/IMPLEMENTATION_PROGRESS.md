@@ -2690,3 +2690,14 @@ that the single application chunk exceeds 500 kB; this is not a phase
 correctness or build failure. The complete gate was run exactly once after
 review remediation and durable-document absorption and was not rerun after this
 factual append.
+
+The first focused post-closure correctness slice adds the missing starting
+Arcana guard and repairs acquisition-conversion publication at a progressively
+blocked reward child. Starting manual Arcana now respect the 30-Grasp baseline
+and Void's exact 30/18/12/6/0 capacities through codec, commands, derived Route
+state, and proposal controls; automatic and run-local grants remain exempt.
+Progressive evaluation now carries the exact reward-owned artifacts needed to
+retain Artificer and Time Piece choices on reached Nectar, Ashes, and Bones
+pickups without publishing controls past the evaluated prefix. The permanent
+`PRODUCT_POLISH.md` tracker owns the remaining product observations and marks
+unselected authorable reward slots as the next foundational audit.

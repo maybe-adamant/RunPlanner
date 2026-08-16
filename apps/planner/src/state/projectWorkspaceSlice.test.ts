@@ -55,6 +55,40 @@ function createStore() {
 }
 
 describe('project workspace application state', () => {
+  it('publishes an exact 30-Grasp loadout and rejects an impossible Redux command atomically', () => {
+    const { store } = createStore();
+    const route = createRouteAddress('Underworld');
+    const exactThirty = [
+      'ManaOverTime',
+      'StatusVulnerability',
+      'StartingGold',
+      'RarityBoost',
+      'LastStand',
+      'ScreenReroll',
+      'LowManaDamageBonus',
+    ];
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceManualArcanaSelection',
+        route,
+        arcanaKeys: exactThirty,
+      }),
+    );
+    const exactWorkspace = store.getState().projectWorkspace;
+    expect(exactWorkspace.history.present.routes[0]?.loadout.manualArcanaKeys).toHaveLength(7);
+
+    expect(() =>
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceManualArcanaSelection',
+          route,
+          arcanaKeys: [...exactThirty, 'HealthRegen'],
+        }),
+      ),
+    ).toThrow('manual Arcana cost 31 exceeds starting Grasp capacity 30');
+    expect(store.getState().projectWorkspace).toBe(exactWorkspace);
+  });
+
   it('atomically boots one empty authored history and its exact evaluation', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const state = store.getState();

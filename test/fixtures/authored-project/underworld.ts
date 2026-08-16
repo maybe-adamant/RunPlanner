@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createAcquisitionRoleAddress,
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
@@ -8,9 +9,11 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createLocalRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -167,6 +170,96 @@ export function goldenFOccurrenceId(batchIndex: number, exitIndex: number): Occu
 
 export function goldenGOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
   return createOccurrenceId(`golden-g-b${batchIndex}-e${exitIndex}`);
+}
+
+interface FConversionFrontierFixture {
+  readonly project: ProjectDocument;
+  readonly acquisition: ReturnType<typeof createAcquisitionRoleAddress>;
+  readonly unreachedAcquisition: ReturnType<typeof createAcquisitionRoleAddress>;
+}
+
+function createFConversionLoadoutProject(): ProjectDocument {
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: createRouteAddress('Underworld'),
+    arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'GoldifyKeepsake',
+  });
+  for (const vowKey of ['BoonSkipShrineUpgrade', 'BanUnpickedBoonsShrineUpgrade'] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey,
+      rank: 1,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  return project;
+}
+
+/** Reached F metaprogression pickup followed by an unresolved outgoing frontier. */
+export function createFConversionFrontierProject(
+  rewardType: 'GiftDrop' | 'MetaCurrencyDrop' | 'MetaCardPointsCommonDrop',
+): FConversionFrontierFixture {
+  const occurrenceId = goldenFOccurrenceId(1, 1);
+  const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
+  let project = createFConversionLoadoutProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType },
+  });
+  if (rewardType === 'GiftDrop') {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(reward, 'self'),
+      value: { kind: 'random', targetTraitKey: null },
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenFBiome, source(occurrenceId)),
+  });
+  return Object.freeze({
+    project,
+    acquisition: createAcquisitionRoleAddress(reward, 'self'),
+    unreachedAcquisition: createAcquisitionRoleAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
+      'self',
+    ),
+  });
+}
+
+/** Reached Bones conversion contact followed by an invalid RunProgress Bones offer. */
+export function createFInvalidLaterConversionProject(): FConversionFrontierFixture {
+  const reachedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+  const blockedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
+  let project = applyProjectCommand(createFConversionLoadoutProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: reachedReward,
+    value: { rewardType: 'MetaCurrencyDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: blockedReward,
+    value: { rewardType: 'MetaCurrencyDrop' },
+  });
+  return Object.freeze({
+    project,
+    acquisition: createAcquisitionRoleAddress(reachedReward, 'self'),
+    unreachedAcquisition: createAcquisitionRoleAddress(blockedReward, 'self'),
+  });
 }
 
 /** Retained test-only identity helper for the F/G progressive fixture. */

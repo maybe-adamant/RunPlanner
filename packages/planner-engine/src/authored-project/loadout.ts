@@ -5,7 +5,54 @@ import { ProjectDocumentContractError } from './validation';
 export interface DerivedRouteLoadout {
   readonly activeArcanaKeys: readonly string[];
   readonly automaticArcanaKeys: readonly string[];
+  readonly startingArcanaGrasp: StartingArcanaGraspAssessment;
   readonly fearTotal: number;
+}
+
+export interface StartingArcanaGraspAssessment {
+  readonly cost: number;
+  readonly capacity: number;
+  readonly legal: boolean;
+}
+
+export function assessStartingArcanaGrasp(
+  catalog: Catalog,
+  manualArcanaKeys: readonly string[],
+  fearRanks: Readonly<Record<string, number>>,
+): StartingArcanaGraspAssessment {
+  const voidVow = catalog.fearVows.byKey.LimitGraspShrineUpgrade;
+  if (voidVow?.effect?.kind !== 'limitStartingGrasp') {
+    throw new Error('catalog is missing the Vow of Void starting-Grasp effect');
+  }
+  const voidRank = fearRanks[voidVow.key];
+  if (
+    voidRank === undefined ||
+    !Number.isInteger(voidRank) ||
+    voidRank < 0 ||
+    voidRank > voidVow.effect.availablePercentByRank.length
+  ) {
+    throw new Error(`invalid configured Vow of Void rank ${String(voidRank)}`);
+  }
+  const seen = new Set<string>();
+  const cost = manualArcanaKeys.reduce((total, key) => {
+    const card = catalog.arcanaCards.byKey[key];
+    if (card === undefined || card.activation.kind !== 'manual' || seen.has(key)) {
+      throw new Error(`invalid starting manual Arcana ${key}`);
+    }
+    seen.add(key);
+    return total + card.graspCost;
+  }, 0);
+  const availablePercent =
+    voidRank === 0 ? 100 : voidVow.effect.availablePercentByRank[voidRank - 1];
+  if (availablePercent === undefined) {
+    throw new Error(`Vow of Void rank ${voidRank} has no available-Grasp percentage`);
+  }
+  const capacity = Math.floor((voidVow.effect.baseCapacity * availablePercent) / 100);
+  return Object.freeze({
+    cost,
+    capacity,
+    legal: cost <= capacity,
+  });
 }
 
 export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
@@ -104,9 +151,15 @@ export function deriveRouteLoadout(catalog: Catalog, loadout: RouteLoadout): Der
         .reduce((sum, point) => sum + point, 0),
     0,
   );
+  const startingArcanaGrasp = assessStartingArcanaGrasp(
+    catalog,
+    loadout.manualArcanaKeys,
+    loadout.fearRanks,
+  );
   return Object.freeze({
     activeArcanaKeys: Object.freeze(activeArcanaKeys),
     automaticArcanaKeys: Object.freeze(activeArcanaKeys.filter((key) => !manual.has(key))),
+    startingArcanaGrasp,
     fearTotal,
   });
 }

@@ -44,6 +44,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createFConversionFrontierProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -2130,6 +2131,38 @@ describe('structured workspace interaction binding', () => {
       },
     });
   });
+
+  it.each(['GiftDrop', 'MetaCurrencyDrop', 'MetaCardPointsCommonDrop'] as const)(
+    'keeps the reached %s conversion interaction visible at a later incomplete frontier',
+    (rewardType) => {
+      const occurrenceId = goldenFOccurrenceId(1, 1);
+      const acquisition = createAcquisitionRoleAddress(
+        createIncomingRewardAddress(goldenFBiome, occurrenceId),
+        'self',
+      );
+      const { interactions } = bind(
+        createFConversionFrontierProject(rewardType).project,
+        'Underworld',
+        'F',
+      );
+      expect(
+        interactions.acquisitionConversions.get(semanticAddressKey(acquisition)),
+      ).toMatchObject({
+        owner: acquisition,
+        visible: true,
+        timePieceSupported: true,
+        artificerSupported: true,
+        artificerDefaultReplacement: expect.any(Object),
+      });
+      const unreached = createAcquisitionRoleAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
+        'self',
+      );
+      expect(
+        interactions.acquisitionConversions.get(semanticAddressKey(unreached))?.visible ?? false,
+      ).toBe(false);
+    },
+  );
 
   it('reuses ordinary Hammer and Pom child interactions for an Artificer replacement', () => {
     const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));

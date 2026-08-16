@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  assessStartingArcanaGrasp,
   createDefaultRouteLoadout,
   deriveRouteLoadout,
   type RouteLoadout,
@@ -15,6 +16,46 @@ function derive(manualArcanaKeys: readonly string[]) {
 }
 
 describe('route loadout derivation', () => {
+  it.each([
+    [
+      0,
+      30,
+      [
+        'ManaOverTime',
+        'StatusVulnerability',
+        'StartingGold',
+        'RarityBoost',
+        'LastStand',
+        'ScreenReroll',
+        'LowManaDamageBonus',
+      ],
+    ],
+    [1, 18, ['ManaOverTime', 'StatusVulnerability', 'StartingGold', 'CastCount']],
+    [2, 12, ['StartingGold', 'LastStand', 'CastCount']],
+    [3, 6, ['StartingGold', 'ChanneledCast']],
+    [4, 0, []],
+  ] as const)(
+    'assesses the exact starting Grasp boundary at Void rank %s as %s',
+    (voidRank, capacity, exactSelection) => {
+      const defaults = createDefaultRouteLoadout(catalog);
+      const fearRanks = {
+        ...defaults.fearRanks,
+        LimitGraspShrineUpgrade: voidRank,
+      };
+      expect(assessStartingArcanaGrasp(catalog, exactSelection, fearRanks)).toEqual({
+        cost: capacity,
+        capacity,
+        legal: true,
+      });
+      expect(
+        assessStartingArcanaGrasp(catalog, [...exactSelection, 'HealthRegen'], fearRanks),
+      ).toMatchObject({
+        capacity,
+        legal: false,
+      });
+    },
+  );
+
   it.each([
     ['The Moon', ['CastCount'], 'SorceryRegenUpgrade'],
     [
@@ -54,5 +95,10 @@ describe('route loadout derivation', () => {
     });
 
     expect(derived.fearTotal).toBe(17);
+    expect(derived.startingArcanaGrasp).toEqual({
+      cost: 0,
+      capacity: 30,
+      legal: true,
+    });
   });
 });
