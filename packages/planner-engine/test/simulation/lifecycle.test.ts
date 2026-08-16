@@ -106,6 +106,9 @@ function inputWithoutProducer(
     ...(executionInput.fieldsCageRewards === undefined
       ? {}
       : { fieldsCageRewards: executionInput.fieldsCageRewards }),
+    ...(executionInput.fieldsOptionalRewardSlotKeys === undefined
+      ? {}
+      : { fieldsOptionalRewardSlotKeys: executionInput.fieldsOptionalRewardSlotKeys }),
     counterEffects: executionInput.counterEffects,
   };
 }
@@ -136,6 +139,7 @@ describe('single-room lifecycle execution', () => {
           { phaseKey: 'Cage01', slotKey: 'cage1' },
           { phaseKey: 'Cage02', slotKey: 'cage2' },
         ],
+        fieldsOptionalRewardSlotKeys: [],
       }),
     ).events;
 

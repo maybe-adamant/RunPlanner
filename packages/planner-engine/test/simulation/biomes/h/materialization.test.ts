@@ -15,6 +15,7 @@ import {
   encodeProjectDocument,
   semanticAddressKey,
   type ExitDecision,
+  type FieldsCombatAction,
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
@@ -100,6 +101,44 @@ function catalogWithNonFieldsBoundedRoom(gameName: string): Catalog {
       ),
     },
   };
+}
+
+function catalogWithNarrowFieldsOptionalSupport(
+  gameName: string,
+  eligibleRewardType: string,
+): Catalog {
+  const room = catalog.rooms.byKey[gameName];
+  const descriptor = room?.fieldsOptionalRewards;
+  if (room === undefined || descriptor === undefined) {
+    throw new Error(`catalog has no Fields optional declaration for ${gameName}`);
+  }
+  const replacement: RoomDeclaration = Object.freeze({
+    ...room,
+    fieldsOptionalRewards: Object.freeze({
+      ...descriptor,
+      reward: Object.freeze({
+        ...descriptor.reward,
+        eligibleRewardTypes: Object.freeze([eligibleRewardType]),
+        ineligibleRewardTypes: Object.freeze(
+          descriptor.reward.allowedRewardTypes.filter(
+            (rewardType) => rewardType !== eligibleRewardType,
+          ),
+        ),
+      }),
+    }),
+  });
+  return Object.freeze({
+    ...catalog,
+    rooms: Object.freeze({
+      ...catalog.rooms,
+      byKey: Object.freeze({ ...catalog.rooms.byKey, [gameName]: replacement }),
+      values: Object.freeze(
+        catalog.rooms.values.map((candidate) =>
+          candidate.gameName === gameName ? replacement : candidate,
+        ),
+      ),
+    }),
+  });
 }
 
 function appendBatch(
@@ -243,7 +282,304 @@ function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {
   );
 }
 
+function replaceFieldsActions(
+  project: ProjectDocument,
+  occurrenceId: OccurrenceId,
+  transform: (order: readonly FieldsCombatAction[]) => readonly FieldsCombatAction[],
+): ProjectDocument {
+  const state = plan(project).topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  )?.state;
+  if (state?.kind !== 'fieldsCombat') throw new Error(`missing Fields state ${occurrenceId}`);
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFieldsActionOrder',
+    occurrence: createOccurrenceAddress(biome, occurrenceId),
+    actionOrder: transform(state.actionOrder),
+  });
+}
+
 describe('H Fields materialization', () => {
+  it('materializes only the selected optional prefix while retaining complete authored slots', () => {
+    const project = createGoldenFGHProject();
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const snapshot = materialize(project);
+    const room = ordinaryBatches(snapshot)
+      .flatMap((batch) => batch.targets)
+      .map((target) => target.room)
+      .find((candidate) => candidate.occurrenceId === occurrenceId);
+    expect(room?.fieldsOptionalRewards?.map((reward) => reward.slotKey)).toEqual([
+      'optional1',
+      'optional2',
+    ]);
+    expect(room?.fieldsOptionalRewards?.map((reward) => reward.resolvedStoreKey)).toEqual([
+      'FieldsOptionalRewards',
+      'FieldsOptionalRewards',
+    ]);
+    const state = plan(project).topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    )?.state;
+    expect(state).toMatchObject({
+      kind: 'fieldsCombat',
+      optionalRewardCount: 2,
+      optionalRewards: {
+        optional1: expect.any(Object),
+        optional2: expect.any(Object),
+        optional3: expect.any(Object),
+      },
+    });
+  });
+
+  it('consumes generated unpicked optionals from only their persistent bag without acquisition history', () => {
+    const selected = simulateProject(catalog, createGoldenFGHProject())
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (selected?.authoring !== 'complete' || selected.validity !== 'valid') {
+      throw new Error('selected optional fixture must be valid');
+    }
+    const selectedBranch = selected.rewards.branches[0];
+    if (selectedBranch === undefined) throw new Error('selected optional fixture has no branch');
+    expect(
+      selectedBranch.bags.FieldsOptionalRewards?.remainingEntryCounts.reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+    ).toBe(13);
+    expect(
+      selectedBranch.events.filter(
+        (event) =>
+          event.kind === 'rewardOffered' &&
+          event.origin.kind === 'localReward' &&
+          event.origin.groupKey === 'optionalRewards',
+      ),
+    ).toHaveLength(6);
+    expect(
+      selectedBranch.events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          event.origin.kind === 'localReward' &&
+          event.origin.groupKey === 'optionalRewards',
+      ),
+    ).toBe(false);
+
+    let none = createGoldenFGHProject();
+    for (const occurrenceId of [
+      createOccurrenceId('golden-h-combat02'),
+      createOccurrenceId('golden-h-combat09'),
+      createOccurrenceId('golden-h-combat05'),
+    ]) {
+      none = applyProjectCommand(none, catalog, {
+        kind: 'ReplaceFieldsOptionalRewardCount',
+        occurrence: createOccurrenceAddress(biome, occurrenceId),
+        optionalRewardCount: 0,
+      });
+    }
+    const noneBiome = simulateProject(catalog, none)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (noneBiome?.authoring !== 'complete' || noneBiome.validity !== 'valid') {
+      throw new Error('zero optional fixture must be valid');
+    }
+    const noneBranch = noneBiome.rewards.branches[0];
+    expect(noneBranch?.bags.FieldsOptionalRewards).toBeUndefined();
+    expect(noneBranch?.bags.RunProgress).toEqual(selectedBranch.bags.RunProgress);
+  });
+
+  it('refills the real Fields optional cohort by appending one full set without discarding ineligible leftovers', () => {
+    const firstCombat = createOccurrenceId('golden-h-combat02');
+    const laterCombats = [
+      createOccurrenceId('golden-h-combat09'),
+      createOccurrenceId('golden-h-combat05'),
+    ];
+    let project = createGoldenFGHProject();
+    for (const slotKey of ['optional1', 'optional2']) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(biome, firstCombat, 'optionalRewards', slotKey),
+        value: { rewardType: 'RoomRewardHealDrop' },
+      });
+    }
+    for (const occurrenceId of laterCombats) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsOptionalRewardCount',
+        occurrence: createOccurrenceAddress(biome, occurrenceId),
+        optionalRewardCount: 0,
+      });
+    }
+    const baseline = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence: createOccurrenceAddress(biome, firstCombat),
+      optionalRewardCount: 0,
+    });
+    // Keep the exact 19-entry store and real H02 lifecycle, but narrow this
+    // declaration-local support so the bounded cohort can reach refill.
+    const narrowedCatalog = catalogWithNarrowFieldsOptionalSupport(
+      'H_Combat02',
+      'RoomRewardHealDrop',
+    );
+    const evaluated = simulateProject(narrowedCatalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    const withoutOptionals = simulateProject(narrowedCatalog, baseline)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (
+      evaluated?.authoring !== 'complete' ||
+      evaluated.validity !== 'valid' ||
+      withoutOptionals?.authoring !== 'complete' ||
+      withoutOptionals.validity !== 'valid'
+    ) {
+      throw new Error('Fields optional refill fixtures must be valid');
+    }
+    const branch = evaluated.rewards.branches[0];
+    const baselineBranch = withoutOptionals.rewards.branches[0];
+    if (branch === undefined || baselineBranch === undefined) {
+      throw new Error('Fields optional refill fixtures have no reward branch');
+    }
+    const remaining = branch.bags.FieldsOptionalRewards?.remainingEntryCounts;
+    if (remaining === undefined) throw new Error('Fields optional refill bag is missing');
+
+    expect(
+      branch.events.filter(
+        (event) =>
+          event.kind === 'rewardOffered' &&
+          event.origin.kind === 'localReward' &&
+          event.origin.occurrenceId === firstCombat &&
+          event.origin.groupKey === 'optionalRewards',
+      ),
+    ).toHaveLength(2);
+    expect(remaining).toHaveLength(19);
+    const store = narrowedCatalog.rewards.stores.byKey.FieldsOptionalRewards;
+    if (store === undefined) throw new Error('Fields optional store is missing');
+    const healIndex = store.entries.findIndex((entry) => entry.rewardType === 'RoomRewardHealDrop');
+    expect(healIndex).toBeGreaterThanOrEqual(0);
+    expect(remaining[healIndex]).toBe(0);
+    expect(remaining.filter((_, index) => index !== healIndex)).toEqual(
+      Array.from({ length: 18 }, () => 2),
+    );
+    expect(remaining.reduce((sum, count) => sum + count, 0)).toBe(36);
+    expect(branch.bags.RunProgress).toEqual(baselineBranch.bags.RunProgress);
+  });
+
+  it.each([
+    ['before the first cage', 0, 'before'],
+    ['between cage completions', 2, 'between'],
+    ['after the final cage', 4, 'after'],
+  ] as const)('weaves an optional interaction %s', (_label, index, expectedPosition) => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const optional = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', 'optional1');
+    const project = replaceFieldsActions(createGoldenFGHProject(), occurrenceId, (order) => {
+      const next = [...order];
+      next.splice(index, 0, { kind: 'interactOptionalReward', slotKey: 'optional1' });
+      return next;
+    });
+    const evaluated = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+      throw new Error('ordered optional fixture must be valid');
+    }
+    const acquisition = evaluated.rewards.branches[0]?.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(optional),
+    );
+    const roomHistory = evaluated.history.rooms.find(
+      (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === occurrenceId,
+    );
+    const event = (kind: 'encounterStarted' | 'encounterCompleted', phaseKey: string) =>
+      evaluated.history.events.find(
+        (candidate) =>
+          candidate.kind === kind &&
+          candidate.origin.kind === 'occurrence' &&
+          candidate.origin.occurrenceId === occurrenceId &&
+          candidate.phaseKey === phaseKey,
+      );
+    expect(roomHistory).toBeDefined();
+    expect(acquisition).toBeDefined();
+    const cage1Start = event('encounterStarted', 'Cage01')!;
+    const cage1Complete = event('encounterCompleted', 'Cage01')!;
+    const cage2Start = event('encounterStarted', 'Cage02')!;
+    const cage2Complete = event('encounterCompleted', 'Cage02')!;
+    if (expectedPosition === 'before')
+      expect(acquisition!.historySequence).toBeLessThan(cage1Start.sequence);
+    if (expectedPosition === 'between') {
+      expect(acquisition!.historySequence).toBeGreaterThan(cage1Complete.sequence);
+      expect(acquisition!.historySequence).toBeLessThan(cage2Start.sequence);
+    }
+    if (expectedPosition === 'after')
+      expect(acquisition!.historySequence).toBeGreaterThan(cage2Complete.sequence);
+  });
+
+  it('routes an interacted optional Time Piece disposition through shared settlement', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const optional = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', 'optional1');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(optional, 'self'),
+      value: 'gold',
+    });
+    project = replaceFieldsActions(project, occurrenceId, (order) => [
+      { kind: 'interactOptionalReward', slotKey: 'optional1' },
+      ...order,
+    ]);
+    const evaluated = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+      throw new Error('optional Time Piece fixture must be valid');
+    }
+    const events = evaluated.rewards.branches[0]?.events ?? [];
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold', origin: optional }),
+    );
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(optional),
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps an uninteracted optional disposition dormant without charge, settlement, or finding', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const optional = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', 'optional1');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(optional, 'self'),
+      value: 'gold',
+    });
+
+    const evaluated = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+      throw new Error('dormant optional disposition fixture must be valid');
+    }
+    expect(
+      evaluated.rewards.branches[0]?.events.some(
+        (event) =>
+          (event.kind === 'conversionToGold' || event.kind === 'concreteAcquisition') &&
+          semanticAddressKey(event.origin) === semanticAddressKey(optional),
+      ),
+    ).toBe(false);
+    expect(
+      evaluated.findings.some(
+        (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(optional),
+      ),
+    ).toBe(false);
+  });
+
   it('keeps Fields Min/Max and cage-local rewards as engine-owned candidate domains', () => {
     const project = createGoldenFGHProject();
     const start = goldenHStartId;
@@ -286,6 +622,11 @@ describe('H Fields materialization', () => {
         value: reward.offer,
       },
       {
+        kind: 'localReward',
+        reward: createLocalRewardAddress(biome, combat, 'optionalRewards', 'optional1'),
+        value: { rewardType: 'MaxManaDropSmall' },
+      },
+      {
         kind: 'fieldsActionOrder',
         occurrence: occurrenceOwner,
         actionOrder: reorderedActions,
@@ -305,6 +646,7 @@ describe('H Fields materialization', () => {
     expect(candidates).toMatchObject([
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'min', selectedPossible: true } },
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'max' } },
+      { kind: 'localReward', result: { supported: true, findings: [] } },
       { kind: 'localReward', result: { supported: true, findings: [] } },
       { kind: 'fieldsActionOrder', result: { selectedPossible: true, findings: [] } },
       { kind: 'fieldsActionOrder', result: { selectedPossible: false } },

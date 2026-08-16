@@ -9,6 +9,11 @@ export const fieldsRoomLifecycleProfiles = [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
+        kind: 'materializeOfferPoint',
+        offerPoint: 'fieldsOptionalRewards',
+        effects: ['recordOfferPoint'],
+      },
+      {
         kind: 'runFieldsActionSequence',
         effects: [
           'recordEncounterStart',

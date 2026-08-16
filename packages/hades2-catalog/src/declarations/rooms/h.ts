@@ -1,5 +1,37 @@
 import type { RawRoomDeclaration } from '../types';
 
+const fieldsOptionalRewardCapacities = {
+  H_Combat01: 4,
+  H_Combat02: 3,
+  H_Combat03: 4,
+  H_Combat04: 4,
+  H_Combat05: 4,
+  H_Combat06: 4,
+  H_Combat07: 3,
+  H_Combat08: 3,
+  H_Combat09: 2,
+  H_Combat10: 4,
+  H_Combat11: 2,
+  H_Combat12: 3,
+  H_Combat13: 2,
+  H_Combat14: 2,
+  H_Combat15: 2,
+} as const;
+
+function fieldsOptionalRewards(gameName: keyof typeof fieldsOptionalRewardCapacities) {
+  return {
+    key: 'optionalRewards' as const,
+    optionalRewardCapacity: fieldsOptionalRewardCapacities[gameName],
+    reward: {
+      kind: 'countedChoice' as const,
+      storeKeys: ['FieldsOptionalRewards'],
+      eligibleRewardTypes: [],
+      ineligibleRewardTypes: [],
+      producerLifecycleKey: 'RoomReward',
+    },
+  };
+}
+
 export const hRooms = [
   {
     gameName: 'H_Intro',
@@ -29,6 +61,7 @@ export const hRooms = [
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat01'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -71,6 +104,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat02'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -118,6 +152,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat03'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -160,6 +195,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat04'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -202,6 +238,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat05'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -244,6 +281,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat06'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -286,6 +324,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat07'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -328,6 +367,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat08'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -370,6 +410,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat09'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -417,6 +458,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat10'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -459,6 +501,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat11'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -501,6 +544,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat12'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -543,6 +587,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat13'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -590,6 +635,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat14'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [
@@ -637,6 +683,7 @@ export const hRooms = [
     ],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    fieldsOptionalRewards: fieldsOptionalRewards('H_Combat15'),
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'FieldsEncounter',
     encounterSlotBindings: [

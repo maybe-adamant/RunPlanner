@@ -98,6 +98,7 @@ export function projectCommandAddress(
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsActionOrder':
+    case 'ReplaceFieldsOptionalRewardCount':
       return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;

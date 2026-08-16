@@ -496,6 +496,38 @@ function controlsForOccurrence(
           rewardControl(input, { kind: 'localReward', address }, group.reward, offer.offer, offer),
         );
       }
+      const optionalDescriptor = room.fieldsOptionalRewards;
+      if (optionalDescriptor === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${room.gameName} Fields state has no optional reward declaration`,
+        );
+      }
+      for (const slotKey of optionalDescriptor.slotKeys.slice(
+        0,
+        occurrence.state.optionalRewardCount,
+      )) {
+        const reward = occurrence.state.optionalRewards[slotKey];
+        if (reward === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Fields state is missing ${slotKey}`,
+          );
+        }
+        const address = createLocalRewardAddress(
+          input.biome,
+          occurrence.occurrenceId,
+          optionalDescriptor.key,
+          slotKey,
+        );
+        controls.push(
+          rewardControl(
+            input,
+            { kind: 'localReward', address },
+            optionalDescriptor.reward,
+            reward.offer,
+            reward,
+          ),
+        );
+      }
       break;
     }
     case 'shipCombat': {
@@ -1179,7 +1211,9 @@ function fieldsActionLabel(
   }
   return action.kind === 'completeCage'
     ? `Complete Cage ${ordinal}`
-    : `Interact with Cage ${ordinal} reward`;
+    : action.kind === 'interactCageReward'
+      ? `Interact with Cage ${ordinal} reward`
+      : `Interact with Optional ${ordinal}`;
 }
 
 function fieldsChronology(
@@ -1194,6 +1228,9 @@ function fieldsChronology(
   for (const [index, entry] of domain.entries()) {
     ordinals.set(`complete:${entry.phaseKey}`, index + 1);
     ordinals.set(`interact:${entry.slotKey}`, index + 1);
+  }
+  for (const [index, slotKey] of (room.fieldsOptionalRewards?.slotKeys ?? []).entries()) {
+    ordinals.set(`interactOptional:${slotKey}`, index + 1);
   }
   const assessment = assessFieldsActionOrder(input.catalog, room, state, activeCageCount);
   const inactiveKeys = new Set(
@@ -1216,6 +1253,7 @@ function fieldsChronology(
         key: `${proposal.kind}:${index}:${actionKey}`,
         label,
         order: proposal.order,
+        ...(proposal.defaultParticipation === true ? { defaultParticipation: true } : {}),
       });
     });
   const proposalsByAction = new Map<string, string[]>();
@@ -1416,19 +1454,59 @@ function roomLocalForOccurrence(
             label: `Cage ${index + 1}`,
           });
         });
+      const optionalDescriptor = room.fieldsOptionalRewards;
+      if (optionalDescriptor === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${room.gameName} Fields state has no optional reward declaration`,
+        );
+      }
+      const chronology =
+        fieldsFacts === undefined
+          ? undefined
+          : fieldsChronology(input, room, occurrence.state, fieldsFacts.doorCageRewardCount);
+      const interactedKeys = new Set(occurrence.state.actionOrder.map(fieldsActionKey));
+      const optionalRewards = (
+        chronology === undefined
+          ? []
+          : optionalDescriptor.slotKeys.slice(0, occurrence.state.optionalRewardCount)
+      ).map((slotKey, index) => {
+        const address = createLocalRewardAddress(
+          input.biome,
+          occurrence.occurrenceId,
+          optionalDescriptor.key,
+          slotKey,
+        );
+        const actionKey = `interactOptional:${slotKey}`;
+        const participationProposal = chronology?.proposals.find(
+          (proposal) => proposal.actionKey === actionKey && proposal.defaultParticipation === true,
+        );
+        if (participationProposal === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName}.${slotKey} has no Fields participation proposal`,
+          );
+        }
+        return Object.freeze({
+          control: requireProjectedRewardControl(controls, address, 'countedReward'),
+          interacted: interactedKeys.has(actionKey),
+          key: slotKey,
+          label: `Optional ${index + 1}`,
+          participationProposalKey: participationProposal.key,
+        });
+      });
       return Object.freeze({
         kind: 'fields' as const,
         cages: Object.freeze(cages),
-        ...(fieldsFacts === undefined
-          ? {}
-          : {
-              chronology: fieldsChronology(
-                input,
-                room,
-                occurrence.state,
-                fieldsFacts.doorCageRewardCount,
-              ),
-            }),
+        owner: createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+        optionalRewardCount: occurrence.state.optionalRewardCount,
+        optionalRewardCapacity: optionalDescriptor.optionalRewardCapacity,
+        optionalRewardCountValues: Object.freeze(
+          Array.from(
+            { length: optionalDescriptor.optionalRewardCapacity + 1 },
+            (_, index) => index,
+          ),
+        ),
+        optionalRewards: Object.freeze(optionalRewards),
+        ...(chronology === undefined ? {} : { chronology }),
         groupKey: group.key,
       });
     }

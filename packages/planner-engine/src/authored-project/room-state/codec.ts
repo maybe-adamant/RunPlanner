@@ -36,6 +36,7 @@ import {
   requireCountedBinding,
   requireEphyraSideRooms,
   requireFieldsCages,
+  requireFieldsOptionalRewards,
   requireOrdinaryRole,
   requireShipCombatWheels,
   requireShopBinding,
@@ -939,7 +940,11 @@ export function decodeRoomState(
     case 'FieldsCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fieldsCombat', path);
-      expectExactKeys(state, ['kind', 'cages', 'actionOrder'], path);
+      expectExactKeys(
+        state,
+        ['kind', 'cages', 'optionalRewardCount', 'optionalRewards', 'actionOrder'],
+        path,
+      );
       const descriptor = requireFieldsCages(room, path);
       const rawCages = expectRecord(state.cages, `${path}.cages`);
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
@@ -957,10 +962,44 @@ export function decodeRoomState(
         );
         cages[slotKey] = Object.freeze({ ...reward, offer });
       }
+      const optionalDescriptor = requireFieldsOptionalRewards(room, path);
+      const optionalRewardCount = state.optionalRewardCount;
+      if (
+        typeof optionalRewardCount !== 'number' ||
+        !Number.isInteger(optionalRewardCount) ||
+        optionalRewardCount < 0 ||
+        optionalRewardCount > optionalDescriptor.optionalRewardCapacity
+      ) {
+        failProjectDocument(
+          `${path}.optionalRewardCount`,
+          `must be within 0..${optionalDescriptor.optionalRewardCapacity}`,
+        );
+      }
+      const rawOptionalRewards = expectRecord(state.optionalRewards, `${path}.optionalRewards`);
+      expectExactKeys(rawOptionalRewards, optionalDescriptor.slotKeys, `${path}.optionalRewards`);
+      const optionalRewards: Record<string, AuthoredRewardState> = {};
+      for (const slotKey of optionalDescriptor.slotKeys) {
+        const reward = decodeRewardState(
+          rawOptionalRewards[slotKey],
+          catalog,
+          `${path}.optionalRewards.${slotKey}`,
+          { kind: 'producerLifecycle', key: optionalDescriptor.reward.producerLifecycleKey },
+        );
+        const offer = decodeCountedOffer(
+          reward.offer,
+          catalog,
+          optionalDescriptor.reward,
+          `${path}.optionalRewards.${slotKey}.offer`,
+        );
+        optionalRewards[slotKey] = Object.freeze({ ...reward, offer });
+      }
       const domain = fieldsCageActionDomain(catalog, room);
-      const knownActions = new Set(
-        domain.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
-      );
+      const knownActions = new Set([
+        ...domain.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
+        ...optionalDescriptor.slotKeys
+          .slice(0, optionalRewardCount)
+          .map((slotKey) => `interactOptional:${slotKey}`),
+      ]);
       const seenActions = new Set<string>();
       const actionOrder = expectArray(state.actionOrder, `${path}.actionOrder`).map(
         (value, index): FieldsCombatAction => {
@@ -976,7 +1015,7 @@ export function decodeRoomState(
                     phaseKey: expectString(action.phaseKey, `${actionPath}.phaseKey`),
                   });
                 })()
-              : kind === 'interactCageReward'
+              : kind === 'interactCageReward' || kind === 'interactOptionalReward'
                 ? (() => {
                     expectExactKeys(action, ['kind', 'slotKey'], actionPath);
                     return Object.freeze({
@@ -999,6 +1038,8 @@ export function decodeRoomState(
       return Object.freeze({
         kind: 'fieldsCombat',
         cages: Object.freeze(cages),
+        optionalRewardCount,
+        optionalRewards: Object.freeze(optionalRewards),
         actionOrder: Object.freeze(actionOrder),
       });
     }

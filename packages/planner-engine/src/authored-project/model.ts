@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 39 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 40 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -81,12 +81,15 @@ export interface AuthoredAcquisitionSiteState {
 export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
   readonly cages: Readonly<Record<string, AuthoredRewardState>>;
+  readonly optionalRewardCount: number;
+  readonly optionalRewards: Readonly<Record<string, AuthoredRewardState>>;
   readonly actionOrder: readonly FieldsCombatAction[];
 }
 
 export type FieldsCombatAction =
   | { readonly kind: 'completeCage'; readonly phaseKey: string }
-  | { readonly kind: 'interactCageReward'; readonly slotKey: string };
+  | { readonly kind: 'interactCageReward'; readonly slotKey: string }
+  | { readonly kind: 'interactOptionalReward'; readonly slotKey: string };
 
 export interface RewardWheelState {
   readonly storeKey: string;

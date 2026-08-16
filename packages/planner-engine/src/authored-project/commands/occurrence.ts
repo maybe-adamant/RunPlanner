@@ -19,6 +19,7 @@ export function applyOccurrenceCommand(
 ): ProjectDocument {
   switch (command.kind) {
     case 'ReplaceFieldsActionOrder':
+    case 'ReplaceFieldsOptionalRewardCount':
       return applyFieldsOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceIncomingReward':
       return applyIncomingRewardCommand(document, catalog, located, command);

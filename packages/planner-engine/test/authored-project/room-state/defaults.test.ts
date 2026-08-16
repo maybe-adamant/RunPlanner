@@ -60,6 +60,12 @@ describe('authored room-state defaults', () => {
         cage2: { offer: { rewardType: expect.any(String) } },
         cage3: { offer: { rewardType: expect.any(String) } },
       },
+      optionalRewardCount: 2,
+      optionalRewards: {
+        optional1: { offer: { rewardType: 'MaxManaDropSmall' } },
+        optional2: { offer: { rewardType: 'MaxManaDropSmall' } },
+        optional3: { offer: { rewardType: 'MaxManaDropSmall' } },
+      },
     });
 
     expect(

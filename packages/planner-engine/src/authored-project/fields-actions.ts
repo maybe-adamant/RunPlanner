@@ -34,12 +34,19 @@ export interface FieldsActionOrderProposal {
   readonly assessment: FieldsActionOrderAssessment;
   /** This one edit either completes the sequence or strictly repairs it. */
   readonly structurallyAuthorable: boolean;
+  /** Canonical checkbox transition for an optional pickup. */
+  readonly defaultParticipation?: boolean;
 }
 
 export function fieldsActionKey(action: FieldsCombatAction): string {
-  return action.kind === 'completeCage'
-    ? `complete:${action.phaseKey}`
-    : `interact:${action.slotKey}`;
+  switch (action.kind) {
+    case 'completeCage':
+      return `complete:${action.phaseKey}`;
+    case 'interactCageReward':
+      return `interact:${action.slotKey}`;
+    case 'interactOptionalReward':
+      return `interactOptional:${action.slotKey}`;
+  }
 }
 
 /** Exact declaration-owned cage phase/reward pairs in preparation order. */
@@ -171,10 +178,17 @@ export function assessFieldsActionOrder(
   ) {
     throw new Error(`${room.gameName} cannot assess ${String(activeCageCount)} Fields cages`);
   }
+  const optionalRewards = room.fieldsOptionalRewards;
+  if (optionalRewards === undefined) {
+    throw new Error(`${room.gameName} has no Fields optional rewards`);
+  }
   const active = domain.slice(0, activeCageCount);
-  const activeKeys = new Set(
-    active.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
-  );
+  const activeKeys = new Set([
+    ...active.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
+    ...optionalRewards.slotKeys
+      .slice(0, state.optionalRewardCount)
+      .map((slotKey) => `interactOptional:${slotKey}`),
+  ]);
   const orderIndex = new Map(
     state.actionOrder.map((action, index) => [fieldsActionKey(action), index] as const),
   );
@@ -279,6 +293,40 @@ export function fieldsActionOrderProposals(
           order: state.actionOrder.filter((_, index) => index !== fromIndex),
         });
       }
+    }
+  }
+  const activeOptionalSlotKeys = room.fieldsOptionalRewards?.slotKeys.slice(
+    0,
+    state.optionalRewardCount,
+  );
+  if (activeOptionalSlotKeys === undefined) {
+    throw new Error(`${room.gameName} has no Fields optional rewards`);
+  }
+  for (const slotKey of activeOptionalSlotKeys) {
+    const action = Object.freeze({ kind: 'interactOptionalReward' as const, slotKey });
+    const fromIndex = state.actionOrder.findIndex(
+      (candidate) => fieldsActionKey(candidate) === fieldsActionKey(action),
+    );
+    if (fromIndex >= 0) {
+      add({
+        kind: 'remove',
+        action,
+        fromIndex,
+        order: state.actionOrder.filter((_, index) => index !== fromIndex),
+        defaultParticipation: true,
+      });
+      continue;
+    }
+    for (let toIndex = 0; toIndex <= state.actionOrder.length; toIndex += 1) {
+      const order = [...state.actionOrder];
+      order.splice(toIndex, 0, action);
+      add({
+        kind: 'insert',
+        action,
+        toIndex,
+        order,
+        ...(toIndex === state.actionOrder.length ? { defaultParticipation: true } : {}),
+      });
     }
   }
   return Object.freeze(proposals);
