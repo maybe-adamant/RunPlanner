@@ -102,7 +102,7 @@ import type {
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 
-type BaseRewardPayloadCommand = Extract<
+type RewardPayloadCommand = Extract<
   ProjectCommand,
   {
     readonly kind:
@@ -114,59 +114,61 @@ type BaseRewardPayloadCommand = Extract<
   }
 >;
 
-function wrapDerivedShopEntryEdit<Command extends ProjectCommand>(
+function derivedShopPayloadIntent<Command extends DerivedShopEntryEditCommand['edit']>(
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
-  intent: WorkspaceCommandIntent<Command>,
+  edit: Command,
 ): WorkspaceCommandIntent<Command | DerivedShopEntryEditCommand> {
-  if (materialization === undefined) return intent;
+  if (materialization === undefined) return Object.freeze({ command: edit });
   return Object.freeze({
-    ...intent,
     command: Object.freeze({
       kind: 'EditDerivedShopEntry' as const,
       ...materialization,
-      edit: intent.command as DerivedShopEntryEditCommand['edit'],
+      edit,
     }),
   });
+}
+
+function rewardCommandFor(
+  owner: WorkspaceRewardControl['owner'],
+  value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
+): RewardPayloadCommand {
+  switch (owner.kind) {
+    case 'incomingReward':
+      return Object.freeze({ kind: 'ReplaceIncomingReward', reward: owner.address, value });
+    case 'localReward':
+      return Object.freeze({ kind: 'ReplaceLocalReward', reward: owner.address, value });
+    case 'rewardWheelOffer':
+      return Object.freeze({ kind: 'ReplaceRewardWheelOffer', offer: owner.address, value });
+    case 'shopOffer':
+      return Object.freeze({ kind: 'ReplaceShopOffer', offer: owner.address, value });
+    case 'acquisitionEntry':
+      return Object.freeze({
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: owner.address,
+        value,
+      });
+  }
 }
 
 function rewardIntentFor(
   owner: WorkspaceRewardControl['owner'],
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
-): WorkspaceCommandIntent<BaseRewardPayloadCommand> {
-  switch (owner.kind) {
-    case 'incomingReward':
-      return Object.freeze({
-        command: Object.freeze({ kind: 'ReplaceIncomingReward', reward: owner.address, value }),
-      });
-    case 'localReward':
-      return Object.freeze({
-        command: Object.freeze({ kind: 'ReplaceLocalReward', reward: owner.address, value }),
-      });
-    case 'rewardWheelOffer':
-      return Object.freeze({
-        command: Object.freeze({ kind: 'ReplaceRewardWheelOffer', offer: owner.address, value }),
-      });
-    case 'shopOffer':
-      return Object.freeze({
-        command: Object.freeze({ kind: 'ReplaceShopOffer', offer: owner.address, value }),
-      });
-    case 'acquisitionEntry':
-      return Object.freeze({
-        command: Object.freeze({
-          kind: 'ReplaceAcquisitionEntryOffer',
-          entry: owner.address,
-          value,
-        }),
-      });
+  materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
+): WorkspaceCommandIntent<RewardPayloadCommand | DerivedShopEntryEditCommand> {
+  const command = rewardCommandFor(owner, value);
+  if (materialization === undefined) return Object.freeze({ command });
+  if (command.kind !== 'ReplaceAcquisitionEntryOffer') {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner.address)} cannot own a derived Shop payload edit`,
+    );
   }
+  return derivedShopPayloadIntent(materialization, command);
 }
 
-function traitOfferIntentFor(
+function traitOfferCommandFor(
   owner: TraitOfferAddress,
   value: AuthoredTraitOffer,
-): WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }>
-> {
+): Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }> {
   if (owner.owner.kind === 'gorgonPhase') {
     if (value.kind !== 'traits' || value.options.length !== 3) {
       throw new StructuredWorkspaceProjectionContractError(
@@ -174,44 +176,36 @@ function traitOfferIntentFor(
       );
     }
     return Object.freeze({
-      command: Object.freeze({
-        kind: 'ReplaceGorgonAthenaOffer' as const,
-        trait: owner,
-        value: Object.freeze({
-          traitKeys: Object.freeze(value.options.map((option) => option.traitKey)) as readonly [
-            string,
-            string,
-            string,
-          ],
-          selectedOptionKey: value.selectedOptionKey,
-        }),
+      kind: 'ReplaceGorgonAthenaOffer' as const,
+      trait: owner,
+      value: Object.freeze({
+        traitKeys: Object.freeze(value.options.map((option) => option.traitKey)) as readonly [
+          string,
+          string,
+          string,
+        ],
+        selectedOptionKey: value.selectedOptionKey,
       }),
     });
   }
-  return Object.freeze({
-    command: Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value }),
-  });
+  return Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value });
 }
 
-function ordinaryTraitOfferIntentFor(
+function ordinaryTraitOfferCommandFor(
   owner: TraitOfferAddress,
   value: AuthoredTraitOffer,
-): WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>> {
-  return Object.freeze({
-    command: Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value }),
-  });
+): Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }> {
+  return Object.freeze({ kind: 'ReplaceTraitOffer' as const, trait: owner, value });
 }
 
-function levelResolutionIntentFor(
+function levelResolutionCommandFor(
   owner: LevelResolutionAddress,
   value: AuthoredLevelResolution,
-): WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>> {
+): Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }> {
   return Object.freeze({
-    command: Object.freeze({
-      kind: 'ReplaceLevelResolution' as const,
-      levelResolution: owner,
-      value,
-    }),
+    kind: 'ReplaceLevelResolution' as const,
+    levelResolution: owner,
+    value,
   });
 }
 
@@ -1723,10 +1717,7 @@ export function bindWorkspaceInteractions(
         authoredRewardTypes: rewardTypes,
         choiceLabel: services.rewardPicker.choiceLabel,
         intentFor: (offer: ResolvedRewardOffer) =>
-          wrapDerivedShopEntryEdit(
-            control.derivedShopEntryEdit,
-            rewardIntentFor(control.owner, offer),
-          ),
+          rewardIntentFor(control.owner, offer, control.derivedShopEntryEdit),
         key,
         load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer),
         model: services.rewardPicker.project,
@@ -1754,14 +1745,12 @@ export function bindWorkspaceInteractions(
               : { goldSupported: false, visible: conversion.value === 'gold' };
           })(),
           intentFor: (value: 'normal' | 'gold') =>
-            wrapDerivedShopEntryEdit(
+            derivedShopPayloadIntent(
               control.derivedShopEntryEdit,
               Object.freeze({
-                command: Object.freeze({
-                  kind: 'ReplaceAcquisitionConversion' as const,
-                  acquisition: conversion.address,
-                  value,
-                }),
+                kind: 'ReplaceAcquisitionConversion' as const,
+                acquisition: conversion.address,
+                value,
               }),
             ),
           key,
@@ -1897,9 +1886,9 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, circeResolution: resolution });
-                  return wrapDerivedShopEntryEdit(
+                  return derivedShopPayloadIntent(
                     derivedShopEntryEdit,
-                    ordinaryTraitOfferIntentFor(
+                    ordinaryTraitOfferCommandFor(
                       control.address,
                       Object.freeze({
                         ...offer,
@@ -1957,9 +1946,9 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoPomTarget: targetTraitKey });
-                  return wrapDerivedShopEntryEdit(
+                  return derivedShopPayloadIntent(
                     derivedShopEntryEdit,
-                    ordinaryTraitOfferIntentFor(
+                    ordinaryTraitOfferCommandFor(
                       control.address,
                       Object.freeze({
                         ...offer,
@@ -2005,9 +1994,9 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoLastRunBoon: child });
-                  return wrapDerivedShopEntryEdit(
+                  return derivedShopPayloadIntent(
                     derivedShopEntryEdit,
-                    ordinaryTraitOfferIntentFor(
+                    ordinaryTraitOfferCommandFor(
                       control.address,
                       Object.freeze({
                         ...offer,
@@ -2082,9 +2071,9 @@ export function bindWorkspaceInteractions(
                     );
                   const options = [...offer.options];
                   options[index] = Object.freeze({ ...existing, echoLastReward: child });
-                  return wrapDerivedShopEntryEdit(
+                  return derivedShopPayloadIntent(
                     derivedShopEntryEdit,
-                    ordinaryTraitOfferIntentFor(
+                    ordinaryTraitOfferCommandFor(
                       control.address,
                       Object.freeze({
                         ...offer,
@@ -2219,14 +2208,12 @@ export function bindWorkspaceInteractions(
                   Object.freeze({
                     control: setControl,
                     intentFor: (result: string | null) =>
-                      wrapDerivedShopEntryEdit(
+                      derivedShopPayloadIntent(
                         derivedShopEntryEdit,
                         Object.freeze({
-                          command: Object.freeze({
-                            kind: 'ReplaceAllTogetherSet' as const,
-                            set: setControl.address,
-                            value: result,
-                          }),
+                          kind: 'ReplaceAllTogetherSet' as const,
+                          set: setControl.address,
+                          value: result,
                         }),
                       ),
                     offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
@@ -2322,9 +2309,9 @@ export function bindWorkspaceInteractions(
         choices: traitChoices,
         giver: control.giver,
         intentFor: (value: AuthoredTraitOffer) =>
-          wrapDerivedShopEntryEdit(
+          derivedShopPayloadIntent(
             derivedShopEntryEdit,
-            traitOfferIntentFor(control.address, value),
+            traitOfferCommandFor(control.address, value),
           ),
         key,
         load,
@@ -2333,14 +2320,12 @@ export function bindWorkspaceInteractions(
         optionDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
-          wrapDerivedShopEntryEdit(
+          derivedShopPayloadIntent(
             derivedShopEntryEdit,
             Object.freeze({
-              command: Object.freeze({
-                kind: 'ReplaceTraitSelection' as const,
-                selectedOptionKey,
-                trait: control.address,
-              }),
+              kind: 'ReplaceTraitSelection' as const,
+              selectedOptionKey,
+              trait: control.address,
             }),
           ),
         value: control.offer,
@@ -2366,9 +2351,9 @@ export function bindWorkspaceInteractions(
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
         intentFor: (value: AuthoredLevelResolution) =>
-          wrapDerivedShopEntryEdit(
+          derivedShopPayloadIntent(
             derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner)),
-            levelResolutionIntentFor(control.address, value),
+            levelResolutionCommandFor(control.address, value),
           ),
         key,
         levelCount: control.levelCount,
