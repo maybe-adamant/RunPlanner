@@ -684,10 +684,19 @@ mandatory recreated entry through the ordinary acquisition roles. This keeps
 replayed Nectar on its opted-in run-progress path and keeps Blind Box identity
 separate from its resolved source.
 
-Gold Gold Gold derives one free supplemental acquisition immediately after the
-first purchased non-`SpellDrop` World Shop entry while its exact one-use trait
-is equipped. Loot duplicates receive fresh offer/source resolution, including
-an independently resolved Blind Box; Shop-profile Nectar duplicates do not
-gain the room/Echo-replay Pom mutation. The supplemental entry never enters the
-authored Shop order. Both effects reuse the canonical reward kernel and exact
-history projections rather than adding aliases or a second acquisition fold.
+Gold Gold Gold's first purchased non-`SpellDrop` World Shop entry consumes the
+exact one-use trait and materializes one separate free object. The source does
+not automatically acquire that object: its later interaction may be interwoven
+with other purchases and pickups in the room. Loot creation fixes its generated
+offer at materialization, while consumable behavior occurs at interaction.
+`RemoveStoreItem` runs before the purchased loot choice or consumable effect is
+settled, so the duplicate's generation frontier is the pre-source-acquisition
+history rather than the branch after applying that paid reward. Pom loot alone
+has a later conditional regeneration contact: `CreateBoonLootButtons` reruns
+`SetTraitsOnLoot` when any stored `StackOnly` target disappeared before
+interaction.
+Blind Box resolves its hidden loot on interaction in the game. The planner may
+instead fully author that result on the derived Gold row, provided the later
+site order stores only chronology. Schema 37 still collapses materialization
+and pickup into one immediate supplemental settlement; this is a known model
+discrepancy reserved for the focused Gold chronology correction.

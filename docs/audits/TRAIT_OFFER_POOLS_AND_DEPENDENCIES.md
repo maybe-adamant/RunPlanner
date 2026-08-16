@@ -546,12 +546,19 @@ least one legal nested outcome before publishing the outer Boon row, avoiding
 an empty authored child while recording this stricter-than-source boundary.
 
 Gold Gold Gold needs no parallel pending-effect record. `EchoDoubleShop`
-itself is the equipped pending state. Shop settlement tests for it at each
-eligible purchased entry in authored order, inserts the mandatory duplicate
-pickup immediately after the triggering purchase, and consumes the one-use
-trait. `SpellDrop` neither triggers nor consumes it. With no later eligible
-World Shop purchase, the trait remains equipped. Wells use separate purchase
-paths and are not part of this effect.
+itself is the equipped pending state. The first eligible purchased World Shop
+entry consumes that one-use trait and materializes a separate free duplicate;
+the duplicate may be interacted with later among other room acquisitions.
+`SpellDrop` neither triggers nor consumes it. With no later eligible World Shop
+purchase, the trait remains equipped. The duplicate is created from the
+pre-source-acquisition branch: the paid source identity is known, but its boon
+choice or consumable effect has not yet entered history. Wells use separate
+purchase paths and are not part of this effect. The planner's focused
+correction represents the materialized duplicate as one derived Shop row plus
+one entry in the existing site order, not as another pending-effect ledger. Pom
+duplicates retain the exact `StackOnly` interaction exception: if a stored
+target disappeared before pickup, the final visible Pom options regenerate
+from the pickup frontier.
 
 The schema-35 keepsake model owns the current identity at Echo acquisition,
 ordered later replacements, supported rank-I profiles, and a biome-start

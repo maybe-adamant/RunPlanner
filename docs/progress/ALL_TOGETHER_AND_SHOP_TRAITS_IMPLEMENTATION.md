@@ -9,6 +9,13 @@ scripts. The final lock removed the impossible contract-Blind-Box-to-Hermes
 chronology, closed the Time Piece contract matrix, and made the exact Shop
 Hermes restock exclusion behavior explicit.
 
+Gate A was delivered by `a4c46d8`; Gate B was delivered by `73f9e13`. A
+post-Gate-B source correction established that Gold Gold Gold materializes a
+separate pickup at its triggering purchase but does not acquire that pickup
+immediately. `ECHO_GOLD_SHOP_CHRONOLOGY_CORRECTION.md` therefore supersedes
+this plan's immediate-Gold-settlement statements and must complete before this
+phase closes. The Infernal Contract and Travel Deal contracts remain settled.
+
 The source authority is
 `../audits/ALL_TOGETHER_AND_SHOP_TRAITS_GAME_DATA_AUDIT.md`. The existing
 ordinary Shop declarations and requirements remain owned by
