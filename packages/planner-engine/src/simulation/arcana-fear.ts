@@ -11,6 +11,14 @@ export interface ActiveArcanaState {
 }
 export interface ArcanaState {
   readonly active: readonly ActiveArcanaState[];
+  /** Exact successful source interactions; remaining capacity is always derived. */
+  readonly artificerUses: readonly ArtificerUseEvidence[];
+}
+export interface ArtificerUseEvidence {
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly roleOrdinal: number;
 }
 export interface FearState {
   readonly configuredRanks: Readonly<Record<string, number>>;
@@ -42,6 +50,66 @@ export interface ArcanaFearState {
   readonly arcana: ArcanaState;
   readonly fear: FearState;
   readonly events: readonly ArcanaFearEvent[];
+}
+
+export interface ArtificerStatus {
+  readonly rarity: Extract<TraitRarity, 'Epic' | 'Heroic'>;
+  readonly capacity: 3 | 4;
+  readonly spent: number;
+  readonly remaining: number;
+}
+
+export function artificerStatus(
+  catalog: Catalog,
+  state: ArcanaFearState,
+): ArtificerStatus | undefined {
+  const active = state.arcana.active.find((card) => card.key === 'MetaToRunUpgrade');
+  const capacity =
+    active === undefined
+      ? undefined
+      : catalog.arcanaCards.byKey[active.key]?.artificerCapacityByRarity?.[active.rarity];
+  if (active === undefined || capacity === undefined) return undefined;
+  const spent = state.arcana.artificerUses.length;
+  return Object.freeze({
+    rarity: active.rarity,
+    capacity,
+    spent,
+    remaining: Math.max(0, capacity - spent),
+  });
+}
+
+export function consumeArtificerUse(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  evidence: ArtificerUseEvidence,
+): ArcanaFearState | undefined {
+  const status = artificerStatus(catalog, state);
+  if (status === undefined || status.remaining === 0) return undefined;
+  const key = JSON.stringify([
+    evidence.owner,
+    evidence.acquisitionRole,
+    evidence.sequence,
+    evidence.roleOrdinal,
+  ]);
+  if (
+    state.arcana.artificerUses.some(
+      (candidate) =>
+        JSON.stringify([
+          candidate.owner,
+          candidate.acquisitionRole,
+          candidate.sequence,
+          candidate.roleOrdinal,
+        ]) === key,
+    )
+  )
+    return undefined;
+  return Object.freeze({
+    ...state,
+    arcana: Object.freeze({
+      ...state.arcana,
+      artificerUses: Object.freeze([...state.arcana.artificerUses, Object.freeze(evidence)]),
+    }),
+  });
 }
 
 export type CirceResolutionEffect = 'activateArcana' | 'promoteArcana' | 'disableFear';
@@ -183,6 +251,7 @@ export function createArcanaFearState(catalog: Catalog, loadout: RouteLoadout): 
           }),
         ),
       ),
+      artificerUses: Object.freeze([]),
     }),
     fear: Object.freeze({
       configuredRanks: Object.freeze({ ...loadout.fearRanks }),
@@ -278,7 +347,7 @@ export function activateTemporaryArcana(
     legal: true,
     state: Object.freeze({
       ...state,
-      arcana: Object.freeze({ active: Object.freeze(active) }),
+      arcana: Object.freeze({ ...state.arcana, active: Object.freeze(active) }),
       events: Object.freeze([
         ...state.events,
         Object.freeze({
@@ -315,6 +384,7 @@ export function promoteArcana(
     state: Object.freeze({
       ...state,
       arcana: Object.freeze({
+        ...state.arcana,
         active: Object.freeze(
           state.arcana.active.map((candidate) =>
             canonicalKeys.includes(candidate.key)

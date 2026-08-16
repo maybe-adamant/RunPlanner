@@ -7,15 +7,18 @@ import type { ResolvedRewardOffer } from '../reward-kernel/model';
  * default: commands and codecs can consequently distinguish an incomplete
  * or malformed document from an intentional normal acquisition.
  */
-export function createDefaultConversionByAcquisitionRole(
+export function createDefaultDispositionByAcquisitionRole(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
-): Readonly<Record<string, 'normal' | 'gold'>> {
+): import('./model').AuthoredRewardState['dispositionByAcquisitionRole'] {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
   return Object.freeze(
     Object.fromEntries(
-      declaration.acquisitionRoles.values.map((role) => [role.key, 'normal' as const]),
+      declaration.acquisitionRoles.values.map((role) => [
+        role.key,
+        Object.freeze({ kind: 'normal' as const }),
+      ]),
     ),
   );
 }

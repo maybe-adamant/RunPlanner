@@ -77,27 +77,62 @@ export function RewardControlEditor({
               workspaceInteractionKey(conversion.address),
             );
             return !interaction.visible ? null : (
-              <label
+              <div
                 className="reward-acquisition-conversion"
                 key={workspaceInteractionKey(conversion.address)}
               >
-                <span>{conversion.acquisitionRoleLabel}</span>
-                <select
-                  aria-label={`Time Piece ${conversion.acquisitionRoleLabel}`}
-                  onChange={(event) =>
-                    executeIntent(interaction.intentFor(event.target.value as 'normal' | 'gold'))
-                  }
-                  value={conversion.value}
-                >
-                  <option value="normal">Acquire normally</option>
-                  <option
-                    disabled={!interaction.goldSupported && conversion.value !== 'gold'}
-                    value="gold"
+                <label>
+                  <span>{conversion.acquisitionRoleLabel}</span>
+                  <select
+                    aria-label={`Acquisition disposition ${conversion.acquisitionRoleLabel}`}
+                    onChange={(event) => {
+                      const kind = event.target.value;
+                      if (kind === 'normal' || kind === 'timePiece') {
+                        executeIntent(interaction.intentFor(Object.freeze({ kind })));
+                        return;
+                      }
+                      const replacement = interaction.artificerDefaultReplacement;
+                      if (kind === 'artificer' && replacement !== undefined)
+                        executeIntent(
+                          interaction.intentFor(Object.freeze({ kind: 'artificer', replacement })),
+                        );
+                    }}
+                    value={conversion.value.kind}
                   >
-                    Convert to Gold
-                  </option>
-                </select>
-              </label>
+                    <option value="normal">Acquire normally</option>
+                    <option
+                      disabled={
+                        !interaction.timePieceSupported && conversion.value.kind !== 'timePiece'
+                      }
+                      value="timePiece"
+                    >
+                      Convert to Gold
+                    </option>
+                    <option
+                      disabled={
+                        (!interaction.artificerSupported ||
+                          interaction.artificerDefaultReplacement === undefined) &&
+                        conversion.value.kind !== 'artificer'
+                      }
+                      value="artificer"
+                    >
+                      Artificer
+                    </option>
+                  </select>
+                </label>
+                {conversion.value.kind !==
+                'artificer' ? null : interaction.artificerReplacementControl ===
+                  undefined ? null : (
+                  <fieldset className="artificer-replacement-editor">
+                    <legend>Artificer replacement</legend>
+                    <RewardControlEditor
+                      control={interaction.artificerReplacementControl}
+                      idPrefix={`${idPrefix}-artificer-${conversion.address.acquisitionRole}`}
+                      interactions={interactions}
+                    />
+                  </fieldset>
+                )}
+              </div>
             );
           })}
         </div>

@@ -12,6 +12,7 @@ import {
   createLevelResolutionAddress,
   optionIndex,
   createDefaultAllTogetherResult,
+  traitGiverForAcquisitionRole,
   semanticAddressKey,
   type OccurrenceId,
   type SemanticAddress,
@@ -24,6 +25,7 @@ import {
   type KeepsakeEquipResultAddress,
   type DerivedShopEntryEditCommand,
   type ProjectCommand,
+  type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -55,6 +57,7 @@ import { createTakeoverBatchCommand } from '@planner/workspace/takeoverBatchInte
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
+import { workspaceAcquisitionRoleLabel } from '../assembly/occurrence-assembly';
 import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';
 import type {
   StructuredWorkspaceContextualServices,
@@ -72,7 +75,9 @@ import type {
   WorkspaceInteractionChoice,
   WorkspaceCommandIntent,
   WorkspaceRewardControl,
+  WorkspaceExplicitRewardControl,
   WorkspaceRewardInteraction,
+  WorkspaceAcquisitionConversionControl,
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
@@ -103,6 +108,107 @@ import type {
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 
+function createArtificerReplacementControl(
+  catalog: Catalog,
+  candidates: CandidateProjectionSession,
+  conversion: WorkspaceAcquisitionConversionControl,
+  replacementAddress: import('@run-planner/engine/authored-project').AcquisitionEntryAddress,
+  candidateOptions: readonly AuthoredRewardState[],
+): WorkspaceExplicitRewardControl | undefined {
+  if (conversion.value.kind !== 'artificer') return undefined;
+  const replacement = conversion.value.replacement;
+  const options = Object.freeze(
+    candidateOptions.some(
+      (option) => JSON.stringify(option.offer) === JSON.stringify(replacement.offer),
+    )
+      ? [...candidateOptions]
+      : [...candidateOptions, replacement],
+  );
+  const markerFor = (address: SemanticAddress) =>
+    Object.freeze({
+      ...conversion.marker,
+      address,
+      focusKey: semanticAddressKey(address),
+    });
+  const owner = Object.freeze({ kind: 'acquisitionEntry' as const, address: replacementAddress });
+  const traitOffers = Object.freeze(
+    Object.entries(replacement.traitOffersByAcquisitionRole).flatMap(([role, offer]) => {
+      const giverKey = traitGiverForAcquisitionRole(catalog, replacement.offer, role);
+      const giver = giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey];
+      if (giver === undefined) return [];
+      const address = createTraitOfferAddress(replacementAddress, role);
+      return [
+        Object.freeze({
+          acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role),
+          address,
+          giver,
+          marker: markerFor(address),
+          offer,
+          rewardOwner: replacementAddress,
+        }),
+      ];
+    }),
+  );
+  const levelResolutions = Object.freeze(
+    Object.entries(replacement.levelResolutionsByAcquisitionRole ?? {}).flatMap(([role, value]) => {
+      const address = createLevelResolutionAddress(replacementAddress, role);
+      const assessment = candidates.levelResolution(address, value);
+      const counts = new Set((assessment?.groups ?? []).map((group) => group.surface.levelCount));
+      const levelCount = counts.size === 1 ? [...counts][0] : undefined;
+      return levelCount === undefined
+        ? []
+        : [
+            Object.freeze({
+              acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role),
+              address,
+              levelCount,
+              settledEmptyNoOp: false,
+              marker: markerFor(address),
+              rewardOwner: replacementAddress,
+              value,
+            }),
+          ];
+    }),
+  );
+  const declaration = catalog.rewards.rewardTypes.byKey[replacement.offer.rewardType];
+  if (declaration === undefined)
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(replacementAddress)} has unknown reward type ${replacement.offer.rewardType}`,
+    );
+  const conversions = Object.freeze(
+    declaration.acquisitionRoles.values.map((role) => {
+      const address = createAcquisitionRoleAddress(replacementAddress, role.key);
+      const value = replacement.dispositionByAcquisitionRole[role.key];
+      if (value === undefined)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(replacementAddress)} lacks disposition ${role.key}`,
+        );
+      return Object.freeze({
+        acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role.key),
+        address,
+        marker: markerFor(address),
+        rewardOwner: replacementAddress,
+        value,
+      });
+    }),
+  );
+  return Object.freeze({
+    kind: 'explicitReward' as const,
+    marker: markerFor(replacementAddress),
+    offer: replacement.offer,
+    owner,
+    traitOffers,
+    levelResolutions,
+    conversions,
+    rewardTypes: Object.freeze([...new Set(options.map((option) => option.offer.rewardType))]),
+    artificerReplacementEdit: Object.freeze({
+      acquisition: conversion.address,
+      options,
+      replacement,
+    }),
+  });
+}
+
 type RewardPayloadCommand = Extract<
   ProjectCommand,
   {
@@ -115,16 +221,184 @@ type RewardPayloadCommand = Extract<
   }
 >;
 
-function derivedShopPayloadIntent<Command extends DerivedShopEntryEditCommand['edit']>(
+function replaceArtificerTraitOffer(
+  replacement: AuthoredRewardState,
+  role: string,
+  value: AuthoredTraitOffer,
+): AuthoredRewardState {
+  return Object.freeze({
+    ...replacement,
+    traitOffersByAcquisitionRole: Object.freeze({
+      ...replacement.traitOffersByAcquisitionRole,
+      [role]: value,
+    }),
+  });
+}
+
+function replaceArtificerLevelResolution(
+  replacement: AuthoredRewardState,
+  role: string,
+  value: AuthoredLevelResolution,
+): AuthoredRewardState {
+  return Object.freeze({
+    ...replacement,
+    levelResolutionsByAcquisitionRole: Object.freeze({
+      ...replacement.levelResolutionsByAcquisitionRole,
+      [role]: value,
+    }),
+  });
+}
+
+function selectArtificerTraitOffer(
+  replacement: AuthoredRewardState,
+  role: string,
+  selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+): AuthoredRewardState {
+  const offer = replacement.traitOffersByAcquisitionRole[role];
+  if (offer?.kind !== 'traits') {
+    throw new StructuredWorkspaceProjectionContractError(
+      `Artificer replacement role ${role} has no selectable trait offer`,
+    );
+  }
+  return replaceArtificerTraitOffer(
+    replacement,
+    role,
+    Object.freeze({ ...offer, selectedOptionKey }),
+  );
+}
+
+function editArtificerReplacement(
+  edit: DerivedShopEntryEditCommand['edit'],
+  owner: NonNullable<WorkspaceRewardControl['artificerReplacementEdit']>,
+): AuthoredRewardState {
+  const replacement = owner.replacement;
+  switch (edit.kind) {
+    case 'ReplaceAcquisitionEntryOffer': {
+      const selected = owner.options.find(
+        (option) => JSON.stringify(option.offer) === JSON.stringify(edit.value),
+      );
+      if (selected === undefined)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(edit.entry)} has no complete Artificer reward option`,
+        );
+      return selected;
+    }
+    case 'ReplaceTraitOffer':
+      return replaceArtificerTraitOffer(replacement, edit.trait.acquisitionRole, edit.value);
+    case 'ReplaceTraitSelection':
+      return selectArtificerTraitOffer(
+        replacement,
+        edit.trait.acquisitionRole,
+        edit.selectedOptionKey,
+      );
+    case 'ReplaceAllTogetherSet': {
+      const role = edit.set.trait.acquisitionRole;
+      const offer = replacement.traitOffersByAcquisitionRole[role];
+      if (offer?.kind !== 'traits')
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(edit.set)} has no Artificer trait offer`,
+        );
+      const index = optionIndex(edit.set.optionKey);
+      const option = offer.options[index];
+      if (option === undefined)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(edit.set)} has no selected trait option`,
+        );
+      if (option.allTogetherResult === undefined)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(edit.set)} has no complete All Together result`,
+        );
+      const options = [
+        ...offer.options,
+      ] as import('@run-planner/engine/authored-project').AuthoredTraitOption[];
+      options[index] = Object.freeze({
+        ...option,
+        allTogetherResult: Object.freeze({
+          ...option.allTogetherResult,
+          [edit.set.setKey]: edit.value,
+        }),
+      });
+      return replaceArtificerTraitOffer(
+        replacement,
+        role,
+        Object.freeze({
+          ...offer,
+          options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+        }),
+      );
+    }
+    case 'ReplaceLevelResolution':
+      return replaceArtificerLevelResolution(
+        replacement,
+        edit.levelResolution.acquisitionRole,
+        edit.value,
+      );
+    case 'ReplaceAcquisitionDisposition':
+      return Object.freeze({
+        ...replacement,
+        dispositionByAcquisitionRole: Object.freeze({
+          ...replacement.dispositionByAcquisitionRole,
+          [edit.acquisition.acquisitionRole]: edit.value,
+        }),
+      });
+    case 'ReplaceGorgonAthenaOffer':
+      throw new StructuredWorkspaceProjectionContractError(
+        'Artificer replacement cannot own a Gorgon Athena offer',
+      );
+  }
+}
+
+function derivedShopPayloadIntent<Command extends ProjectCommand>(
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
   edit: Command,
-): WorkspaceCommandIntent<Command | DerivedShopEntryEditCommand> {
+  artificer?: WorkspaceRewardControl['artificerReplacementEdit'],
+): WorkspaceCommandIntent<
+  | Command
+  | DerivedShopEntryEditCommand
+  | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
+> {
+  if (artificer !== undefined) {
+    if (
+      edit.kind !== 'ReplaceAcquisitionEntryOffer' &&
+      edit.kind !== 'ReplaceTraitOffer' &&
+      edit.kind !== 'ReplaceGorgonAthenaOffer' &&
+      edit.kind !== 'ReplaceTraitSelection' &&
+      edit.kind !== 'ReplaceAllTogetherSet' &&
+      edit.kind !== 'ReplaceLevelResolution' &&
+      edit.kind !== 'ReplaceAcquisitionDisposition'
+    )
+      throw new StructuredWorkspaceProjectionContractError(
+        `${edit.kind} cannot edit an Artificer replacement`,
+      );
+    return Object.freeze({
+      command: Object.freeze({
+        kind: 'ReplaceAcquisitionDisposition' as const,
+        acquisition: artificer.acquisition,
+        value: Object.freeze({
+          kind: 'artificer' as const,
+          replacement: editArtificerReplacement(edit, artificer),
+        }),
+      }),
+    });
+  }
   if (materialization === undefined) return Object.freeze({ command: edit });
+  if (
+    edit.kind !== 'ReplaceAcquisitionEntryOffer' &&
+    edit.kind !== 'ReplaceTraitOffer' &&
+    edit.kind !== 'ReplaceGorgonAthenaOffer' &&
+    edit.kind !== 'ReplaceTraitSelection' &&
+    edit.kind !== 'ReplaceAllTogetherSet' &&
+    edit.kind !== 'ReplaceLevelResolution' &&
+    edit.kind !== 'ReplaceAcquisitionDisposition'
+  )
+    throw new StructuredWorkspaceProjectionContractError(
+      `${edit.kind} cannot edit a derived Shop entry`,
+    );
   return Object.freeze({
     command: Object.freeze({
       kind: 'EditDerivedShopEntry' as const,
       ...materialization,
-      edit,
+      edit: edit as DerivedShopEntryEditCommand['edit'],
     }),
   });
 }
@@ -155,8 +429,14 @@ function rewardIntentFor(
   owner: WorkspaceRewardControl['owner'],
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
-): WorkspaceCommandIntent<RewardPayloadCommand | DerivedShopEntryEditCommand> {
+  artificer?: WorkspaceRewardControl['artificerReplacementEdit'],
+): WorkspaceCommandIntent<
+  | RewardPayloadCommand
+  | DerivedShopEntryEditCommand
+  | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
+> {
   const command = rewardCommandFor(owner, value);
+  if (artificer !== undefined) return derivedShopPayloadIntent(materialization, command, artificer);
   if (materialization === undefined) return Object.freeze({ command });
   if (command.kind !== 'ReplaceAcquisitionEntryOffer') {
     throw new StructuredWorkspaceProjectionContractError(
@@ -1732,21 +2012,69 @@ export function bindWorkspaceInteractions(
     );
   }
 
+  const effectiveRewardControls = new Map(rewardControls);
+  const evaluatedConversions = new Map<
+    string,
+    ReturnType<CandidateProjectionSession['acquisitionConversion']>
+  >();
+  const replacementControls = new Map<string, WorkspaceExplicitRewardControl>();
+  for (const control of rewardControls.values()) {
+    for (const conversion of control.conversions ?? []) {
+      const key = workspaceInteractionKey(conversion.address);
+      const evaluated = candidates.acquisitionConversion(conversion.address);
+      evaluatedConversions.set(key, evaluated);
+      if (
+        evaluated.kind !== 'acquisitionConversion' ||
+        evaluated.result.artificerReplacementAddress === undefined
+      )
+        continue;
+      const replacement = createArtificerReplacementControl(
+        catalog,
+        candidates,
+        conversion,
+        evaluated.result.artificerReplacementAddress,
+        evaluated.result.artificerReplacementOptions ?? Object.freeze([]),
+      );
+      if (replacement === undefined) continue;
+      const replacementKey = workspaceInteractionKey(replacement.owner.address);
+      effectiveRewardControls.set(replacementKey, replacement);
+      replacementControls.set(key, replacement);
+    }
+  }
+
+  const effectiveTraitControls = new Map(traitControls ?? []);
+  const effectiveLevelResolutionControls = new Map(levelResolutionControls ?? []);
+  for (const control of effectiveRewardControls.values()) {
+    for (const trait of control.traitOffers ?? [])
+      effectiveTraitControls.set(workspaceInteractionKey(trait.address), trait);
+    for (const level of control.levelResolutions ?? [])
+      effectiveLevelResolutionControls.set(workspaceInteractionKey(level.address), level);
+  }
+
   const derivedShopEntryEdits = new Map<
     string,
     NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
   >();
-  for (const control of rewardControls.values()) {
+  const artificerReplacementEdits = new Map<
+    string,
+    NonNullable<WorkspaceRewardControl['artificerReplacementEdit']>
+  >();
+  for (const control of effectiveRewardControls.values()) {
     if (control.derivedShopEntryEdit !== undefined) {
       derivedShopEntryEdits.set(
         semanticAddressKey(control.owner.address),
         control.derivedShopEntryEdit,
       );
     }
+    if (control.artificerReplacementEdit !== undefined)
+      artificerReplacementEdits.set(
+        semanticAddressKey(control.owner.address),
+        control.artificerReplacementEdit,
+      );
   }
 
   const rewards = new Map<string, WorkspaceRewardInteraction>();
-  for (const [key, control] of rewardControls) {
+  for (const [key, control] of effectiveRewardControls) {
     const rewardTypes =
       control.kind === 'countedReward'
         ? candidates.countedRewardTypes(control.owner, control.binding, control.offer.rewardType)
@@ -1757,7 +2085,12 @@ export function bindWorkspaceInteractions(
         authoredRewardTypes: rewardTypes,
         choiceLabel: services.rewardPicker.choiceLabel,
         intentFor: (offer: ResolvedRewardOffer) =>
-          rewardIntentFor(control.owner, offer, control.derivedShopEntryEdit),
+          rewardIntentFor(
+            control.owner,
+            offer,
+            control.derivedShopEntryEdit,
+            control.artificerReplacementEdit,
+          ),
         key,
         load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer),
         model: services.rewardPicker.project,
@@ -1769,29 +2102,52 @@ export function bindWorkspaceInteractions(
   }
 
   const acquisitionConversions = new Map();
-  for (const control of rewardControls.values()) {
+  for (const control of effectiveRewardControls.values()) {
     for (const conversion of control.conversions ?? []) {
       const key = workspaceInteractionKey(conversion.address);
+      const evaluated =
+        evaluatedConversions.get(key) ?? candidates.acquisitionConversion(conversion.address);
       acquisitionConversions.set(
         key,
         Object.freeze({
           ...(() => {
-            const evaluated = candidates.acquisitionConversion(conversion.address);
             return evaluated.kind === 'acquisitionConversion'
               ? {
-                  goldSupported: evaluated.result.goldSupported,
-                  visible: evaluated.result.goldSupported || conversion.value === 'gold',
+                  timePieceSupported: evaluated.result.timePieceSupported,
+                  artificerSupported: evaluated.result.artificerSupported,
+                  ...(evaluated.result.artificerDefaultReplacement === undefined
+                    ? {}
+                    : {
+                        artificerDefaultReplacement: evaluated.result.artificerDefaultReplacement,
+                      }),
+                  artificerReplacementOptions:
+                    evaluated.result.artificerReplacementOptions ?? Object.freeze([]),
+                  ...(replacementControls.get(key) === undefined
+                    ? {}
+                    : { artificerReplacementControl: replacementControls.get(key)! }),
+                  visible:
+                    evaluated.result.timePieceSupported ||
+                    evaluated.result.artificerSupported ||
+                    conversion.value.kind !== 'normal',
                 }
-              : { goldSupported: false, visible: conversion.value === 'gold' };
+              : {
+                  timePieceSupported: false,
+                  artificerSupported: false,
+                  artificerReplacementOptions: Object.freeze([]),
+                  visible: conversion.value.kind !== 'normal',
+                };
           })(),
-          intentFor: (value: 'normal' | 'gold') =>
+          intentFor: (
+            value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
+          ) =>
             derivedShopPayloadIntent(
               control.derivedShopEntryEdit,
               Object.freeze({
-                kind: 'ReplaceAcquisitionConversion' as const,
+                kind: 'ReplaceAcquisitionDisposition' as const,
                 acquisition: conversion.address,
                 value,
               }),
+              control.artificerReplacementEdit,
             ),
           key,
           owner: conversion.address,
@@ -1802,8 +2158,11 @@ export function bindWorkspaceInteractions(
   }
 
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
-  for (const [key, control] of traitControls ?? []) {
+  for (const [key, control] of effectiveTraitControls) {
     const derivedShopEntryEdit = derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner));
+    const artificerReplacementEdit = artificerReplacementEdits.get(
+      semanticAddressKey(control.rewardOwner),
+    );
     const traitChoices = Object.freeze(
       control.giver.traitKeys.map((traitKey) => {
         const trait = catalog.traits.byKey[traitKey];
@@ -1935,6 +2294,7 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
+                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -1995,6 +2355,7 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
+                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2043,6 +2404,7 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
+                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2120,6 +2482,7 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
+                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2216,7 +2579,7 @@ export function bindWorkspaceInteractions(
                         defaultValue: evaluated.result.defaultValue,
                         goldSupported:
                           conversion.kind === 'acquisitionConversion' &&
-                          conversion.result.goldSupported,
+                          conversion.result.timePieceSupported,
                         traitOptionDomains,
                         traitRarityEditable: nestedGiver?.rarityPolicy.kind === 'selectable',
                         ...(nextTraitOffer === undefined ? {} : { nextTraitOffer }),
@@ -2255,6 +2618,7 @@ export function bindWorkspaceInteractions(
                           set: setControl.address,
                           value: result,
                         }),
+                        artificerReplacementEdit,
                       ),
                     offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
                       const index = optionIndex(optionKey);
@@ -2352,6 +2716,7 @@ export function bindWorkspaceInteractions(
           derivedShopPayloadIntent(
             derivedShopEntryEdit,
             traitOfferCommandFor(control.address, value),
+            artificerReplacementEdit,
           ),
         key,
         load,
@@ -2367,6 +2732,7 @@ export function bindWorkspaceInteractions(
               selectedOptionKey,
               trait: control.address,
             }),
+            artificerReplacementEdit,
           ),
         value: control.offer,
         traitsStartingDraft: () =>
@@ -2385,7 +2751,10 @@ export function bindWorkspaceInteractions(
   }
 
   const levelResolutions = new Map<string, WorkspaceLevelResolutionInteraction>();
-  for (const [key, control] of levelResolutionControls ?? []) {
+  for (const [key, control] of effectiveLevelResolutionControls) {
+    const artificerReplacementEdit = artificerReplacementEdits.get(
+      semanticAddressKey(control.rewardOwner),
+    );
     levelResolutions.set(
       key,
       Object.freeze({
@@ -2394,6 +2763,7 @@ export function bindWorkspaceInteractions(
           derivedShopPayloadIntent(
             derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner)),
             levelResolutionCommandFor(control.address, value),
+            artificerReplacementEdit,
           ),
         key,
         levelCount: control.levelCount,

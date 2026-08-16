@@ -57,7 +57,11 @@ export function applyFieldsOccurrenceCommand(
             actionOrder: Object.freeze(
               state.actionOrder.filter(
                 (action) =>
-                  action.kind !== 'interactOptionalReward' || activeSlotKeys.has(action.slotKey),
+                  (action.kind !== 'interactOptionalReward' ||
+                    activeSlotKeys.has(action.slotKey)) &&
+                  (action.kind !== 'interactArtificerReplacement' ||
+                    action.sourceGroup !== 'optionalRewards' ||
+                    activeSlotKeys.has(action.slotKey)),
               ),
             ),
           }),
@@ -73,6 +77,24 @@ export function applyFieldsOccurrenceCommand(
     ...optionalDescriptor.slotKeys
       .slice(0, state.optionalRewardCount)
       .map((slotKey) => `interactOptional:${slotKey}`),
+    ...fieldsCageActionDomain(catalog, room).flatMap((entry) =>
+      Object.entries(state.cages[entry.slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+        ([role, disposition]) =>
+          disposition.kind === 'artificer'
+            ? [`interactArtificer:cages:${entry.slotKey}:${role}`]
+            : [],
+      ),
+    ),
+    ...optionalDescriptor.slotKeys
+      .slice(0, state.optionalRewardCount)
+      .flatMap((slotKey) =>
+        Object.entries(state.optionalRewards[slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+          ([role, disposition]) =>
+            disposition.kind === 'artificer'
+              ? [`interactArtificer:optionalRewards:${slotKey}:${role}`]
+              : [],
+        ),
+      ),
   ]);
   const seen = new Set<string>();
   for (const action of command.actionOrder) {

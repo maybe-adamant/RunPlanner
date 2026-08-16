@@ -711,7 +711,9 @@ describe('trait offer editor', () => {
                     load: () => ({
                       rewardType: 'RoomMoneyDrop',
                       rewardLabel: 'Gold',
-                      defaultValue: Object.freeze({ conversion: 'normal' as const }),
+                      defaultValue: Object.freeze({
+                        disposition: Object.freeze({ kind: 'normal' as const }),
+                      }),
                       goldSupported: false,
                       traitOptionDomains: Object.freeze([]),
                       traitRarityEditable: false,
@@ -745,7 +747,7 @@ describe('trait offer editor', () => {
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]).toEqual({
       traitKey: 'EchoLastReward',
-      echoLastReward: { conversion: 'normal' },
+      echoLastReward: { disposition: { kind: 'normal' } },
     });
     application.dispose();
   });

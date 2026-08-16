@@ -149,17 +149,17 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
   return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
 }
 
-describe('schema-40 occurrence-owned encounter persistence', () => {
+describe('schema-41 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(40);
+    expect(decoded.schemaVersion).toBe(41);
   });
 
   it.each(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const)(
-    'rejects reserved initial Shop slot key %s at the schema-40 codec boundary',
+    'rejects reserved initial Shop slot key %s at the schema-41 codec boundary',
     (reservedKey) => {
       const world = catalog.rewards.shops.byKey.WorldShop;
       const first = world?.slots.values[0];
@@ -270,7 +270,7 @@ describe('schema-40 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 40 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 41 });
   });
 
   it('round-trips the exact All Together map, legal null, and one semantic set edit', () => {
@@ -367,43 +367,77 @@ describe('schema-40 occurrence-owned encounter persistence', () => {
   it('rejects schema 35 rather than inventing an All Together child migration', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 35;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 35');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 35');
   });
 
   it('rejects schema 37 rather than migrating source-keyed Gold chronology', () => {
     const document = encoded(createCompleteFGProject());
     document.schemaVersion = 37;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 37');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 37');
   });
 
   it('rejects schema 39 rather than inventing Fields optional rewards', () => {
     const document = encoded(createGoldenFGHProject());
-    document.schemaVersion = 39;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 39');
+    document.schemaVersion = 40;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 40');
   });
 
-  it('requires an exact persisted conversion disposition map for every reward role', () => {
+  it('requires an exact persisted acquisition disposition map for every reward role', () => {
     const document = encoded(createCompleteFGProject());
     const reward = (occurrence(document, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord)
       .reward as JsonRecord;
 
-    delete reward.conversionByAcquisitionRole;
+    delete reward.dispositionByAcquisitionRole;
     expect(() => decodeProjectDocument(document, catalog)).toThrow(
-      'conversionByAcquisitionRole: is required',
+      'dispositionByAcquisitionRole: is required',
     );
 
     const incomplete = encoded(createCompleteFGProject());
     const incompleteReward = (
       occurrence(incomplete, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord
     ).reward as JsonRecord;
-    incompleteReward.conversionByAcquisitionRole = {};
-    expect(() => decodeProjectDocument(incomplete, catalog)).toThrow('must be normal or gold');
+    incompleteReward.dispositionByAcquisitionRole = {};
+    expect(() => decodeProjectDocument(incomplete, catalog)).toThrow('is missing acquisition role');
 
     const extra = encoded(createCompleteFGProject());
     const extraReward = (occurrence(extra, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord)
       .reward as JsonRecord;
-    (extraReward.conversionByAcquisitionRole as JsonRecord).unknown = 'normal';
+    (extraReward.dispositionByAcquisitionRole as JsonRecord).unknown = { kind: 'normal' };
     expect(() => decodeProjectDocument(extra, catalog)).toThrow('is not an acquisition role');
+  });
+
+  it('rejects excluded and recursive Artificer replacement payloads', () => {
+    const excluded = encoded(createCompleteFGProject());
+    const gift = (occurrence(excluded, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord)
+      .reward as JsonRecord;
+    const spell = (occurrence(excluded, 'F', goldenFOccurrenceId(10, 2)).state as JsonRecord)
+      .reward as JsonRecord;
+    (gift.dispositionByAcquisitionRole as JsonRecord).self = {
+      kind: 'artificer',
+      replacement: spell,
+    };
+    expect(() => decodeProjectDocument(excluded, catalog)).toThrow(
+      'must be an Artificer-eligible RunProgress reward',
+    );
+
+    const recursive = encoded(createCompleteFGProject());
+    const recursiveGift = (
+      occurrence(recursive, 'F', goldenFOccurrenceId(1, 1)).state as JsonRecord
+    ).reward as JsonRecord;
+    const maxHealth = (occurrence(recursive, 'F', goldenFOccurrenceId(3, 1)).state as JsonRecord)
+      .reward as JsonRecord;
+    const nested = structuredClone(maxHealth);
+    (maxHealth.dispositionByAcquisitionRole as JsonRecord).self = {
+      kind: 'artificer',
+      replacement: nested,
+    };
+    (recursiveGift.dispositionByAcquisitionRole as JsonRecord).self = {
+      kind: 'artificer',
+      replacement: maxHealth,
+    };
+    expect(() => decodeProjectDocument(recursive, catalog)).toThrow(
+      'Artificer replacements cannot recurse',
+    );
   });
 
   it('round-trips complete Fig Leaf phase maps as immutable nested state', () => {
@@ -587,28 +621,28 @@ describe('schema-40 occurrence-owned encounter persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 40, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 41, received 30');
   });
 
   it.each([

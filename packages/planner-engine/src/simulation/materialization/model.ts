@@ -38,7 +38,7 @@ export interface CanonicalResolvedIncomingReward {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
-  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey?: string;
   /**
@@ -56,7 +56,7 @@ export interface CanonicalShopOffer {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
-  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferContext;
 }
 
@@ -79,7 +79,7 @@ export interface CanonicalLocalReward {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
-  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey: string;
 }
@@ -94,7 +94,7 @@ export interface CanonicalFieldsOptionalReward {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
-  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferContext;
   readonly resolvedStoreKey: 'FieldsOptionalRewards';
 }
@@ -106,7 +106,7 @@ export interface CanonicalRewardWheelOffer {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
-  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferContext;
   readonly picked: boolean;
 }

@@ -46,6 +46,8 @@ export function fieldsActionKey(action: FieldsCombatAction): string {
       return `interact:${action.slotKey}`;
     case 'interactOptionalReward':
       return `interactOptional:${action.slotKey}`;
+    case 'interactArtificerReplacement':
+      return `interactArtificer:${action.sourceGroup}:${action.slotKey}:${action.acquisitionRole}`;
   }
 }
 
@@ -183,11 +185,44 @@ export function assessFieldsActionOrder(
     throw new Error(`${room.gameName} has no Fields optional rewards`);
   }
   const active = domain.slice(0, activeCageCount);
+  const artificerActions = [
+    ...active.flatMap((entry) =>
+      Object.entries(state.cages[entry.slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+        ([acquisitionRole, disposition]) =>
+          disposition.kind === 'artificer'
+            ? [
+                Object.freeze({
+                  kind: 'interactArtificerReplacement' as const,
+                  sourceGroup: 'cages' as const,
+                  slotKey: entry.slotKey,
+                  acquisitionRole,
+                }),
+              ]
+            : [],
+      ),
+    ),
+    ...optionalRewards.slotKeys.slice(0, state.optionalRewardCount).flatMap((slotKey) =>
+      Object.entries(state.optionalRewards[slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+        ([acquisitionRole, disposition]) =>
+          disposition.kind === 'artificer'
+            ? [
+                Object.freeze({
+                  kind: 'interactArtificerReplacement' as const,
+                  sourceGroup: 'optionalRewards' as const,
+                  slotKey,
+                  acquisitionRole,
+                }),
+              ]
+            : [],
+      ),
+    ),
+  ];
   const activeKeys = new Set([
     ...active.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
     ...optionalRewards.slotKeys
       .slice(0, state.optionalRewardCount)
       .map((slotKey) => `interactOptional:${slotKey}`),
+    ...artificerActions.map(fieldsActionKey),
   ]);
   const orderIndex = new Map(
     state.actionOrder.map((action, index) => [fieldsActionKey(action), index] as const),
@@ -217,6 +252,24 @@ export function assessFieldsActionOrder(
     } else if (completionIndex === undefined || interactionIndex < completionIndex) {
       issues.push(Object.freeze({ kind: 'dependency', action: interaction }));
     }
+  }
+  for (const action of artificerActions) {
+    const replacementIndex = orderIndex.get(fieldsActionKey(action));
+    const sourceAction = Object.freeze({
+      kind:
+        action.sourceGroup === 'cages'
+          ? ('interactCageReward' as const)
+          : ('interactOptionalReward' as const),
+      slotKey: action.slotKey,
+    });
+    const sourceIndex = orderIndex.get(fieldsActionKey(sourceAction));
+    if (action.sourceGroup === 'cages' && replacementIndex === undefined)
+      issues.push(Object.freeze({ kind: 'missing', action }));
+    if (
+      replacementIndex !== undefined &&
+      (sourceIndex === undefined || replacementIndex < sourceIndex)
+    )
+      issues.push(Object.freeze({ kind: 'dependency', action }));
   }
   return Object.freeze({ issues: Object.freeze(issues), valid: issues.length === 0 });
 }
@@ -312,7 +365,15 @@ export function fieldsActionOrderProposals(
         kind: 'remove',
         action,
         fromIndex,
-        order: state.actionOrder.filter((_, index) => index !== fromIndex),
+        order: state.actionOrder.filter(
+          (candidate, index) =>
+            index !== fromIndex &&
+            !(
+              candidate.kind === 'interactArtificerReplacement' &&
+              candidate.sourceGroup === 'optionalRewards' &&
+              candidate.slotKey === slotKey
+            ),
+        ),
         defaultParticipation: true,
       });
       continue;
@@ -327,6 +388,68 @@ export function fieldsActionOrderProposals(
         order,
         ...(toIndex === state.actionOrder.length ? { defaultParticipation: true } : {}),
       });
+    }
+  }
+  const artificerActions = [
+    ...fieldsCageActionDomain(catalog, room)
+      .slice(0, activeCageCount)
+      .flatMap((entry) =>
+        Object.entries(state.cages[entry.slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+          ([acquisitionRole, disposition]) =>
+            disposition.kind === 'artificer'
+              ? [
+                  Object.freeze({
+                    kind: 'interactArtificerReplacement' as const,
+                    sourceGroup: 'cages' as const,
+                    slotKey: entry.slotKey,
+                    acquisitionRole,
+                  }),
+                ]
+              : [],
+        ),
+      ),
+    ...activeOptionalSlotKeys.flatMap((slotKey) =>
+      Object.entries(state.optionalRewards[slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
+        ([acquisitionRole, disposition]) =>
+          disposition.kind === 'artificer'
+            ? [
+                Object.freeze({
+                  kind: 'interactArtificerReplacement' as const,
+                  sourceGroup: 'optionalRewards' as const,
+                  slotKey,
+                  acquisitionRole,
+                }),
+              ]
+            : [],
+      ),
+    ),
+  ];
+  for (const action of artificerActions.filter(
+    (candidate) => candidate.sourceGroup === 'optionalRewards',
+  )) {
+    const fromIndex = state.actionOrder.findIndex(
+      (candidate) => fieldsActionKey(candidate) === fieldsActionKey(action),
+    );
+    if (fromIndex >= 0) {
+      add({
+        kind: 'remove',
+        action,
+        fromIndex,
+        order: state.actionOrder.filter((_, index) => index !== fromIndex),
+        defaultParticipation: true,
+      });
+    } else {
+      for (let toIndex = 0; toIndex <= state.actionOrder.length; toIndex += 1) {
+        const order = [...state.actionOrder];
+        order.splice(toIndex, 0, action);
+        add({
+          kind: 'insert',
+          action,
+          toIndex,
+          order,
+          ...(toIndex === state.actionOrder.length ? { defaultParticipation: true } : {}),
+        });
+      }
     }
   }
   return Object.freeze(proposals);

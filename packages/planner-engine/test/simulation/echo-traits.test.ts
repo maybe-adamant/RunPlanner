@@ -655,7 +655,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(40);
+    expect(decoded.schemaVersion).toBe(41);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -1625,7 +1625,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       catalog,
       baseBranch(),
       echoOwner.owner,
-      echoRewardOffer({ conversion: 'normal' }),
+      echoRewardOffer({ disposition: { kind: 'normal' } }),
       10,
       'encounterCompleted',
       findings,
@@ -1681,7 +1681,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer({ conversion: 'normal' }),
+      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
@@ -1741,7 +1741,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
           offer: { rewardType: 'GiftDrop' },
           producerLifecycleKey: 'EchoLastReward',
           instanceProvenance: 'free',
-          conversionByAcquisitionRole: { self: 'normal' },
+          dispositionByAcquisitionRole: { self: { kind: 'normal' } },
           levelResolutionsByAcquisitionRole: {
             self: { kind: 'random', targetTraitKey: null },
           },
@@ -1788,7 +1788,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
           offer: { rewardType: 'MemPointsCommonDrop' },
           producerLifecycleKey: 'EchoLastReward',
           instanceProvenance: 'free',
-          conversionByAcquisitionRole: { self: 'normal' },
+          dispositionByAcquisitionRole: { self: { kind: 'normal' } },
         },
       },
       replayFacts,
@@ -1807,7 +1807,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
       value: echoRewardOffer({
-        conversion: 'normal',
+        disposition: { kind: 'normal' },
         traitOffer: {
           kind: 'traits',
           giverKey: 'WeaponUpgrade',
@@ -1835,13 +1835,13 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const repair = createPreparedProjectCandidateSession(catalog, stale).evaluate({
       kind: 'echoLastRewardDomain',
       trait: echoOwner,
-      value: echoRewardOffer({ conversion: 'normal' }),
+      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
       optionKey: 'option1',
     });
     if (repair.kind !== 'echoLastRewardDomain') throw new Error('Replay repair is missing');
     expect(repair.result).toEqual({
       rewardType: replacement.rewardType,
-      defaultValue: { conversion: 'normal' },
+      defaultValue: { disposition: { kind: 'normal' } },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -1860,14 +1860,14 @@ describe('Echo Gate C Reward Reward Reward', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer({ conversion: 'normal' }),
+      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
     });
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceTraitOffer',
         trait: echoOwner,
         value: echoRewardOffer({
-          conversion: 'normal',
+          disposition: { kind: 'normal' },
           traitOffer: Object.freeze({
             kind: 'traits',
             giverKey: 'Zeus',
@@ -1893,7 +1893,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
 
     const misplaced = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const misplacedOptions = echoOfferInDocument(misplaced).options as JsonRecord[];
-    misplacedOptions[1]!.echoLastReward = { conversion: 'normal' };
+    misplacedOptions[1]!.echoLastReward = { disposition: { kind: 'normal' } };
     expect(() => decodeProjectDocument(misplaced, catalog)).toThrow(
       /is supported only by Echo Reward Reward Reward/,
     );
@@ -1926,7 +1926,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     if (domain.kind !== 'echoLastRewardDomain') throw new Error('Echo replay domain is missing');
     expect(domain.result.rewardType).toBe('WeaponUpgrade');
     expect(domain.result.defaultValue).toMatchObject({
-      conversion: 'normal',
+      disposition: { kind: 'normal' },
       traitOffer: { kind: 'traits', giverKey: 'WeaponUpgrade' },
     });
 

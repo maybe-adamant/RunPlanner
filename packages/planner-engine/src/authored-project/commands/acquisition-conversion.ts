@@ -1,26 +1,32 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredRewardState, ProjectDocument, RoomOccurrence } from '../model';
+import type {
+  AcquisitionDisposition,
+  AuthoredRewardState,
+  ProjectDocument,
+  RoomOccurrence,
+} from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
-import type { AcquisitionConversionCommand } from './types';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import type { AcquisitionDispositionCommand } from './types';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
+import { fieldsActionKey } from '../fields-actions';
 import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
 function updateReward(
   reward: AuthoredRewardState,
   catalog: Catalog,
   role: string,
-  value: 'normal' | 'gold',
+  value: AcquisitionDisposition,
 ): AuthoredRewardState {
-  const defaults = createDefaultConversionByAcquisitionRole(catalog, reward.offer);
+  const defaults = createDefaultDispositionByAcquisitionRole(catalog, reward.offer);
   const roleKeys = Object.keys(defaults);
   if (!roleKeys.includes(role)) throw new Error(`${role} is not an acquisition role`);
   return Object.freeze({
     ...reward,
-    conversionByAcquisitionRole: Object.freeze({
+    dispositionByAcquisitionRole: Object.freeze({
       ...defaults,
-      ...reward.conversionByAcquisitionRole,
+      ...reward.dispositionByAcquisitionRole,
       [role]: value,
     }),
   });
@@ -29,16 +35,37 @@ function updateReward(
 /**
  * One command owns only the persisted role-local disposition.  Eligibility is
  * deliberately evaluated later by the chronological acquisition evaluator so
- * invalid authored `gold` choices remain repairable findings.
+ * invalid authored acquisition dispositions remain repairable findings.
  */
-export function applyAcquisitionConversionCommand(
+export function applyAcquisitionDispositionCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: AcquisitionConversionCommand,
+  command: AcquisitionDispositionCommand,
 ): ProjectDocument {
-  if (command.value !== 'normal' && command.value !== 'gold') {
-    failCommand(command, 'conversion must be normal or gold');
+  if (
+    command.value.kind !== 'normal' &&
+    command.value.kind !== 'timePiece' &&
+    command.value.kind !== 'artificer'
+  ) {
+    failCommand(command, 'disposition must be normal, timePiece, or artificer');
+  }
+  if (command.value.kind === 'artificer') {
+    const runProgress = catalog.rewards.stores.byKey.RunProgress;
+    const rewardType = command.value.replacement.offer.rewardType;
+    if (
+      runProgress === undefined ||
+      rewardType === 'Devotion' ||
+      rewardType === 'SpellDrop' ||
+      !runProgress.entries.some((entry) => entry.rewardType === rewardType)
+    )
+      failCommand(command, 'Artificer replacement must be an eligible RunProgress reward');
+    if (
+      Object.values(command.value.replacement.dispositionByAcquisitionRole).some(
+        (disposition) => disposition.kind === 'artificer',
+      )
+    )
+      failCommand(command, 'Artificer replacement cannot recurse');
   }
   const topology = requireTopology(located.plan, command);
   const owner = command.acquisition.owner;
@@ -111,19 +138,59 @@ export function applyAcquisitionConversionCommand(
               : undefined;
         const reward = rewards?.[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing local reward ${owner.slotKey}`);
+        const nextReward = replace(reward);
+        const retainedArtificerChronology =
+          reward.dispositionByAcquisitionRole[role]?.kind === 'artificer' &&
+          command.value.kind === 'artificer';
+        const actionOrder = [
+          ...(retainedArtificerChronology
+            ? occurrence.state.actionOrder
+            : occurrence.state.actionOrder.filter(
+                (action) =>
+                  action.kind !== 'interactArtificerReplacement' ||
+                  action.sourceGroup !== owner.groupKey ||
+                  action.slotKey !== owner.slotKey ||
+                  action.acquisitionRole !== role,
+              )),
+        ];
+        if (
+          !retainedArtificerChronology &&
+          owner.groupKey === 'cages' &&
+          command.value.kind === 'artificer'
+        ) {
+          const sourceKey = fieldsActionKey({
+            kind: 'interactCageReward',
+            slotKey: owner.slotKey,
+          });
+          const sourceIndex = actionOrder.findIndex(
+            (action) => fieldsActionKey(action) === sourceKey,
+          );
+          const replacementAction = Object.freeze({
+            kind: 'interactArtificerReplacement' as const,
+            sourceGroup: 'cages' as const,
+            slotKey: owner.slotKey,
+            acquisitionRole: role,
+          });
+          actionOrder.splice(
+            sourceIndex < 0 ? actionOrder.length : sourceIndex + 1,
+            0,
+            replacementAction,
+          );
+        }
         state = Object.freeze({
           ...occurrence.state,
+          actionOrder: Object.freeze(actionOrder),
           ...(owner.groupKey === 'cages'
             ? {
                 cages: Object.freeze({
                   ...occurrence.state.cages,
-                  [owner.slotKey]: replace(reward),
+                  [owner.slotKey]: nextReward,
                 }),
               }
             : {
                 optionalRewards: Object.freeze({
                   ...occurrence.state.optionalRewards,
-                  [owner.slotKey]: replace(reward),
+                  [owner.slotKey]: nextReward,
                 }),
               }),
         });

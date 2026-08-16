@@ -49,6 +49,7 @@ import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
 import {
+  assessArtificerConversion,
   assessTimePieceConversion,
   type AcquisitionSource,
   type RewardBranchState,
@@ -316,10 +317,17 @@ function createEmptyDerivedAcquisitionEntryCandidateArtifacts(): DerivedAcquisit
 
 /** Exact captured role frontiers from the canonical acquisition fold. */
 export interface AcquisitionConversionCandidateCapability {
-  readonly assessments: readonly {
+  readonly timePieceAssessments: readonly {
     readonly supported: boolean;
     readonly evidence: import('./model').FindingEvidence;
   }[];
+  readonly artificerAssessments: readonly {
+    readonly supported: boolean;
+    readonly evidence: import('./model').FindingEvidence;
+  }[];
+  readonly artificerDefaultReplacement?: import('../authored-project/model').AuthoredRewardState;
+  readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
+  readonly artificerReplacementAddress?: import('../authored-project/addresses').AcquisitionEntryAddress;
 }
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
@@ -335,6 +343,10 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly branchesBeforeRole: readonly RewardBranchState[];
       readonly source: AcquisitionSource;
       readonly lifecyclePoint: import('../reward-kernel').ProducerLifecyclePointKey;
+      readonly blocksArtificerConversion?: true;
+      readonly artificerDefaultReplacement?: import('../authored-project/model').AuthoredRewardState;
+      readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
+      readonly artificerReplacementAddress: import('../authored-project/addresses').AcquisitionEntryAddress;
     }[]
   >,
 ): AcquisitionConversionCandidateArtifacts {
@@ -344,7 +356,7 @@ export function createAcquisitionConversionCandidateArtifacts(
       const entries = privateContexts.get(semanticAddressKey(address));
       if (entries === undefined) return undefined;
       return Object.freeze({
-        assessments: Object.freeze(
+        timePieceAssessments: Object.freeze(
           entries.flatMap((entry) =>
             entry.branchesBeforeRole.map((branch) =>
               assessTimePieceConversion(
@@ -357,6 +369,49 @@ export function createAcquisitionConversionCandidateArtifacts(
             ),
           ),
         ),
+        artificerAssessments: Object.freeze(
+          entries.flatMap((entry) =>
+            entry.branchesBeforeRole.map((branch) =>
+              assessArtificerConversion(catalog, branch, entry.source, {
+                role: entry.address.acquisitionRole,
+                lifecyclePoint: entry.lifecyclePoint,
+                ...(entry.blocksArtificerConversion === true
+                  ? { blocksArtificerConversion: true as const }
+                  : {}),
+              }),
+            ),
+          ),
+        ),
+        ...(() => {
+          const defaults = entries.flatMap((entry) =>
+            entry.artificerDefaultReplacement === undefined
+              ? []
+              : [entry.artificerDefaultReplacement],
+          );
+          const first = defaults[0];
+          return defaults.length === entries.length &&
+            first !== undefined &&
+            defaults.every((value) => JSON.stringify(value) === JSON.stringify(first))
+            ? { artificerDefaultReplacement: first }
+            : {};
+        })(),
+        ...(() => {
+          const options = entries.map((entry) => entry.artificerReplacementOptions);
+          const first = options[0];
+          return options.length === entries.length &&
+            first !== undefined &&
+            options.every((value) => JSON.stringify(value) === JSON.stringify(first))
+            ? { artificerReplacementOptions: first }
+            : {};
+        })(),
+        ...(() => {
+          const addresses = entries.map((entry) => entry.artificerReplacementAddress);
+          const first = addresses[0];
+          return first !== undefined &&
+            addresses.every((address) => semanticAddressKey(address) === semanticAddressKey(first))
+            ? { artificerReplacementAddress: first }
+            : {};
+        })(),
       });
     },
   });

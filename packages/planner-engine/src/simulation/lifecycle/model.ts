@@ -84,7 +84,12 @@ export type RoomLifecycleEvent =
       readonly lifecyclePoint: ProducerLifecyclePointKey;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'outgoingGenerationCheckpoint' })
-  | (RoomLifecycleEventBase & { readonly kind: 'acquisitionPointReached'; readonly point: string })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'acquisitionPointReached';
+      readonly point: string;
+      /** Exact original source point retained by a later Artificer child action. */
+      readonly artificerSourcePoint?: string;
+    })
   | (RoomLifecycleEventBase & { readonly kind: 'roomCommitted' })
   | (RoomLifecycleEventBase & {
       readonly kind: 'roomCountersAdvanced';

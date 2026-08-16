@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 40 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 41 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -20,12 +20,17 @@ export interface ShopOfferState {
 export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer>>;
 export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;
 
+export type AcquisitionDisposition =
+  | { readonly kind: 'normal' }
+  | { readonly kind: 'timePiece' }
+  | { readonly kind: 'artificer'; readonly replacement: AuthoredRewardState };
+
 export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
   readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
   /** Exact player disposition for every declared concrete acquisition role. */
-  readonly conversionByAcquisitionRole: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly dispositionByAcquisitionRole: Readonly<Record<string, AcquisitionDisposition>>;
 }
 
 /** The narrow loadout surface consumed by room/reward materialization. */
@@ -89,7 +94,13 @@ export interface FieldsCombatState {
 export type FieldsCombatAction =
   | { readonly kind: 'completeCage'; readonly phaseKey: string }
   | { readonly kind: 'interactCageReward'; readonly slotKey: string }
-  | { readonly kind: 'interactOptionalReward'; readonly slotKey: string };
+  | { readonly kind: 'interactOptionalReward'; readonly slotKey: string }
+  | {
+      readonly kind: 'interactArtificerReplacement';
+      readonly sourceGroup: 'cages' | 'optionalRewards';
+      readonly slotKey: string;
+      readonly acquisitionRole: string;
+    };
 
 export interface RewardWheelState {
   readonly storeKey: string;

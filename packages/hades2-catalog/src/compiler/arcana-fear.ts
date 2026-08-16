@@ -28,6 +28,7 @@ export function normalizeArcanaCards(
     cells.add(cell);
     if (card.permanentRank !== 3) fail(`${path}.permanentRank`, 'must be rank III');
     const postBossActivationCounts = card.postBossActivationCounts;
+    const artificerCapacityByRarity = card.artificerCapacityByRarity;
     if (card.key === 'CardDraw') {
       if (
         postBossActivationCounts === undefined ||
@@ -52,6 +53,16 @@ export function normalizeArcanaCards(
         `${path}.postBossActivationCounts`,
         'only Judgment may declare post-Boss activation counts',
       );
+    }
+    if (card.key === 'MetaToRunUpgrade') {
+      if (
+        artificerCapacityByRarity?.Epic !== 3 ||
+        artificerCapacityByRarity.Heroic !== 4 ||
+        Object.keys(artificerCapacityByRarity).length !== 2
+      )
+        fail(`${path}.artificerCapacityByRarity`, 'Artificer must declare Epic 3 and Heroic 4');
+    } else if (artificerCapacityByRarity !== undefined) {
+      fail(`${path}.artificerCapacityByRarity`, 'only Artificer may declare conversion capacity');
     }
     if (traits.byKey[card.traitKey] === undefined) {
       fail(`${path}.traitKey`, `unknown trait ${card.traitKey}`);
@@ -105,6 +116,9 @@ export function normalizeArcanaCards(
       ...(postBossActivationCounts === undefined
         ? {}
         : { postBossActivationCounts: Object.freeze({ ...postBossActivationCounts }) }),
+      ...(artificerCapacityByRarity === undefined
+        ? {}
+        : { artificerCapacityByRarity: Object.freeze({ ...artificerCapacityByRarity }) }),
     });
   });
   if (values.length !== 25) fail('arcanaCards', 'must declare all 25 cards');

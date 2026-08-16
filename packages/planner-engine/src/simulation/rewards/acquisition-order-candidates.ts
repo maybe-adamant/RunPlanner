@@ -3,6 +3,7 @@ import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel'
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
 import type { AcquisitionOrderCandidateContext } from './lifecycle-artifacts';
+import type { TraitOfferContext } from '../traits';
 import {
   settlePickupAcquisitionSite,
   settleShopAcquisitionSite,
@@ -81,6 +82,7 @@ export function preparePickupAcquisitionOrderCandidateContext(options: {
   readonly producerLifecycleKey: string;
   readonly historySequence: number;
   readonly facts: (history: RewardHistoryState) => RewardKernelFacts;
+  readonly traitContext?: TraitOfferContext;
 }): AcquisitionOrderCandidateContext {
   const site = options.room.pickupSite;
   if (site === undefined)
@@ -99,6 +101,7 @@ export function preparePickupAcquisitionOrderCandidateContext(options: {
           producerLifecycleKey: options.producerLifecycleKey,
           historySequence: options.historySequence,
           facts: options.facts,
+          ...(options.traitContext === undefined ? {} : { traitContext: options.traitContext }),
         },
         findings,
       );

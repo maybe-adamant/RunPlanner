@@ -453,7 +453,6 @@ export function createStructuredWorkspaceProjection(
             routeSource.evaluation === undefined ? 'blocked' : routeStatus(routeSource.evaluation),
         });
       });
-      registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
       const interactions = bindWorkspaceInteractions({
         allocateOccurrenceId,
         assembly,
@@ -475,6 +474,39 @@ export function createStructuredWorkspaceProjection(
         takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
+      for (const conversion of interactions.acquisitionConversions.values()) {
+        const replacement = conversion.artificerReplacementControl;
+        if (replacement === undefined) continue;
+        const parent = focusByOwner.get(semanticAddressKey(conversion.owner));
+        if (parent === undefined)
+          throw new Error(`${semanticAddressKey(conversion.owner)} has no inspector destination`);
+        const childAddresses = [
+          replacement.marker.address,
+          ...(replacement.traitOffers ?? []).map((control) => control.marker.address),
+          ...(replacement.levelResolutions ?? []).map((control) => control.marker.address),
+          ...(replacement.conversions ?? []).map((control) => control.marker.address),
+        ];
+        appendUniqueFocusDestinations(
+          focusByOwner,
+          childAddresses.map((address) => {
+            const key = semanticAddressKey(address);
+            return [
+              key,
+              Object.freeze({
+                ...parent,
+                focusAddress: address,
+                focusKey: key,
+                ownerAddress: address,
+                ...(address.kind === 'traitOffer' ? { traitDialogTarget: address } : {}),
+                ...(address.kind === 'levelResolution'
+                  ? { levelResolutionDialogTarget: address }
+                  : {}),
+              }),
+            ] as const;
+          }),
+        );
+      }
+      registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
         focusByOwner,

@@ -183,7 +183,7 @@ export type WorkspaceOccurrenceAssembler = (
   input: WorkspaceOccurrenceAssemblyRequest,
 ) => WorkspaceOccurrenceAssembly;
 
-function acquisitionRoleLabel(acquisitionRole: string): string {
+export function workspaceAcquisitionRoleLabel(acquisitionRole: string): string {
   return acquisitionRole === 'chosenSource'
     ? 'Chosen God'
     : acquisitionRole === 'spurnedSource'
@@ -255,7 +255,7 @@ function traitOfferControls(
           );
     controls.push(
       Object.freeze({
-        acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
+        acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
         address,
         giver,
         marker: input.markerDestinations.marker(address),
@@ -296,7 +296,7 @@ function levelResolutionControls(
       }
       return [
         Object.freeze({
-          acquisitionRoleLabel: acquisitionRoleLabel(acquisitionRole),
+          acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
           address,
           levelCount,
           settledEmptyNoOp:
@@ -332,14 +332,14 @@ function conversionControls(
   return Object.freeze(
     declaration.acquisitionRoles.values.map((role) => {
       const address = createAcquisitionRoleAddress(owner.address, role.key);
-      const value = reward.conversionByAcquisitionRole[role.key];
+      const value = reward.dispositionByAcquisitionRole[role.key];
       if (value === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(owner.address)} lacks conversion disposition for ${role.key}`,
+          `${semanticAddressKey(owner.address)} lacks acquisition disposition for ${role.key}`,
         );
       }
       return Object.freeze({
-        acquisitionRoleLabel: acquisitionRoleLabel(role.key),
+        acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role.key),
         address,
         marker: input.markerDestinations.marker(address),
         rewardOwner: owner.address,
@@ -1203,7 +1203,13 @@ function fieldsActionLabel(
   action: FieldsCombatAction,
   ordinals: ReadonlyMap<string, number>,
 ): string {
-  const ordinal = ordinals.get(fieldsActionKey(action));
+  const ordinal = ordinals.get(
+    action.kind === 'interactArtificerReplacement'
+      ? action.sourceGroup === 'cages'
+        ? `interact:${action.slotKey}`
+        : `interactOptional:${action.slotKey}`
+      : fieldsActionKey(action),
+  );
   if (ordinal === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
       `Fields action ${fieldsActionKey(action)} has no declaration ordinal`,
@@ -1213,7 +1219,9 @@ function fieldsActionLabel(
     ? `Complete Cage ${ordinal}`
     : action.kind === 'interactCageReward'
       ? `Interact with Cage ${ordinal} reward`
-      : `Interact with Optional ${ordinal}`;
+      : action.kind === 'interactOptionalReward'
+        ? `Interact with Optional ${ordinal}`
+        : `Pick up ${action.sourceGroup === 'cages' ? `Cage ${ordinal}` : `Optional ${ordinal}`} Artificer replacement`;
 }
 
 function fieldsChronology(
@@ -1238,24 +1246,28 @@ function fieldsChronology(
       .filter((issue) => issue.kind === 'inactive')
       .map((issue) => fieldsActionKey(issue.action)),
   );
-  const proposals = fieldsActionOrderProposals(input.catalog, room, state, activeCageCount)
-    .filter((proposal) => proposal.structurallyAuthorable || proposal.kind === 'insert')
-    .map((proposal, index) => {
-      const actionKey = fieldsActionKey(proposal.action);
-      const label =
-        proposal.kind === 'remove'
-          ? 'Remove inactive action'
-          : proposal.kind === 'insert'
-            ? `Insert at position ${(proposal.toIndex ?? 0) + 1}`
-            : `Move to position ${(proposal.toIndex ?? 0) + 1}`;
-      return Object.freeze({
-        actionKey,
-        key: `${proposal.kind}:${index}:${actionKey}`,
-        label,
-        order: proposal.order,
-        ...(proposal.defaultParticipation === true ? { defaultParticipation: true } : {}),
-      });
+  const engineProposals = fieldsActionOrderProposals(
+    input.catalog,
+    room,
+    state,
+    activeCageCount,
+  ).filter((proposal) => proposal.structurallyAuthorable || proposal.kind === 'insert');
+  const proposals = engineProposals.map((proposal, index) => {
+    const actionKey = fieldsActionKey(proposal.action);
+    const label =
+      proposal.kind === 'remove'
+        ? 'Remove inactive action'
+        : proposal.kind === 'insert'
+          ? `Insert at position ${(proposal.toIndex ?? 0) + 1}`
+          : `Move to position ${(proposal.toIndex ?? 0) + 1}`;
+    return Object.freeze({
+      actionKey,
+      key: `${proposal.kind}:${index}:${actionKey}`,
+      label,
+      order: proposal.order,
+      ...(proposal.defaultParticipation === true ? { defaultParticipation: true } : {}),
     });
+  });
   const proposalsByAction = new Map<string, string[]>();
   for (const proposal of proposals) {
     proposalsByAction.set(proposal.actionKey, [
@@ -1269,20 +1281,43 @@ function fieldsChronology(
       ? [issue.action]
       : [],
   );
-  const rows = [...state.actionOrder, ...missingActions].map((action) => {
+  const optionalAvailableActions = engineProposals.flatMap((proposal) =>
+    proposal.defaultParticipation === true &&
+    fieldsActionKey(proposal.action).startsWith('interactArtificer:') &&
+    !currentKeys.has(fieldsActionKey(proposal.action))
+      ? [proposal]
+      : [],
+  );
+  const optionalAvailableKeys = new Set(
+    optionalAvailableActions.map((proposal) => fieldsActionKey(proposal.action)),
+  );
+  const rowActions = [
+    ...state.actionOrder,
+    ...missingActions,
+    ...optionalAvailableActions.map((proposal) => proposal.action),
+  ];
+  const rows = rowActions.map((action) => {
     const key = fieldsActionKey(action);
     const address = createFieldsActionAddress(input.biome, input.occurrence.occurrenceId, key);
+    const participationProposal = proposals.find(
+      (proposal) => proposal.actionKey === key && proposal.defaultParticipation === true,
+    );
     return Object.freeze({
       address,
       key,
       label: fieldsActionLabel(action, ordinals),
       marker: input.markerDestinations.marker(address),
       proposalKeys: Object.freeze(proposalsByAction.get(key) ?? []),
-      state: !currentKeys.has(key)
-        ? ('missing' as const)
-        : inactiveKeys.has(key)
-          ? ('inactive' as const)
-          : ('active' as const),
+      ...(participationProposal === undefined
+        ? {}
+        : { participationProposalKey: participationProposal.key }),
+      state: optionalAvailableKeys.has(key)
+        ? ('available' as const)
+        : !currentKeys.has(key)
+          ? ('missing' as const)
+          : inactiveKeys.has(key)
+            ? ('inactive' as const)
+            : ('active' as const),
     });
   });
   return Object.freeze({

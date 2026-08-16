@@ -33,9 +33,9 @@ describe('authored-project incoming reward commands', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionConversion',
+      kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(reward, 'source'),
-      value: 'gold',
+      value: { kind: 'timePiece' },
     });
     const state = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
@@ -45,7 +45,7 @@ describe('authored-project incoming reward commands', () => {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     });
-    expect(state.reward.conversionByAcquisitionRole).toEqual({ source: 'gold' });
+    expect(state.reward.dispositionByAcquisitionRole).toEqual({ source: { kind: 'timePiece' } });
   });
 
   it('preserves base rarities and the exact ordered Calling Card ledger in one offer command', () => {

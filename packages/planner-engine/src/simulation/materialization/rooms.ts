@@ -135,7 +135,8 @@ function resolvedIncomingReward(
             context.occurrence.state.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole:
             context.occurrence.state.reward.levelResolutionsByAcquisitionRole,
-          conversionByAcquisitionRole: context.occurrence.state.reward.conversionByAcquisitionRole,
+          dispositionByAcquisitionRole:
+            context.occurrence.state.reward.dispositionByAcquisitionRole,
         }
       : {}),
     traitContext: traitContextForOffer(context, offer),
@@ -339,7 +340,7 @@ function materializeFieldsCombat(
       offer: reward.offer,
       traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
       levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-      conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
+      dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
       traitContext: traitContextForOffer(context, reward.offer),
       resolvedStoreKey: storeKey,
     });
@@ -368,7 +369,7 @@ function materializeFieldsCombat(
         offer: reward.offer,
         traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
         levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-        conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
+        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
         traitContext: traitContextForOffer(context, reward.offer),
         resolvedStoreKey: 'FieldsOptionalRewards' as const,
       });
@@ -458,7 +459,7 @@ export function materializeShipCombatState(
         offer: reward.offer,
         traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
         levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-        conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
+        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
         traitContext: Object.freeze({
           ...loadout,
           blockGiftBoons: room.blockGiftBoons,
@@ -537,7 +538,7 @@ function materializeShopEntry(
           offer: authored.reward.offer,
           traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: authored.reward.levelResolutionsByAcquisitionRole,
-          conversionByAcquisitionRole: authored.reward.conversionByAcquisitionRole,
+          dispositionByAcquisitionRole: authored.reward.dispositionByAcquisitionRole,
           traitContext: traitContextForOffer(context, authored.reward.offer),
         });
       }),

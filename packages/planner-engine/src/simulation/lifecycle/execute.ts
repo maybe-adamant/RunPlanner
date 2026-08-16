@@ -354,6 +354,7 @@ function fieldsActionSequenceOperationHandler(
   const completionKeys = new Set<string>();
   const interactionKeys = new Set<string>();
   const optionalInteractionKeys = new Set<string>();
+  const artificerInteractionKeys = new Set<string>();
   const optionalSlots = new Set(optionalSlotKeys);
   const applyEncounterEffects = (
     next: ExecutionState,
@@ -407,6 +408,29 @@ function fieldsActionSequenceOperationHandler(
         next,
         { ...context, operationIndex },
         { kind: 'acquisitionPointReached', point: `optionalRewards:${action.slotKey}` },
+      );
+      continue;
+    }
+    if (action.kind === 'interactArtificerReplacement') {
+      const sourceKey = `${action.sourceGroup}:${action.slotKey}:${action.acquisitionRole}`;
+      const sourceInteracted =
+        action.sourceGroup === 'cages'
+          ? interactionKeys.has(action.slotKey)
+          : optionalInteractionKeys.has(action.slotKey);
+      if (!sourceInteracted || artificerInteractionKeys.has(sourceKey)) {
+        throw new LifecycleExecutionContractError(
+          `${context.profile.key} received unavailable Artificer replacement ${sourceKey}`,
+        );
+      }
+      artificerInteractionKeys.add(sourceKey);
+      next = appendEvent(
+        next,
+        { ...context, operationIndex },
+        {
+          kind: 'acquisitionPointReached',
+          point: `artificerReplacement:${action.sourceGroup}:${action.slotKey}:${action.acquisitionRole}`,
+          artificerSourcePoint: `${action.sourceGroup}:${action.slotKey}`,
+        },
       );
       continue;
     }

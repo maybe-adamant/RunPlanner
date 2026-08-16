@@ -124,6 +124,7 @@ import {
   settleEncounterTraitOffer,
   settleProducerAcquisitionSite,
   settleOwnedAcquisitionSite,
+  settleArtificerReplacementAcquisition,
   processOfferGenerationCohort,
   processEncounterTraitOffer,
   processRewardOffer,
@@ -1222,6 +1223,30 @@ export function evaluateBiomeRewardsAssemblyInternal(
         key,
         Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
       );
+      const replacement = frontier.artificerReplacementCandidate;
+      if (replacement?.defaultSettlement !== undefined) {
+        recordAcquisitionRoleFrontiers(replacement.defaultSettlement.roleFrontiers);
+        recordTraitChildSettlements(
+          replacement.defaultSettlement.traitChildSettlements,
+          frontier.source.origin,
+        );
+      }
+      const replacementKey = semanticAddressKey(frontier.artificerReplacementAddress);
+      if (replacement !== undefined && !producerFrontiers.has(replacementKey))
+        indexRewardProducerFrontier(
+          producerFrontiers,
+          Object.freeze({
+            generationPolicy: 'sequential',
+            generationHistorySequence: frontier.historySequence,
+            reachableBranchCount: frontier.branchesBeforeRole.length,
+            acquisitionHorizon: 'ownEnteredLifecycle',
+            owners: Object.freeze([frontier.artificerReplacementAddress]),
+            evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) =>
+              semanticAddressKey(owner) === replacementKey
+                ? replacement.evaluateOffer(offer)
+                : fail('Artificer replacement frontier received a foreign owner'),
+          }),
+        );
     }
   }
   function recordDerivedAcquisitionEntryFrontiers(
@@ -1759,6 +1784,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             producerLifecycleKey: producer.disposition.producerLifecycleKey,
             historySequence,
             facts: pickupFacts,
+            traitContext: routeLoadout,
           }),
         );
       }
@@ -1773,6 +1799,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           historySequence,
           findingChronology,
           facts: pickupFacts,
+          traitContext: routeLoadout,
         },
         targetFindings,
       );
@@ -1817,6 +1844,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   historySequence,
                   findingChronology,
                   facts: pickupFacts,
+                  traitContext: routeLoadout,
                 },
                 candidateFindings,
               ).branches;
@@ -3973,7 +4001,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                             self: child!.levelResolution,
                           }),
                         }),
-                    conversionByAcquisitionRole: Object.freeze({ self: child!.conversion }),
+                    dispositionByAcquisitionRole: Object.freeze({ self: child!.disposition }),
                     traitContext: Object.freeze({
                       weaponKey: routeLoadout.weaponKey,
                       aspectKey: routeLoadout.aspectKey,
@@ -4086,16 +4114,27 @@ export function evaluateBiomeRewardsAssemblyInternal(
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
         }
         if (room.lifecycleProfileKey === 'FieldsCombatRoom') {
+          const artificerParts = event.point.startsWith('artificerReplacement:')
+            ? event.point.slice('artificerReplacement:'.length).split(':')
+            : undefined;
           const cageSlotKey = event.point.startsWith('cages:')
             ? event.point.slice('cages:'.length)
             : undefined;
           const optionalSlotKey = event.point.startsWith('optionalRewards:')
             ? event.point.slice('optionalRewards:'.length)
             : undefined;
+          const artificerGroup = artificerParts?.[0];
+          const artificerSlotKey = artificerParts?.[1];
+          const artificerRole = artificerParts?.[2];
+          const effectiveCageSlotKey = artificerGroup === 'cages' ? artificerSlotKey : cageSlotKey;
+          const effectiveOptionalSlotKey =
+            artificerGroup === 'optionalRewards' ? artificerSlotKey : optionalSlotKey;
           const localReward =
-            cageSlotKey === undefined
-              ? room.fieldsOptionalRewards?.find((reward) => reward.slotKey === optionalSlotKey)
-              : room.localRewards?.find((reward) => reward.slotKey === cageSlotKey);
+            effectiveCageSlotKey === undefined
+              ? room.fieldsOptionalRewards?.find(
+                  (reward) => reward.slotKey === effectiveOptionalSlotKey,
+                )
+              : room.localRewards?.find((reward) => reward.slotKey === effectiveCageSlotKey);
           const acquisitionView = roomView.acquisitionPoints?.find(
             (point) => point.point === event.point,
           )?.before;
@@ -4104,35 +4143,71 @@ export function evaluateBiomeRewardsAssemblyInternal(
               `${room.gameName} has no Fields acquisition ${event.point}`,
             );
           }
-          const settlement = settleOwnedAcquisitionSite(
-            catalog,
-            branches,
-            {
-              siteOwner: localReward.origin,
-              pointKey: event.point,
-              entryKey: localReward.slotKey,
-              source: Object.freeze({ ...localReward, instanceProvenance: 'free' }),
-              historySequence: event.sequence,
-            },
-            (branchHistory) =>
-              rewardFacts(
-                catalog,
-                room,
-                room,
-                declaration,
-                acquisitionView,
-                branchHistory,
-                enteredBiomeCount,
-              ),
-            findings,
-            undefined,
-            rewardFindingChronologyForRoom(
-              snapshot,
-              room.origin,
-              event.sequence,
-              'localRoomLifecycle',
-            ),
+          const facts = (branchHistory: RewardHistoryState) =>
+            rewardFacts(
+              catalog,
+              room,
+              room,
+              declaration,
+              acquisitionView,
+              branchHistory,
+              enteredBiomeCount,
+            );
+          const chronology = rewardFindingChronologyForRoom(
+            snapshot,
+            room.origin,
+            event.sequence,
+            'localRoomLifecycle',
           );
+          const settlement =
+            artificerParts === undefined || artificerRole === undefined
+              ? settleOwnedAcquisitionSite(
+                  catalog,
+                  branches,
+                  {
+                    siteOwner: localReward.origin,
+                    pointKey: event.point,
+                    entryKey: localReward.slotKey,
+                    source: Object.freeze({ ...localReward, instanceProvenance: 'free' }),
+                    historySequence: event.sequence,
+                    deferArtificerReplacement: true,
+                  },
+                  facts,
+                  findings,
+                  undefined,
+                  chronology,
+                )
+              : settleArtificerReplacementAcquisition(
+                  catalog,
+                  branches,
+                  {
+                    siteOwner: localReward.origin,
+                    pointKey:
+                      event.artificerSourcePoint ??
+                      fail(`${room.gameName} Artificer replacement lost its source point`),
+                    sourceEntryKey: localReward.slotKey,
+                    sourceOrigin: localReward.origin,
+                    sourceReward: Object.freeze({
+                      offer: localReward.offer,
+                      traitOffersByAcquisitionRole:
+                        localReward.traitOffersByAcquisitionRole ?? Object.freeze({}),
+                      ...(localReward.levelResolutionsByAcquisitionRole === undefined
+                        ? {}
+                        : {
+                            levelResolutionsByAcquisitionRole:
+                              localReward.levelResolutionsByAcquisitionRole,
+                          }),
+                      dispositionByAcquisitionRole:
+                        localReward.dispositionByAcquisitionRole ?? Object.freeze({}),
+                    }),
+                    acquisitionRole: artificerRole,
+                    participation: artificerGroup === 'cages' ? 'mandatory' : 'optional',
+                    historySequence: event.sequence,
+                    facts,
+                    findingChronology: chronology,
+                  },
+                  findings,
+                );
           recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
           recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
           branches = settlement.branches;

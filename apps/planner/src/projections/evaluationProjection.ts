@@ -378,6 +378,15 @@ const findingCopy = {
     description:
       'This reward is not a free, eligible acquisition with a remaining Time Piece charge.',
   },
+  artificerConversionUnavailable: {
+    title: 'Artificer cannot convert this acquisition',
+    description:
+      'This source is not a free eligible metaprogression pickup with an active remaining Artificer use.',
+  },
+  artificerReplacementUnavailable: {
+    title: 'Artificer replacement unavailable',
+    description: 'Choose a reward currently reachable from the RunProgress bag.',
+  },
   figLeafSkipUnavailable: {
     title: 'Fig Leaf skip unavailable',
     description: 'This combat cannot be skipped with the remaining Fig Leaf uses.',

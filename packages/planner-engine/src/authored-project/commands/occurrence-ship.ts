@@ -17,7 +17,7 @@ import {
   createDefaultTraitOffers,
   producerLevelEffectSource,
 } from '../traits';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 
 function requireWheel(
   catalog: Catalog,
@@ -134,7 +134,7 @@ export function applyShipOccurrenceCommand(
             ...wheel.offers,
             [command.offer.offerKey]: Object.freeze({
               offer: command.value,
-              conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
                 catalog,
                 command.value,
               ),

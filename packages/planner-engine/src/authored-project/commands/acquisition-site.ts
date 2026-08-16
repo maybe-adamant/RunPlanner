@@ -15,6 +15,7 @@ import {
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
+import { parseArtificerReplacementEntryKey } from '../artificer';
 
 /**
  * The first authorable settlement point is a materialized Shop's room-exit
@@ -188,10 +189,18 @@ export function applyAcquisitionSiteCommand(
     failCommand(command, 'does not own a materialized authorable acquisition site');
   const seen = new Set<string>();
   for (const key of command.entryKeys) {
+    const parsedArtificer = parseArtificerReplacementEntryKey(key);
+    const artificerSource =
+      parsedArtificer === undefined ? undefined : pickupEntries?.[parsedArtificer.sourceKey];
     const belongs =
       shopOffers === undefined
-        ? pickupEntries?.[key] !== undefined
-        : shopOffers[key] !== undefined || pickupEntries?.[key] !== undefined;
+        ? pickupEntries?.[key] !== undefined ||
+          artificerSource?.dispositionByAcquisitionRole[parsedArtificer!.acquisitionRole]?.kind ===
+            'artificer'
+        : shopOffers[key] !== undefined ||
+          pickupEntries?.[key] !== undefined ||
+          artificerSource?.dispositionByAcquisitionRole[parsedArtificer!.acquisitionRole]?.kind ===
+            'artificer';
     if (!belongs) failCommand(command, `unknown entry ${key}`);
     if (seen.has(key)) failCommand(command, `entry ${key} is duplicated`);
     seen.add(key);

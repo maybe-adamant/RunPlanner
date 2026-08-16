@@ -22,7 +22,7 @@ import {
   createDefaultTraitOffers,
   producerLevelEffectSource,
 } from '../traits';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 import {
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
@@ -287,7 +287,7 @@ function switchTargetToAnomaly(
       kind: 'anomaly',
       reward: Object.freeze({
         offer: occurrence.state.reward.offer,
-        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
           catalog,
           occurrence.state.reward.offer,
         ),
@@ -416,7 +416,7 @@ function revertAnomaly(
           kind: 'counted',
           reward: Object.freeze({
             offer: occurrence.state.reward.offer,
-            conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
               catalog,
               occurrence.state.reward.offer,
             ),

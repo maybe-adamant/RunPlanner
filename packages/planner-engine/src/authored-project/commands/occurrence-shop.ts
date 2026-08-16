@@ -12,7 +12,7 @@ import {
   shopProfileUsesDeathDefianceCondition,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 
 export function applyShopOccurrenceCommand(
   document: ProjectDocument,
@@ -66,7 +66,10 @@ export function applyShopOccurrenceCommand(
   const replacement = Object.freeze({
     reward: Object.freeze({
       offer: command.value,
-      conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, command.value),
+      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
+        catalog,
+        command.value,
+      ),
       traitOffersByAcquisitionRole: createDefaultTraitOffers(
         catalog,
         command.value,

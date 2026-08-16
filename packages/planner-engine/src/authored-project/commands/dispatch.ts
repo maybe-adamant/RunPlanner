@@ -19,7 +19,7 @@ import {
   applyAcquisitionSiteCommand,
   materializeDerivedShopEntryDefault,
 } from './acquisition-site';
-import { applyAcquisitionConversionCommand } from './acquisition-conversion';
+import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
 import { applyBossCompletionCommand } from './boss-completion';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
@@ -43,7 +43,7 @@ function derivedPayloadEntryAddress(
       return command.levelResolution.owner.kind === 'acquisitionEntry'
         ? command.levelResolution.owner
         : undefined;
-    case 'ReplaceAcquisitionConversion':
+    case 'ReplaceAcquisitionDisposition':
       return command.acquisition.owner.kind === 'acquisitionEntry'
         ? command.acquisition.owner
         : undefined;
@@ -171,8 +171,8 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
-    case 'ReplaceAcquisitionConversion':
-      return applyAcquisitionConversionCommand(
+    case 'ReplaceAcquisitionDisposition':
+      return applyAcquisitionDispositionCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

@@ -20,6 +20,7 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly kind: AcquisitionKind;
   readonly historyProjection: HistoryProjectionKey;
   readonly goldConversionEligible?: boolean;
+  readonly artificerConversionEligible?: boolean;
   readonly lastRewardRecreation?: {
     readonly rewardType: string;
     readonly producerLifecycleKey: 'EchoLastReward';

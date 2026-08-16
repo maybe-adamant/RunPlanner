@@ -277,7 +277,7 @@ describe('workspace inspector destinations', () => {
   it('redirects only reached generated Echo replay findings to the same trait inspector', () => {
     const configured = echoReplayProject(
       Object.freeze({
-        conversion: 'normal',
+        disposition: { kind: 'normal' as const },
         traitOffer: Object.freeze({
           kind: 'traits',
           giverKey: 'WeaponUpgrade',
@@ -324,7 +324,7 @@ describe('workspace inspector destinations', () => {
   it('routes a real invalid Echo replay conversion role to the same trait inspector', () => {
     const configured = echoReplayProject(
       Object.freeze({
-        conversion: 'gold',
+        disposition: { kind: 'timePiece' as const },
         traitOffer: Object.freeze({
           kind: 'traits',
           giverKey: 'WeaponUpgrade',

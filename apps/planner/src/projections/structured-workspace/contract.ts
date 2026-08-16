@@ -85,7 +85,11 @@ export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive'
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
 export type WorkspacePayloadEditIntent<Command extends ProjectCommand> = WorkspaceCommandIntent<
-  Command | Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>
+  | Command
+  | Extract<
+      ProjectCommand,
+      { readonly kind: 'EditDerivedShopEntry' | 'ReplaceAcquisitionDisposition' }
+    >
 >;
 
 export interface WorkspaceMarker {
@@ -252,7 +256,7 @@ export interface WorkspaceAcquisitionConversionControl {
   readonly address: AcquisitionRoleAddress;
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
-  readonly value: 'normal' | 'gold';
+  readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
 }
 
 /** Exact selected Circe outcome owner; its domain is supplied by the candidate session. */
@@ -426,10 +430,14 @@ export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly giver: TraitGiverDeclaration;
-  readonly intentFor: (
-    value: AuthoredTraitOffer,
-  ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' }>
+  readonly intentFor: (value: AuthoredTraitOffer) => WorkspacePayloadEditIntent<
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind:
+          'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' | 'ReplaceAcquisitionDisposition';
+      }
+    >
   >;
   readonly key: string;
   readonly load: (
@@ -446,7 +454,10 @@ export interface WorkspaceTraitOfferInteraction {
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
   ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceTraitSelection' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceTraitSelection' | 'ReplaceAcquisitionDisposition' }
+    >
   >;
   readonly value: AuthoredTraitOffer;
   /** Exact engine-backed traits draft for returning from Fallback Gold. */
@@ -464,7 +475,10 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly intentFor: (
     value: AuthoredLevelResolution,
   ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceLevelResolution' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceLevelResolution' | 'ReplaceAcquisitionDisposition' }
+    >
   >;
   readonly key: string;
   /** Declaration-owned increment displayed beside the exact Pom control. */
@@ -611,6 +625,7 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceRewardWheelOffer'
         | 'ReplaceShopOffer'
         | 'ReplaceAcquisitionEntryOffer'
+        | 'ReplaceAcquisitionDisposition'
         | 'EditDerivedShopEntry';
     }
   >
@@ -824,15 +839,20 @@ export interface WorkspaceInteractionCatalog {
 export interface WorkspaceAcquisitionConversionInteraction {
   readonly visible: boolean;
   /** Gold is enabled only when every reached engine branch supports it. */
-  readonly goldSupported: boolean;
+  readonly timePieceSupported: boolean;
+  readonly artificerSupported: boolean;
+  readonly artificerDefaultReplacement?: import('@run-planner/engine/authored-project').AuthoredRewardState;
+  /** Complete declaration defaults used to seed the generated reward editor. */
+  readonly artificerReplacementOptions: readonly import('@run-planner/engine/authored-project').AuthoredRewardState[];
+  readonly artificerReplacementControl?: WorkspaceExplicitRewardControl;
   readonly intentFor: (
-    value: 'normal' | 'gold',
+    value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
   ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionConversion' }>
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
   >;
   readonly key: string;
   readonly owner: AcquisitionRoleAddress;
-  readonly value: 'normal' | 'gold';
+  readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
 }
 
 export interface WorkspaceShopDeathDefianceConditionInteraction {
@@ -970,6 +990,12 @@ interface WorkspaceRewardControlBase {
     readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
     readonly defaultValue: AuthoredRewardState;
   };
+  /** Nested generated reward edited atomically through its source disposition. */
+  readonly artificerReplacementEdit?: {
+    readonly acquisition: AcquisitionRoleAddress;
+    readonly options: readonly AuthoredRewardState[];
+    readonly replacement: AuthoredRewardState;
+  };
 }
 
 export interface WorkspaceCountedRewardControl extends WorkspaceRewardControlBase {
@@ -1013,7 +1039,9 @@ export interface WorkspaceFieldsActionRow {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly proposalKeys: readonly string[];
-  readonly state: 'active' | 'inactive' | 'missing';
+  /** Canonical insert/remove proposal for an optional action's checkbox. */
+  readonly participationProposalKey?: string;
+  readonly state: 'active' | 'available' | 'inactive' | 'missing';
 }
 
 export interface WorkspaceFieldsChronology {
@@ -1577,6 +1605,12 @@ export interface WorkspaceRunStatePresentation {
     readonly origin: ArcanaActivationOrigin;
     readonly rarity: TraitRarity;
   }[];
+  readonly artificer?: {
+    readonly rarity: Extract<TraitRarity, 'Epic' | 'Heroic'>;
+    readonly spent: number;
+    readonly capacity: 3 | 4;
+    readonly remaining: number;
+  };
   readonly bags: readonly WorkspaceRunStateBagPresentation[];
   readonly counters: readonly { readonly key: string; readonly value: number }[];
   readonly elements: readonly { readonly key: string; readonly value: number }[];

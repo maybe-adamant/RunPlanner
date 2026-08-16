@@ -8,7 +8,7 @@ import { legalTopologyOccurrenceRoom } from '../topology/room-ownership';
 import type { IncomingRewardCommand } from './types';
 import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
-import { createDefaultConversionByAcquisitionRole } from '../reward-state';
+import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -48,7 +48,7 @@ export function applyIncomingRewardCommand(
       kind: 'fixed',
       reward: Object.freeze({
         offer: command.value,
-        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
           catalog,
           command.value,
         ),
@@ -74,7 +74,7 @@ export function applyIncomingRewardCommand(
       ...occurrence.state,
       reward: Object.freeze({
         offer: command.value,
-        conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
+        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
           catalog,
           command.value,
         ),

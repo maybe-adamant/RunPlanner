@@ -4,6 +4,7 @@ export {
   promoteArcana,
   suppressFearVow,
   beginBiomeArcanaFearState,
+  artificerStatus,
   consumeOrdinaryRoomForfeit,
   type ActiveArcanaState,
   type ArcanaActivationOrigin,
