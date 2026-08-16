@@ -16,11 +16,16 @@ import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures
 const occurrenceId = createOccurrenceId('golden-h-combat02');
 const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
 
-function fieldsState(project: ProjectDocument): FieldsCombatState {
+function fieldsState(
+  project: ProjectDocument,
+  targetOccurrenceId = occurrenceId,
+): FieldsCombatState {
   const state = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((biome) => biome.biomeKey === 'H')
-    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)?.state;
+    ?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === targetOccurrenceId,
+    )?.state;
   if (state?.kind !== 'fieldsCombat') throw new Error('missing Fields occurrence');
   return state;
 }
@@ -111,5 +116,84 @@ describe('authored Fields occurrence commands', () => {
         actionOrder: [{ kind: 'completeCage', phaseKey: 'UnknownCage' }],
       }),
     ).toThrow('unknown Fields action complete:UnknownCage');
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceFieldsActionOrder',
+        occurrence,
+        actionOrder: [{ kind: 'interactOptionalReward', slotKey: 'optional3' }],
+      }),
+    ).toThrow('unknown Fields action interactOptional:optional3');
   });
+
+  it('changes the optional active prefix without rerolling retained values or restoring membership', () => {
+    const initial = createGoldenFGHProject();
+    const selected = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceFieldsActionOrder',
+      occurrence,
+      actionOrder: [
+        { kind: 'interactOptionalReward', slotKey: 'optional2' },
+        ...fieldsState(initial).actionOrder,
+      ],
+    });
+    const before = fieldsState(selected);
+    const lowered = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence,
+      optionalRewardCount: 1,
+    });
+    expect(fieldsState(lowered)).toMatchObject({
+      optionalRewardCount: 1,
+      optionalRewards: before.optionalRewards,
+    });
+    expect(fieldsState(lowered).actionOrder.map(fieldsActionKey)).not.toContain(
+      'interactOptional:optional2',
+    );
+    const raised = applyProjectCommand(lowered, catalog, {
+      kind: 'ReplaceFieldsOptionalRewardCount',
+      occurrence,
+      optionalRewardCount: 2,
+    });
+    expect(fieldsState(raised).optionalRewards).toStrictEqual(before.optionalRewards);
+    expect(fieldsState(raised).actionOrder.map(fieldsActionKey)).not.toContain(
+      'interactOptional:optional2',
+    );
+    expect(() =>
+      applyProjectCommand(raised, catalog, {
+        kind: 'ReplaceFieldsOptionalRewardCount',
+        occurrence,
+        optionalRewardCount: 4,
+      }),
+    ).toThrow('optional reward count must be within 0..3');
+  });
+
+  it.each([
+    ['golden-h-combat09', 2],
+    ['golden-h-combat02', 3],
+    ['golden-h-combat05', 4],
+  ] as const)(
+    'supports the full optional domain for %s (capacity %i) with default two',
+    (id, capacity) => {
+      const targetOccurrenceId = createOccurrenceId(id);
+      const target = createOccurrenceAddress(goldenHBiome, targetOccurrenceId);
+      let project = createGoldenFGHProject();
+      expect(fieldsState(project, targetOccurrenceId).optionalRewardCount).toBe(2);
+      for (let optionalRewardCount = 0; optionalRewardCount <= capacity; optionalRewardCount += 1) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFieldsOptionalRewardCount',
+          occurrence: target,
+          optionalRewardCount,
+        });
+        expect(fieldsState(project, targetOccurrenceId).optionalRewardCount).toBe(
+          optionalRewardCount,
+        );
+      }
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFieldsOptionalRewardCount',
+          occurrence: target,
+          optionalRewardCount: capacity + 1,
+        }),
+      ).toThrow(`optional reward count must be within 0..${capacity}`);
+    },
+  );
 });

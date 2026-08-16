@@ -147,6 +147,12 @@ function localStoreKey(
   declaration: RoomDeclaration,
   owner: LocalRewardAddress,
 ): string | undefined {
+  if (owner.groupKey === declaration.fieldsOptionalRewards?.key) {
+    if (!declaration.fieldsOptionalRewards.slotKeys.includes(owner.slotKey)) {
+      fail(`reward producer ${semanticAddressKey(owner)} has no optional reward slot`);
+    }
+    return 'FieldsOptionalRewards';
+  }
   const descriptor = declaration.localChildren.find((child) => child.key === owner.groupKey);
   if (descriptor?.kind === 'boundedRewardSlots') {
     if (!descriptor.slotKeys.includes(owner.slotKey)) {

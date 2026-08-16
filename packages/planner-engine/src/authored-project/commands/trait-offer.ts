@@ -465,23 +465,38 @@ export function locateTraitReward(
     case 'localReward':
       if (state.kind === 'fieldsCombat') {
         const room = catalog.rooms.byKey[occurrence.gameName];
-        const group = room?.localChildren.find((child) => child.key === owner.groupKey);
-        if (group?.kind !== 'boundedRewardSlots') {
+        const cageGroup = room?.localChildren.find((child) => child.key === owner.groupKey);
+        const binding =
+          cageGroup?.kind === 'boundedRewardSlots'
+            ? cageGroup.reward
+            : room?.fieldsOptionalRewards?.key === owner.groupKey
+              ? room.fieldsOptionalRewards.reward
+              : undefined;
+        const slotKeys =
+          cageGroup?.kind === 'boundedRewardSlots'
+            ? cageGroup.slotKeys
+            : room?.fieldsOptionalRewards?.key === owner.groupKey
+              ? room.fieldsOptionalRewards.slotKeys
+              : [];
+        if (binding === undefined) {
           failCommand(
             command,
             `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
           );
         }
-        if (!group.slotKeys.includes(owner.slotKey)) {
+        if (!slotKeys.includes(owner.slotKey)) {
           failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
         }
-        const reward = state.cages[owner.slotKey];
+        const reward =
+          owner.groupKey === 'cages'
+            ? state.cages[owner.slotKey]
+            : state.optionalRewards[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
         return Object.freeze({
           reward,
           levelEffectSource: {
             kind: 'producerLifecycle',
-            key: group.reward.producerLifecycleKey,
+            key: binding.producerLifecycleKey,
           } as const,
         });
       }
@@ -595,24 +610,42 @@ export function updateTraitRewardState(
     case 'localReward':
       if (state.kind === 'fieldsCombat') {
         const room = catalog.rooms.byKey[occurrence.gameName];
-        const group = room?.localChildren.find((child) => child.key === owner.groupKey);
-        if (group?.kind !== 'boundedRewardSlots') {
+        const cageGroup = room?.localChildren.find((child) => child.key === owner.groupKey);
+        const slotKeys =
+          cageGroup?.kind === 'boundedRewardSlots'
+            ? cageGroup.slotKeys
+            : room?.fieldsOptionalRewards?.key === owner.groupKey
+              ? room.fieldsOptionalRewards.slotKeys
+              : [];
+        if (slotKeys.length === 0) {
           failCommand(
             command,
             `${occurrence.gameName} has no Fields reward group ${owner.groupKey}`,
           );
         }
-        if (!group.slotKeys.includes(owner.slotKey)) {
+        if (!slotKeys.includes(owner.slotKey)) {
           failCommand(command, `${occurrence.gameName} has no Fields reward slot ${owner.slotKey}`);
         }
-        const reward = state.cages[owner.slotKey];
+        const reward =
+          owner.groupKey === 'cages'
+            ? state.cages[owner.slotKey]
+            : state.optionalRewards[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing Fields reward ${owner.slotKey}`);
         return Object.freeze({
           ...state,
-          cages: Object.freeze({
-            ...state.cages,
-            [owner.slotKey]: update(reward, trait.acquisitionRole, value),
-          }),
+          ...(owner.groupKey === 'cages'
+            ? {
+                cages: Object.freeze({
+                  ...state.cages,
+                  [owner.slotKey]: update(reward, trait.acquisitionRole, value),
+                }),
+              }
+            : {
+                optionalRewards: Object.freeze({
+                  ...state.optionalRewards,
+                  [owner.slotKey]: update(reward, trait.acquisitionRole, value),
+                }),
+              }),
         });
       }
       if (state.kind === 'ephyraCombat') {

@@ -1529,6 +1529,70 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
+  it('authors Fields optional count and chronology-derived interaction with undoable retention', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    const optionals = screen.getByLabelText('Fields optional rewards');
+    const count = within(optionals).getByRole('combobox', {
+      name: 'Optional pickups',
+    }) as HTMLSelectElement;
+    expect(count.value).toBe('2');
+    expect(Array.from(count.options).map((option) => option.value)).toEqual(['0', '1', '2', '3']);
+    expect(within(optionals).queryByLabelText('Optional 3')).toBeNull();
+    const optional2 = within(optionals).getByLabelText('Optional 2');
+    const interact = within(optional2).getByRole('checkbox', {
+      name: 'Interact with Optional 2',
+    }) as HTMLInputElement;
+    expect(interact.checked).toBe(false);
+
+    await view.user.click(interact);
+    await waitFor(() => expect(interact.checked).toBe(true));
+    const interacted = occurrenceState(
+      view.application.store.getState().projectWorkspace.history.present,
+      'Underworld',
+      'H',
+      occurrenceId,
+    );
+    expect(interacted).toMatchObject({
+      kind: 'fieldsCombat',
+      actionOrder: expect.arrayContaining([
+        { kind: 'interactOptionalReward', slotKey: 'optional2' },
+      ]),
+    });
+    if (interacted.kind !== 'fieldsCombat') throw new Error('Fields state is missing');
+    const retained = interacted.optionalRewards.optional2;
+
+    await view.user.selectOptions(count, '1');
+    await waitFor(() => expect(screen.queryByLabelText('Optional 2')).toBeNull());
+    const lowered = occurrenceState(
+      view.application.store.getState().projectWorkspace.history.present,
+      'Underworld',
+      'H',
+      occurrenceId,
+    );
+    expect(lowered).toMatchObject({ kind: 'fieldsCombat', optionalRewardCount: 1 });
+    if (lowered.kind !== 'fieldsCombat') throw new Error('lowered Fields state is missing');
+    expect(lowered.optionalRewards.optional2).toEqual(retained);
+    expect(lowered.actionOrder).not.toEqual(
+      expect.arrayContaining([{ kind: 'interactOptionalReward', slotKey: 'optional2' }]),
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => expect(screen.getByLabelText('Optional 2')).toBeTruthy());
+    expect(
+      (
+        screen.getByRole('checkbox', {
+          name: 'Interact with Optional 2',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
+
   it('moves one Fields action through candidate-backed chronology and undo/redo', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(

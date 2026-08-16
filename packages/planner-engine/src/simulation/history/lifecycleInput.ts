@@ -69,6 +69,10 @@ export function createRoomLifecycleInput(
           ),
         )
       : undefined;
+  const fieldsOptionalRewardSlotKeys =
+    room.kind === 'authored' && fieldsActions !== undefined
+      ? Object.freeze((room.fieldsOptionalRewards ?? []).map((reward) => reward.slotKey))
+      : undefined;
   const activePhaseKeys = new Set(encounterPhases.map((phase) => phase.slotKey));
   const offerPointRewardStores =
     rewardWheels === undefined
@@ -90,6 +94,7 @@ export function createRoomLifecycleInput(
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(fieldsActions === undefined ? {} : { fieldsActions }),
     ...(fieldsCageRewards === undefined ? {} : { fieldsCageRewards }),
+    ...(fieldsOptionalRewardSlotKeys === undefined ? {} : { fieldsOptionalRewardSlotKeys }),
     ...(incomingReward === undefined
       ? {}
       : {

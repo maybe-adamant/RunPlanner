@@ -132,7 +132,13 @@ describe('authored room-state replacement', () => {
       replacementDefault,
       testLoadout,
     );
-    expect(reconciled).toEqual(previousState);
+    const compatibleOptionalRewards = Object.fromEntries(
+      Object.entries(previousState.optionalRewards).filter(([slotKey]) => slotKey !== 'optional4'),
+    );
+    expect(reconciled).toEqual({
+      ...previousState,
+      optionalRewards: compatibleOptionalRewards,
+    });
     expect(reconciled).not.toBe(previousState);
   });
 

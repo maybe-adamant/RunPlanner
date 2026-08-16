@@ -766,6 +766,50 @@ export function normalizeRooms(
         defaultRewardType: 'BlindBoxLoot',
       });
     })();
+    const fieldsOptionalRewards = (() => {
+      const raw = room.fieldsOptionalRewards;
+      if (raw === undefined) return undefined;
+      if (
+        room.mode.kind !== 'authored' ||
+        room.mode.templateKey !== 'FieldsCombat' ||
+        raw.key !== 'optionalRewards'
+      ) {
+        fail(`${path}.fieldsOptionalRewards`, 'requires an authored FieldsCombat room');
+      }
+      const optionalRewardCapacity = requirePositiveInteger(
+        raw.optionalRewardCapacity,
+        `${path}.fieldsOptionalRewards.optionalRewardCapacity`,
+      );
+      if (optionalRewardCapacity < 2 || optionalRewardCapacity > 4) {
+        fail(
+          `${path}.fieldsOptionalRewards.optionalRewardCapacity`,
+          'must be within the supported 2..4 map capacity',
+        );
+      }
+      const reward = normalizeRewardBinding(
+        raw.reward,
+        rewards,
+        `${path}.fieldsOptionalRewards.reward`,
+      );
+      if (
+        reward.kind !== 'countedChoice' ||
+        reward.storeKeys.length !== 1 ||
+        reward.storeKeys[0] !== 'FieldsOptionalRewards'
+      ) {
+        fail(
+          `${path}.fieldsOptionalRewards.reward.storeKeys`,
+          'must contain only FieldsOptionalRewards',
+        );
+      }
+      return Object.freeze({
+        key: 'optionalRewards' as const,
+        optionalRewardCapacity,
+        slotKeys: Object.freeze(
+          Array.from({ length: optionalRewardCapacity }, (_, index) => `optional${index + 1}`),
+        ),
+        reward,
+      });
+    })();
 
     return Object.freeze({
       gameName: room.gameName,
@@ -825,6 +869,7 @@ export function normalizeRooms(
           return normalized;
         },
       ),
+      ...(fieldsOptionalRewards === undefined ? {} : { fieldsOptionalRewards }),
       ...(infernalContractReward === undefined ? {} : { infernalContractReward }),
     });
   });
@@ -874,8 +919,8 @@ export function normalizeRooms(
     });
   });
   collection.values.forEach((room, roomIndex) => {
+    const path = `rooms[${roomIndex}]`;
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'Preboss') {
-      const path = `rooms[${roomIndex}]`;
       if (room.prebossBatchPolicy?.kind === 'retainNormalPeers') {
         if (room.caps.maxCreationsPerRoom !== 1) {
           fail(
@@ -886,9 +931,11 @@ export function normalizeRooms(
       }
     }
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'FieldsCombat') {
-      const path = `rooms[${roomIndex}]`;
       if (room.individualRewardStoreKey === undefined) {
         fail(`${path}.individualRewardStoreKey`, 'is required by FieldsCombat');
+      }
+      if (room.fieldsOptionalRewards === undefined) {
+        fail(`${path}.fieldsOptionalRewards`, 'FieldsCombat requires optional reward capacity');
       }
       if (room.localChildren.length !== 1) {
         fail(`${path}.localChildren`, 'FieldsCombat requires exactly one cages descriptor');
@@ -942,8 +989,13 @@ export function normalizeRooms(
         );
       }
     }
+    if (
+      (room.mode.kind !== 'authored' || room.mode.templateKey !== 'FieldsCombat') &&
+      room.fieldsOptionalRewards !== undefined
+    ) {
+      fail(`${path}.fieldsOptionalRewards`, 'is only valid for FieldsCombat');
+    }
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat') {
-      const path = `rooms[${roomIndex}]`;
       const envelope = encounterEnvelopes.byKey[room.encounterEnvelopeKey];
       const intro = envelope?.slots[0];
       const combat1 = envelope?.slots[1];

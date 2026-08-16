@@ -6,6 +6,7 @@ import {
   requireCountedBinding,
   requireEphyraSideRooms,
   requireFieldsCages,
+  requireFieldsOptionalRewards,
   requireShipCombatWheels,
 } from './declaration';
 import { reconcileRoomEncounterState } from './encounters';
@@ -99,10 +100,57 @@ function reconcileFieldsCombatState(
       ];
     }),
   );
+  const previousOptional = requireFieldsOptionalRewards(previousRoom, previousRoom.gameName);
+  const replacementOptional = requireFieldsOptionalRewards(
+    replacementRoom,
+    replacementRoom.gameName,
+  );
+  const optionalRewards = Object.fromEntries(
+    replacementOptional.slotKeys.map((slotKey) => {
+      const previousReward = previousState.optionalRewards[slotKey];
+      const replacementReward = replacementState.optionalRewards[slotKey];
+      if (replacementReward === undefined) {
+        throw new Error(`${replacementRoom.gameName} default omitted optional reward ${slotKey}`);
+      }
+      return [
+        slotKey,
+        previousReward !== undefined &&
+        previousOptional.slotKeys.includes(slotKey) &&
+        countedOfferIsAdmitted(replacementOptional.reward, previousReward.offer)
+          ? Object.freeze({
+              offer: previousReward.offer,
+              ...defaultRewardLeaves(
+                catalog,
+                previousReward.offer,
+                loadout,
+                producerLevelEffectSource(replacementOptional.reward),
+              ),
+            })
+          : replacementReward,
+      ];
+    }),
+  );
+  const optionalRewardCount = Math.min(
+    previousState.optionalRewardCount,
+    replacementOptional.optionalRewardCapacity,
+  );
+  const admittedOptionalActions = new Set(
+    replacementOptional.slotKeys
+      .slice(0, optionalRewardCount)
+      .map((slotKey) => `interactOptional:${slotKey}`),
+  );
   return Object.freeze({
     kind: 'fieldsCombat',
     cages: Object.freeze(cages),
-    actionOrder: previousState.actionOrder,
+    optionalRewardCount,
+    optionalRewards: Object.freeze(optionalRewards),
+    actionOrder: Object.freeze(
+      previousState.actionOrder.filter(
+        (action) =>
+          action.kind !== 'interactOptionalReward' ||
+          admittedOptionalActions.has(`interactOptional:${action.slotKey}`),
+      ),
+    ),
   });
 }
 

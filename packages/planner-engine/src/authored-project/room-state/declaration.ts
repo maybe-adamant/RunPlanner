@@ -1,6 +1,7 @@
 import type {
   Catalog,
   EncounterRewardWheelAttachment,
+  FieldsOptionalRewardDescriptor,
   LocalChildDescriptor,
   RoomDeclaration,
 } from '../../catalog-schema';
@@ -73,6 +74,16 @@ export function requireFieldsCages(
     failProjectDocument(path, 'FieldsCombat requires bounded cages');
   }
   return cages;
+}
+
+export function requireFieldsOptionalRewards(
+  room: RoomDeclaration,
+  path: string,
+): FieldsOptionalRewardDescriptor {
+  if (room.fieldsOptionalRewards === undefined) {
+    failProjectDocument(path, 'FieldsCombat requires optional rewards');
+  }
+  return room.fieldsOptionalRewards;
 }
 
 export function requireShipCombatWheels(

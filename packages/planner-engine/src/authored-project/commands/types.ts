@@ -229,11 +229,17 @@ export type LocalRewardCommand = {
   readonly value: ResolvedRewardOffer;
 };
 
-export type FieldsOccurrenceCommand = {
-  readonly kind: 'ReplaceFieldsActionOrder';
-  readonly occurrence: OccurrenceAddress;
-  readonly actionOrder: readonly import('../model').FieldsCombatAction[];
-};
+export type FieldsOccurrenceCommand =
+  | {
+      readonly kind: 'ReplaceFieldsActionOrder';
+      readonly occurrence: OccurrenceAddress;
+      readonly actionOrder: readonly import('../model').FieldsCombatAction[];
+    }
+  | {
+      readonly kind: 'ReplaceFieldsOptionalRewardCount';
+      readonly occurrence: OccurrenceAddress;
+      readonly optionalRewardCount: number;
+    };
 
 export type ShipOccurrenceCommand =
   | {

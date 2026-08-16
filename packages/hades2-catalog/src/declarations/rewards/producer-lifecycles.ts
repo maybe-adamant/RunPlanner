@@ -23,6 +23,8 @@ export const producerLifecycles = [
       'TalentDrop',
       'TalentBigDrop',
       'MinorTalentDrop',
+      'RoomRewardHealDrop',
+      'ArmorBoost',
       'Boon',
       'GiftDrop',
       'MetaCurrencyDrop',

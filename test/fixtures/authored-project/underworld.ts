@@ -617,6 +617,25 @@ function appendCompleteH(project: ProjectDocument): ProjectDocument {
       });
     }
   }
+  const optionalOffers: readonly (readonly [OccurrenceId, readonly ResolvedRewardOffer[]])[] = [
+    [combat02, [{ rewardType: 'MaxManaDropSmall' }, { rewardType: 'MaxManaDropSmall' }]],
+    [combat09, [{ rewardType: 'MaxHealthDropSmall' }, { rewardType: 'MaxHealthDropSmall' }]],
+    [combat05, [{ rewardType: 'RoomMoneyTinyDrop' }, { rewardType: 'RoomMoneyTinyDrop' }]],
+  ];
+  for (const [occurrenceId, offers] of optionalOffers) {
+    for (const [index, value] of offers.entries()) {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(
+          goldenHBiome,
+          occurrenceId,
+          'optionalRewards',
+          `optional${index + 1}`,
+        ),
+        value,
+      });
+    }
+  }
   const prebossDecision = createExitDecisionAddress(goldenHBiome, source(combat05));
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTakeoverBatch',

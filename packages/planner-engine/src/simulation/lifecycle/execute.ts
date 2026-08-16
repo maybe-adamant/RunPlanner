@@ -338,7 +338,8 @@ function fieldsActionSequenceOperationHandler(
 ): ExecutionState {
   const actions = context.input.fieldsActions;
   const bindings = context.input.fieldsCageRewards;
-  if (actions === undefined || bindings === undefined) {
+  const optionalSlotKeys = context.input.fieldsOptionalRewardSlotKeys;
+  if (actions === undefined || bindings === undefined || optionalSlotKeys === undefined) {
     throw new LifecycleExecutionContractError(
       `${context.profile.key} requires Fields actions and cage reward bindings`,
     );
@@ -352,6 +353,8 @@ function fieldsActionSequenceOperationHandler(
   const bindingBySlot = new Map(bindings.map((binding) => [binding.slotKey, binding]));
   const completionKeys = new Set<string>();
   const interactionKeys = new Set<string>();
+  const optionalInteractionKeys = new Set<string>();
+  const optionalSlots = new Set(optionalSlotKeys);
   const applyEncounterEffects = (
     next: ExecutionState,
     encounterPhase: ResolvedEncounterPhase,
@@ -391,6 +394,20 @@ function fieldsActionSequenceOperationHandler(
       }
       completionKeys.add(action.phaseKey);
       next = applyEncounterEffects(next, phase);
+      continue;
+    }
+    if (action.kind === 'interactOptionalReward') {
+      if (!optionalSlots.has(action.slotKey) || optionalInteractionKeys.has(action.slotKey)) {
+        throw new LifecycleExecutionContractError(
+          `${context.profile.key} received unavailable optional interaction ${action.slotKey}`,
+        );
+      }
+      optionalInteractionKeys.add(action.slotKey);
+      next = appendEvent(
+        next,
+        { ...context, operationIndex },
+        { kind: 'acquisitionPointReached', point: `optionalRewards:${action.slotKey}` },
+      );
       continue;
     }
     const binding = bindingBySlot.get(action.slotKey);

@@ -20,6 +20,7 @@ import {
   requireCountedBinding,
   requireEphyraSideRooms,
   requireFieldsCages,
+  requireFieldsOptionalRewards,
   requireOrdinaryRole,
   requireShipCombatWheels,
   requireShopBinding,
@@ -121,6 +122,25 @@ function defaultFieldsCages(
     );
   }
   return Object.freeze(cages);
+}
+
+function defaultFieldsOptionalRewards(
+  room: RoomDeclaration,
+  path: string,
+): Readonly<Record<string, ResolvedRewardOffer>> {
+  const descriptor = requireFieldsOptionalRewards(room, path);
+  return Object.freeze(
+    Object.fromEntries(
+      descriptor.slotKeys.map((slotKey) => [
+        slotKey,
+        defaultCountedOffer(
+          descriptor.reward,
+          'FieldsOptionalRewards',
+          `${path}.optionalRewards.${slotKey}`,
+        ),
+      ]),
+    ),
+  );
 }
 
 function defaultRewardWheel(
@@ -317,38 +337,46 @@ export function createDefaultRoomState(
           failProjectDocument(path, 'FieldsCombat default requires the selected active cage count');
         }
         const cages = defaultFieldsCages(room, path);
+        const optionalDescriptor = requireFieldsOptionalRewards(room, path);
+        const optionalRewards = defaultFieldsOptionalRewards(room, path);
+        const rewardState = (
+          offer: ResolvedRewardOffer,
+          source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
+        ) =>
+          Object.freeze({
+            offer,
+            conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(catalog, offer),
+            traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
+            ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
+              ? {}
+              : {
+                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
+                    catalog,
+                    offer,
+                    source,
+                  ),
+                }),
+          });
         return Object.freeze({
           kind: 'fieldsCombat',
           actionOrder: createDefaultFieldsActionOrder(catalog, room, context.activeCageCount),
+          optionalRewardCount: 2,
+          optionalRewards: Object.freeze(
+            Object.fromEntries(
+              Object.entries(optionalRewards).map(([slotKey, offer]) => [
+                slotKey,
+                rewardState(offer, producerLevelEffectSource(optionalDescriptor.reward)),
+              ]),
+            ),
+          ),
           cages: Object.freeze(
             Object.fromEntries(
               Object.entries(cages).map(([slotKey, offer]) => [
                 slotKey,
-                Object.freeze({
+                rewardState(
                   offer,
-                  conversionByAcquisitionRole: createDefaultConversionByAcquisitionRole(
-                    catalog,
-                    offer,
-                  ),
-                  traitOffersByAcquisitionRole: createDefaultTraitOffers(
-                    catalog,
-                    offer,
-                    defaultLoadout,
-                  ),
-                  ...(createDefaultLevelResolutions(
-                    catalog,
-                    offer,
-                    producerLevelEffectSource(requireFieldsCages(room, path).reward),
-                  ) === undefined
-                    ? {}
-                    : {
-                        levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                          catalog,
-                          offer,
-                          producerLevelEffectSource(requireFieldsCages(room, path).reward),
-                        ),
-                      }),
-                }),
+                  producerLevelEffectSource(requireFieldsCages(room, path).reward),
+                ),
               ]),
             ),
           ),

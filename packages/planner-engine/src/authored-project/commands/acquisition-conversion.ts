@@ -103,11 +103,29 @@ export function applyAcquisitionConversionCommand(
       break;
     case 'localReward':
       if (occurrence.state.kind === 'fieldsCombat') {
-        const reward = occurrence.state.cages[owner.slotKey];
+        const rewards =
+          owner.groupKey === 'cages'
+            ? occurrence.state.cages
+            : owner.groupKey === 'optionalRewards'
+              ? occurrence.state.optionalRewards
+              : undefined;
+        const reward = rewards?.[owner.slotKey];
         if (reward === undefined) failCommand(command, `missing local reward ${owner.slotKey}`);
         state = Object.freeze({
           ...occurrence.state,
-          cages: Object.freeze({ ...occurrence.state.cages, [owner.slotKey]: replace(reward) }),
+          ...(owner.groupKey === 'cages'
+            ? {
+                cages: Object.freeze({
+                  ...occurrence.state.cages,
+                  [owner.slotKey]: replace(reward),
+                }),
+              }
+            : {
+                optionalRewards: Object.freeze({
+                  ...occurrence.state.optionalRewards,
+                  [owner.slotKey]: replace(reward),
+                }),
+              }),
         });
       } else if (occurrence.state.kind === 'ephyraCombat') {
         const { state: ephyra, group } = requireEphyraSideGroup(

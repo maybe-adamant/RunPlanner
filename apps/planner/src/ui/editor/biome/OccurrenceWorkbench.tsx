@@ -431,6 +431,7 @@ function FieldsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
+  const dispatch = useAppDispatch();
   return (
     <div className="fields-room-editor">
       {room.cages.length === 0 ? null : (
@@ -453,10 +454,96 @@ function FieldsWorkbench({
         </div>
       )}
       {room.chronology === undefined ? null : (
+        <section aria-label="Fields optional rewards" className="local-reward-editor">
+          <label className="field-control">
+            <span>Optional pickups</span>
+            <select
+              aria-label="Optional pickups"
+              onChange={(event) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceFieldsOptionalRewardCount',
+                    occurrence: room.owner,
+                    optionalRewardCount: Number(event.target.value),
+                  }),
+                )
+              }
+              value={room.optionalRewardCount}
+            >
+              {room.optionalRewardCountValues.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <FieldsOptionalRewardRows
+            chronology={room.chronology}
+            interactions={interactions}
+            room={room}
+          />
+        </section>
+      )}
+      {room.chronology === undefined ? null : (
         <FieldsChronologyWorkbench chronology={room.chronology} interactions={interactions} />
       )}
     </div>
   );
+}
+
+function FieldsOptionalRewardRows({
+  chronology,
+  interactions,
+  room,
+}: {
+  readonly chronology: NonNullable<
+    Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>['chronology']
+  >;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
+}) {
+  const executeIntent = useCommandIntent();
+  const chronologyInteraction = requireWorkspaceInteraction(
+    interactions.fieldsActionOrders,
+    chronology.interactionKey,
+  );
+  const chronologyCandidates = useWorkspaceInteraction(chronologyInteraction);
+  const applyParticipation = (proposalKey: string): void => {
+    const proposalIndex = chronologyInteraction.proposals.findIndex(
+      (proposal) => proposal.key === proposalKey,
+    );
+    if (proposalIndex < 0) return;
+    const evaluated = chronologyCandidates.result ?? chronologyCandidates.activate();
+    if (!candidateMayBeAuthored(evaluated?.[proposalIndex])) return;
+    executeIntent(chronologyInteraction.intentFor(proposalKey));
+  };
+  return room.optionalRewards.map((reward) => (
+    <section aria-label={reward.label} className="local-reward-slot" key={reward.key}>
+      <div className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>{reward.label}</h4>
+          <SemanticOwnerMarker address={reward.control.marker.address} />
+        </div>
+        <label className="purchase-control">
+          <input
+            aria-busy={chronologyCandidates.pending || undefined}
+            aria-label={`Interact with ${reward.label}`}
+            checked={reward.interacted}
+            onChange={() => applyParticipation(reward.participationProposalKey)}
+            onFocus={chronologyCandidates.activate}
+            onPointerDown={chronologyCandidates.activate}
+            type="checkbox"
+          />
+          Interact
+        </label>
+      </div>
+      <RewardControlEditor
+        control={reward.control}
+        idPrefix={`room-${reward.control.marker.focusKey}`}
+        interactions={interactions}
+      />
+    </section>
+  ));
 }
 
 function FieldsChronologyWorkbench({

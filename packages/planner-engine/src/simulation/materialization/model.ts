@@ -84,6 +84,21 @@ export interface CanonicalLocalReward {
   readonly resolvedStoreKey: string;
 }
 
+/** One entry-generated Fields pickup, independent of cage encounter rewards. */
+export interface CanonicalFieldsOptionalReward {
+  readonly origin: LocalRewardAddress;
+  readonly groupKey: 'optionalRewards';
+  readonly slotKey: string;
+  readonly producerLifecycleKey: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer>>;
+  readonly levelResolutionsByAcquisitionRole?:
+    Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly conversionByAcquisitionRole?: Readonly<Record<string, 'normal' | 'gold'>>;
+  readonly traitContext?: TraitOfferContext;
+  readonly resolvedStoreKey: 'FieldsOptionalRewards';
+}
+
 export interface CanonicalRewardWheelOffer {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
@@ -127,6 +142,7 @@ export interface CanonicalAuthoredRoom {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly fieldsActions?: readonly FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;

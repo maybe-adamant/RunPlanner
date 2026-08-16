@@ -308,6 +308,11 @@ export interface RawRoomDeclaration {
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren?: readonly RawLocalChildDescriptor[];
+  readonly fieldsOptionalRewards?: {
+    readonly key: 'optionalRewards';
+    readonly optionalRewardCapacity: number;
+    readonly reward: RawCountedRewardBinding;
+  };
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
     readonly producerLifecycleKey: string;

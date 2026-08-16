@@ -83,6 +83,39 @@ describe('persisted authored room-state codec', () => {
     );
   });
 
+  it('decodes the declaration-bounded Fields optional inventory and closed actions', () => {
+    const declaration = room('H_Combat02');
+    const context = { role: 'ordinary' as const, entryActive: true, activeCageCount: 2 };
+    const state = mutable(createDefaultRoomState(catalog, declaration, context));
+    state.optionalRewardCount = 0;
+    state.actionOrder = [
+      ...(state.actionOrder as Record<string, unknown>[]),
+      { kind: 'interactOptionalReward', slotKey: 'optional3' },
+    ];
+    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
+      'unknown Fields action identity interactOptional:optional3',
+    );
+    state.actionOrder = [];
+    expect(decodeRoomState(state, catalog, declaration, context, path)).toMatchObject({
+      kind: 'fieldsCombat',
+      optionalRewardCount: 0,
+      optionalRewards: {
+        optional1: expect.any(Object),
+        optional2: expect.any(Object),
+        optional3: expect.any(Object),
+      },
+    });
+    state.optionalRewardCount = 4;
+    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
+      'must be within 0..3',
+    );
+    state.optionalRewardCount = 2;
+    state.actionOrder = [{ kind: 'interactOptionalReward', slotKey: 'optional4' }];
+    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
+      'unknown Fields action identity interactOptional:optional4',
+    );
+  });
+
   it.each(['H_Combat02', 'O_Combat01', 'N_Combat02'])(
     'decodes the complete %s declaration default',
     (gameName) => {

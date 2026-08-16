@@ -150,7 +150,7 @@ const roomFacts = [
 const normalizedBiomeSnapshotHashes = [
   ['F', 'a8a39561c1a63cc6'],
   ['G', 'de3df3d8994c6fd2'],
-  ['H', '84874d55ef8143e8'],
+  ['H', '0886c0e1bf79c6dd'],
   ['I', 'd643cc2b75f9b8a7'],
   ['N', '4d59515550ccfe07'],
   ['O', 'a888b5f10a097993'],
@@ -383,6 +383,36 @@ describe('catalog regression coverage retained through unified decisions', () =>
       );
     },
   );
+
+  it('declares the exact Fields optional pickup capacity for every H combat map', () => {
+    expect(
+      Object.fromEntries(
+        Array.from({ length: 15 }, (_, index) => {
+          const gameName = `H_Combat${String(index + 1).padStart(2, '0')}`;
+          return [
+            gameName,
+            catalog.rooms.byKey[gameName]?.fieldsOptionalRewards?.optionalRewardCapacity,
+          ];
+        }),
+      ),
+    ).toEqual({
+      H_Combat01: 4,
+      H_Combat02: 3,
+      H_Combat03: 4,
+      H_Combat04: 4,
+      H_Combat05: 4,
+      H_Combat06: 4,
+      H_Combat07: 3,
+      H_Combat08: 3,
+      H_Combat09: 2,
+      H_Combat10: 4,
+      H_Combat11: 2,
+      H_Combat12: 3,
+      H_Combat13: 2,
+      H_Combat14: 2,
+      H_Combat15: 2,
+    });
+  });
 
   it.each(normalizedBiomeSnapshotHashes)(
     '%s keeps an exact normalized declaration snapshot',

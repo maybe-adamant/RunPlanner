@@ -991,11 +991,20 @@ export interface WorkspaceFieldsCageDescriptor {
   readonly label: string;
 }
 
+export interface WorkspaceFieldsOptionalRewardDescriptor {
+  readonly control: WorkspaceCountedRewardControl;
+  readonly interacted: boolean;
+  readonly key: string;
+  readonly label: string;
+  readonly participationProposalKey: string;
+}
+
 export interface WorkspaceFieldsActionProposal {
   readonly actionKey: string;
   readonly key: string;
   readonly label: string;
   readonly order: readonly FieldsCombatAction[];
+  readonly defaultParticipation?: boolean;
 }
 
 export interface WorkspaceFieldsActionRow {
@@ -1255,6 +1264,11 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'fields';
       readonly cages: readonly WorkspaceFieldsCageDescriptor[];
+      readonly optionalRewardCount: number;
+      readonly optionalRewardCapacity: number;
+      readonly optionalRewardCountValues: readonly number[];
+      readonly optionalRewards: readonly WorkspaceFieldsOptionalRewardDescriptor[];
+      readonly owner: OccurrenceAddress;
       /** Withheld when a retained mixed batch has no truthful active-cage domain. */
       readonly chronology?: WorkspaceFieldsChronology;
       readonly groupKey: string;

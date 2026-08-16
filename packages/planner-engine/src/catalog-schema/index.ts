@@ -510,6 +510,8 @@ export interface RoomDeclaration {
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren: readonly LocalChildDescriptor[];
+  /** Entry-generated, optional Fields pickups and their exact map capacity. */
+  readonly fieldsOptionalRewards?: FieldsOptionalRewardDescriptor;
   /** Source-owned zero-cost Infernal Contract pedestal at qualifying Preboss rooms. */
   readonly infernalContractReward?: {
     readonly entryKey: 'infernalContractReward';
@@ -517,6 +519,13 @@ export interface RoomDeclaration {
     readonly rewardTypes: readonly [string, string, string, string, string];
     readonly defaultRewardType: string;
   };
+}
+
+export interface FieldsOptionalRewardDescriptor {
+  readonly key: 'optionalRewards';
+  readonly optionalRewardCapacity: number;
+  readonly slotKeys: readonly string[];
+  readonly reward: CountedRewardBinding;
 }
 
 export type AuthoredFieldInitialization<T> =

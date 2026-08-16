@@ -48,6 +48,7 @@ import type {
 } from '../history';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalFieldsOptionalReward,
   CanonicalAdditionalContinuation,
   CanonicalBatch,
   CanonicalBiome,
@@ -670,8 +671,21 @@ function expectedTargetStores(
 
 function localRewardBinding(
   declaration: RoomDeclaration,
-  reward: CanonicalLocalReward,
+  reward: CanonicalLocalReward | CanonicalFieldsOptionalReward,
 ): CountedRewardBinding {
+  if (reward.groupKey === 'optionalRewards') {
+    const descriptor = declaration.fieldsOptionalRewards;
+    if (
+      descriptor === undefined ||
+      !descriptor.slotKeys.includes(reward.slotKey) ||
+      descriptor.reward.producerLifecycleKey !== reward.producerLifecycleKey
+    ) {
+      throw new BiomeRewardSimulationContractError(
+        `${declaration.gameName} does not own optional reward ${reward.slotKey}`,
+      );
+    }
+    return descriptor.reward;
+  }
   const descriptor = declaration.localChildren.find(
     (child) => child.kind === 'boundedRewardSlots' && child.key === reward.groupKey,
   );
@@ -3214,6 +3228,125 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = processShopInventory(branches, shopContext, findings);
           break;
         }
+        if (event.offerPoint === 'fieldsOptionalRewards') {
+          const optionalRewards = room.fieldsOptionalRewards ?? [];
+          const view = roomView.offerPoints?.find(
+            (candidate) => candidate.offerPoint === event.offerPoint,
+          )?.before;
+          if (view === undefined || room.lifecycleProfileKey !== 'FieldsCombatRoom') {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} has no Fields optional materialization`,
+            );
+          }
+          const frontierBranches = branches;
+          const contexts = optionalRewards.map((reward) => ({
+            catalog,
+            reward,
+            binding: localRewardBinding(declaration, reward),
+            historySequence: event.sequence,
+            peers: Object.freeze([]),
+            facts: (branchHistory: RewardHistoryState) =>
+              rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
+          }));
+          const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+            const ownerKey = semanticAddressKey(owner);
+            const selectedReward = optionalRewards.find(
+              (reward) => semanticAddressKey(reward.origin) === ownerKey,
+            );
+            if (selectedReward === undefined) {
+              return fail('Fields optional frontier received a foreign owner');
+            }
+            const candidateFindings = new Map<string, FindingRegionEntry>();
+            let candidateBranches = frontierBranches;
+            for (const context of contexts) {
+              candidateBranches = processRewardOffer(
+                candidateBranches,
+                semanticAddressKey(context.reward.origin) === ownerKey
+                  ? { ...context, reward: Object.freeze({ ...context.reward, offer }) }
+                  : context,
+                candidateFindings,
+              );
+            }
+            const pointKey = `optionalRewards:${selectedReward.slotKey}`;
+            const acquisitionEvent = history.events.find(
+              (candidate) =>
+                candidate.kind === 'acquisitionPointReached' &&
+                semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
+                candidate.point === pointKey,
+            );
+            const acquisitionView = roomView.acquisitionPoints?.find(
+              (point) => point.point === pointKey,
+            )?.before;
+            if (
+              candidateBranches.length > 0 &&
+              acquisitionEvent !== undefined &&
+              acquisitionView !== undefined
+            ) {
+              candidateBranches = settleOwnedAcquisitionSite(
+                catalog,
+                candidateBranches,
+                {
+                  siteOwner: selectedReward.origin,
+                  pointKey,
+                  entryKey: selectedReward.slotKey,
+                  source: Object.freeze({
+                    ...selectedReward,
+                    offer,
+                    instanceProvenance: 'free',
+                  }),
+                  historySequence: acquisitionEvent.sequence,
+                },
+                (branchHistory) =>
+                  rewardFacts(
+                    catalog,
+                    room,
+                    room,
+                    declaration,
+                    acquisitionView,
+                    branchHistory,
+                    enteredBiomeCount,
+                  ),
+                candidateFindings,
+                ownerRegion(selectedReward.origin),
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  acquisitionEvent.sequence,
+                  'localRoomLifecycle',
+                ),
+              ).branches;
+            }
+            return candidateResult(candidateFindings, candidateBranches);
+          };
+          for (const reward of optionalRewards) {
+            const pointKey = `optionalRewards:${reward.slotKey}`;
+            const acquisitionEvent = history.events.find(
+              (candidate) =>
+                candidate.kind === 'acquisitionPointReached' &&
+                semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
+                candidate.point === pointKey,
+            );
+            indexRewardProducerFrontier(
+              producerFrontiers,
+              Object.freeze({
+                generationPolicy: 'sequential',
+                generationHistorySequence: event.sequence,
+                reachableBranchCount: frontierBranches.length,
+                acquisitionHorizon:
+                  acquisitionEvent === undefined
+                    ? ('generationOnly' as const)
+                    : ('ownEnteredLifecycle' as const),
+                owners: Object.freeze([reward.origin]),
+                resolvedStoreKey: reward.resolvedStoreKey,
+                evaluateOffer: evaluateOptionalCohort,
+              }),
+            );
+          }
+          for (const context of contexts) {
+            branches = processRewardOffer(branches, context, findings);
+          }
+          break;
+        }
         const wheel = room.rewardWheels?.find(
           (candidate) => candidate.wheelKey === event.offerPoint,
         );
@@ -3953,10 +4086,16 @@ export function evaluateBiomeRewardsAssemblyInternal(
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
         }
         if (room.lifecycleProfileKey === 'FieldsCombatRoom') {
-          const slotKey = event.point.startsWith('cages:')
+          const cageSlotKey = event.point.startsWith('cages:')
             ? event.point.slice('cages:'.length)
             : undefined;
-          const localReward = room.localRewards?.find((reward) => reward.slotKey === slotKey);
+          const optionalSlotKey = event.point.startsWith('optionalRewards:')
+            ? event.point.slice('optionalRewards:'.length)
+            : undefined;
+          const localReward =
+            cageSlotKey === undefined
+              ? room.fieldsOptionalRewards?.find((reward) => reward.slotKey === optionalSlotKey)
+              : room.localRewards?.find((reward) => reward.slotKey === cageSlotKey);
           const acquisitionView = roomView.acquisitionPoints?.find(
             (point) => point.point === event.point,
           )?.before;

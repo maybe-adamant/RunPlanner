@@ -119,6 +119,7 @@ export interface RoomLifecycleExecutionInput {
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
   readonly fieldsActions?: readonly FieldsCombatAction[];
   readonly fieldsCageRewards?: readonly { readonly phaseKey: string; readonly slotKey: string }[];
+  readonly fieldsOptionalRewardSlotKeys?: readonly string[];
 }
 
 export interface RoomHistoryFragment {

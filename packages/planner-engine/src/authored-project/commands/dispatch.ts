@@ -116,6 +116,7 @@ function applyUnchecked(
       );
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsActionOrder':
+    case 'ReplaceFieldsOptionalRewardCount':
     case 'ReplaceIncomingReward':
     case 'ReplaceLocalReward':
     case 'ReplaceSideRoomGeneration':

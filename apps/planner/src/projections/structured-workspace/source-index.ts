@@ -172,6 +172,7 @@ function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom
   }
   if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
   for (const reward of room.localRewards ?? []) appendOwner(keys, reward.origin);
+  for (const reward of room.fieldsOptionalRewards ?? []) appendOwner(keys, reward.origin);
   for (const wheel of room.rewardWheels ?? []) {
     appendOwner(keys, wheel.origin);
     for (const offer of wheel.offers) appendOwner(keys, offer.origin);

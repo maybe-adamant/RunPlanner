@@ -19,6 +19,7 @@ import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encoun
 import type { ResolvedEncounterPhase } from '../encounters';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalFieldsOptionalReward,
   CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
@@ -73,6 +74,7 @@ interface MaterializedRoomLeaf {
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly fieldsActions?: readonly import('../../authored-project/model').FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
@@ -342,6 +344,35 @@ function materializeFieldsCombat(
       resolvedStoreKey: storeKey,
     });
   });
+  const optionalDescriptor = context.room.fieldsOptionalRewards;
+  if (optionalDescriptor === undefined) {
+    fail(`${context.room.gameName} has no Fields optional reward descriptor`);
+  }
+  const fieldsOptionalRewards = optionalDescriptor.slotKeys
+    .slice(0, state.optionalRewardCount)
+    .map((slotKey) => {
+      const reward = state.optionalRewards[slotKey];
+      if (reward === undefined) {
+        fail(`${context.room.gameName} is missing authored optional reward ${slotKey}`);
+      }
+      return Object.freeze({
+        origin: createLocalRewardAddress(
+          context.biome,
+          context.occurrence.occurrenceId,
+          optionalDescriptor.key,
+          slotKey,
+        ),
+        groupKey: optionalDescriptor.key,
+        slotKey,
+        producerLifecycleKey: optionalDescriptor.reward.producerLifecycleKey,
+        offer: reward.offer,
+        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+        levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+        conversionByAcquisitionRole: reward.conversionByAcquisitionRole,
+        traitContext: traitContextForOffer(context, reward.offer),
+        resolvedStoreKey: 'FieldsOptionalRewards' as const,
+      });
+    });
   return Object.freeze({
     lifecycleProfileKey: 'FieldsCombatRoom',
     activeEncounterSlotKeys: Object.freeze([
@@ -349,6 +380,7 @@ function materializeFieldsCombat(
       ...activeCageSlots.map((slot) => slot.key),
     ]),
     localRewards: Object.freeze(localRewards),
+    fieldsOptionalRewards: Object.freeze(fieldsOptionalRewards),
     fieldsActions: state.actionOrder,
   });
 }
@@ -682,6 +714,9 @@ export function materializeAuthoredRoom(
       : { requiredObjects: context.room.requiredObjects }),
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
+    ...(leaf.fieldsOptionalRewards === undefined
+      ? {}
+      : { fieldsOptionalRewards: leaf.fieldsOptionalRewards }),
     ...(leaf.fieldsActions === undefined ? {} : { fieldsActions: leaf.fieldsActions }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
