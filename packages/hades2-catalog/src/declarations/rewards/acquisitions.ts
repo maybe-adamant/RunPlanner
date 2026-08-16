@@ -291,6 +291,13 @@ export const acquisitions = [
     goldConversionEligible: true,
     ...lastReward('MetaCardPointsCommonBigDrop'),
   },
+  {
+    gameName: 'MemPointsCommonDrop',
+    kind: 'resource',
+    historyProjection: 'consumableAndUse',
+    goldConversionEligible: true,
+    ...lastReward('MemPointsCommonDrop'),
+  },
   { gameName: 'WeaponPointsRareDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'CardUpgradePointsDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'CharonPointsDrop', kind: 'resource', historyProjection: 'consumableAndUse' },

@@ -72,6 +72,7 @@ export const rewardTypes = [
   directReward('MetaCurrencyBigDrop', 'Big Bones', 'resource'),
   directReward('MetaCardPointsCommonDrop', 'Ashes', 'resource'),
   directReward('MetaCardPointsCommonBigDrop', 'Big Ashes', 'resource'),
+  directReward('MemPointsCommonDrop', 'Psyche', 'resource'),
   directReward('WeaponPointsRareDrop', 'Nightmare', 'resource'),
   directReward('CardUpgradePointsDrop', 'Moon Dust', 'resource'),
   directReward('CharonPointsDrop', 'Obol Points', 'resource'),

@@ -379,6 +379,7 @@ describe('keepsake normalization', () => {
         'MetaCurrencyBigDrop',
         'MetaCardPointsCommonDrop',
         'MetaCardPointsCommonBigDrop',
+        'MemPointsCommonDrop',
       ].sort(),
     );
     for (const excluded of [
@@ -427,6 +428,15 @@ describe('keepsake normalization', () => {
         ),
       ),
     ).toThrow('goldConversionEligible: must be boolean');
+    expect(() =>
+      createWith(
+        base.map((acquisition) =>
+          acquisition.gameName === 'MemPointsCommonDrop'
+            ? { ...acquisition, goldConversionEligible: false }
+            : acquisition,
+        ),
+      ),
+    ).toThrow('exact Time Piece gold-conversion eligibility set');
   });
 
   it('normalizes only the auto-activated Blind Box hidden source as a Time Piece role blocker', () => {

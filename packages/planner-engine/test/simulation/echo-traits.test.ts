@@ -1756,6 +1756,51 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(findings.size).toBe(0);
   });
 
+  it('recreates acquired Narcissus Psyche through the exact Echo last-reward lifecycle', () => {
+    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
+    const replayEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(replayOwner, 'echoReplay'),
+      'recreatedReward',
+    );
+    const initial = baseBranch();
+    const acquiredPsyche = Object.freeze({
+      ...initial,
+      history: applyConcreteAcquisition(catalog.rewards, initial.history, {
+        kind: 'resource',
+        gameName: 'MemPointsCommonDrop',
+      }),
+    });
+    expect(acquiredPsyche.history.lastRewardRecreation).toEqual({
+      offer: { rewardType: 'MemPointsCommonDrop' },
+      producerLifecycleKey: 'EchoLastReward',
+    });
+    const findings = new Map();
+    const settled = settleOwnedAcquisitionSite(
+      catalog,
+      [acquiredPsyche],
+      {
+        siteOwner: replayOwner,
+        pointKey: 'echoReplay',
+        entryKey: 'recreatedReward',
+        historySequence: 10,
+        source: {
+          origin: replayEntry,
+          offer: { rewardType: 'MemPointsCommonDrop' },
+          producerLifecycleKey: 'EchoLastReward',
+          instanceProvenance: 'free',
+          conversionByAcquisitionRole: { self: 'normal' },
+        },
+      },
+      replayFacts,
+      findings,
+    );
+    expect(settled.branches[0]?.history.consumableRecord.MemPointsCommonDrop).toBe(2);
+    expect(settled.branches[0]?.history.lastRewardRecreation?.offer.rewardType).toBe(
+      'MemPointsCommonDrop',
+    );
+    expect(findings.size).toBe(0);
+  });
+
   it('retains a stale replay child at the exact owner and repairs it against changed history', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {

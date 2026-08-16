@@ -213,6 +213,7 @@ function normalizeAcquisitions(
     'MetaCurrencyBigDrop',
     'MetaCardPointsCommonDrop',
     'MetaCardPointsCommonBigDrop',
+    'MemPointsCommonDrop',
   ]);
   const declaredEligible = raw
     .filter((acquisition, index) => {
@@ -262,6 +263,7 @@ function normalizeAcquisitions(
     'MetaCurrencyBigDrop',
     'MetaCardPointsCommonDrop',
     'MetaCardPointsCommonBigDrop',
+    'MemPointsCommonDrop',
   ]);
   const declaredLastRewardEligible = raw
     .filter((acquisition) => acquisition.lastRewardRecreation !== undefined)

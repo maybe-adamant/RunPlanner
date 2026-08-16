@@ -1031,6 +1031,60 @@ describe('structured workspace occurrence assembly', () => {
     );
   });
 
+  it('projects Psyche and Max Magick as distinct ordered Narcissus acquisition rows', () => {
+    let project = createCompleteFGProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusD' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusE' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+      'roomExit',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['maxMana', 'psyche'],
+    });
+    const acquisitions = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly.node
+      .room.acquisitions;
+    expect(acquisitions?.entries.map((entry) => [entry.key, entry.label])).toEqual([
+      ['maxMana', 'Max Magick'],
+      ['psyche', 'Psyche'],
+    ]);
+    expect(acquisitions?.entries.map((entry) => entry.rewardControl?.offer)).toEqual([
+      { rewardType: 'MaxManaDrop' },
+      { rewardType: 'MemPointsCommonDrop' },
+    ]);
+    expect(acquisitions?.entries.map((entry) => entry.participation?.selected)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
   it('projects one picked Narcissus pickup with its exact entry-owned payload control', () => {
     let project = createCompleteFGProject();
     const occurrence = project.routes

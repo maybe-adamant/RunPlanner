@@ -701,6 +701,73 @@ describe('OccurrenceWorkbench', () => {
     ).toBe(false);
   });
 
+  it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
+    let project = createGoldenFGHIProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusD' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusE' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
+      const node = biome.nodes.find(
+        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
+          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === occurrence.occurrenceId,
+      );
+      return node === undefined ? undefined : { kind: 'node', node };
+    });
+    const authoredSite = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.acquisitionSites?.roomExit;
+
+    expect(screen.getByRole('checkbox', { name: 'Picked up psyche' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Picked up maxMana' })).toBeTruthy();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Picked up psyche' }));
+    expect(authoredSite()?.order).toEqual(['psyche']);
+    const psycheRow = screen.getByText('Psyche').closest('.acquisition-entry');
+    if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
+    await view.user.selectOptions(within(psycheRow).getByLabelText(/Time Piece/), 'gold');
+    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('gold');
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('normal');
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(authoredSite()?.pickupEntries?.psyche?.conversionByAcquisitionRole.self).toBe('gold');
+  });
+
   it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();
