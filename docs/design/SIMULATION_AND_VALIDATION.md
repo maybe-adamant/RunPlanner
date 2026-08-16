@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-38 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-41 decision-spine evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same explicit biome-evaluation
 products.
@@ -1168,6 +1168,24 @@ generated first and remains unchanged. Participating pickups then fold in
 authored order, and their post-settlement history becomes visible to later
 rooms. An unselected descriptor, skipped pickup, or dormant pickup child emits
 no history, finding, trait, or level effect.
+
+Fields prepares all active cage offers before entry, materializes its active
+optional offers from `FieldsOptionalRewards` on entry, and then executes one
+authored room-action sequence. Cage completion and reward readiness remain
+distinct from acquisition. Optional generation consumes its bag even when the
+pickup is skipped; history changes only at an interaction action. Inactive
+cages and optional slots retain authored state but publish no reward child.
+
+An acquisition role resolves exactly one authored disposition. Time Piece and
+Artificer are mutually exclusive with normal acquisition. Artificer support is
+assessed against the exact free source, active rank-derived Arcana capacity,
+current acquisition history, and current `RunProgress` bag. A successful
+conversion records exact spent-use evidence and consumes the shared counted
+bag transition, while source and generated replacement remain absent from
+concrete history until the replacement's later acquisition checkpoint. Run
+State derives Artificer's Epic/Heroic capacity, spent count, and remaining
+count from the active Arcana state; Lazuli changes rarity without resetting
+the evidence.
 
 For each generated batch:
 

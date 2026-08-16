@@ -298,3 +298,13 @@ progressive state, target domains, exact authored outcomes, banned history, and
 Forfeit usage. Grasp capacity, Vow of Void's capacity effect, Fated mode,
 permanent card advancement, and every other ordinary Vow gameplay effect remain
 deliberately out of scope.
+
+Schema 41 adds the Artificer's supported reward-facing effect without changing
+the pre-run loadout model. The catalog owns Epic capacity three and Heroic
+capacity four. Canonical run-local Arcana state records exact successful source
+interactions rather than a mutable remaining counter; remaining uses are
+derived from current rarity and spent evidence. Lazuli promotion therefore
+preserves every spent use and adds exactly one remaining use. Concrete source
+eligibility, `RunProgress` bag consumption, source destruction, and later
+replacement acquisition remain reward/lifecycle authorities rather than a
+generic Arcana callback system.

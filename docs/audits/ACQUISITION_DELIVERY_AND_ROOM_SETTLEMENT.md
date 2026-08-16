@@ -4,8 +4,10 @@
 
 **Complete for the game facts needed to canonicalize currently modeled reward
 acquisitions, correct Shop-backed settlement, model Narcissus pickups, and
-settle Echo's replayed and duplicated acquisitions.** Schema 38 now delivers
-that boundary. Shrine delivery, Well behavior, other composite-room delivery
+settle Echo's replayed and duplicated acquisitions.** Schema 41 now delivers
+that boundary, including consequential Narcissus pickup closure, Fields room
+chronology, and separately acquired Artificer replacements. Shrine delivery,
+Well behavior, other composite-room delivery
 additions, and other dropped-item families remain explicitly scoped follow-up
 work rather than gaps in the current contract.
 
@@ -153,15 +155,18 @@ the producer of the drops; it is not itself the dropped reward.
 
 The currently modeled examples expose the boundary clearly:
 
-| Selected choice | Produced supported pickup    | Pickup-owned consequence                                                  |
-| --------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `NarcissusA`    | `StoreRewardRandomStack`     | one random eligible trait gains `+1`                                      |
-| `NarcissusC`    | `Currency`                   | source-faithful Gold acquisition/history; quantity remains unmodeled      |
-| `NarcissusD`    | `MaxManaDrop`                | concrete acquisition/history                                              |
-| `NarcissusE`    | `MaxHealthDrop`              | concrete acquisition/history                                              |
-| `NarcissusG`    | two `ElementalBoost` pickups | each creates one all-element contribution                                 |
-| `NarcissusH`    | `LastStandDrop`              | concrete acquisition/history under the local Death Defiance approximation |
-| `NarcissusI`    | `BlindBoxLoot`               | the box later resolves its hidden source and fresh trait offer            |
+| Selected choice | Produced supported pickup    | Pickup-owned consequence                                                   |
+| --------------- | ---------------------------- | -------------------------------------------------------------------------- |
+| `NarcissusA`    | `StoreRewardRandomStack`     | one random eligible trait gains `+1`                                       |
+| `NarcissusB`    | `MetaCardPointsCommonDrop`   | free Ashes acquisition with Time Piece and Artificer                       |
+| `NarcissusC`    | `Currency`                   | source-faithful Gold acquisition/history; quantity remains unmodeled       |
+| `NarcissusD`    | `MemPointsCommonDrop`        | free Psyche acquisition with Time Piece, Artificer, and last-reward replay |
+| `NarcissusD`    | `MaxManaDrop`                | concrete acquisition/history                                               |
+| `NarcissusE`    | `MetaCurrencyDrop`           | free Bones acquisition with Time Piece and Artificer                       |
+| `NarcissusE`    | `MaxHealthDrop`              | concrete acquisition/history                                               |
+| `NarcissusG`    | two `ElementalBoost` pickups | each creates one all-element contribution                                  |
+| `NarcissusH`    | `LastStandDrop`              | concrete acquisition/history under the local Death Defiance approximation  |
+| `NarcissusI`    | `BlindBoxLoot`               | the box later resolves its hidden source and fresh trait offer             |
 
 The random-Pom target and Mystery Boon source/offer consequently belong to the
 produced pickup's acquisition, not intrinsically to the outer Narcissus menu
@@ -818,6 +823,12 @@ trait; Gold later removes only its exact one-use outer acquisition.
     reward kernel. It adapts the existing reward acquisition into the shared
     checkpoint order where chronology is observable and removes the superseded
     direct trait/Pom editor in the same vertical slice.
+19. Artificer source interaction and replacement acquisition are separate
+    checkpoints. The source is not acquired; its complete source-owned
+    replacement enters the same shared fold only at a later required or
+    optional interaction. Fields carries that dependency in its one mixed
+    action chronology, and ordinary acquisition sites retain their existing
+    order.
 
 ## Explicit simplifications and remaining follow-up facts
 

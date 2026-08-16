@@ -203,6 +203,27 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
+### Fields and Artificer Products
+
+A Fields occurrence workbench projects one optional-count control, one active
+inventory row per spawned optional, and one engine-owned mixed chronology.
+Inventory rows own reward payload and acquisition disposition. Optional
+interaction checkboxes are derived from chronology membership; the chronology
+owns all completion, interaction, movement, and source-before-replacement
+constraints. Dormant optional values and inactive cage payloads retain authored
+state but publish no control, marker, or finding destination. A retained
+inactive chronology action alone remains visible as its explicit removal
+repair.
+
+Every reached acquisition role reuses the shared disposition control for
+ordinary acquisition, Time Piece, and supported Artificer. Selecting Artificer
+publishes the complete replacement reward editor at its source-owned semantic
+address. Ordered sites expose its later pickup through their existing
+chronology; a mandatory singleton shows a fixed required replacement without a
+synthetic order control. React renders the engine's support, replacement
+domain, and complete command intents and does not evaluate eligibility or bag
+state.
+
 ### Keepsake Products
 
 Route Settings projects the mandatory starting selection, and each reached
@@ -695,6 +716,13 @@ exact acquisition children from the engine product. Producer cards may expose
 the outer Story choice or Shop inventory, but they do not duplicate pickup-
 owned trait or Pom editors. Mandatory singleton settlements remain compact and
 do not acquire an otherwise empty Acquisitions card.
+
+The same closure applies to Artificer replacement children. Every reached
+replacement reward, trait offer, Pom resolution, disposition, and later pickup
+has one containing inspector, bound interaction, and exact finding destination.
+Not-yet-generated replacements and children beneath dormant optional or cage
+state publish none. Fields chronology rows reference those shared reward
+controls rather than duplicating their editors.
 
 The shared trait editor is a projection over the engine's complete offer
 assessment: one to three materialized trait options or mutually exclusive

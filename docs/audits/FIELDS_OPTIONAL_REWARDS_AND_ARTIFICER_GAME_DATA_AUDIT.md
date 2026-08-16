@@ -15,10 +15,10 @@ simulation product, command, UI, delivery gate, file placement, or commit
 sequence. The Fields facts are recorded independently of Artificer so the room
 surface remains useful even if the Arcana effect is deferred.
 
-The currently implemented H baseline deliberately omits
-`FieldsOptionalRewards`. This audit does not change that disposition. It
-establishes the source contract a later Fields slice must settle before an
-Artificer slice relies on those pickups.
+The source conclusions are implemented through authored schema 41. Stable
+planner contracts live in the authored, reward, lifecycle,
+simulation/validation, workspace, and H biome authorities; this audit retains
+the source evidence and final disposition rather than delivery mechanics.
 
 ## Sources
 
@@ -505,6 +505,24 @@ been spent, the ordinary result naturally displays four remaining charges.
 - Lazuli preserves spent uses and adds one remaining Artificer use rather than
   resetting a previously used card.
 
+## Planner disposition
+
+The planner represents exact declaration-owned optional capacities, the full
+zero-through-capacity authored count, the persistent 19-entry optional bag, and
+one mixed Fields action chronology. Cage completion is atomic; cage, optional,
+and Artificer replacement acquisitions all use the shared concrete-acquisition
+settlement fold. Optional generation consumes `FieldsOptionalRewards`, while
+unpicked values remain history-neutral.
+
+Narcissus now represents every pickup consequential to Time Piece or Artificer.
+Psyche is a producer-owned acquisition with ordinary consumable/use and Echo
+last-reward behavior but no counted-store membership. The supported
+Artificer disposition covers every present free eligible producer, uses exact
+Epic/Heroic capacities and retained spent-use evidence, consumes the current
+`RunProgress` bag through the ordinary counted transition, and creates a
+separately acquired source-owned replacement. Paid Shop inventory and Echo
+Reward Reward Reward remain blocked.
+
 ## Remaining bounded questions
 
 The product need not model pickup interaction during an active cage combat if
@@ -512,9 +530,8 @@ it preserves every legal between-encounter and post-encounter acquisition
 ordering. If a future mechanic depends specifically on mid-combat pickup
 timing, that interaction lock should receive its own focused source trace.
 
-Before locking Artificer scope, complete the bounded Narcissus correction
-recorded above: restore the three omitted dual-conversion pickups without
-adding Psyche to a counted store, and harden all six conversion-relevant
-pickups through their exact source options and independent acquisition
-dispositions. The remaining source pickups may stay explicitly effect-neutral
-until another supported system makes them consequential.
+The remaining Narcissus companion pickups may stay explicitly effect-neutral
+until another supported system makes them consequential. Wells, exact Surface
+Shop delayed delivery, and other currently unsupported producers require their
+own source and lifecycle slices; they do not expand the implemented Artificer
+matrix implicitly.

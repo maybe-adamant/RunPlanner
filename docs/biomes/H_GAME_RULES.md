@@ -7,8 +7,10 @@ progressed-save static baseline with supported Nemesis combat. Shared generation
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); the H room
 and layout declarations own concrete candidates, exits, counters, and caps.
 
-The rules were checked against `RoomSets.lua`, `RoomDataH.lua`, Fields map
-data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
+The route rules were checked against `RoomSets.lua`, `RoomDataH.lua`, Fields map
+data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18. The
+optional-reward capacities, room chronology, and Artificer contacts were
+rechecked on 2026-08-15; source details remain in the focused audit.
 
 ## Authored shape
 
@@ -19,6 +21,9 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 - A FieldsCombat occurrence owns its declaration-bounded cage offers. Active
   and dormant cages remain stable occurrence-owned leaves; changing a room
   reconciles only compatible cage keys.
+- It also owns a zero-through-capacity optional count, complete retained
+  optional reward values, and one mixed action chronology for atomic cage
+  completions plus cage, optional, and Artificer-replacement interactions.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so
@@ -64,21 +69,45 @@ FieldsCombat rooms own bounded `cages` children. Cage capacity, active-slot
 limit, and the RunProgress binding are concrete declaration facts. The normal
 H outcome selects the lower or upper supported cage count before targets are
 authored. Cages outside that active prefix remain dormant authored leaves;
-they are neither discarded nor acquired. The optional Fields reward behavior
-that depends on unmodeled game-side conditions remains outside the baseline,
-not an invented third outcome.
+they are neither discarded nor acquired.
+
+The exact optional maxima are declaration-owned from the installed map assets:
+
+```text
+capacity 4: H_Combat01, 03, 04, 05, 06, 10
+capacity 3: H_Combat02, 07, 08, 12
+capacity 2: H_Combat09, 11, 13, 14, 15
+```
+
+Every count from zero through the concrete capacity is possible. The uniform
+authored default is two because every supported map admits it; this is a
+planner default, not a probability or minimum claim. Active optional slots
+resolve sequentially on entry from the persistent 19-entry
+`FieldsOptionalRewards` bag without sibling exclusion. Generation consumes the
+bag whether or not a pickup is later taken, while unpicked optionals remain
+history-neutral.
 
 The order is:
 
 ```text
 choose Fields cage outcome -> create normal-door targets ->
-prepare each target's cage offers -> select one target -> enter its combat
+prepare each target's cage offers -> select one target -> enter its combat ->
+generate active optionals -> execute its authored Fields actions
 ```
 
 This keeps local cages distinct from the normal-door decision and from the
 Preboss free reward. A counted cage offer consumes its declaration-backed
 RunProgress support when its owning room is prepared; selecting another normal
 peer does not recreate that room's cages.
+
+The Passive phase is fixed first. Each cage-completion action then represents
+activation through completion as one indivisible planner step; the model does
+not permit pickup interaction during an active wave. A cage reward cannot be
+interacted with before its matching completion. Optional interactions may be
+placed before the first cage, between completed cages, or after the final cage.
+Required cage rewards must resolve, while optional pickups may remain on the
+ground. The same action order carries a later Artificer replacement pickup;
+there is no cage-only order or Fields-private acquisition fold.
 
 ### Depth, force, and completion facts
 
@@ -96,13 +125,16 @@ resets are applied only after the selected Preboss has entered.
 
 ### Baseline boundaries
 
-The canonical H model preserves the progressed-save Fields route:
-physical doors, cage bounds, forced windows, normal reward support, the bridge,
-the WorldShop, and completion counters. It does not model weighted room-set
-replay, optional Fields rewards, natural Chaos, NPC random/interaction or
-Shop/Bridge behavior, combat-wave composition, rerolls, or profile-dependent
-variants. Those are explicit
-future modeling inputs, not hidden eligibility predicates.
+The canonical H model preserves the progressed-save Fields route: physical
+doors, cage bounds, optional-pickup capacities and persistent bag, the mixed
+room chronology, forced windows, normal reward support, the bridge, the
+WorldShop, and completion counters. `H_Bridge01` includes its fixed
+`Story_Echo_01` encounter and supported Echo trait offer. The model does not
+cover optional-pickup chance weights or map positions, pickup interaction
+during an active wave, weighted room-set replay, other NPC/random-event or
+unmodeled Shop interactions, combat-wave composition, rerolls, or
+profile-dependent variants. Those are explicit future modeling inputs, not
+hidden eligibility predicates.
 
 ### Concrete encounter selection
 
@@ -116,13 +148,16 @@ encounter definition's depth effect.
 resolve on an active cage, never on either Passive set, an inactive cage, the
 bridge, Shop, or another non-cage room. Its exact-key requirements participate
 in the same preparation history as every other concrete definition. Gold wager,
-random-event, interaction, Shop, and Bridge behavior remain outside the
-planner's modeled surface.
+unsupported random-event and NPC interactions, and unmodeled Shop interaction
+variants remain outside the planner's modeled surface; the fixed Echo Bridge
+offer is supported.
 
 ## Product boundary
 
 The canonical product owns H catalog facts, authored Fields state, concrete
-encounter selection, semantic commands, validation, candidates, and workspace
-projection. NPC events and interactions beyond selected Nemesis combat, Natural
-Chaos and other unsupported detours, and optional player systems remain outside
-the baseline until they are modeled explicitly.
+encounter selection, cage and optional offer generation, the action chronology,
+shared acquisition dispositions including Artificer, semantic commands,
+validation, candidates, and workspace projection. NPC events and interactions
+beyond selected Nemesis combat and the fixed Echo Bridge trait offer, plus
+other unsupported player systems, remain outside the baseline until modeled
+explicitly.
