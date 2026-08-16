@@ -20,6 +20,11 @@ export function createTestDefaultRoomState(
 ) {
   return createDefaultRoomState(catalog, declaration, {
     ...context,
+    ...(declaration.mode.kind === 'authored' &&
+    declaration.mode.templateKey === 'FieldsCombat' &&
+    context.activeCageCount === undefined
+      ? { activeCageCount: 2 }
+      : {}),
     loadout: testRouteLoadout(catalog),
   });
 }

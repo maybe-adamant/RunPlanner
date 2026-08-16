@@ -312,6 +312,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       };
     case 'fieldsCageOutcomeUnavailable':
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
+    case 'fieldsActionMissing':
+      return { kind: 'fields', message: 'Insert this required Fields room action.' };
+    case 'fieldsActionInactive':
+      return { kind: 'fields', message: 'Remove this action for an inactive Fields cage.' };
+    case 'fieldsActionDependency':
+      return { kind: 'fields', message: 'Move this pickup after its cage combat.' };
     case 'hubOpenSlotUnavailable':
       return { kind: 'hub', message: 'This Hub room conflicts with the selected open set.' };
     case 'sideRoomGenerationUnavailable':

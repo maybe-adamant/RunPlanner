@@ -1,5 +1,6 @@
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
@@ -9,6 +10,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   encodeProjectDocument,
   semanticAddressKey,
@@ -26,6 +28,7 @@ import {
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
   materializeBiome,
+  type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -253,10 +256,20 @@ describe('H Fields materialization', () => {
     }
     const reward = occurrence.state.cages.cage1;
     if (reward === undefined) throw new Error('H fixture must retain cage1');
-    const candidates = createPreparedProjectCandidateSession(
+    const occurrenceOwner = createOccurrenceAddress(biome, combat);
+    const reorderedActions = Object.freeze([
+      { kind: 'completeCage' as const, phaseKey: 'Cage02' },
+      { kind: 'completeCage' as const, phaseKey: 'Cage01' },
+      { kind: 'interactCageReward' as const, slotKey: 'cage1' },
+      { kind: 'interactCageReward' as const, slotKey: 'cage2' },
+    ]);
+    const work: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
-    ).evaluate([
+      { observe: (event) => work.push(event) },
+    );
+    const candidates = session.evaluate([
       {
         kind: 'fieldsCageOutcome',
         decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
@@ -272,13 +285,47 @@ describe('H Fields materialization', () => {
         reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
         value: reward.offer,
       },
+      {
+        kind: 'fieldsActionOrder',
+        occurrence: occurrenceOwner,
+        actionOrder: reorderedActions,
+      },
+      {
+        kind: 'fieldsActionOrder',
+        occurrence: occurrenceOwner,
+        actionOrder: [
+          { kind: 'interactCageReward', slotKey: 'cage1' },
+          { kind: 'completeCage', phaseKey: 'Cage01' },
+          { kind: 'completeCage', phaseKey: 'Cage02' },
+          { kind: 'interactCageReward', slotKey: 'cage2' },
+        ],
+      },
     ]);
 
     expect(candidates).toMatchObject([
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'min', selectedPossible: true } },
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'max' } },
       { kind: 'localReward', result: { supported: true, findings: [] } },
+      { kind: 'fieldsActionOrder', result: { selectedPossible: true, findings: [] } },
+      { kind: 'fieldsActionOrder', result: { selectedPossible: false } },
     ]);
+    expect(work.filter((event) => event.kind === 'fieldsActionBiomeReplay')).toEqual([
+      { kind: 'fieldsActionBiomeReplay', owner: occurrenceOwner },
+      { kind: 'fieldsActionBiomeReplay', owner: occurrenceOwner },
+    ]);
+    const selected = simulateProject(
+      catalog,
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsActionOrder',
+        occurrence: occurrenceOwner,
+        actionOrder: reorderedActions,
+      }),
+    );
+    expect(
+      selected.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'H'),
+    ).toMatchObject({ authoring: 'complete', validity: 'valid' });
   });
 
   it('settles only active cage slots at their exact local reward sites', () => {
@@ -299,7 +346,7 @@ describe('H Fields materialization', () => {
     }
     const events = h.rewards.branches[0]?.events ?? [];
     for (const reward of minRoom.localRewards) {
-      const site = createAcquisitionSiteAddress(reward.origin, reward.encounterPhaseKey);
+      const site = createAcquisitionSiteAddress(reward.origin, `cages:${reward.slotKey}`);
       expect(
         events.find(
           (event) =>
@@ -324,6 +371,52 @@ describe('H Fields materialization', () => {
     ).toBe(false);
   });
 
+  it('routes a cage Time Piece choice through the authored interaction checkpoint', () => {
+    const cage = createLocalRewardAddress(
+      biome,
+      createOccurrenceId('golden-h-combat02'),
+      'cages',
+      'cage1',
+    );
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionConversion',
+      acquisition: createAcquisitionRoleAddress(cage, 'self'),
+      value: 'gold',
+    });
+    const evaluated = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (evaluated?.authoring !== 'complete' || evaluated.validity !== 'valid') {
+      throw new Error('Time Piece fixture did not complete valid H');
+    }
+    const events = evaluated.rewards.branches[0]?.events ?? [];
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'conversionToGold',
+        origin: cage,
+        settlement: {
+          site: createAcquisitionSiteAddress(cage, 'cages:cage1'),
+          entry: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(cage, 'cages:cage1'),
+            'cage1',
+          ),
+        },
+      }),
+    );
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(cage),
+      ),
+    ).toBe(false);
+  });
+
   it('does not assess a later Fields decision after an earlier cage reward is invalid', () => {
     const firstCombat = createOccurrenceId('golden-h-combat02');
     const laterCombat = createOccurrenceId('golden-h-combat09');
@@ -332,12 +425,19 @@ describe('H Fields materialization', () => {
       reward: createLocalRewardAddress(biome, firstCombat, 'cages', 'cage1'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
     });
+    const laterState = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === laterCombat,
+    )?.state;
+    if (laterState?.kind !== 'fieldsCombat') throw new Error('later Fields state is missing');
+    const work: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      { observe: (event) => work.push(event) },
+    );
 
     expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+      session.evaluate({
         kind: 'fieldsCageOutcome',
         decision: createExitDecisionAddress(biome, {
           kind: 'occurrence',
@@ -346,6 +446,14 @@ describe('H Fields materialization', () => {
         cageOutcome: 'max',
       }),
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    expect(
+      session.evaluate({
+        kind: 'fieldsActionOrder',
+        occurrence: createOccurrenceAddress(biome, laterCombat),
+        actionOrder: laterState.actionOrder,
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    expect(work.filter((event) => event.kind === 'fieldsActionBiomeReplay')).toEqual([]);
   });
 
   it('derives each Fields capacity and active local-reward prefix without mutating authorship', () => {
@@ -481,6 +589,26 @@ describe('H Fields materialization', () => {
       batchCapacity: 3,
       cageTargetCount: 1,
       doorCageRewardCount: 3,
+    });
+
+    const capacityLimited = applyProjectCommand(completeProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, createOccurrenceId('h-materialized-bridge')),
+      gameName: 'H_Combat13',
+    });
+    const replacementState = plan(capacityLimited).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'h-materialized-bridge',
+    )?.state;
+    if (replacementState?.kind !== 'fieldsCombat') {
+      throw new Error('capacity-limited Fields replacement is missing');
+    }
+    expect(replacementState.actionOrder).toHaveLength(4);
+    expect(ordinaryBatches(materialize(capacityLimited))[2]?.batchState).toEqual({
+      kind: 'fields',
+      cageOutcome: 'max',
+      batchCapacity: 2,
+      cageTargetCount: 1,
+      doorCageRewardCount: 2,
     });
   });
 

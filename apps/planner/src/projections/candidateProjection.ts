@@ -42,6 +42,7 @@ import {
   type LocalRewardAddress,
   type OccurrenceId,
   type OccurrenceAddress,
+  type FieldsCombatAction,
   type ProjectDocument,
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
@@ -157,6 +158,10 @@ export interface CandidateProjectionSession {
     decision: ExitDecisionAddress,
     outcomes: readonly ('min' | 'max')[],
   ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly fieldsActionOrders: (
+    occurrence: OccurrenceAddress,
+    values: readonly (readonly FieldsCombatAction[])[],
+  ) => readonly CandidateOptionProjection<readonly FieldsCombatAction[]>[];
   readonly takeoverPrebossBatches: (
     source: ExitDecisionAddress,
     gameNames: readonly string[],
@@ -703,6 +708,25 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      fieldsActionOrders: (
+        occurrence: OccurrenceAddress,
+        values: readonly (readonly FieldsCombatAction[])[],
+      ) =>
+        projectOptions(
+          cache,
+          assembly,
+          `fields-actions:${semanticAddressKey(occurrence)}:${domainKey(
+            values.map((value) => JSON.stringify(value)),
+          )}`,
+          values,
+          values.map((actionOrder) => ({
+            kind: 'fieldsActionOrder',
+            occurrence,
+            actionOrder,
+          })),
+          catalog,
+          options,
+        ),
       shipCombatPhaseCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
         projectOptions(
           cache,
@@ -1174,6 +1198,8 @@ function candidateForced(
       return evaluation.result.selectedPossible && evaluation.result.supportStoreKeys.length === 1;
     case 'fieldsCageOutcome':
       return evaluation.result.selectedPossible && evaluation.result.supportOutcomes.length === 1;
+    case 'fieldsActionOrder':
+      return false;
     case 'shipEncounterCount':
       return (
         evaluation.result.selectedPossible && evaluation.result.supportEncounterCounts.length === 1

@@ -105,9 +105,19 @@ describe('authored room-state replacement', () => {
 
   it('retains declaration-compatible Fields cages', () => {
     const previousRoom = room('H_Combat01');
-    const previousState = createDefaultRoomState(catalog, previousRoom, {
+    const defaultPreviousState = createDefaultRoomState(catalog, previousRoom, {
       role: 'ordinary',
       entryActive: true,
+    });
+    if (defaultPreviousState.kind !== 'fieldsCombat') throw new Error('missing Fields default');
+    const previousState = Object.freeze({
+      ...defaultPreviousState,
+      actionOrder: Object.freeze([
+        defaultPreviousState.actionOrder[0]!,
+        defaultPreviousState.actionOrder[2]!,
+        defaultPreviousState.actionOrder[1]!,
+        defaultPreviousState.actionOrder[3]!,
+      ]),
     });
     const replacementRoom = room('H_Combat02');
     const replacementDefault = createDefaultRoomState(catalog, replacementRoom, {

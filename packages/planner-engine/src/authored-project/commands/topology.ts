@@ -40,6 +40,7 @@ import {
   selectedExitContinuation,
   selectedExitKey,
 } from '../topology/query';
+import { fieldsDefaultActiveCageCount } from '../fields-actions';
 import { createDefaultInfernalContractEntries } from '../shop';
 import {
   failCommand,
@@ -187,12 +188,14 @@ function defaultOccurrence(
   entryActive: boolean,
   resolvedStoreKey: string | undefined,
   loadout: { readonly weaponKey: string; readonly aspectKey: string },
+  activeCageCount?: number,
 ): RoomOccurrence {
   const state = createDefaultRoomState(catalog, room, {
     role,
     entryActive,
     ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
     loadout,
+    ...(activeCageCount === undefined ? {} : { activeCageCount }),
   });
   const encounters = createDefaultRoomEncounterState(
     catalog,
@@ -545,6 +548,13 @@ function createTarget(
       nextSelectedExitKey === command.target.exitKey,
       batchRewardStoreKey,
       located.loadout,
+      fieldsDefaultActiveCageCount({
+        catalog,
+        layout: located.layout,
+        topology,
+        decision,
+        room,
+      }),
     ),
     command,
   );

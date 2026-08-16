@@ -8,6 +8,7 @@ import { applyIncomingRewardCommand } from './occurrence-incoming-reward';
 import { applyLocalRewardCommand } from './occurrence-local-reward';
 import { applyShipOccurrenceCommand } from './occurrence-ship';
 import { applyShopOccurrenceCommand } from './occurrence-shop';
+import { applyFieldsOccurrenceCommand } from './occurrence-fields';
 import type { OccurrenceLeafCommand } from './types';
 
 export function applyOccurrenceCommand(
@@ -17,6 +18,8 @@ export function applyOccurrenceCommand(
   command: OccurrenceLeafCommand,
 ): ProjectDocument {
   switch (command.kind) {
+    case 'ReplaceFieldsActionOrder':
+      return applyFieldsOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceIncomingReward':
       return applyIncomingRewardCommand(document, catalog, located, command);
     case 'ReplaceLocalReward':

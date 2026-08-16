@@ -16,6 +16,8 @@ export interface RoomStateContext {
   readonly resolvedStoreKey?: string;
   readonly entryActive: boolean;
   readonly loadout: TraitOfferDefaultsContext;
+  /** Required only while constructing a Fields occurrence inside its selected batch. */
+  readonly activeCageCount?: number;
   /**
    * An Anomaly replacement retains the offer domain of the normal G target it
    * displaced. This is decode context, not persisted duplicate state.

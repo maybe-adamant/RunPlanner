@@ -108,6 +108,12 @@ export interface LocalRewardAddress extends BiomeOwnedAddress {
   readonly groupKey: string;
   readonly slotKey: string;
 }
+/** One exact persisted row in a Fields room's mixed action chronology. */
+export interface FieldsActionAddress extends BiomeOwnedAddress {
+  readonly kind: 'fieldsAction';
+  readonly occurrenceId: OccurrenceId;
+  readonly actionKey: string;
+}
 export interface LocalChildAddress extends BiomeOwnedAddress {
   readonly kind: 'localChild';
   readonly occurrenceId: OccurrenceId;
@@ -272,6 +278,7 @@ export type SemanticAddress =
   | AdditionalExitAddress
   | HubDecisionAddress
   | LocalRewardAddress
+  | FieldsActionAddress
   | LocalChildAddress
   | LocalChildGroupAddress
   | EncounterPhaseAddress
@@ -494,6 +501,18 @@ export function createLocalRewardAddress(
     occurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
     slotKey: nonBlank(slotKey, 'slotKey'),
+  });
+}
+export function createFieldsActionAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  actionKey: string,
+): FieldsActionAddress {
+  return Object.freeze({
+    kind: 'fieldsAction',
+    ...owner(biome),
+    occurrenceId,
+    actionKey: nonBlank(actionKey, 'actionKey'),
   });
 }
 export function createLocalChildAddress(
@@ -804,6 +823,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'localReward':
     case 'localChild':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
+    case 'fieldsAction':
+      return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
     case 'localChildGroup':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey]);
     case 'encounterPhase':

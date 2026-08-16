@@ -4,6 +4,7 @@ import {
   createBiomeFieldAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFieldsActionAddress,
   createHubDecisionAddress,
   createHubOpenSetAddress,
   createHubVisitAddress,
@@ -13,6 +14,7 @@ import {
   type ExitDecisionSourceAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
+import { assessFieldsActionOrder, fieldsActionKey } from '../authored-project/fields-actions';
 import type {
   AuthoredBiomeState,
   BiomeTopology,
@@ -34,6 +36,7 @@ import {
   selectedExitTarget,
 } from '../authored-project/topology/query';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
+import { fieldsBatchFacts } from './materialization/decision-facts';
 
 export interface IncompleteBiomeCompletenessResult {
   readonly completion: 'incomplete';
@@ -131,6 +134,44 @@ function isTakeoverBatch(
     const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
     return room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors';
   });
+}
+
+function fieldsActionFindings(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  decision: ExitDecision,
+  occurrence: RoomOccurrence,
+  room: RoomDeclaration,
+): readonly SemanticFinding[] {
+  if (occurrence.state.kind !== 'fieldsCombat') return Object.freeze([]);
+  const facts = fieldsBatchFacts(catalog, layout, (id) => occurrences.get(id), decision);
+  if (facts === undefined) {
+    throw new CompletenessContractError(`${room.gameName} has no configured Fields batch facts`);
+  }
+  const assessment = assessFieldsActionOrder(
+    catalog,
+    room,
+    occurrence.state,
+    facts.doorCageRewardCount,
+  );
+  return Object.freeze(
+    assessment.issues.map((issue) => {
+      const actionKey = fieldsActionKey(issue.action);
+      const origin = createFieldsActionAddress(biome, occurrence.occurrenceId, actionKey);
+      return finding(
+        issue.kind === 'missing'
+          ? 'fieldsActionMissing'
+          : issue.kind === 'inactive'
+            ? 'fieldsActionInactive'
+            : 'fieldsActionDependency',
+        origin,
+        { actionKey, activeCageCount: facts.doorCageRewardCount },
+      );
+    }),
+  );
 }
 
 function findMissingTargets(
@@ -409,6 +450,19 @@ export function evaluateBiomeCompleteness(
         `trusted topology lost room ${selectedOccurrence.gameName}`,
       );
     }
+    findings.push(
+      ...fieldsActionFindings(
+        catalog,
+        biome,
+        layout,
+        topology,
+        occurrences,
+        decision,
+        selectedOccurrence,
+        selectedRoom,
+      ),
+    );
+    if (findings.length !== 0) return incomplete(findings);
     if (selectedRoom.kind === 'Preboss') {
       return findings.length === 0
         ? Object.freeze({

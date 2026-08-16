@@ -61,6 +61,28 @@ function traitFixture(): {
 }
 
 describe('persisted authored room-state codec', () => {
+  it('accepts missing Fields actions for repair but rejects unknown and duplicate identities', () => {
+    const declaration = room('H_Combat02');
+    const context = { role: 'ordinary' as const, entryActive: true, activeCageCount: 2 };
+    const state = mutable(createDefaultRoomState(catalog, declaration, context));
+    const actionOrder = state.actionOrder as Record<string, unknown>[];
+    state.actionOrder = actionOrder.slice(0, 3);
+    expect(decodeRoomState(state, catalog, declaration, context, path)).toMatchObject({
+      kind: 'fieldsCombat',
+      actionOrder: expect.any(Array),
+    });
+
+    state.actionOrder = [...actionOrder, actionOrder[0]];
+    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
+      'duplicates Fields action complete:Cage01',
+    );
+
+    state.actionOrder = [{ kind: 'completeCage', phaseKey: 'UnknownCage' }];
+    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
+      'unknown Fields action identity complete:UnknownCage',
+    );
+  });
+
   it.each(['H_Combat02', 'O_Combat01', 'N_Combat02'])(
     'decodes the complete %s declaration default',
     (gameName) => {

@@ -66,6 +66,18 @@ const findingCopy = {
     title: 'Fields door roll cannot occur here',
     description: 'The selected Min or Max outcome is unavailable at this point in the Fields.',
   },
+  fieldsActionMissing: {
+    title: 'Fields action is missing',
+    description: 'Insert this required cage combat or reward interaction into the room order.',
+  },
+  fieldsActionInactive: {
+    title: 'Fields action is inactive',
+    description: 'Remove this retained action or reactivate its cage through the door outcome.',
+  },
+  fieldsActionDependency: {
+    title: 'Fields reward is still locked',
+    description: 'Move this reward interaction after its matching cage combat.',
+  },
   biomeTopologyMissing: {
     title: 'Start this biome',
     description: 'Choose a starting room before building its route.',
@@ -663,6 +675,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Room reward`;
     case 'localReward':
       return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
+    case 'fieldsAction':
+      return `${biomeLabel} · Fields room action`;
     case 'localChild':
       return `${biomeLabel} · ${numberedDestinationLabel('Side room', origin.slotKey)}`;
     case 'localChildGroup':

@@ -23,6 +23,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'occurrence':
     case 'incomingReward':
     case 'localReward':
+    case 'fieldsAction':
     case 'localChild':
     case 'localChildGroup':
     case 'rewardWheel':

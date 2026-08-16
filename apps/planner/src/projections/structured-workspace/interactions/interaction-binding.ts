@@ -61,6 +61,7 @@ import type {
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
   WorkspaceFigLeafInteraction,
+  WorkspaceFieldsActionOrderInteraction,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
@@ -291,6 +292,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
+  readonly fieldsActionOrders: ReadonlyMap<string, WorkspaceFieldsActionOrderInteraction>;
   readonly acquisitionOrders: ReadonlyMap<string, WorkspaceCandidateInteraction<readonly string[]>>;
   readonly shopDeathDefianceConditions: ReadonlyMap<
     string,
@@ -324,6 +326,7 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
+  const fieldsActionOrders = new Map<string, WorkspaceFieldsActionOrderInteraction>();
   const acquisitionOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
   const shopDeathDefianceConditions = new Map<
     string,
@@ -473,6 +476,41 @@ function bindOccurrenceLocalInteractions(
             );
           }
         }
+        break;
+      }
+      case 'fieldsActionOrder': {
+        const key = semanticAddressKey(requirement.owner);
+        const proposals = requirement.proposals;
+        const values = Object.freeze(proposals.map((proposal) => proposal.order));
+        if (fieldsActionOrders.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound Fields action-order interactions`,
+          );
+        }
+        fieldsActionOrders.set(
+          key,
+          Object.freeze({
+            intentFor(proposalKey: string) {
+              const proposal = proposals.find((candidate) => candidate.key === proposalKey);
+              if (proposal === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${proposalKey} is not a Fields action-order proposal for ${key}`,
+                );
+              }
+              return Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceFieldsActionOrder' as const,
+                  occurrence: requirement.owner,
+                  actionOrder: proposal.order,
+                }),
+              });
+            },
+            key,
+            load: () => candidates.fieldsActionOrders(requirement.owner, values),
+            owner: requirement.owner,
+            proposals,
+          }),
+        );
         break;
       }
       case 'ephyraSideRooms': {
@@ -625,6 +663,7 @@ function bindOccurrenceLocalInteractions(
   }
   return Object.freeze({
     encounterPhases,
+    fieldsActionOrders,
     figLeafSkips,
     gorgonConditions,
     rewardWheelOfferCounts,
@@ -1396,6 +1435,7 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
   const {
     encounterPhases,
+    fieldsActionOrders,
     figLeafSkips,
     gorgonConditions,
     rewardWheelOfferCounts,
@@ -2556,6 +2596,7 @@ export function bindWorkspaceInteractions(
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
+    fieldsActionOrders,
     naturalChaosExits,
     naturalChaosSpawns,
     hubTakeovers,

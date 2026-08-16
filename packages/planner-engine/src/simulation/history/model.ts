@@ -245,11 +245,18 @@ export interface OfferPointView {
   readonly acquisitionAfter?: HistoryStateView;
 }
 
+export interface AcquisitionPointView {
+  readonly point: string;
+  readonly before: HistoryStateView;
+  readonly after: HistoryStateView;
+}
+
 export interface ProgressiveRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
   readonly preparation: HistoryStateView;
   readonly entry: HistoryStateView;
   readonly offerPoints?: readonly OfferPointView[];
+  readonly acquisitionPoints?: readonly AcquisitionPointView[];
   readonly preOutgoing?: HistoryStateView;
   readonly targetGenerations: readonly TargetGenerationView[];
   readonly outgoingGeneration?: HistoryStateView;

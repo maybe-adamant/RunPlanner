@@ -638,6 +638,58 @@ export function evaluateBiome(
   return evaluateBiomeAssembly(catalog, routeKey, plan, context).evaluation;
 }
 
+/**
+ * Replay one configured biome from the exact predecessor frontier already
+ * attested by the selected project evaluation. Candidate families can change
+ * the biome's authored plan without replaying unrelated routes or biomes.
+ */
+export function replayProjectBiomeFromEvaluatedPredecessor(
+  catalog: Catalog,
+  project: ProjectDocument,
+  selected: ProjectEvaluation,
+  biome: BiomeAddress,
+): ProjectBiomeEvaluation {
+  const route = project.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  const selectedRoute = selected.routes.find((candidate) => candidate.routeKey === biome.routeKey);
+  const biomeIndex = route?.biomes.findIndex((candidate) => candidate.biomeKey === biome.biomeKey);
+  if (
+    route === undefined ||
+    selectedRoute === undefined ||
+    biomeIndex === undefined ||
+    biomeIndex < 0
+  ) {
+    throw new ProjectSimulationContractError(
+      `${biome.routeKey}/${biome.biomeKey} has no configured candidate replay context`,
+    );
+  }
+  const plan = route.biomes[biomeIndex];
+  if (plan === undefined) {
+    throw new ProjectSimulationContractError(`${biome.biomeKey} candidate replay lost its plan`);
+  }
+  const previous = selectedRoute.biomes[biomeIndex - 1];
+  if (
+    previous !== undefined &&
+    (previous.authoring !== 'complete' || previous.validity !== 'valid')
+  ) {
+    throw new ProjectSimulationContractError(
+      `${biome.biomeKey} candidate replay predecessor is not complete and valid`,
+    );
+  }
+  return evaluateBiome(catalog, route.routeKey, plan, {
+    enteredBiomeCount: biomeIndex + 1,
+    hasConfiguredSuccessor: biomeIndex + 1 < route.biomes.length,
+    loadout: route.loadout,
+    ...(previous === undefined
+      ? {}
+      : {
+          seed: Object.freeze({
+            history: previous.history,
+            rewardBranches: previous.rewards.branches,
+          }),
+        }),
+  });
+}
+
 function evaluateBiomeAssembly(
   catalog: Catalog,
   routeKey: string,

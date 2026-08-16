@@ -13,6 +13,7 @@ import type {
 import type {
   AuthoredRewardState,
   AuthoredRoomState,
+  FieldsCombatAction,
   EphyraCombatState,
   EphyraSideRoomState,
   RewardWheelState,
@@ -20,6 +21,7 @@ import type {
   ShopOfferState,
   ShopState,
 } from '../model';
+import { fieldsActionKey, fieldsCageActionDomain } from '../fields-actions';
 import {
   expectExactKeys,
   expectArray,
@@ -937,7 +939,7 @@ export function decodeRoomState(
     case 'FieldsCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fieldsCombat', path);
-      expectExactKeys(state, ['kind', 'cages'], path);
+      expectExactKeys(state, ['kind', 'cages', 'actionOrder'], path);
       const descriptor = requireFieldsCages(room, path);
       const rawCages = expectRecord(state.cages, `${path}.cages`);
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
@@ -955,9 +957,49 @@ export function decodeRoomState(
         );
         cages[slotKey] = Object.freeze({ ...reward, offer });
       }
+      const domain = fieldsCageActionDomain(catalog, room);
+      const knownActions = new Set(
+        domain.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
+      );
+      const seenActions = new Set<string>();
+      const actionOrder = expectArray(state.actionOrder, `${path}.actionOrder`).map(
+        (value, index): FieldsCombatAction => {
+          const actionPath = `${path}.actionOrder[${index}]`;
+          const action = expectRecord(value, actionPath);
+          const kind = expectString(action.kind, `${actionPath}.kind`);
+          const decoded: FieldsCombatAction =
+            kind === 'completeCage'
+              ? (() => {
+                  expectExactKeys(action, ['kind', 'phaseKey'], actionPath);
+                  return Object.freeze({
+                    kind,
+                    phaseKey: expectString(action.phaseKey, `${actionPath}.phaseKey`),
+                  });
+                })()
+              : kind === 'interactCageReward'
+                ? (() => {
+                    expectExactKeys(action, ['kind', 'slotKey'], actionPath);
+                    return Object.freeze({
+                      kind,
+                      slotKey: expectString(action.slotKey, `${actionPath}.slotKey`),
+                    });
+                  })()
+                : failProjectDocument(`${actionPath}.kind`, `unknown Fields action ${kind}`);
+          const key = fieldsActionKey(decoded);
+          if (!knownActions.has(key)) {
+            failProjectDocument(actionPath, `unknown Fields action identity ${key}`);
+          }
+          if (seenActions.has(key)) {
+            failProjectDocument(actionPath, `duplicates Fields action ${key}`);
+          }
+          seenActions.add(key);
+          return decoded;
+        },
+      );
       return Object.freeze({
         kind: 'fieldsCombat',
         cages: Object.freeze(cages),
+        actionOrder: Object.freeze(actionOrder),
       });
     }
     case 'ShipCombat':

@@ -588,8 +588,8 @@ describe('structured workspace biome semantic assembly', () => {
     }
     expect(retainedFields.room.entered).toBe(false);
     expect(retainedFields.room.roomLocal.cages).not.toHaveLength(0);
-    expect(retainedFields.room.roomLocal.cages.map((cage) => cage.active)).toEqual(
-      validFields.room.roomLocal.cages.map((cage) => cage.active),
+    expect(retainedFields.room.roomLocal.cages.map((cage) => cage.key)).toEqual(
+      validFields.room.roomLocal.cages.map((cage) => cage.key),
     );
     expect(
       retainedFields.room.roomLocal.cages.every((cage) =>

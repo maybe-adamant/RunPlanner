@@ -11,6 +11,7 @@ import type {
 } from '../../authored-project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
+import type { FieldsCombatAction } from '../../authored-project/model';
 
 export type RoomHistoryOrigin =
   CompletionRoomAddress | HubRoomAddress | LocalChildAddress | OccurrenceAddress;
@@ -116,6 +117,8 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
+  readonly fieldsActions?: readonly FieldsCombatAction[];
+  readonly fieldsCageRewards?: readonly { readonly phaseKey: string; readonly slotKey: string }[];
 }
 
 export interface RoomHistoryFragment {

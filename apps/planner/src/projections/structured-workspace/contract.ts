@@ -18,6 +18,8 @@ import {
   type HubVisitAddress,
   type LocalChildAddress,
   type LocalChildGroupAddress,
+  type FieldsActionAddress,
+  type FieldsCombatAction,
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -783,6 +785,7 @@ export interface WorkspaceInteractionCatalog {
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+  readonly fieldsActionOrders: ReadonlyMap<string, WorkspaceFieldsActionOrderInteraction>;
   readonly hubTakeovers: ReadonlyMap<string, WorkspaceHubTakeoverInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
@@ -983,10 +986,44 @@ export interface WorkspaceExplicitRewardControl extends WorkspaceRewardControlBa
 export type WorkspaceRewardControl = WorkspaceCountedRewardControl | WorkspaceExplicitRewardControl;
 
 export interface WorkspaceFieldsCageDescriptor {
-  readonly active: boolean;
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+}
+
+export interface WorkspaceFieldsActionProposal {
+  readonly actionKey: string;
+  readonly key: string;
+  readonly label: string;
+  readonly order: readonly FieldsCombatAction[];
+}
+
+export interface WorkspaceFieldsActionRow {
+  readonly address: FieldsActionAddress;
+  readonly key: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly proposalKeys: readonly string[];
+  readonly state: 'active' | 'inactive' | 'missing';
+}
+
+export interface WorkspaceFieldsChronology {
+  readonly interactionKey: string;
+  readonly owner: OccurrenceAddress;
+  readonly proposals: readonly WorkspaceFieldsActionProposal[];
+  readonly rows: readonly WorkspaceFieldsActionRow[];
+}
+
+export interface WorkspaceFieldsActionOrderInteraction {
+  readonly intentFor: (
+    proposalKey: string,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsActionOrder' }>
+  >;
+  readonly key: string;
+  readonly load: () => readonly CandidateOptionProjection<readonly FieldsCombatAction[]>[];
+  readonly owner: OccurrenceAddress;
+  readonly proposals: readonly WorkspaceFieldsActionProposal[];
 }
 
 export interface WorkspaceRewardWheelOfferDescriptor {
@@ -1218,6 +1255,8 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'fields';
       readonly cages: readonly WorkspaceFieldsCageDescriptor[];
+      /** Withheld when a retained mixed batch has no truthful active-cage domain. */
+      readonly chronology?: WorkspaceFieldsChronology;
       readonly groupKey: string;
     }
   | {

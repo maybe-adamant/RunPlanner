@@ -21,6 +21,7 @@ import {
 import type {
   WorkspaceEphyraSideRoomEntryOrderControl,
   WorkspaceExitFrontierCapabilities,
+  WorkspaceFieldsActionProposal,
   WorkspaceInteractionChoice,
 } from '../contract';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
@@ -89,6 +90,11 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly owner: AcquisitionSiteAddress;
       readonly proposalEntryKeys: readonly (readonly string[])[];
       readonly selectedEntryKeys: readonly string[];
+    }
+  | {
+      readonly kind: 'fieldsActionOrder';
+      readonly owner: OccurrenceAddress;
+      readonly proposals: readonly WorkspaceFieldsActionProposal[];
     }
   | {
       readonly kind: 'shopDeathDefianceCondition';

@@ -9,8 +9,13 @@ export const fieldsRoomLifecycleProfiles = [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
-        kind: 'runEncounterSequence',
-        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
+        kind: 'runFieldsActionSequence',
+        effects: [
+          'recordEncounterStart',
+          'advanceEncounterDepth',
+          'recordEncounterCompletion',
+          'recordAcquisitionPoint',
+        ],
       },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {

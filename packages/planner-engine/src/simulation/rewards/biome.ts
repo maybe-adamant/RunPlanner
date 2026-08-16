@@ -2864,12 +2864,20 @@ export function evaluateBiomeRewardsAssemblyInternal(
           const localOwnerKey = semanticAddressKey(localReward.origin);
           const acquisitionEvent = history.events.find(
             (candidate) =>
-              candidate.kind === 'encounterCompleted' &&
               semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-              candidate.phaseKey === localReward.encounterPhaseKey,
+              (room.lifecycleProfileKey === 'FieldsCombatRoom'
+                ? candidate.kind === 'acquisitionPointReached' &&
+                  candidate.point === `cages:${localReward.slotKey}`
+                : candidate.kind === 'encounterCompleted' &&
+                  candidate.phaseKey === localReward.encounterPhaseKey),
           );
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
-          const acquisitionView = candidateRoomView?.preOutgoing ?? candidateRoomView?.entry;
+          const acquisitionView =
+            room.lifecycleProfileKey === 'FieldsCombatRoom'
+              ? candidateRoomView?.acquisitionPoints?.find(
+                  (point) => point.point === `cages:${localReward.slotKey}`,
+                )?.before
+              : (candidateRoomView?.preOutgoing ?? candidateRoomView?.entry);
           indexRewardProducerFrontier(
             producerFrontiers,
             Object.freeze({
@@ -2877,7 +2885,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               generationHistorySequence: event.sequence,
               reachableBranchCount: frontierBranches.length,
               acquisitionHorizon:
-                acquisitionEvent?.kind !== 'encounterCompleted' || acquisitionView === undefined
+                acquisitionEvent === undefined || acquisitionView === undefined
                   ? 'generationOnly'
                   : 'ownEnteredLifecycle',
               owners: Object.freeze([localReward.origin]),
@@ -2900,7 +2908,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 );
                 if (
                   candidateBranches.length > 0 &&
-                  acquisitionEvent?.kind === 'encounterCompleted' &&
+                  acquisitionEvent !== undefined &&
                   acquisitionView !== undefined
                 ) {
                   candidateBranches = settleOwnedAcquisitionSite(
@@ -2908,7 +2916,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     candidateBranches,
                     {
                       siteOwner: localReward.origin,
-                      pointKey: localReward.encounterPhaseKey,
+                      pointKey:
+                        acquisitionEvent.kind === 'acquisitionPointReached'
+                          ? acquisitionEvent.point
+                          : localReward.encounterPhaseKey,
                       entryKey: localReward.slotKey,
                       source: Object.freeze({ ...localReward, offer, instanceProvenance: 'free' }),
                       historySequence: acquisitionEvent.sequence,
@@ -3446,7 +3457,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
           room === undefined && completionRoom === undefined
             ? undefined
             : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
-        if (declaration?.advancesExperimentalHammerUses === true) {
+        if (
+          declaration?.advancesExperimentalHammerUses === true &&
+          !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
+        ) {
           branches = advanceExperimentalHammerForCompletion(branches, event.origin, event.sequence);
         }
         if (
@@ -3876,6 +3890,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ? (room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ??
               [])
             : [];
+        if (room.lifecycleProfileKey === 'FieldsCombatRoom') {
+          branches = advanceRewardBranches(branches, event.sequence);
+          break;
+        }
         if (matchingRewards.length === 0) {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
@@ -3933,6 +3951,53 @@ export function evaluateBiomeRewardsAssemblyInternal(
           roomView === undefined
         ) {
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
+        }
+        if (room.lifecycleProfileKey === 'FieldsCombatRoom') {
+          const slotKey = event.point.startsWith('cages:')
+            ? event.point.slice('cages:'.length)
+            : undefined;
+          const localReward = room.localRewards?.find((reward) => reward.slotKey === slotKey);
+          const acquisitionView = roomView.acquisitionPoints?.find(
+            (point) => point.point === event.point,
+          )?.before;
+          if (localReward === undefined || acquisitionView === undefined) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} has no Fields acquisition ${event.point}`,
+            );
+          }
+          const settlement = settleOwnedAcquisitionSite(
+            catalog,
+            branches,
+            {
+              siteOwner: localReward.origin,
+              pointKey: event.point,
+              entryKey: localReward.slotKey,
+              source: Object.freeze({ ...localReward, instanceProvenance: 'free' }),
+              historySequence: event.sequence,
+            },
+            (branchHistory) =>
+              rewardFacts(
+                catalog,
+                room,
+                room,
+                declaration,
+                acquisitionView,
+                branchHistory,
+                enteredBiomeCount,
+              ),
+            findings,
+            undefined,
+            rewardFindingChronologyForRoom(
+              snapshot,
+              room.origin,
+              event.sequence,
+              'localRoomLifecycle',
+            ),
+          );
+          recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
+          recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
+          branches = settlement.branches;
+          break;
         }
         branches = settleAuthoredAcquisitionSite(
           room,

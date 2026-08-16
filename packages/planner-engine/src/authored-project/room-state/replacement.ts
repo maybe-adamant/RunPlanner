@@ -102,6 +102,7 @@ function reconcileFieldsCombatState(
   return Object.freeze({
     kind: 'fieldsCombat',
     cages: Object.freeze(cages),
+    actionOrder: previousState.actionOrder,
   });
 }
 
