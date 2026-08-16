@@ -63,7 +63,7 @@ biome start and retains the other eligible keepsakes as effect-neutral captured
 history until their individual effect slices are implemented.
 
 Hera's All Together, the Zagreus Infernal Contract, and Hermes's Travel Deal
-are also supported through authored schema 38. All Together resolves one exact
+are also supported. All Together resolves one exact
 rarityless Infusion from each non-exhausted declaration-owned pair without
 changing god-pool history. Qualifying World Shops retain their declaration-owned initial
 inventory and add the free Contract pedestal, one source-derived Travel refill,
@@ -72,6 +72,23 @@ and participation are authored on those rows, while one shared Acquisitions
 order owns chronology; Gold materializes from the first accepted paid
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
+
+Authored schema 41 also closes the Narcissus, Mourning Fields, and Artificer
+surface. Narcissus exposes every pickup consequential to Time Piece or
+Artificer, including producer-owned Psyche without adding it to a counted
+store. Each Fields combat room owns its exact optional-pickup capacity,
+retained optional inventory, and one action chronology that interleaves atomic
+cage completion with cage, optional, and Artificer-replacement interactions.
+Optional offers consume the persistent `FieldsOptionalRewards` bag when they
+spawn and remain history-neutral when left behind.
+
+The Artificer uses one mutually exclusive acquisition disposition beside
+ordinary pickup and Time Piece. A successful free-source conversion spends one
+rank-derived Arcana use, consumes the current `RunProgress` bag, destroys the
+source without acquiring it, and creates a separately acquired replacement.
+Epic supplies three uses; Lazuli's Heroic promotion preserves spent-use
+evidence and adds one remaining use. Paid Shop items and Echo's Reward Reward
+Reward recreation remain ineligible.
 
 ## Architecture
 
@@ -188,13 +205,14 @@ copied elsewhere.
   explicit, Campaign C separated the justified authored-core authorities, and
   Campaign D retained the coherent ordered history and reward folds. Echo's
   eight-choice delivery, All Together, Infernal Contract, Travel Deal, and the
-  corrected Gold Shop chronology are complete through authored schema 38.
+  corrected Gold Shop chronology are complete. Narcissus pickup correction,
+  Fields room chronology and optional rewards, and Artificer conversions are
+  complete through authored schema 41.
   Shop inventory, supplemental reward payloads, purchase/pickup participation,
   and room-local chronology remain distinct supported products. The ranked Hub
   follow-up and manual Shop UX acceptance close Phase 7. Phase 8 is complete
-  with the successful `v0.1.0` tagged Windows portable release. Fields minor
-  rewards, Artificer, Wells, and exact Surface Shop delivery timing remain
-  focused follow-up work.
+  with the successful `v0.1.0` tagged Windows portable release. Wells and exact
+  Surface Shop delivery timing remain focused follow-up work.
 
 ## Source Evidence
 

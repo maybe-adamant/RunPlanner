@@ -7,9 +7,9 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 38 Boundary
+## Schema 41 Boundary
 
-Schema 38 is the sole persisted authored-project contract. The codec rejects
+Schema 41 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
@@ -162,7 +162,7 @@ result of Cherished Heirloom are never authored: ordinary selection is fixed at
 Epic and simulation derives both Cherished transitions from catalog facts and
 canonical trait history.
 
-Schema 38 closes Echo's active authored children without adding effect state to
+Schema 38 introduced Echo's active authored children without adding effect state to
 the project. Pom persists one selected greatest-level target or the explicit
 empty-domain `null` result. Boon persists one to three distinct trait-key rows
 whose giver identity and equipped rarity are explicit, plus only the selected
@@ -177,6 +177,24 @@ and replay count remain chronological trait history; only a reached
 Experimental Hammer replay persists its selected-compatible or explicit
 exhausted result beneath that succeeding biome's start address. Dormant Echo
 option detail remains structurally retained but is not active authorship.
+
+Schemas 39 and 40 give every Fields combat occurrence one closed `actionOrder`,
+one selected optional-reward count, and complete retained optional-reward
+values through the declaration's exact capacity. The action sequence contains
+atomic cage completions and interactions with cage, active optional, and
+Artificer-replacement pickups. Optional participation is sequence membership,
+not a second boolean. Lowering the active count removes newly dormant optional
+actions while retaining their values and dispositions; restoring the count
+does not silently restore participation.
+
+Schema 41 replaces the former `normal | gold` role state with one exact
+acquisition disposition: `normal`, `timePiece`, or `artificer` with a complete
+`RunProgress` replacement reward. The child belongs to its exact source and
+acquisition role. Ordinary ordered acquisition sites represent its later
+pickup with a collision-safe source-derived entry key; Fields uses its one
+room-action chronology. Mandatory singleton room rewards derive the later
+required pickup checkpoint and persist no synthetic one-row order. No pending
+Artificer map or remaining-use counter is authored.
 
 ## Common Decision Model
 
@@ -376,6 +394,15 @@ conversion edit without changing `roomExit.order`. `SelectDerivedShopEntry`
 atomically materializes the same default and applies one engine-supplied
 complete participation/order proposal. These are one shared command family,
 not effect-specific state or a second Shop chronology.
+
+A Fields combat occurrence owns three related but non-duplicated products:
+declaration-bounded cage reward values, a complete retained optional inventory
+plus active count, and one mixed room-action order. That order alone owns cage
+completion and pickup chronology. Cage interactions are required after their
+matching completion; optional interactions are membership-controlled; and a
+source selecting Artificer may add one later source-owned replacement action.
+Commands and decoding use stable phase, slot, and acquisition-role identities,
+never rendered ordinals.
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or

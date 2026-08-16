@@ -532,13 +532,19 @@ Offer resolution walks every generated occurrence in physical target order,
 resolving its ordinary incoming producer before its active cage slots. Picked
 and unpicked targets therefore share one counted-bag and Boon-source offer
 history; an earlier miniboss Boon can constrain a later combat cage source.
-Only the active slots of the entered combat target acquire their rewards.
-Inactive third slots remain complete authored state but emit no canonical
-offer or acquisition.
+Only active cage offers of the entered combat target can later be acquired.
+Their concrete acquisition occurs at the exact authored interaction action,
+after the matching cage completion; inactive cages remain complete authored
+state but emit no canonical offer or acquisition.
 
-The automatically spawned `FieldsOptionalRewards` bag is a separate deferred
-surface. The canonical v1 trace acquires none and does not fold those values
-into the cage producer, RunProgress bag, or generated batch state.
+Every Fields combat declaration also owns an exact optional capacity of two,
+three, or four. The active optional prefix is resolved sequentially on room
+entry from the persistent 19-entry `FieldsOptionalRewards` bag, with no sibling
+peer exclusion. Generation consumes the bag even when the player leaves a
+pickup behind. Optional generation neither consumes `RunProgress` nor changes
+history; only a later action-sequence interaction reaches shared concrete
+acquisition settlement. Counted-store refill remains the ordinary append-one-
+full-set transition and retains ineligible leftovers.
 
 ### I Clockwork Composition
 
@@ -842,7 +848,21 @@ player-rarityless descriptor may emit zero or more declaration-owned pickups at 
 Story room's post-outgoing `roomExit` site. The descriptor never enters
 equipped-trait history. A random Pom target or Mystery Boon offer belongs to
 the concrete produced pickup and is evaluated only when that entry participates
-in the site's exact order.
+in the site's exact order. Ashes, Psyche, and Bones are independent concrete
+pickups beside Max Magick, Max Health, and Death Defiance; Psyche owns ordinary
+consumable/use and last-reward history but no counted-store membership.
+
+Normal acquisition, Time Piece, and Artificer are one mutually exclusive
+disposition on each exact acquisition role. Artificer is supported only for a
+free eligible concrete instance. A successful conversion consumes one use and
+one exact currently reachable `RunProgress` bag entry with Devotion and Spell
+excluded, records the replacement offer, and destroys the source without
+folding its acquisition history. The complete replacement remains a separate
+source-owned entry and reaches this same concrete-acquisition fold only at its
+later required or optional checkpoint. Mandatory singleton rewards use a fixed
+later checkpoint; authored acquisition sites use their existing order; Fields
+uses its mixed room-action chronology. No pending registry, private order, or
+second bag transition exists.
 
 Echo reuses the same boundary in two different ways. Reward Reward Reward
 reads the latest successfully settled acquisition whose concrete declaration

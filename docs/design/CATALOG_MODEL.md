@@ -774,7 +774,7 @@ not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
 
-Schema 38 contains 294 memberships across the 20 non-Hammer givers and 92
+The normalized catalog contains 294 memberships across the 20 non-Hammer givers and 92
 memberships under the Hammer giver. Echo contributes exactly eight
 player-rarityless identities: Reward, Boon, Survive, Pom, Evade, Fight, Gold,
 and Gift. Their selected dispositions close direct numeric/no-op behavior,
@@ -793,6 +793,15 @@ separate rarityless fixed acquisition. These declarations are closed facts,
 not a generic callback registry; normalization rejects either selected
 disposition on any other trait and validates every pair, pedestal member,
 destination, and supplemental key.
+
+The Artificer is an Arcana declaration rather than a giver member. Its
+normalized capacity profile is exact: Epic has three uses and Heroic has four.
+Concrete acquisition declarations independently own inherited Artificer
+eligibility, while producer lifecycle and instance provenance may block it.
+The supported source family is Nectar, ordinary and Big Bones, ordinary and
+Big Ashes, and producer-owned Psyche; Psyche is not inserted into a counted
+store. Room declarations separately own exact Fields optional capacities and
+the persistent `FieldsOptionalRewards` producer binding.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,

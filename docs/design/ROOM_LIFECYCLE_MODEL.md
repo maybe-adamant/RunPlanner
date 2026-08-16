@@ -409,7 +409,9 @@ pickups it produces settle at the occurrence-owned `roomExit` point after the
 outgoing batch is frozen. Their authored order therefore affects later route
 state without regenerating the current doors. A pickup owns its exact reward,
 trait offer, or level-resolution child; those children are not nested under
-the outer Narcissus option.
+the outer Narcissus option. The consequential concrete set includes Ashes,
+Psyche, Bones, Max Magick, Max Health, and Death Defiance; each remains optional
+and independently ordered.
 
 ### Ephyra Opening
 
@@ -534,6 +536,33 @@ The concrete O authority owns its exact active phases and offer points.
 a counter increment from an earlier phase cannot retroactively add another
 phase. The shared lifecycle model owns their ordered execution and state
 visibility.
+
+### Mourning Fields Combat Room
+
+```text
+prepare all cage offers and encounter identities
+enter room
+materialize active Fields optional offers
+complete Passive
+run authored Fields actions
+generate outgoing batch
+commit and exit
+```
+
+The Fields action sequence is the room's only chronology. One cage-completion
+action atomically represents activation through encounter completion because
+pickup interaction during an active combat wave is outside the supported
+model. Cage reward interaction becomes ready only afterward; optional pickup
+interactions may appear before, between, or after completed cages. Every
+interaction uses the shared acquisition settlement fold.
+
+Selecting Artificer at a source interaction consumes the current
+`RunProgress` bag and creates, but does not acquire, its source-owned
+replacement. A required cage transfers its obligation to a later replacement
+action; an optional Fields source may omit that action and leave the
+replacement behind. Several conversions may therefore precede every generated
+replacement acquisition. The sequence does not create a Fields-private
+acquisition fold or Artificer-private order.
 
 ### Preboss and Persistent Structures
 

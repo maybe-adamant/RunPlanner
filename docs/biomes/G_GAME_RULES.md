@@ -49,7 +49,7 @@ coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 | Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | implemented           | --                                                            |
 | Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and direct encounter definitions                                     | implemented           | --                                                            |
 | Takeover Preboss                       | `G_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and later exits are free rewards when present    | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                            |
-| Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Deferred:** retain the fixed Story offer but do not author or consume the internal benefit choice    | documented boundary   | Concrete NPC gifts and trait state are modeled                |
+| Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Exact supported surface:** rarityless offer plus independently ordered consequential pickups         | implemented           | Another omitted companion pickup gains a modeled consequence  |
 | Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input              |
 | Narcissus and special-room progression | Dialogue, bounty, lifetime, prior-run force, and world-upgrade gates alter availability                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                    |
 
@@ -171,9 +171,14 @@ facts.
 
 The fixed `Story` producer describes the incoming door offer for
 `G_Story01`. Entering that room also presents Narcissus's internal benefit
-choice. The current product deliberately does not author those concrete gifts
-or apply their trait and resource effects. That future NPC/trait-resolution
-surface does not change the current Story producer or room eligibility model.
+choice. The selected rarityless descriptor may create independent optional
+pickups at the post-outgoing `roomExit` point. The supported surface includes
+all run-consequential results plus Ashes, Psyche, and Bones because Time Piece,
+Artificer, and Echo last-reward history observe them. Psyche remains a
+producer-owned concrete acquisition rather than a counted-store member. Other
+numerically neutral companion drops remain deliberately omitted until another
+modeled system makes them consequential. This room-local surface does not
+change the fixed Story producer or room eligibility model.
 
 ## Reward-Store Projection
 

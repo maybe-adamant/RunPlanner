@@ -12,12 +12,51 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The All Together and Shop-trait phase is complete through authored schema 38.
+The Narcissus, Fields, and Artificer phase is complete through authored schema 41. The locked audit/plan landed at `b054eb7`; the complete consequential
+Narcissus pickup surface landed at `888ebe1`; Fields cage action chronology
+landed at `1ecba06`; Fields optional pickups landed at `3415d7d`; and Artificer
+landed at `2f97524`.
+Schema 41 is strict and rejects schema 40 rather than migrating the superseded
+acquisition-disposition shape.
+
+Narcissus now exposes Ashes, Psyche, and Bones as independent optional pickups
+beside the already modeled Max Magick, Max Health, and Death Defiance contacts.
+Psyche owns ordinary acquisition, Time Piece, and Echo last-reward behavior but
+remains absent from every counted store. Every H combat declaration owns its
+exact optional capacity, the active zero-through-capacity prefix, retained
+optional reward values, and one mixed action chronology. Optional offers
+consume the persistent 19-entry `FieldsOptionalRewards` bag on room entry and
+remain history-neutral when left behind.
+
+Artificer reuses the exact acquisition role, reward editor, counted-bag,
+concrete-acquisition, chronology, candidate, finding, Redux, and Run State
+authorities. Epic provides three uses and Heroic four; exact successful source
+interactions are retained so Lazuli adds one remaining use without resetting
+spend. A successful free-source conversion consumes the current `RunProgress`
+bag, destroys the source without acquisition history, and creates one
+source-owned replacement acquired at a later fixed or authored action. Paid
+Shop inventory and Echo Reward Reward Reward remain blocked. Static closure
+found one Fields chronology, one acquisition fold, one shared `RunProgress` bag
+transition, and no Artificer pending registry, private order, or private bag.
+
+Independent Gate A review found no defect. Gate B review findings covering
+whole-project proposal replay, inactive-payload leakage, duplicated active
+count, and missing prior-schema rejection were accepted and remediated. Gate C
+added the accepted missing real-Fields refill-with-leftovers witness. Gate D
+retained the exact original Fields source identity, added the missing optional
+replacement participation row, replaced a partial bespoke replacement editor
+with the shared complete reward control, and filled the Lazuli, mandatory-room,
+Hub-bag independence, ordered-producer, inverse-Hammer, identity, and UI
+witnesses. Main review added an Artificer-specific append-refill-with-leftovers
+test and vocabulary cleanup without a production-logic change. Final complete
+repository totals are recorded in the detailed delivery entry below.
+
+The preceding All Together and Shop-trait phase completed authored schema 38.
 The locked audit/plan landed at `da7163d`; All Together landed at `a4c46d8`;
 Infernal Contract and Travel Deal landed at `73f9e13`; and the focused Gold
-chronology contract was locked at `4583db1`. Schema 38 is strict and rejects
-schema 37. It reserves `echoDoubleShopReward` as Gold's sole stable child and
-retains no source-keyed Gold persistence or compatibility decoder.
+chronology contract was locked at `4583db1`. Schema 38 reserved
+`echoDoubleShopReward` as Gold's sole stable child and retained no source-keyed
+Gold persistence or compatibility decoder.
 
 All Together owns one complete four-pair result, directly grants each selected
 rarityless Infusion, and leaves god-pool history unchanged. Qualifying Shops
@@ -40,12 +79,9 @@ frozen; Pom alone regenerates when at least one stored `StackOnly` target has
 disappeared. Initial, Travel, Gold, and Contract entries weave through one
 Acquisitions chronology with atomic source rebind, move, and dependent removal.
 
-The phase deliberately defers Wells, exact Surface Shop delivery timing,
-Fields minor rewards and their room-local chronology, Artificer and Lazuli
-charges, numeric Shop costs/discounts, probability/RNG, challenge switches,
-Shopping NPC purchases, and live-map kit IDs. The intended successor remains
-Narcissus pickup-surface correction, Fields minor pickups/order, then Artificer
-against those completed producer surfaces.
+The remaining Shop-trait boundaries still defer Wells, exact Surface Shop
+delivery timing, numeric Shop costs/discounts, probability/RNG, challenge
+switches, Shopping NPC purchases, and live-map kit IDs.
 
 Echo's complete eight-choice Story provider was established in authored schema 35. Gate A added the rarityless provider plus Survive, Evade, Fight, and
 Pom (`adc5a02`), followed by the source-faithful correction that removes
@@ -2611,4 +2647,46 @@ production build (382 transformed modules). Vite retained its existing
 advisory that the single application chunk exceeds 500 kB; this is not a phase
 correctness or build failure. The complete gate was run once after review
 remediation and durable-document absorption and was not rerun after this
+factual append.
+
+The Narcissus, Fields, and Artificer delivery advances the current authored
+contract from schema 38 through strict schemas 39, 40, and 41. Gate A
+(`888ebe1`) restores Ashes, Psyche, and Bones as independent Narcissus pickups
+and extends Psyche through Time Piece and Echo last-reward without adding a
+counted-store entry. Gate B (`1ecba06`) replaces automatic cage acquisition
+with one engine-owned mixed Fields action chronology. Gate C (`3415d7d`) adds
+the exact 2/3/4 optional capacities, retained zero-through-capacity state, and
+persistent `FieldsOptionalRewards` generation. Gate D (`2f97524`) adds the
+closed ordinary/Time Piece/Artificer disposition, exact spent-use evidence,
+current-`RunProgress` conversion, and separately acquired replacement.
+
+Across Gates A-D, production changed by +4,531/-345 lines from the locked-plan
+commit (net +4,186): catalog +266 net, engine +2,857 net, and application/React
++1,063 net. Tests changed by +2,811/-169 (net +2,642). The growth is confined
+to the declared catalog facts, schema/commands, one Fields chronology,
+reward/lifecycle/candidate authorities, and their application projection; the
+closure audit found no shadow state, compatibility path, or parallel fold to
+retire.
+
+The first independent Gate D review required preserving the exact original
+Fields source identity, exposing optional replacement participation, and
+replacing the partial reward-type-only replacement editor with the shared
+complete explicit reward control. It also closed the Lazuli spent-zero-through-
+three table, ordinary mandatory timing, Ephyra `HubRewards` independence,
+Narcissus and Echo Gold ordered paths, inverse early-Hammer rejection, Fields
+identity, and optional UI witnesses. Main review added the Artificer-specific
+append-refill witness with retained Devotion/Spell leftovers and removed stale
+vocabulary; no additional production defect remained.
+
+Before the Gate D commit, all workspace typechecks passed, as did catalog
+185/185, engine 85 files and 1,092 tests, planner 55/556, contract 8/49,
+product 6/27, lint, formatting, the production build, and diff checks. The
+final test-only refill addition then passed the focused Artificer file 10/10.
+
+The single authorized phase-closure `npm run check` passed all three workspace
+typechecks, 155 test files and 1,861 tests, lint, repository formatting, and the
+production build (386 transformed modules). Vite retained its existing advisory
+that the single application chunk exceeds 500 kB; this is not a phase
+correctness or build failure. The complete gate was run exactly once after
+review remediation and durable-document absorption and was not rerun after this
 factual append.
