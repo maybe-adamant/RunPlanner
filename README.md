@@ -181,6 +181,7 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [trait-offer pools and dependencies](docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md),
+  [authored reward and trait defaults](docs/audits/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md),
   [acquisition delivery and room settlement](docs/audits/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md),
   [Arcana and Fear audit](docs/audits/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md),
   [All Together and Shop-trait audit](docs/audits/ALL_TOGETHER_AND_SHOP_TRAITS_GAME_DATA_AUDIT.md),

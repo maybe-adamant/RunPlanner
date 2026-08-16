@@ -21,7 +21,12 @@ This file retains only enough completed context to explain the active backlog.
 
 ## Active Foundational Audit
 
-### Unselected authorable reward slots
+### Unselected authorable rewards and trait offers
+
+The implementation-free
+[`AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md`](../audits/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md)
+now covers rewards and generated trait offers together. A separately reviewed
+implementation plan is the next step.
 
 Current room and derived-reward construction frequently inserts a complete
 concrete default before the player has authored a choice. When that arbitrary
@@ -35,9 +40,8 @@ or has banned the relevant Apollo traits. The invalid generated trait child is
 retained by simulation, yet workspace projection cannot construct its repair
 surface and throws while registering the exact finding destination.
 
-Before another local repair, audit every authorable reward-default insertion
-site and design one general unresolved state. The intended distinction to test
-is:
+The audit establishes one general unresolved-state distinction for every
+authorable reward and generated trait-offer insertion site:
 
 ```text
 never authored                -> unselected and incomplete
@@ -45,13 +49,11 @@ authored, then made invalid   -> selected, retained, and repairable
 declaration-fixed game reward -> concrete without player selection
 ```
 
-The audit must cover ordinary room rewards, local and Fields pickups, reward
-wheels, player-authored Shop inventory, Artificer replacements, Travel Deal
-refills, Echo Gold duplicates, Infernal Contract rewards, and Echo replay
-children. It must decide strict codec shape, defaults, commands, progressive
-checkpoints, candidate publication, findings, focus, Redux history, and how
-nested reward detail becomes available after selection. It must not use the
-first candidate as an implicit authored choice.
+The completed audit covers ordinary room rewards, local and Fields pickups,
+reward wheels, player-authored Shop inventory, Artificer replacements, Travel
+Deal refills, Echo Gold duplicates, Infernal Contract rewards, Echo replay
+children, and provider-owned trait offers. It rejects using the first candidate
+as implicit authored intent.
 
 ## Correctness Queue
 
