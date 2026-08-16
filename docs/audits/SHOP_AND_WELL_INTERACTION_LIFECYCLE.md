@@ -13,8 +13,9 @@ outside this audit.
 This document does not define complete item pools, prices, probability
 weights, or UI labels. `REWARD_GAME_DATA_AUDIT.md` remains the source authority
 for the supported `WorldShop`, `I_WorldShop`, and `Q_WorldShop` offer matrices.
-Future Well or Shrine work must refresh the focused pool and eligibility facts
-listed under unresolved questions before declaring those families supported.
+The focused `STYGIAN_WELL_GAME_DATA_AUDIT.md` and
+`HERMES_SHRINE_DELIVERY_GAME_DATA_AUDIT.md` own the refreshed Well and Shrine
+pool, eligibility, and special-effect facts.
 
 The game evidence was checked on 2026-08-11 against the installed Hades II
 scripts. Primary sources are:
@@ -110,9 +111,10 @@ separate game behaviors from this lifecycle ordering.
 ## Well of Charon (`RoomShop`)
 
 The base room declaration gives a Well of Charon a chance to appear after the
-relevant permanent unlock, at biome depth three or later, with four rooms of
-spacing from the previous Well event. Concrete rooms may override the chance,
-requirements, or force state. Appearance also requires an available physical
+relevant permanent unlock, at biome depth three or later, once the current
+depth is at least four greater than the previous Well depth. That means three
+intervening rooms. Concrete rooms may override the chance, requirements, or
+force state. Appearance also requires an available physical
 `ChallengeSwitchBase` slot.
 
 When eligible, room setup records `ForceWellShop`, installs a locked `WellShop`
