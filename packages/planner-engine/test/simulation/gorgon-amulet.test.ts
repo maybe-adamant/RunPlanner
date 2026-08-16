@@ -349,6 +349,36 @@ describe('Gorgon Amulet lifecycle', () => {
         trait: createTraitOfferAddress(incoming, 'source'),
         value: cherishedOffer(),
       });
+      for (const [occurrenceId, options] of [
+        [goldenGOccurrenceId(6, 1), ['DemeterSpecialBoon', 'DemeterCastBoon', 'DemeterSprintBoon']],
+        [goldenGOccurrenceId(7, 1), ['DemeterManaBoon', 'CastNovaBoon', 'PlantHealthBoon']],
+      ] as const) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+          },
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(
+            createIncomingRewardAddress(goldenGBiome, occurrenceId),
+            'source',
+          ),
+          value: {
+            kind: 'traits',
+            giverKey: 'Demeter',
+            options: [
+              { traitKey: options[0], rarity: 'Common' },
+              { traitKey: options[1], rarity: 'Common' },
+              { traitKey: options[2], rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option1',
+          },
+        });
+      }
     }
 
     const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
@@ -381,7 +411,7 @@ describe('Gorgon Amulet lifecycle', () => {
         )
       : seeded;
     const result = evaluateGWithGorgonSeed(project, acquired);
-    expect(result.branches).not.toHaveLength(0);
+    expect(result.branches, JSON.stringify(result.findings)).not.toHaveLength(0);
     expect(result.branches.every((branch) => branch.keepsakes.gorgon?.status === 'consumed')).toBe(
       true,
     );
@@ -753,7 +783,7 @@ describe('Gorgon Amulet lifecycle', () => {
             (event) => event.kind === 'roomCreated' && event.gameName === 'N_Sub01',
           )
         : undefined;
-    expect(nSubEvent).toBeDefined();
+    expect(nSubEvent, JSON.stringify(nAssembly.evaluation.findings)).toBeDefined();
     if (
       nSubEvent === undefined ||
       nSubEvent.kind !== 'roomCreated' ||

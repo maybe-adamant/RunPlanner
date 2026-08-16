@@ -339,7 +339,8 @@ describe('DecisionWorkbench', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const options = within(screen.getByRole('listbox')).getAllByRole('option');
-    expect(options.map((option) => option.textContent)).toEqual(['Pre-Hub']);
+    expect(options).toHaveLength(1);
+    expect(within(options[0]!).getByText('Pre-Hub')).toBeTruthy();
     expect(options[0]?.getAttribute('aria-disabled')).not.toBe('true');
     expect(screen.queryByText(/Preboss/)).toBeNull();
 

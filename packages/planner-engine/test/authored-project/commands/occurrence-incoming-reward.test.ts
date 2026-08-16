@@ -25,6 +25,17 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  const apolloOffer = {
+    kind: 'traits' as const,
+    giverKey: 'Apollo',
+    options: [
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+      { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+    ] as const,
+    selectedOptionKey: 'option1' as const,
+  };
+
   it('persists one exact Time Piece acquisition-role disposition without rewriting its reward', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -40,7 +51,8 @@ describe('authored-project incoming reward commands', () => {
     const state = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
       (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
     )?.state;
-    if (state?.kind !== 'counted') throw new Error('expected counted reward');
+    if (state?.kind !== 'counted' || state.reward === null)
+      throw new Error('expected counted reward');
     expect(state.reward.offer).toEqual({
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -99,6 +111,11 @@ describe('authored-project incoming reward commands', () => {
       value,
     });
     project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: apolloOffer,
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
       trait: createTraitOfferAddress(reward, 'source'),
       selectedOptionKey: 'option2',
@@ -112,7 +129,8 @@ describe('authored-project incoming reward commands', () => {
       occurrence?.state.kind === 'counted'
         ? occurrence.state.reward?.traitOffersByAcquisitionRole?.source
         : undefined;
-    if (existing === undefined) throw new Error('customized trait offer is missing');
+    if (existing === undefined || existing === null)
+      throw new Error('customized trait offer is missing');
     expect(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceTraitOffer',
@@ -134,6 +152,11 @@ describe('authored-project incoming reward commands', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     const trait = createTraitOfferAddress(reward, 'source');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: apolloOffer,
+    });
     const occurrence = project.routes
       .flatMap((route) => route.biomes)
       .flatMap((biome) => biome.topology?.occurrences ?? [])
@@ -177,7 +200,18 @@ describe('authored-project incoming reward commands', () => {
   });
 
   it('rejects a persisted Death Defiance field on an unsupported trait owner', () => {
-    const document = JSON.parse(encodeProjectDocument(createGoldenFGHProject())) as {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 2));
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: apolloOffer,
+    });
+    const document = JSON.parse(encodeProjectDocument(project)) as {
       routes: Array<{
         biomes: Array<{ topology?: { occurrences: Array<Record<string, unknown>> } }>;
       }>;

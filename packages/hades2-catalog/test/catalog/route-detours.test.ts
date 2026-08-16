@@ -183,7 +183,7 @@ describe('route detour catalog declarations', () => {
       blockGiftBoons: true,
       incomingReward: {
         kind: 'fixed',
-        offer: { rewardType: 'InfernalContractBoon' },
+        rewardType: 'InfernalContractBoon',
       },
       enteredRewardStoreHistory: { kind: 'none' },
       counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
@@ -386,7 +386,7 @@ describe('route detour catalog declarations', () => {
             behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
           },
         ],
-        incomingReward: { kind: 'fixed', offer: { rewardType: 'TrialUpgrade' } },
+        incomingReward: { kind: 'fixed', rewardType: 'TrialUpgrade' },
       });
     }
     expect(

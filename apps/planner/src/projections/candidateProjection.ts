@@ -126,17 +126,17 @@ export interface CandidateProjectionSession {
   readonly evaluation: ProjectEvaluation;
   readonly prepareRewardDomain: (
     rewardTypes: readonly string[],
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ) => PreparedRewardDomain;
   readonly countedRewardTypes: (
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
-    selectedRewardType: string,
+    selectedRewardType?: string,
   ) => readonly string[];
   readonly rewardDomain: (
     owner: RewardCandidateOwner,
     rewardTypes: readonly string[],
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ) => Promise<ProjectedRewardDomain>;
   readonly startRooms: (
     owner: BiomeAddress | OccurrenceAddress,
@@ -507,9 +507,12 @@ export function createCandidateSessionFactory(
   const boundSessionCache = new WeakMap<ProjectEvaluationAssembly, CandidateProjectionSession>();
   const prepareCachedRewardDomain = (
     rewardTypes: readonly string[],
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ): PreparedRewardDomain => {
-    const key = domainKey([...rewardTypes, offerKey(selected)]);
+    const key = domainKey([
+      ...rewardTypes,
+      selected === undefined ? '__unresolved__' : offerKey(selected),
+    ]);
     const existing = preparedRewardDomainCache.get(key);
     if (existing !== undefined) {
       return existing;
@@ -522,7 +525,7 @@ export function createCandidateSessionFactory(
     assembly: ProjectEvaluationAssembly,
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
-    selectedRewardType: string,
+    selectedRewardType?: string,
   ): readonly string[] => {
     let projectCache = rewardTypeDomainCache.get(assembly);
     if (projectCache === undefined) {
@@ -530,14 +533,15 @@ export function createCandidateSessionFactory(
       rewardTypeDomainCache.set(assembly, projectCache);
     }
     const selectable = countedRewardTypeDomain(catalog, assembly, owner.address, binding);
-    const key = `reward-types:${semanticAddressKey(owner.address)}:${domainKey(selectable)}:${selectedRewardType}`;
+    const key = `reward-types:${semanticAddressKey(owner.address)}:${domainKey(selectable)}:${selectedRewardType ?? '__unresolved__'}`;
     const existing = projectCache.get(key);
     if (existing !== undefined) {
       return existing;
     }
-    const domain = selectable.includes(selectedRewardType)
-      ? selectable
-      : Object.freeze([...selectable, selectedRewardType]);
+    const domain =
+      selectedRewardType === undefined || selectable.includes(selectedRewardType)
+        ? selectable
+        : Object.freeze([...selectable, selectedRewardType]);
     projectCache.set(key, domain);
     return domain;
   };
@@ -545,12 +549,12 @@ export function createCandidateSessionFactory(
     assembly: ProjectEvaluationAssembly,
     owner: RewardCandidateOwner,
     rewardTypes: readonly string[],
-    selected: ResolvedRewardOffer,
+    selected?: ResolvedRewardOffer,
   ): Promise<ProjectedRewardDomain> => {
     const prepared = prepareCachedRewardDomain(rewardTypes, selected);
     const offers = rewardDomainOffers(prepared);
     const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
-    const pendingKey = `${candidateKey}:selected:${offerKey(selected)}`;
+    const pendingKey = `${candidateKey}:selected:${selected === undefined ? '__unresolved__' : offerKey(selected)}`;
     let projectPending = pendingRewardDomains.get(assembly);
     if (projectPending === undefined) {
       projectPending = new Map();
@@ -671,12 +675,12 @@ export function createCandidateSessionFactory(
       countedRewardTypes: (
         owner: CountedRewardCandidateOwner,
         binding: CountedRewardBinding,
-        selectedRewardType: string,
+        selectedRewardType?: string,
       ) => countedRewardTypesFor(assembly, owner, binding, selectedRewardType),
       rewardDomain: (
         owner: RewardCandidateOwner,
         rewardTypes: readonly string[],
-        selected: ResolvedRewardOffer,
+        selected?: ResolvedRewardOffer,
       ) => rewardDomainFor(assembly, owner, rewardTypes, selected),
       startRooms: (owner: BiomeAddress | OccurrenceAddress, rooms: readonly RoomDeclaration[]) =>
         startRoomsFor(assembly, owner, rooms),

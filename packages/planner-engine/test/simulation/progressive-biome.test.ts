@@ -248,6 +248,11 @@ function partialGWithOnePhysicalTarget() {
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
     'RunProgress',
   );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenGBiome, first),
+    value: { rewardType: 'MaxManaDrop' },
+  });
   project = authorLegalTraitOffers(project);
   project = appendBatch(
     project,
@@ -289,6 +294,11 @@ function partialGWithInvalidSecondPhysicalTarget() {
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
     'RunProgress',
   );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenGBiome, first),
+    value: { rewardType: 'MaxManaDrop' },
+  });
   project = authorLegalTraitOffers(project);
   project = appendBatch(
     project,
@@ -327,7 +337,11 @@ function partialGWithEarlierInvalidReward() {
 
 function partialFWithInvalidSiblingAdditionsAndNormalTarget() {
   const batches = [
-    { targets: ['F_Combat02'], pickedExitIndex: 1 },
+    {
+      targets: ['F_Combat02'],
+      pickedExitIndex: 1,
+      offers: [{ rewardType: 'GiftDrop' }],
+    },
     {
       targets: ['F_Combat03', 'F_Combat03'],
       pickedExitIndex: 1,
@@ -401,7 +415,7 @@ describe('progressive biome evaluation', () => {
           timePieceConvertible: true,
           artificerSupported: true,
           artificerConvertible: true,
-          artificerDefaultReplacement: expect.any(Object),
+          artificerReplacementOptions: expect.any(Array),
         },
       });
       expect(
@@ -1276,7 +1290,15 @@ describe('progressive biome evaluation', () => {
     );
     expect(evaluation.assessmentPrefix?.frontier).toMatchObject({
       kind: 'exitDecision',
-      targets: [],
+      targets: [
+        {
+          origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit1'),
+          room: { occurrenceId: fixture.firstTarget },
+        },
+        {
+          origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
+        },
+      ],
     });
     expect(
       bindTestCandidateSession(catalog, fixture.project).evaluate({
@@ -1301,12 +1323,12 @@ describe('progressive biome evaluation', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'roomTarget' });
   });
 
   it('replays every physical peer when a later forced room changes the shared batch store', () => {
     const target = goldenFOccurrenceId(5, 2);
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let project = applyProjectCommand(authorLegalTraitOffers(createGoldenFGHIProject()), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, target),
       gameName: 'F_Combat01',
@@ -1316,7 +1338,20 @@ describe('progressive biome evaluation', () => {
       reward: createIncomingRewardAddress(goldenFBiome, target),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
     });
-    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(goldenFBiome, target), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSprintBoon', rarity: 'Common' },
+          { traitKey: 'HestiaManaBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
 
     const assembly = simulateProjectAssembly(catalog, project);
     expect(() => simulateProject(catalog, project)).not.toThrow();

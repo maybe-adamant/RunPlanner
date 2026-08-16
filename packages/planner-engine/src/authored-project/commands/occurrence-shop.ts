@@ -5,14 +5,13 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { ShopOccurrenceCommand } from './types';
-import { createDefaultLevelResolutions, createDefaultTraitOffers } from '../traits';
+import { createUnresolvedAcquisitionRewardState } from '../traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   shopProfileUsesDeathDefianceCondition,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 
 export function applyShopOccurrenceCommand(
   document: ProjectDocument,
@@ -62,31 +61,12 @@ export function applyShopOccurrenceCommand(
   }
   const offer = occurrence.state.shop.offers[command.offer.offerKey];
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
-  if (sameOccurrenceValue(offer.reward.offer, command.value)) return document;
+  if (offer.reward !== null && sameOccurrenceValue(offer.reward.offer, command.value))
+    return document;
   const replacement = Object.freeze({
-    reward: Object.freeze({
-      offer: command.value,
-      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-        catalog,
-        command.value,
-      ),
-      traitOffersByAcquisitionRole: createDefaultTraitOffers(
-        catalog,
-        command.value,
-        located.loadout,
-      ),
-      ...(createDefaultLevelResolutions(catalog, command.value, {
-        kind: 'shopProfile',
-        key: occurrence.state.shop.profileKey,
-      }) === undefined
-        ? {}
-        : {
-            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-              catalog,
-              command.value,
-              { kind: 'shopProfile', key: occurrence.state.shop.profileKey },
-            ),
-          }),
+    reward: createUnresolvedAcquisitionRewardState(catalog, command.value, {
+      kind: 'shopProfile',
+      key: occurrence.state.shop.profileKey,
     }),
   });
   return updateOccurrenceTopology(

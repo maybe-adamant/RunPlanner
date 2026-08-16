@@ -55,9 +55,18 @@ describe('authored-project Shop occurrence commands', () => {
       value,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitSelection',
+      kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(offer, 'source'),
-      selectedOptionKey: 'option2',
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option2',
+      },
     });
 
     expect(applyProjectCommand(project, catalog, { kind: 'ReplaceShopOffer', offer, value })).toBe(

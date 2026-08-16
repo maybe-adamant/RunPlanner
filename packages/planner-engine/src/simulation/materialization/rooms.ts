@@ -9,6 +9,7 @@ import {
 } from '../../authored-project/addresses';
 import type {
   AuthoredRoomState,
+  AuthoredRewardState,
   RoomOccurrence,
   RouteWeaponAspectLoadout,
   ShopState,
@@ -73,8 +74,11 @@ interface MaterializedRoomLeaf {
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
+  readonly unresolvedIncomingReward?: CanonicalAuthoredRoom['unresolvedIncomingReward'];
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly unresolvedLocalRewards?: CanonicalAuthoredRoom['unresolvedLocalRewards'];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
+  readonly unresolvedFieldsOptionalRewards?: CanonicalAuthoredRoom['unresolvedFieldsOptionalRewards'];
   readonly fieldsActions?: readonly import('../../authored-project/model').FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
@@ -115,11 +119,39 @@ function traitContextForOffer(
   });
 }
 
-function resolvedIncomingReward(
+function materializedIncomingReward(
   context: AuthoredRoomMaterializationContext,
   producerKind: CanonicalResolvedIncomingReward['producerKind'],
   producerLifecycleKey: string,
-  offer: CanonicalResolvedIncomingReward['offer'],
+  reward: AuthoredRewardState | null,
+): Pick<MaterializedRoomLeaf, 'incomingReward' | 'unresolvedIncomingReward'> {
+  const storeKey = resolvedStoreKey(context.room, context.batchStoreKey);
+  const base = Object.freeze({
+    origin: createIncomingRewardAddress(context.biome, context.occurrence.occurrenceId),
+    producerKind,
+    instanceProvenance: producerKind === 'shop' ? 'paid' : 'free',
+    producerLifecycleKey,
+    ...(storeKey === undefined ? {} : { resolvedStoreKey: storeKey }),
+  });
+  if (reward === null) return Object.freeze({ unresolvedIncomingReward: base });
+  return Object.freeze({
+    incomingReward: Object.freeze({
+      ...base,
+      kind: 'resolved' as const,
+      offer: reward.offer,
+      traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+      levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+      dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+      traitContext: traitContextForOffer(context, reward.offer),
+    }),
+  });
+}
+
+function fixedIncomingReward(
+  context: AuthoredRoomMaterializationContext,
+  producerKind: CanonicalResolvedIncomingReward['producerKind'],
+  producerLifecycleKey: string,
+  offer: ResolvedRewardOffer,
 ): CanonicalResolvedIncomingReward {
   const storeKey = resolvedStoreKey(context.room, context.batchStoreKey);
   return Object.freeze({
@@ -129,16 +161,8 @@ function resolvedIncomingReward(
     instanceProvenance: producerKind === 'shop' ? 'paid' : 'free',
     producerLifecycleKey,
     offer,
-    ...('reward' in context.occurrence.state
-      ? {
-          traitOffersByAcquisitionRole:
-            context.occurrence.state.reward.traitOffersByAcquisitionRole,
-          levelResolutionsByAcquisitionRole:
-            context.occurrence.state.reward.levelResolutionsByAcquisitionRole,
-          dispositionByAcquisitionRole:
-            context.occurrence.state.reward.dispositionByAcquisitionRole,
-        }
-      : {}),
+    traitOffersByAcquisitionRole: Object.freeze({}),
+    dispositionByAcquisitionRole: Object.freeze({}),
     traitContext: traitContextForOffer(context, offer),
     ...(storeKey === undefined ? {} : { resolvedStoreKey: storeKey }),
   });
@@ -166,11 +190,11 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
     lifecycleProfileKey:
       context.lifecycleProfileKey ??
       (context.room.encounterEnvelopeKey === 'PEncounter' ? 'PCombatRoom' : 'StandardRewardRoom'),
-    incomingReward: resolvedIncomingReward(
+    ...materializedIncomingReward(
       context,
       'countedChoice',
       binding.producerLifecycleKey,
-      state.reward.offer,
+      state.reward,
     ),
   });
 }
@@ -187,15 +211,22 @@ function materializeAnomaly(context: AuthoredRoomMaterializationContext): Materi
   if (binding.kind !== 'countedChoice') {
     fail(`${context.room.gameName} Anomaly has ${binding.kind} producer`);
   }
-  const incoming = resolvedIncomingReward(
+  const incoming = materializedIncomingReward(
     context,
     'countedChoice',
     binding.producerLifecycleKey,
-    state.reward.offer,
+    state.reward,
   );
   return Object.freeze({
     lifecycleProfileKey: 'StandardRewardRoom',
-    incomingReward: Object.freeze({ ...incoming, acquisitionEnabled: state.success }),
+    ...('incomingReward' in incoming && incoming.incomingReward !== undefined
+      ? {
+          incomingReward: Object.freeze({
+            ...incoming.incomingReward,
+            acquisitionEnabled: state.success,
+          }),
+        }
+      : incoming),
   });
 }
 
@@ -228,11 +259,11 @@ function materializeEphyraCombat(
   }
   return Object.freeze({
     lifecycleProfileKey: context.lifecycleProfileKey ?? 'EphyraMainRoom',
-    incomingReward: resolvedIncomingReward(
+    ...materializedIncomingReward(
       context,
       'countedChoice',
       binding.producerLifecycleKey,
-      state.reward.offer,
+      state.reward,
     ),
   });
 }
@@ -243,18 +274,9 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   if (binding.kind !== 'fixed') {
     fail(`${context.room.gameName} fixed template has ${binding.kind} producer`);
   }
-  const payload = state.reward.offer.payload ?? binding.offer.payload;
   return Object.freeze({
     lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
-    incomingReward: resolvedIncomingReward(
-      context,
-      'fixed',
-      binding.producerLifecycleKey,
-      Object.freeze({
-        rewardType: binding.offer.rewardType,
-        ...(payload === undefined ? {} : { payload }),
-      }),
-    ),
+    ...materializedIncomingReward(context, 'fixed', binding.producerLifecycleKey, state.reward),
   });
 }
 
@@ -317,7 +339,7 @@ function materializeFieldsCombat(
     fail(`${context.room.gameName} has no complete Fields encounter envelope`);
   }
   const activeCageSlots = cageSlots.slice(0, activeCageCount);
-  const localRewards = activeCageSlots.map((encounterSlot) => {
+  const cageLeaves = activeCageSlots.map((encounterSlot) => {
     const attachment = encounterSlot.rewardAttachment;
     if (attachment?.kind !== 'localReward') {
       return fail(`${context.room.gameName}.${encounterSlot.key} lacks a cage reward attachment`);
@@ -326,7 +348,7 @@ function materializeFieldsCombat(
     if (reward === undefined) {
       fail(`${context.room.gameName} is missing authored cage ${attachment.slotKey}`);
     }
-    return Object.freeze({
+    const base = Object.freeze({
       origin: createLocalRewardAddress(
         context.biome,
         context.occurrence.occurrenceId,
@@ -337,26 +359,22 @@ function materializeFieldsCombat(
       slotKey: attachment.slotKey,
       encounterPhaseKey: encounterSlot.key,
       producerLifecycleKey: descriptor.reward.producerLifecycleKey,
-      offer: reward.offer,
-      traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-      levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-      dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-      traitContext: traitContextForOffer(context, reward.offer),
       resolvedStoreKey: storeKey,
     });
+    return Object.freeze({ base, reward });
   });
   const optionalDescriptor = context.room.fieldsOptionalRewards;
   if (optionalDescriptor === undefined) {
     fail(`${context.room.gameName} has no Fields optional reward descriptor`);
   }
-  const fieldsOptionalRewards = optionalDescriptor.slotKeys
+  const optionalLeaves = optionalDescriptor.slotKeys
     .slice(0, state.optionalRewardCount)
     .map((slotKey) => {
       const reward = state.optionalRewards[slotKey];
       if (reward === undefined) {
         fail(`${context.room.gameName} is missing authored optional reward ${slotKey}`);
       }
-      return Object.freeze({
+      const base = Object.freeze({
         origin: createLocalRewardAddress(
           context.biome,
           context.occurrence.occurrenceId,
@@ -366,14 +384,38 @@ function materializeFieldsCombat(
         groupKey: optionalDescriptor.key,
         slotKey,
         producerLifecycleKey: optionalDescriptor.reward.producerLifecycleKey,
-        offer: reward.offer,
-        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-        levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-        traitContext: traitContextForOffer(context, reward.offer),
         resolvedStoreKey: 'FieldsOptionalRewards' as const,
       });
+      return Object.freeze({ base, reward });
     });
+  const localRewards = cageLeaves.flatMap(({ base, reward }) =>
+    reward === null
+      ? []
+      : [
+          Object.freeze({
+            ...base,
+            offer: reward.offer,
+            traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+            levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+            dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+            traitContext: traitContextForOffer(context, reward.offer),
+          }),
+        ],
+  );
+  const fieldsOptionalRewards = optionalLeaves.flatMap(({ base, reward }) =>
+    reward === null
+      ? []
+      : [
+          Object.freeze({
+            ...base,
+            offer: reward.offer,
+            traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+            levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+            dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+            traitContext: traitContextForOffer(context, reward.offer),
+          }),
+        ],
+  );
   return Object.freeze({
     lifecycleProfileKey: 'FieldsCombatRoom',
     activeEncounterSlotKeys: Object.freeze([
@@ -381,7 +423,13 @@ function materializeFieldsCombat(
       ...activeCageSlots.map((slot) => slot.key),
     ]),
     localRewards: Object.freeze(localRewards),
+    unresolvedLocalRewards: Object.freeze(
+      cageLeaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
+    ),
     fieldsOptionalRewards: Object.freeze(fieldsOptionalRewards),
+    unresolvedFieldsOptionalRewards: Object.freeze(
+      optionalLeaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
+    ),
     fieldsActions: state.actionOrder,
   });
 }
@@ -443,12 +491,12 @@ export function materializeShipCombatState(
     if (wheel === undefined) {
       fail(`${room.gameName} is missing ${descriptor.key}`);
     }
-    const offers = descriptor.offerKeys.slice(0, wheel.offerCount).map((offerKey, index) => {
+    const leaves = descriptor.offerKeys.slice(0, wheel.offerCount).map((offerKey, index) => {
       const reward = wheel.offers[offerKey];
       if (reward === undefined) {
         fail(`${room.gameName}.${descriptor.key} is missing ${offerKey}`);
       }
-      return Object.freeze({
+      const base = Object.freeze({
         origin: createRewardWheelOfferAddress(
           biome,
           occurrence.occurrenceId,
@@ -456,21 +504,31 @@ export function materializeShipCombatState(
           offerKey,
         ),
         offerKey,
-        offer: reward.offer,
-        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-        levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-        traitContext: Object.freeze({
-          ...loadout,
-          blockGiftBoons: room.blockGiftBoons,
-          devotionNoDuo: reward.offer.rewardType === 'Devotion',
-        }),
         picked: wheel.pickedOfferIndex === index + 1,
       });
+      return Object.freeze({ base, reward });
     });
-    if (offers.filter((offer) => offer.picked).length !== 1) {
+    if (leaves.filter(({ base }) => base.picked).length !== 1) {
       fail(`${room.gameName}.${descriptor.key} has no unique active pick`);
     }
+    const offers = leaves.flatMap(({ base, reward }) =>
+      reward === null
+        ? []
+        : [
+            Object.freeze({
+              ...base,
+              offer: reward.offer,
+              traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+              levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+              dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+              traitContext: Object.freeze({
+                ...loadout,
+                blockGiftBoons: room.blockGiftBoons,
+                devotionNoDuo: reward.offer.rewardType === 'Devotion',
+              }),
+            }),
+          ],
+    );
     return [
       Object.freeze({
         origin: createRewardWheelAddress(biome, occurrence.occurrenceId, descriptor.key),
@@ -479,6 +537,9 @@ export function materializeShipCombatState(
         producerLifecycleKey: descriptor.reward.producerLifecycleKey,
         storeKey: wheel.storeKey,
         offers: Object.freeze(offers),
+        unresolvedOffers: Object.freeze(
+          leaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
+        ),
         pickedOfferIndex: wheel.pickedOfferIndex,
       }),
     ];
@@ -523,24 +584,49 @@ function materializeShopEntry(
       ? {}
       : { deathDefianceConditionMet: shop.deathDefianceConditionMet }),
     offers: Object.freeze(
-      profile.slots.values.map((slot) => {
+      profile.slots.values.flatMap((slot) => {
         const authored = shop.offers[slot.key];
         if (authored === undefined) {
           fail(`${context.room.gameName} shop is missing offer ${slot.key}`);
         }
-        return Object.freeze({
+        const base = Object.freeze({
           offerKey: slot.key,
           offerOrigin: createShopOfferAddress(
             context.biome,
             context.occurrence.occurrenceId,
             slot.key,
           ),
-          offer: authored.reward.offer,
-          traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
-          levelResolutionsByAcquisitionRole: authored.reward.levelResolutionsByAcquisitionRole,
-          dispositionByAcquisitionRole: authored.reward.dispositionByAcquisitionRole,
-          traitContext: traitContextForOffer(context, authored.reward.offer),
         });
+        return authored.reward === null
+          ? []
+          : [
+              Object.freeze({
+                ...base,
+                offer: authored.reward.offer,
+                traitOffersByAcquisitionRole: authored.reward.traitOffersByAcquisitionRole,
+                levelResolutionsByAcquisitionRole:
+                  authored.reward.levelResolutionsByAcquisitionRole,
+                dispositionByAcquisitionRole: authored.reward.dispositionByAcquisitionRole,
+                traitContext: traitContextForOffer(context, authored.reward.offer),
+              }),
+            ];
+      }),
+    ),
+    unresolvedOffers: Object.freeze(
+      profile.slots.values.flatMap((slot) => {
+        const authored = shop.offers[slot.key];
+        return authored?.reward === null
+          ? [
+              Object.freeze({
+                offerKey: slot.key,
+                offerOrigin: createShopOfferAddress(
+                  context.biome,
+                  context.occurrence.occurrenceId,
+                  slot.key,
+                ),
+              }),
+            ]
+          : [];
       }),
     ),
     order: context.occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]),
@@ -561,11 +647,11 @@ function materializeShopRoom(
   }
   return Object.freeze({
     lifecycleProfileKey,
-    incomingReward: resolvedIncomingReward(
+    incomingReward: fixedIncomingReward(
       context,
       'shop',
       binding.producerLifecycleKey,
-      binding.offer,
+      Object.freeze({ rewardType: binding.rewardType }),
     ),
     ...(context.entered && state.shop !== undefined
       ? { entryState: materializeShopEntry(context, state.shop) }
@@ -587,11 +673,11 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
   }
   return Object.freeze({
     lifecycleProfileKey: 'PrebossFreeRewardRoom',
-    incomingReward: resolvedIncomingReward(
+    ...materializedIncomingReward(
       context,
       'freeReward',
       policy.remainingOffers.reward.producerLifecycleKey,
-      state.reward.offer,
+      state.reward,
     ),
   });
 }
@@ -662,7 +748,7 @@ function requireLifecycleSelection(
   if (!profile.encounterEnvelopeKeys.includes(encounterEnvelopeKey)) {
     fail(`${room.gameName} envelope ${encounterEnvelopeKey} is incompatible with ${profile.key}`);
   }
-  const producer = leaf.incomingReward;
+  const producer = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
   if (producer === undefined) {
     if (profile.producer.kind !== 'none') {
       fail(`${room.gameName} lifecycle ${profile.key} requires a producer`);
@@ -714,10 +800,19 @@ export function materializeAuthoredRoom(
       ? {}
       : { requiredObjects: context.room.requiredObjects }),
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
+    ...(leaf.unresolvedIncomingReward === undefined
+      ? {}
+      : { unresolvedIncomingReward: leaf.unresolvedIncomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
+    ...(leaf.unresolvedLocalRewards === undefined
+      ? {}
+      : { unresolvedLocalRewards: leaf.unresolvedLocalRewards }),
     ...(leaf.fieldsOptionalRewards === undefined
       ? {}
       : { fieldsOptionalRewards: leaf.fieldsOptionalRewards }),
+    ...(leaf.unresolvedFieldsOptionalRewards === undefined
+      ? {}
+      : { unresolvedFieldsOptionalRewards: leaf.unresolvedFieldsOptionalRewards }),
     ...(leaf.fieldsActions === undefined ? {} : { fieldsActions: leaf.fieldsActions }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),

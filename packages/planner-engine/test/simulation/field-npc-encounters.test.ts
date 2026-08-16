@@ -12,6 +12,7 @@ import {
   createTraitOfferAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRewardWheelOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type AuthoredTraitOffer,
@@ -448,7 +449,7 @@ function enteredNLocalProjectForArtemis(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nCombatId),
-    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceSideRoomGeneration',
@@ -464,6 +465,11 @@ function enteredNLocalProjectForArtemis(): ProjectDocument {
     kind: 'ReplaceLocalReward',
     reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     value: { rewardType: 'MaxHealthDropSmall' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
@@ -601,7 +607,7 @@ describe('field NPC encounter requirements', () => {
     const trace = biome.rewards.selectedTraitOffers.find(
       (candidate) => semanticAddressKey(candidate.address.owner) === semanticAddressKey(fNpcPhase),
     );
-    expect(trace).toMatchObject({ acquisitionRole: 'selection' });
+    expect(trace, JSON.stringify(biome.findings)).toMatchObject({ acquisitionRole: 'selection' });
     expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.CritBonusBoon).toBeDefined();
     expect(
       createPreparedProjectCandidateSession(
@@ -1163,13 +1169,34 @@ describe('field NPC encounter requirements', () => {
     const intro = phase(oBiome, occurrenceId, 'Intro');
     const combat1 = phase(oBiome, occurrenceId, 'Combat1');
     const combat2 = phase(oBiome, occurrenceId, 'Combat2');
-    const withThreePhases = authorLegalTraitOffers(
-      applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-        kind: 'ReplaceShipEncounterCount',
-        occurrence: room,
-        encounterCount: 3,
-      }),
-    );
+    let withThreePhases = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: room,
+      encounterCount: 3,
+    });
+    withThreePhases = applyProjectCommand(withThreePhases, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, occurrenceId, 'wheel2', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    withThreePhases = applyProjectCommand(withThreePhases, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createRewardWheelOfferAddress(oBiome, occurrenceId, 'wheel2', 'offer1'),
+        'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusManaBoltBoon', rarity: 'Common' },
+          { traitKey: 'BoltRetaliateBoon', rarity: 'Common' },
+          { traitKey: 'FocusLightningBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    withThreePhases = authorLegalTraitOffers(withThreePhases);
     const originalState = authoredOccurrence(withThreePhases, 'O', occurrenceId).state;
 
     expect(support(withThreePhases, intro)?.candidateEncounterKeys).toContain('HeraclesCombatO');

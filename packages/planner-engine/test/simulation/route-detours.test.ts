@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -170,13 +171,69 @@ function replaceIncomingReward(
   project: ProjectDocument,
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
-  rewardType: 'MaxHealthDrop' | 'MaxManaDrop' | 'MetaCurrencyDrop' | 'RoomMoneyDrop',
+  rewardType:
+    | 'MaxHealthDrop'
+    | 'MaxManaDrop'
+    | 'MetaCurrencyDrop'
+    | 'MetaCardPointsCommonDrop'
+    | 'RoomMoneyDrop',
 ): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, occurrenceId),
     value: { rewardType },
   });
+}
+
+function replaceApolloReward(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  const reward = createIncomingRewardAddress(biome, occurrenceId);
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(reward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return next;
+}
+
+function authorWorldShop(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = project;
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    MajorNonBoon: { rewardType: 'WeaponUpgradeDrop' },
+    Minor: { rewardType: 'MaxManaDrop' },
+  })) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, occurrenceId, offerKey),
+      value,
+    });
+  }
+  return next;
 }
 
 function selectEncounter(
@@ -240,19 +297,21 @@ function buildAnomalyProject(success: boolean) {
     occurrenceId: intro,
   });
   project = appendSingleTargetBatch(project, gBiome, intro, combat01, 'G_Combat01', 'RunProgress');
+  project = replaceIncomingReward(project, gBiome, combat01, 'MaxHealthDrop');
   project = createBatch(project, gBiome, combat01);
   project = replaceBatchStore(project, gBiome, combat01, 'MetaProgress');
   project = addTarget(project, gBiome, combat01, 'exit1', combat02, 'G_Combat02');
   project = addTarget(project, gBiome, combat01, 'exit2', combat01Peer, 'G_Combat03');
-  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCurrencyDrop');
+  project = replaceIncomingReward(project, gBiome, combat02, 'MetaCurrencyDrop');
+  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCardPointsCommonDrop');
   project = setNormalSelection(project, gBiome, combat01, 'exit1');
   project = createBatch(project, gBiome, combat02);
   project = replaceBatchStore(project, gBiome, combat02, 'RunProgress');
   project = addTarget(project, gBiome, combat02, 'exit1', anomaly, 'G_Combat04');
   project = addTarget(project, gBiome, combat02, 'exit2', combat02Peer1, 'G_Combat05');
   project = addTarget(project, gBiome, combat02, 'exit3', combat02Peer2, 'G_Combat06');
-  project = replaceIncomingReward(project, gBiome, combat02Peer1, 'MaxHealthDrop');
-  project = replaceIncomingReward(project, gBiome, combat02Peer2, 'MaxManaDrop');
+  project = replaceIncomingReward(project, gBiome, combat02Peer1, 'MaxManaDrop');
+  project = replaceApolloReward(project, gBiome, combat02Peer2);
   project = setNormalSelection(project, gBiome, combat02, 'exit1');
   project = applyProjectCommand(project, catalog, {
     kind: 'SwitchTargetToAnomaly',
@@ -272,6 +331,7 @@ function buildAnomalyProject(success: boolean) {
     'G_Combat07',
     'RunProgress',
   );
+  project = replaceApolloReward(project, gBiome, returned);
   return {
     project,
     anomaly,
@@ -297,7 +357,9 @@ function buildMidshopProject(options: {
     occurrenceId: opening,
     gameName: 'F_Opening01',
   });
+  project = replaceApolloReward(project, fBiome, opening);
   project = appendSingleTargetBatch(project, fBiome, opening, shop, 'F_Shop01', 'MetaProgress');
+  project = authorWorldShop(project, fBiome, shop);
   const additional = createAdditionalExitAddress(fBiome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddZagreusContract',
@@ -325,6 +387,7 @@ function buildMidshopProject(options: {
       'F_Combat03',
       'RunProgress',
     );
+    project = replaceIncomingReward(project, fBiome, returned, 'RoomMoneyDrop');
   }
   return { project, shop, contract, normal1, normal2, returned, additional };
 }
@@ -360,6 +423,7 @@ function buildNaturalChaosProject() {
     occurrenceId: opening,
     gameName: 'F_Opening01',
   });
+  project = replaceApolloReward(project, fBiome, opening);
   const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddNaturalChaos',
@@ -368,6 +432,7 @@ function buildNaturalChaosProject() {
   });
   project = setAdditionalSelection(project, fBiome, opening, 'naturalChaos');
   project = appendSingleTargetBatch(project, fBiome, chaos, returned, 'F_Combat01', 'RunProgress');
+  project = replaceIncomingReward(project, fBiome, returned, 'MaxHealthDrop');
   return { project, opening, chaos, returned, additional };
 }
 
@@ -391,16 +456,22 @@ function buildAnomalyCapProject(firstAnomalySelected: boolean) {
     occurrenceId: intro,
   });
   project = appendSingleTargetBatch(project, gBiome, intro, combat01, 'G_Combat01', 'RunProgress');
+  project = replaceIncomingReward(project, gBiome, combat01, 'MaxHealthDrop');
   project = createBatch(project, gBiome, combat01);
   project = replaceBatchStore(project, gBiome, combat01, 'MetaProgress');
   project = addTarget(project, gBiome, combat01, 'exit1', combat02, 'G_Combat02');
   project = addTarget(project, gBiome, combat01, 'exit2', combat01Peer, 'G_Combat03');
+  project = replaceIncomingReward(project, gBiome, combat02, 'MetaCurrencyDrop');
+  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCardPointsCommonDrop');
   project = setNormalSelection(project, gBiome, combat01, 'exit1');
   project = createBatch(project, gBiome, combat02);
   project = replaceBatchStore(project, gBiome, combat02, 'RunProgress');
   project = addTarget(project, gBiome, combat02, 'exit1', firstAnomaly, 'G_Combat04');
   project = addTarget(project, gBiome, combat02, 'exit2', continuingCombat, 'G_Combat05');
   project = addTarget(project, gBiome, combat02, 'exit3', combat02Peer, 'G_Combat06');
+  project = replaceIncomingReward(project, gBiome, firstAnomaly, 'RoomMoneyDrop');
+  project = replaceIncomingReward(project, gBiome, continuingCombat, 'MaxHealthDrop');
+  project = replaceIncomingReward(project, gBiome, combat02Peer, 'MaxManaDrop');
   project = setNormalSelection(project, gBiome, combat02, firstAnomalySelected ? 'exit1' : 'exit2');
   project = applyProjectCommand(project, catalog, {
     kind: 'SwitchTargetToAnomaly',
@@ -417,11 +488,14 @@ function buildAnomalyCapProject(firstAnomalySelected: boolean) {
       'G_Combat07',
       'RunProgress',
     );
+    project = replaceIncomingReward(project, gBiome, returnedCombat, 'MaxHealthDrop');
     laterSource = returnedCombat;
     project = createBatch(project, gBiome, laterSource);
     project = replaceBatchStore(project, gBiome, laterSource, 'RunProgress');
     project = addTarget(project, gBiome, laterSource, 'exit1', laterAnomaly, 'G_Combat08');
     project = addTarget(project, gBiome, laterSource, 'exit2', laterPeer1, 'G_Combat09');
+    project = replaceIncomingReward(project, gBiome, laterAnomaly, 'RoomMoneyDrop');
+    project = replaceIncomingReward(project, gBiome, laterPeer1, 'MaxManaDrop');
   } else {
     laterSource = continuingCombat;
     project = createBatch(project, gBiome, laterSource);
@@ -429,6 +503,9 @@ function buildAnomalyCapProject(firstAnomalySelected: boolean) {
     project = addTarget(project, gBiome, laterSource, 'exit1', laterAnomaly, 'G_Combat07');
     project = addTarget(project, gBiome, laterSource, 'exit2', laterPeer1, 'G_Combat08');
     project = addTarget(project, gBiome, laterSource, 'exit3', laterPeer2, 'G_Combat09');
+    project = replaceIncomingReward(project, gBiome, laterAnomaly, 'RoomMoneyDrop');
+    project = replaceIncomingReward(project, gBiome, laterPeer1, 'MaxHealthDrop');
+    project = replaceIncomingReward(project, gBiome, laterPeer2, 'MaxManaDrop');
   }
   project = setNormalSelection(project, gBiome, laterSource, 'exit1');
   project = applyProjectCommand(project, catalog, {
@@ -607,6 +684,7 @@ describe('route-detour simulation', () => {
       biome: nBiome,
       occurrenceId: opening,
     });
+    project = replaceApolloReward(project, nBiome, opening);
     const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddNaturalChaos',
@@ -656,6 +734,7 @@ describe('route-detour simulation', () => {
       biome: nBiome,
       occurrenceId: opening,
     });
+    project = replaceApolloReward(project, nBiome, opening);
     const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddNaturalChaos',
@@ -692,6 +771,7 @@ describe('route-detour simulation', () => {
       occurrenceId: opening,
       gameName: 'F_Opening01',
     });
+    project = replaceApolloReward(project, fBiome, opening);
     const firstAdditional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddNaturalChaos',
@@ -700,6 +780,7 @@ describe('route-detour simulation', () => {
     });
     project = replaceBatchStore(project, fBiome, opening, 'RunProgress');
     project = addTarget(project, fBiome, opening, 'exit1', firstCombat, 'F_Combat01');
+    project = replaceIncomingReward(project, fBiome, firstCombat, 'MaxHealthDrop');
     project = setNormalSelection(project, fBiome, opening, 'exit1');
     const secondAdditional = createAdditionalExitAddress(fBiome, firstCombat, 'naturalChaos');
     project = applyProjectCommand(project, catalog, {
@@ -709,6 +790,7 @@ describe('route-detour simulation', () => {
     });
     project = replaceBatchStore(project, fBiome, firstCombat, 'RunProgress');
     project = addTarget(project, fBiome, firstCombat, 'exit1', secondCombat, 'F_Combat02');
+    project = replaceIncomingReward(project, fBiome, secondCombat, 'MaxManaDrop');
     const { snapshot, history } = prefix(project, fBiome);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
 
@@ -874,6 +956,7 @@ describe('route-detour simulation', () => {
         1,
         traitContext(project, gBiome),
       );
+      expect(rewards.findings).toEqual([]);
       const incoming = createIncomingRewardAddress(gBiome, anomaly);
       const anomalyRoom = snapshot.decisions
         .filter((decision) => decision.kind === 'batch')

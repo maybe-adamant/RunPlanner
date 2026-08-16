@@ -7,48 +7,6 @@ import type {
   KeepsakeEquipResultCommand,
 } from './types';
 
-/**
- * Activates declaration-owned defaults for a newly selected keepsake without
- * overwriting an authored result retained while that keepsake was dormant.
- */
-export function withDefaultKeepsakeEquipResult(
-  catalog: Catalog,
-  keepsakeKey: string,
-  current: AuthoredKeepsakeEquipResults | undefined,
-  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
-): AuthoredKeepsakeEquipResults | undefined {
-  const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
-  if (effect?.kind === 'experimentalHammer') {
-    if (current?.experimentalHammer !== undefined) return current;
-    const traitKey = catalog.traits.values.find((trait) => {
-      const compatibility = trait.hammerCompatibility;
-      return (
-        compatibility !== undefined &&
-        loadout !== undefined &&
-        compatibility.weaponKey === loadout.weaponKey &&
-        compatibility.aspectKeys.includes(loadout.aspectKey)
-      );
-    })?.key;
-    if (traitKey === undefined) throw new Error('catalog has no Hammer trait');
-    return Object.freeze({
-      ...current,
-      experimentalHammer: Object.freeze({ kind: 'selected' as const, traitKey }),
-    });
-  }
-  if (effect?.kind !== 'jeweledPom' || current?.jeweledPom !== undefined) return current;
-  const defaults = catalog.traitGivers.byKey[effect.giverKey]?.defaultOffer;
-  if (defaults === undefined) throw new Error(`${effect.giverKey} has no default trait offer`);
-  const selected = defaults.options[defaults.selectedOption];
-  if (selected === undefined) throw new Error(`${effect.giverKey} has no selected default trait`);
-  return Object.freeze({
-    ...current,
-    jeweledPom: Object.freeze({
-      traitKey: selected.traitKey,
-      ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
-    }),
-  });
-}
-
 export function applyKeepsakeCommand(
   document: ProjectDocument,
   catalog: Catalog,
@@ -223,19 +181,9 @@ export function applyKeepsakeCommand(
     catalog.keepsakes.byKey[command.value.keepsakeKey] === undefined
   )
     failCommand(command, `unknown keepsake ${command.value.keepsakeKey}`);
-  const keepsakeEquipResults =
-    command.value.kind === 'replace'
-      ? withDefaultKeepsakeEquipResult(
-          catalog,
-          command.value.keepsakeKey,
-          located.plan.keepsakeEquipResults,
-          document.routes.find((route) => route.routeKey === command.selection.routeKey)?.loadout,
-        )
-      : located.plan.keepsakeEquipResults;
   return withBiome(document, located, {
     ...located.plan,
     postbossKeepsakeDisposition: command.value,
-    ...(keepsakeEquipResults === undefined ? {} : { keepsakeEquipResults }),
   });
 }
 

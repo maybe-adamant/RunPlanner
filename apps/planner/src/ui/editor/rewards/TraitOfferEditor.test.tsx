@@ -61,7 +61,7 @@ describe('trait offer editor', () => {
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
-    if (interaction === undefined || interaction.value.kind !== 'traits')
+    if (interaction === undefined || interaction.value?.kind !== 'traits')
       throw new Error('Calling Card Apollo interaction is missing');
     const commit = vi.fn();
     const user = userEvent.setup();
@@ -711,7 +711,7 @@ describe('trait offer editor', () => {
                     load: () => ({
                       rewardType: 'RoomMoneyDrop',
                       rewardLabel: 'Gold',
-                      defaultValue: Object.freeze({
+                      initialValue: Object.freeze({
                         disposition: Object.freeze({ kind: 'normal' as const }),
                       }),
                       goldSupported: false,
@@ -834,7 +834,7 @@ describe('trait offer editor', () => {
     const initial = [...initialWorkspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.key === 'Medea',
     );
-    if (initial === undefined || initial.value.kind !== 'traits')
+    if (initial === undefined || initial.value?.kind !== 'traits')
       throw new Error('Medea trait offer interaction is missing');
     const invalidProject = applyProjectCommand(project, application.catalog, {
       kind: 'ReplaceTraitOffer',
@@ -880,7 +880,8 @@ describe('trait offer editor', () => {
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
-    if (interaction === undefined) throw new Error('trait offer interaction is missing');
+    if (interaction?.value?.kind !== 'traits')
+      throw new Error('trait offer interaction is missing');
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
@@ -917,7 +918,7 @@ describe('trait offer editor', () => {
     const interaction = [...workspace.interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
-    if (interaction === undefined || interaction.value.kind !== 'traits')
+    if (interaction === undefined || interaction.value?.kind !== 'traits')
       throw new Error('ranked trait interaction is missing');
     const trait = interaction.value.options[0]?.traitKey;
     if (trait === undefined) throw new Error('trait offer fixture is missing option1');
@@ -1226,9 +1227,9 @@ describe('trait offer editor', () => {
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const base = [...workspace.interactions.traitOffers.values()].find(
-      (candidate) => candidate.value.kind === 'traits',
+      (candidate) => candidate.value?.kind === 'traits',
     );
-    if (base === undefined || base.value.kind !== 'traits') {
+    if (base === undefined || base.value?.kind !== 'traits') {
       throw new Error('traits interaction is missing');
     }
     const value = Object.freeze({
@@ -1275,9 +1276,9 @@ describe('trait offer editor', () => {
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const base = [...workspace.interactions.traitOffers.values()].find(
-      (candidate) => candidate.value.kind === 'traits',
+      (candidate) => candidate.value?.kind === 'traits',
     );
-    if (base === undefined || base.value.kind !== 'traits') {
+    if (base === undefined || base.value?.kind !== 'traits') {
       throw new Error('traits interaction is missing');
     }
     const one = Object.freeze({

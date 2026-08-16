@@ -84,6 +84,13 @@ function appendBatch(
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
+    if (target.gameName.startsWith('I_Combat')) {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, target.occurrenceId),
+        value: { rewardType: 'RoomMoneyTripleDrop' },
+      });
+    }
   }
   return targets.length === 1
     ? next
@@ -245,6 +252,11 @@ function projectWithExhaustedLimitDomain(): ProjectDocument {
     target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: combat15 }, 'exit2'),
     occurrenceId: combat18,
     gameName: 'I_Combat18',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, combat18),
+    value: { rewardType: 'RoomMoneyTripleDrop' },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'SetExitSelection',

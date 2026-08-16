@@ -44,20 +44,32 @@ function traitFixture(): {
   readonly declaration: RoomDeclaration;
   readonly state: Record<string, unknown>;
 } {
-  for (const declaration of catalog.rooms.values) {
-    try {
-      const state = mutable(
-        createDefaultRoomState(catalog, declaration, {
-          role: 'ordinary',
-          entryActive: true,
-        }),
-      );
-      if (findTraitOffer(state) !== undefined) return { declaration, state };
-    } catch {
-      // Some declaration-owned state kinds are not ordinary room fixtures.
-    }
-  }
-  throw new Error('catalog has no default trait-offer fixture');
+  const declaration = room('F_Combat04');
+  const state = mutable(
+    createDefaultRoomState(catalog, declaration, {
+      role: 'ordinary',
+      entryActive: true,
+      resolvedStoreKey: 'RunProgress',
+    }),
+  );
+  state.reward = {
+    offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+    traitOffersByAcquisitionRole: {
+      source: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    },
+  };
+  return { declaration, state };
 }
 
 describe('persisted authored room-state codec', () => {
@@ -196,9 +208,12 @@ describe('persisted authored room-state codec', () => {
         resolvedStoreKey: 'RunProgress',
       }),
     );
+    raw.reward = {
+      offer: { rewardType: 'StackUpgrade' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {},
+    };
     const reward = raw.reward as Record<string, unknown>;
-    reward.offer = { rewardType: 'StackUpgrade' };
-    reward.traitOffersByAcquisitionRole = {};
 
     expect(() =>
       decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
@@ -257,7 +272,12 @@ describe('persisted authored room-state codec', () => {
 
     delete shop.legacyOrder;
     const offers = shop.offers as Record<string, Record<string, unknown>>;
-    (offers.Boon!.reward as Record<string, unknown>).purchased = false;
+    offers.Boon!.reward = {
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: { source: null },
+      purchased: false,
+    };
     expect(() =>
       decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
     ).toThrow('$.room.state.shop.offers.Boon.reward: unexpected key purchased');
@@ -272,11 +292,13 @@ describe('persisted authored room-state codec', () => {
     const offers = shop.offers as Record<string, Record<string, unknown>>;
     const major = offers.MajorNonBoon;
     if (major === undefined) throw new Error('missing MajorNonBoon shop offer');
-    const reward = major.reward as Record<string, unknown>;
-    reward.offer = { rewardType: 'GiftDrop' };
-    reward.traitOffersByAcquisitionRole = {};
-    reward.levelResolutionsByAcquisitionRole = {
-      self: { kind: 'random', targetTraitKey: null },
+    major.reward = {
+      offer: { rewardType: 'GiftDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {},
+      levelResolutionsByAcquisitionRole: {
+        self: { kind: 'random', targetTraitKey: null },
+      },
     };
 
     expect(() =>

@@ -76,7 +76,6 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
   readonly defaultOffer?: RawTraitOfferDefaults;
-  readonly defaultsByLoadout?: Readonly<Record<string, RawTraitOfferDefaults>>;
   readonly denialParticipates?: boolean;
 }
 

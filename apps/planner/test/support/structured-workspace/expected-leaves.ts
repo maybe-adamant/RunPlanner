@@ -79,7 +79,7 @@ function resolveExpectedFixedRewardType(room: RoomDeclaration): string {
   if (room.incomingReward.kind !== 'fixed') {
     throw new Error(`${room.gameName} fixed state has ${room.incomingReward.kind} reward binding`);
   }
-  return room.incomingReward.offer.rewardType;
+  return room.incomingReward.rewardType;
 }
 
 type AuthoredBatchDecision = ExitDecision & {
@@ -217,9 +217,10 @@ export function expectedWorkspaceLeafRequirements(
   };
   const requireRewardWithTraits = (
     address: TraitOfferOwnerAddress,
-    reward: AuthoredRewardState,
+    reward: AuthoredRewardState | null,
   ): void => {
     requireReward(address);
+    if (reward === null) return;
     requireTraitOffers(address, reward);
     requireLevelResolutions(address, reward);
   };

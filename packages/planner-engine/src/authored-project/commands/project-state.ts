@@ -4,7 +4,6 @@ import { assessStartingArcanaGrasp } from '../loadout';
 import type { ProjectDocument } from '../model';
 
 import { failCommand, locateBiome, withBiome } from './contract';
-import { withDefaultKeepsakeEquipResult } from './keepsake';
 import type { ProjectStateCommand } from './types';
 
 function routeForCommand(
@@ -132,12 +131,6 @@ export function applyProjectStateCommand(
       if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
         failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
       if (route.loadout.startingKeepsakeKey === command.keepsakeKey) return document;
-      const keepsakeEquipResults = withDefaultKeepsakeEquipResult(
-        catalog,
-        command.keepsakeKey,
-        route.loadout.keepsakeEquipResults,
-        route.loadout,
-      );
       return {
         ...document,
         routes: document.routes.map((candidate, index) =>
@@ -147,7 +140,6 @@ export function applyProjectStateCommand(
                 loadout: {
                   ...route.loadout,
                   startingKeepsakeKey: command.keepsakeKey,
-                  ...(keepsakeEquipResults === undefined ? {} : { keepsakeEquipResults }),
                 },
               }
             : candidate,

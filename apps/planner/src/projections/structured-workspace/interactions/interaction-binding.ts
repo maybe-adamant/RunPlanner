@@ -118,9 +118,10 @@ function createArtificerReplacementControl(
   if (conversion.value.kind !== 'artificer') return undefined;
   const replacement = conversion.value.replacement;
   const options = Object.freeze(
-    candidateOptions.some(
-      (option) => JSON.stringify(option.offer) === JSON.stringify(replacement.offer),
-    )
+    replacement === null ||
+      candidateOptions.some(
+        (option) => JSON.stringify(option.offer) === JSON.stringify(replacement.offer),
+      )
       ? [...candidateOptions]
       : [...candidateOptions, replacement],
   );
@@ -131,6 +132,23 @@ function createArtificerReplacementControl(
       focusKey: semanticAddressKey(address),
     });
   const owner = Object.freeze({ kind: 'acquisitionEntry' as const, address: replacementAddress });
+  if (replacement === null) {
+    return Object.freeze({
+      kind: 'explicitReward' as const,
+      marker: markerFor(replacementAddress),
+      offer: null,
+      owner,
+      traitOffers: Object.freeze([]),
+      levelResolutions: Object.freeze([]),
+      conversions: Object.freeze([]),
+      rewardTypes: Object.freeze([...new Set(options.map((option) => option.offer.rewardType))]),
+      artificerReplacementEdit: Object.freeze({
+        acquisition: conversion.address,
+        options,
+        replacement,
+      }),
+    });
+  }
   const traitOffers = Object.freeze(
     Object.entries(replacement.traitOffersByAcquisitionRole).flatMap(([role, offer]) => {
       const giverKey = traitGiverForAcquisitionRole(catalog, replacement.offer, role);
@@ -283,6 +301,13 @@ function editArtificerReplacement(
         );
       return selected;
     }
+    default:
+      if (replacement === null)
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(owner.acquisition)} has no authored Artificer replacement`,
+        );
+  }
+  switch (edit.kind) {
     case 'ReplaceTraitOffer':
       return replaceArtificerTraitOffer(replacement, edit.trait.acquisitionRole, edit.value);
     case 'ReplaceTraitSelection':
@@ -2077,7 +2102,7 @@ export function bindWorkspaceInteractions(
   for (const [key, control] of effectiveRewardControls) {
     const rewardTypes =
       control.kind === 'countedReward'
-        ? candidates.countedRewardTypes(control.owner, control.binding, control.offer.rewardType)
+        ? candidates.countedRewardTypes(control.owner, control.binding, control.offer?.rewardType)
         : control.rewardTypes;
     rewards.set(
       key,
@@ -2092,7 +2117,7 @@ export function bindWorkspaceInteractions(
             control.artificerReplacementEdit,
           ),
         key,
-        load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer),
+        load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer ?? undefined),
         model: services.rewardPicker.project,
         owner: control.owner.address,
         selected: control.offer,
@@ -2115,11 +2140,6 @@ export function bindWorkspaceInteractions(
               ? {
                   timePieceSupported: evaluated.result.timePieceSupported,
                   artificerSupported: evaluated.result.artificerSupported,
-                  ...(evaluated.result.artificerDefaultReplacement === undefined
-                    ? {}
-                    : {
-                        artificerDefaultReplacement: evaluated.result.artificerDefaultReplacement,
-                      }),
                   artificerReplacementOptions:
                     evaluated.result.artificerReplacementOptions ?? Object.freeze([]),
                   ...(replacementControls.get(key) === undefined
@@ -2174,7 +2194,10 @@ export function bindWorkspaceInteractions(
         return Object.freeze({ label: trait.label, value: trait.key });
       }),
     );
-    const load = (value = control.offer) => candidates.traitOffer(control.address, value);
+    const startingDraft = () =>
+      candidates.traitOfferStartingDraft(control.address, control.giver.key);
+    const load = (value = control.offer ?? startingDraft()) =>
+      value === undefined ? Object.freeze([]) : candidates.traitOffer(control.address, value);
     const optionDomains = new Map<
       string,
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
@@ -2501,8 +2524,7 @@ export function bindWorkspaceInteractions(
                       const trait = createTraitOfferAddress(entry, 'self');
                       const level = createLevelResolutionAddress(entry, 'self');
                       const current = offer.options[optionIndex(optionKey)]?.echoLastReward;
-                      const traitOffer =
-                        current?.traitOffer ?? evaluated.result.defaultValue.traitOffer;
+                      const traitOffer = current?.traitOffer ?? evaluated.result.traitOfferDraft;
                       const nextTraitOffer =
                         traitOffer?.kind === 'traits'
                           ? candidates.nextTraitOfferDraft(trait, traitOffer)
@@ -2556,7 +2578,7 @@ export function bindWorkspaceInteractions(
                             )
                           : Object.freeze([]);
                       const levelValue =
-                        current?.levelResolution ?? evaluated.result.defaultValue.levelResolution;
+                        current?.levelResolution ?? evaluated.result.levelResolutionDraft;
                       const levelProjection =
                         levelValue === undefined
                           ? undefined
@@ -2576,7 +2598,13 @@ export function bindWorkspaceInteractions(
                         rewardLabel:
                           catalog.rewards.rewardTypes.byKey[evaluated.result.rewardType]?.label ??
                           evaluated.result.rewardType,
-                        defaultValue: evaluated.result.defaultValue,
+                        initialValue: evaluated.result.initialValue,
+                        ...(evaluated.result.traitOfferDraft === undefined
+                          ? {}
+                          : { traitOfferDraft: evaluated.result.traitOfferDraft }),
+                        ...(evaluated.result.levelResolutionDraft === undefined
+                          ? {}
+                          : { levelResolutionDraft: evaluated.result.levelResolutionDraft }),
                         goldSupported:
                           conversion.kind === 'acquisitionConversion' &&
                           conversion.result.timePieceSupported,
@@ -2735,8 +2763,7 @@ export function bindWorkspaceInteractions(
             artificerReplacementEdit,
           ),
         value: control.offer,
-        traitsStartingDraft: () =>
-          candidates.traitOfferStartingDraft(control.address, control.giver.key),
+        traitsStartingDraft: startingDraft,
         nextTraitOfferDraft: (value: AuthoredTraitOfferTraits) =>
           candidates.nextTraitOfferDraft(control.address, value),
         ...(control.deathDefianceCondition === undefined

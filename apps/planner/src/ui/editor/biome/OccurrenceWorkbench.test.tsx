@@ -54,10 +54,12 @@ import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSe
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createCombat08ArtificerRegressionProject,
   createFConversionFrontierProject,
   createFMidshopPomFrontierProject,
   fMidshopPomShopId,
   authorLegalTraitOffers,
+  authorSurfaceWorldShop,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
@@ -338,7 +340,7 @@ function contractTravelFShopsProject(): {
   const late3Peer = createOccurrenceId('gate-b-ui-f-late-3-peer');
   for (const [exitKey, occurrenceId, rewardType] of [
     ['exit1', late3, 'MetaCardPointsCommonDrop'],
-    ['exit2', late3Peer, 'MetaCurrencyDrop'],
+    ['exit2', late3Peer, 'GiftDrop'],
   ] as const) {
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
@@ -374,7 +376,11 @@ function contractTravelFShopsProject(): {
     selection: createExitSelectionAddress(goldenFBiome, source(late3)),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
-  return { project: authorLegalTraitOffers(project), midshopId, prebossId };
+  return {
+    project: authorLegalTraitOffers(authorSurfaceWorldShop(project, goldenFBiome, prebossId)),
+    midshopId,
+    prebossId,
+  };
 }
 
 function authoredAnomalyProject(): {
@@ -521,6 +527,84 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('authors the attached Combat08 Artificer replacement from an exact unresolved checkpoint', () => {
+    const combat08 = goldenFOccurrenceId(3, 2);
+    const source = createIncomingRewardAddress(goldenFBiome, combat08);
+    const acquisition = createAcquisitionRoleAddress(source, 'self');
+    const replacementAddress = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, combat08),
+        'roomRewardPickup',
+      ),
+      'artificer:self:self',
+    );
+    let unresolved: ProjectDocument | undefined;
+    expect(() => {
+      unresolved = applyProjectCommand(createCombat08ArtificerRegressionProject(), catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer', replacement: null },
+      });
+      simulateProjectAssembly(catalog, unresolved);
+    }).not.toThrow();
+    if (unresolved === undefined) throw new Error('Combat08 Artificer command did not apply');
+    const view = renderOccurrenceWorkbench(unresolved, 'Underworld', 'F', occurrenceById(combat08));
+    const workspace = workspaceProjection(view.application);
+    const replacementFinding = view.application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.routes.flatMap((route) => route.findings)
+      .filter(
+        (finding) =>
+          finding.code === 'rewardMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(replacementAddress),
+      );
+    expect(replacementFinding).toHaveLength(1);
+    expect(workspace.focusByOwner.has(semanticAddressKey(replacementAddress))).toBe(true);
+    const replacementEditor = screen.getByText('Artificer replacement').closest('fieldset');
+    if (!(replacementEditor instanceof HTMLElement)) {
+      throw new Error('Combat08 Artificer replacement editor is missing');
+    }
+    expect(within(replacementEditor).getByRole('button', { name: 'Reward' })).toBeTruthy();
+
+    const conversion = workspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    const replacement = conversion?.artificerReplacementOptions.find(
+      (option) => option.offer.rewardType === 'MaxHealthDrop',
+    );
+    const interaction = workspace.interactions.rewards.get(semanticAddressKey(replacementAddress));
+    if (replacement === undefined || interaction === undefined) {
+      throw new Error('Combat08 Artificer replacement command is missing');
+    }
+    expect(() =>
+      act(() =>
+        view.application.store.dispatch(
+          authoredProjectCommandDispatched(interaction.intentFor(replacement.offer).command),
+        ),
+      ),
+    ).not.toThrow();
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.routes.flatMap((route) => route.findings)
+        .some(
+          (finding) =>
+            finding.code === 'rewardMissing' &&
+            semanticAddressKey(finding.origin) === semanticAddressKey(replacementAddress),
+        ),
+    ).toBe(false);
+    const authored = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === combat08);
+    expect(
+      authored !== undefined &&
+        'reward' in authored.state &&
+        authored.state.reward?.dispositionByAcquisitionRole.self,
+    ).toMatchObject({ kind: 'artificer', replacement: { offer: { rewardType: 'MaxHealthDrop' } } });
+  });
+
   it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
     renderStaticOccurrenceWorkbench(
       createFConversionFrontierProject('GiftDrop').project,
@@ -625,7 +709,7 @@ describe('OccurrenceWorkbench', () => {
     });
   });
 
-  it('activates a context-invalid dormant Blind Box, then repairs its source on the pickup row', async () => {
+  it('authors a Narcissus Blind Box before pickup and acquires it only through undoable order', async () => {
     let project = createCompleteFGProject();
     const occurrence = project.routes
       .flatMap((route) => route.biomes)
@@ -676,14 +760,13 @@ describe('OccurrenceWorkbench', () => {
         deathDefianceConditionMet: false,
       },
     });
-    expect(
-      project.routes
-        .flatMap((route) => route.biomes)
-        .find((biome) => biome.biomeKey === 'G')
-        ?.topology?.occurrences.find(
-          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )?.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon,
-    ).toBeDefined();
+    const mysteryBoon = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        'roomExit',
+      ),
+      'mysteryBoon',
+    );
     const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
       const node = biome.nodes.find(
         (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
@@ -697,24 +780,70 @@ describe('OccurrenceWorkbench', () => {
     expect((pickedUp as HTMLInputElement).disabled).toBe(false);
     const acquisitions = screen.getByText('Acquisitions').closest('section');
     if (acquisitions === null) throw new Error('Narcissus acquisitions workbench is missing');
-    expect(within(acquisitions).queryByRole('button', { name: 'Reward' })).toBeNull();
+    const reward = within(acquisitions).getByRole('button', { name: 'Reward' });
+    await view.user.click(reward);
+    await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
+
+    const authoredSite = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.acquisitionSites?.roomExit;
+    await waitFor(() =>
+      expect(authoredSite()?.pickupEntries?.mysteryBoon).toMatchObject({
+        offer: { payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+        traitOffersByAcquisitionRole: { hiddenSource: null },
+      }),
+    );
+    expect(authoredSite()?.order).toEqual([]);
+
+    const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
+      semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
+    );
+    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    if (hiddenSource === undefined)
+      throw new Error('Narcissus Blind Box hidden-source editor is missing');
+    if (hiddenSourceDraft === undefined)
+      throw new Error('Narcissus Blind Box hidden-source starting draft is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(hiddenSource.intentFor(hiddenSourceDraft).command),
+      ),
+    );
+    const hasAcquiredMysteryBoon = () => {
+      const evaluated = simulateProject(
+        catalog,
+        view.application.store.getState().projectWorkspace.history.present,
+      )
+        .routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G');
+      return (
+        evaluated !== undefined &&
+        'rewards' in evaluated &&
+        evaluated.rewards.branches.some((branch) =>
+          branch.events.some(
+            (event) =>
+              event.kind === 'concreteAcquisition' &&
+              event.settlement?.entry.entryKey === 'mysteryBoon',
+          ),
+        )
+      );
+    };
+    expect(hasAcquiredMysteryBoon()).toBe(false);
 
     await view.user.click(pickedUp);
-    const reward = await within(acquisitions).findByRole('button', { name: 'Reward' });
-    await view.user.click(reward);
-    await view.user.click(within(await screen.findByRole('listbox')).getByText('Hestia'));
+    expect(authoredSite()?.order).toEqual(['mysteryBoon']);
+    expect(hasAcquiredMysteryBoon()).toBe(true);
 
-    const entry = view.application.store
-      .getState()
-      .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'G')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      )?.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon;
-    expect(entry).toMatchObject({
-      offer: { payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
-      traitOffersByAcquisitionRole: { hiddenSource: { giverKey: 'Hestia' } },
-    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredSite()?.order).toEqual([]);
+    expect(hasAcquiredMysteryBoon()).toBe(false);
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(authoredSite()?.order).toEqual(['mysteryBoon']);
+    expect(hasAcquiredMysteryBoon()).toBe(true);
     expect(
       (
         within(acquisitions).getByRole('checkbox', {
@@ -2288,14 +2417,14 @@ describe('OccurrenceWorkbench', () => {
     };
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(screen.getByLabelText('Purchase Offer 1'));
-    expect(order()).toEqual(['Boon']);
-
     await view.user.click(screen.getByLabelText('Purchase Offer 2'));
-    expect(order()).toEqual(['Boon', 'MajorNonBoon']);
+    expect(order()).toEqual(['MajorNonBoon']);
+
+    await view.user.click(screen.getByLabelText('Purchase Offer 3'));
+    expect(order()).toEqual(['MajorNonBoon', 'Minor']);
 
     await view.user.click(screen.getAllByRole('button', { name: 'Move earlier' })[1]!);
-    expect(order()).toEqual(['MajorNonBoon', 'Boon']);
+    expect(order()).toEqual(['Minor', 'MajorNonBoon']);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 3,
     );
@@ -2492,11 +2621,8 @@ describe('OccurrenceWorkbench', () => {
     if (!(refillRewardRow instanceof HTMLElement))
       throw new Error('Travel Deal reward editor is missing');
     const refillReward = within(refillRewardRow).getByRole('button', { name: 'Reward' });
-    const replacementLabel = refillReward.textContent?.includes('Max Health')
-      ? 'Max Magick'
-      : 'Max Health';
     await view.user.click(refillReward);
-    await view.user.click(within(await screen.findByRole('listbox')).getByText(replacementLabel));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Heal'));
 
     const authored = view.application.store
       .getState()
@@ -2505,9 +2631,7 @@ describe('OccurrenceWorkbench', () => {
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === prebossId)
       ?.acquisitionSites?.roomExit?.pickupEntries;
     expect(authored?.infernalContractReward?.offer).toEqual({ rewardType: 'StackUpgrade' });
-    expect(authored?.travelDealRefill?.offer.rewardType).toBe(
-      replacementLabel === 'Max Health' ? 'MaxHealthDrop' : 'MaxManaDrop',
-    );
+    expect(authored?.travelDealRefill?.offer.rewardType).toBe('RoomRewardHealDrop');
   }, 15_000);
 
   it('renders an unpicked Shop as dormant without inventory controls', () => {

@@ -527,7 +527,6 @@ export interface RoomDeclaration {
     readonly entryKey: 'infernalContractReward';
     readonly producerLifecycleKey: string;
     readonly rewardTypes: readonly [string, string, string, string, string];
-    readonly defaultRewardType: string;
   };
 }
 

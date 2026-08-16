@@ -34,9 +34,9 @@ function optionSupportsOffer(
       ? authored.offer.payload.source
       : undefined;
   return (
-    !excluded?.has(option.defaultOffer.rewardType) &&
+    !excluded?.has(option.rewardType) &&
     (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
-    option.defaultOffer.rewardType === authored.offer.rewardType &&
+    option.rewardType === authored.offer.rewardType &&
     (option.requirement === undefined ||
       evaluateRequirement(option.requirement, facts.requirements)) &&
     (additionalRequirement === undefined ||
@@ -62,9 +62,9 @@ function optionSupportsOfferWithPeers(
       ? authored.offer.payload.source
       : undefined;
   return (
-    !excluded?.has(option.defaultOffer.rewardType) &&
+    !excluded?.has(option.rewardType) &&
     (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
-    option.defaultOffer.rewardType === authored.offer.rewardType &&
+    option.rewardType === authored.offer.rewardType &&
     (option.requirement === undefined ||
       evaluateRequirement(option.requirement, facts.requirements)) &&
     (additionalRequirement === undefined ||
@@ -203,8 +203,7 @@ function existentialGroupAssignments(
   catalog: RewardKernelCatalog,
   options: readonly ShopOptionEntry[],
   offerCount: number,
-  targetLocalIndex: number | undefined,
-  targetOffer: AuthoredShopOffer,
+  fixedOffers: readonly (import('./model').ResolvedRewardOffer | null)[],
   facts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
   constraints: ShopGenerationConstraints,
@@ -215,10 +214,11 @@ function existentialGroupAssignments(
   if (position === offerCount) return Object.freeze([Object.freeze([])]);
   return options.flatMap((option) => {
     if (used.has(option.key)) return [];
+    const fixedOffer = fixedOffers[position];
     const offers =
-      position === targetLocalIndex
-        ? Object.freeze([targetOffer.offer])
-        : locallyValidRewardOffers(catalog, option.defaultOffer.rewardType);
+      fixedOffer === undefined || fixedOffer === null
+        ? locallyValidRewardOffers(catalog, option.rewardType)
+        : Object.freeze([fixedOffer]);
     return offers.flatMap((offer) => {
       if (
         !optionSupportsOfferWithPeers(
@@ -238,8 +238,7 @@ function existentialGroupAssignments(
         catalog,
         options,
         offerCount,
-        targetLocalIndex,
-        targetOffer,
+        fixedOffers,
         facts,
         additionalOptionRequirements,
         constraints,
@@ -267,17 +266,39 @@ export function findShopIndexedGenerationWitnesses(
 ): readonly ShopGenerationWitness[] {
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= profile.slotCount)
     return Object.freeze([]);
+  const fixedOffers = Array.from<import('./model').ResolvedRewardOffer | null>({
+    length: profile.slotCount,
+  }).fill(null);
+  fixedOffers[slotIndex] = offer;
+  return findShopPartialGenerationWitnesses(
+    catalog,
+    profile,
+    Object.freeze(fixedOffers),
+    facts,
+    additionalOptionRequirements,
+    constraints,
+  );
+}
+
+/** Existentially completes every unresolved Shop slot while retaining each
+ * already-authored indexed offer and exact group without-replacement rules. */
+export function findShopPartialGenerationWitnesses(
+  catalog: RewardKernelCatalog,
+  profile: ShopProfileDeclaration,
+  fixedOffers: readonly (import('./model').ResolvedRewardOffer | null)[],
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
+  constraints: ShopGenerationConstraints = {},
+): readonly ShopGenerationWitness[] {
+  if (fixedOffers.length !== profile.slotCount) return Object.freeze([]);
   let offset = 0;
   let witnesses: readonly (readonly string[])[] = Object.freeze([Object.freeze([])]);
   for (const group of profile.groups.values) {
-    const targetLocalIndex =
-      slotIndex >= offset && slotIndex < offset + group.offerCount ? slotIndex - offset : undefined;
     const groupAssignments = existentialGroupAssignments(
       catalog,
       group.options.values,
       group.offerCount,
-      targetLocalIndex,
-      Object.freeze({ offer }),
+      fixedOffers.slice(offset, offset + group.offerCount),
       facts,
       additionalOptionRequirements,
       constraints,
@@ -362,7 +383,7 @@ export function evaluateShopPurchases(
         const activeKey = witness.optionKeys[remainingIndex];
         const active =
           activeKey === undefined ? undefined : optionByWitness(profile, remainingIndex, activeKey);
-        return active === undefined ? [] : [active.defaultOffer.rewardType];
+        return active === undefined ? [] : [active.rewardType];
       }),
     );
     const facts = factsWithHistory(baseFacts, history, activeNames);
@@ -439,7 +460,7 @@ export function evaluateShopPurchaseAtSlot(
     [...remaining].flatMap((index) => {
       const key = witness.optionKeys[index];
       const active = key === undefined ? undefined : optionByWitness(profile, index, key);
-      return active === undefined ? [] : [active.defaultOffer.rewardType];
+      return active === undefined ? [] : [active.rewardType];
     }),
   );
   const facts = factsWithHistory(baseFacts, initialHistory, activeNames);

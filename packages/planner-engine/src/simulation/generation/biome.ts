@@ -2109,6 +2109,16 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
           `${semanticAddressKey(batch.origin)} takeover batch has no target`,
         );
       }
+      const takeoverOwner = requireSource(rooms, batch.parent.origin);
+      if (
+        !history.rooms.some(
+          (room) => semanticAddressKey(room.origin) === semanticAddressKey(takeoverOwner.origin),
+        )
+      ) {
+        // A missing reward leaf can stop the source before its outgoing
+        // lifecycle without invalidating the already-authored takeover shape.
+        continue;
+      }
       const support = evaluateTakeoverPrebossBatchCandidate(
         catalog,
         snapshot,
@@ -2139,9 +2149,10 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
     );
     if (sourceViews === undefined) {
-      throw new BiomeRoomGenerationContractError(
-        `source ${semanticAddressKey(source.origin)} has no lifecycle history`,
-      );
+      // The source occurrence may be structurally authored while an unresolved
+      // reward leaf blocks its lifecycle. Downstream topology remains
+      // authorable, but generation cannot be assessed from a fabricated view.
+      continue;
     }
     const sourceBeforeGeneration = normalTargetCandidateHistory(layout, source, sourceViews);
     if (sourceBeforeGeneration === undefined) {

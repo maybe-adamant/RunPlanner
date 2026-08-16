@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'a8a39561c1a63cc6'],
-  ['G', 'de3df3d8994c6fd2'],
-  ['H', '0886c0e1bf79c6dd'],
-  ['I', 'd643cc2b75f9b8a7'],
-  ['N', '4d59515550ccfe07'],
-  ['O', 'a888b5f10a097993'],
-  ['P', '14dd862d52be7b08'],
-  ['Q', '80a5598eb3206f8f'],
+  ['F', '665fc9bd0106e7da'],
+  ['G', '3ca3fd83c1bc9e2a'],
+  ['H', '74d34e9f3ea0d334'],
+  ['I', 'e9a442353f2e1b04'],
+  ['N', 'a0b4cd0df588115d'],
+  ['O', 'ce89c2153d6dd574'],
+  ['P', '73494d0b76274644'],
+  ['Q', '82011d23c796162b'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -320,7 +320,6 @@ describe('catalog regression coverage retained through unified decisions', () =>
           'TalentBigDrop',
           'TalentDrop',
         ],
-        defaultRewardType: 'BlindBoxLoot',
       });
     }
     expect(catalog.rooms.byKey.I_PreBoss01).toBeUndefined();

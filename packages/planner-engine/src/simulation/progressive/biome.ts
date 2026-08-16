@@ -633,10 +633,11 @@ function retainBlockedRegionProducts(
   const traitOffers: TraitOfferCandidateArtifacts = Object.freeze({
     at: (address: TraitOfferAddress) => {
       const key = semanticAddressKey(address);
-      if (!retainedTraitKeys.has(key)) return undefined;
       return blockedKey !== undefined && key === blockedKey && blockedCapability !== undefined
         ? blockedCapability
-        : retainedArtifacts.traitOffers.at(address);
+        : retainedTraitKeys.has(key)
+          ? retainedArtifacts.traitOffers.at(address)
+          : undefined;
     },
   });
   const selectedLevelKeys = new Set(
@@ -703,14 +704,32 @@ function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.acquisitionConversions.at(blockedAcquisitionAt) ??
         blockedArtifacts.acquisitionConversions.at(blockedAcquisitionAt));
+  const blockedReplacementCapability =
+    blockedDerivedAcquisitionAt === undefined
+      ? undefined
+      : (selectedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt) ??
+        blockedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt));
   const acquisitionConversions =
-    blockedAcquisitionAt === undefined || blockedAcquisitionCapability === undefined
+    (blockedAcquisitionAt === undefined || blockedAcquisitionCapability === undefined) &&
+    blockedReplacementCapability === undefined
       ? retainedArtifacts.acquisitionConversions
       : Object.freeze({
           at: (address: AcquisitionRoleAddress) =>
+            blockedAcquisitionAt !== undefined &&
+            blockedAcquisitionCapability !== undefined &&
             semanticAddressKey(address) === semanticAddressKey(blockedAcquisitionAt)
               ? blockedAcquisitionCapability
-              : retainedArtifacts.acquisitionConversions.at(address),
+              : blockedReplacementCapability !== undefined &&
+                  semanticAddressKey(address) ===
+                    semanticAddressKey(blockedReplacementCapability.address)
+                ? blockedReplacementCapability.capability
+                : retainedArtifacts.acquisitionConversions.at(address),
+          atReplacement: (address: AcquisitionEntryAddress) =>
+            blockedDerivedAcquisitionAt !== undefined &&
+            blockedReplacementCapability !== undefined &&
+            semanticAddressKey(address) === semanticAddressKey(blockedDerivedAcquisitionAt)
+              ? blockedReplacementCapability
+              : retainedArtifacts.acquisitionConversions.atReplacement(address),
         });
   const blockedDerivedAcquisitionCapability =
     blockedDerivedAcquisitionAt === undefined
@@ -778,11 +797,22 @@ function retainBlockedRegionProducts(
     blockedTargetCapability === undefined
       ? retainedArtifacts.roomTargets
       : Object.freeze({
-          at: (target: TargetAddress) =>
-            blockedTarget !== undefined &&
-            semanticAddressKey(target) === semanticAddressKey(blockedTarget)
-              ? blockedTargetCapability
-              : retainedArtifacts.roomTargets.at(target),
+          at: (target: TargetAddress) => {
+            if (
+              blockedTarget !== undefined &&
+              semanticAddressKey(target) === semanticAddressKey(blockedTarget)
+            ) {
+              return blockedTargetCapability;
+            }
+            // The interaction prefix retains exactly the blocked target's
+            // physical cohort and no later decision. Its sibling target
+            // capabilities remain assessable even though execution stopped
+            // before the invalid authored leaf.
+            return rewardOwner === undefined
+              ? retainedArtifacts.roomTargets.at(target)
+              : (blockedArtifacts.roomTargets.at(target) ??
+                  retainedArtifacts.roomTargets.at(target));
+          },
         });
   const rewardProducers: RewardProducerCandidateArtifacts =
     rewardCapability === undefined
@@ -1665,10 +1695,23 @@ function clampPrefix(
       frontier: Object.freeze({ kind: 'hubBoard', origin: decision.origin }),
     });
   }
+  if (decision.parent.origin.kind === 'hubRoom') {
+    return Object.freeze({
+      ...prefix,
+      decisions: Object.freeze(prefix.decisions.slice(0, located.decisionIndex)),
+      // A Hub-owned handoff is one physical generation unit with the Hub.
+      // It cannot be replayed as an ordinary non-empty frontier.  Keep the
+      // completed board and stop before the blocked handoff target instead;
+      // the selected products retain that target's authoring artifacts.
+      frontier: exitFrontier(decision),
+    });
+  }
   const retainedTargets =
     located.targetIndex === undefined
       ? Object.freeze([])
-      : decision.targets.slice(0, located.targetIndex);
+      : located.finding.code === 'rewardMissing'
+        ? decision.targets
+        : decision.targets.slice(0, located.targetIndex);
   const retainedAdditional =
     located.additionalIndex === undefined
       ? decision.additional
@@ -1717,6 +1760,7 @@ function retainedInteractionPrefix(
       : undefined
     : prefix.decisions[located.decisionIndex];
   if (decision === undefined || decision.kind !== 'batch') return clampPrefix(prefix, located);
+  if (decision.parent.origin.kind === 'hubRoom') return clampPrefix(prefix, located);
   // A batch's physical targets share one reward-store envelope.  Interaction
   // replay therefore has to retain the complete authored target set even when
   // the first blocked owner belongs to an earlier peer.  The execution prefix
@@ -2016,7 +2060,10 @@ function clampSelectedProducts(
       materializedPrefix: authoredPrefix,
       roomGeneration: retainedRoomGeneration,
       rewards: retainedRewards,
-      assessmentPrefix: executionPrefix,
+      assessmentPrefix:
+        rewardOwnerAddress(unsupported.finding.origin) === undefined
+          ? executionPrefix
+          : interactionPrefix,
       findings: mergedFindings(evaluated.evaluation, retainedFindings),
       blockedAt: unsupported.finding.origin,
     }),

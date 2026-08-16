@@ -5,7 +5,7 @@ import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 import {
-  createDefaultLevelResolutions,
+  createUnresolvedLevelResolutions,
   producerLevelEffectSource,
 } from '../../../src/authored-project/traits';
 
@@ -20,7 +20,7 @@ describe('authored room-state defaults', () => {
     const standard = room('F_Combat04');
     if (standard.incomingReward.kind === 'none') throw new Error('expected reward producer');
     expect(
-      createDefaultLevelResolutions(
+      createUnresolvedLevelResolutions(
         catalog,
         { rewardType: 'GiftDrop' },
         producerLevelEffectSource(standard.incomingReward),
@@ -30,7 +30,7 @@ describe('authored room-state defaults', () => {
     const shop = room('F_Shop01');
     if (shop.incomingReward.kind !== 'shop') throw new Error('expected shop producer');
     expect(
-      createDefaultLevelResolutions(
+      createUnresolvedLevelResolutions(
         catalog,
         { rewardType: 'GiftDrop' },
         {
@@ -41,7 +41,7 @@ describe('authored room-state defaults', () => {
     ).toBeUndefined();
   });
 
-  it('constructs complete declaration-owned complex defaults', () => {
+  it('constructs declaration-owned structure with unresolved authorable rewards', () => {
     expect(
       createDefaultRoomState(catalog, room('H_Combat02'), {
         role: 'ordinary',
@@ -56,15 +56,15 @@ describe('authored room-state defaults', () => {
         { kind: 'interactCageReward', slotKey: 'cage2' },
       ],
       cages: {
-        cage1: { offer: { rewardType: expect.any(String) } },
-        cage2: { offer: { rewardType: expect.any(String) } },
-        cage3: { offer: { rewardType: expect.any(String) } },
+        cage1: null,
+        cage2: null,
+        cage3: null,
       },
       optionalRewardCount: 2,
       optionalRewards: {
-        optional1: { offer: { rewardType: 'MaxManaDropSmall' } },
-        optional2: { offer: { rewardType: 'MaxManaDropSmall' } },
-        optional3: { offer: { rewardType: 'MaxManaDropSmall' } },
+        optional1: null,
+        optional2: null,
+        optional3: null,
       },
     });
 
@@ -107,17 +107,17 @@ describe('authored room-state defaults', () => {
       }),
     ).toMatchObject({
       kind: 'ephyraCombat',
-      reward: { offer: { rewardType: expect.any(String) } },
+      reward: null,
       sideRooms: {
         sideDoor1: {
           generation: 'notGenerated',
           enteredOrdinal: null,
-          reward: { offer: { rewardType: expect.any(String) } },
+          reward: null,
         },
         sideDoor2: {
           generation: 'notGenerated',
           enteredOrdinal: null,
-          reward: { offer: { rewardType: expect.any(String) } },
+          reward: null,
         },
       },
     });
@@ -136,7 +136,7 @@ describe('authored room-state defaults', () => {
       }),
     ).toMatchObject({
       kind: 'counted',
-      reward: { offer: declaration.incomingReward.defaultOffersByStore.RunProgress },
+      reward: null,
     });
   });
 
@@ -158,9 +158,9 @@ describe('authored room-state defaults', () => {
       shop: {
         profileKey: 'WorldShop',
         offers: {
-          Boon: {},
-          MajorNonBoon: {},
-          Minor: {},
+          Boon: { reward: null },
+          MajorNonBoon: { reward: null },
+          Minor: { reward: null },
         },
       },
     });
@@ -182,7 +182,7 @@ describe('authored room-state defaults', () => {
         }),
       ).toMatchObject({
         kind: 'freeReward',
-        reward: { offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress },
+        reward: null,
       });
     },
   );
@@ -212,7 +212,7 @@ describe('authored room-state defaults', () => {
       }),
     ).toMatchObject({
       kind: 'freeReward',
-      reward: { offer: policy.remainingOffers.reward.defaultOffersByStore.RunProgress },
+      reward: null,
     });
   });
 

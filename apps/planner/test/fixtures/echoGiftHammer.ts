@@ -16,6 +16,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 
 export const echoGiftHammerReplayAddress = createKeepsakeEquipResultAddress(
   createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
@@ -64,31 +68,44 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
     gameName: 'H_MiniBoss02',
   });
+  const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTargetId);
+  const rewardSession = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  );
+  const supportedSource = catalog.traitGivers.values
+    .filter((giver) => giver.providerKind === 'olympian')
+    .map((giver) => ({
+      giver,
+      offer: {
+        rewardType: 'Boon' as const,
+        payload: { kind: 'BoonSource' as const, source: `${giver.key}Upgrade` },
+      },
+    }))
+    .find(({ offer }) => {
+      const evaluation = rewardSession.evaluate({
+        kind: 'incomingReward',
+        reward: forcedReward,
+        value: offer,
+      });
+      return evaluation.kind === 'incomingReward' && evaluation.result.supported;
+    });
+  if (supportedSource === undefined) throw new Error('no candidate-supported H miniboss Boon');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenHBiome, forcedTargetId),
-    value: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
-    },
+    reward: forcedReward,
+    value: supportedSource.offer,
   });
+  const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
+  const traitDraft = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).traitOfferStartingDraft(forcedTrait, supportedSource.giver.key);
+  if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(
-      createIncomingRewardAddress(goldenHBiome, forcedTargetId),
-      'source',
-    ),
-    value: {
-      kind: 'traits',
-      giverKey: 'Aphrodite',
-      options: [
-        { traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
-        { traitKey: 'HealthRewardBonusBoon', rarity: 'Common' },
-        { traitKey: 'ManaBurstBoon', rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-      rarificationActions: [],
-    },
+    trait: forcedTrait,
+    value: traitDraft,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',

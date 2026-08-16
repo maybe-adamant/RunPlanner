@@ -4,10 +4,12 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -70,6 +72,26 @@ describe('canonical N Hub materialization', () => {
       kind: 'CreateStart',
       biome: nBiome,
       occurrenceId: nOccurrenceIds.opening,
+    });
+    const reward = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',

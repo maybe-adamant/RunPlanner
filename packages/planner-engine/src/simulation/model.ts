@@ -32,6 +32,7 @@ export type EncounterResolutionFindingCode =
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'
+  | 'rewardMissing'
   | 'rewardAcquisitionUnavailable'
   | 'rewardBagSupportEmpty'
   | 'rewardBagEntryUnavailable'
@@ -51,6 +52,7 @@ export type RewardGenerationFindingCode =
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'
+  | 'traitOfferMissing'
   | 'alreadyEquipped'
   | 'bannedTrait'
   | 'missingPrerequisite'

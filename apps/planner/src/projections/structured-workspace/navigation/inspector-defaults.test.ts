@@ -203,7 +203,7 @@ describe('workspace inspector defaults', () => {
     expect(retained.defaultInspectorDestination?.kind).toBe('node');
     if (retained.defaultInspectorDestination?.kind !== 'node') return;
     expect(nodeByKey(retained, retained.defaultInspectorDestination.nodeKey).kind).toBe(
-      'takeoverBatch',
+      'ordinaryBatch',
     );
 
     const blocked = biome(withUnresolvedFSelections(complete, [goldenFOccurrenceId(1, 1)]), 'G');

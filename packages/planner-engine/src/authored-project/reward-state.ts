@@ -3,11 +3,11 @@ import type { ResolvedRewardOffer } from '../reward-kernel/model';
 
 /**
  * Every authored reward owns an explicit disposition for every declared
- * acquisition role. This is persisted state rather than a settlement-time
- * default: commands and codecs can consequently distinguish an incomplete
+ * acquisition role. This is persisted state rather than settlement-time
+ * inference: commands and codecs can consequently distinguish an incomplete
  * or malformed document from an intentional normal acquisition.
  */
-export function createDefaultDispositionByAcquisitionRole(
+export function createNormalDispositionByAcquisitionRole(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
 ): import('./model').AuthoredRewardState['dispositionByAcquisitionRole'] {

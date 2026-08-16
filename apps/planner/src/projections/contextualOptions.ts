@@ -345,6 +345,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'bag', message: 'This reward is unavailable from the selected reward pool.' };
     case 'rewardPayloadInvalid':
       return { kind: 'payload', message: 'These reward details are not valid.' };
+    case 'rewardMissing':
+      return { kind: 'reward', message: 'Choose this reward.' };
+    case 'traitOfferMissing':
+      return { kind: 'trait', message: 'Choose the generated trait offer.' };
     case 'rewardSourceUnavailable':
       return typeof finding.evidence.chosenSource === 'string' &&
         typeof finding.evidence.spurnedSource === 'string'

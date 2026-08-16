@@ -134,6 +134,48 @@ function replaceIncoming(
   });
 }
 
+export function authorSurfaceWorldShop(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = project;
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    MajorNonBoon: { rewardType: 'MaxHealthDrop' },
+    Minor: { rewardType: 'MaxManaDrop' },
+  } satisfies Readonly<Record<string, ResolvedRewardOffer>>)) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, occurrenceId, offerKey),
+      value,
+    });
+  }
+  return next;
+}
+
+function authorQWorldShop(project: ProjectDocument, occurrenceId: OccurrenceId): ProjectDocument {
+  let next = project;
+  for (const [offerKey, value] of Object.entries({
+    MixedProgress1: { rewardType: 'MaxHealthDrop' },
+    MixedProgress2: { rewardType: 'MaxManaDrop' },
+    LargeSurvival: { rewardType: 'HealBigDrop' },
+    Survival: { rewardType: 'ArmorBigBoost' },
+    PremiumProgress: { rewardType: 'MaxHealthDropBig' },
+    MetaProgress: { rewardType: 'WeaponPointsRareDrop' },
+  } satisfies Readonly<Record<string, ResolvedRewardOffer>>)) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(qBiome, occurrenceId, offerKey),
+      value,
+    });
+  }
+  return next;
+}
+
 function appendBatch(
   project: ProjectDocument,
   biome: BiomeAddress,
@@ -237,6 +279,10 @@ export function appendNEntry(project: ProjectDocument): ProjectDocument {
     biome: nBiome,
     occurrenceId: nOccurrenceIds.opening,
   });
+  next = replaceIncoming(next, nBiome, nOccurrenceIds.opening, {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+  });
   const openingDecision = decision(nBiome, nOccurrenceIds.opening);
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateBatch',
@@ -247,6 +293,10 @@ export function appendNEntry(project: ProjectDocument): ProjectDocument {
     target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
     occurrenceId: nOccurrenceIds.preHub,
     gameName: 'N_PreHub01',
+  });
+  next = replaceIncoming(next, nBiome, nOccurrenceIds.preHub, {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'AresUpgrade' },
   });
   return applyProjectCommand(next, catalog, {
     kind: 'CreateBatch',
@@ -313,13 +363,7 @@ export function appendCompleteN(
     gameName: 'N_PreBoss01',
     targetOccurrenceIds: { preboss: nOccurrenceIds.preboss },
   });
-  return authorLegalTraitOffers(
-    applyProjectCommand(next, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
-      value: { rewardType: 'MaxHealthDrop' },
-    }),
-  );
+  return authorLegalTraitOffers(authorSurfaceWorldShop(next, nBiome, nOccurrenceIds.preboss));
 }
 
 export function appendCompleteO(project: ProjectDocument): ProjectDocument {
@@ -364,13 +408,7 @@ export function appendCompleteO(project: ProjectDocument): ProjectDocument {
     gameName: 'O_PreBoss01',
     targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
   });
-  return authorLegalTraitOffers(
-    applyProjectCommand(next, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'MajorNonBoon'),
-      value: { rewardType: 'MaxHealthDrop' },
-    }),
-  );
+  return authorLegalTraitOffers(authorSurfaceWorldShop(next, oBiome, oOccurrenceIds.preboss));
 }
 
 export function appendCompleteP(project: ProjectDocument): ProjectDocument {
@@ -442,8 +480,11 @@ export function appendCompleteP(project: ProjectDocument): ProjectDocument {
     selection: createExitSelectionAddress(pBiome, occurrenceSource(parent)),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
+  next = replaceIncoming(next, pBiome, pOccurrenceIds.prebossReward, {
+    rewardType: 'MaxHealthDrop',
+  });
   return authorLegalTraitOffers(
-    applyProjectCommand(next, catalog, {
+    applyProjectCommand(authorSurfaceWorldShop(next, pBiome, pOccurrenceIds.prebossShop), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
       value: { rewardType: 'MaxHealthDrop' },
@@ -506,7 +547,7 @@ export function appendCompleteQ(project: ProjectDocument): ProjectDocument {
     targetOccurrenceIds: { exit1: qOccurrenceIds.preboss },
   });
   return authorLegalTraitOffers(
-    applyProjectCommand(next, catalog, {
+    applyProjectCommand(authorQWorldShop(next, qOccurrenceIds.preboss), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
       value: { rewardType: 'MaxHealthDropBig' },

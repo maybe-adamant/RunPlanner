@@ -309,7 +309,7 @@ export type AcquisitionSiteCommand =
       readonly kind: 'SelectDerivedShopEntry';
       readonly site: AcquisitionSiteAddress;
       readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
-      readonly defaultValue: import('../model').AuthoredRewardState;
+      readonly sourceOfferKey: string;
       readonly entryKeys: readonly string[];
     };
 
@@ -376,15 +376,13 @@ export type DerivedShopEntryPayloadCommand =
   | LevelResolutionCommand
   | AcquisitionDispositionCommand;
 
-/**
- * Atomically persists one derived Shop entry's declaration-complete default and
- * applies its payload edit without changing the Shop acquisition chronology.
- */
+/** Atomically materializes one derived Shop entry from its exact source and
+ * applies a complete payload edit without changing Shop acquisition chronology. */
 export type DerivedShopEntryEditCommand = {
   readonly kind: 'EditDerivedShopEntry';
   readonly site: AcquisitionSiteAddress;
   readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
-  readonly defaultValue: import('../model').AuthoredRewardState;
+  readonly sourceOfferKey: string;
   readonly edit: DerivedShopEntryPayloadCommand;
 };
 

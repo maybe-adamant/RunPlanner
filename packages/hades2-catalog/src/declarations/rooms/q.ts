@@ -544,7 +544,6 @@ export const qRooms = [
         'TalentBigDrop',
         'TalentDrop',
       ],
-      defaultRewardType: 'BlindBoxLoot',
     },
     prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'none' },

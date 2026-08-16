@@ -24,6 +24,7 @@ export {
   evaluateShopPurchaseAtSlot,
   findShopGenerationWitnesses,
   findShopIndexedGenerationWitnesses,
+  findShopPartialGenerationWitnesses,
   purchaseInteractionName,
   simulateShopPurchases,
 } from './shop';

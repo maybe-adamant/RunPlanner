@@ -24,8 +24,7 @@ import {
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import { createDefaultTraitOffers } from '../../../../src/authored-project/traits';
-import { createDefaultDispositionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
+import { createNormalDispositionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranches,
@@ -567,7 +566,39 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(biome.rewards.validity).toBe('valid');
   });
 
-  it('keeps one changed Hub reward authorable while sibling defaults still block the board', () => {
+  it('discards a failed first Hub-board completion before accepting a later sibling proposal', () => {
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'OpenHubSlot',
+      slot: createHubSlotAddress(nBiome, 'hub', 'story'),
+      occurrenceId: nOccurrenceId('story'),
+    });
+    // Free the singleton Max Health entry. The unresolved story slot first
+    // proposes that same entry, so the focused combat09 candidate initially
+    // fails and must be retried with a later story-domain proposal.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+      },
+    });
+    const result = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
+      kind: 'incomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+      value: { rewardType: 'MaxHealthDropBig' },
+    });
+
+    expect(result).toMatchObject({
+      kind: 'incomingReward',
+      result: { supported: true, findings: [] },
+    });
+  });
+
+  it('reports the authored sibling cohort while one Hub reward is repaired structurally', () => {
     let project = createRepresentativeNProject();
     const repeatedDefault = {
       rewardType: 'Boon' as const,
@@ -604,7 +635,13 @@ describe('N Hub rewards, validation, and candidates', () => {
           payload: { kind: 'BoonSource', source: 'AresUpgrade' },
         },
       }),
-    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+    ).toMatchObject({
+      kind: 'incomingReward',
+      result: {
+        supported: false,
+        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
+      },
+    });
   });
 
   it('still rejects a repeated Hub source when no hidden generation order reaches the cap', () => {
@@ -729,7 +766,18 @@ describe('N Hub rewards, validation, and candidates', () => {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'DemeterUpgrade' },
     };
-    const traitOffersByAcquisitionRole = createDefaultTraitOffers(catalog, offer, route.loadout);
+    const traitOffersByAcquisitionRole = Object.freeze({
+      source: Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'Demeter',
+        options: Object.freeze([
+          Object.freeze({ traitKey: 'DemeterWeaponBoon', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'DemeterSpecialBoon', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'DemeterCastBoon', rarity: 'Common' as const }),
+        ] as const),
+        selectedOptionKey: 'option1' as const,
+      }),
+    });
     const replacedParent = Object.freeze({
       ...parent,
       state: Object.freeze({
@@ -740,7 +788,7 @@ describe('N Hub rewards, validation, and candidates', () => {
             ...side,
             reward: Object.freeze({
               offer,
-              dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
+              dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(
                 catalog,
                 offer,
               ),
@@ -810,7 +858,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).branches;
     const branch = branches[0];
     const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];
-    if (branch === undefined || expectedOffer === undefined || expectedOffer.kind !== 'traits') {
+    if (
+      branch === undefined ||
+      expectedOffer === undefined ||
+      expectedOffer === null ||
+      expectedOffer.kind !== 'traits'
+    ) {
       throw new Error('trait event was not reached');
     }
     expect(branch.events).toContainEqual(

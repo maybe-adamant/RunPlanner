@@ -192,15 +192,15 @@ describe('BiomeWorkspace', () => {
     const godHeading = within(sheet).getByRole('heading', { name: 'Gods in pool' });
     const godSection = godHeading.closest('section');
     if (godSection === null) throw new Error('Gods in pool section is missing');
-    expect(within(godSection).getByText('Apollo')).toBeTruthy();
+    expect(godSection.textContent).toContain('Apollo');
     expect(godSection.textContent).not.toContain('ApolloUpgrade');
     expect(within(sheet).getByRole('heading', { name: 'Elements' })).toBeTruthy();
     const traitHeading = within(sheet).getByRole('heading', { name: 'Equipped traits' });
     const traitSection = traitHeading.closest('section');
     if (traitSection === null) throw new Error('Equipped traits section is missing');
-    expect(within(traitSection).getByText('Nova Strike · Common · Lv. 3')).toBeTruthy();
-    expect(within(traitSection).getByText('Nova Flourish · Common · Lv. 1')).toBeTruthy();
-    expect(within(traitSection).getByText('Solar Ring · Common · Lv. 1')).toBeTruthy();
+    expect(within(traitSection).getByText('Nova Strike · Common · Lv. 2')).toBeTruthy();
+    expect(within(traitSection).getByText('Heaven Flourish · Common · Lv. 1')).toBeTruthy();
+    expect(within(traitSection).getByText('Engagement Ring · Common · Lv. 1')).toBeTruthy();
     expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
     expect(within(traitSection).getByText('Wicked Thrasher · Rank I')).toBeTruthy();
     expect(within(traitSection).getByText('Sprint:').nextElementSibling?.textContent).toBe('None');
@@ -713,11 +713,15 @@ describe('BiomeWorkspace', () => {
 
   it('keeps the terminal Hub control visible when an invalid PreHub reward blocks evaluation', async () => {
     const preHubReward = createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub);
-    const invalidPrefix = applyProjectCommand(appendNEntry(emptyProject('Surface', 1)), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: preHubReward,
-      value: { rewardType: 'TalentDrop' },
-    });
+    const invalidPrefix = applyProjectCommand(
+      authorLegalTraitOffers(appendNEntry(emptyProject('Surface', 1))),
+      catalog,
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: preHubReward,
+        value: { rewardType: 'TalentDrop' },
+      },
+    );
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,

@@ -742,8 +742,6 @@ export function normalizeRooms(
         expected.some((rewardType, index) => raw.rewardTypes[index] !== rewardType)
       )
         fail(`${path}.infernalContractReward.rewardTypes`, 'must match ZagPedestalOptions');
-      if (raw.defaultRewardType !== 'BlindBoxLoot')
-        fail(`${path}.infernalContractReward.defaultRewardType`, 'must be BlindBoxLoot');
       const lifecycle = rewards.producerLifecycles.byKey[raw.producerLifecycleKey];
       if (
         lifecycle === undefined ||
@@ -763,7 +761,6 @@ export function normalizeRooms(
           string,
           string,
         ],
-        defaultRewardType: 'BlindBoxLoot',
       });
     })();
     const fieldsOptionalRewards = (() => {

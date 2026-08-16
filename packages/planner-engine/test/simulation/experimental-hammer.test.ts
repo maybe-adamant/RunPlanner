@@ -136,6 +136,103 @@ function lifecycleCompletions(
 }
 
 describe('Experimental Hammer', () => {
+  it('leaves its immediate result unresolved independent of catalog order', () => {
+    const project = createCompleteFGProject();
+    const reversedCatalog = Object.freeze({
+      ...catalog,
+      traits: Object.freeze({
+        ...catalog.traits,
+        values: Object.freeze([...catalog.traits.values].reverse()),
+      }),
+    });
+    const selected = applyProjectCommand(project, reversedCatalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'TempHammerKeepsake',
+    });
+    expect(route(selected).loadout.keepsakeEquipResults?.experimentalHammer).toBeUndefined();
+    const missingAssembly = simulateProjectAssembly(reversedCatalog, selected);
+    expect(missingAssembly.evaluation).toMatchObject({
+      status: 'incomplete',
+      summary: {
+        evaluatedBiomeCount: 0,
+        validatedBiomeCount: 0,
+        blockedBiomeCount: 2,
+        eligibleForExecutionPlan: false,
+      },
+    });
+    expect(missingAssembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'keepsakeEquipResultMissing',
+        origin: createKeepsakeEquipResultAddress(
+          createRouteStartKeepsakeSelectionAddress('Underworld'),
+          'experimentalHammer',
+        ),
+      }),
+    );
+    const missingRoute = missingAssembly.evaluation.routes.find(
+      (candidate) => candidate.routeKey === 'Underworld',
+    );
+    expect(missingRoute).toMatchObject({
+      status: 'incomplete',
+      biomes: [],
+      processing: { completeValidPrefix: [], active: null, blockedSuffix: ['F', 'G'] },
+      summary: {
+        evaluatedBiomeCount: 0,
+        validatedBiomeCount: 0,
+        blockedBiomeCount: 2,
+        eligibleForExecutionPlan: false,
+      },
+    });
+    const result = createKeepsakeEquipResultAddress(
+      createRouteStartKeepsakeSelectionAddress('Underworld'),
+      'experimentalHammer',
+    );
+    expect(
+      keepsakeEquipResultCandidateForProjectEvaluationAssembly(missingAssembly, result),
+    ).toBeDefined();
+
+    const retainedInvalid = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result,
+      value: { kind: 'selected', traitKey: 'DaggerBlinkAoETrait' },
+    });
+    const invalidAssembly = simulateProjectAssembly(catalog, retainedInvalid);
+    expect(invalidAssembly.evaluation.status).toBe('invalid');
+    expect(route(retainedInvalid).loadout.keepsakeEquipResults?.experimentalHammer).toEqual({
+      kind: 'selected',
+      traitKey: 'DaggerBlinkAoETrait',
+    });
+    expect(invalidAssembly.evaluation.routes[0]).toMatchObject({
+      status: 'invalid',
+      biomes: [],
+      processing: { completeValidPrefix: [], active: null, blockedSuffix: ['F', 'G'] },
+      summary: { eligibleForExecutionPlan: false },
+    });
+    expect(invalidAssembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: result }),
+    );
+
+    const completed = applyProjectCommand(retainedInvalid, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result,
+      value: { kind: 'selected', traitKey: 'StaffOneWayAttackTrait' },
+    });
+    const completedRoute = simulateProjectAssembly(catalog, completed).evaluation.routes[0];
+    expect(completedRoute).toMatchObject({
+      status: 'valid',
+      processing: { completeValidPrefix: ['F', 'G'], active: null, blockedSuffix: [] },
+      summary: { evaluatedBiomeCount: 2, validatedBiomeCount: 2, eligibleForExecutionPlan: true },
+    });
+    expect(completedRoute?.biomes).toHaveLength(2);
+    const resumedF = completedRoute?.biomes[0];
+    if (resumedF === undefined || !('rewards' in resumedF))
+      throw new Error('completed route-start Hammer did not resume F');
+    expect(resumedF.rewards.branches[0]?.traitHistory?.equippedTraits).toHaveProperty(
+      'StaffOneWayAttackTrait',
+    );
+  });
+
   it('acquires one compatible Hammer directly without an invented rarity', () => {
     const project = createCompleteFGProject();
     const branch = equippedBranch(project, 20);
@@ -451,21 +548,24 @@ describe('Experimental Hammer', () => {
     ).toBe(false);
   });
 
-  it('preserves a context-invalid Hammer child default and exposes another compatible result', () => {
+  it('preserves a context-invalid authored Hammer child and exposes another compatible result', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
       createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
-    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection,
       value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
     });
-    const defaultResult = route(project).biomes.find((biome) => biome.biomeKey === 'F')
-      ?.keepsakeEquipResults?.experimentalHammer;
-    if (defaultResult?.kind !== 'selected') throw new Error('Hammer child default is missing');
+    const authoredResult = { kind: 'selected' as const, traitKey: 'StaffLongAttackTrait' };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
+      value: authoredResult,
+    });
 
     const arcanaFear = createArcanaFearState(catalog, route(project).loadout);
-    const alreadyEquipped = equippedBranch(project, 20, defaultResult.traitKey);
+    const alreadyEquipped = equippedBranch(project, 20, authoredResult.traitKey);
     const carried = {
       ...alreadyEquipped,
       keepsakes: createKeepsakeState(catalog, 'ManaOverTimeRefundKeepsake', arcanaFear),
@@ -490,7 +590,7 @@ describe('Experimental Hammer', () => {
     expect(
       route(project).biomes.find((biome) => biome.biomeKey === 'F')?.keepsakeEquipResults
         ?.experimentalHammer,
-    ).toEqual(defaultResult);
+    ).toEqual(authoredResult);
     expect(rewards.simulation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: result }),
     );
@@ -500,7 +600,7 @@ describe('Experimental Hammer', () => {
       project,
       simulateProjectAssembly(catalog, project).evaluation,
       rewards.keepsakeEquipResultArtifacts,
-      { kind: 'keepsakeEquipResult', result, value: defaultResult },
+      { kind: 'keepsakeEquipResult', result, value: authoredResult },
     );
     expect(candidates).toMatchObject({
       kind: 'keepsakeEquipResult',
@@ -513,7 +613,7 @@ describe('Experimental Hammer', () => {
         (option) =>
           'kind' in option.value &&
           option.value.kind === 'selected' &&
-          option.value.traitKey !== defaultResult.traitKey &&
+          option.value.traitKey !== authoredResult.traitKey &&
           option.selectedPossible,
       ),
     ).toBe(true);
@@ -597,22 +697,11 @@ describe('Experimental Hammer', () => {
 
   it('publishes missing and incompatible persisted route-start results as repairable findings', () => {
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: start,
       keepsakeKey: 'TempHammerKeepsake',
     });
-    project = {
-      ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              loadout: { ...candidate.loadout, keepsakeEquipResults: {} },
-            },
-      ),
-    };
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing' }),
     );
@@ -664,29 +753,11 @@ describe('Experimental Hammer', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
       createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
-    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection,
       value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
     });
-    project = {
-      ...project,
-      routes: project.routes.map((candidate) =>
-        candidate.routeKey !== 'Underworld'
-          ? candidate
-          : {
-              ...candidate,
-              biomes: candidate.biomes.map((biome) =>
-                biome.biomeKey !== 'F'
-                  ? biome
-                  : {
-                      ...biome,
-                      keepsakeEquipResults: {},
-                    },
-              ),
-            },
-      ),
-    };
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     const missingAssembly = simulateProjectAssembly(catalog, project);
     expect(missingAssembly.evaluation.findings).toContainEqual(

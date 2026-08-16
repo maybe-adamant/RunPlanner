@@ -1,7 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
-  createDefaultInfernalContractEntries,
   createOccurrenceId,
   semanticAddressKey,
   shopAcquisitionOrderProposals,
@@ -13,11 +12,12 @@ import {
   factsWithHistory,
   type AuthoredShopOffer,
   type RewardKernelFacts,
+  type ResolvedRewardOffer,
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
-import { createDefaultAcquisitionRewardState } from '../../src/authored-project/traits';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
@@ -35,6 +35,112 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' } as const;
+
+const explicitShopOffers: Readonly<Record<string, ResolvedRewardOffer>> = Object.freeze({
+  Boon: Object.freeze({
+    rewardType: 'RandomLoot',
+    payload: Object.freeze({ kind: 'BoonSource', source: 'ApolloUpgrade' }),
+  }),
+  MajorNonBoon: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+  Minor: Object.freeze({ rewardType: 'MaxManaDrop' }),
+  BoostedBoon: Object.freeze({ rewardType: 'StackUpgradeBig' }),
+  MixedProgress: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+  Survival: Object.freeze({ rewardType: 'HealBigDrop' }),
+  PremiumProgress: Object.freeze({ rewardType: 'MaxHealthDropBig' }),
+  MetaProgress: Object.freeze({ rewardType: 'CardUpgradePointsDrop' }),
+  MixedProgress1: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+  MixedProgress2: Object.freeze({ rewardType: 'MaxManaDrop' }),
+  LargeSurvival: Object.freeze({ rewardType: 'HealBigDrop' }),
+});
+
+function authoredShopReward(
+  offer: ResolvedRewardOffer,
+  profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop' = 'WorldShop',
+): AuthoredRewardState {
+  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+    kind: 'shopProfile',
+    key: profileKey,
+  });
+  const source = offer.payload?.kind === 'BoonSource' ? offer.payload.source : undefined;
+  const traitOffer =
+    source === 'ApolloUpgrade'
+      ? Object.freeze({
+          kind: 'traits' as const,
+          giverKey: 'Apollo',
+          options: Object.freeze([
+            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+          ] as const),
+          selectedOptionKey: 'option1' as const,
+          rarificationActions: Object.freeze([]),
+        })
+      : source === 'HestiaUpgrade'
+        ? Object.freeze({
+            kind: 'traits' as const,
+            giverKey: 'Hestia',
+            options: Object.freeze([
+              { traitKey: 'HestiaWeaponBoon', rarity: 'Common' as const },
+              { traitKey: 'HestiaSpecialBoon', rarity: 'Common' as const },
+              { traitKey: 'HestiaCastBoon', rarity: 'Common' as const },
+            ] as const),
+            selectedOptionKey: 'option1' as const,
+            rarificationActions: Object.freeze([]),
+          })
+        : source === 'ZeusUpgrade'
+          ? Object.freeze({
+              kind: 'traits' as const,
+              giverKey: 'Zeus',
+              options: Object.freeze([
+                { traitKey: 'ZeusWeaponBoon', rarity: 'Common' as const },
+                { traitKey: 'ZeusSpecialBoon', rarity: 'Common' as const },
+                { traitKey: 'ZeusCastBoon', rarity: 'Common' as const },
+              ] as const),
+              selectedOptionKey: 'option1' as const,
+              rarificationActions: Object.freeze([]),
+            })
+          : undefined;
+  return Object.freeze({
+    ...state,
+    traitOffersByAcquisitionRole: Object.freeze(
+      Object.fromEntries(
+        Object.entries(state.traitOffersByAcquisitionRole).map(([role, value]) => [
+          role,
+          value ?? traitOffer ?? null,
+        ]),
+      ),
+    ),
+    ...(state.levelResolutionsByAcquisitionRole === undefined
+      ? {}
+      : {
+          levelResolutionsByAcquisitionRole: Object.freeze(
+            Object.fromEntries(
+              Object.keys(state.levelResolutionsByAcquisitionRole).map((role) => [
+                role,
+                {
+                  kind: 'choice' as const,
+                  offeredTraitKeys: Object.freeze([]),
+                  selectedTraitKey: null,
+                },
+              ]),
+            ),
+          ),
+        }),
+  });
+}
+
+function authoredDerivedReward(
+  frontier: {
+    readonly evaluateOffer?: (offer: ResolvedRewardOffer) => { readonly supported: boolean };
+  },
+  offer: ResolvedRewardOffer,
+  profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop' = 'WorldShop',
+): AuthoredRewardState {
+  if (frontier.evaluateOffer?.(offer).supported !== true) {
+    throw new Error(`explicit derived fixture offer ${offer.rewardType} is unsupported`);
+  }
+  return authoredShopReward(offer, profileKey);
+}
 
 function baseFacts(): RewardKernelFacts {
   return {
@@ -152,33 +258,21 @@ function settle(options: {
     loadout,
   });
   if (state.kind !== 'shop' || state.shop === undefined) throw new Error('missing World Shop');
-  const contractEntries = createDefaultInfernalContractEntries(
-    catalog,
-    declaration.gameName,
-    loadout,
-  );
-  const defaultContract = contractEntries.infernalContractReward;
   const contractRewardType = options.contractRewardType ?? 'BlindBoxLoot';
   const rewardDeclaration = catalog.rewards.rewardTypes.byKey[contractRewardType];
-  if (defaultContract === undefined || rewardDeclaration === undefined)
-    throw new Error('missing Contract default');
-  const selectedContractBase = createDefaultAcquisitionRewardState(
-    catalog,
+  if (rewardDeclaration === undefined) throw new Error('missing Contract reward declaration');
+  const selectedContractBase = authoredShopReward(
     Object.freeze({
       rewardType: contractRewardType,
-      ...(options.contractBlindBoxSource !== undefined
+      ...(contractRewardType === 'BlindBoxLoot'
         ? {
             payload: Object.freeze({
               kind: 'BoonSource' as const,
-              source: options.contractBlindBoxSource,
+              source: options.contractBlindBoxSource ?? 'ApolloUpgrade',
             }),
           }
-        : rewardDeclaration.defaultPayload === undefined
-          ? {}
-          : { payload: rewardDeclaration.defaultPayload }),
+        : {}),
     }),
-    loadout,
-    { kind: 'producerLifecycle', key: 'ZagPedestal' },
   );
   const selectedContract =
     options.contractGold !== true
@@ -200,11 +294,19 @@ function settle(options: {
       ...state.shop,
       offers: Object.freeze(
         Object.fromEntries(
-          Object.entries(state.shop.offers).map(([key, offer]) => [
+          Object.keys(state.shop.offers).map((key) => [
             key,
-            options.shopOfferOverrides?.[key] === undefined
-              ? offer
-              : Object.freeze({ reward: options.shopOfferOverrides[key]! }),
+            Object.freeze({
+              reward:
+                options.shopOfferOverrides?.[key] ??
+                authoredShopReward(
+                  explicitShopOffers[key] ??
+                    (() => {
+                      throw new Error(`missing explicit Shop fixture offer for ${key}`);
+                    })(),
+                  state.shop!.profileKey as 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
+                ),
+            }),
           ]),
         ),
       ),
@@ -362,12 +464,13 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       slotIndex: 1,
       address: { entryKey: 'travelDealRefill' },
     });
-    if (refill?.defaultValue === undefined) throw new Error('missing derived refill default');
+    if (refill === undefined) throw new Error('missing derived refill frontier');
+    const refillReward = authoredDerivedReward(refill, { rewardType: 'RoomRewardHealDrop' });
 
     const purchased = settle({
       order: ['MajorNonBoon', 'travelDealRefill'],
       travel: true,
-      travelChild: refill.defaultValue,
+      travelChild: refillReward,
     });
     expect([...purchased.findings.values()]).toEqual([]);
     expect(purchased.settlement.branches).toHaveLength(1);
@@ -379,13 +482,12 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('retains the exact refill frontier when the selected child is stale', () => {
-    const staleChild = createDefaultAcquisitionRewardState(
+    const staleChild = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({
         rewardType: 'BlindBoxLoot' as const,
         payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ApolloUpgrade' }),
       }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const result = settle({
@@ -469,12 +571,13 @@ describe('Infernal Contract and Travel Deal chronology', () => {
 
   it('keeps premature and missing selected refills exact at the singleton entry', () => {
     const derived = settle({ order: ['MajorNonBoon'], travel: true });
-    const defaultValue = derived.settlement.derivedEntryFrontiers?.find(
+    const frontier = derived.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'travelDealRefill',
-    )?.defaultValue;
-    if (defaultValue === undefined) throw new Error('missing Travel default');
+    );
+    if (frontier === undefined) throw new Error('missing Travel frontier');
+    const authoredReward = authoredDerivedReward(frontier, { rewardType: 'RoomRewardHealDrop' });
     for (const result of [
-      settle({ order: ['travelDealRefill'], travel: true, travelChild: defaultValue }),
+      settle({ order: ['travelDealRefill'], travel: true, travelChild: authoredReward }),
       settle({ order: ['MajorNonBoon', 'travelDealRefill'], travel: true }),
     ]) {
       expect([...result.findings.values()].map((entry) => entry.finding)).toContainEqual(
@@ -487,10 +590,9 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('lets Spell trigger Travel while Echo stays armed for the next paid non-Spell purchase', () => {
-    const spell = createDefaultAcquisitionRewardState(
+    const spell = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'SpellDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const derived = settle({
@@ -502,7 +604,8 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const refill = derived.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'travelDealRefill',
     );
-    if (refill?.defaultValue === undefined) throw new Error('missing Spell-triggered refill');
+    if (refill === undefined) throw new Error('missing Spell-triggered refill');
+    const refillReward = authoredDerivedReward(refill, { rewardType: 'MaxManaDrop' });
     expect(refill).toMatchObject({ sourceOfferKey: 'Minor', slotIndex: 2 });
     expect(
       derived.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
@@ -512,17 +615,17 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       (offer) => offer.offerKey === 'MajorNonBoon',
     );
     if (source === undefined) throw new Error('missing Major non-boon Shop source');
-    const duplicate = createDefaultAcquisitionRewardState(
-      catalog,
-      echoShopDuplicateOffer(catalog, source.offer),
-      loadout,
-      { kind: 'shopProfile', key: 'WorldShop' },
-    );
+    const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
+    if (duplicateOffer === null) throw new Error('ordinary source unexpectedly needs fresh detail');
+    const duplicate = createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    });
     const settled = settle({
       order: ['Minor', 'MajorNonBoon', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
       echo: true,
-      travelChild: refill.defaultValue,
+      travelChild: refillReward,
       echoDuplicateSourceKey: 'MajorNonBoon',
       echoDuplicateChild: duplicate,
       shopOfferOverrides: { Minor: spell },
@@ -542,16 +645,14 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('keeps Gold armed when the Travel paid entry fails indexed generation support', () => {
-    const spell = createDefaultAcquisitionRewardState(
+    const spell = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'SpellDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
-    const impossibleRefill = createDefaultAcquisitionRewardState(
+    const impossibleRefill = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const rejected = settle({
@@ -587,10 +688,9 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('lets the Spell-triggered Travel refill own the later Gold duplicate pickup', () => {
-    const spell = createDefaultAcquisitionRewardState(
+    const spell = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'SpellDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const derived = settle({
@@ -602,18 +702,18 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const refill = derived.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'travelDealRefill',
     );
-    if (refill?.defaultValue === undefined) throw new Error('missing Spell-triggered refill');
-    const duplicate = createDefaultAcquisitionRewardState(
+    if (refill === undefined) throw new Error('missing Spell-triggered refill');
+    const refillReward = authoredDerivedReward(refill, { rewardType: 'MaxManaDrop' });
+    const duplicate = createUnresolvedAcquisitionRewardState(
       catalog,
-      echoShopDuplicateOffer(catalog, refill.defaultValue.offer),
-      loadout,
+      echoShopDuplicateOffer(catalog, refillReward.offer)!,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const settled = settle({
       order: ['Minor', 'travelDealRefill', 'echoDoubleShopReward'],
       travel: true,
       echo: true,
-      travelChild: refill.defaultValue,
+      travelChild: refillReward,
       echoDuplicateSourceKey: 'travelDealRefill',
       echoDuplicateChild: duplicate,
       shopOfferOverrides: { Minor: spell },
@@ -632,23 +732,24 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const refill = derived.settlement.derivedEntryFrontiers?.find(
       (entry) => entry.kind === 'travelDealRefill',
     );
-    if (refill?.defaultValue === undefined) throw new Error('missing Minor-triggered refill');
+    if (refill === undefined) throw new Error('missing Minor-triggered refill');
+    const refillReward = authoredDerivedReward(refill, { rewardType: 'SpellDrop' });
     expect(
       refill.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
     const source = derived.canonical.entryState?.offers.find((offer) => offer.offerKey === 'Minor');
     if (source === undefined) throw new Error('missing Minor Shop source');
-    const duplicate = createDefaultAcquisitionRewardState(
-      catalog,
-      echoShopDuplicateOffer(catalog, source.offer),
-      loadout,
-      { kind: 'shopProfile', key: 'WorldShop' },
-    );
+    const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
+    if (duplicateOffer === null) throw new Error('ordinary source unexpectedly needs fresh detail');
+    const duplicate = createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    });
     const settled = settle({
       order: ['Minor', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
       echo: true,
-      travelChild: refill.defaultValue,
+      travelChild: refillReward,
       echoDuplicateSourceKey: 'Minor',
       echoDuplicateChild: duplicate,
     });
@@ -682,10 +783,9 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('does not retroactively refill when the first paid purchase grants Travel Deal', () => {
-    const hermesBase = createDefaultAcquisitionRewardState(
+    const hermesBase = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'ShopHermesUpgrade' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'WorldShop' },
     );
     const hermesTravel = Object.freeze({
@@ -772,7 +872,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const profile = catalog.rewards.shops.byKey.WorldShop;
     if (profile === undefined) throw new Error('missing World Shop profile');
     const authored: readonly AuthoredShopOffer[] = profile.slots.values.map((slot) => ({
-      offer: slot.defaultOffer,
+      offer: explicitShopOffers[slot.key]!,
     }));
     const facts = baseFacts();
     const hammerExcluded = evaluateShopGenerationSupport(
@@ -816,9 +916,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
 
     const majorGroup = profile.groups.byKey.MajorNonBoon;
     if (majorGroup === undefined) throw new Error('missing World Shop major group');
-    const fullyExcluded = new Set(
-      majorGroup.options.values.map((option) => option.defaultOffer.rewardType),
-    );
+    const fullyExcluded = new Set(majorGroup.options.values.map((option) => option.rewardType));
     expect(
       evaluateShopGenerationSupport(
         catalog.rewards,
@@ -876,7 +974,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const profile = catalog.rewards.shops.byKey.Q_WorldShop;
     if (profile === undefined) throw new Error('missing Q World Shop profile');
     const authored: readonly AuthoredShopOffer[] = profile.slots.values.map((slot) => ({
-      offer: slot.defaultOffer,
+      offer: explicitShopOffers[slot.key]!,
     }));
     expect(profile.slots.values.slice(0, 2).map((slot) => slot.groupKey)).toEqual([
       'MixedProgress',
@@ -890,16 +988,14 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('regenerates a genuine Q Travel refill at the purchased index with fresh peers', () => {
-    const maxHealth = createDefaultAcquisitionRewardState(
+    const maxHealth = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'Q_WorldShop' },
     );
-    const maxMana = createDefaultAcquisitionRewardState(
+    const maxMana = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'MaxManaDrop' as const }),
-      loadout,
       { kind: 'shopProfile', key: 'Q_WorldShop' },
     );
     const derived = settle({
@@ -913,13 +1009,20 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     );
     expect(refill).toMatchObject({ sourceOfferKey: 'MixedProgress1', slotIndex: 0 });
     expect(refill?.rewardTypes).toContain('RandomLoot');
-    expect(refill?.defaultValue?.offer.rewardType).not.toBe('MaxHealthDrop');
-    if (refill?.defaultValue === undefined) throw new Error('missing Q Travel refill');
+    if (refill === undefined) throw new Error('missing Q Travel refill');
+    const refillReward = authoredDerivedReward(
+      refill,
+      {
+        rewardType: 'RandomLoot',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+      'Q_WorldShop',
+    );
     const settled = settle({
       order: ['MixedProgress1', 'travelDealRefill'],
       roomGameName: 'Q_PreBoss01',
       travel: true,
-      travelChild: refill.defaultValue,
+      travelChild: refillReward,
       shopOfferOverrides: { MixedProgress1: maxHealth, MixedProgress2: maxMana },
     });
     expect([...settled.findings.values()]).toEqual([]);

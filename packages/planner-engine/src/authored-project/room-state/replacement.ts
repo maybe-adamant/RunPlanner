@@ -3,36 +3,12 @@ import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { AuthoredRoomState } from '../model';
 import {
-  requireCountedBinding,
   requireEphyraSideRooms,
   requireFieldsCages,
   requireFieldsOptionalRewards,
   requireShipCombatWheels,
 } from './declaration';
 import { reconcileRoomEncounterState } from './encounters';
-import {
-  createDefaultLevelResolutions,
-  createDefaultTraitOffers,
-  producerLevelEffectSource,
-  type TraitOfferDefaultsContext,
-} from '../traits';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
-
-function defaultRewardLeaves(
-  catalog: Catalog,
-  offer: ResolvedRewardOffer,
-  loadout: TraitOfferDefaultsContext,
-  source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
-) {
-  const levelResolutions = createDefaultLevelResolutions(catalog, offer, source);
-  return Object.freeze({
-    dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-    traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
-    ...(levelResolutions === undefined
-      ? {}
-      : { levelResolutionsByAcquisitionRole: levelResolutions }),
-  });
-}
 
 function countedOfferIsAdmitted(
   binding: CountedRewardBinding,
@@ -65,7 +41,6 @@ function reconcileFieldsCombatState(
   previousState: Extract<AuthoredRoomState, { readonly kind: 'fieldsCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'fieldsCombat' }>,
-  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'FieldsCombat')) {
     return replacementState;
@@ -85,18 +60,13 @@ function reconcileFieldsCombatState(
       return [
         slotKey,
         previousReward !== undefined &&
+        previousReward !== null &&
         previousDescriptor.slotKeys.includes(slotKey) &&
         countedOfferIsAdmitted(replacementDescriptor.reward, previousReward.offer)
-          ? Object.freeze({
-              offer: previousReward.offer,
-              ...defaultRewardLeaves(
-                catalog,
-                previousReward.offer,
-                loadout,
-                producerLevelEffectSource(replacementDescriptor.reward),
-              ),
-            })
-          : replacementReward,
+          ? previousReward
+          : previousReward === null && previousDescriptor.slotKeys.includes(slotKey)
+            ? null
+            : replacementReward,
       ];
     }),
   );
@@ -115,18 +85,13 @@ function reconcileFieldsCombatState(
       return [
         slotKey,
         previousReward !== undefined &&
+        previousReward !== null &&
         previousOptional.slotKeys.includes(slotKey) &&
         countedOfferIsAdmitted(replacementOptional.reward, previousReward.offer)
-          ? Object.freeze({
-              offer: previousReward.offer,
-              ...defaultRewardLeaves(
-                catalog,
-                previousReward.offer,
-                loadout,
-                producerLevelEffectSource(replacementOptional.reward),
-              ),
-            })
-          : replacementReward,
+          ? previousReward
+          : previousReward === null && previousOptional.slotKeys.includes(slotKey)
+            ? null
+            : replacementReward,
       ];
     }),
   );
@@ -160,7 +125,6 @@ function reconcileShipCombatState(
   previousState: Extract<AuthoredRoomState, { readonly kind: 'shipCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'shipCombat' }>,
-  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'ShipCombat')) {
     return replacementState;
@@ -203,17 +167,12 @@ function reconcileShipCombatState(
             offerKey,
             previousDescriptor.offerKeys.includes(offerKey) &&
             previousReward !== undefined &&
+            previousReward !== null &&
             countedOfferIsAdmitted(descriptor.reward, previousReward.offer)
-              ? Object.freeze({
-                  offer: previousReward.offer,
-                  ...defaultRewardLeaves(
-                    catalog,
-                    previousReward.offer,
-                    loadout,
-                    producerLevelEffectSource(descriptor.reward),
-                  ),
-                })
-              : replacementReward,
+              ? previousReward
+              : previousReward === null
+                ? null
+                : replacementReward,
           ];
         }),
       );
@@ -252,7 +211,6 @@ function reconcileEphyraCombatState(
   previousState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
   replacementRoom: RoomDeclaration,
   replacementState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
-  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   if (!roomUsesTemplate(previousRoom, 'EphyraCombat')) {
     return replacementState;
@@ -291,27 +249,19 @@ function reconcileEphyraCombatState(
       retainedEntryOrder.push({ slotKey: slot.slotKey, ordinal: previousSide.enteredOrdinal });
     }
     const childBinding = replacementChild.incomingReward;
-    const offer =
-      childBinding.kind === 'countedChoice' &&
-      countedOfferIsAdmitted(childBinding, previousSide.reward.offer)
-        ? previousSide.reward.offer
-        : fallback.reward.offer;
+    const reward =
+      previousSide.reward === null
+        ? null
+        : childBinding.kind === 'countedChoice' &&
+            countedOfferIsAdmitted(childBinding, previousSide.reward.offer)
+          ? previousSide.reward
+          : fallback.reward;
     return {
       slotKey: slot.slotKey,
       state: Object.freeze({
         generation: previousSide.generation,
         enteredOrdinal: null,
-        reward: Object.freeze({
-          offer,
-          ...defaultRewardLeaves(
-            catalog,
-            offer,
-            loadout,
-            producerLevelEffectSource(
-              requireCountedBinding(replacementChild, replacementChild.gameName),
-            ),
-          ),
-        }),
+        reward,
         encounters: reconcileRoomEncounterState(
           catalog,
           previousChild,
@@ -335,22 +285,16 @@ function reconcileEphyraCombatState(
     ]),
   );
   const parentBinding = replacementRoom.incomingReward;
-  const parentOffer =
-    parentBinding.kind === 'countedChoice' &&
-    countedOfferIsAdmitted(parentBinding, previousState.reward.offer)
-      ? previousState.reward.offer
-      : replacementState.reward.offer;
+  const parentReward =
+    previousState.reward === null
+      ? null
+      : parentBinding.kind === 'countedChoice' &&
+          countedOfferIsAdmitted(parentBinding, previousState.reward.offer)
+        ? previousState.reward
+        : replacementState.reward;
   return Object.freeze({
     kind: 'ephyraCombat',
-    reward: Object.freeze({
-      offer: parentOffer,
-      ...defaultRewardLeaves(
-        catalog,
-        parentOffer,
-        loadout,
-        producerLevelEffectSource(requireCountedBinding(replacementRoom, replacementRoom.gameName)),
-      ),
-    }),
+    reward: parentReward,
     sideRooms: Object.freeze(sideRooms),
   });
 }
@@ -368,7 +312,6 @@ export function reconcileReplacementRoomState(
   previousState: AuthoredRoomState,
   replacementRoom: RoomDeclaration,
   replacementState: AuthoredRoomState,
-  loadout: TraitOfferDefaultsContext,
 ): AuthoredRoomState {
   switch (replacementState.kind) {
     case 'none':
@@ -376,18 +319,11 @@ export function reconcileReplacementRoomState(
     case 'counted':
       return previousState.kind === 'counted' &&
         replacementRoom.incomingReward.kind === 'countedChoice' &&
-        countedOfferIsAdmitted(replacementRoom.incomingReward, previousState.reward.offer)
+        (previousState.reward === null ||
+          countedOfferIsAdmitted(replacementRoom.incomingReward, previousState.reward.offer))
         ? Object.freeze({
             kind: 'counted',
-            reward: Object.freeze({
-              offer: previousState.reward.offer,
-              ...defaultRewardLeaves(
-                catalog,
-                previousState.reward.offer,
-                loadout,
-                producerLevelEffectSource(replacementRoom.incomingReward),
-              ),
-            }),
+            reward: previousState.reward,
           })
         : replacementState;
     case 'anomaly':
@@ -404,7 +340,6 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            loadout,
           )
         : replacementState;
     case 'shipCombat':
@@ -415,7 +350,6 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            loadout,
           )
         : replacementState;
     case 'ephyraCombat':
@@ -427,7 +361,6 @@ export function reconcileReplacementRoomState(
             previousState,
             replacementRoom,
             replacementState,
-            loadout,
           )
         : replacementState;
   }

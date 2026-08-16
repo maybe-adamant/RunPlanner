@@ -4,7 +4,6 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
-import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
   AuthoredRoomState,
   EphyraCombatState,
@@ -27,29 +26,21 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { createDefaultRoomEncounterState } from './encounters';
-import {
-  createDefaultLevelResolutions,
-  createDefaultTraitOffers,
-  producerLevelEffectSource,
-  type TraitOfferDefaultsContext,
-} from '../traits';
+import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
 import { createDefaultFieldsActionOrder } from '../fields-actions';
 
-function defaultCountedOffer(
+function requireCountedStore(
   binding: CountedRewardBinding,
   storeKey: string | undefined,
   path: string,
-): ResolvedRewardOffer {
+): void {
   if (storeKey === undefined) {
     failProjectDocument(path, 'counted reward requires a resolved store');
   }
-  const offer = binding.defaultOffersByStore[storeKey];
-  if (offer === undefined) {
+  if (!binding.storeKeys.includes(storeKey)) {
     failProjectDocument(path, `${storeKey} is not available from this room`);
   }
-  return offer;
 }
 
 /**
@@ -64,40 +55,14 @@ function defaultCountedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
-function defaultShopState(
-  catalog: Catalog,
-  binding: ShopRewardBinding,
-  path: string,
-  loadout: TraitOfferDefaultsContext,
-): ShopState {
+function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
   const profile = catalog.rewards.shops.byKey[binding.shopProfileKey];
   if (profile === undefined) {
     failProjectDocument(path, `unknown shop profile ${binding.shopProfileKey}`);
   }
   const offers: Record<string, ShopOfferState> = {};
   for (const slot of profile.slots.values) {
-    offers[slot.key] = Object.freeze({
-      reward: Object.freeze({
-        offer: slot.defaultOffer,
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-          catalog,
-          slot.defaultOffer,
-        ),
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, slot.defaultOffer, loadout),
-        ...(createDefaultLevelResolutions(catalog, slot.defaultOffer, {
-          kind: 'shopProfile',
-          key: profile.key,
-        }) === undefined
-          ? {}
-          : {
-              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                catalog,
-                slot.defaultOffer,
-                { kind: 'shopProfile', key: profile.key },
-              ),
-            }),
-      }),
-    });
+    offers[slot.key] = Object.freeze({ reward: null });
   }
   return Object.freeze({
     profileKey: profile.key,
@@ -108,18 +73,16 @@ function defaultShopState(
   });
 }
 
-function defaultFieldsCages(
-  room: RoomDeclaration,
-  path: string,
-): Readonly<Record<string, ResolvedRewardOffer>> {
+function defaultFieldsCages(room: RoomDeclaration, path: string): Readonly<Record<string, null>> {
   const descriptor = requireFieldsCages(room, path);
-  const cages: Record<string, ResolvedRewardOffer> = {};
+  const cages: Record<string, null> = {};
   for (const slotKey of descriptor.slotKeys) {
-    cages[slotKey] = defaultCountedOffer(
+    requireCountedStore(
       descriptor.reward,
       room.individualRewardStoreKey,
       `${path}.cages.${slotKey}`,
     );
+    cages[slotKey] = null;
   }
   return Object.freeze(cages);
 }
@@ -127,17 +90,18 @@ function defaultFieldsCages(
 function defaultFieldsOptionalRewards(
   room: RoomDeclaration,
   path: string,
-): Readonly<Record<string, ResolvedRewardOffer>> {
+): Readonly<Record<string, null>> {
   const descriptor = requireFieldsOptionalRewards(room, path);
   return Object.freeze(
     Object.fromEntries(
       descriptor.slotKeys.map((slotKey) => [
         slotKey,
-        defaultCountedOffer(
+        (requireCountedStore(
           descriptor.reward,
           'FieldsOptionalRewards',
           `${path}.optionalRewards.${slotKey}`,
         ),
+        null),
       ]),
     ),
   );
@@ -147,36 +111,13 @@ function defaultRewardWheel(
   catalog: Catalog,
   descriptor: EncounterRewardWheelAttachment,
   path: string,
-  loadout: TraitOfferDefaultsContext,
 ): RewardWheelState {
-  const offer = defaultCountedOffer(descriptor.reward, descriptor.defaultStoreKey, path);
+  requireCountedStore(descriptor.reward, descriptor.defaultStoreKey, path);
   return Object.freeze({
     storeKey: descriptor.defaultStoreKey,
     offerCount: descriptor.offerCount.defaultValue,
     offers: Object.freeze(
-      Object.fromEntries(
-        descriptor.offerKeys.map((offerKey) => [
-          offerKey,
-          Object.freeze({
-            offer,
-            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-            traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
-            ...(createDefaultLevelResolutions(
-              catalog,
-              offer,
-              producerLevelEffectSource(descriptor.reward),
-            ) === undefined
-              ? {}
-              : {
-                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                    catalog,
-                    offer,
-                    producerLevelEffectSource(descriptor.reward),
-                  ),
-                }),
-          }),
-        ]),
-      ),
+      Object.fromEntries(descriptor.offerKeys.map((offerKey) => [offerKey, null])),
     ),
     pickedOfferIndex: 1,
   });
@@ -186,7 +127,6 @@ function defaultShipCombatState(
   catalog: Catalog,
   room: RoomDeclaration,
   path: string,
-  loadout: TraitOfferDefaultsContext,
 ): ShipCombatState {
   const wheels = requireShipCombatWheels(catalog, room, path);
   return Object.freeze({
@@ -194,7 +134,7 @@ function defaultShipCombatState(
     encounterCount: 2,
     wheels: Object.freeze(
       Object.fromEntries(
-        wheels.map((wheel) => [wheel.key, defaultRewardWheel(catalog, wheel, path, loadout)]),
+        wheels.map((wheel) => [wheel.key, defaultRewardWheel(catalog, wheel, path)]),
       ),
     ),
   });
@@ -205,7 +145,6 @@ function defaultEphyraCombatState(
   room: RoomDeclaration,
   resolvedStoreKey: string | undefined,
   path: string,
-  loadout: TraitOfferDefaultsContext,
 ): EphyraCombatState {
   const sideRooms: Record<string, EphyraSideRoomState> = {};
   for (const slot of requireEphyraSideRooms(room, path)?.slots ?? []) {
@@ -216,51 +155,7 @@ function defaultEphyraCombatState(
     sideRooms[slot.slotKey] = Object.freeze({
       generation: 'notGenerated',
       enteredOrdinal: null,
-      reward: Object.freeze({
-        offer: defaultCountedOffer(
-          requireCountedBinding(sideRoom, path),
-          sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-          `${path}.sideRooms.${slot.slotKey}.offer`,
-        ),
-        dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-          catalog,
-          defaultCountedOffer(
-            requireCountedBinding(sideRoom, path),
-            sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-            `${path}.sideRooms.${slot.slotKey}.offer`,
-          ),
-        ),
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(
-          catalog,
-          defaultCountedOffer(
-            requireCountedBinding(sideRoom, path),
-            sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-            `${path}.sideRooms.${slot.slotKey}.offer`,
-          ),
-          loadout,
-        ),
-        ...(createDefaultLevelResolutions(
-          catalog,
-          defaultCountedOffer(
-            requireCountedBinding(sideRoom, path),
-            sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-            `${path}.sideRooms.${slot.slotKey}.offer`,
-          ),
-          producerLevelEffectSource(requireCountedBinding(sideRoom, path)),
-        ) === undefined
-          ? {}
-          : {
-              levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                catalog,
-                defaultCountedOffer(
-                  requireCountedBinding(sideRoom, path),
-                  sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
-                  `${path}.sideRooms.${slot.slotKey}.offer`,
-                ),
-                producerLevelEffectSource(requireCountedBinding(sideRoom, path)),
-              ),
-            }),
-      }),
+      reward: null,
       encounters: createDefaultRoomEncounterState(
         catalog,
         sideRoom,
@@ -268,31 +163,14 @@ function defaultEphyraCombatState(
       ),
     });
   }
-  const offer = defaultCountedOffer(
+  requireCountedStore(
     requireCountedBinding(room, path),
     defaultCountedStoreKey(room, resolvedStoreKey),
     `${path}.offer`,
   );
   return Object.freeze({
     kind: 'ephyraCombat',
-    reward: Object.freeze({
-      offer,
-      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-      traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, loadout),
-      ...(createDefaultLevelResolutions(
-        catalog,
-        offer,
-        producerLevelEffectSource(requireCountedBinding(room, path)),
-      ) === undefined
-        ? {}
-        : {
-            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-              catalog,
-              offer,
-              producerLevelEffectSource(requireCountedBinding(room, path)),
-            ),
-          }),
-    }),
+    reward: null,
     sideRooms: Object.freeze(sideRooms),
   });
 }
@@ -304,26 +182,13 @@ export function createDefaultRoomState(
 ): AuthoredRoomState {
   const path = `rooms.${room.gameName}.state`;
   const { role, entryActive } = context;
-  const defaultLoadout = context.loadout;
-  const traitOffers = (
-    offer: ResolvedRewardOffer,
+  const fixedReward = (
+    offer: import('../../reward-kernel/model').ResolvedRewardOffer,
     source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
-  ) => ({
-    reward: Object.freeze({
-      offer,
-      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-      traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
-      ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
-        ? {}
-        : {
-            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-              catalog,
-              offer,
-              source,
-            ),
-          }),
-    }),
-  });
+  ) =>
+    catalog.rewards.rewardTypes.byKey[offer.rewardType]?.payloadDomain === undefined
+      ? createUnresolvedAcquisitionRewardState(catalog, offer, source)
+      : null;
 
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
@@ -337,63 +202,25 @@ export function createDefaultRoomState(
           failProjectDocument(path, 'FieldsCombat default requires the selected active cage count');
         }
         const cages = defaultFieldsCages(room, path);
-        const optionalDescriptor = requireFieldsOptionalRewards(room, path);
         const optionalRewards = defaultFieldsOptionalRewards(room, path);
-        const rewardState = (
-          offer: ResolvedRewardOffer,
-          source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
-        ) =>
-          Object.freeze({
-            offer,
-            dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-            traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
-            ...(createDefaultLevelResolutions(catalog, offer, source) === undefined
-              ? {}
-              : {
-                  levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                    catalog,
-                    offer,
-                    source,
-                  ),
-                }),
-          });
         return Object.freeze({
           kind: 'fieldsCombat',
           actionOrder: createDefaultFieldsActionOrder(catalog, room, context.activeCageCount),
           optionalRewardCount: 2,
           optionalRewards: Object.freeze(
-            Object.fromEntries(
-              Object.entries(optionalRewards).map(([slotKey, offer]) => [
-                slotKey,
-                rewardState(offer, producerLevelEffectSource(optionalDescriptor.reward)),
-              ]),
-            ),
+            Object.fromEntries(Object.entries(optionalRewards).map(([slotKey]) => [slotKey, null])),
           ),
           cages: Object.freeze(
-            Object.fromEntries(
-              Object.entries(cages).map(([slotKey, offer]) => [
-                slotKey,
-                rewardState(
-                  offer,
-                  producerLevelEffectSource(requireFieldsCages(room, path).reward),
-                ),
-              ]),
-            ),
+            Object.fromEntries(Object.entries(cages).map(([slotKey]) => [slotKey, null])),
           ),
         });
       }
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
-      return defaultShipCombatState(catalog, room, path, defaultLoadout);
+      return defaultShipCombatState(catalog, room, path);
     case 'EphyraCombat':
       requireOrdinaryRole(role, room, path);
-      return defaultEphyraCombatState(
-        catalog,
-        room,
-        context.resolvedStoreKey,
-        path,
-        defaultLoadout,
-      );
+      return defaultEphyraCombatState(catalog, room, context.resolvedStoreKey, path);
     case 'FixedOpening':
     case 'FixedPreHub':
     case 'ClockworkCombat':
@@ -402,26 +229,26 @@ export function createDefaultRoomState(
     case 'Miniboss':
     case 'StandardCombat': {
       requireOrdinaryRole(role, room, path);
-      const offer = defaultCountedOffer(
+      requireCountedStore(
         requireCountedBinding(room, path),
         defaultCountedStoreKey(room, context.resolvedStoreKey),
         path,
       );
       return Object.freeze({
         kind: 'counted',
-        ...traitOffers(offer, producerLevelEffectSource(requireCountedBinding(room, path))),
+        reward: null,
       });
     }
     case 'Anomaly': {
       requireOrdinaryRole(role, room, path);
-      const offer = defaultCountedOffer(
+      requireCountedStore(
         requireCountedBinding(room, path),
         defaultCountedStoreKey(room, context.resolvedStoreKey),
         path,
       );
       return Object.freeze({
         kind: 'anomaly',
-        ...traitOffers(offer, producerLevelEffectSource(requireCountedBinding(room, path))),
+        reward: null,
         success: true,
       });
     }
@@ -436,27 +263,10 @@ export function createDefaultRoomState(
           `${authoredTemplateKey(room, path)} requires a fixed reward binding`,
         );
       }
-      const offer = room.incomingReward.offer;
+      const offer = Object.freeze({ rewardType: room.incomingReward.rewardType });
       return Object.freeze({
         kind: 'fixed',
-        reward: Object.freeze({
-          offer,
-          dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(catalog, offer),
-          traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, offer, defaultLoadout),
-          ...(createDefaultLevelResolutions(
-            catalog,
-            offer,
-            producerLevelEffectSource(room.incomingReward),
-          ) === undefined
-            ? {}
-            : {
-                levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                  catalog,
-                  offer,
-                  producerLevelEffectSource(room.incomingReward),
-                ),
-              }),
-        }),
+        reward: fixedReward(offer, producerLevelEffectSource(room.incomingReward)),
       });
     }
     case 'Shop':
@@ -465,7 +275,7 @@ export function createDefaultRoomState(
         kind: 'shop',
         ...(entryActive
           ? {
-              shop: defaultShopState(catalog, requireShopBinding(room, path), path, defaultLoadout),
+              shop: defaultShopState(catalog, requireShopBinding(room, path), path),
             }
           : {}),
       });
@@ -478,12 +288,7 @@ export function createDefaultRoomState(
           kind: 'shop',
           ...(entryActive
             ? {
-                shop: defaultShopState(
-                  catalog,
-                  requireShopBinding(room, path),
-                  path,
-                  defaultLoadout,
-                ),
+                shop: defaultShopState(catalog, requireShopBinding(room, path), path),
               }
             : {}),
         });
@@ -494,17 +299,14 @@ export function createDefaultRoomState(
       ) {
         failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
-      const offer = defaultCountedOffer(
+      requireCountedStore(
         room.prebossBatchPolicy.remainingOffers.reward,
         defaultCountedStoreKey(room, context.resolvedStoreKey),
         path,
       );
       return Object.freeze({
         kind: 'freeReward',
-        ...traitOffers(
-          offer,
-          producerLevelEffectSource(room.prebossBatchPolicy.remainingOffers.reward),
-        ),
+        reward: null,
       });
     }
   }

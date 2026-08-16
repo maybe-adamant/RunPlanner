@@ -4,9 +4,11 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -47,6 +49,26 @@ function blankNEntryProject() {
     kind: 'CreateStart',
     biome: nBiome,
     occurrenceId: nOccurrenceIds.opening,
+  });
+  const reward = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(reward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
   });
   return applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',

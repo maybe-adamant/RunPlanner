@@ -17,6 +17,7 @@ import {
   createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
@@ -54,11 +55,17 @@ let goldenFGHCache: ProjectDocument | undefined;
 let goldenFGHICache: ProjectDocument | undefined;
 
 const fBatches: readonly BatchSpec[] = [
-  { storeKey: 'MetaProgress', targets: [{ gameName: 'F_Combat02' }] },
+  {
+    storeKey: 'MetaProgress',
+    targets: [{ gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } }],
+  },
   {
     storeKey: 'RunProgress',
     targets: [
-      { gameName: 'F_Combat03' },
+      {
+        gameName: 'F_Combat03',
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      },
       { gameName: 'F_Combat03', offer: { rewardType: 'MaxHealthDrop' } },
     ],
   },
@@ -86,7 +93,10 @@ const fBatches: readonly BatchSpec[] = [
   {
     storeKey: 'RunProgress',
     targets: [
-      { gameName: 'F_MiniBoss01' },
+      {
+        gameName: 'F_MiniBoss01',
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      },
       {
         gameName: 'F_MiniBoss02',
         offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
@@ -108,7 +118,7 @@ const fBatches: readonly BatchSpec[] = [
     storeKey: 'MetaProgress',
     targets: [
       { gameName: 'F_Combat14', offer: { rewardType: 'MetaCardPointsCommonDrop' } },
-      { gameName: 'F_Combat14', offer: { rewardType: 'MetaCurrencyDrop' } },
+      { gameName: 'F_Combat14', offer: { rewardType: 'GiftDrop' } },
     ],
   },
   {
@@ -122,6 +132,40 @@ const fBatches: readonly BatchSpec[] = [
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
+}
+
+function authorWorldShop(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  profileKey: 'WorldShop' | 'I_WorldShop' = 'WorldShop',
+): ProjectDocument {
+  const offers: Readonly<Record<string, ResolvedRewardOffer>> =
+    profileKey === 'WorldShop'
+      ? {
+          Boon: {
+            rewardType: 'RandomLoot',
+            payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+          },
+          MajorNonBoon: { rewardType: 'RoomRewardHealDrop' },
+          Minor: { rewardType: 'MaxManaDrop' },
+        }
+      : {
+          BoostedBoon: { rewardType: 'StackUpgradeBig' },
+          MixedProgress: { rewardType: 'MaxHealthDrop' },
+          Survival: { rewardType: 'HealBigDrop' },
+          PremiumProgress: { rewardType: 'MaxHealthDropBig' },
+          MetaProgress: { rewardType: 'CardUpgradePointsDrop' },
+        };
+  let next = project;
+  for (const [offerKey, value] of Object.entries(offers)) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, occurrenceId, offerKey),
+      value,
+    });
+  }
+  return next;
 }
 
 function applyBatch(
@@ -205,6 +249,23 @@ function createFConversionLoadoutProject(): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   return project;
 }
 
@@ -285,6 +346,31 @@ function createCompleteFProject(): ProjectDocument {
     occurrenceId: goldenFStartId,
     gameName: 'F_Opening01',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
   let parent = goldenFStartId;
   for (const [offset, batch] of fBatches.entries()) {
     const batchIndex = offset + 1;
@@ -316,15 +402,7 @@ function createCompleteFProject(): ProjectDocument {
     selection: createExitSelectionAddress(goldenFBiome, source(parent)),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(
-      goldenFBiome,
-      createOccurrenceId('golden-f-preboss-shop'),
-      'MajorNonBoon',
-    ),
-    value: { rewardType: 'RoomRewardHealDrop' },
-  });
+  return authorWorldShop(project, goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
 }
 
 /** Selected F Midshop with a purchased-Pom-ready inventory and no outgoing decision yet. */
@@ -351,6 +429,14 @@ export function createFMidshopPomFrontierProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, start),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
   let parent = start;
   for (const [offset, batch] of batches.entries()) {
     const batchIndex = offset + 1;
@@ -367,12 +453,13 @@ export function createFMidshopPomFrontierProject(): ProjectDocument {
     parent =
       batchIndex === 5 ? fMidshopPomShopId : createOccurrenceId(`midshop-pom-b${batchIndex}-e1`);
   }
-  project = authorLegalTraitOffers(project);
-  return applyProjectCommand(project, catalog, {
+  project = authorWorldShop(project, goldenFBiome, fMidshopPomShopId);
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
     value: { rewardType: 'StoreRewardRandomStack' },
   });
+  return authorLegalTraitOffers(project);
 }
 
 function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
@@ -497,15 +584,7 @@ function createCompleteFGProjectRaw(options: GoldenGProjectOptions = {}): Projec
       batch,
     );
     if (batch.targets[0]?.gameName === 'G_Shop01') {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceShopOffer',
-        offer: createShopOfferAddress(
-          goldenGBiome,
-          goldenGOccurrenceId(batchIndex, 1),
-          'MajorNonBoon',
-        ),
-        value: { rewardType: 'RoomRewardHealDrop' },
-      });
+      project = authorWorldShop(project, goldenGBiome, goldenGOccurrenceId(batchIndex, 1));
     }
     parent = goldenGOccurrenceId(batchIndex, 1);
   }
@@ -543,15 +622,7 @@ function createCompleteFGProjectRaw(options: GoldenGProjectOptions = {}): Projec
       value: { kind: 'normal', exitKey: 'exit1' },
     });
   }
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(
-      goldenGBiome,
-      createOccurrenceId('golden-g-preboss-shop'),
-      'MajorNonBoon',
-    ),
-    value: { rewardType: 'RoomRewardHealDrop' },
-  });
+  return authorWorldShop(project, goldenGBiome, createOccurrenceId('golden-g-preboss-shop'));
 }
 
 export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
@@ -649,6 +720,14 @@ function appendCompleteH(project: ProjectDocument): ProjectDocument {
     ],
     { fieldsCageOutcome: 'max' },
   );
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenHBiome, miniBoss),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+    },
+  });
   next = appendUnstoredBatch(
     next,
     goldenHBiome,
@@ -687,7 +766,7 @@ function appendCompleteH(project: ProjectDocument): ProjectDocument {
     [
       combat05,
       [
-        { rewardType: 'MaxHealthDrop' },
+        { rewardType: 'StackUpgrade' },
         { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
         { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
       ],
@@ -697,7 +776,7 @@ function appendCompleteH(project: ProjectDocument): ProjectDocument {
       [
         { rewardType: 'MaxManaDrop' },
         { rewardType: 'RoomMoneyDrop' },
-        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+        { rewardType: 'MaxHealthDrop' },
       ],
     ],
   ];
@@ -749,15 +828,7 @@ function appendCompleteH(project: ProjectDocument): ProjectDocument {
     selection: createExitSelectionAddress(goldenHBiome, prebossDecision.source),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
-  return applyProjectCommand(next, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(
-      goldenHBiome,
-      createOccurrenceId('golden-h-preboss-shop'),
-      'MajorNonBoon',
-    ),
-    value: { rewardType: 'RoomRewardHealDrop' },
-  });
+  return authorWorldShop(next, goldenHBiome, createOccurrenceId('golden-h-preboss-shop'));
 }
 
 function appendCompleteI(project: ProjectDocument): ProjectDocument {
@@ -787,6 +858,11 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
     { occurrenceId: combat05, gameName: 'I_Combat05' },
     { occurrenceId: createOccurrenceId('golden-i-combat02'), gameName: 'I_Combat02' },
   ]);
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenIBiome, createOccurrenceId('golden-i-combat02')),
+    value: { rewardType: 'RoomMoneyTripleDrop' },
+  });
   next = appendUnstoredBatch(next, goldenIBiome, combat05, [
     { occurrenceId: combat06, gameName: 'I_Combat06' },
   ]);
@@ -797,6 +873,14 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
     { occurrenceId: createOccurrenceId('golden-i-preboss'), gameName: 'I_PreBoss02' },
     { occurrenceId: createOccurrenceId('golden-i-miniboss01'), gameName: 'I_MiniBoss01' },
   ]);
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenIBiome, createOccurrenceId('golden-i-miniboss01')),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
   for (const [occurrenceId, encounterKey] of [
     [combat01, 'GeneratedI_GoalReward'],
     [combat03, 'GeneratedI_Small_GoalReward'],
@@ -814,7 +898,7 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
       encounterKey,
     });
   }
-  return next;
+  return authorWorldShop(next, goldenIBiome, createOccurrenceId('golden-i-preboss'), 'I_WorldShop');
 }
 
 /** Complete F-through-H authored-project fixture. */

@@ -655,7 +655,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(41);
+    expect(decoded.schemaVersion).toBe(42);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -742,7 +742,7 @@ describe('Echo Gate A direct choices', () => {
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
     expect(h.rewards.branches).toHaveLength(1);
     expect(h.rewards.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
-      ApolloWeaponBoon: { level: 3 },
+      ApolloWeaponBoon: { level: 2 },
       EchoDoubleLevelBoon: { traitKey: 'EchoDoubleLevelBoon' },
     });
     expect(
@@ -1610,7 +1610,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         (branch) =>
           branch.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
           branch.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity === 'Common' &&
-          branch.history.lootTypeHistory.ApolloUpgrade === 3,
+          branch.history.lootTypeHistory.ApolloUpgrade === 1,
       ),
     ).toBe(true);
     expect(h.findings).toContainEqual(
@@ -1842,12 +1842,12 @@ describe('Echo Gate C Reward Reward Reward', () => {
     if (repair.kind !== 'echoLastRewardDomain') throw new Error('Replay repair is missing');
     expect(repair.result).toEqual({
       rewardType: replacement.rewardType,
-      defaultValue: { disposition: { kind: 'normal' } },
+      initialValue: { disposition: { kind: 'normal' } },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer(repair.result.defaultValue),
+      value: echoRewardOffer(repair.result.initialValue),
     });
     const repaired = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
@@ -1926,15 +1926,19 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
     if (domain.kind !== 'echoLastRewardDomain') throw new Error('Echo replay domain is missing');
     expect(domain.result.rewardType).toBe('WeaponUpgrade');
-    expect(domain.result.defaultValue).toMatchObject({
+    expect(domain.result.initialValue).toEqual({
       disposition: { kind: 'normal' },
-      traitOffer: { kind: 'traits', giverKey: 'WeaponUpgrade' },
+      traitOffer: null,
+    });
+    expect(domain.result.traitOfferDraft).toMatchObject({
+      kind: 'traits',
+      giverKey: 'WeaponUpgrade',
     });
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer(domain.result.defaultValue),
+      value: echoRewardOffer(domain.result.initialValue),
     });
     const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
     const replaySite = createAcquisitionSiteAddress(replayOwner, 'echoReplay');
@@ -1949,7 +1953,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
       value: echoRewardOffer(
-        Object.freeze({ ...domain.result.defaultValue, traitOffer: replayDraft }),
+        Object.freeze({ ...domain.result.initialValue, traitOffer: replayDraft }),
       ),
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);

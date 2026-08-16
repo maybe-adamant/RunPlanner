@@ -39,7 +39,6 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures';
 
-import { createDefaultTraitOffers } from '../../src/authored-project/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
@@ -1314,6 +1313,7 @@ describe('trait legality and derived facts', () => {
         (route) => route.routeKey === routeKey,
       );
       if (evaluation === undefined) throw new Error(`${routeKey} route is missing`);
+      expect(evaluation.findings).toEqual([]);
       expect(evaluation.status).toBe('valid');
       expect(evaluation.biomes).toHaveLength(4);
       const finalBiome = evaluation.biomes.at(-1);
@@ -1739,6 +1739,30 @@ describe('reached trait offer chronology', () => {
       factsWithHistory(baseFacts(), history, new Set());
     const findings = new Map();
     const hammer = { rewardType: 'WeaponUpgrade' as const };
+    const hammerKeys = catalog.traitGivers.byKey.WeaponUpgrade?.traitKeys.filter((traitKey) => {
+      const compatibility = catalog.traits.byKey[traitKey]?.hammerCompatibility;
+      return (
+        compatibility?.weaponKey === authoredLoadout.weaponKey &&
+        compatibility.aspectKeys.includes(authoredLoadout.aspectKey)
+      );
+    });
+    if (hammerKeys === undefined || hammerKeys.length < 3) {
+      throw new Error('invalid-Hammer trace fixture needs three compatible options');
+    }
+    const hammerOffer = Object.freeze({
+      weaponUpgrade: Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'WeaponUpgrade',
+        options: Object.freeze(
+          hammerKeys.slice(0, 3).map((traitKey) => Object.freeze({ traitKey })),
+        ) as readonly [
+          { readonly traitKey: string },
+          { readonly traitKey: string },
+          { readonly traitKey: string },
+        ],
+        selectedOptionKey: 'option1' as const,
+      }),
+    });
     let branches = settleTestRoomReward(
       biome,
       createOccurrenceId('invalid-hammer-trace'),
@@ -1748,7 +1772,7 @@ describe('reached trait offer chronology', () => {
         offer: hammer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, hammer, authoredLoadout),
+        traitOffersByAcquisitionRole: hammerOffer,
         traitContext: activeLoadout,
       },
       1,
@@ -1759,6 +1783,18 @@ describe('reached trait offer chronology', () => {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
+    const boonOffer = Object.freeze({
+      source: Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          Object.freeze({ traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const }),
+          Object.freeze({ traitKey: 'ApolloCastBoon', rarity: 'Common' as const }),
+        ] as const),
+        selectedOptionKey: 'option1' as const,
+      }),
+    });
     branches = settleTestRoomReward(
       biome,
       createOccurrenceId('valid-boon-trace'),
@@ -1768,7 +1804,7 @@ describe('reached trait offer chronology', () => {
         offer: boon,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
-        traitOffersByAcquisitionRole: createDefaultTraitOffers(catalog, boon, activeLoadout),
+        traitOffersByAcquisitionRole: boonOffer,
         traitContext: activeLoadout,
       },
       2,
@@ -1777,7 +1813,7 @@ describe('reached trait offer chronology', () => {
     );
 
     const branch = branches[0];
-    const expectedOffer = Object.values(createDefaultTraitOffers(catalog, boon, activeLoadout))[0];
+    const expectedOffer = boonOffer.source;
     if (expectedOffer?.kind !== 'traits') throw new Error('valid boon trait offer is missing');
     expect(branch?.events).toContainEqual(
       expect.objectContaining({

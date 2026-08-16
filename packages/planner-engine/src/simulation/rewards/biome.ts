@@ -11,7 +11,6 @@ import {
   createTargetAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
-  type AcquisitionEntryAddress,
   type AcquisitionSiteOwnerAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
@@ -21,9 +20,10 @@ import {
 } from '../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../authored-project/model';
 import {
-  createDefaultEchoLastRewardAcquisition,
+  createUnresolvedEchoLastRewardAcquisition,
   optionIndex,
-  createDefaultPickupRewardState,
+  createUnresolvedAcquisitionRewardState,
+  createUnresolvedPickupRewardState,
   materializeGorgonAthenaOffer,
   selectedPickupProducer,
 } from '../../authored-project/traits';
@@ -32,6 +32,8 @@ import {
   selectedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounters';
 import {
+  findShopPartialGenerationWitnesses,
+  locallyValidRewardOffers,
   type ResolvedRewardOffer,
   type RewardHistoryState,
   type RewardKernelFacts,
@@ -201,21 +203,19 @@ interface IncomingOfferCandidateContext {
   >[];
 }
 
-function sameResolvedOffer(
-  left: CanonicalResolvedIncomingReward['offer'],
-  right: CanonicalResolvedIncomingReward['offer'],
-): boolean {
-  if (left.rewardType !== right.rewardType) return false;
-  if (left.payload === undefined || right.payload === undefined) {
-    return left.payload === right.payload;
-  }
-  if (left.payload.kind !== right.payload.kind) return false;
-  return left.payload.kind === 'BoonSource' && right.payload.kind === 'BoonSource'
-    ? left.payload.source === right.payload.source
-    : left.payload.kind === 'DevotionPair' && right.payload.kind === 'DevotionPair'
-      ? left.payload.chosenSource === right.payload.chosenSource &&
-        left.payload.spurnedSource === right.payload.spurnedSource
-      : false;
+interface UnresolvedIncomingOfferCandidateContext {
+  readonly room: CanonicalRewardRoom;
+  readonly declaration: RoomDeclaration;
+  readonly incoming: NonNullable<CanonicalRewardRoom['unresolvedIncomingReward']>;
+  readonly historySequence: number;
+  readonly frontierBranches: readonly RewardBranchState[];
+  readonly facts: (history: RewardHistoryState) => RewardKernelFacts;
+  readonly candidateFor: (offer: ResolvedRewardOffer) => CanonicalResolvedIncomingReward;
+  readonly acquisitionView?: HistoryStateView;
+  readonly producerPoints?: readonly Extract<
+    HistoryEvent,
+    { readonly kind: 'producerPointReached' }
+  >[];
 }
 
 type RewardRoomOwner = {
@@ -523,11 +523,10 @@ function hubRewardLookups(
   const uniqueTypes = new Set<string>();
   for (const target of hub.board.targets) {
     const incoming = target.room.incomingReward;
-    if (incoming === undefined) {
-      throw new BiomeRewardSimulationContractError(
-        `${target.room.gameName} has no Hub-board reward for ${descriptor.rewardLookup.key}`,
-      );
-    }
+    // An open Hub slot owns an authorable reward leaf before that leaf is
+    // materialized. Missing authorship is reported at the reward owner; it
+    // contributes no concrete lookup membership yet.
+    if (incoming === undefined) continue;
     if (!uniqueTypes.has(incoming.offer.rewardType)) {
       uniqueTypes.add(incoming.offer.rewardType);
       orderedTypes.push(incoming.offer.rewardType);
@@ -896,6 +895,14 @@ function prepareShipLifecycleCandidateContext(
           (offer: CanonicalRewardWheel['offers'][number]) => offer.picked,
         );
         if (picked === undefined) {
+          const unresolvedPicked = wheel.unresolvedOffers.find((offer) => offer.picked);
+          if (unresolvedPicked !== undefined) {
+            addRewardFinding(
+              candidateFindings,
+              rewardFinding('rewardMissing', unresolvedPicked.origin, {}),
+            );
+            return lifecycleCandidateResult(candidateFindings, candidateBranches);
+          }
           return fail(`${room.gameName}.${wheel.wheelKey} has no picked offer`);
         }
         if (candidateBranches.length > 0) {
@@ -1203,12 +1210,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     readonly import('./processing').DerivedAcquisitionEntryFrontier[]
   >();
-  const derivedDefaultSettlements: {
-    readonly address: AcquisitionEntryAddress;
-    readonly settlement: NonNullable<
-      import('./processing').DerivedAcquisitionEntryFrontier['defaultSettlement']
-    >;
-  }[] = [];
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
   const blockedGorgonPhases = new Set<string>();
@@ -1224,13 +1225,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
         Object.freeze([...(acquisitionConversionContexts.get(key) ?? []), frontier]),
       );
       const replacement = frontier.artificerReplacementCandidate;
-      if (replacement?.defaultSettlement !== undefined) {
-        recordAcquisitionRoleFrontiers(replacement.defaultSettlement.roleFrontiers);
-        recordTraitChildSettlements(
-          replacement.defaultSettlement.traitChildSettlements,
-          frontier.source.origin,
-        );
-      }
       const replacementKey = semanticAddressKey(frontier.artificerReplacementAddress);
       if (replacement !== undefined && !producerFrontiers.has(replacementKey))
         indexRewardProducerFrontier(
@@ -1259,12 +1253,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
         frontier,
       ]);
       derivedAcquisitionEntryContexts.set(key, combined);
-      if (frontier.defaultSettlement !== undefined) {
-        derivedDefaultSettlements.push(
-          Object.freeze({ address: frontier.address, settlement: frontier.defaultSettlement }),
-        );
-        recordAcquisitionRoleFrontiers(frontier.defaultSettlement.roleFrontiers);
-      }
       const first = combined[0];
       if (
         (first?.kind !== 'travelDealRefill' &&
@@ -1275,6 +1263,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
         producerFrontiers.has(key)
       )
         continue;
+      recordAcquisitionRoleFrontiers(
+        combined.flatMap((candidate) => candidate.roleFrontiers ?? Object.freeze([])),
+      );
       indexRewardProducerFrontier(
         producerFrontiers,
         Object.freeze({
@@ -1426,6 +1417,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     {
       readonly occurrenceOwner: SemanticAddress;
       readonly branches: RewardBranchState[];
+      readonly candidateContexts: TraitOfferCandidateContext[];
       readonly runStateSnapshots: Map<string, DecisionRunStateSnapshot>;
     }
   >();
@@ -1440,9 +1432,15 @@ export function evaluateBiomeRewardsAssemblyInternal(
         traitChildSettlementBuilders.set(key, {
           occurrenceOwner,
           branches: [checkpoint.branch],
+          candidateContexts:
+            checkpoint.candidateContext === undefined ? [] : [checkpoint.candidateContext],
           runStateSnapshots: new Map(),
         });
-      else current.branches.push(checkpoint.branch);
+      else {
+        current.branches.push(checkpoint.branch);
+        if (checkpoint.candidateContext !== undefined)
+          current.candidateContexts.push(checkpoint.candidateContext);
+      }
     }
   }
   const hubDecisionsBySource = new Map(
@@ -1638,7 +1636,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
   let pendingHubBoard:
     | {
         readonly frontierBranches: readonly RewardBranchState[];
-        readonly offers: IncomingOfferCandidateContext[];
+        readonly offers: (
+          IncomingOfferCandidateContext | UnresolvedIncomingOfferCandidateContext
+        )[];
       }
     | undefined;
 
@@ -1820,9 +1820,15 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 return fail('pickup reward frontier received a foreign owner');
               }
               // A pickup producer fixes its reward identity. Candidate editing
-              // may resolve only its declaration-compatible payload at this
-              // exact ordered pre-entry frontier.
-              if (offer.rewardType !== frontier.reward.offer.rewardType) {
+              // resolves only its declaration-compatible payload at this
+              // exact site frontier; pickup order independently decides
+              // whether the completed entry is acquired.
+              const fixedRewardType =
+                frontier.reward?.offer.rewardType ??
+                producer.disposition.pickups.find(
+                  (pickup) => pickup.key === frontier.address.entryKey,
+                )?.rewardType;
+              if (fixedRewardType === undefined || offer.rewardType !== fixedRewardType) {
                 return Object.freeze({ findings: Object.freeze([]), supported: false });
               }
               const candidateFindings = new Map<string, FindingRegionEntry>();
@@ -1832,17 +1838,19 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 {
                   siteOwner: room.origin,
                   entries: Object.freeze({
-                    [frontier.address.entryKey]: createDefaultPickupRewardState(
+                    [frontier.address.entryKey]: createUnresolvedPickupRewardState(
                       catalog,
                       offer,
-                      routeLoadout,
                       producer.disposition.producerLifecycleKey,
                     ),
                   }),
-                  order: Object.freeze([frontier.address.entryKey]),
+                  order: room.pickupSite!.order.includes(frontier.address.entryKey)
+                    ? Object.freeze([frontier.address.entryKey])
+                    : Object.freeze([]),
                   producerLifecycleKey: producer.disposition.producerLifecycleKey,
                   historySequence,
                   findingChronology,
+                  publishUnpickedChildFrontiers: false,
                   facts: pickupFacts,
                   traitContext: routeLoadout,
                 },
@@ -2000,15 +2008,39 @@ export function evaluateBiomeRewardsAssemblyInternal(
   function flushPendingHubBoard(): void {
     const pending = pendingHubBoard;
     if (pending === undefined || pending.offers.length === 0) return;
-    const contexts = Object.freeze(pending.offers.map((entry) => entry.context));
     const owners = Object.freeze(pending.offers.map((entry) => entry.incoming.origin));
     const ownerKeys = new Set(owners.map(semanticAddressKey));
     const generationHistorySequence = Math.max(
-      ...contexts.map((context) => context.historySequence),
+      ...pending.offers.map((entry) =>
+        'context' in entry ? entry.context.historySequence : entry.historySequence,
+      ),
     );
-    const selectedBoardBranches = processOfferGenerationCohort(branches, contexts, findings, {
-      ordering: 'sourceOffers',
-    });
+    const resolvedEntries = pending.offers.filter(
+      (entry): entry is IncomingOfferCandidateContext => 'context' in entry,
+    );
+    const unresolvedEntries = pending.offers.filter(
+      (entry): entry is UnresolvedIncomingOfferCandidateContext => 'candidateFor' in entry,
+    );
+    const selectedBoardBranches =
+      unresolvedEntries.length === 0
+        ? processOfferGenerationCohort(
+            branches,
+            Object.freeze(resolvedEntries.map((entry) => entry.context)),
+            findings,
+            { ordering: 'sourceOffers' },
+          )
+        : Object.freeze([]);
+    for (const entry of unresolvedEntries) {
+      addRewardFinding(
+        findings,
+        rewardFinding('rewardMissing', entry.incoming.origin, {}),
+        ownerRegion(entry.incoming.origin),
+        Object.freeze({
+          kind: 'hubBoard' as const,
+          history: historyFindingChronology(entry.historySequence),
+        }),
+      );
+    }
     const evaluateHubBoardOffer = (
       owner: SemanticAddress,
       offer: CanonicalResolvedIncomingReward['offer'],
@@ -2017,54 +2049,137 @@ export function evaluateBiomeRewardsAssemblyInternal(
       if (!ownerKeys.has(ownerKey)) {
         return fail('Hub-board frontier received a foreign owner');
       }
-      const candidateFindings = new Map<string, FindingRegionEntry>();
-      const candidateContexts = contexts.map((context) =>
-        semanticAddressKey(context.reward.origin) === ownerKey
-          ? {
-              ...context,
-              reward: Object.freeze({ ...context.reward, offer }),
-            }
-          : context,
-      );
       const selected = pending.offers.find(
         (entry) => semanticAddressKey(entry.incoming.origin) === ownerKey,
       );
       if (selected === undefined) return fail('Hub-board frontier lost its owner');
-      const candidateBranches = processOfferGenerationCohort(
-        pending.frontierBranches,
-        candidateContexts,
-        candidateFindings,
-        { ordering: 'sourceOffers' },
-      );
+      const domainFor = (
+        entry: UnresolvedIncomingOfferCandidateContext,
+      ): readonly ResolvedRewardOffer[] => {
+        const storeKey = entry.incoming.resolvedStoreKey;
+        if (storeKey !== undefined) {
+          const store = catalog.rewards.stores.byKey[storeKey];
+          return Object.freeze(
+            (store?.entries ?? []).flatMap((storeEntry) =>
+              locallyValidRewardOffers(catalog.rewards, storeEntry.rewardType),
+            ),
+          );
+        }
+        const binding = entry.declaration.incomingReward;
+        return binding.kind === 'fixed'
+          ? locallyValidRewardOffers(catalog.rewards, binding.rewardType)
+          : Object.freeze([]);
+      };
+      let completedContexts: readonly OfferProcessingContext[] | undefined;
+      let completedBranches: readonly RewardBranchState[] | undefined;
+      let completedFindings: Map<string, FindingRegionEntry> | undefined;
+      let representativeFailedFindings: Map<string, FindingRegionEntry> | undefined;
+      const build = (index: number, values: OfferProcessingContext[]): boolean => {
+        if (index === pending.offers.length) {
+          const trialFindings = new Map<string, FindingRegionEntry>();
+          const supported = processOfferGenerationCohort(
+            pending.frontierBranches,
+            values,
+            trialFindings,
+            { ordering: 'sourceOffers' },
+          );
+          if (supported.length === 0) {
+            representativeFailedFindings ??= trialFindings;
+            return false;
+          }
+          completedContexts = Object.freeze(values);
+          completedBranches = supported;
+          completedFindings = trialFindings;
+          return true;
+        }
+        const entry = pending.offers[index]!;
+        const isFocused = semanticAddressKey(entry.incoming.origin) === ownerKey;
+        const choices = isFocused
+          ? Object.freeze([offer])
+          : 'context' in entry
+            ? Object.freeze([entry.incoming.offer])
+            : domainFor(entry);
+        for (const choice of choices) {
+          const incoming =
+            'context' in entry
+              ? Object.freeze({ ...entry.incoming, offer: choice })
+              : entry.candidateFor(choice);
+          const context: OfferProcessingContext =
+            'context' in entry
+              ? Object.freeze({ ...entry.context, reward: incoming })
+              : Object.freeze({
+                  catalog,
+                  reward: incoming,
+                  ...(countedBinding(entry.declaration, incoming) === undefined
+                    ? {}
+                    : { binding: countedBinding(entry.declaration, incoming)! }),
+                  historySequence: entry.historySequence,
+                  peers: Object.freeze([]),
+                  facts: entry.facts,
+                });
+          if (build(index + 1, [...values, context])) return true;
+        }
+        return false;
+      };
+      const generationSupported = build(0, []);
       if (
-        candidateBranches.length > 0 ||
-        selectedBoardBranches.length > 0 ||
-        sameResolvedOffer(offer, selected.incoming.offer)
-      ) {
-        return completeIncomingOfferCandidate(
-          selected,
-          offer,
-          candidateBranches,
-          candidateFindings,
-        );
-      }
-
-      // A newly opened Hub board starts from complete declaration defaults,
-      // which can leave several sibling offers invalid at once. A changed
-      // focused value must remain authorable when it is valid from the board's
-      // pre-generation frontier; the selected board still owns complete
-      // atomic validation and remains blocked until every sibling is repaired.
-      const focusedFindings = new Map<string, FindingRegionEntry>();
-      const focusedBranches = processRewardOffer(
-        pending.frontierBranches,
-        {
-          ...selected.context,
-          peers: Object.freeze([]),
-          reward: Object.freeze({ ...selected.incoming, offer }),
-        },
-        focusedFindings,
+        !generationSupported ||
+        completedContexts === undefined ||
+        completedBranches === undefined ||
+        completedFindings === undefined
+      )
+        return Object.freeze({
+          findings: Object.freeze(
+            [...(representativeFailedFindings ?? new Map()).values()]
+              .map((entry) => entry.finding)
+              .filter((finding) => finding.code !== 'traitOfferMissing'),
+          ),
+          supported: false,
+        });
+      const focusedContext = completedContexts.find(
+        (context) => semanticAddressKey(context.reward.origin) === ownerKey,
       );
-      return completeIncomingOfferCandidate(selected, offer, focusedBranches, focusedFindings);
+      const selectedResolved: IncomingOfferCandidateContext =
+        'context' in selected
+          ? Object.freeze({
+              context: focusedContext!,
+              room: selected.room,
+              declaration: selected.declaration,
+              incoming: Object.freeze({
+                ...selected.incoming,
+                offer: focusedContext!.reward.offer,
+              }),
+              ...(selected.acquisitionView === undefined
+                ? {}
+                : { acquisitionView: selected.acquisitionView }),
+              ...(selected.acquisitionSequence === undefined
+                ? {}
+                : { acquisitionSequence: selected.acquisitionSequence }),
+              ...(selected.producerPoints === undefined
+                ? {}
+                : { producerPoints: selected.producerPoints }),
+            })
+          : Object.freeze({
+              context: focusedContext!,
+              room: selected.room,
+              declaration: selected.declaration,
+              incoming: selected.candidateFor(focusedContext!.reward.offer),
+              ...(selected.acquisitionView === undefined
+                ? {}
+                : { acquisitionView: selected.acquisitionView }),
+              ...(selected.producerPoints === undefined
+                ? {}
+                : { producerPoints: selected.producerPoints }),
+            });
+      completeIncomingOfferCandidate(selectedResolved, offer, completedBranches, completedFindings);
+      return Object.freeze({
+        findings: Object.freeze(
+          [...completedFindings.values()]
+            .map((entry) => entry.finding)
+            .filter((finding) => finding.code !== 'traitOfferMissing'),
+        ),
+        supported: true,
+      });
     };
     for (const entry of pending.offers) {
       indexRewardProducerFrontier(
@@ -2074,20 +2189,21 @@ export function evaluateBiomeRewardsAssemblyInternal(
           generationHistorySequence,
           reachableBranchCount: pending.frontierBranches.length,
           acquisitionHorizon:
-            entry.acquisitionView === undefined || entry.acquisitionSequence === undefined
-              ? 'generationOnly'
-              : 'ownEnteredLifecycle',
+            entry.acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
           owners: Object.freeze([entry.incoming.origin]),
-          ...(entry.context.reward.resolvedStoreKey === undefined
+          ...(entry.incoming.resolvedStoreKey === undefined
             ? {}
-            : { resolvedStoreKey: entry.context.reward.resolvedStoreKey }),
+            : { resolvedStoreKey: entry.incoming.resolvedStoreKey }),
           evaluateOffer: evaluateHubBoardOffer,
         }),
       );
     }
     branches = selectedBoardBranches;
     peers = Object.freeze(
-      contexts.map((context) => ({ origin: context.reward.origin, offer: context.reward.offer })),
+      resolvedEntries.map((entry) => ({
+        origin: entry.context.reward.origin,
+        offer: entry.context.reward.offer,
+      })),
     );
     pendingHubBoard = undefined;
   }
@@ -2597,8 +2713,45 @@ export function evaluateBiomeRewardsAssemblyInternal(
           break;
         }
         const incoming = room.incomingReward;
-        const localRewards = room.kind === 'authored' ? (room.localRewards ?? []) : [];
-        if (incoming === undefined && localRewards.length === 0) {
+        const unresolvedIncoming = room.unresolvedIncomingReward;
+        const concreteLocalRewards = room.kind === 'authored' ? (room.localRewards ?? []) : [];
+        const unresolvedLocalRewards =
+          room.kind === 'authored' ? (room.unresolvedLocalRewards ?? []) : [];
+        const orderedLocalRewards = Object.freeze(
+          [...concreteLocalRewards, ...unresolvedLocalRewards].sort(
+            (left, right) =>
+              room.encounterPhases.findIndex((phase) => phase.slotKey === left.encounterPhaseKey) -
+              room.encounterPhases.findIndex((phase) => phase.slotKey === right.encounterPhaseKey),
+          ),
+        );
+        const firstUnresolvedLocalIndex = orderedLocalRewards.findIndex((reward) =>
+          unresolvedLocalRewards.includes(reward as (typeof unresolvedLocalRewards)[number]),
+        );
+        const concreteLocalKeys = new Set(concreteLocalRewards.map((reward) => reward.slotKey));
+        const localRewards = Object.freeze(
+          orderedLocalRewards
+            .slice(
+              0,
+              firstUnresolvedLocalIndex < 0
+                ? orderedLocalRewards.length
+                : firstUnresolvedLocalIndex,
+            )
+            .filter((reward): reward is CanonicalLocalReward =>
+              concreteLocalKeys.has(reward.slotKey),
+            ),
+        );
+        const unresolvedLocalReward =
+          firstUnresolvedLocalIndex < 0
+            ? undefined
+            : (orderedLocalRewards[
+                firstUnresolvedLocalIndex
+              ] as (typeof unresolvedLocalRewards)[number]);
+        if (
+          incoming === undefined &&
+          unresolvedIncoming === undefined &&
+          localRewards.length === 0 &&
+          unresolvedLocalRewards.length === 0
+        ) {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
@@ -2747,6 +2900,164 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName} has no offer-time history view`,
           );
         }
+        if (incoming === undefined && unresolvedIncoming !== undefined) {
+          const frontierBranches = branches;
+          const address = unresolvedIncoming.origin;
+          const ownerKey = semanticAddressKey(address);
+          const offerFindingChronology =
+            event.source === 'hubTarget'
+              ? Object.freeze({
+                  kind: 'hubBoard' as const,
+                  history: historyFindingChronology(event.sequence),
+                })
+              : event.source === 'localChild'
+                ? rewardFindingChronologyForRoom(
+                    snapshot,
+                    room.origin,
+                    event.sequence,
+                    'sideGeneration',
+                  )
+                : undefined;
+          const candidateFor = (offer: ResolvedRewardOffer): CanonicalResolvedIncomingReward => {
+            const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+              kind: 'producerLifecycle',
+              key: unresolvedIncoming.producerLifecycleKey,
+            });
+            return Object.freeze({
+              ...unresolvedIncoming,
+              kind: 'resolved' as const,
+              offer,
+              traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
+              ...(state.levelResolutionsByAcquisitionRole === undefined
+                ? {}
+                : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
+              dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
+              traitContext: Object.freeze({
+                ...routeLoadout,
+                blockGiftBoons: declaration.blockGiftBoons,
+                devotionNoDuo: offer.rewardType === 'Devotion',
+              }),
+            });
+          };
+          const acquisitionView =
+            views.get(semanticAddressKey(room.origin))?.preOutgoing ??
+            views.get(semanticAddressKey(room.origin))?.entry;
+          const producerPoints = history.events.filter(
+            (
+              candidate,
+            ): candidate is Extract<HistoryEvent, { readonly kind: 'producerPointReached' }> =>
+              candidate.kind === 'producerPointReached' &&
+              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+          );
+          const unresolvedFacts = (branchHistory: RewardHistoryState) =>
+            rewardFacts(
+              catalog,
+              source,
+              currentRoom,
+              catalog.rooms.byKey[source.gameName] ?? declaration,
+              view,
+              branchHistory,
+              enteredBiomeCount,
+              currentShopNames,
+              source.kind === 'hub' ? source.origin : peerParentOrigin,
+              source.kind === 'hub' ? 'hubTarget' : peerCreationSource,
+            );
+          if (event.source === 'hubTarget') {
+            if (pendingHubBoard === undefined) {
+              pendingHubBoard = { frontierBranches, offers: [] };
+            }
+            pendingHubBoard.offers.push(
+              Object.freeze({
+                room,
+                declaration,
+                incoming: unresolvedIncoming,
+                historySequence: event.sequence,
+                frontierBranches,
+                facts: unresolvedFacts,
+                candidateFor,
+                ...(acquisitionView === undefined ? {} : { acquisitionView }),
+                ...(producerPoints.length === 0 ? {} : { producerPoints }),
+              }),
+            );
+          } else {
+            indexRewardProducerFrontier(
+              producerFrontiers,
+              Object.freeze({
+                generationPolicy: 'sequential',
+                generationHistorySequence: event.sequence,
+                reachableBranchCount: frontierBranches.length,
+                acquisitionHorizon:
+                  acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
+                owners: Object.freeze([address]),
+                ...(unresolvedIncoming.resolvedStoreKey === undefined
+                  ? {}
+                  : { resolvedStoreKey: unresolvedIncoming.resolvedStoreKey }),
+                evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+                  if (semanticAddressKey(owner) !== ownerKey)
+                    return fail('unresolved reward frontier received a foreign owner');
+                  const candidate = candidateFor(offer);
+                  const candidateBinding = countedBinding(declaration, candidate);
+                  const candidateFindings = new Map<string, FindingRegionEntry>();
+                  const candidateBranches = processRewardOffer(
+                    frontierBranches,
+                    {
+                      catalog,
+                      reward: candidate,
+                      ...(candidateBinding === undefined ? {} : { binding: candidateBinding }),
+                      historySequence: event.sequence,
+                      ...(offerFindingChronology === undefined
+                        ? {}
+                        : { findingChronology: offerFindingChronology }),
+                      peers,
+                      facts: unresolvedFacts,
+                    },
+                    candidateFindings,
+                  );
+                  const generated = candidateBranches.length > 0;
+                  if (generated && acquisitionView !== undefined) {
+                    const candidateContext: IncomingOfferCandidateContext = Object.freeze({
+                      context: Object.freeze({
+                        catalog,
+                        reward: candidate,
+                        ...(candidateBinding === undefined ? {} : { binding: candidateBinding }),
+                        historySequence: event.sequence,
+                        peers,
+                        facts: unresolvedFacts,
+                      }),
+                      room,
+                      declaration,
+                      incoming: candidate,
+                      acquisitionView,
+                      producerPoints,
+                    });
+                    completeIncomingOfferCandidate(
+                      candidateContext,
+                      offer,
+                      candidateBranches,
+                      candidateFindings,
+                    );
+                  }
+                  return Object.freeze({
+                    findings: Object.freeze(
+                      [...candidateFindings.values()]
+                        .map((entry) => entry.finding)
+                        .filter((finding) => finding.code !== 'traitOfferMissing'),
+                    ),
+                    supported: generated,
+                  });
+                },
+              }),
+            );
+            addRewardFinding(
+              findings,
+              rewardFinding('rewardMissing', address, {}),
+              ownerRegion(address),
+              offerFindingChronology ?? historyFindingChronology(event.sequence),
+            );
+            branches = Object.freeze([]);
+          }
+        }
+        if (branches.length === 0) break;
         if (incoming !== undefined) {
           const binding = countedBinding(declaration, incoming);
           const frontierBranches = branches;
@@ -2940,7 +3251,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   return fail('local reward frontier received a foreign owner');
                 }
                 const candidateFindings = new Map<string, FindingRegionEntry>();
-                let candidateBranches = processRewardOffer(
+                const candidateBranches = processRewardOffer(
                   frontierBranches,
                   {
                     ...offerContext,
@@ -2953,7 +3264,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   acquisitionEvent !== undefined &&
                   acquisitionView !== undefined
                 ) {
-                  candidateBranches = settleOwnedAcquisitionSite(
+                  settleOwnedAcquisitionSite(
                     catalog,
                     candidateBranches,
                     {
@@ -2984,7 +3295,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       acquisitionEvent.sequence,
                       'localRoomLifecycle',
                     ),
-                  ).branches;
+                  );
                 }
                 return candidateResult(candidateFindings, candidateBranches);
               },
@@ -2995,6 +3306,131 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ...peers,
             { origin: localReward.origin, offer: localReward.offer },
           ]);
+        }
+        if (unresolvedLocalReward !== undefined && branches.length > 0) {
+          const frontierBranches = branches;
+          const ownerKey = semanticAddressKey(unresolvedLocalReward.origin);
+          const acquisitionEvent = history.events.find(
+            (candidate) =>
+              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
+              (room.lifecycleProfileKey === 'FieldsCombatRoom'
+                ? candidate.kind === 'acquisitionPointReached' &&
+                  candidate.point === `cages:${unresolvedLocalReward.slotKey}`
+                : candidate.kind === 'encounterCompleted' &&
+                  candidate.phaseKey === unresolvedLocalReward.encounterPhaseKey),
+          );
+          const candidateRoomView = views.get(semanticAddressKey(room.origin));
+          const acquisitionView =
+            room.lifecycleProfileKey === 'FieldsCombatRoom'
+              ? candidateRoomView?.acquisitionPoints?.find(
+                  (point) => point.point === `cages:${unresolvedLocalReward.slotKey}`,
+                )?.before
+              : (candidateRoomView?.preOutgoing ?? candidateRoomView?.entry);
+          indexRewardProducerFrontier(
+            producerFrontiers,
+            Object.freeze({
+              generationPolicy: 'sequential',
+              generationHistorySequence: event.sequence,
+              reachableBranchCount: frontierBranches.length,
+              acquisitionHorizon:
+                acquisitionEvent === undefined || acquisitionView === undefined
+                  ? 'generationOnly'
+                  : 'ownEnteredLifecycle',
+              owners: Object.freeze([unresolvedLocalReward.origin]),
+              resolvedStoreKey: unresolvedLocalReward.resolvedStoreKey,
+              evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+                if (semanticAddressKey(owner) !== ownerKey)
+                  return fail('unresolved local reward frontier received a foreign owner');
+                const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+                  kind: 'producerLifecycle',
+                  key: unresolvedLocalReward.producerLifecycleKey,
+                });
+                const candidate = Object.freeze({
+                  ...unresolvedLocalReward,
+                  offer,
+                  traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
+                  ...(state.levelResolutionsByAcquisitionRole === undefined
+                    ? {}
+                    : {
+                        levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole,
+                      }),
+                  dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
+                  traitContext: Object.freeze({
+                    ...routeLoadout,
+                    blockGiftBoons: declaration.blockGiftBoons,
+                    devotionNoDuo: offer.rewardType === 'Devotion',
+                  }),
+                });
+                const candidateFindings = new Map<string, FindingRegionEntry>();
+                const candidateBranches = processRewardOffer(
+                  frontierBranches,
+                  {
+                    catalog,
+                    reward: candidate,
+                    binding: localRewardBinding(declaration, candidate),
+                    historySequence: event.sequence,
+                    peers,
+                    facts: (branchHistory: RewardHistoryState) =>
+                      rewardFacts(
+                        catalog,
+                        source,
+                        currentRoom,
+                        catalog.rooms.byKey[source.gameName] ?? declaration,
+                        view,
+                        branchHistory,
+                        enteredBiomeCount,
+                        currentShopNames,
+                      ),
+                  },
+                  candidateFindings,
+                );
+                const generated = candidateBranches.length > 0;
+                if (generated && acquisitionEvent !== undefined && acquisitionView !== undefined) {
+                  settleOwnedAcquisitionSite(
+                    catalog,
+                    candidateBranches,
+                    {
+                      siteOwner: candidate.origin,
+                      pointKey:
+                        acquisitionEvent.kind === 'acquisitionPointReached'
+                          ? acquisitionEvent.point
+                          : candidate.encounterPhaseKey,
+                      entryKey: candidate.slotKey,
+                      source: Object.freeze({ ...candidate, instanceProvenance: 'free' }),
+                      historySequence: acquisitionEvent.sequence,
+                    },
+                    (branchHistory) =>
+                      rewardFacts(
+                        catalog,
+                        room,
+                        room,
+                        declaration,
+                        acquisitionView,
+                        branchHistory,
+                        enteredBiomeCount,
+                      ),
+                    candidateFindings,
+                    ownerRegion(candidate.origin),
+                  );
+                }
+                return Object.freeze({
+                  findings: Object.freeze(
+                    [...candidateFindings.values()]
+                      .map((entry) => entry.finding)
+                      .filter((finding) => finding.code !== 'traitOfferMissing'),
+                  ),
+                  supported: generated,
+                });
+              },
+            }),
+          );
+          addRewardFinding(
+            findings,
+            rewardFinding('rewardMissing', unresolvedLocalReward.origin, {}),
+            ownerRegion(unresolvedLocalReward.origin),
+            historyFindingChronology(event.sequence),
+          );
+          branches = Object.freeze([]);
         }
         break;
       }
@@ -3173,11 +3609,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }
         if (event.offerPoint === 'shopInventory') {
           const frontierBranches = branches;
-          const owners = Object.freeze(
-            (room.entryState?.kind === 'shop' ? room.entryState.offers : []).map(
-              (offer) => offer.offerOrigin,
-            ),
-          );
+          const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
+          const owners = Object.freeze([
+            ...(shopEntry?.offers.map((offer) => offer.offerOrigin) ?? []),
+            ...(shopEntry?.unresolvedOffers.map((offer) => offer.offerOrigin) ?? []),
+          ]);
           const ownerKeys = new Set(owners.map(semanticAddressKey));
           const shopContext = {
             catalog,
@@ -3222,42 +3658,63 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   owner: SemanticAddress,
                   offer: CanonicalResolvedIncomingReward['offer'],
                 ) => {
-                  if (room.entryState?.kind !== 'shop') {
+                  if (shopEntry === undefined) {
                     return fail(`${room.gameName} lost its shop candidate state`);
                   }
                   const ownerKey = semanticAddressKey(owner);
                   if (!ownerKeys.has(ownerKey)) {
                     return fail('shop reward frontier received a foreign owner');
                   }
-                  const candidateRoom = Object.freeze({
-                    ...room,
-                    entryState: Object.freeze({
-                      ...room.entryState,
-                      offers: Object.freeze(
-                        room.entryState.offers.map((entry) =>
-                          semanticAddressKey(entry.offerOrigin) === ownerKey
-                            ? Object.freeze({ ...entry, offer })
-                            : entry,
-                        ),
-                      ),
-                    }),
-                  });
-                  const candidateFindings = new Map<string, FindingRegionEntry>();
-                  const candidateBranches = processShopInventory(
-                    frontierBranches,
-                    { ...shopContext, room: candidateRoom },
-                    candidateFindings,
+                  const profile = catalog.rewards.shops.byKey[shopEntry.profileKey];
+                  if (profile === undefined)
+                    return fail(`unknown shop profile ${shopEntry.profileKey}`);
+                  const concreteByKey = new Map(
+                    shopEntry.offers.map((entry) => [entry.offerKey, entry.offer] as const),
                   );
-                  return candidateResult(candidateFindings, candidateBranches);
+                  const focused = [...shopEntry.offers, ...shopEntry.unresolvedOffers].find(
+                    (entry) => semanticAddressKey(entry.offerOrigin) === ownerKey,
+                  );
+                  if (focused === undefined) return fail('shop reward frontier lost its owner');
+                  const fixedOffers = profile.slots.values.map((slot) =>
+                    slot.key === focused.offerKey ? offer : (concreteByKey.get(slot.key) ?? null),
+                  );
+                  const requirements =
+                    declaration.incomingReward.kind === 'shop'
+                      ? declaration.incomingReward.additionalOptionRequirements
+                      : undefined;
+                  const supported = frontierBranches.some(
+                    (branch) =>
+                      findShopPartialGenerationWitnesses(
+                        catalog.rewards,
+                        profile,
+                        fixedOffers,
+                        shopContext.facts(branch.history, new Set()),
+                        requirements,
+                      ).length > 0,
+                  );
+                  return Object.freeze({ findings: Object.freeze([]), supported });
                 },
               }),
             );
           }
-          branches = processShopInventory(branches, shopContext, findings);
+          if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {
+            for (const unresolved of shopEntry!.unresolvedOffers) {
+              addRewardFinding(
+                findings,
+                rewardFinding('rewardMissing', unresolved.offerOrigin, {}),
+                ownerRegion(room.origin),
+                shopContext.findingChronology,
+              );
+            }
+            branches = Object.freeze([]);
+          } else {
+            branches = processShopInventory(branches, shopContext, findings);
+          }
           break;
         }
         if (event.offerPoint === 'fieldsOptionalRewards') {
           const optionalRewards = room.fieldsOptionalRewards ?? [];
+          const unresolvedOptionals = room.unresolvedFieldsOptionalRewards ?? [];
           const view = roomView.offerPoints?.find(
             (candidate) => candidate.offerPoint === event.offerPoint,
           )?.before;
@@ -3267,7 +3724,40 @@ export function evaluateBiomeRewardsAssemblyInternal(
             );
           }
           const frontierBranches = branches;
-          const contexts = optionalRewards.map((reward) => ({
+          const descriptor = declaration.fieldsOptionalRewards;
+          if (descriptor === undefined)
+            return fail(`${room.gameName} has no Fields optional descriptor`);
+          const concreteBySlot = new Map(optionalRewards.map((reward) => [reward.slotKey, reward]));
+          const unresolvedBySlot = new Map(
+            unresolvedOptionals.map((reward) => [reward.slotKey, reward]),
+          );
+          const orderedSlots = descriptor.slotKeys.filter(
+            (slotKey) => concreteBySlot.has(slotKey) || unresolvedBySlot.has(slotKey),
+          );
+          const candidateState = (
+            base: (typeof unresolvedOptionals)[number],
+            offer: ResolvedRewardOffer,
+          ): CanonicalFieldsOptionalReward => {
+            const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+              kind: 'producerLifecycle',
+              key: base.producerLifecycleKey,
+            });
+            return Object.freeze({
+              ...base,
+              offer,
+              traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
+              ...(state.levelResolutionsByAcquisitionRole === undefined
+                ? {}
+                : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
+              dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
+              traitContext: Object.freeze({
+                ...routeLoadout,
+                blockGiftBoons: declaration.blockGiftBoons,
+                devotionNoDuo: offer.rewardType === 'Devotion',
+              }),
+            });
+          };
+          const contextFor = (reward: CanonicalFieldsOptionalReward) => ({
             catalog,
             reward,
             binding: localRewardBinding(declaration, reward),
@@ -3275,26 +3765,67 @@ export function evaluateBiomeRewardsAssemblyInternal(
             peers: Object.freeze([]),
             facts: (branchHistory: RewardHistoryState) =>
               rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
-          }));
+          });
           const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
             const ownerKey = semanticAddressKey(owner);
-            const selectedReward = optionalRewards.find(
+            const selectedReward = [...optionalRewards, ...unresolvedOptionals].find(
               (reward) => semanticAddressKey(reward.origin) === ownerKey,
             );
             if (selectedReward === undefined) {
               return fail('Fields optional frontier received a foreign owner');
             }
-            const candidateFindings = new Map<string, FindingRegionEntry>();
-            let candidateBranches = frontierBranches;
-            for (const context of contexts) {
-              candidateBranches = processRewardOffer(
-                candidateBranches,
-                semanticAddressKey(context.reward.origin) === ownerKey
-                  ? { ...context, reward: Object.freeze({ ...context.reward, offer }) }
-                  : context,
-                candidateFindings,
-              );
-            }
+            const store = catalog.rewards.stores.byKey.FieldsOptionalRewards;
+            if (store === undefined) return fail('Fields optional store is missing');
+            const domain = Object.freeze(
+              store.entries.flatMap((entry) =>
+                locallyValidRewardOffers(catalog.rewards, entry.rewardType),
+              ),
+            );
+            let representativeFailedFindings: Map<string, FindingRegionEntry> | undefined;
+            const visit = (
+              index: number,
+              current: readonly RewardBranchState[],
+              currentFindings: Map<string, FindingRegionEntry>,
+            ):
+              | {
+                  readonly branches: readonly RewardBranchState[];
+                  readonly findings: Map<string, FindingRegionEntry>;
+                }
+              | undefined => {
+              if (index === orderedSlots.length)
+                return Object.freeze({ branches: current, findings: currentFindings });
+              const slotKey = orderedSlots[index]!;
+              const concrete = concreteBySlot.get(slotKey);
+              const unresolved = unresolvedBySlot.get(slotKey);
+              const offers =
+                slotKey === selectedReward.slotKey
+                  ? Object.freeze([offer])
+                  : concrete === undefined
+                    ? domain
+                    : Object.freeze([concrete.offer]);
+              for (const candidateOffer of offers) {
+                const trialFindings = new Map(currentFindings);
+                const reward =
+                  concrete !== undefined && candidateOffer === concrete.offer
+                    ? concrete
+                    : unresolved === undefined
+                      ? Object.freeze({ ...concrete!, offer: candidateOffer })
+                      : candidateState(unresolved, candidateOffer);
+                const next = processRewardOffer(current, contextFor(reward), trialFindings);
+                if (next.length === 0) {
+                  representativeFailedFindings ??= trialFindings;
+                  continue;
+                }
+                const completed = visit(index + 1, next, trialFindings);
+                if (completed !== undefined) return completed;
+              }
+              return undefined;
+            };
+            const completion = visit(0, frontierBranches, new Map());
+            const candidateBranches = completion?.branches ?? Object.freeze([]);
+            const candidateFindings =
+              completion?.findings ?? representativeFailedFindings ?? new Map();
+            const generated = candidateBranches.length > 0;
             const pointKey = `optionalRewards:${selectedReward.slotKey}`;
             const acquisitionEvent = history.events.find(
               (candidate) =>
@@ -3310,7 +3841,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               acquisitionEvent !== undefined &&
               acquisitionView !== undefined
             ) {
-              candidateBranches = settleOwnedAcquisitionSite(
+              settleOwnedAcquisitionSite(
                 catalog,
                 candidateBranches,
                 {
@@ -3318,7 +3849,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   pointKey,
                   entryKey: selectedReward.slotKey,
                   source: Object.freeze({
-                    ...selectedReward,
+                    ...(concreteBySlot.get(selectedReward.slotKey) ??
+                      candidateState(unresolvedBySlot.get(selectedReward.slotKey)!, offer)),
                     offer,
                     instanceProvenance: 'free',
                   }),
@@ -3342,11 +3874,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   acquisitionEvent.sequence,
                   'localRoomLifecycle',
                 ),
-              ).branches;
+              );
             }
-            return candidateResult(candidateFindings, candidateBranches);
+            return Object.freeze({
+              findings: Object.freeze(
+                [...candidateFindings.values()]
+                  .map((entry) => entry.finding)
+                  .filter((finding) => finding.code !== 'traitOfferMissing'),
+              ),
+              supported: generated,
+            });
           };
-          for (const reward of optionalRewards) {
+          for (const reward of [...optionalRewards, ...unresolvedOptionals]) {
             const pointKey = `optionalRewards:${reward.slotKey}`;
             const acquisitionEvent = history.events.find(
               (candidate) =>
@@ -3370,8 +3909,26 @@ export function evaluateBiomeRewardsAssemblyInternal(
               }),
             );
           }
-          for (const context of contexts) {
-            branches = processRewardOffer(branches, context, findings);
+          let reachedMissing = false;
+          for (const slotKey of orderedSlots) {
+            const concrete = concreteBySlot.get(slotKey);
+            if (concrete === undefined) {
+              reachedMissing = true;
+              continue;
+            }
+            if (!reachedMissing)
+              branches = processRewardOffer(branches, contextFor(concrete), findings);
+          }
+          if (unresolvedOptionals.length > 0) {
+            for (const unresolved of unresolvedOptionals) {
+              addRewardFinding(
+                findings,
+                rewardFinding('rewardMissing', unresolved.origin, {}),
+                ownerRegion(room.origin),
+                historyFindingChronology(event.sequence),
+              );
+            }
+            branches = Object.freeze([]);
           }
           break;
         }
@@ -3403,7 +3960,30 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ),
           );
         }
-        const contexts = wheel.offers.map((offer) => ({
+        const wheelStateFor = (
+          base: (typeof wheel.unresolvedOffers)[number],
+          offer: ResolvedRewardOffer,
+        ): CanonicalRewardWheel['offers'][number] => {
+          const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+            kind: 'producerLifecycle',
+            key: wheel.producerLifecycleKey,
+          });
+          return Object.freeze({
+            ...base,
+            offer,
+            traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
+            ...(state.levelResolutionsByAcquisitionRole === undefined
+              ? {}
+              : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
+            dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
+            traitContext: Object.freeze({
+              ...routeLoadout,
+              blockGiftBoons: declaration.blockGiftBoons,
+              devotionNoDuo: offer.rewardType === 'Devotion',
+            }),
+          });
+        };
+        const contextForWheel = (offer: CanonicalRewardWheel['offers'][number]) => ({
           catalog,
           reward: {
             ...offer,
@@ -3415,9 +3995,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
           peers: Object.freeze([]),
           facts: (branchHistory: RewardHistoryState) =>
             rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
-        }));
+        });
+        const contexts = wheel.offers.map(contextForWheel);
         const frontierBranches = branches;
-        const owners = Object.freeze(wheel.offers.map((offer) => offer.origin));
+        const owners = Object.freeze(
+          [...wheel.offers, ...wheel.unresolvedOffers].map((offer) => offer.origin),
+        );
         const ownerKeys = new Set(owners.map(semanticAddressKey));
         const acquisitionView = roomView.offerPoints?.find(
           (candidate) => candidate.offerPoint === event.offerPoint,
@@ -3449,20 +4032,74 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 return fail('reward-wheel frontier received a foreign owner');
               }
               const candidateFindings = new Map<string, FindingRegionEntry>();
-              let candidateBranches = processOfferGenerationCohort(
-                frontierBranches,
-                contexts.map((context) =>
-                  semanticAddressKey(context.reward.origin) === ownerKey
-                    ? {
-                        ...context,
-                        reward: Object.freeze({ ...context.reward, offer }),
-                      }
-                    : context,
+              const focused = [...wheel.offers, ...wheel.unresolvedOffers].find(
+                (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
+              );
+              if (focused === undefined) return fail('reward-wheel frontier lost its owner');
+              const concreteByKey = new Map(
+                wheel.offers.map((candidate) => [candidate.offerKey, candidate]),
+              );
+              const unresolvedByKey = new Map(
+                wheel.unresolvedOffers.map((candidate) => [candidate.offerKey, candidate]),
+              );
+              const offerKeys = Object.freeze(
+                [...wheel.offers, ...wheel.unresolvedOffers]
+                  .sort((left, right) => left.offerKey.localeCompare(right.offerKey))
+                  .map((candidate) => candidate.offerKey),
+              );
+              const store = catalog.rewards.stores.byKey[wheel.storeKey];
+              if (store === undefined) return fail(`unknown wheel store ${wheel.storeKey}`);
+              const domain = Object.freeze(
+                store.entries.flatMap((entry) =>
+                  locallyValidRewardOffers(catalog.rewards, entry.rewardType),
                 ),
+              );
+              const proposals: CanonicalRewardWheel['offers'][number][][] = [];
+              const build = (
+                index: number,
+                values: CanonicalRewardWheel['offers'][number][],
+              ): void => {
+                if (proposals.length > 0) return;
+                if (index === offerKeys.length) {
+                  proposals.push(values);
+                  return;
+                }
+                const key = offerKeys[index]!;
+                const concrete = concreteByKey.get(key);
+                const unresolved = unresolvedByKey.get(key);
+                const offers =
+                  key === focused.offerKey
+                    ? Object.freeze([offer])
+                    : concrete === undefined
+                      ? domain
+                      : Object.freeze([concrete.offer]);
+                for (const candidateOffer of offers) {
+                  const candidate =
+                    concrete !== undefined && candidateOffer === concrete.offer
+                      ? concrete
+                      : unresolved === undefined
+                        ? Object.freeze({ ...concrete!, offer: candidateOffer })
+                        : wheelStateFor(unresolved, candidateOffer);
+                  const trialFindings = new Map<string, FindingRegionEntry>();
+                  const trial = processOfferGenerationCohort(
+                    frontierBranches,
+                    [...values, candidate].map(contextForWheel),
+                    trialFindings,
+                    { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
+                  );
+                  if (trial.length === 0) continue;
+                  build(index + 1, [...values, candidate]);
+                  if (proposals.length > 0) return;
+                }
+              };
+              build(0, []);
+              const candidateBranches = processOfferGenerationCohort(
+                frontierBranches,
+                (proposals[0] ?? []).map(contextForWheel),
                 candidateFindings,
                 { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
               );
-              const selectedOffer = wheel.offers.find(
+              const selectedOffer = (proposals[0] ?? []).find(
                 (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
               );
               if (
@@ -3477,7 +4114,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   producerLifecycleKey: wheel.producerLifecycleKey,
                   instanceProvenance: 'free',
                 });
-                candidateBranches = settleOwnedAcquisitionSite(
+                settleOwnedAcquisitionSite(
                   catalog,
                   candidateBranches,
                   {
@@ -3499,16 +4136,35 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     ),
                   candidateFindings,
                   ownerRegion(wheel.origin),
-                ).branches;
+                );
               }
-              return candidateResult(candidateFindings, candidateBranches);
+              return Object.freeze({
+                findings: Object.freeze(
+                  [...candidateFindings.values()]
+                    .map((entry) => entry.finding)
+                    .filter((finding) => finding.code !== 'traitOfferMissing'),
+                ),
+                supported: proposals.length > 0,
+              });
             },
           }),
         );
-        branches = processOfferGenerationCohort(branches, contexts, findings, {
-          ordering: 'allOffers',
-          atomicRegion: ownerRegion(wheel.origin),
-        });
+        if (wheel.unresolvedOffers.length > 0) {
+          for (const unresolved of wheel.unresolvedOffers) {
+            addRewardFinding(
+              findings,
+              rewardFinding('rewardMissing', unresolved.origin, {}),
+              ownerRegion(wheel.origin),
+              historyFindingChronology(event.sequence),
+            );
+          }
+          branches = Object.freeze([]);
+        } else {
+          branches = processOfferGenerationCohort(branches, contexts, findings, {
+            ordering: 'allOffers',
+            atomicRegion: ownerRegion(wheel.origin),
+          });
+        }
         break;
       }
       case 'offerPointAcquired': {
@@ -3887,6 +4543,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               traitChildSettlementBuilders.set(key, {
                 occurrenceOwner: room.origin,
                 branches: [checkpoint.branch],
+                candidateContexts: [],
                 runStateSnapshots: new Map(),
               });
             else current.branches.push(checkpoint.branch);
@@ -3907,8 +4564,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
             selectedEchoDisposition?.kind === 'echo' &&
             selectedEchoDisposition.effect === 'lastReward'
           ) {
+            const outerTraitAddress = createTraitOfferAddress(phaseAddress, 'selection');
             const replayOwner = createEchoLastRewardAddress(
-              createTraitOfferAddress(phaseAddress, 'selection'),
+              outerTraitAddress,
               authoredEncounterOffer.selectedOptionKey,
             );
             const site = createAcquisitionSiteAddress(replayOwner, 'echoReplay');
@@ -3926,18 +4584,48 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 settledEchoBranches.push(outer.branch);
                 continue;
               }
-              const defaultChild = createDefaultEchoLastRewardAcquisition(
+              const unresolvedChild = createUnresolvedEchoLastRewardAcquisition(
                 catalog,
                 recreation,
-                routeLoadout,
               );
-              const expectedTrait = defaultChild.traitOffer !== undefined;
-              const expectedLevel = defaultChild.levelResolution !== undefined;
+              const expectedTrait = unresolvedChild.traitOffer !== undefined;
+              const expectedLevel = unresolvedChild.levelResolution !== undefined;
               const childApplicable =
                 child !== undefined &&
                 (child.traitOffer !== undefined) === expectedTrait &&
                 (child.levelResolution !== undefined) === expectedLevel;
               if (!childApplicable) {
+                const outerKey = semanticAddressKey(outerTraitAddress);
+                const outerCheckpoint = traitChildSettlementBuilders.get(outerKey);
+                const outerCandidateContext = Object.freeze({
+                  before: beforeOuter.traitHistory ?? createTraitHistoryState(),
+                  context: Object.freeze({
+                    ...routeLoadout,
+                    echoLastRewardAvailable: true,
+                    echoLastRewardRecreation: recreation,
+                    resolvedProviderKey: 'Echo',
+                    currentKeepsakeKey: beforeOuter.keepsakes.currentKey,
+                    ...(authoredEncounterOffer.deathDefianceConditionMet === undefined
+                      ? {}
+                      : {
+                          deathDefianceConditionMet:
+                            authoredEncounterOffer.deathDefianceConditionMet,
+                        }),
+                  }),
+                  arcanaFear: beforeOuter.arcanaFear,
+                  keepsakes: beforeOuter.keepsakes,
+                });
+                if (outerCheckpoint === undefined)
+                  traitChildSettlementBuilders.set(outerKey, {
+                    occurrenceOwner: room.origin,
+                    branches: [outer.branch],
+                    candidateContexts: [outerCandidateContext],
+                    runStateSnapshots: new Map(),
+                  });
+                else {
+                  outerCheckpoint.branches.push(outer.branch);
+                  outerCheckpoint.candidateContexts.push(outerCandidateContext);
+                }
                 const finding = Object.freeze({
                   code:
                     child === undefined
@@ -3969,6 +4657,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   traitChildSettlementBuilders.set(key, {
                     occurrenceOwner: room.origin,
                     branches: [outer.branch],
+                    candidateContexts: [],
                     runStateSnapshots: new Map(),
                   });
                 else current.branches.push(outer.branch);
@@ -4037,6 +4726,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   traitChildSettlementBuilders.set(key, {
                     occurrenceOwner: room.origin,
                     branches: [outer.branch],
+                    candidateContexts: [],
                     runStateSnapshots: new Map(),
                   });
                 else current.branches.push(outer.branch);
@@ -4250,52 +4940,15 @@ export function evaluateBiomeRewardsAssemblyInternal(
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
   );
-  const derivedTraitCandidateContexts = new Map<string, readonly TraitOfferCandidateContext[]>();
-  const derivedLevelCandidateContexts = new Map<
-    string,
-    readonly {
-      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
-      readonly before: import('../traits').TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >();
-  for (const { address, settlement } of derivedDefaultSettlements) {
-    const candidateProducts = selectedTraitOfferProducts(settlement.branches);
-    for (const offer of candidateProducts.selectedTraitOffers) {
-      if (semanticAddressKey(offer.address.owner) !== semanticAddressKey(address)) continue;
-      const key = semanticAddressKey(offer.address);
-      const contexts = candidateProducts.candidateContexts.get(key) ?? Object.freeze([]);
-      derivedTraitCandidateContexts.set(
-        key,
-        Object.freeze([...(derivedTraitCandidateContexts.get(key) ?? []), ...contexts]),
-      );
-    }
-    for (const level of candidateProducts.selectedLevelResolutions) {
-      if (semanticAddressKey(level.address.owner) !== semanticAddressKey(address)) continue;
-      const key = semanticAddressKey(level.address);
-      const contexts = candidateProducts.levelCandidateContexts.get(key) ?? Object.freeze([]);
-      derivedLevelCandidateContexts.set(
-        key,
-        Object.freeze([...(derivedLevelCandidateContexts.get(key) ?? []), ...contexts]),
-      );
-    }
-  }
   const traitCandidateContexts = new Map(traitProducts.candidateContexts);
-  for (const [key, contexts] of derivedTraitCandidateContexts) {
+  for (const [key, checkpoint] of traitChildSettlementBuilders) {
+    if (checkpoint.candidateContexts.length === 0) continue;
     traitCandidateContexts.set(
       key,
-      Object.freeze([...(traitCandidateContexts.get(key) ?? []), ...contexts]),
+      Object.freeze([...(traitCandidateContexts.get(key) ?? []), ...checkpoint.candidateContexts]),
     );
   }
   const levelCandidateContexts = new Map(traitProducts.levelCandidateContexts);
-  for (const [key, contexts] of derivedLevelCandidateContexts) {
-    levelCandidateContexts.set(
-      key,
-      Object.freeze([...(levelCandidateContexts.get(key) ?? []), ...contexts]),
-    );
-  }
   const runStatePublication = publishRunStateThroughCoverage(
     [...runStateSnapshotsByOwner.values()],
     [...runStateSnapshotsByOwner.values()],

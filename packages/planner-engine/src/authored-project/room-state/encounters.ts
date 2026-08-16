@@ -228,18 +228,21 @@ function decodeEchoLastReward(
   const dispositionKind = expectString(dispositionRecord.kind, `${path}.disposition.kind`);
   if (dispositionKind !== 'normal' && dispositionKind !== 'timePiece')
     failProjectDocument(`${path}.disposition.kind`, 'must be normal or timePiece');
-  let traitOffer: AuthoredTraitOffer | undefined;
+  let traitOffer: AuthoredTraitOffer | null | undefined;
   if (hasTraitOffer) {
-    const rawOffer = expectRecord(record.traitOffer, `${path}.traitOffer`);
-    const giverKey = expectString(rawOffer.giverKey, `${path}.traitOffer.giverKey`);
-    traitOffer = decodeEncounterTraitOffer(
-      rawOffer,
-      catalog,
-      giverKey,
-      `${path}.traitOffer`,
-      true,
-      true,
-    );
+    if (record.traitOffer === null) traitOffer = null;
+    else {
+      const rawOffer = expectRecord(record.traitOffer, `${path}.traitOffer`);
+      const giverKey = expectString(rawOffer.giverKey, `${path}.traitOffer.giverKey`);
+      traitOffer = decodeEncounterTraitOffer(
+        rawOffer,
+        catalog,
+        giverKey,
+        `${path}.traitOffer`,
+        true,
+        true,
+      );
+    }
   }
   let levelResolution: AuthoredEchoLastRewardAcquisition['levelResolution'];
   if (hasLevelResolution) {

@@ -16,7 +16,10 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../authored-project/traits';
 import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
-import { createDefaultEchoLastRewardAcquisition } from '../authored-project/traits';
+import {
+  createUnresolvedEchoLastRewardAcquisition,
+  traitGiverForAcquisitionRole,
+} from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
   createEmptyRewardProducerCandidateArtifacts,
@@ -121,7 +124,8 @@ export interface TraitOfferCandidateCapability {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => readonly (readonly import('./traits').EchoLastRunBoonOutcome[])[];
-  /** Branch-correlated exact replay descriptors and declaration-owned initial children. */
+  /** Branch-correlated exact replay descriptors, unresolved persisted shape, and
+   * engine-owned complete proposals for fresh nested authoring. */
   readonly echoLastReward: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
@@ -129,7 +133,9 @@ export interface TraitOfferCandidateCapability {
     readonly recreation: NonNullable<
       import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
     >;
-    readonly defaultValue: import('../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+    readonly initialValue: import('../authored-project/traits').AuthoredEchoLastRewardAcquisition;
+    readonly traitOfferDraft?: import('../authored-project/traits').AuthoredTraitOffer;
+    readonly levelResolutionDraft?: import('../authored-project/traits').AuthoredLevelResolution;
   }[];
   /** Exact ownership-only All Together set domains for surviving branches. */
   readonly allTogetherSet: (
@@ -235,8 +241,8 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly kind: import('./rewards/processing').DerivedAcquisitionEntryFrontier['kind'];
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
-  readonly defaultValue?: import('../authored-project/model').AuthoredRewardState;
   readonly rewardTypes?: readonly string[];
+  readonly fixedReward?: import('../authored-project/model').AuthoredRewardState;
   readonly eligibleSourceOfferKeys?: readonly string[];
 }
 export interface DerivedAcquisitionEntryCandidateArtifacts {
@@ -263,8 +269,8 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         frontier.branchCohortSize !== first.branchCohortSize ||
         frontier.sourceOfferKey !== first.sourceOfferKey ||
         frontier.slotIndex !== first.slotIndex ||
-        JSON.stringify(frontier.defaultValue) !== JSON.stringify(first.defaultValue) ||
         JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
+        JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
         JSON.stringify(frontier.eligibleSourceOfferKeys) !==
           JSON.stringify(first.eligibleSourceOfferKeys),
     )
@@ -274,8 +280,8 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     kind: first.kind,
     ...(first.sourceOfferKey === undefined ? {} : { sourceOfferKey: first.sourceOfferKey }),
     ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
-    ...(first.defaultValue === undefined ? {} : { defaultValue: first.defaultValue }),
     ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
+    ...(first.fixedReward === undefined ? {} : { fixedReward: first.fixedReward }),
     ...(first.eligibleSourceOfferKeys === undefined
       ? {}
       : { eligibleSourceOfferKeys: first.eligibleSourceOfferKeys }),
@@ -325,14 +331,23 @@ export interface AcquisitionConversionCandidateCapability {
     readonly supported: boolean;
     readonly evidence: import('./model').FindingEvidence;
   }[];
-  readonly artificerDefaultReplacement?: import('../authored-project/model').AuthoredRewardState;
-  readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
   readonly artificerReplacementAddress?: import('../authored-project/addresses').AcquisitionEntryAddress;
+  readonly artificerReplacementRewardTypes?: readonly string[];
+  readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
 }
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
     address: AcquisitionRoleAddress,
   ) => AcquisitionConversionCandidateCapability | undefined;
+  /** Exact source-role capability for an Artificer replacement owner. */
+  readonly atReplacement: (
+    address: import('../authored-project/addresses').AcquisitionEntryAddress,
+  ) =>
+    | {
+        readonly address: AcquisitionRoleAddress;
+        readonly capability: AcquisitionConversionCandidateCapability;
+      }
+    | undefined;
 }
 export function createAcquisitionConversionCandidateArtifacts(
   catalog: Catalog,
@@ -344,80 +359,93 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly source: AcquisitionSource;
       readonly lifecyclePoint: import('../reward-kernel').ProducerLifecyclePointKey;
       readonly blocksArtificerConversion?: true;
-      readonly artificerDefaultReplacement?: import('../authored-project/model').AuthoredRewardState;
-      readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
       readonly artificerReplacementAddress: import('../authored-project/addresses').AcquisitionEntryAddress;
+      readonly artificerReplacementCandidate?: {
+        readonly rewardTypes: readonly string[];
+      };
+      readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
     }[]
   >,
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
+  const at = (address: AcquisitionRoleAddress) => {
+    const entries = privateContexts.get(semanticAddressKey(address));
+    if (entries === undefined) return undefined;
+    return Object.freeze({
+      timePieceAssessments: Object.freeze(
+        entries.flatMap((entry) =>
+          entry.branchesBeforeRole.map((branch) =>
+            assessTimePieceConversion(
+              catalog,
+              branch,
+              entry.source,
+              entry.address.acquisitionRole,
+              entry.lifecyclePoint,
+            ),
+          ),
+        ),
+      ),
+      artificerAssessments: Object.freeze(
+        entries.flatMap((entry) =>
+          entry.branchesBeforeRole.map((branch) =>
+            assessArtificerConversion(catalog, branch, entry.source, {
+              role: entry.address.acquisitionRole,
+              lifecyclePoint: entry.lifecyclePoint,
+              ...(entry.blocksArtificerConversion === true
+                ? { blocksArtificerConversion: true as const }
+                : {}),
+            }),
+          ),
+        ),
+      ),
+      ...(() => {
+        const domains = entries.map((entry) => entry.artificerReplacementOptions);
+        const first = domains[0];
+        return first !== undefined &&
+          domains.every((domain) => JSON.stringify(domain) === JSON.stringify(first))
+          ? { artificerReplacementOptions: first }
+          : {};
+      })(),
+      ...(() => {
+        const domains = entries.map((entry) => entry.artificerReplacementCandidate?.rewardTypes);
+        const first = domains[0];
+        return first !== undefined &&
+          domains.every((domain) => JSON.stringify(domain) === JSON.stringify(first))
+          ? { artificerReplacementRewardTypes: first }
+          : {};
+      })(),
+      ...(() => {
+        const addresses = entries.map((entry) => entry.artificerReplacementAddress);
+        const first = addresses[0];
+        return first !== undefined &&
+          addresses.every(
+            (candidate) => semanticAddressKey(candidate) === semanticAddressKey(first),
+          )
+          ? { artificerReplacementAddress: first }
+          : {};
+      })(),
+    });
+  };
   return Object.freeze({
-    at: (address: AcquisitionRoleAddress) => {
-      const entries = privateContexts.get(semanticAddressKey(address));
-      if (entries === undefined) return undefined;
-      return Object.freeze({
-        timePieceAssessments: Object.freeze(
-          entries.flatMap((entry) =>
-            entry.branchesBeforeRole.map((branch) =>
-              assessTimePieceConversion(
-                catalog,
-                branch,
-                entry.source,
-                entry.address.acquisitionRole,
-                entry.lifecyclePoint,
-              ),
-            ),
-          ),
-        ),
-        artificerAssessments: Object.freeze(
-          entries.flatMap((entry) =>
-            entry.branchesBeforeRole.map((branch) =>
-              assessArtificerConversion(catalog, branch, entry.source, {
-                role: entry.address.acquisitionRole,
-                lifecyclePoint: entry.lifecyclePoint,
-                ...(entry.blocksArtificerConversion === true
-                  ? { blocksArtificerConversion: true as const }
-                  : {}),
-              }),
-            ),
-          ),
-        ),
-        ...(() => {
-          const defaults = entries.flatMap((entry) =>
-            entry.artificerDefaultReplacement === undefined
-              ? []
-              : [entry.artificerDefaultReplacement],
-          );
-          const first = defaults[0];
-          return defaults.length === entries.length &&
-            first !== undefined &&
-            defaults.every((value) => JSON.stringify(value) === JSON.stringify(first))
-            ? { artificerDefaultReplacement: first }
-            : {};
-        })(),
-        ...(() => {
-          const options = entries.map((entry) => entry.artificerReplacementOptions);
-          const first = options[0];
-          return options.length === entries.length &&
-            first !== undefined &&
-            options.every((value) => JSON.stringify(value) === JSON.stringify(first))
-            ? { artificerReplacementOptions: first }
-            : {};
-        })(),
-        ...(() => {
-          const addresses = entries.map((entry) => entry.artificerReplacementAddress);
-          const first = addresses[0];
-          return first !== undefined &&
-            addresses.every((address) => semanticAddressKey(address) === semanticAddressKey(first))
-            ? { artificerReplacementAddress: first }
-            : {};
-        })(),
-      });
+    at,
+    atReplacement: (
+      replacement: import('../authored-project/addresses').AcquisitionEntryAddress,
+    ) => {
+      const replacementKey = semanticAddressKey(replacement);
+      for (const entries of privateContexts.values()) {
+        const source = entries.find(
+          (entry) => semanticAddressKey(entry.artificerReplacementAddress) === replacementKey,
+        );
+        if (source === undefined) continue;
+        const capability = at(source.address);
+        if (capability !== undefined) return Object.freeze({ address: source.address, capability });
+      }
+      return undefined;
     },
   });
 }
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
-  return Object.freeze({ at: () => undefined });
+  return Object.freeze({ at: () => undefined, atReplacement: () => undefined });
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -780,23 +808,21 @@ export function createTraitOfferCandidateArtifacts(
                 recreation === undefined
               )
                 return [];
-              const declaredDefault = createDefaultEchoLastRewardAcquisition(catalog, recreation, {
-                weaponKey: context.context.weaponKey ?? '',
-                aspectKey: context.context.aspectKey ?? '',
-              });
+              const unresolved = createUnresolvedEchoLastRewardAcquisition(catalog, recreation);
+              const giverKey = traitGiverForAcquisitionRole(catalog, recreation.offer, 'self');
               const freshTraitOffer =
-                declaredDefault.traitOffer?.kind === 'traits'
-                  ? traitOfferStartingDraft(
+                giverKey === undefined
+                  ? undefined
+                  : traitOfferStartingDraft(
                       catalog,
-                      declaredDefault.traitOffer.giverKey,
+                      giverKey,
                       context.before,
                       Object.freeze({
                         ...context.context,
-                        resolvedProviderKey: declaredDefault.traitOffer.giverKey,
+                        resolvedProviderKey: giverKey,
                       }),
-                    )
-                  : declaredDefault.traitOffer;
-              const levelResolution = declaredDefault.levelResolution;
+                    );
+              const levelResolution = unresolved.levelResolution;
               const eligibleLevelTargets = pomEligibleTargetKeys(catalog, context.before);
               const reachedLevelResolution =
                 levelResolution?.kind === 'choice'
@@ -814,13 +840,11 @@ export function createTraitOfferCandidateArtifacts(
               return [
                 Object.freeze({
                   recreation,
-                  defaultValue: Object.freeze({
-                    ...declaredDefault,
-                    ...(freshTraitOffer === undefined ? {} : { traitOffer: freshTraitOffer }),
-                    ...(reachedLevelResolution === undefined
-                      ? {}
-                      : { levelResolution: reachedLevelResolution }),
-                  }),
+                  initialValue: unresolved,
+                  ...(freshTraitOffer === undefined ? {} : { traitOfferDraft: freshTraitOffer }),
+                  ...(reachedLevelResolution === undefined
+                    ? {}
+                    : { levelResolutionDraft: reachedLevelResolution }),
                 }),
               ];
             }),

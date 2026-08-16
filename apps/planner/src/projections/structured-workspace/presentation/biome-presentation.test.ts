@@ -244,6 +244,7 @@ describe('structured workspace biome presentation', () => {
       opening?.kind !== 'node' ||
       opening.node.kind !== 'occurrenceWorkbench' ||
       opening.node.room.roomLocal.kind !== 'incomingReward' ||
+      opening.node.room.roomLocal.control.offer === null ||
       preHubDecisionNode === undefined ||
       preHubSelectedTarget?.reward === undefined
     ) {
@@ -256,7 +257,10 @@ describe('structured workspace biome presentation', () => {
     const preHub = preHubDecisionNode.targets.find(
       (target) => target.room.gameName === 'N_PreHub01',
     );
-    if (preHub?.room.roomLocal.kind !== 'incomingReward') {
+    if (
+      preHub?.room.roomLocal.kind !== 'incomingReward' ||
+      preHub.room.roomLocal.control.offer === null
+    ) {
       throw new Error('N PreHub incoming reward is missing');
     }
     expect(preHubSelectedTarget.reward).toEqual({
@@ -265,7 +269,11 @@ describe('structured workspace biome presentation', () => {
     });
 
     const firstVisit = hub.visits[0];
-    if (firstVisit === undefined || firstVisit.node.room.roomLocal.kind !== 'ephyra') {
+    if (
+      firstVisit === undefined ||
+      firstVisit.node.room.roomLocal.kind !== 'ephyra' ||
+      firstVisit.node.room.roomLocal.incomingReward.offer === null
+    ) {
       throw new Error('first Hub visit is missing its Ephyra main reward');
     }
     expect(firstVisit.mainReward).toEqual({
@@ -324,7 +332,11 @@ describe('structured workspace biome presentation', () => {
     const directTarget = directDecision.targets.find(
       (target) => target.selected && target.room.roomLocal.kind === 'incomingReward',
     );
-    if (directTarget === undefined || directTarget.room.roomLocal.kind !== 'incomingReward') {
+    if (
+      directTarget === undefined ||
+      directTarget.room.roomLocal.kind !== 'incomingReward' ||
+      directTarget.room.roomLocal.control.offer === null
+    ) {
       throw new Error('F direct selected target is missing');
     }
     const directRail = direct.rail.find(
@@ -399,7 +411,7 @@ describe('structured workspace biome presentation', () => {
     }
     const goalTarget = goalDecision.targets[0];
     if (goalTarget?.room.roomLocal.kind !== 'incomingReward') {
-      throw new Error('I Clockwork Goal target lost its dormant counted reward');
+      throw new Error('I Clockwork Goal target lost its dormant counted reward control');
     }
     const rail = biome.rail.find(
       (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
@@ -407,7 +419,7 @@ describe('structured workspace biome presentation', () => {
     );
     if (rail === undefined) throw new Error('I Clockwork Goal decision rail entry is missing');
 
-    expect(goalTarget.room.roomLocal.control.offer.rewardType).toBe('RoomMoneyTripleDrop');
+    expect(goalTarget.room.roomLocal.control.offer).toBeNull();
     expect(goalDecision.missingTargets).toEqual([]);
     expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label });
   });

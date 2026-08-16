@@ -172,16 +172,20 @@ function payloadDomain(
 export function prepareRewardDomain(
   catalog: Catalog,
   rewardTypes: readonly string[],
-  selected: ResolvedRewardOffer,
+  selected?: ResolvedRewardOffer,
 ): PreparedRewardDomain {
   const types = rewardTypes.map((rewardType) => {
     let witnesses = locallyValidRewardOffers(catalog.rewards, rewardType);
-    if (rewardType === selected.rewardType) {
+    if (selected !== undefined && rewardType === selected.rewardType) {
       witnesses = appendUnique(witnesses, selected);
     }
-    return option(rewardType, witnesses, rewardType === selected.rewardType ? selected : undefined);
+    return option(
+      rewardType,
+      witnesses,
+      selected !== undefined && rewardType === selected.rewardType ? selected : undefined,
+    );
   });
-  if (!rewardTypes.includes(selected.rewardType)) {
+  if (selected !== undefined && !rewardTypes.includes(selected.rewardType)) {
     types.push(
       option(
         selected.rewardType,
@@ -189,6 +193,12 @@ export function prepareRewardDomain(
         selected,
       ),
     );
+  }
+  if (selected === undefined) {
+    return Object.freeze({
+      types: Object.freeze(types),
+      payload: Object.freeze({ kind: 'none' }),
+    });
   }
   const selectedType = types.find((candidate) => candidate.key === selected.rewardType);
   if (selectedType === undefined) {

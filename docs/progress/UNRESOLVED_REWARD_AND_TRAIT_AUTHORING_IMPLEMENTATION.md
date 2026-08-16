@@ -176,8 +176,9 @@ consumer in the same commit. The final behavior gate deletes every remaining
 production seed field and helper.
 
 Schema numbers follow semantic model boundaries, not room-family boundaries.
-Gate A advances the shared reward model once. Gate B advances the remaining
-encounter-owned trait-offer model once. The project must not advance a schema
+Gate A advances the shared reward model and immediate keepsake-result model
+once. Gate B advances the remaining encounter-owned trait-offer model once.
+The project must not advance a schema
 for an internal implementation checkpoint.
 
 ### 9. Unresolved handling is total, not exceptional
@@ -360,10 +361,11 @@ new name.
 
 ### Objective
 
-Replace the shared invented-default machinery across every reward owner in one
-complete vertical slice. Ordinary incoming rewards establish the core
-unresolved contract; room-local cohorts, generated inventory, supplemental
-entries, and Artificer use that same contract before the gate is reviewed.
+Replace the shared invented-default machinery across every reward owner and
+both immediate random keepsake results in one complete vertical slice.
+Ordinary incoming rewards establish the core unresolved contract; room-local
+cohorts, generated inventory, supplemental entries, Artificer, Jeweled Pom,
+and Experimental Hammer use that same contract before the gate is reviewed.
 
 ### Persisted boundary
 
@@ -373,7 +375,10 @@ supplemental Shops, acquisition-site pickups, Artificer replacements, and Echo
 recreated entries to unresolved-or-complete state wherever their identity is
 not fully fixed. A complete reward's required trait-producing roles become
 unresolved-or-complete offers with exact role keys. Fully fixed producers
-remain derived concrete values.
+remain derived concrete values. Route-start, Postboss, and Echo-replayed
+Jeweled Pom or Experimental Hammer selections retain their concrete keepsake
+identity while their immediate random trait result is absent/unresolved until
+authored through the existing result command.
 
 ### Behavior
 
@@ -389,6 +394,12 @@ remain derived concrete values.
 - Compatible selected rewards/offers survive room replacement unchanged,
   including selected-invalid state.
 - Reset returns an authorable leaf to unresolved; it does not restore a seed.
+- Selecting Jeweled Pom or Experimental Hammer never installs a giver default,
+  catalog-first trait, or loadout triple. Their existing exact result candidate,
+  finding, focus, and command products own completion.
+- Completed immediate keepsake results survive swap-away/back and upstream
+  invalidation as retained authored values. Experimental Hammer Echo replay
+  uses the same unresolved-or-complete result contract.
 
 ### Primary witnesses
 
@@ -413,10 +424,15 @@ remain derived concrete values.
 - Creating a room with an unresolved reward, changing an unrelated route field,
   replacing the room, and finally authoring the reward all succeed without a
   temporary concrete value or exception-based recovery.
+- Route-start and Postboss Jeweled Pom/Experimental Hammer selections retain
+  their concrete keepsake identity, publish one exact missing-result finding,
+  expose their complete candidate domain, and settle only after a result is
+  authored. Experimental Hammer Echo replay has the same behavior.
 - Gate A removes reward-payload, counted-store, Shop-slot, Contract, and derived
-  replacement seeds from production catalog/compiler products. Only giver
-  offer seeds still required by the not-yet-migrated encounter-offer owner may
-  remain for Gate B.
+  replacement seeds plus Hammer `defaultsByLoadout` from production
+  catalog/compiler products. Only giver `defaultOffer` seeds still required by
+  the not-yet-migrated encounter-offer/Gorgon owner may remain for Gate B;
+  Jeweled Pom no longer consumes that seed.
 
 ### Commit boundary
 
@@ -585,21 +601,21 @@ All current Gate-A behavior, witnesses, and deletions proceed to one independent
 review and commit. No private pending map, Shop-specific unresolved order, or
 derived-entry default installer may survive.
 
-## Gate B — Encounter/Keepsake Trait Outcomes and Final Trait-Seed Removal
+## Gate B — Encounter Trait Outcomes and Final Trait-Seed Removal
 
 ### Objective
 
-Complete generated-trait migration at every remaining encounter- and
-keepsake-owned contact, then remove the production catalog vocabulary that can
-still express invented defaults.
+Complete generated-trait migration at every remaining encounter-owned contact,
+then remove the production catalog vocabulary that can still express invented
+defaults.
 
 ### Persisted boundary
 
 Advance schema 42 to strict schema 43. Migrate encounter/NPC trait offers,
-Gorgon Athena, Jeweled Pom's immediate Hades trait, Experimental Hammer's
-immediate compatible Hammer result, and every remaining specialized generated
-trait outcome to the same unresolved-or-complete contract. Delete the remaining
-giver offer seeds and their compiler-normalized products.
+Gorgon Athena, and every remaining encounter-generated trait outcome to the
+same unresolved-or-complete contract. Delete the remaining giver
+`defaultOffer` seeds and their compiler-normalized products. Gate A's immediate
+keepsake-result model and deleted Hammer loadout triples are not reopened.
 
 ### Behavior
 
@@ -608,8 +624,6 @@ giver offer seeds and their compiler-normalized products.
   offer unresolved.
 - Gorgon's condition may activate a known Athena provider without choosing
   three Athena traits.
-- Hammer candidates derive solely from weapon/aspect compatibility and current
-  history; no loadout triple remains.
 - Circe, Echo, All Together, Denial, Forfeit, Calling Card, targeted
   acquisition, rarity, and selected child semantics run only after one complete
   outer offer is authored and retain their current exact rules.
@@ -619,13 +633,6 @@ giver offer seeds and their compiler-normalized products.
 - Existing Combat/Artemis/Heracles encounter defaults and encounter-selection
   commands remain unchanged; no encounter identity gains an unresolved state
   or repeated authoring control.
-- Selecting Jeweled Pom or Experimental Hammer at route start or Postboss
-  retains the keepsake identity but leaves its immediate random trait result
-  unresolved. It never selects the giver default or first compatible Hammer.
-- Existing keepsake-result candidate, missing-finding, focus, and command
-  products remain the sole authoring path. A completed result that later becomes
-  invalid is retained, and Experimental Hammer's Echo replay follows the same
-  selected-or-unresolved contract without a second default path.
 - Reward support and Shop option identity already enumerate from Gate A's
   source support and fixed declarations; Gate B does not reopen that model.
 - The compiler rejects reintroduction of giver authoring seeds, while Gate A's
@@ -634,20 +641,12 @@ giver offer seeds and their compiler-normalized products.
 
 ### Primary witnesses
 
-- Every non-Hammer giver compiles without a default triple; every Hammer
-  loadout retains exact compatible candidate support without one.
-- Representative Olympian, Hermes, Hammer, NPC, Gorgon, Circe, and Echo offers
+- Every giver compiles without an authored default offer.
+- Representative Olympian, Hermes, NPC, Gorgon, Circe, and Echo offers
   start unresolved and emit only one missing finding.
 - Representative Combat, Artemis, and Heracles occurrences retain their
   existing encounter identity without a missing-encounter finding; only a
   declaration-owned trait offer, when present, is unresolved.
-- Route-start and Postboss Jeweled Pom/Experimental Hammer selections retain
-  concrete keepsake identities, publish one missing-result finding, preserve
-  their exact candidate domains, and settle only after a result is authored.
-- Completed immediate keepsake results survive swap-away/back and upstream
-  invalidation as retained selected values. Experimental Hammer biome-start
-  Echo replay uses the same unresolved and complete states without inventing a
-  first compatible Hammer.
 - A complete one-, two-, and three-option offer plus Fallback Gold round-trip
   and settle through the same command family.
 - Denial bans and Forfeit effects are absent while the offer is unresolved and

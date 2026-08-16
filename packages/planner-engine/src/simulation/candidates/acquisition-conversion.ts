@@ -19,9 +19,9 @@ export interface EvaluatedAcquisitionConversionCandidate {
     readonly timePieceConvertible: boolean;
     readonly artificerSupported: boolean;
     readonly artificerConvertible: boolean;
-    readonly artificerDefaultReplacement?: import('../../authored-project/model').AuthoredRewardState;
-    readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
     readonly artificerReplacementAddress?: import('../../authored-project/addresses').AcquisitionEntryAddress;
+    readonly artificerReplacementRewardTypes?: readonly string[];
+    readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
     readonly branchCount: number;
     readonly unsupportedEvidence: readonly import('../model').FindingEvidence[];
   };
@@ -68,15 +68,15 @@ export function evaluateAcquisitionConversionCandidate(
             entry.evidence.blocksArtificerConversion !== true &&
             entry.evidence.instanceProvenance === 'free',
         ),
-      ...(capability.artificerDefaultReplacement === undefined
-        ? {}
-        : { artificerDefaultReplacement: capability.artificerDefaultReplacement }),
-      ...(capability.artificerReplacementOptions === undefined
-        ? {}
-        : { artificerReplacementOptions: capability.artificerReplacementOptions }),
       ...(capability.artificerReplacementAddress === undefined
         ? {}
         : { artificerReplacementAddress: capability.artificerReplacementAddress }),
+      ...(capability.artificerReplacementRewardTypes === undefined
+        ? {}
+        : { artificerReplacementRewardTypes: capability.artificerReplacementRewardTypes }),
+      ...(capability.artificerReplacementOptions === undefined
+        ? {}
+        : { artificerReplacementOptions: capability.artificerReplacementOptions }),
       branchCount: capability.timePieceAssessments.length,
       unsupportedEvidence: Object.freeze(
         [...capability.timePieceAssessments, ...capability.artificerAssessments]

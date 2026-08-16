@@ -1708,24 +1708,7 @@ describe('trait offer catalog closure', () => {
     ).toThrow(/rarityless traits cannot declare/);
   });
 
-  it('provides a compatible complete Hammer default for every weapon/aspect pair', () => {
-    const hammer = traits?.givers.byKey.WeaponUpgrade;
-    expect(hammer?.defaultsByLoadout && Object.keys(hammer.defaultsByLoadout)).toHaveLength(24);
-    for (const weapon of traits?.weapons.values ?? []) {
-      for (const aspectKey of weapon.aspectKeys) {
-        const defaults = hammer?.defaultsByLoadout?.[`${weapon.key}:${aspectKey}`];
-        expect(defaults?.options).toHaveLength(3);
-        for (const option of defaults?.options ?? []) {
-          const declaration = traits?.traits.byKey[option.traitKey];
-          expect(declaration?.hammerCompatibility?.weaponKey).toBe(weapon.key);
-          expect(declaration?.hammerCompatibility?.aspectKeys).toContain(aspectKey);
-          expect(option.rarity).toBeUndefined();
-        }
-      }
-    }
-  });
-
-  it('rejects unknown pools and incomplete Hammer defaults at the catalog boundary', () => {
+  it('rejects unknown pools at the catalog boundary without requiring Hammer defaults', () => {
     const unknownPool = {
       ...declarations,
       traitCatalog: {
@@ -1737,27 +1720,7 @@ describe('trait offer catalog closure', () => {
     };
     expect(() => createCatalog(unknownPool)).toThrow(/unknown trait/);
 
-    const incompleteHammer = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        givers: declarations.traitCatalog.givers.map((giver) =>
-          giver.key === 'WeaponUpgrade'
-            ? {
-                ...giver,
-                defaultsByLoadout: Object.fromEntries(
-                  Object.entries(giver.defaultsByLoadout ?? {}).filter(
-                    ([key]) => key !== 'WeaponStaffSwing:BaseStaffAspect',
-                  ),
-                ),
-              }
-            : giver,
-        ),
-      },
-    };
-    expect(() => createCatalog(incompleteHammer)).toThrow(
-      /missing WeaponStaffSwing:BaseStaffAspect/,
-    );
+    expect(traits?.givers.byKey.WeaponUpgrade?.defaultOffer).toBeUndefined();
   });
 
   it('rejects malformed priority declarations and non-priority Olympian defaults', () => {
@@ -2069,27 +2032,15 @@ describe('trait offer catalog closure', () => {
           giver.key === 'WeaponUpgrade'
             ? {
                 ...giver,
-                defaultsByLoadout: {
-                  ...giver.defaultsByLoadout,
-                  'WeaponStaffSwing:BaseStaffAspect': {
-                    ...giver.defaultsByLoadout?.['WeaponStaffSwing:BaseStaffAspect'],
-                    options: [
-                      {
-                        traitKey: 'StaffDoubleAttackTrait',
-                        rarity: 'Common' as const,
-                      },
-                      ...(giver.defaultsByLoadout?.[
-                        'WeaponStaffSwing:BaseStaffAspect'
-                      ]?.options.slice(1) ?? []),
-                    ] as const,
-                  },
-                },
+                rarityPolicy: { kind: 'fixed' as const, rarity: 'Common' as const },
               }
             : giver,
         ),
       },
     };
-    expect(() => createCatalog(hammerRarity as never)).toThrow(/has no rarity/);
+    expect(() => createCatalog(hammerRarity as never)).toThrow(
+      /Hammer givers require no rarity authorship/,
+    );
 
     const unknownRequirement = {
       ...declarations,

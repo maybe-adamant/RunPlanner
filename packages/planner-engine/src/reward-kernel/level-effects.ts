@@ -28,7 +28,7 @@ export function levelResolutionEffectFor(
       if (shop === undefined) return undefined;
       const bindings = shop.groups.values.flatMap((group) =>
         group.options.values
-          .filter((option) => option.defaultOffer.rewardType === offer.rewardType)
+          .filter((option) => option.rewardType === offer.rewardType)
           .flatMap((option) =>
             option.acquisitionLifecycle.filter((binding) => binding.role === role),
           ),

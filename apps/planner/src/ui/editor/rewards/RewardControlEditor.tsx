@@ -43,7 +43,12 @@ export function RewardControlEditor({
           interactions={interactions}
           offer={control.offer}
           onReplace={onReplace}
-          {...(offerStartStep === undefined ? {} : { initialStep: offerStartStep })}
+          {...(control.authoringSeed === undefined
+            ? {}
+            : { unresolvedSeed: control.authoringSeed })}
+          {...((offerStartStep ?? control.authoringStartStep) === undefined
+            ? {}
+            : { initialStep: offerStartStep ?? control.authoringStartStep })}
         />
       ) : (
         <RewardValueEditor
@@ -52,7 +57,12 @@ export function RewardControlEditor({
           interactions={interactions}
           offer={control.offer}
           onReplace={onReplace}
-          {...(offerStartStep === undefined ? {} : { initialStep: offerStartStep })}
+          {...(control.authoringSeed === undefined
+            ? {}
+            : { unresolvedSeed: control.authoringSeed })}
+          {...((offerStartStep ?? control.authoringStartStep) === undefined
+            ? {}
+            : { initialStep: offerStartStep ?? control.authoringStartStep })}
         />
       )}
       {!showAcquisitionChildren ? null : (
@@ -91,10 +101,11 @@ export function RewardControlEditor({
                         executeIntent(interaction.intentFor(Object.freeze({ kind })));
                         return;
                       }
-                      const replacement = interaction.artificerDefaultReplacement;
-                      if (kind === 'artificer' && replacement !== undefined)
+                      if (kind === 'artificer')
                         executeIntent(
-                          interaction.intentFor(Object.freeze({ kind: 'artificer', replacement })),
+                          interaction.intentFor(
+                            Object.freeze({ kind: 'artificer', replacement: null }),
+                          ),
                         );
                     }}
                     value={conversion.value.kind}
@@ -110,9 +121,7 @@ export function RewardControlEditor({
                     </option>
                     <option
                       disabled={
-                        (!interaction.artificerSupported ||
-                          interaction.artificerDefaultReplacement === undefined) &&
-                        conversion.value.kind !== 'artificer'
+                        !interaction.artificerSupported && conversion.value.kind !== 'artificer'
                       }
                       value="artificer"
                     >

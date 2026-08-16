@@ -12,12 +12,7 @@ import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { LocalRewardCommand } from './types';
-import {
-  createDefaultLevelResolutions,
-  createDefaultTraitOffers,
-  producerLevelEffectSource,
-} from '../traits';
-import { createDefaultDispositionByAcquisitionRole } from '../reward-state';
+import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 
 export function applyLocalRewardCommand(
   document: ProjectDocument,
@@ -57,7 +52,12 @@ export function applyLocalRewardCommand(
     const levelEffectSource = producerLevelEffectSource(binding);
     if (reward === undefined)
       failCommand(command, `missing local reward ${command.reward.slotKey}`);
-    if (sameOccurrenceValue(reward.offer, command.value)) return document;
+    if (reward !== null && sameOccurrenceValue(reward.offer, command.value)) return document;
+    const replacementReward = createUnresolvedAcquisitionRewardState(
+      catalog,
+      command.value,
+      levelEffectSource,
+    );
     return updateOccurrenceTopology(
       document,
       located,
@@ -71,61 +71,13 @@ export function applyLocalRewardCommand(
               ? {
                   cages: Object.freeze({
                     ...occurrence.state.cages,
-                    [command.reward.slotKey]: Object.freeze({
-                      offer: command.value,
-                      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-                        catalog,
-                        command.value,
-                      ),
-                      traitOffersByAcquisitionRole: createDefaultTraitOffers(
-                        catalog,
-                        command.value,
-                        located.loadout,
-                      ),
-                      ...(createDefaultLevelResolutions(
-                        catalog,
-                        command.value,
-                        levelEffectSource,
-                      ) === undefined
-                        ? {}
-                        : {
-                            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                              catalog,
-                              command.value,
-                              levelEffectSource,
-                            ),
-                          }),
-                    }),
+                    [command.reward.slotKey]: replacementReward,
                   }),
                 }
               : {
                   optionalRewards: Object.freeze({
                     ...occurrence.state.optionalRewards,
-                    [command.reward.slotKey]: Object.freeze({
-                      offer: command.value,
-                      dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-                        catalog,
-                        command.value,
-                      ),
-                      traitOffersByAcquisitionRole: createDefaultTraitOffers(
-                        catalog,
-                        command.value,
-                        located.loadout,
-                      ),
-                      ...(createDefaultLevelResolutions(
-                        catalog,
-                        command.value,
-                        levelEffectSource,
-                      ) === undefined
-                        ? {}
-                        : {
-                            levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                              catalog,
-                              command.value,
-                              levelEffectSource,
-                            ),
-                          }),
-                    }),
+                    [command.reward.slotKey]: replacementReward,
                   }),
                 }),
           }),
@@ -146,7 +98,8 @@ export function applyLocalRewardCommand(
   const sideRoom = state.sideRooms[command.reward.slotKey];
   if (sideRoom === undefined)
     failCommand(command, `missing side-room state ${command.reward.slotKey}`);
-  if (sameOccurrenceValue(sideRoom.reward.offer, command.value)) return document;
+  if (sideRoom.reward !== null && sameOccurrenceValue(sideRoom.reward.offer, command.value))
+    return document;
   const sideDeclaration =
     catalog.rooms.byKey[
       group.slots.find((slot) => slot.slotKey === command.reward.slotKey)?.roomGameName ?? ''
@@ -167,28 +120,11 @@ export function applyLocalRewardCommand(
             ...state.sideRooms,
             [command.reward.slotKey]: Object.freeze({
               ...sideRoom,
-              reward: Object.freeze({
-                offer: command.value,
-                dispositionByAcquisitionRole: createDefaultDispositionByAcquisitionRole(
-                  catalog,
-                  command.value,
-                ),
-                traitOffersByAcquisitionRole: createDefaultTraitOffers(
-                  catalog,
-                  command.value,
-                  located.loadout,
-                ),
-                ...(createDefaultLevelResolutions(catalog, command.value, levelEffectSource) ===
-                undefined
-                  ? {}
-                  : {
-                      levelResolutionsByAcquisitionRole: createDefaultLevelResolutions(
-                        catalog,
-                        command.value,
-                        levelEffectSource,
-                      ),
-                    }),
-              }),
+              reward: createUnresolvedAcquisitionRewardState(
+                catalog,
+                command.value,
+                levelEffectSource,
+              ),
             }),
           }),
         }),

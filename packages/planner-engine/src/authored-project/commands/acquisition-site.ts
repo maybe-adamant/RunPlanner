@@ -5,17 +5,42 @@ import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutati
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { AcquisitionSiteCommand, DerivedShopEntryEditCommand } from './types';
 import {
-  createDefaultAcquisitionRewardState,
-  createDefaultPickupRewardState,
+  createUnresolvedAcquisitionRewardState,
+  createUnresolvedPickupRewardState,
   selectedPickupProducer,
 } from '../traits';
 import {
   authoredAcquisitionEntry,
+  echoShopDuplicateOffer,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 import { parseArtificerReplacementEntryKey } from '../artificer';
+
+function derivedShopEntryValue(
+  catalog: Catalog,
+  occurrence: import('../model').RoomOccurrence,
+  entryKey: typeof TRAVEL_DEAL_REFILL_ENTRY_KEY | typeof ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  sourceOfferKey: string,
+  command: AcquisitionSiteCommand | DerivedShopEntryEditCommand,
+): import('../model').AuthoredRewardState | null {
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (shop === undefined) failCommand(command, 'has no materialized Shop');
+  const source =
+    shop.offers[sourceOfferKey]?.reward ??
+    occurrence.acquisitionSites?.roomExit?.pickupEntries?.[sourceOfferKey];
+  if (source === undefined || source === null)
+    failCommand(command, `has no concrete derived-entry source ${sourceOfferKey}`);
+  if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) return null;
+  const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
+  return duplicateOffer === null
+    ? null
+    : createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
+        kind: 'shopProfile',
+        key: shop.profileKey,
+      });
+}
 
 /**
  * The first authorable settlement point is a materialized Shop's room-exit
@@ -37,17 +62,6 @@ export function applyAcquisitionSiteCommand(
     const profileKey =
       occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
     if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-    const expected = createDefaultAcquisitionRewardState(
-      catalog,
-      command.defaultValue.offer,
-      located.loadout,
-      { kind: 'shopProfile', key: profileKey },
-    );
-    if (
-      command.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-      !sameOccurrenceValue(expected, command.defaultValue)
-    )
-      failCommand(command, 'must use the declaration-complete derived refill default');
     if (
       command.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
       command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
@@ -56,6 +70,13 @@ export function applyAcquisitionSiteCommand(
     if (!command.entryKeys.includes(command.entryKey))
       failCommand(command, `must include ${command.entryKey} in the acquisition order`);
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
+    const derivedValue = derivedShopEntryValue(
+      catalog,
+      occurrence,
+      command.entryKey,
+      command.sourceOfferKey,
+      command,
+    );
     const nextOccurrence = Object.freeze({
       ...occurrence,
       acquisitionSites: Object.freeze({
@@ -64,7 +85,7 @@ export function applyAcquisitionSiteCommand(
           order: Object.freeze([...command.entryKeys]),
           pickupEntries: Object.freeze({
             ...pickupEntries,
-            [command.entryKey]: pickupEntries[command.entryKey] ?? command.defaultValue,
+            [command.entryKey]: pickupEntries[command.entryKey] ?? derivedValue,
           }),
         }),
       }),
@@ -92,10 +113,12 @@ export function applyAcquisitionSiteCommand(
     if (
       !supplementalEntry &&
       entry !== undefined &&
+      entry !== null &&
       entry.offer.rewardType !== command.value.rewardType
     )
       failCommand(command, `must retain declared reward type ${entry.offer.rewardType}`);
-    if (entry !== undefined && sameOccurrenceValue(entry.offer, command.value)) return document;
+    if (entry !== undefined && entry !== null && sameOccurrenceValue(entry.offer, command.value))
+      return document;
     const route = document.routes.find((candidate) => candidate.routeKey === site.routeKey);
     if (route === undefined) failCommand(command, `unknown route ${site.routeKey}`);
     if (supplementalEntry) {
@@ -128,10 +151,9 @@ export function applyAcquisitionSiteCommand(
                 order: occurrence.acquisitionSites?.roomExit?.order ?? [],
                 pickupEntries: Object.freeze({
                   ...pickupEntries,
-                  [command.entry.entryKey]: createDefaultAcquisitionRewardState(
+                  [command.entry.entryKey]: createUnresolvedAcquisitionRewardState(
                     catalog,
                     command.value,
-                    route.loadout,
                     effectSource,
                   ),
                 }),
@@ -156,10 +178,9 @@ export function applyAcquisitionSiteCommand(
               order: occurrence.acquisitionSites?.roomExit?.order ?? [],
               pickupEntries: Object.freeze({
                 ...pickupEntries,
-                [command.entry.entryKey]: createDefaultPickupRewardState(
+                [command.entry.entryKey]: createUnresolvedPickupRewardState(
                   catalog,
                   command.value,
-                  route.loadout,
                   producer.disposition.producerLifecycleKey,
                 ),
               }),
@@ -226,8 +247,8 @@ export function applyAcquisitionSiteCommand(
   );
 }
 
-/** Persist a derived Shop payload default without selecting it in chronology. */
-export function materializeDerivedShopEntryDefault(
+/** Persist only source-derived facts (or an unresolved leaf) before a nested edit. */
+export function materializeDerivedShopEntry(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
@@ -245,19 +266,15 @@ export function materializeDerivedShopEntryDefault(
     command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
   )
     failCommand(command, 'has an unknown derived Shop entry');
-  const expected = createDefaultAcquisitionRewardState(
-    catalog,
-    command.defaultValue.offer,
-    located.loadout,
-    { kind: 'shopProfile', key: profileKey },
-  );
-  if (
-    command.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-    !sameOccurrenceValue(expected, command.defaultValue)
-  )
-    failCommand(command, 'must use the declaration-complete derived entry default');
   const site = occurrence.acquisitionSites?.roomExit;
   if (site?.pickupEntries?.[command.entryKey] !== undefined) return document;
+  const derivedValue = derivedShopEntryValue(
+    catalog,
+    occurrence,
+    command.entryKey,
+    command.sourceOfferKey,
+    command,
+  );
   const nextOccurrence = Object.freeze({
     ...occurrence,
     acquisitionSites: Object.freeze({
@@ -266,7 +283,7 @@ export function materializeDerivedShopEntryDefault(
         order: site?.order ?? Object.freeze([]),
         pickupEntries: Object.freeze({
           ...(site?.pickupEntries ?? {}),
-          [command.entryKey]: command.defaultValue,
+          [command.entryKey]: derivedValue,
         }),
       }),
     }),
