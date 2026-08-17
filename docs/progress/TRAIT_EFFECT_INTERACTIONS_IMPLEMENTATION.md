@@ -2,19 +2,17 @@
 
 ## Status
 
-Draft lock candidate created from clean base
-`86dbd783f021e2c2be1f2708957e2be8d20c95d5` with strict project schema 43.
-This document is temporary delivery authority. It is not linked from the
-README or stable design documents, and implementation must not begin until a
-fresh adversarial review has checked it against the installed game scripts,
-the live engine/application products, and the current unresolved-authoring
-contract.
+Locked delivery plan created from clean base
+`86dbd783f021e2c2be1f2708957e2be8d20c95d5`. Gate A landed as `86d5aea` with
+strict schema 44, and Gate B landed as `e3f708b` with strict schema 45. Gate C's
+interaction shape was amended on the clean Gate-B head before its executor was
+started. A fresh adversarial read must check that amendment against the live
+schema-45 products before Gate C is locked for execution.
 
-The preceding schema-43 unresolved-authoring behavior has landed, but its
-durable closure remains separate pending work at draft time. Complete that
-closure and retire its temporary authority before this plan's first behavior
-commit. This plan is self-contained and must not silently absorb or reinterpret
-the predecessor's closure.
+This document is temporary delivery authority. It is not linked from the
+README or stable design documents. The preceding unresolved-authoring phase's
+durable closure remains separate pending work; this plan must not silently
+absorb or reinterpret that closure.
 
 Owning evidence:
 
@@ -473,13 +471,26 @@ Reward replay payload/editor path. It must not relocate BBB into acquisitions.
 ### Application and UI
 
 - Remove BBB editing from the outer Echo option card.
-- Render a dedicated `Boon Boon Boon choice` row in the selected-outcome region
-  after the outer selection.
+- Render one summarized `Boon Boon Boon choice` dependent row in the
+  selected-outcome region after the outer selection. An unresolved row says
+  that a choice is required and exposes `Choose`; a completed row summarizes
+  the selected provider, trait, and rarity and exposes `Edit choice`.
+- `Choose` or `Edit choice` drills into a second view inside the existing trait
+  dialog. It does not open a nested modal and does not add a second unlabeled
+  `Edit trait` button. The child view identifies its ownership with an
+  `Echo offer > Boon Boon Boon choice` header or equivalent breadcrumb and
+  provides `Back` to the outer Echo offer.
 - Use a contextual compound picker for one to three heterogeneous
   giver/trait/rarity rows and one selected row. Fixed-rarity traits show a
   read-only rarity; selectable rarities use engine-backed candidates.
 - When the selected BBB row is targeted, render its contextual Target section
-  below the BBB rows. Do not change row/card height.
+  below the BBB rows in the child view. Do not change row/card height.
+- Keep incomplete compound progress in editor-session state. `Back`, Cancel,
+  or closing the dialog does not persist a partial BBB value; one explicit
+  completion action dispatches the complete specialized child.
+- An exact missing or invalid BBB finding opens the containing trait dialog in
+  the BBB child view and focuses the affected child control. Ordinary entry
+  through the Echo editor starts in the outer view.
 - Make the fixed chronology obvious in copy and controls: no Picked up checkbox,
   no order handle, and no movement command.
 
@@ -502,15 +513,21 @@ Reward replay payload/editor path. It must not relocate BBB into acquisitions.
 - provider-specific Duo variants remain alternatives for one trait identity
   and cannot occupy two rows;
 - fixed and selectable rarity domains render correctly;
+- the outer Echo view shows one labeled dependent summary row rather than two
+  ambiguous `Edit trait` buttons, and Choose/Edit enters and returns from the
+  same-dialog child view without nesting dialogs;
 - selected Bridal Glow exposes one target picker below BBB rows and commits one
   complete specialized offer;
+- backing out of a partial BBB compound draft persists no child edit, while one
+  completed draft dispatches exactly one semantic replacement;
 - successful selection mutates only the selected provider's loot history and
   exact selected trait effect;
 - switching outer options makes the BBB row dormant and restores it on return;
 - missing/invalid BBB never throws through command, simulation, projection, or
   React; and
-- the dedicated row and its nested target support exact focus plus Redux
-  undo/redo without any acquisition participation/order product.
+- the dedicated row and its nested target support exact finding-driven dialog
+  entry/focus plus Redux undo/redo without any acquisition
+  participation/order product.
 
 ### Commit boundary
 
