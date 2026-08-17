@@ -3,16 +3,22 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
+  createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -21,11 +27,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApplication } from '@planner/composition/createApplication';
 import {
   authoredProjectCommandDispatched,
+  authoredProjectRedoRequested,
   authoredProjectReplaced,
+  authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
+  goldenHBiome,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -33,6 +42,7 @@ import {
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 afterEach(() => {
   cleanup();
@@ -65,6 +75,144 @@ describe('underworld product loop', () => {
     });
     expect(document.body.textContent).not.toContain('F_Combat');
     expect(document.body.textContent).not.toContain('Linear topology');
+  });
+
+  it('repairs a stale Echo replay identity through the focused generated Acquisitions row', async () => {
+    const application = createApplication();
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    const combat09 = createOccurrenceId('golden-h-combat09');
+    const echoOwner = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const replayKey = echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1');
+    const replayEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
+      replayKey,
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: combat09,
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'EchoLastReward' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+        rarificationActions: [],
+      },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: replayEntry,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(
+        goldenHBiome,
+        createOccurrenceId('golden-h-combat03'),
+        'cages',
+        'cage1',
+      ),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(goldenHBiome, combat09, 'cages', 'cage2'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+
+    const staleFinding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (finding) =>
+          finding.code === 'rewardSourceUnavailable' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
+      );
+    if (staleFinding === undefined) throw new Error('stale Echo replay finding is missing');
+    const findingIndex = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.indexOf(staleFinding);
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.rewards.get(semanticAddressKey(replayEntry)),
+    ).toMatchObject({
+      authoredRewardTypes: ['MaxHealthDrop'],
+      selected: { rewardType: 'WeaponUpgrade' },
+    });
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings).getAllByRole('button')[findingIndex];
+    if (findingButton === undefined) throw new Error('stale Echo replay finding is not presented');
+    await view.user.click(findingButton);
+
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(replayEntry);
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'biome',
+      biomeKey: 'H',
+    });
+    const replayRow = document.getElementById(semanticOwnerControlElementId(replayEntry));
+    if (!(replayRow instanceof HTMLElement))
+      throw new Error('focused Echo Acquisitions row is missing');
+    const reward = within(replayRow).getByRole('button', { name: 'Reward' });
+    await view.user.click(reward);
+    const picker = await screen.findByRole('listbox');
+    const maxHealth = within(picker).getByText('Max Health');
+    expect(maxHealth.closest('[aria-disabled="true"]')).toBeNull();
+    await view.user.click(maxHealth);
+
+    const authoredSite = () =>
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'H')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
+        ?.acquisitionSites?.roomExit;
+    await waitFor(() =>
+      expect(authoredSite()).toMatchObject({
+        order: [replayKey],
+        pickupEntries: { [replayKey]: { offer: { rewardType: 'MaxHealthDrop' } } },
+      }),
+    );
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
+        ),
+    ).toBe(false);
+
+    act(() => application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredSite()).toMatchObject({
+      order: [replayKey],
+      pickupEntries: { [replayKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
+    });
+    act(() => application.store.dispatch(authoredProjectRedoRequested()));
+    expect(authoredSite()).toMatchObject({
+      order: [replayKey],
+      pickupEntries: { [replayKey]: { offer: { rewardType: 'MaxHealthDrop' } } },
+    });
   });
 
   it('authors, configures, selects, and continues through a natural Chaos gate', async () => {

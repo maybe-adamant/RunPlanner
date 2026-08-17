@@ -141,6 +141,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];
     readonly fixedReward?: import('../../authored-project/model').AuthoredRewardState;
+    readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];
 }

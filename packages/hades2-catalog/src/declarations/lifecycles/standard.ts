@@ -104,7 +104,7 @@ export const standardRoomLifecycleProfiles = [
 
 export const specializedRewardRoomLifecycleProfiles = [
   {
-    key: 'NarcissusStoryRoom',
+    key: 'StoryPickupRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [

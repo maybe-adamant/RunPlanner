@@ -1,33 +1,34 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
-  createEchoLastRewardAddress,
   createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  echoLastRewardPickupEntryKey,
   type AuthoredEchoLastRunBoonOffer,
-  type AuthoredEchoLastRewardAcquisition,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import {
-  applyConcreteAcquisition,
-  factsWithHistory,
   recordLootTypeHistorySource,
   supportedPayloads,
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import {
   createPreparedProjectCandidateSession,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
@@ -42,14 +43,10 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   evaluateEchoLastRunBoonDomain,
-  evaluateEchoLastRewardDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
-import {
-  processEncounterTraitOffer,
-  settleOwnedAcquisitionSite,
-} from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
 import {
   assessTraitOption,
   attachTraitHistory,
@@ -139,15 +136,22 @@ function echoBoonOffer(
   );
 }
 
-function echoRewardOffer(child?: AuthoredEchoLastRewardAcquisition): AuthoredTraitOfferTraits {
+function echoRewardOffer(): AuthoredTraitOfferTraits {
   return echoOffer('option1', [
-    Object.freeze({
-      traitKey: 'EchoLastReward',
-      ...(child === undefined ? {} : { echoLastReward: child }),
-    }),
+    Object.freeze({ traitKey: 'EchoLastReward' }),
     Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
     Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
   ]);
+}
+
+const echoReplayEntryKey = echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1');
+
+function echoReplaySite() {
+  return createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit');
+}
+
+function echoReplayEntry() {
+  return createAcquisitionEntryAddress(echoReplaySite(), echoReplayEntryKey);
 }
 
 function completeGoldenFGHProject() {
@@ -204,6 +208,25 @@ function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge())
   });
 }
 
+function makeBridgeOutgoingEligible(project: ReturnType<typeof completeGoldenFGHProject>) {
+  const targetId = createOccurrenceId('golden-h-combat05');
+  const replaced = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(goldenHBiome, targetId),
+    gameName: 'H_MiniBoss02',
+  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(replaced, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenHBiome, targetId),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    }),
+  );
+}
+
 function historyFromTraits(
   options: readonly {
     readonly giverKey: string;
@@ -238,36 +261,6 @@ function ordinaryPoolFor(history: ReturnType<typeof baseBranch>['history']): rea
   } as RewardKernelFacts;
   return supportedPayloads(catalog.rewards, rewardType, facts).flatMap((payload) =>
     payload.kind === 'BoonSource' ? [payload.source] : [],
-  );
-}
-
-function replayFacts(history: ReturnType<typeof baseBranch>['history']): RewardKernelFacts {
-  return factsWithHistory(
-    {
-      requirements: {
-        counters: {
-          biomeDepthCache: 1,
-          biomeEncounterDepth: 1,
-          encounterDepth: 1,
-          enteredBiomes: 3,
-          upgradableTraitCount: 0,
-        },
-        records: { biomeUseRecord: {}, lootTypeHistory: {}, roomsEntered: {}, useRecord: {} },
-        currentRoomShopOptionNames: new Set(),
-        currentRoomRewardType: undefined,
-        currentRoomStructuralTags: [],
-        rewardLookups: {},
-        runDepthCache: 1,
-        lastEventRunDepthCaches: {},
-        recentEncounterEnvelopeSlots: [],
-        offeredExitCount: 1,
-        currentBatchRoomGameNames: [],
-        clockwork: undefined,
-        flags: { allSpellInvested: false, pendingSpellDrop: false },
-      },
-    },
-    history,
-    new Set(),
   );
 }
 
@@ -677,7 +670,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(44);
+    expect(decoded.schemaVersion).toBe(45);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -1654,19 +1647,6 @@ describe('Echo Gate B Boon Boon Boon', () => {
     if (offer.kind !== 'traitOffer') throw new Error('Echo offer candidate is unavailable');
     expect(offer.result.supported).toBe(true);
     expect(offer.result.assessments.every((assessment) => assessment.legal)).toBe(true);
-    const reward = session.evaluate({
-      kind: 'echoLastRewardDomain',
-      trait: echoOwner,
-      value,
-      optionKey: 'option1',
-    });
-    expect(reward).toMatchObject({
-      kind: 'echoLastRewardDomain',
-      result: {
-        rewardType: replacement.rewardType,
-        initialValue: { disposition: { kind: 'normal' } },
-      },
-    });
     const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
@@ -1718,60 +1698,26 @@ describe('Echo Gate B Boon Boon Boon', () => {
 });
 
 describe('Echo Gate C Reward Reward Reward', () => {
-  it('keeps Reward unavailable without prior replay history and rejects branch-divergent identity', () => {
-    const findings = new Map();
-    const settled = processEncounterTraitOffer(
-      catalog,
-      baseBranch(),
-      echoOwner.owner,
-      echoRewardOffer({ disposition: { kind: 'normal' } }),
-      10,
-      'encounterCompleted',
-      findings,
-    );
-    expect(settled.traitHistory?.equippedTraits.EchoLastReward).toBeUndefined();
-    expect([...findings.values()].map((entry) => entry.finding.code)).toContain('offerContext');
-
-    const gift = catalog.rewards.acquisitions.byKey.GiftDrop?.lastRewardRecreation;
-    const money = catalog.rewards.acquisitions.byKey.RoomMoneyDrop?.lastRewardRecreation;
-    if (gift === undefined || money === undefined)
-      throw new Error('Replay declarations are missing');
-    const project = completeGoldenFGHProject();
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    const artifacts = createTraitOfferCandidateArtifacts(
-      catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
-          [
-            Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({
-                resolvedProviderKey: 'Echo',
-                echoLastRewardAvailable: true,
-                echoLastRewardRecreation: gift,
-              }),
-            }),
-            Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({
-                resolvedProviderKey: 'Echo',
-                echoLastRewardAvailable: true,
-                echoLastRewardRecreation: money,
-              }),
-            }),
-          ],
-        ],
-      ]),
-    );
-    expect(
-      evaluateEchoLastRewardDomain(catalog, project, evaluation, artifacts, {
-        kind: 'echoLastRewardDomain',
-        trait: echoOwner,
-        value: echoRewardOffer(),
-        optionKey: 'option1',
-      }).kind,
-    ).toBe('unavailable');
+  it('creates one required unresolved room-exit pickup and cannot omit it from order', () => {
+    const project = applyProjectCommand(selectGoldenBridge(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoRewardOffer(),
+    });
+    const occurrence = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    expect(occurrence.acquisitionSites?.roomExit).toEqual({
+      order: [echoReplayEntryKey],
+      pickupEntries: { [echoReplayEntryKey]: null },
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionOrder',
+        site: echoReplaySite(),
+        entryKeys: [],
+      }),
+    ).toThrow(/required pickup/);
   });
 
   it('replays the latest consumable source at Echo without regenerating the room exit', () => {
@@ -1780,231 +1726,196 @@ describe('Echo Gate C Reward Reward Reward', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
+      value: echoRewardOffer(),
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: replacement.rewardType },
+    });
+    project = makeBridgeOutgoingEligible(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
-    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
-    const replayEntry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(replayOwner, 'echoReplay'),
-      'recreatedReward',
-    );
-    expect(h.coverage).toMatchObject({
-      kind: 'prefix',
-      blockedAt: {
-        kind: 'target',
-        source: { kind: 'occurrence', occurrenceId: bridgeId },
-      },
-    });
-    expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayOwner }));
+    const replayEntry = echoReplayEntry();
+    expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
     expect(
-      h.rewards.branches.every(
-        (branch) =>
-          branch.history.lastRewardRecreation?.offer.rewardType === replacement.rewardType &&
-          branch.events.some(
-            (event) =>
-              event.kind === 'concreteAcquisition' &&
-              event.settlement !== undefined &&
-              semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
-          ),
+      h.rewards.branches.every((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
+        ),
       ),
     ).toBe(true);
   });
 
-  it('runs replayed Nectar through its opted-in random Pom path with a legal empty target', () => {
-    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
-    const replayEntry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(replayOwner, 'echoReplay'),
-      'recreatedReward',
-    );
-    const initial = baseBranch();
-    const branch = Object.freeze({
-      ...initial,
-      history: applyConcreteAcquisition(catalog.rewards, initial.history, {
-        kind: 'resource',
-        gameName: 'GiftDrop',
-      }),
-    });
-    const findings = new Map();
-    const settled = settleOwnedAcquisitionSite(
-      catalog,
-      [branch],
-      {
-        siteOwner: replayOwner,
-        pointKey: 'echoReplay',
-        entryKey: 'recreatedReward',
-        historySequence: 10,
-        source: {
-          origin: replayEntry,
-          offer: { rewardType: 'GiftDrop' },
-          producerLifecycleKey: 'EchoLastReward',
-          instanceProvenance: 'free',
-          dispositionByAcquisitionRole: { self: { kind: 'normal' } },
-          levelResolutionsByAcquisitionRole: {
-            self: { kind: 'random', targetTraitKey: null },
-          },
-        },
-      },
-      replayFacts,
-      findings,
-    );
-    expect(settled.branches).toHaveLength(1);
-    expect(settled.branches[0]?.history.consumableRecord.GiftDrop).toBe(2);
-    expect(settled.branches[0]?.traitHistory?.events).toEqual([]);
-    expect(findings.size).toBe(0);
-  });
-
-  it('recreates acquired Narcissus Psyche through the exact Echo last-reward lifecycle', () => {
-    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
-    const replayEntry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(replayOwner, 'echoReplay'),
-      'recreatedReward',
-    );
-    const initial = baseBranch();
-    const acquiredPsyche = Object.freeze({
-      ...initial,
-      history: applyConcreteAcquisition(catalog.rewards, initial.history, {
-        kind: 'resource',
-        gameName: 'MemPointsCommonDrop',
-      }),
-    });
-    expect(acquiredPsyche.history.lastRewardRecreation).toEqual({
-      offer: { rewardType: 'MemPointsCommonDrop' },
-      producerLifecycleKey: 'EchoLastReward',
-    });
-    const findings = new Map();
-    const settled = settleOwnedAcquisitionSite(
-      catalog,
-      [acquiredPsyche],
-      {
-        siteOwner: replayOwner,
-        pointKey: 'echoReplay',
-        entryKey: 'recreatedReward',
-        historySequence: 10,
-        source: {
-          origin: replayEntry,
-          offer: { rewardType: 'MemPointsCommonDrop' },
-          producerLifecycleKey: 'EchoLastReward',
-          instanceProvenance: 'free',
-          dispositionByAcquisitionRole: { self: { kind: 'normal' } },
-        },
-      },
-      replayFacts,
-      findings,
-    );
-    expect(settled.branches[0]?.history.consumableRecord.MemPointsCommonDrop).toBe(2);
-    expect(settled.branches[0]?.history.lastRewardRecreation?.offer.rewardType).toBe(
-      'MemPointsCommonDrop',
-    );
-    expect(findings.size).toBe(0);
-  });
-
-  it('retains a stale replay child at the exact owner and repairs it against changed history', () => {
+  it('retains a stale generated pickup at its exact entry and repairs changed history', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer({
-        disposition: { kind: 'normal' },
-        traitOffer: {
-          kind: 'traits',
-          giverKey: 'WeaponUpgrade',
-          options: [
-            { traitKey: 'StaffAttackRecoveryTrait' },
-            { traitKey: 'StaffPowershotTrait' },
-            { traitKey: 'StaffDoubleAttackTrait' },
-          ],
-          selectedOptionKey: 'option1',
-          rarificationActions: [],
-        },
-      }),
+      value: echoRewardOffer(),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'WeaponUpgrade' },
     });
     const replacement = replaceLatestGoldenRewardWithConsumable(project);
-    project = replacement.project;
+    project = makeBridgeOutgoingEligible(replacement.project);
     const stale = simulateProjectAssembly(catalog, project);
     const h = stale.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
-    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
-    expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: replayOwner });
-    expect(h.rewards.branches[0]?.traitHistory?.equippedTraits.EchoLastReward).toBeDefined();
+    const replayEntry = echoReplayEntry();
     expect(h.findings).toContainEqual(
-      expect.objectContaining({ code: 'echoLastRewardChildUnavailable', origin: replayOwner }),
+      expect.objectContaining({ code: 'rewardSourceUnavailable', origin: replayEntry }),
     );
-    const repair = createPreparedProjectCandidateSession(catalog, stale).evaluate({
-      kind: 'echoLastRewardDomain',
-      trait: echoOwner,
-      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
-      optionKey: 'option1',
-    });
-    if (repair.kind !== 'echoLastRewardDomain') throw new Error('Replay repair is missing');
-    expect(repair.result).toEqual({
-      rewardType: replacement.rewardType,
-      initialValue: { disposition: { kind: 'normal' } },
-    });
+    expect(
+      derivedAcquisitionEntriesForProjectEvaluationAssembly(stale, replayEntry.site),
+    ).toContainEqual(
+      expect.objectContaining({
+        address: replayEntry,
+        fixedReward: expect.objectContaining({ offer: { rewardType: replacement.rewardType } }),
+        retainedSourceMismatch: true,
+        rewardTypes: [replacement.rewardType],
+      }),
+    );
+    const staleSession = createPreparedProjectCandidateSession(catalog, stale);
+    expect(
+      staleSession.evaluate({
+        kind: 'acquisitionEntryOffer',
+        entry: replayEntry,
+        value: { rewardType: replacement.rewardType },
+      }),
+    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
+    expect(
+      staleSession.evaluate({
+        kind: 'acquisitionEntryOffer',
+        entry: replayEntry,
+        value: { rewardType: 'WeaponUpgrade' },
+      }),
+    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: false } });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: echoOwner,
-      value: echoRewardOffer(repair.result.initialValue),
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: replayEntry,
+      value: { rewardType: replacement.rewardType },
     });
     const repaired = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in repaired)) throw new Error('H must be evaluated');
-    expect(repaired.findings).not.toContainEqual(expect.objectContaining({ origin: replayOwner }));
+    expect(repaired.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
   });
 
-  it('round-trips the strict replay child and rejects misplaced or malformed detail', () => {
+  it('retains the generated payload while dormant and restores required participation on reselect', () => {
+    let project = applyProjectCommand(selectGoldenBridge(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoRewardOffer(),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: echoOwner,
+      selectedOptionKey: 'option2',
+    });
+    const dormantOccurrence = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    expect(dormantOccurrence.acquisitionSites?.roomExit).toMatchObject({
+      order: [],
+      pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
+    });
+    const dormantH = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!;
+    if (!('rewards' in dormantH)) throw new Error('H must be evaluated');
+    expect(dormantH.findings).not.toContainEqual(
+      expect.objectContaining({ origin: echoReplayEntry() }),
+    );
+    expect(
+      dormantH.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) === semanticAddressKey(echoReplayEntry()),
+        ),
+      ),
+    ).toBe(false);
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoRewardOffer(),
+    });
+    const restoredOccurrence = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
+    expect(restoredOccurrence.acquisitionSites?.roomExit).toMatchObject({
+      order: [echoReplayEntryKey],
+      pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
+    });
+  });
+
+  it('round-trips schema 45 and rejects the retired nested replay child', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
-      value: echoRewardOffer({ disposition: { kind: 'normal' } }),
+      value: echoRewardOffer(),
     });
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceTraitOffer',
-        trait: echoOwner,
-        value: echoRewardOffer({
-          disposition: { kind: 'normal' },
-          traitOffer: Object.freeze({
-            kind: 'traits',
-            giverKey: 'Zeus',
-            options: Object.freeze([
-              Object.freeze({ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }),
-            ]) as AuthoredTraitOfferTraits['options'],
-            selectedOptionKey: 'option1',
-            rarificationActions: Object.freeze([]),
-          }),
-        }),
-      }),
-    ).toThrow(/ApolloWeaponBoon is not in giver Zeus/);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
 
-    const malformed = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
-    const malformedOptions = echoOfferInDocument(malformed).options as JsonRecord[];
-    (malformedOptions[0]!.echoLastReward as JsonRecord).extra = true;
-    expect(() => decodeProjectDocument(malformed, catalog)).toThrow(
-      /echoLastReward\.extra: is not a project document field/,
+    const retired = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
+    const options = echoOfferInDocument(retired).options as JsonRecord[];
+    options[0]!.echoLastReward = { disposition: { kind: 'normal' } };
+    expect(() => decodeProjectDocument(retired, catalog)).toThrow(
+      /echoLastReward: is not a project document field/,
     );
+  });
 
-    const misplaced = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
-    const misplacedOptions = echoOfferInDocument(misplaced).options as JsonRecord[];
-    misplacedOptions[1]!.echoLastReward = { disposition: { kind: 'normal' } };
-    expect(() => decodeProjectDocument(misplaced, catalog)).toThrow(
-      /is supported only by Echo Reward Reward Reward/,
-    );
-
-    const unknownTarget = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
-    const unknownOptions = echoOfferInDocument(unknownTarget).options as JsonRecord[];
-    (unknownOptions[0]!.echoLastReward as JsonRecord).levelResolution = {
-      kind: 'random',
-      targetTraitKey: 'UnknownTrait',
-    };
-    expect(() => decodeProjectDocument(unknownTarget, catalog)).toThrow(
-      /targetTraitKey: unknown trait/,
+  it('supports Time Piece through the shared required replay acquisition role', () => {
+    let project = applyProjectCommand(selectGoldenBridge(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoRewardOffer(),
+    });
+    project = makeBridgeOutgoingEligible(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(echoReplayEntry(), 'self'),
+      value: { kind: 'timePiece' },
+    });
+    const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!;
+    if (!('rewards' in h)) throw new Error('H must be evaluated');
+    expect(h.rewards.branches[0]?.events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold', origin: echoReplayEntry() }),
     );
   });
 
@@ -2015,32 +1926,22 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
+    project = makeBridgeOutgoingEligible(project);
     const incomplete = simulateProjectAssembly(catalog, project);
-    const domain = createPreparedProjectCandidateSession(catalog, incomplete).evaluate({
-      kind: 'echoLastRewardDomain',
-      trait: echoOwner,
-      value: echoRewardOffer(),
-      optionKey: 'option1',
-    });
-    if (domain.kind !== 'echoLastRewardDomain') throw new Error('Echo replay domain is missing');
-    expect(domain.result.rewardType).toBe('WeaponUpgrade');
-    expect(domain.result.initialValue).toEqual({
-      disposition: { kind: 'normal' },
-      traitOffer: null,
-    });
-    expect(domain.result.traitOfferDraft).toMatchObject({
-      kind: 'traits',
-      giverKey: 'WeaponUpgrade',
-    });
+    const incompleteH = incomplete.evaluation.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!;
+    if (!('rewards' in incompleteH)) throw new Error('H must be evaluated');
+    const replayEntry = echoReplayEntry();
+    expect(incompleteH.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardMissing', origin: replayEntry }),
+    );
 
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: echoOwner,
-      value: echoRewardOffer(domain.result.initialValue),
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: replayEntry,
+      value: { rewardType: 'WeaponUpgrade' },
     });
-    const replayOwner = createEchoLastRewardAddress(echoOwner, 'option1');
-    const replaySite = createAcquisitionSiteAddress(replayOwner, 'echoReplay');
-    const replayEntry = createAcquisitionEntryAddress(replaySite, 'recreatedReward');
     const replayTrait = createTraitOfferAddress(replayEntry, 'self');
     const replayDraft = createPreparedProjectCandidateSession(
       catalog,
@@ -2049,10 +1950,8 @@ describe('Echo Gate C Reward Reward Reward', () => {
     if (replayDraft === undefined) throw new Error('Fresh Hammer replay offer is missing');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
-      trait: echoOwner,
-      value: echoRewardOffer(
-        Object.freeze({ ...domain.result.initialValue, traitOffer: replayDraft }),
-      ),
+      trait: replayTrait,
+      value: replayDraft,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(decoded).toEqual(project);
@@ -2060,30 +1959,20 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
-    expect(h.coverage).toMatchObject({
-      kind: 'prefix',
-      blockedAt: {
-        kind: 'target',
-        source: { kind: 'occurrence', occurrenceId: bridgeId },
-      },
-    });
-    expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayOwner }));
+    expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
     expect(h.rewards.branches.length).toBeGreaterThan(0);
     expect(
-      h.rewards.branches.every(
-        (branch) =>
-          branch.traitHistory?.equippedTraits.EchoLastReward?.rarity === undefined &&
-          branch.history.lastRewardRecreation?.offer.rewardType === 'WeaponUpgrade' &&
-          branch.events.some(
-            (event) =>
-              event.kind === 'concreteAcquisition' &&
-              event.settlement !== undefined &&
-              semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
-          ),
+      h.rewards.branches.every((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
+        ),
       ),
     ).toBe(true);
     expect(
-      h.rewards.branches.map((branch) => branch.history.lootTypeHistory.WeaponUpgrade),
-    ).toEqual([3]);
+      h.rewards.branches.every((branch) => branch.history.lootTypeHistory.WeaponUpgrade === 3),
+    ).toBe(true);
   });
 });

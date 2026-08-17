@@ -961,14 +961,19 @@ export function AcquisitionsWorkbench({
           ...without.slice(nextIndex).map((candidate) => candidate.key),
         ];
         return (
-          <div className="acquisition-entry" key={entry.key}>
+          <div
+            className="acquisition-entry"
+            id={semanticOwnerControlElementId(entry.address)}
+            key={entry.key}
+            tabIndex={-1}
+          >
             <div className="owner-markers">
               <span>{entry.label}</span>
               {entry.rewardControl === undefined ? null : (
                 <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
               )}
             </div>
-            {entry.participation?.selected === false ? null : (
+            {entry.participation?.selected === false || participants.length < 2 ? null : (
               <AcquisitionMoveButton
                 disabled={participantIndex === 0}
                 entryKeys={move(participantIndex - 1)}
@@ -977,7 +982,7 @@ export function AcquisitionsWorkbench({
                 site={acquisitions.site}
               />
             )}
-            {entry.participation?.selected === false ? null : (
+            {entry.participation?.selected === false || participants.length < 2 ? null : (
               <AcquisitionMoveButton
                 disabled={participantIndex === participants.length - 1}
                 entryKeys={move(participantIndex + 1)}
@@ -999,18 +1004,10 @@ export function AcquisitionsWorkbench({
                 control={entry.rewardControl}
                 idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
                 interactions={interactions}
-                showOffer={
-                  entry.rewardControl.offer?.payload !== undefined ||
-                  entry.rewardControl.offer === null
-                }
-                {...(entry.rewardControl.offer === null
+                showOffer={entry.rewardControl.offerEditVisibility === 'visible'}
+                {...(entry.rewardControl.offerEditStartStep === undefined
                   ? {}
-                  : {
-                      offerStartStep:
-                        entry.rewardControl.offer.payload?.kind === 'BoonSource'
-                          ? ('source' as const)
-                          : ('chosen' as const),
-                    })}
+                  : { offerStartStep: entry.rewardControl.offerEditStartStep })}
               />
             )}
           </div>

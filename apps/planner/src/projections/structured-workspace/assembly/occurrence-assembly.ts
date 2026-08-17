@@ -42,6 +42,8 @@ import {
   type LevelResolutionAddress,
   shopAcquisitionOrderProposals,
   selectedPickupProducer,
+  echoLastRewardPickupEntryKey,
+  echoLastRewardPickupEntryKeys,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -120,6 +122,7 @@ type WorkspaceDerivedAcquisitionEntry = {
   readonly kind:
     | 'echoDoubleShopPlaceholder'
     | 'echoDoubleShopReward'
+    | 'echoLastReward'
     | 'infernalContractReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
@@ -127,6 +130,7 @@ type WorkspaceDerivedAcquisitionEntry = {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: AuthoredRewardState;
+  readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 };
 
@@ -402,6 +406,7 @@ function rewardControl(
   authoredReward: AuthoredRewardState | null,
   explicitRewardTypes: readonly string[] = Object.freeze(offer === null ? [] : [offer.rewardType]),
   derivedShopEntryEdit?: WorkspaceRewardControl['derivedShopEntryEdit'],
+  retainedSourceMismatch = false,
 ): WorkspaceRewardControl {
   const fixedRewardType =
     offer === null && explicitRewardTypes.length === 1 ? explicitRewardTypes[0] : undefined;
@@ -426,6 +431,13 @@ function rewardControl(
   const acquisitionOutcome = input.ordinaryRewardForfeited(owner)
     ? ('forfeitedByVow' as const)
     : undefined;
+  const offerEditStartStep = retainedSourceMismatch
+    ? ('type' as const)
+    : offer?.payload?.kind === 'BoonSource'
+      ? ('source' as const)
+      : offer?.payload?.kind === 'DevotionPair'
+        ? ('chosen' as const)
+        : authoringStartStep;
   return binding === undefined
     ? Object.freeze({
         kind: 'explicitReward' as const,
@@ -434,7 +446,13 @@ function rewardControl(
         ...(authoringSeed === undefined ? {} : { authoringSeed }),
         marker: input.markerDestinations.marker(owner.address),
         offer,
+        ...(offerEditStartStep === undefined ? {} : { offerEditStartStep }),
+        offerEditVisibility:
+          offer === null || offer.payload !== undefined || retainedSourceMismatch
+            ? ('visible' as const)
+            : ('hidden' as const),
         owner,
+        retainedSourceMismatch,
         traitOffers:
           authoredReward === null
             ? Object.freeze([])
@@ -456,7 +474,13 @@ function rewardControl(
         binding,
         marker: input.markerDestinations.marker(owner.address),
         offer,
+        ...(offerEditStartStep === undefined ? {} : { offerEditStartStep }),
+        offerEditVisibility:
+          offer === null || offer.payload !== undefined || retainedSourceMismatch
+            ? ('visible' as const)
+            : ('hidden' as const),
         owner: owner as CountedRewardCandidateOwner,
+        retainedSourceMismatch,
         traitOffers:
           authoredReward === null
             ? Object.freeze([])
@@ -975,22 +999,49 @@ function activeEncounterPhasesForOwner(
               selectedDisposition?.kind !== 'echo' ||
               selectedDisposition.effect !== 'lastReward'
                 ? undefined
-                : Object.freeze({
-                    address: createEchoLastRewardAddress(
+                : (() => {
+                    if (address.owner.kind !== 'occurrence')
+                      throw new StructuredWorkspaceProjectionContractError(
+                        `${semanticAddressKey(traitAddress)} Echo replay is not occurrence-owned`,
+                      );
+                    const replayAddress = createEchoLastRewardAddress(
                       traitAddress,
                       authoredTraitOffer.selectedOptionKey,
-                    ),
-                    marker: input.markerDestinations.marker(
-                      createEchoLastRewardAddress(
-                        traitAddress,
+                    );
+                    const site = createAcquisitionSiteAddress(
+                      createOccurrenceAddress(input.biome, address.owner.occurrenceId),
+                      'roomExit',
+                    );
+                    const acquisitionEntry = createAcquisitionEntryAddress(
+                      site,
+                      echoLastRewardPickupEntryKey(
+                        domain.slotKey,
+                        selectedDefinition.key,
                         authoredTraitOffer.selectedOptionKey,
                       ),
-                    ),
-                    optionKey: authoredTraitOffer.selectedOptionKey,
-                    ...(selected?.echoLastReward === undefined
-                      ? {}
-                      : { value: selected.echoLastReward }),
-                  });
+                    );
+                    const capability = input
+                      .derivedAcquisitionEntries?.(site)
+                      .find(
+                        (entry) =>
+                          entry.kind === 'echoLastReward' &&
+                          entry.address.entryKey === acquisitionEntry.entryKey,
+                      );
+                    return Object.freeze({
+                      address: replayAddress,
+                      acquisitionEntry,
+                      marker: input.markerDestinations.marker(replayAddress),
+                      optionKey: authoredTraitOffer.selectedOptionKey,
+                      ...(capability?.fixedReward === undefined
+                        ? {}
+                        : {
+                            spawnLabel: summarizeRewardOffer(
+                              input.catalog,
+                              capability.fixedReward.offer,
+                            ),
+                          }),
+                    });
+                  })();
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               address: traitAddress,
@@ -2243,46 +2294,69 @@ export function assembleWorkspaceOccurrence(
           const site = createAcquisitionSiteAddress(address, 'roomExit');
           const order = occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]);
           const pickupProducer = selectedPickupProducer(input.catalog, occurrence.encounters);
+          const activePickups = pickupProducer?.pickups ?? Object.freeze([]);
+          const activeKeys = new Set(activePickups.map((pickup) => pickup.key));
+          const structuralEchoKeys = new Set(
+            echoLastRewardPickupEntryKeys(input.catalog, occurrence.encounters),
+          );
+          const entryIsActive = (key: string): boolean =>
+            !structuralEchoKeys.has(key) || activeKeys.has(key);
+          const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
           return Object.freeze({
             site,
             marker: input.markerDestinations.marker(site),
             placement: 'postOutgoing' as const,
             entries: Object.freeze(
-              [...order, ...Object.keys(pickupSite).filter((key) => !order.includes(key))].map(
-                (key) => {
-                  const reward = pickupSite[key] ?? null;
-                  const fixedRewardType = pickupProducer?.disposition.pickups.find(
-                    (pickup) => pickup.key === key,
-                  )?.rewardType;
-                  const entry = createAcquisitionEntryAddress(site, key);
-                  const selected = order.includes(key);
-                  const toggleEntryKeys = Object.freeze(
-                    selected ? order.filter((candidate) => candidate !== key) : [...order, key],
-                  );
-                  return Object.freeze({
-                    key,
-                    address: entry,
-                    label:
-                      reward === null
-                        ? 'Choose reward'
-                        : (input.catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]
-                            ?.label ?? reward.offer.rewardType),
-                    rewardControl: rewardControl(
-                      input,
-                      { kind: 'acquisitionEntry' as const, address: entry },
-                      undefined,
-                      reward?.offer ?? null,
-                      reward,
-                      fixedRewardType === undefined ? Object.freeze([]) : [fixedRewardType],
-                    ) as WorkspaceExplicitRewardControl,
-                    participation: Object.freeze({
-                      label: 'Picked up' as const,
-                      selected,
-                      toggleEntryKeys,
-                    }),
-                  });
-                },
-              ),
+              [
+                ...order.filter(entryIsActive),
+                ...Object.keys(pickupSite).filter(
+                  (key) => entryIsActive(key) && !order.includes(key),
+                ),
+              ].map((key) => {
+                const reward = pickupSite[key] ?? null;
+                const pickup = activePickups.find((candidate) => candidate.key === key);
+                const capability = derivedEntries.find(
+                  (entry) => entry.kind === 'echoLastReward' && entry.address.entryKey === key,
+                );
+                const rewardTypes =
+                  capability?.rewardTypes ??
+                  (pickup?.rewardType === undefined
+                    ? Object.freeze([])
+                    : Object.freeze([pickup.rewardType]));
+                const presentedOffer = reward?.offer ?? capability?.fixedReward?.offer ?? null;
+                const entry = createAcquisitionEntryAddress(site, key);
+                const selected = order.includes(key);
+                const toggleEntryKeys = Object.freeze(
+                  selected ? order.filter((candidate) => candidate !== key) : [...order, key],
+                );
+                return Object.freeze({
+                  key,
+                  address: entry,
+                  label:
+                    presentedOffer === null
+                      ? 'Choose reward'
+                      : summarizeRewardOffer(input.catalog, presentedOffer),
+                  rewardControl: rewardControl(
+                    input,
+                    { kind: 'acquisitionEntry' as const, address: entry },
+                    undefined,
+                    reward?.offer ?? null,
+                    reward,
+                    rewardTypes,
+                    undefined,
+                    capability?.retainedSourceMismatch === true,
+                  ) as WorkspaceExplicitRewardControl,
+                  ...(pickup?.required === true
+                    ? {}
+                    : {
+                        participation: Object.freeze({
+                          label: 'Picked up' as const,
+                          selected,
+                          toggleEntryKeys,
+                        }),
+                      }),
+                });
+              }),
             ),
           });
         })();

@@ -821,7 +821,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
-    lifecycleProfileKey: 'NarcissusStoryRoom',
+    lifecycleProfileKey: 'StoryPickupRoom',
     additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],

@@ -704,39 +704,17 @@ describe('structured workspace interaction binding', () => {
 
     const bound = bind(project, 'Underworld', 'H');
     const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
-    const replay = interaction?.optionDomain(rewardOffer, 'option1').echoLastReward;
+    const replay = interaction?.echoLastReward;
     const replayOwner = createEchoLastRewardAddress(trait, 'option1');
-    expect(replay?.control.address).toEqual(replayOwner);
-    const domain = replay?.forOffer(rewardOffer).load();
-    expect(domain).toMatchObject({
-      rewardType: 'WeaponUpgrade',
-      rewardLabel: 'Hammer',
-      initialValue: {
-        disposition: { kind: 'normal' },
-        traitOffer: null,
-      },
-      traitOfferDraft: { kind: 'traits', giverKey: 'WeaponUpgrade' },
+    expect(replay?.address).toEqual(replayOwner);
+    expect(replay?.acquisitionEntry).toMatchObject({
+      kind: 'acquisitionEntry',
+      site: { kind: 'acquisitionSite', pointKey: 'roomExit' },
     });
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(replayOwner))).toBe(
       true,
     );
-    if (domain === undefined) throw new Error('Echo replay domain is missing');
-    if (domain.traitOfferDraft === undefined) throw new Error('Echo replay trait draft is missing');
-    const authoredReplay = Object.freeze({
-      ...domain.initialValue,
-      traitOffer: domain.traitOfferDraft,
-    });
-    const intent = replay?.intentFor(rewardOffer, authoredReplay).command;
-    expect(intent).toMatchObject({
-      kind: 'ReplaceTraitOffer',
-      trait,
-    });
-    if (intent?.kind !== 'ReplaceTraitOffer' || intent.value.kind !== 'traits')
-      throw new Error('Echo replay intent is malformed');
-    expect(intent.value.options[0]).toEqual({
-      traitKey: 'EchoLastReward',
-      echoLastReward: authoredReplay,
-    });
+    expect(interaction?.optionDomain(rewardOffer, 'option1')).not.toHaveProperty('echoLastReward');
   });
 
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {

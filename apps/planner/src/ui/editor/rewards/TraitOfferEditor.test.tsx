@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createIncomingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
@@ -17,6 +19,7 @@ import {
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
   createEchoPomTargetAddress,
+  createOccurrenceAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -847,7 +850,7 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
-  it('creates and saves the exact Echo last-reward acquisition child', async () => {
+  it('shows the Echo generated-pickup summary without nesting payload in the trait', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -870,6 +873,13 @@ describe('trait offer editor', () => {
     const childAddress = createEchoLastRewardAddress(base.owner, 'option1');
     const control = Object.freeze({
       address: childAddress,
+      acquisitionEntry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, goldenFStartId),
+          'roomExit',
+        ),
+        'echoLastReward:Encounter:Story_Echo_01:option1',
+      ),
       marker: Object.freeze({
         address: childAddress,
         assessment: 'assessed' as const,
@@ -877,6 +887,7 @@ describe('trait offer editor', () => {
         focusKey: 'test-echo-last-reward',
       }),
       optionKey: 'option1' as const,
+      spawnLabel: 'Gold',
     });
     const interaction = Object.freeze({
       ...base,
@@ -896,7 +907,8 @@ describe('trait offer editor', () => {
             }),
           }),
         ]),
-      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+      echoLastReward: control,
+      optionDomain: () =>
         Object.freeze({
           hasTargetPicker: false,
           load: () =>
@@ -906,35 +918,6 @@ describe('trait offer editor', () => {
               rarityPickerFor: () => undefined,
               traitPicker: Object.freeze({ sections: Object.freeze([]) }),
             }),
-          ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
-            ? {}
-            : {
-                echoLastReward: Object.freeze({
-                  control,
-                  intentFor: () =>
-                    Object.freeze({
-                      command: Object.freeze({
-                        kind: 'ReplaceTraitOffer' as const,
-                        trait: base.owner,
-                        value: draft,
-                      }),
-                    }),
-                  forOffer: () => ({
-                    load: () => ({
-                      rewardType: 'RoomMoneyDrop',
-                      rewardLabel: 'Gold',
-                      initialValue: Object.freeze({
-                        disposition: Object.freeze({ kind: 'normal' as const }),
-                      }),
-                      goldSupported: false,
-                      traitOptionDomains: Object.freeze([]),
-                      traitRarityEditable: false,
-                      levelTargetChoices: Object.freeze([]),
-                      emptyLevelTargetAllowed: false,
-                    }),
-                  }),
-                }),
-              }),
         }),
     });
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
@@ -953,14 +936,11 @@ describe('trait offer editor', () => {
       </Provider>,
     );
 
-    expect(screen.getByText('Latest replayable source: Gold')).toBeDefined();
-    await user.click(screen.getByRole('button', { name: 'Create replay decisions' }));
+    expect(screen.getByText('Spawns: Gold')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Configure in Acquisitions' })).toBeDefined();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
-    expect(saved.options[0]).toEqual({
-      traitKey: 'EchoLastReward',
-      echoLastReward: { disposition: { kind: 'normal' } },
-    });
+    expect(saved.options[0]).toEqual({ traitKey: 'EchoLastReward' });
     application.dispose();
   });
 

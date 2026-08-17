@@ -3,14 +3,13 @@ import {
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
   createSelectedPickupEntries,
+  echoLastRewardPickupEntryKeys,
   selectedPickupProducer,
   traitOfferSupportsExhaustion,
   traitOfferOption,
   optionIndex,
   normalizeAuthoredEchoLastRunBoon,
-  normalizeAuthoredEchoLastReward,
   normalizeAllTogetherResult,
-  type AuthoredEchoLastRewardAcquisition,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -80,36 +79,31 @@ function reconcileSelectedPickupEntries(
   occurrence: RoomOccurrence,
 ): RoomOccurrence {
   const producer = selectedPickupProducer(catalog, occurrence.encounters);
+  const echoKeys = new Set(echoLastRewardPickupEntryKeys(catalog, occurrence.encounters));
   const defaults: Readonly<Record<string, AuthoredRewardState | null>> =
-    producer === undefined
-      ? Object.freeze({})
-      : createSelectedPickupEntries(catalog, producer.traitKey);
+    producer === undefined ? Object.freeze({}) : createSelectedPickupEntries(catalog, producer);
   const current = occurrence.acquisitionSites?.roomExit;
   const existing = current?.pickupEntries ?? {};
   const pickupEntries = Object.freeze(
-    Object.fromEntries(
-      Object.entries(defaults).map(([key, fallback]) => {
+    Object.fromEntries([
+      ...Object.entries(existing).filter(([key]) => echoKeys.has(key)),
+      ...Object.entries(defaults).map(([key, fallback]) => {
         const retained = existing[key];
         return [
           key,
-          retained !== null &&
-          fallback !== null &&
-          retained?.offer.rewardType === fallback.offer.rewardType
-            ? retained
-            : fallback,
-        ];
+          fallback === null
+            ? (retained ?? null)
+            : retained !== null && retained?.offer.rewardType === fallback.offer.rewardType
+              ? retained
+              : fallback,
+        ] as const;
       }),
-    ),
+    ]),
   );
   if (Object.keys(pickupEntries).length === 0) {
     if (current?.pickupEntries === undefined) return occurrence;
-    const { roomExit, ...otherSites } = occurrence.acquisitionSites ?? {};
-    const nextSites =
-      roomExit === undefined
-        ? otherSites
-        : roomExit.order.length === 0
-          ? otherSites
-          : { ...otherSites, roomExit: Object.freeze({ order: roomExit.order }) };
+    const nextSites = { ...(occurrence.acquisitionSites ?? {}) };
+    delete nextSites.roomExit;
     const without = { ...occurrence };
     delete without.acquisitionSites;
     return Object.freeze({
@@ -119,9 +113,14 @@ function reconcileSelectedPickupEntries(
         : { acquisitionSites: Object.freeze(nextSites) }),
     });
   }
-  const order = Object.freeze(
-    (current?.order ?? []).filter((key) => pickupEntries[key] !== undefined),
-  );
+  const activeKeys = new Set(producer?.pickups.map((pickup) => pickup.key) ?? []);
+  const requiredKeys =
+    producer?.pickups.filter((pickup) => pickup.required).map((pickup) => pickup.key) ?? [];
+  const retainedOrder = (current?.order ?? []).filter((key) => activeKeys.has(key));
+  const order = Object.freeze([
+    ...retainedOrder,
+    ...requiredKeys.filter((key) => !retainedOrder.includes(key)),
+  ]);
   return Object.freeze({
     ...occurrence,
     acquisitionSites: Object.freeze({
@@ -169,23 +168,9 @@ function pickupEntrySource(
     reward: entry,
     levelEffectSource: {
       kind: 'producerLifecycle' as const,
-      key: producer.disposition.producerLifecycleKey,
+      key: producer.producerLifecycleKey,
     },
   });
-}
-
-function validateEchoLastReward(
-  catalog: Catalog,
-  value: AuthoredEchoLastRewardAcquisition,
-  command: TraitOfferCommand,
-): AuthoredEchoLastRewardAcquisition {
-  const normalized = normalizeAuthoredEchoLastReward(catalog, value);
-  return normalized.traitOffer === undefined || normalized.traitOffer === null
-    ? normalized
-    : Object.freeze({
-        ...normalized,
-        traitOffer: validateOffer(catalog, normalized.traitOffer, command),
-      });
 }
 
 function validateOffer(
@@ -285,21 +270,6 @@ function validateOffer(
         );
       }
     }
-    if ('echoLastReward' in option) {
-      if (
-        trait.selectedDisposition.kind !== 'echo' ||
-        trait.selectedDisposition.effect !== 'lastReward'
-      )
-        failCommand(command, `${option.traitKey} does not support Echo Reward Reward Reward`);
-      try {
-        validateEchoLastReward(catalog, option.echoLastReward, command);
-      } catch (error) {
-        failCommand(
-          command,
-          error instanceof Error ? error.message : 'invalid Echo last-reward acquisition',
-        );
-      }
-    }
     if ('allTogetherResult' in option) {
       try {
         normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult);
@@ -334,10 +304,6 @@ function validateOffer(
           'echoLastRunBoon' in option
             ? normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon)
             : undefined;
-        const echoLastReward =
-          'echoLastReward' in option
-            ? validateEchoLastReward(catalog, option.echoLastReward, command)
-            : undefined;
         const allTogetherResult =
           'allTogetherResult' in option
             ? normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult)
@@ -346,13 +312,11 @@ function validateOffer(
           return Object.freeze({
             ...option,
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
-            ...(echoLastReward === undefined ? {} : { echoLastReward }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           });
         if (resolution.kind === 'disableFear')
           return Object.freeze({
             ...option,
-            ...(echoLastReward === undefined ? {} : { echoLastReward }),
             circeResolution: Object.freeze({ kind: resolution.kind, vowKey: resolution.vowKey }),
           });
         return Object.freeze({

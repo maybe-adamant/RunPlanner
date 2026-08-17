@@ -328,14 +328,6 @@ const findingCopy = {
     title: 'Boon Boon Boon outcome is unavailable',
     description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
   },
-  echoLastRewardChildMissing: {
-    title: 'Create the Reward Reward Reward replay',
-    description: 'Create the acquisition decisions required by the latest replayable source.',
-  },
-  echoLastRewardChildUnavailable: {
-    title: 'Reward Reward Reward replay is stale',
-    description: 'Reset or repair the acquisition decisions for the latest replayable source.',
-  },
   echoShopDuplicateChildMissing: {
     title: 'Create the Gold Gold Gold duplicate',
     description: 'Create the acquisition decisions for the reached free Shop duplicate.',

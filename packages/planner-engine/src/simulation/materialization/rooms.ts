@@ -28,6 +28,10 @@ import type {
 } from './model';
 import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import {
+  echoLastRewardPickupEntryKeys,
+  selectedPickupProducer,
+} from '../../authored-project/traits';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -782,6 +786,29 @@ export function materializeAuthoredRoom(
     );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
+  const pickupProducer = selectedPickupProducer(context.catalog, context.occurrence.encounters);
+  const activePickupKeys = new Set(pickupProducer?.pickups.map((pickup) => pickup.key) ?? []);
+  const structuralEchoPickupKeys = new Set(
+    echoLastRewardPickupEntryKeys(context.catalog, context.occurrence.encounters),
+  );
+  const pickupIsActive = (key: string): boolean =>
+    !structuralEchoPickupKeys.has(key) || activePickupKeys.has(key);
+  const authoredPickupSite = context.occurrence.acquisitionSites?.roomExit;
+  const authoredPickupEntries = authoredPickupSite?.pickupEntries;
+  const activePickupEntries =
+    authoredPickupEntries === undefined
+      ? undefined
+      : context.occurrence.state.kind === 'shop'
+        ? authoredPickupEntries
+        : Object.freeze(
+            Object.fromEntries(
+              Object.entries(authoredPickupEntries).filter(([key]) => pickupIsActive(key)),
+            ),
+          );
+  const activePickupOrder =
+    context.occurrence.state.kind === 'shop'
+      ? (authoredPickupSite?.order ?? [])
+      : (authoredPickupSite?.order.filter(pickupIsActive) ?? []);
   return Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -816,12 +843,12 @@ export function materializeAuthoredRoom(
     ...(leaf.fieldsActions === undefined ? {} : { fieldsActions: leaf.fieldsActions }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
-    ...(context.occurrence.acquisitionSites?.roomExit?.pickupEntries === undefined
+    ...(activePickupEntries === undefined || Object.keys(activePickupEntries).length === 0
       ? {}
       : {
           pickupSite: Object.freeze({
-            order: context.occurrence.acquisitionSites.roomExit.order,
-            entries: context.occurrence.acquisitionSites.roomExit.pickupEntries,
+            order: activePickupOrder,
+            entries: activePickupEntries,
           }),
         }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),

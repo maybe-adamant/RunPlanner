@@ -19,7 +19,7 @@ import type {
   AuthoredRewardState,
 } from '../model';
 import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
-import { optionIndex } from '../traits';
+import { echoLastRewardPickupEntryKeys, selectedPickupProducer } from '../traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -264,6 +264,7 @@ function decodeAcquisitionSites(
   occurrence: RawOccurrence,
   catalog: Catalog,
   pickupProducerLifecycleKey: string | undefined,
+  echoLastRewardEntryKeys: ReadonlySet<string>,
   shopProfileKey: string | undefined,
 ): Readonly<
   Record<
@@ -302,7 +303,12 @@ function decodeAcquisitionSites(
         'contains a duplicate entry',
       );
     }
-    if (hasPickups && pickupProducerLifecycleKey === undefined && shopProfileKey === undefined)
+    if (
+      hasPickups &&
+      pickupProducerLifecycleKey === undefined &&
+      echoLastRewardEntryKeys.size === 0 &&
+      shopProfileKey === undefined
+    )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
         'has no selected pickup producer',
@@ -322,7 +328,12 @@ function decodeAcquisitionSites(
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
                 shopProfileKey === undefined
-                  ? { kind: 'producerLifecycle', key: pickupProducerLifecycleKey! }
+                  ? {
+                      kind: 'producerLifecycle',
+                      key: echoLastRewardEntryKeys.has(key)
+                        ? 'EchoLastReward'
+                        : pickupProducerLifecycleKey!,
+                    }
                   : key === INFERNAL_CONTRACT_ENTRY_KEY
                     ? {
                         kind: 'producerLifecycle',
@@ -331,6 +342,7 @@ function decodeAcquisitionSites(
                             ?.producerLifecycleKey ?? '',
                       }
                     : { kind: 'shopProfile', key: shopProfileKey },
+                echoLastRewardEntryKeys.has(key) ? false : true,
               ),
             ]),
           ),
@@ -1421,36 +1433,23 @@ export function decodeBiomeTopology(
       room,
       `${rawOccurrence.path}.encounters`,
     );
-    const selectedPickupDispositions = Object.values(encounters.traitOffersByPhase ?? {})
-      .flatMap((phase) => Object.values(phase))
-      .map((offer) => {
-        if (offer === null) return undefined;
-        if (offer.kind === 'fallbackGold') return undefined;
-        const selected = offer.options[optionIndex(offer.selectedOptionKey)];
-        return selected === undefined
-          ? undefined
-          : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-      })
-      .filter(
-        (
-          disposition,
-        ): disposition is Extract<
-          NonNullable<typeof disposition>,
-          { readonly kind: 'producePickups' }
-        > => disposition?.kind === 'producePickups',
-      );
-    if (selectedPickupDispositions.length > 1)
+    let pickupProducer: ReturnType<typeof selectedPickupProducer>;
+    try {
+      pickupProducer = selectedPickupProducer(catalog, encounters);
+    } catch (error) {
       failProjectDocument(
         `${rawOccurrence.path}.encounters`,
-        'has more than one active pickup producer',
+        error instanceof Error ? error.message : 'has invalid pickup producers',
       );
-    const pickupDisposition = selectedPickupDispositions[0];
+    }
+    const echoEntryKeys = new Set(echoLastRewardPickupEntryKeys(catalog, encounters));
     const acquisitionSites = rawOccurrence.hasAcquisitionSites
       ? decodeAcquisitionSites(
           rawOccurrence.acquisitionSites,
           rawOccurrence,
           catalog,
-          pickupDisposition?.producerLifecycleKey,
+          pickupProducer?.producerLifecycleKey,
+          echoEntryKeys,
           state.kind === 'shop' ? state.shop?.profileKey : undefined,
         )
       : undefined;
@@ -1523,8 +1522,12 @@ export function decodeBiomeTopology(
           `${rawOccurrence.path}.acquisitionSites`,
           'pickup producers author only roomExit',
         );
-      const expected = pickupDisposition?.pickups ?? [];
-      if (expected.length === 0 && acquisitionSites !== undefined) {
+      const expected = pickupProducer?.pickups ?? [];
+      const structurallyOwnedKeys = new Set([
+        ...expected.map((pickup) => pickup.key),
+        ...echoEntryKeys,
+      ]);
+      if (structurallyOwnedKeys.size === 0 && acquisitionSites !== undefined) {
         failProjectDocument(
           `${rawOccurrence.path}.acquisitionSites`,
           'has no authorable acquisition site',
@@ -1535,17 +1538,20 @@ export function decodeBiomeTopology(
           `${rawOccurrence.path}.acquisitionSites.roomExit`,
           'selected pickup producer requires pickupEntries',
         );
-      if (expected.length > 0) {
+      if (structurallyOwnedKeys.size > 0) {
         const entries = acquisitionSites?.roomExit?.pickupEntries ?? {};
         if (
-          Object.keys(entries).length !== expected.length ||
+          Object.keys(entries).some((key) => !structurallyOwnedKeys.has(key)) ||
           expected.some((pickup) => {
             const entry = entries[pickup.key];
             return (
               entry === undefined ||
-              (entry === null
-                ? catalog.rewards.rewardTypes.byKey[pickup.rewardType]?.payloadDomain === undefined
-                : entry.offer.rewardType !== pickup.rewardType)
+              (pickup.rewardType === undefined
+                ? false
+                : entry === null
+                  ? catalog.rewards.rewardTypes.byKey[pickup.rewardType]?.payloadDomain ===
+                    undefined
+                  : entry.offer.rewardType !== pickup.rewardType)
             );
           })
         )
@@ -1553,8 +1559,16 @@ export function decodeBiomeTopology(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
             'does not match selected descriptor pickups',
           );
+        for (const required of expected.filter((pickup) => pickup.required)) {
+          if (!acquisitionSites?.roomExit?.order.includes(required.key))
+            failProjectDocument(
+              `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
+              `${required.key} is a required pickup`,
+            );
+        }
+        const activeKeys = new Set(expected.map((pickup) => pickup.key));
         for (const key of acquisitionSites?.roomExit?.order ?? []) {
-          if (entries[key] === undefined && !isActiveArtificerReplacement(key, entries))
+          if (!activeKeys.has(key) && !isActiveArtificerReplacement(key, entries))
             failProjectDocument(
               `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
               `${key} is not an active pickup`,

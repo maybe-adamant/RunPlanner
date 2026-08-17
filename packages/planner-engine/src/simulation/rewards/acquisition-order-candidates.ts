@@ -80,6 +80,7 @@ export function preparePickupAcquisitionOrderCandidateContext(options: {
   readonly room: CanonicalAuthoredRoom;
   readonly branchesBeforePickups: readonly RewardBranchState[];
   readonly producerLifecycleKey: string;
+  readonly requiredEntryKeys?: ReadonlySet<string>;
   readonly historySequence: number;
   readonly facts: (history: RewardHistoryState) => RewardKernelFacts;
   readonly traitContext?: TraitOfferContext;
@@ -99,6 +100,9 @@ export function preparePickupAcquisitionOrderCandidateContext(options: {
           entries: site.entries,
           order: Object.freeze([...order]),
           producerLifecycleKey: options.producerLifecycleKey,
+          ...(options.requiredEntryKeys === undefined
+            ? {}
+            : { requiredEntryKeys: options.requiredEntryKeys }),
           historySequence: options.historySequence,
           facts: options.facts,
           ...(options.traitContext === undefined ? {} : { traitContext: options.traitContext }),

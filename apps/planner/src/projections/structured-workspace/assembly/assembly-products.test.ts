@@ -57,7 +57,9 @@ function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
       focusKey: semanticAddressKey(address),
     }),
     offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+    offerEditVisibility: 'hidden' as const,
     owner: Object.freeze({ kind: 'incomingReward' as const, address }),
+    retainedSourceMismatch: false,
     rewardTypes: Object.freeze(['MaxHealthDrop']),
   });
 }

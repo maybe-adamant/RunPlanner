@@ -17,8 +17,6 @@ export interface AuthoredTraitOption {
   readonly echoPomTarget?: string | null;
   /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
-  /** Decisions owned by the exact recreated acquisition; replay identity stays derived. */
-  readonly echoLastReward?: AuthoredEchoLastRewardAcquisition;
   /** All Together's complete one-result-per-source-set outcome when authored. */
   readonly allTogetherResult?: AuthoredAllTogetherResult;
 }
@@ -52,81 +50,6 @@ export function normalizeAllTogetherResult(
       }),
     ),
   ) as AuthoredAllTogetherResult;
-}
-
-export interface AuthoredEchoLastRewardAcquisition {
-  readonly disposition: { readonly kind: 'normal' | 'timePiece' };
-  readonly traitOffer?: AuthoredTraitOffer | null;
-  readonly levelResolution?: AuthoredLevelResolution;
-}
-
-export function normalizeAuthoredEchoLastReward(
-  catalog: Catalog,
-  value: AuthoredEchoLastRewardAcquisition,
-): AuthoredEchoLastRewardAcquisition {
-  if (value.disposition.kind !== 'normal' && value.disposition.kind !== 'timePiece')
-    throw new Error('Echo last-reward disposition must be normal or timePiece');
-  const level = value.levelResolution;
-  if (level?.kind === 'choice') {
-    if (new Set(level.offeredTraitKeys).size !== level.offeredTraitKeys.length)
-      throw new Error('Echo last-reward Pom choices must be distinct');
-    if (level.offeredTraitKeys.some((key) => catalog.traits.byKey[key] === undefined))
-      throw new Error('Echo last-reward Pom choice contains an unknown trait');
-    if (level.selectedTraitKey !== null && !level.offeredTraitKeys.includes(level.selectedTraitKey))
-      throw new Error('Echo last-reward Pom selection must be one of its choices');
-  } else if (
-    level?.kind === 'random' &&
-    level.targetTraitKey !== null &&
-    catalog.traits.byKey[level.targetTraitKey] === undefined
-  ) {
-    throw new Error('Echo last-reward random Pom target is unknown');
-  }
-  const traitOffer =
-    value.traitOffer?.kind === 'traits'
-      ? Object.freeze({
-          ...value.traitOffer,
-          options: Object.freeze([
-            ...value.traitOffer.options,
-          ]) as AuthoredTraitOfferTraits['options'],
-          rarificationActions: Object.freeze([...(value.traitOffer.rarificationActions ?? [])]),
-        })
-      : value.traitOffer;
-  return Object.freeze({
-    disposition: Object.freeze({ ...value.disposition }),
-    ...(traitOffer === undefined ? {} : { traitOffer }),
-    ...(level === undefined
-      ? {}
-      : {
-          levelResolution: Object.freeze(
-            level.kind === 'choice'
-              ? {
-                  kind: 'choice' as const,
-                  offeredTraitKeys: Object.freeze([...level.offeredTraitKeys]),
-                  selectedTraitKey: level.selectedTraitKey,
-                }
-              : { kind: 'random' as const, targetTraitKey: level.targetTraitKey },
-          ),
-        }),
-  });
-}
-
-export function createUnresolvedEchoLastRewardAcquisition(
-  catalog: Catalog,
-  recreation: NonNullable<
-    import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
-  >,
-): AuthoredEchoLastRewardAcquisition {
-  const traitOffer = createUnresolvedTraitOffers(catalog, recreation.offer).self;
-  const levelResolution = createUnresolvedLevelResolutions(
-    catalog,
-    recreation.offer,
-    producerLevelEffectSource({ producerLifecycleKey: recreation.producerLifecycleKey }),
-  )?.self;
-  return Object.freeze({
-    disposition: Object.freeze({ kind: 'normal' as const }),
-    ...(traitOffer === undefined ? {} : { traitOffer }),
-    ...(levelResolution === undefined ? {} : { levelResolution }),
-  });
 }
 
 export interface AuthoredEchoLastRunBoonOption {
@@ -413,12 +336,14 @@ export function materializeGorgonAthenaOffer(
  */
 export function createSelectedPickupEntries(
   catalog: Catalog,
-  selectedTraitKey: string,
+  producer: SelectedPickupProducer,
 ): Readonly<Record<string, import('./model').AuthoredRewardState | null>> {
-  const disposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
-  if (disposition?.kind !== 'producePickups') return Object.freeze({});
   const entries: Record<string, import('./model').AuthoredRewardState | null> = {};
-  for (const pickup of disposition.pickups) {
+  for (const pickup of producer.pickups) {
+    if (pickup.rewardType === undefined) {
+      entries[pickup.key] = null;
+      continue;
+    }
     const declaration = catalog.rewards.rewardTypes.byKey[pickup.rewardType];
     if (declaration === undefined) throw new Error(`unknown pickup reward ${pickup.rewardType}`);
     entries[pickup.key] =
@@ -426,7 +351,7 @@ export function createSelectedPickupEntries(
         ? createUnresolvedPickupRewardState(
             catalog,
             Object.freeze({ rewardType: pickup.rewardType }),
-            disposition.producerLifecycleKey,
+            producer.producerLifecycleKey,
           )
         : null;
   }
@@ -482,10 +407,45 @@ function createUnresolvedAcquisitionRewardStateForEffect(
 
 export interface SelectedPickupProducer {
   readonly traitKey: string;
-  readonly disposition: Extract<
-    import('../catalog-schema').TraitSelectedDisposition,
-    { readonly kind: 'producePickups' }
-  >;
+  readonly producerLifecycleKey: string;
+  readonly pickups: readonly {
+    readonly key: string;
+    /** Omitted when exact prior history derives the generated reward identity. */
+    readonly rewardType?: string;
+    readonly required: boolean;
+  }[];
+}
+
+export function echoLastRewardPickupEntryKey(
+  phaseKey: string,
+  encounterKey: string,
+  optionKey: TraitOptionKey,
+): string {
+  return `echoLastReward:${phaseKey}:${encounterKey}:${optionKey}`;
+}
+
+/** Every structurally owned Echo replay row, including dormant outer options. */
+export function echoLastRewardPickupEntryKeys(
+  catalog: Catalog,
+  encounters: RoomEncounterState,
+): readonly string[] {
+  return Object.freeze(
+    Object.entries(encounters.traitOffersByPhase ?? {}).flatMap(([phaseKey, offers]) =>
+      Object.entries(offers).flatMap(([encounterKey, offer]) =>
+        offer === null || offer.kind === 'fallbackGold'
+          ? []
+          : offer.options.flatMap((option, index) => {
+              const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
+              const optionKey = TRAIT_OPTION_KEYS[index];
+              return disposition?.kind === 'echo' &&
+                disposition.effect === 'lastReward' &&
+                optionKey !== undefined
+                ? [echoLastRewardPickupEntryKey(phaseKey, encounterKey, optionKey)]
+                : [];
+            }),
+      ),
+    ),
+  );
 }
 
 /**
@@ -496,19 +456,43 @@ export function selectedPickupProducer(
   catalog: Catalog,
   encounters: RoomEncounterState,
 ): SelectedPickupProducer | undefined {
-  const producers = Object.values(encounters.traitOffersByPhase ?? {})
-    .flatMap((offers) => Object.values(offers))
-    .flatMap((offer) => {
-      if (offer === null) return [];
-      if (offer.kind === 'fallbackGold') return [];
+  const producers: readonly SelectedPickupProducer[] = Object.entries(
+    encounters.traitOffersByPhase ?? {},
+  ).flatMap(([phaseKey, offers]) =>
+    Object.entries(offers).flatMap(([encounterKey, offer]): readonly SelectedPickupProducer[] => {
+      if (offer === null || offer.kind === 'fallbackGold') return [];
       const selected = offer.options[optionIndex(offer.selectedOptionKey)];
       if (selected === undefined) return [];
       const traitKey = selected.traitKey;
       const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
-      return disposition?.kind === 'producePickups'
-        ? [Object.freeze({ traitKey, disposition })]
-        : [];
-    });
+      if (disposition?.kind === 'producePickups')
+        return [
+          Object.freeze({
+            traitKey,
+            producerLifecycleKey: disposition.producerLifecycleKey,
+            pickups: Object.freeze(
+              disposition.pickups.map((pickup) =>
+                Object.freeze({ ...pickup, required: false as const }),
+              ),
+            ),
+          }),
+        ];
+      if (disposition?.kind === 'echo' && disposition.effect === 'lastReward')
+        return [
+          Object.freeze({
+            traitKey,
+            producerLifecycleKey: 'EchoLastReward',
+            pickups: Object.freeze([
+              Object.freeze({
+                key: echoLastRewardPickupEntryKey(phaseKey, encounterKey, offer.selectedOptionKey),
+                required: true as const,
+              }),
+            ]),
+          }),
+        ];
+      return [];
+    }),
+  );
   if (producers.length > 1)
     throw new Error('occurrence has more than one selected pickup producer');
   return producers[0];
