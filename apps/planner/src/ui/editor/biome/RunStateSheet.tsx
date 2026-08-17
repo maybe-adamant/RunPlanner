@@ -68,6 +68,21 @@ function BagSection({
   );
 }
 
+function ordinal(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
 export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunStateLauncher }) {
   const dispatch = useAppDispatch();
   const close = useCallback(() => dispatch(runStateClosed()), [dispatch]);
@@ -99,34 +114,37 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
           ×
         </button>
       </header>
-      <section>
-        <h3>Keepsakes</h3>
-        <p>Current: {state.keepsakes.currentLabel}</p>
+      <details className="run-state-summary-section">
+        <summary>
+          Keepsakes <span>{state.keepsakes.currentLabel}</span>
+        </summary>
+        <ol className="run-state-keepsake-chronology">
+          {state.keepsakes.chronology.map((entry) => (
+            <li key={entry.biomeNumber}>
+              <span>{ordinal(entry.biomeNumber)} Biome:</span> {entry.label}
+              {entry.retained ? ' (retained)' : ''}
+            </li>
+          ))}
+        </ol>
         <p>Fated: {state.keepsakes.fatedStatus}</p>
-        <p>Jeweled Pom: {state.keepsakes.jeweledPomStatus}</p>
-        <p>
-          Calling Card:{' '}
-          {state.keepsakes.callingCardRemainingCharges === undefined
-            ? 'inactive'
-            : `${state.keepsakes.callingCardRemainingCharges} charges remaining`}
-        </p>
-        <p>
-          Time Piece:{' '}
-          {state.keepsakes.timePieceRemainingCharges === undefined
-            ? 'inactive'
-            : `${state.keepsakes.timePieceRemainingCharges} charges remaining`}
-        </p>
-        <p>
-          Gift Gift Gift:{' '}
-          {state.keepsakes.echoGift === undefined
-            ? 'inactive'
-            : `${state.keepsakes.echoGift.capturedKeepsakeLabel} · ${state.keepsakes.echoGift.status} · ${state.keepsakes.echoGift.replayCount} replays`}
-        </p>
-        <div>
-          Experimental Hammers:
-          {state.keepsakes.experimentalHammers.length === 0 ? (
-            ' inactive'
-          ) : (
+        {state.keepsakes.jeweledPomStatus === 'inactive' ? null : (
+          <p>Jeweled Pom: {state.keepsakes.jeweledPomStatus}</p>
+        )}
+        {state.keepsakes.callingCardRemainingCharges === undefined ? null : (
+          <p>Calling Card: {state.keepsakes.callingCardRemainingCharges} charges remaining</p>
+        )}
+        {state.keepsakes.timePieceRemainingCharges === undefined ? null : (
+          <p>Time Piece: {state.keepsakes.timePieceRemainingCharges} charges remaining</p>
+        )}
+        {state.keepsakes.echoGift === undefined ? null : (
+          <p>
+            Gift Gift Gift: {state.keepsakes.echoGift.capturedKeepsakeLabel} ·{' '}
+            {state.keepsakes.echoGift.status} · {state.keepsakes.echoGift.replayCount} replays
+          </p>
+        )}
+        {state.keepsakes.experimentalHammers.length === 0 ? null : (
+          <div>
+            Experimental Hammers:
             <ul>
               {state.keepsakes.experimentalHammers.map((hammer) => (
                 <li key={hammer.acquisitionIdentity}>
@@ -135,28 +153,29 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-        <p>
-          Fig Leaf:{' '}
-          {state.keepsakes.figLeafRemainingUses === undefined
-            ? 'inactive'
-            : `${state.keepsakes.figLeafRemainingUses} uses remaining${
-                state.keepsakes.figLeafActivatedThisBiome ? ' · already used this biome' : ''
-              }`}
-        </p>
-        <p>
-          Gorgon Amulet: {state.keepsakes.gorgonStatus ?? 'inactive'}
-          {state.keepsakes.gorgonRarity === undefined ? '' : ` (${state.keepsakes.gorgonRarity})`}
-        </p>
-        <p>Removed: {state.keepsakes.removedLabels.join(' · ') || 'None'}</p>
-      </section>
-      <section>
-        <h3>Arcana</h3>
+          </div>
+        )}
+        {state.keepsakes.figLeafRemainingUses === undefined ? null : (
+          <p>
+            Fig Leaf: {state.keepsakes.figLeafRemainingUses} uses remaining
+            {state.keepsakes.figLeafActivatedThisBiome ? ' · already used this biome' : ''}
+          </p>
+        )}
+        {state.keepsakes.gorgonStatus === undefined ? null : (
+          <p>
+            Gorgon Amulet: {state.keepsakes.gorgonStatus}
+            {state.keepsakes.gorgonRarity === undefined ? '' : ` (${state.keepsakes.gorgonRarity})`}
+          </p>
+        )}
+      </details>
+      <details className="run-state-summary-section">
+        <summary>
+          Arcana <span>{state.arcana.length} active</span>
+        </summary>
         {state.artificer === undefined ? null : (
           <p>
-            The Artificer: {state.artificer.rarity} · {state.artificer.spent}/
-            {state.artificer.capacity} spent · {state.artificer.remaining} remaining
+            The Artificer: {state.artificer.spent}/{state.artificer.capacity} spent ·{' '}
+            {state.artificer.remaining} remaining
           </p>
         )}
         {state.arcana.length === 0 ? (
@@ -164,27 +183,40 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         ) : (
           <ul>
             {state.arcana.map((card) => (
-              <li key={card.key}>
-                {card.label} · {card.rarity} · {card.origin}
+              <li key={card.key}>{card.label}</li>
+            ))}
+          </ul>
+        )}
+      </details>
+      <details className="run-state-summary-section">
+        <summary>
+          Fear <span>{state.fear.configuredTotal} configured</span>
+        </summary>
+        {state.fear.active.length === 0 ? (
+          <p>None active</p>
+        ) : (
+          <ul className="run-state-fear-list" aria-label="Active Fear vows">
+            {state.fear.active.map((vow) => (
+              <li key={vow.key}>
+                {vow.label} <span>Rank {vow.rank}</span>
               </li>
             ))}
           </ul>
         )}
-      </section>
-      <section>
-        <h3>Fear · {state.fear.configuredTotal} configured</h3>
-        <p>
-          Active:{' '}
-          {state.fear.active.map((vow) => `${vow.label} · Rank ${vow.rank}`).join(' · ') || 'None'}
-        </p>
         <p>Vow of Forfeit: {state.fear.forfeitStatus}</p>
         {state.fear.disabled.length === 0 ? null : (
-          <p>
-            Circe-disabled:{' '}
-            {state.fear.disabled.map((vow) => `${vow.label} · Rank ${vow.rank}`).join(' · ')}
-          </p>
+          <div>
+            Circe-disabled:
+            <ul className="run-state-fear-list" aria-label="Circe-disabled Fear vows">
+              {state.fear.disabled.map((vow) => (
+                <li key={vow.key}>
+                  {vow.label} <span>Rank {vow.rank}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
-      </section>
+      </details>
       <section>
         <h3>Gods in pool</h3>
         <p>{state.godPool.inPool.map(({ label }) => label).join(' · ') || 'None yet'}</p>

@@ -87,6 +87,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       facts: occurrenceFacts,
       levelResolutionAssessment: source.levelResolutionAssessment,
       markerDestinations: markers.emitter,
+      ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: input.occurrence,
     });
   };

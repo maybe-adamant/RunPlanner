@@ -163,8 +163,14 @@ export function presentRunState(
       currentLabel:
         catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
         snapshot.keepsakes.currentKey,
-      removedLabels: Object.freeze(
-        snapshot.keepsakes.removedKeys.map((key) => catalog.keepsakes.byKey[key]?.label ?? key),
+      chronology: Object.freeze(
+        snapshot.keepsakes.history.map((entry, index) =>
+          Object.freeze({
+            biomeNumber: index + 1,
+            label: catalog.keepsakes.byKey[entry.key]?.label ?? entry.key,
+            retained: entry.kind === 'retain',
+          }),
+        ),
       ),
       fatedStatus: snapshot.keepsakes.fatedStatus,
       jeweledPomStatus:

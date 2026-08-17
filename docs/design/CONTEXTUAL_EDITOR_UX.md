@@ -113,10 +113,13 @@ repeat the four-source-cap state. Equipped traits use fixed Attack, Special,
 Cast, Sprint, and Magick rows sourced from the engine's ordinary-slot ledger,
 followed by all other equipped traits. This presentation uses catalog labels
 plus optional rarity or Hammer rank; it does not expose trait, giver, or slot
-keys. A collapsed Keepsakes section presents the engine's current and removed
-identities, Fated state, and retained state for the six supported effects. It
-does not infer an effect from the current identity or recreate charge and
-encounter-use folds. The sheet also presents elements, followed by a `More
+keys. Collapsed Keepsakes, Arcana, and Fear sections keep those dense ledgers
+inspectable rather than expanded by default. Keepsakes presents the engine's
+exact biome-by-biome equip/retain chronology, Fated state, and only the retained
+effect ledgers that actually exist; it does not enumerate inactive keepsakes,
+infer an effect from the current identity, or recreate charge and encounter-use
+folds. Arcana omits redundant rarity and activation-origin labels, while Fear
+uses one vow per row. The sheet also presents elements, followed by a `More
 Info` section with collapsed `Counters` and `Reward Bags` disclosures. Counters
 use one key/value row each;
 individual reward bags retain their nested disclosures. Bag disclosures use the

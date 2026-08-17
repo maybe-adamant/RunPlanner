@@ -1099,6 +1099,10 @@ Vow of Forfeit is narrower: at the ordinary authored room's incoming `Boon` or
 each biome. The authored offer and bag result remain, but concrete acquisition
 and its trait child stay dormant. Shops, Devotion, local children, and pickups
 do not trigger or consume Forfeit, and no consolation acquisition is modeled.
+The veto is an automatic `rewardForfeited` reward event beside Time Piece and
+Artificer outcomes, not an authored acquisition disposition or an
+Arcana/Fear-specific event. The Arcana/Fear ledger retains only the per-biome
+consumed flag needed by later settlement and Run State.
 
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,

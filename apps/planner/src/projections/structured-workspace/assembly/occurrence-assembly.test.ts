@@ -131,6 +131,7 @@ function assemble(
     levelResolutionAssessment: source.levelResolutionAssessment,
     derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
     markerDestinations: markers.emitter,
+    ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
     occurrence,
   });
   return { assembly, markers, source };

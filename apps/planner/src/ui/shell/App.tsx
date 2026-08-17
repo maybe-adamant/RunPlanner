@@ -80,6 +80,26 @@ type JeweledPomInteraction = Extract<
   { readonly owner: { readonly resultKind: 'jeweledPom' } }
 >;
 
+const fearVowGridOrder = Object.freeze([
+  'EnemyDamageShrineUpgrade',
+  'EnemyHealthShrineUpgrade',
+  'EnemyShieldShrineUpgrade',
+  'EnemySpeedShrineUpgrade',
+  'EnemyCountShrineUpgrade',
+  'NextBiomeEnemyShrineUpgrade',
+  'EnemyRespawnShrineUpgrade',
+  'EnemyEliteShrineUpgrade',
+  'HealingReductionShrineUpgrade',
+  'ShopPricesShrineUpgrade',
+  'MinibossCountShrineUpgrade',
+  'BoonSkipShrineUpgrade',
+  'BiomeSpeedShrineUpgrade',
+  'LimitGraspShrineUpgrade',
+  'BoonManaReserveShrineUpgrade',
+  'BanUnpickedBoonsShrineUpgrade',
+  'BossDifficultyShrineUpgrade',
+] as const);
+
 function jeweledPomLoadable(
   interaction: JeweledPomInteraction,
   value: NonNullable<JeweledPomInteraction['value']>,
@@ -237,7 +257,10 @@ function RouteOverview({
   if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
   const arcanaCards = catalog.arcanaCards.values;
-  const fearVows = catalog.fearVows.values;
+  const fearVows = fearVowGridOrder.flatMap((key) => {
+    const vow = catalog.fearVows.byKey[key];
+    return vow === undefined ? [] : [vow];
+  });
   const manualArcanaKeys = authoredRoute.loadout.manualArcanaKeys;
   const fearRanks = authoredRoute.loadout.fearRanks;
   const startingKeepsake = createRouteStartKeepsakeSelectionAddress(workspaceRoute.routeKey);
@@ -314,88 +337,28 @@ function RouteOverview({
       </label>
       <p className="panel-description">{routeDescription}</p>
       <div className="route-loadout-controls">
-        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-starting-keepsake`}>
-          <span>Starting keepsake</span>
-          <select
-            aria-busy={keepsakeCandidates.pending || undefined}
-            id={`${workspaceRoute.routeKey}-starting-keepsake`}
-            onChange={(event) => {
-              const key = event.target.value;
-              const option = keepsakeCandidates.result?.find(
-                (candidate) => candidate.value === key,
-              );
-              if (candidateMayBeAuthored(option))
-                dispatch(authoredProjectCommandDispatched(keepsake.replaceIntent(key).command));
-            }}
-            onFocus={keepsakeCandidates.activate}
-            onPointerDown={keepsakeCandidates.activate}
-            value={authoredRoute.loadout.startingKeepsakeKey}
-          >
-            {keepsake.choices.map((choice) => {
-              const option = keepsakeCandidates.result?.find(
-                (candidate) => candidate.value === choice.value,
-              );
-              return (
-                <option
-                  key={choice.value}
-                  value={choice.value}
-                  disabled={option !== undefined && !candidateMayBeAuthored(option)}
-                  {...candidateSelectState(option)}
-                >
-                  {choice.label}
-                </option>
-              );
-            })}
-          </select>
-        </label>
-        {pom === undefined ? null : (
-          <RouteStartJeweledPomResultControl
-            interaction={pom}
-            missingDeathDefianceDraft={missingPomDeathDefianceDraft}
-            setMissingDeathDefianceDraft={setMissingPomDeathDefianceDraft}
-          />
-        )}
-        {experimentalHammer === undefined ? null : (
-          <fieldset className="field-control">
-            <legend>Experimental Hammer result</legend>
+        <div className="route-keepsake-controls">
+          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-starting-keepsake`}>
+            <span>Starting keepsake</span>
             <select
-              aria-busy={experimentalHammerCandidates.pending || undefined}
-              aria-label="Experimental Hammer result"
-              id={`${workspaceRoute.routeKey}-experimental-hammer`}
+              aria-busy={keepsakeCandidates.pending || undefined}
+              id={`${workspaceRoute.routeKey}-starting-keepsake`}
               onChange={(event) => {
-                const traitKey = event.target.value;
-                if (traitKey === '') return;
-                const option = experimentalHammerCandidateFor(traitKey);
+                const key = event.target.value;
+                const option = keepsakeCandidates.result?.find(
+                  (candidate) => candidate.value === key,
+                );
                 if (candidateMayBeAuthored(option))
-                  dispatch(
-                    authoredProjectCommandDispatched(
-                      experimentalHammer.intentFor(
-                        traitKey === '__exhausted'
-                          ? { kind: 'exhausted' }
-                          : { kind: 'selected', traitKey },
-                      ).command,
-                    ),
-                  );
+                  dispatch(authoredProjectCommandDispatched(keepsake.replaceIntent(key).command));
               }}
-              onFocus={() =>
-                experimentalHammer !== undefined &&
-                experimentalHammerCandidateController.activate(experimentalHammer)
-              }
-              onPointerDown={() =>
-                experimentalHammer !== undefined &&
-                experimentalHammerCandidateController.activate(experimentalHammer)
-              }
-              value={
-                experimentalHammer.value?.kind === 'selected'
-                  ? experimentalHammer.value.traitKey
-                  : experimentalHammer.value?.kind === 'exhausted'
-                    ? '__exhausted'
-                    : ''
-              }
+              onFocus={keepsakeCandidates.activate}
+              onPointerDown={keepsakeCandidates.activate}
+              value={authoredRoute.loadout.startingKeepsakeKey}
             >
-              <option value="">Choose compatible Hammer</option>
-              {experimentalHammer.choices.map((choice) => {
-                const option = experimentalHammerCandidateFor(choice.value);
+              {keepsake.choices.map((choice) => {
+                const option = keepsakeCandidates.result?.find(
+                  (candidate) => candidate.value === choice.value,
+                );
                 return (
                   <option
                     key={choice.value}
@@ -408,60 +371,124 @@ function RouteOverview({
                 );
               })}
             </select>
-          </fieldset>
-        )}
-        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
-          <span>Weapon</span>
-          <select
-            id={`${workspaceRoute.routeKey}-weapon`}
-            onChange={(event) => {
-              const next = catalog.weapons.byKey[event.target.value];
-              if (next === undefined) return;
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceRouteLoadout',
-                  route: createRouteAddress(workspaceRoute.routeKey),
-                  weaponKey: next.key,
-                  aspectKey: next.defaultAspectKey,
-                }),
-              );
-            }}
-            value={weapon.key}
-          >
-            {catalog.weapons.values.map((candidate) => (
-              <option key={candidate.key} value={candidate.key}>
-                {candidate.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-aspect`}>
-          <span>Aspect</span>
-          <select
-            id={`${workspaceRoute.routeKey}-aspect`}
-            onChange={(event) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceRouteLoadout',
-                  route: createRouteAddress(workspaceRoute.routeKey),
-                  weaponKey: weapon.key,
-                  aspectKey: event.target.value,
-                }),
-              )
-            }
-            value={authoredRoute.loadout.aspectKey}
-          >
-            {weapon.aspectKeys.map((aspectKey) => {
-              const aspect = catalog.aspects.byKey[aspectKey];
-              if (aspect === undefined) return null;
-              return (
-                <option key={aspect.key} value={aspect.key}>
-                  {aspect.label}
+          </label>
+          {pom === undefined ? null : (
+            <RouteStartJeweledPomResultControl
+              interaction={pom}
+              missingDeathDefianceDraft={missingPomDeathDefianceDraft}
+              setMissingDeathDefianceDraft={setMissingPomDeathDefianceDraft}
+            />
+          )}
+          {experimentalHammer === undefined ? null : (
+            <fieldset className="field-control">
+              <legend>Experimental Hammer result</legend>
+              <select
+                aria-busy={experimentalHammerCandidates.pending || undefined}
+                aria-label="Experimental Hammer result"
+                id={`${workspaceRoute.routeKey}-experimental-hammer`}
+                onChange={(event) => {
+                  const traitKey = event.target.value;
+                  if (traitKey === '') return;
+                  const option = experimentalHammerCandidateFor(traitKey);
+                  if (candidateMayBeAuthored(option))
+                    dispatch(
+                      authoredProjectCommandDispatched(
+                        experimentalHammer.intentFor(
+                          traitKey === '__exhausted'
+                            ? { kind: 'exhausted' }
+                            : { kind: 'selected', traitKey },
+                        ).command,
+                      ),
+                    );
+                }}
+                onFocus={() =>
+                  experimentalHammer !== undefined &&
+                  experimentalHammerCandidateController.activate(experimentalHammer)
+                }
+                onPointerDown={() =>
+                  experimentalHammer !== undefined &&
+                  experimentalHammerCandidateController.activate(experimentalHammer)
+                }
+                value={
+                  experimentalHammer.value?.kind === 'selected'
+                    ? experimentalHammer.value.traitKey
+                    : experimentalHammer.value?.kind === 'exhausted'
+                      ? '__exhausted'
+                      : ''
+                }
+              >
+                <option value="">Choose compatible Hammer</option>
+                {experimentalHammer.choices.map((choice) => {
+                  const option = experimentalHammerCandidateFor(choice.value);
+                  return (
+                    <option
+                      key={choice.value}
+                      value={choice.value}
+                      disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                      {...candidateSelectState(option)}
+                    >
+                      {choice.label}
+                    </option>
+                  );
+                })}
+              </select>
+            </fieldset>
+          )}
+        </div>
+        <div className="route-weapon-controls">
+          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
+            <span>Weapon</span>
+            <select
+              id={`${workspaceRoute.routeKey}-weapon`}
+              onChange={(event) => {
+                const next = catalog.weapons.byKey[event.target.value];
+                if (next === undefined) return;
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceRouteLoadout',
+                    route: createRouteAddress(workspaceRoute.routeKey),
+                    weaponKey: next.key,
+                    aspectKey: next.defaultAspectKey,
+                  }),
+                );
+              }}
+              value={weapon.key}
+            >
+              {catalog.weapons.values.map((candidate) => (
+                <option key={candidate.key} value={candidate.key}>
+                  {candidate.label}
                 </option>
-              );
-            })}
-          </select>
-        </label>
+              ))}
+            </select>
+          </label>
+          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-aspect`}>
+            <span>Aspect</span>
+            <select
+              id={`${workspaceRoute.routeKey}-aspect`}
+              onChange={(event) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceRouteLoadout',
+                    route: createRouteAddress(workspaceRoute.routeKey),
+                    weaponKey: weapon.key,
+                    aspectKey: event.target.value,
+                  }),
+                )
+              }
+              value={authoredRoute.loadout.aspectKey}
+            >
+              {weapon.aspectKeys.map((aspectKey) => {
+                const aspect = catalog.aspects.byKey[aspectKey];
+                if (aspect === undefined) return null;
+                return (
+                  <option key={aspect.key} value={aspect.key}>
+                    {aspect.label}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
       </div>
       <details
         aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
@@ -531,7 +558,12 @@ function RouteOverview({
         </summary>
         <div className="fear-rank-list">
           {fearVows.map((vow) => (
-            <label key={vow.key} className="field-control">
+            <label
+              key={vow.key}
+              className="field-control fear-rank-control"
+              data-fear-vow-key={vow.key}
+              data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}
+            >
               <span>{vow.label}</span>
               <select
                 aria-label={`${vow.label} rank`}

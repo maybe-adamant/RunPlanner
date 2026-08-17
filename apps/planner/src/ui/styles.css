@@ -520,8 +520,18 @@ button:disabled {
 .route-loadout-controls {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 1rem;
+}
+
+.route-keepsake-controls,
+.route-weapon-controls {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.route-keepsake-controls > :only-child {
+  grid-column: 1 / -1;
 }
 
 .route-loadout-section {
@@ -575,8 +585,12 @@ button:disabled {
 .fear-rank-list {
   display: grid;
   gap: 0.55rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 0.7rem;
+}
+
+.fear-rank-control[data-rival='true'] {
+  grid-column: 2 / span 2;
 }
 
 .trait-offer-launchers {
@@ -584,6 +598,26 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.45rem;
+}
+
+.reward-acquisition-outcome {
+  margin: 0.45rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgb(226 185 113 / 35%);
+  border-radius: 0.4rem;
+  color: #dfc89e;
+  background: rgb(226 185 113 / 8%);
+  font-weight: 650;
+}
+
+.reward-acquisition-outcome {
+  margin: 0.45rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgb(226 185 113 / 35%);
+  border-radius: 0.4rem;
+  color: #dfc89e;
+  background: rgb(226 185 113 / 8%);
+  font-weight: 650;
 }
 
 .trait-offer-dialog-backdrop {
@@ -865,6 +899,32 @@ button:disabled {
 }
 .run-state-sheet details {
   margin: 8px 0;
+}
+.run-state-summary-section {
+  padding: 10px 0;
+  border-bottom: 1px solid #393841;
+}
+.run-state-summary-section > summary {
+  color: #f3ede4;
+  cursor: pointer;
+  font-weight: 700;
+}
+.run-state-summary-section > summary span {
+  margin-left: 5px;
+  color: #aaa7af;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.run-state-keepsake-chronology,
+.run-state-fear-list {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0;
+  padding-left: 1.4rem;
+}
+.run-state-keepsake-chronology li > span,
+.run-state-fear-list li > span {
+  color: #aaa7af;
 }
 .run-state-sheet h4 {
   margin: 12px 0 6px;
@@ -2996,6 +3056,16 @@ select {
 
   .biome-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .route-keepsake-controls,
+  .route-weapon-controls,
+  .fear-rank-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fear-rank-control[data-rival='true'] {
+    grid-column: 1 / -1;
   }
   .run-state-sheet {
     position: fixed;

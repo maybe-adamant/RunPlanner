@@ -500,6 +500,7 @@ export function assembleWorkspaceBiomeSemantics(
       levelResolutionAssessment: source.levelResolutionAssessment,
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
+      ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: request.occurrence,
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });

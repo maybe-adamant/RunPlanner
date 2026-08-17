@@ -155,6 +155,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
     site: AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
+  readonly ordinaryRewardForfeited: (owner: RewardCandidateOwner) => boolean;
   readonly occurrence: RoomOccurrence;
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
@@ -185,13 +186,24 @@ export type WorkspaceOccurrenceAssembler = (
 ) => WorkspaceOccurrenceAssembly;
 
 export function workspaceAcquisitionRoleLabel(acquisitionRole: string): string {
-  return acquisitionRole === 'chosenSource'
-    ? 'Chosen God'
-    : acquisitionRole === 'spurnedSource'
-      ? 'Spurned God'
-      : acquisitionRole
-          .replace(/([a-z])([A-Z])/g, '$1 $2')
-          .replace(/^./, (character) => character.toUpperCase());
+  switch (acquisitionRole) {
+    case 'self':
+      return 'Reward';
+    case 'source':
+      return 'Boon';
+    case 'hiddenSource':
+      return 'Mystery Boon';
+    case 'box':
+      return 'Blind Box';
+    case 'chosenSource':
+      return 'Chosen God';
+    case 'spurnedSource':
+      return 'Spurned God';
+    default:
+      return acquisitionRole
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/^./, (character) => character.toUpperCase());
+  }
 }
 
 function traitOfferControls(
@@ -392,9 +404,13 @@ function rewardControl(
     authoringStartStep === undefined || fixedRewardType === undefined
       ? undefined
       : Object.freeze({ rewardType: fixedRewardType });
+  const acquisitionOutcome = input.ordinaryRewardForfeited(owner)
+    ? ('forfeitedByVow' as const)
+    : undefined;
   return binding === undefined
     ? Object.freeze({
         kind: 'explicitReward' as const,
+        ...(acquisitionOutcome === undefined ? {} : { acquisitionOutcome }),
         ...(authoringStartStep === undefined ? {} : { authoringStartStep }),
         ...(authoringSeed === undefined ? {} : { authoringSeed }),
         marker: input.markerDestinations.marker(owner.address),
@@ -417,6 +433,7 @@ function rewardControl(
       })
     : Object.freeze({
         kind: 'countedReward' as const,
+        ...(acquisitionOutcome === undefined ? {} : { acquisitionOutcome }),
         binding,
         marker: input.markerDestinations.marker(owner.address),
         offer,

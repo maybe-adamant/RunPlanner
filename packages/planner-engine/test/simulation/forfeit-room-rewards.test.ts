@@ -53,8 +53,8 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
       const branch = rewards.branches[0];
       if (branch === undefined) throw new Error('expected reward branch');
       expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
-      expect(branch.arcanaFear.events).toContainEqual(
-        expect.objectContaining({ kind: 'ordinaryRoomRewardForfeited', rewardType }),
+      expect(branch.events).toContainEqual(
+        expect.objectContaining({ kind: 'rewardForfeited', rewardType }),
       );
       expect(
         branch.events.some(

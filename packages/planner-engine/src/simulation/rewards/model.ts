@@ -76,6 +76,11 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
+      /** Automatic room-reward veto; intentionally no concrete acquisition exists. */
+      readonly kind: 'rewardForfeited';
+      readonly rewardType: 'Boon' | 'HermesUpgrade';
+    })
+  | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
       readonly optionKeys: readonly string[];

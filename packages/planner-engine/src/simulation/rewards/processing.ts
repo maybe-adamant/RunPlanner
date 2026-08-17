@@ -3334,12 +3334,17 @@ export function settleProducerAcquisitionSite(
         continue;
       }
       vetoed.push(
-        advanceRewardBranch(
+        appendRewardEvent(
           Object.freeze({
             ...branch,
             arcanaFear: forfeit.state,
           }),
           event.sequence,
+          Object.freeze({
+            kind: 'rewardForfeited' as const,
+            origin: incoming.origin,
+            rewardType: qualifyingRewardType,
+          }),
         ),
       );
     }

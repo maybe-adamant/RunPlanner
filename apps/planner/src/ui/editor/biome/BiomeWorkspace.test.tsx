@@ -187,8 +187,16 @@ describe('BiomeWorkspace', () => {
 
     await user.click(launcher);
     const sheet = screen.getByRole('region', { name: /State before/ });
-    expect(within(sheet).getByRole('heading', { name: 'Arcana' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: /Fear/ })).toBeTruthy();
+    const keepsakes = within(sheet).getByText(/Keepsakes/, { selector: 'summary' });
+    const arcana = within(sheet).getByText(/Arcana/, { selector: 'summary' });
+    const fear = within(sheet).getByText(/Fear/, { selector: 'summary' });
+    expect(keepsakes.closest('details')?.open).toBe(false);
+    expect(arcana.closest('details')?.open).toBe(false);
+    expect(fear.closest('details')?.open).toBe(false);
+    await user.click(keepsakes);
+    expect(within(sheet).getByText(/1st Biome:/).parentElement?.textContent).toContain(
+      'Silver Wheel',
+    );
     const godHeading = within(sheet).getByRole('heading', { name: 'Gods in pool' });
     const godSection = godHeading.closest('section');
     if (godSection === null) throw new Error('Gods in pool section is missing');

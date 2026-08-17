@@ -62,6 +62,7 @@ import {
   authorLegalTraitOffers,
   authorSurfaceWorldShop,
   goldenFBiome,
+  goldenFStartId,
   goldenFOccurrenceId,
   goldenHBiome,
   goldenHStartId,
@@ -561,7 +562,7 @@ describe('OccurrenceWorkbench', () => {
       );
     expect(replacementFinding).toHaveLength(1);
     expect(workspace.focusByOwner.has(semanticAddressKey(replacementAddress))).toBe(true);
-    const replacementEditor = screen.getByText('Artificer replacement').closest('fieldset');
+    const replacementEditor = screen.getByText('Replacement reward').closest('fieldset');
     if (!(replacementEditor instanceof HTMLElement)) {
       throw new Error('Combat08 Artificer replacement editor is missing');
     }
@@ -614,12 +615,15 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
     const disposition = screen.getByRole('combobox', {
-      name: /^Acquisition disposition /,
+      name: /^Reward outcome for /,
     });
-    expect(within(disposition).getByRole('option', { name: 'Acquire normally' })).toBeTruthy();
+    expect(within(disposition).getByRole('option', { name: 'Pick up reward' })).toBeTruthy();
     expect(
-      (within(disposition).getByRole('option', { name: 'Artificer' }) as HTMLOptionElement)
-        .disabled,
+      (
+        within(disposition).getByRole('option', {
+          name: 'Artificer · replace reward',
+        }) as HTMLOptionElement
+      ).disabled,
     ).toBe(false);
     expect(
       screen.getByRole('button', { name: 'Edit Random Pom: No eligible traits' }),
@@ -639,6 +643,27 @@ describe('OccurrenceWorkbench', () => {
         value: { kind: 'artificer', replacement: null },
       },
     );
+    const openingView = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(goldenFStartId),
+    );
+    const openingReward = workspaceBiome(openingView.application, 'Underworld', 'F')
+      .nodes.find(
+        (node): node is WorkspaceOccurrenceWorkbenchNode =>
+          node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === goldenFStartId,
+      )
+      ?.room.rewardControls.find(
+        (control) =>
+          semanticAddressKey(control.owner.address) ===
+          semanticAddressKey(createIncomingRewardAddress(goldenFBiome, goldenFStartId)),
+      );
+    expect(openingReward?.acquisitionOutcome).toBe('forfeitedByVow');
+    expect(screen.getByText('Removed by Vow of Forfeit')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /Reward outcome/ })).toBeNull();
+    cleanup();
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -1001,7 +1026,7 @@ describe('OccurrenceWorkbench', () => {
     expect(authoredSite()?.order).toEqual(['psyche']);
     const psycheRow = screen.getByText('Psyche').closest('.acquisition-entry');
     if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
-    await view.user.selectOptions(within(psycheRow).getByLabelText(/disposition/), 'timePiece');
+    await view.user.selectOptions(within(psycheRow).getByLabelText(/Reward outcome/), 'timePiece');
     expect(authoredSite()?.pickupEntries?.psyche?.dispositionByAcquisitionRole.self).toEqual({
       kind: 'timePiece',
     });
@@ -2627,7 +2652,7 @@ describe('OccurrenceWorkbench', () => {
     const goldShopRow = screen.getByText('Gold Gold Gold duplicate of Offer 3').closest('tr');
     const goldRewardRow = goldShopRow?.nextElementSibling;
     if (!(goldRewardRow instanceof HTMLElement)) throw new Error('Gold reward row is missing');
-    const conversion = within(goldRewardRow).getByLabelText(/disposition/) as HTMLSelectElement;
+    const conversion = within(goldRewardRow).getByLabelText(/Reward outcome/) as HTMLSelectElement;
     await view.user.selectOptions(conversion, 'timePiece');
     expect(authoredSite()?.order).toEqual(['Minor']);
     expect(
