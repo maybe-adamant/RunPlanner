@@ -116,9 +116,13 @@ describe('Run State presentation', () => {
         events: [],
       },
       keepsakes: {
-        currentKey: 'ManaOverTimeRefundKeepsake',
-        history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
-        removedKeys: [],
+        currentKey: 'GoldifyKeepsake',
+        history: [
+          { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
+          { key: 'GoldifyKeepsake', kind: 'replace' },
+          { key: 'GoldifyKeepsake', kind: 'retain' },
+        ],
+        removedKeys: ['ManaOverTimeRefundKeepsake'],
         fatedStatus: 'Unknown',
         callingCard: { remainingCharges: 0 },
         experimentalHammers: [
@@ -178,6 +182,12 @@ describe('Run State presentation', () => {
       disabled: [{ key: 'EnemyDamageShrineUpgrade', label: 'Vow of Pain', rank: 2 }],
     });
     expect(state.keepsakes).toMatchObject({
+      currentLabel: 'Time Piece',
+      chronology: [
+        { biomeNumber: 1, label: 'Silver Wheel', retained: false },
+        { biomeNumber: 2, label: 'Time Piece', retained: false },
+        { biomeNumber: 3, label: 'Time Piece', retained: true },
+      ],
       callingCardRemainingCharges: 0,
       echoGift: {
         capturedKeepsakeLabel: 'Time Piece',

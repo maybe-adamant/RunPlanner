@@ -65,7 +65,11 @@ export function RewardControlEditor({
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
         />
       )}
-      {!showAcquisitionChildren ? null : (
+      {!showAcquisitionChildren ? null : control.acquisitionOutcome === 'forfeitedByVow' ? (
+        <p className="reward-acquisition-outcome" role="status">
+          Removed by Vow of Forfeit
+        </p>
+      ) : (
         <div className="trait-offer-launchers">
           {(control.traitOffers ?? []).map((trait) => (
             <TraitOfferLauncher
@@ -92,9 +96,9 @@ export function RewardControlEditor({
                 key={workspaceInteractionKey(conversion.address)}
               >
                 <label>
-                  <span>{conversion.acquisitionRoleLabel}</span>
+                  <span>{conversion.acquisitionRoleLabel} outcome</span>
                   <select
-                    aria-label={`Acquisition disposition ${conversion.acquisitionRoleLabel}`}
+                    aria-label={`Reward outcome for ${conversion.acquisitionRoleLabel}`}
                     onChange={(event) => {
                       const kind = event.target.value;
                       if (kind === 'normal' || kind === 'timePiece') {
@@ -110,14 +114,14 @@ export function RewardControlEditor({
                     }}
                     value={conversion.value.kind}
                   >
-                    <option value="normal">Acquire normally</option>
+                    <option value="normal">Pick up reward</option>
                     <option
                       disabled={
                         !interaction.timePieceSupported && conversion.value.kind !== 'timePiece'
                       }
                       value="timePiece"
                     >
-                      Convert to Gold
+                      Time Piece · convert to Gold
                     </option>
                     <option
                       disabled={
@@ -125,7 +129,7 @@ export function RewardControlEditor({
                       }
                       value="artificer"
                     >
-                      Artificer
+                      Artificer · replace reward
                     </option>
                   </select>
                 </label>
@@ -133,7 +137,7 @@ export function RewardControlEditor({
                 'artificer' ? null : interaction.artificerReplacementControl ===
                   undefined ? null : (
                   <fieldset className="artificer-replacement-editor">
-                    <legend>Artificer replacement</legend>
+                    <legend>Replacement reward</legend>
                     <RewardControlEditor
                       control={interaction.artificerReplacementControl}
                       idPrefix={`${idPrefix}-artificer-${conversion.address.acquisitionRole}`}

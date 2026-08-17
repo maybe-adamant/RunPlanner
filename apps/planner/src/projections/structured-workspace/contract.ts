@@ -982,6 +982,8 @@ export type WorkspaceRoomPickerControl =
     };
 
 interface WorkspaceRewardControlBase {
+  /** Evaluated automatic outcome for this exact reward acquisition. */
+  readonly acquisitionOutcome?: 'forfeitedByVow';
   /** Direct payload authoring for a declaration-fixed type whose payload remains unresolved. */
   readonly authoringStartStep?: Exclude<RewardPickerStep, 'type' | 'spurned'>;
   /** Transient factual type seed for that unresolved payload; never persisted independently. */
@@ -1582,7 +1584,11 @@ export type WorkspaceRunStateLauncher =
 export interface WorkspaceRunStatePresentation {
   readonly keepsakes: {
     readonly currentLabel: string;
-    readonly removedLabels: readonly string[];
+    readonly chronology: readonly {
+      readonly biomeNumber: number;
+      readonly label: string;
+      readonly retained: boolean;
+    }[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
     readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';
     readonly experimentalHammers: readonly {

@@ -1588,9 +1588,11 @@ bans intact. Fallback Gold and nonparticipating providers emit no bans.
 
 Effective Forfeit is evaluated earlier and at a narrower provenance boundary.
 The first supported incoming `Boon` or `HermesUpgrade` reward on an ordinary
-authored room in each biome records `ordinaryRoomRewardForfeited`, advances the
-processed frontier, and skips concrete acquisition and trait-child evaluation.
-The already-resolved offer and bag consumption remain. Shop, Devotion, local
+authored room in each biome records a `rewardForfeited` reward outcome, advances
+the processed frontier, and skips concrete acquisition and trait-child
+evaluation. This shares the reward-outcome stream used by Time Piece and
+Artificer without making Forfeit an authored or selectable disposition. The
+already-resolved offer and bag consumption remain. Shop, Devotion, local
 children, and pickups do not enter this veto; no substitute acquisition is
 recorded. Per-biome usage resets when carried reward branches initialize the
 next biome, while configured/effective Fear and Circe suppression remain

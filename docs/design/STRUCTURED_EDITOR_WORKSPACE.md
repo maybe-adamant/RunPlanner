@@ -142,7 +142,9 @@ derive bags, or infer availability.
 Equipped and banned trait labels come from the same engine snapshot. Forfeit's
 inactive, available, or consumed state is likewise passed through from the
 progressive Arcana/Fear ledger; the workspace does not infer it from the route
-loadout or room list.
+loadout or room list. Keepsake presentation joins the exact engine history to
+catalog labels as a biome-by-biome chronology; React does not reconstruct that
+sequence from current and removed inventories.
 
 Run State remains available through the covered decision that contains the
 first blocking value and unavailable afterward. The workspace consumes that
@@ -223,6 +225,14 @@ chronology; a mandatory singleton shows a fixed required replacement without a
 synthetic order control. React renders the engine's support, replacement
 domain, and complete command intents and does not evaluate eligibility or bag
 state.
+
+The control presents those authored choices as reward outcomes rather than
+exposing internal role vocabulary. An automatic Forfeit veto is not added to
+the authored disposition union: the engine records it in the same reward-event
+stream as the other acquisition outcomes, the workspace marks the exact reward
+control, and React replaces dormant acquisition children with a read-only
+`Removed by Vow of Forfeit` status. Retained authored children remain in the
+document and reappear if an upstream edit makes the veto no longer apply.
 
 ### Keepsake Products
 

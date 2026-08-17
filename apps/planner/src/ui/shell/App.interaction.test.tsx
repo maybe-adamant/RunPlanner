@@ -868,6 +868,12 @@ describe('planner history interaction', () => {
 describe('route loadout interaction', () => {
   it('presents starting Grasp capacity and disables Arcana or Void choices that exceed it', async () => {
     const { user } = renderPlannerForInteraction();
+    const startingKeepsake = screen.getByRole('combobox', { name: 'Starting keepsake' });
+    const weapon = screen.getByRole('combobox', { name: 'Weapon' });
+    const aspect = screen.getByRole('combobox', { name: 'Aspect' });
+    expect(startingKeepsake.closest('.route-keepsake-controls')).toBeTruthy();
+    expect(weapon.closest('.route-weapon-controls')).toBe(aspect.closest('.route-weapon-controls'));
+    expect(weapon.closest('.route-keepsake-controls')).toBeNull();
     const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
     const arcanaSummary = arcana.querySelector('summary');
     if (arcanaSummary === null) throw new Error('Arcana summary is missing');
@@ -894,6 +900,34 @@ describe('route loadout interaction', () => {
     const fearSummary = fear.querySelector('summary');
     if (fearSummary === null) throw new Error('Fear summary is missing');
     await user.click(fearSummary);
+    expect(
+      Array.from(fear.querySelectorAll<HTMLElement>('.fear-rank-control')).map(
+        (control) => control.dataset.fearVowKey,
+      ),
+    ).toEqual([
+      'EnemyDamageShrineUpgrade',
+      'EnemyHealthShrineUpgrade',
+      'EnemyShieldShrineUpgrade',
+      'EnemySpeedShrineUpgrade',
+      'EnemyCountShrineUpgrade',
+      'NextBiomeEnemyShrineUpgrade',
+      'EnemyRespawnShrineUpgrade',
+      'EnemyEliteShrineUpgrade',
+      'HealingReductionShrineUpgrade',
+      'ShopPricesShrineUpgrade',
+      'MinibossCountShrineUpgrade',
+      'BoonSkipShrineUpgrade',
+      'BiomeSpeedShrineUpgrade',
+      'LimitGraspShrineUpgrade',
+      'BoonManaReserveShrineUpgrade',
+      'BanUnpickedBoonsShrineUpgrade',
+      'BossDifficultyShrineUpgrade',
+    ]);
+    expect(
+      fear
+        .querySelector('[data-fear-vow-key="BossDifficultyShrineUpgrade"]')
+        ?.getAttribute('data-rival'),
+    ).toBe('true');
     const voidRank = screen.getByRole('combobox', { name: 'Vow of Void rank' });
     expect(within(voidRank).getByRole('option', { name: '0' })).toHaveProperty('disabled', false);
     expect(within(voidRank).getByRole('option', { name: '1' })).toHaveProperty('disabled', true);

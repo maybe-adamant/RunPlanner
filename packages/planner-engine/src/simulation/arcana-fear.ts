@@ -37,11 +37,7 @@ export type ArcanaFearEvent =
       readonly kind: 'arcanaPromoted';
       readonly arcanaKeys: readonly string[];
     } & ArcanaFearEvidence)
-  | ({ readonly kind: 'fearVowSuppressed'; readonly vowKey: string } & ArcanaFearEvidence)
-  | ({
-      readonly kind: 'ordinaryRoomRewardForfeited';
-      readonly rewardType: 'Boon' | 'HermesUpgrade';
-    } & ArcanaFearEvidence);
+  | ({ readonly kind: 'fearVowSuppressed'; readonly vowKey: string } & ArcanaFearEvidence);
 export interface ArcanaFearEvidence {
   readonly owner: SemanticAddress;
   readonly sequence: number;
@@ -271,7 +267,7 @@ export function beginBiomeArcanaFearState(state: ArcanaFearState): ArcanaFearSta
     : state;
 }
 
-/** Records the one source-backed Forfeit trigger at its ordinary-room owner. */
+/** Consumes the one source-backed Forfeit use; reward settlement owns its outcome event. */
 export function consumeOrdinaryRoomForfeit(
   catalog: Catalog,
   state: ArcanaFearState,
@@ -292,10 +288,6 @@ export function consumeOrdinaryRoomForfeit(
     state: Object.freeze({
       ...state,
       fear: Object.freeze({ ...state.fear, forfeitConsumed: true }),
-      events: Object.freeze([
-        ...state.events,
-        Object.freeze({ kind: 'ordinaryRoomRewardForfeited' as const, rewardType, ...evidence }),
-      ]),
     }),
   });
 }

@@ -96,6 +96,8 @@ export interface WorkspaceBiomeSource {
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
+  /** True only when every evaluated branch records the engine-owned Forfeit veto. */
+  readonly ordinaryRewardForfeited: (owner: SemanticAddress) => boolean;
   readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
     readonly address: AcquisitionEntryAddress;
     readonly kind:
@@ -687,6 +689,16 @@ function createWorkspaceBiomeSource(
       : []
     ).map((assessment) => [semanticAddressKey(assessment.address), assessment] as const),
   );
+  const rewardBranches =
+    evaluation !== undefined && 'rewards' in evaluation ? evaluation.rewards.branches : [];
+  const forfeitedRewardOwnersByBranch = rewardBranches.map(
+    (branch) =>
+      new Set(
+        branch.events.flatMap((event) =>
+          event.kind === 'rewardForfeited' ? [semanticAddressKey(event.origin)] : [],
+        ),
+      ),
+  );
   return Object.freeze({
     biome,
     completeness,
@@ -712,6 +724,9 @@ function createWorkspaceBiomeSource(
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
+    ordinaryRewardForfeited: (owner: SemanticAddress) =>
+      forfeitedRewardOwnersByBranch.length > 0 &&
+      forfeitedRewardOwnersByBranch.every((owners) => owners.has(semanticAddressKey(owner))),
     derivedAcquisitionEntries,
     plan,
     runState: (owner: ExitDecisionAddress | HubDecisionAddress) => {
