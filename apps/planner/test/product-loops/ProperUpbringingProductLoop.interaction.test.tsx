@@ -3,7 +3,6 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
-  createDefaultAllTogetherResult,
   createIncomingRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
@@ -56,10 +55,17 @@ function prepareProperUpbringingFixture() {
             ...value,
             options: Object.freeze(
               value.options.map((option) => {
-                const result = createDefaultAllTogetherResult(application.catalog, option.traitKey);
-                return result === undefined
+                return option.traitKey !== 'AllElementalBoon'
                   ? option
-                  : Object.freeze({ ...option, allTogetherResult: result });
+                  : Object.freeze({
+                      ...option,
+                      allTogetherResult: Object.freeze({
+                        earth: 'ElementalDamageBoon',
+                        fire: 'ElementalBaseDamageBoon',
+                        air: 'ElementalDamageFloorBoon',
+                        water: 'ElementalHealthBoon',
+                      }),
+                    });
               }),
             ) as typeof value.options,
           });

@@ -228,6 +228,12 @@ export interface CirceResolutionAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** One selected targeted acquisition's exact post-outer outcome. */
+export interface TraitAcquisitionTargetAddress extends BiomeOwnedAddress {
+  readonly kind: 'traitAcquisitionTarget';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+}
 /** Echo Pom's selected target/no-target child beneath the selected outer row. */
 export interface EchoPomTargetAddress extends BiomeOwnedAddress {
   readonly kind: 'echoPomTarget';
@@ -294,6 +300,7 @@ export type SemanticAddress =
   | AcquisitionEntryAddress
   | TraitOfferAddress
   | AcquisitionRoleAddress
+  | TraitAcquisitionTargetAddress
   | CirceResolutionAddress
   | EchoPomTargetAddress
   | EchoLastRunBoonAddress
@@ -708,6 +715,18 @@ export function createCirceResolutionAddress(
     optionKey,
   });
 }
+export function createTraitAcquisitionTargetAddress(
+  trait: TraitOfferAddress,
+  optionKey: TraitAcquisitionTargetAddress['optionKey'],
+): TraitAcquisitionTargetAddress {
+  return Object.freeze({
+    kind: 'traitAcquisitionTarget',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+  });
+}
 export function createEchoPomTargetAddress(
   trait: TraitOfferAddress,
   optionKey: EchoPomTargetAddress['optionKey'],
@@ -844,6 +863,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'traitOffer':
     case 'acquisitionRole':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
+    case 'traitAcquisitionTarget':
     case 'circeResolution':
     case 'echoPomTarget':
     case 'echoLastRunBoon':

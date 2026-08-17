@@ -4,7 +4,6 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
-  createDefaultAllTogetherResult,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
@@ -14,6 +13,7 @@ import {
   createOccurrenceId,
   createRouteAddress,
   createTraitOfferAddress,
+  createTraitAcquisitionTargetAddress,
   createShopOfferAddress,
   semanticAddressKey,
   encodeProjectDocument,
@@ -123,10 +123,17 @@ function allTogetherFindingFixture() {
             ...value,
             options: Object.freeze(
               value.options.map((option) => {
-                const result = createDefaultAllTogetherResult(application.catalog, option.traitKey);
-                return result === undefined
+                return option.traitKey !== 'AllElementalBoon'
                   ? option
-                  : Object.freeze({ ...option, allTogetherResult: result });
+                  : Object.freeze({
+                      ...option,
+                      allTogetherResult: Object.freeze({
+                        earth: null,
+                        fire: 'ElementalBaseDamageBoon',
+                        air: 'ElementalDamageFloorBoon',
+                        water: 'ElementalHealthBoon',
+                      }),
+                    });
               }),
             ) as typeof value.options,
           });
@@ -143,11 +150,6 @@ function allTogetherFindingFixture() {
   if (target === undefined || optionKey === undefined)
     throw new Error('All Together target was not prepared');
   const set = createAllTogetherSetAddress(target, optionKey, 'earth');
-  project = applyProjectCommand(project, application.catalog, {
-    kind: 'ReplaceAllTogetherSet',
-    set,
-    value: null,
-  });
   return { application, project, set, target };
 }
 
@@ -666,10 +668,102 @@ describe('planner history interaction', () => {
     );
 
     const dialog = await screen.findByRole('dialog');
-    const earth = within(dialog).getByLabelText('Earth grant');
+    const earth = within(dialog).getByRole('button', { name: /^Earth:/ });
     await waitFor(() => expect(document.activeElement).toBe(earth));
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(set);
+  });
+
+  it('opens and focuses the exact targeted-acquisition child from its finding', async () => {
+    const application = createApplication();
+    let project = createCompleteFGProject();
+    let target: ReturnType<typeof createTraitOfferAddress> | undefined;
+    let optionKey: 'option1' | 'option2' | 'option3' | undefined;
+    for (const [occurrenceId, giverKey, source, traitKey] of [
+      [goldenFOccurrenceId(2, 1), 'Apollo', 'ApolloUpgrade', 'ApolloCastBoon'],
+      [goldenFOccurrenceId(6, 1), 'Hera', 'HeraUpgrade', 'BoonDecayBoon'],
+    ] as const) {
+      const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+      });
+      project = authorLegalTraitOffers(project);
+      project = prepareLegalPomTraitOffers(project).project;
+      const trace = reachedTraitOffers(project).find(
+        (candidate) =>
+          semanticAddressKey(candidate.address.owner) === semanticAddressKey(reward) &&
+          candidate.acquisitionRole === 'source',
+      );
+      if (trace === undefined) throw new Error(`missing reached ${traitKey} offer`);
+      const value =
+        traitKey === 'BoonDecayBoon'
+          ? ({
+              kind: 'traits',
+              giverKey: 'Hera',
+              options: [
+                { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+                { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+                { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+            } as const)
+          : supportedTraitOffer(project, trace.address, giverKey, traitKey);
+      if (value === undefined || value.kind !== 'traits')
+        throw new Error(`missing authored ${traitKey} offer`);
+      const authored =
+        traitKey !== 'BoonDecayBoon'
+          ? value
+          : Object.freeze({
+              ...value,
+              options: Object.freeze(
+                value.options.map((option) =>
+                  option.traitKey === 'BoonDecayBoon'
+                    ? Object.freeze({
+                        traitKey: option.traitKey,
+                        ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+                      })
+                    : option,
+                ),
+              ) as typeof value.options,
+            });
+      project = applyProjectCommand(project, application.catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: trace.address,
+        value: authored,
+      });
+      if (traitKey === 'BoonDecayBoon') {
+        target = trace.address;
+        optionKey = authored.selectedOptionKey;
+      }
+    }
+    if (target === undefined || optionKey === undefined)
+      throw new Error('targeted acquisition fixture was not prepared');
+    const child = createTraitAcquisitionTargetAddress(target, optionKey);
+    application.store.dispatch(authoredProjectReplaced(project));
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'targetedAcquisitionTargetMissing' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(child),
+      );
+    if (finding === undefined) throw new Error('targeted acquisition child finding is missing');
+    const view = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings)
+      .getAllByRole('button')
+      .find((button) => button.textContent?.includes('Acquisition target is missing'));
+    if (findingButton === undefined) throw new Error('targeted acquisition finding is not shown');
+    await view.user.click(findingButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const targetControl = within(dialog).getByLabelText(`${optionKey} acquisition target`);
+    await waitFor(() => expect(document.activeElement).toBe(targetControl));
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(child);
+    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
   });
 
   it('edits ordinary, Hermes, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {

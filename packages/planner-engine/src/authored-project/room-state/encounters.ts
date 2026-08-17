@@ -371,11 +371,6 @@ export function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.traitKey`,
         `${traitKey} is not in giver ${giverKey}`,
       );
-    if (trait.selectedDisposition.kind === 'directTraitSets' && !hasAllTogetherResult)
-      failProjectDocument(
-        `${path}.options.${optionKey}.allTogetherResult`,
-        'is required by this trait',
-      );
     const rarity = hasRarity
       ? expectString(option.rarity, `${path}.options.${optionKey}.rarity`)
       : undefined;

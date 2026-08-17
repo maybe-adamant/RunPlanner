@@ -1,6 +1,5 @@
 import {
   optionIndex,
-  withDefaultTraitOptionDetail,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
   type TraitOptionKey,
@@ -89,17 +88,11 @@ export function prepareTraitOptionDomain(
       throw new Error(`Trait giver ${giver.key} references unknown trait ${traitKey}`);
     }
     if (trait.rarityDomain.kind === 'none') {
-      variants = appendUnique(
-        variants,
-        withDefaultTraitOptionDetail(catalog, Object.freeze({ traitKey })),
-      );
+      variants = appendUnique(variants, Object.freeze({ traitKey }));
       continue;
     }
     for (const rarity of trait.rarityDomain.equippedRarities) {
-      variants = appendUnique(
-        variants,
-        withDefaultTraitOptionDetail(catalog, Object.freeze({ traitKey, rarity })),
-      );
+      variants = appendUnique(variants, Object.freeze({ traitKey, rarity }));
     }
   }
   const selected = draft.options[optionIndex(focusedOptionKey)];

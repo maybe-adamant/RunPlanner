@@ -467,10 +467,14 @@ describe('structured workspace interaction binding', () => {
     const child = createEchoPomTargetAddress(trait, 'option3');
     const pom = interaction.optionDomain(pomOffer, 'option3').echoPomTarget;
     expect(pom?.control.address).toEqual(child);
-    expect(pom?.forOffer(pomOffer).load()).toEqual({
-      choices: [{ label: 'Nova Strike', value: 'ApolloWeaponBoon' }],
-      emptyNoOpAllowed: false,
-    });
+    const pomDomain = pom?.forOffer(pomOffer).load();
+    expect(pomDomain?.emptyNoOpAllowed).toBe(false);
+    expect(pomDomain?.picker.sections.flatMap((section) => section.items)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
+        expect.objectContaining({ value: 'ZeusWeaponBoon', disabled: true, selected: true }),
+      ]),
+    );
     expect(pom?.control.marker.findingCount).toBeGreaterThan(0);
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
     const pomCommand = pom?.intentFor(pomOffer, 'ApolloWeaponBoon').command;
@@ -527,9 +531,22 @@ describe('structured workspace interaction binding', () => {
         kind: 'allTogetherSetDomain' as const,
         result: {
           setKey,
-          values:
+          candidates:
             setKey === 'earth'
-              ? (['ElementalDamageBoon', 'ElementalOlympianDamageBoon'] as const)
+              ? Object.freeze([
+                  Object.freeze({
+                    value: 'ElementalDamageBoon',
+                    support: 'possible' as const,
+                    branchSupport: Object.freeze([true]),
+                    selected: true,
+                  }),
+                  Object.freeze({
+                    value: 'ElementalOlympianDamageBoon',
+                    support: 'possible' as const,
+                    branchSupport: Object.freeze([true]),
+                    selected: false,
+                  }),
+                ])
               : ([] as const),
         },
       }),
@@ -542,17 +559,15 @@ describe('structured workspace interaction binding', () => {
     expect(sets?.map((set) => set.control.setKey)).toEqual(['earth', 'fire', 'air', 'water']);
     const earth = sets?.[0];
     expect(earth?.control.address).toEqual(createAllTogetherSetAddress(trait, 'option1', 'earth'));
-    expect(earth?.forOffer(authored).load()).toEqual({
-      choices: [
-        { label: 'Martial Art', value: 'ElementalDamageBoon' },
-        { label: 'Rallying Cry', value: 'ElementalOlympianDamageBoon' },
-      ],
-    });
-    expect(earth?.intentFor('ElementalOlympianDamageBoon').command).toEqual({
-      kind: 'ReplaceAllTogetherSet',
-      set: createAllTogetherSetAddress(trait, 'option1', 'earth'),
-      value: 'ElementalOlympianDamageBoon',
-    });
+    expect(
+      earth
+        ?.forOffer(authored)
+        .load()
+        ?.picker.sections.flatMap((section) => section.items),
+    ).toEqual([
+      expect.objectContaining({ label: 'Martial Art', value: 'ElementalDamageBoon' }),
+      expect.objectContaining({ label: 'Rallying Cry', value: 'ElementalOlympianDamageBoon' }),
+    ]);
     expect(
       active.assembly.preliminaryFocusDestinations.has(semanticAddressKey(earth!.control.address)),
     ).toBe(true);
@@ -819,6 +834,11 @@ describe('structured workspace interaction binding', () => {
 
     const domain = interaction.optionDomain(draft, 'option1');
     expect(domain.hasTargetPicker).toBe(true);
+    expect(domain.traitAcquisitionTarget?.address).toMatchObject({
+      kind: 'traitAcquisitionTarget',
+      trait: interaction.owner,
+      optionKey: 'option1',
+    });
     expect(traitAcquisitionTargets).not.toHaveBeenCalled();
     const projected = await domain.load();
     expect(traitAcquisitionTargets).toHaveBeenCalledWith(
@@ -833,7 +853,9 @@ describe('structured workspace interaction binding', () => {
       ),
     ).toEqual(['ApolloCastBoon']);
 
-    expect(interaction.optionDomain(draft, 'option2').hasTargetPicker).toBe(false);
+    const dormant = interaction.optionDomain(draft, 'option2');
+    expect(dormant.hasTargetPicker).toBe(false);
+    expect(dormant.traitAcquisitionTarget).toBeUndefined();
   });
 
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {

@@ -1,6 +1,7 @@
 import {
   createOccurrenceAddress,
   createCirceResolutionAddress,
+  createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
@@ -11,7 +12,6 @@ import {
   createTraitOfferAddress,
   createLevelResolutionAddress,
   optionIndex,
-  createDefaultAllTogetherResult,
   traitGiverForAcquisitionRole,
   semanticAddressKey,
   type OccurrenceId,
@@ -47,6 +47,11 @@ import {
   type CandidateProjectionSession,
 } from '@planner/projections/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import {
+  projectDirectTraitOutcomePicker,
+  withDirectTraitOutcomeSelection,
+  withoutDirectTraitOutcomeValues,
+} from '@planner/projections/directTraitOutcomeProjection';
 import { projectEncounterPicker } from '@planner/projections/encounterPickerProjection';
 import {
   roomCategoryForKind,
@@ -316,42 +321,6 @@ function editArtificerReplacement(
         edit.trait.acquisitionRole,
         edit.selectedOptionKey,
       );
-    case 'ReplaceAllTogetherSet': {
-      const role = edit.set.trait.acquisitionRole;
-      const offer = replacement.traitOffersByAcquisitionRole[role];
-      if (offer?.kind !== 'traits')
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(edit.set)} has no Artificer trait offer`,
-        );
-      const index = optionIndex(edit.set.optionKey);
-      const option = offer.options[index];
-      if (option === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(edit.set)} has no selected trait option`,
-        );
-      if (option.allTogetherResult === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(edit.set)} has no complete All Together result`,
-        );
-      const options = [
-        ...offer.options,
-      ] as import('@run-planner/engine/authored-project').AuthoredTraitOption[];
-      options[index] = Object.freeze({
-        ...option,
-        allTogetherResult: Object.freeze({
-          ...option.allTogetherResult,
-          [edit.set.setKey]: edit.value,
-        }),
-      });
-      return replaceArtificerTraitOffer(
-        replacement,
-        role,
-        Object.freeze({
-          ...offer,
-          options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-        }),
-      );
-    }
     case 'ReplaceLevelResolution':
       return replaceArtificerLevelResolution(
         replacement,
@@ -388,7 +357,6 @@ function derivedShopPayloadIntent<Command extends ProjectCommand>(
       edit.kind !== 'ReplaceTraitOffer' &&
       edit.kind !== 'ReplaceGorgonAthenaOffer' &&
       edit.kind !== 'ReplaceTraitSelection' &&
-      edit.kind !== 'ReplaceAllTogetherSet' &&
       edit.kind !== 'ReplaceLevelResolution' &&
       edit.kind !== 'ReplaceAcquisitionDisposition'
     )
@@ -412,7 +380,6 @@ function derivedShopPayloadIntent<Command extends ProjectCommand>(
     edit.kind !== 'ReplaceTraitOffer' &&
     edit.kind !== 'ReplaceGorgonAthenaOffer' &&
     edit.kind !== 'ReplaceTraitSelection' &&
-    edit.kind !== 'ReplaceAllTogetherSet' &&
     edit.kind !== 'ReplaceLevelResolution' &&
     edit.kind !== 'ReplaceAcquisitionDisposition'
   )
@@ -2220,6 +2187,14 @@ export function bindWorkspaceInteractions(
         option !== undefined &&
         value.selectedOptionKey === optionKey &&
         declaration?.targetedAcquisition !== undefined;
+      const traitAcquisitionTargetControl = hasTargetPicker
+        ? Object.freeze({
+            address: createTraitAcquisitionTargetAddress(control.address, optionKey),
+            marker: control.traitAcquisitionTarget?.marker ?? control.marker,
+            optionKey,
+            ...(option?.targetTraitKey === undefined ? {} : { value: option.targetTraitKey }),
+          })
+        : undefined;
       const circeControl =
         value.selectedOptionKey === optionKey && declaration?.selectedDisposition.kind === 'circe'
           ? Object.freeze({
@@ -2283,7 +2258,14 @@ export function bindWorkspaceInteractions(
                   setKey: set.key,
                   ...(option?.allTogetherResult === undefined
                     ? {}
-                    : { value: option.allTogetherResult[set.key] }),
+                    : {
+                        value: option.allTogetherResult[set.key],
+                        valueLabel:
+                          option.allTogetherResult[set.key] === null
+                            ? 'No grant (set exhausted)'
+                            : (catalog.traits.byKey[option.allTogetherResult[set.key]!]?.label ??
+                              option.allTogetherResult[set.key]!),
+                      }),
                 });
               }),
             )
@@ -2291,6 +2273,9 @@ export function bindWorkspaceInteractions(
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
         hasTargetPicker,
+        ...(traitAcquisitionTargetControl === undefined
+          ? {}
+          : { traitAcquisitionTarget: traitAcquisitionTargetControl }),
         ...(circeControl === undefined
           ? {}
           : {
@@ -2330,25 +2315,35 @@ export function bindWorkspaceInteractions(
                       );
                       if (evaluated.kind !== 'circeResolutionDomain') return undefined;
                       const result = evaluated.result;
+                      const arcanaLabel = (key: string) =>
+                        catalog.arcanaCards.byKey[key]?.label ?? key;
+                      const vowLabel = (key: string) => catalog.fearVows.byKey[key]?.label ?? key;
                       return Object.freeze({
-                        arcanaChoices: Object.freeze(
-                          result.arcanaKeys.map((key) =>
-                            Object.freeze({
-                              label: catalog.arcanaCards.byKey[key]?.label ?? key,
-                              value: key,
-                            }),
-                          ),
+                        arcanaPicker: projectDirectTraitOutcomePicker(
+                          result.arcanaCandidates,
+                          arcanaLabel,
+                          (key) => key,
                         ),
+                        arcanaPickerFor: (selectedKeys: readonly string[]) =>
+                          projectDirectTraitOutcomePicker(
+                            withDirectTraitOutcomeSelection(
+                              withoutDirectTraitOutcomeValues(
+                                result.arcanaCandidates,
+                                selectedKeys,
+                              ),
+                              Object.freeze([]),
+                            ),
+                            arcanaLabel,
+                            (key) => key,
+                          ),
+                        branchAgreement: result.branchAgreement,
                         effect: result.effect,
                         outerAvailable: result.outerAvailable,
                         requiredCount: result.requiredCount,
-                        vowChoices: Object.freeze(
-                          result.vowKeys.map((key) =>
-                            Object.freeze({
-                              label: catalog.fearVows.byKey[key]?.label ?? key,
-                              value: key,
-                            }),
-                          ),
+                        vowPicker: projectDirectTraitOutcomePicker(
+                          result.vowCandidates,
+                          vowLabel,
+                          (key) => key,
                         ),
                       });
                     },
@@ -2387,13 +2382,13 @@ export function bindWorkspaceInteractions(
                       const evaluated = candidates.echoPomTarget(control.address, offer, optionKey);
                       if (evaluated.kind !== 'echoPomTargetDomain') return undefined;
                       return Object.freeze({
-                        choices: Object.freeze(
-                          evaluated.result.traitKeys.map((key) =>
-                            Object.freeze({
-                              label: catalog.traits.byKey[key]?.label ?? key,
-                              value: key,
-                            }),
-                          ),
+                        picker: projectDirectTraitOutcomePicker(
+                          evaluated.result.candidates,
+                          (key) =>
+                            key === null
+                              ? 'No eligible target'
+                              : (catalog.traits.byKey[key]?.label ?? key),
+                          (key) => key ?? '__none__',
                         ),
                         emptyNoOpAllowed: evaluated.result.emptyNoOpAllowed,
                       });
@@ -2638,43 +2633,6 @@ export function bindWorkspaceInteractions(
                 allTogetherSetControls.map((setControl) =>
                   Object.freeze({
                     control: setControl,
-                    intentFor: (result: string | null) =>
-                      derivedShopPayloadIntent(
-                        derivedShopEntryEdit,
-                        Object.freeze({
-                          kind: 'ReplaceAllTogetherSet' as const,
-                          set: setControl.address,
-                          value: result,
-                        }),
-                        artificerReplacementEdit,
-                      ),
-                    offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
-                      const index = optionIndex(optionKey);
-                      const existing = offer.options[index];
-                      if (existing === undefined)
-                        throw new StructuredWorkspaceProjectionContractError(
-                          `${semanticAddressKey(control.address)} is missing ${optionKey}`,
-                        );
-                      const current =
-                        existing.allTogetherResult ??
-                        createDefaultAllTogetherResult(catalog, existing.traitKey);
-                      if (current === undefined)
-                        throw new StructuredWorkspaceProjectionContractError(
-                          `${existing.traitKey} has no All Together default`,
-                        );
-                      const options = [...offer.options];
-                      options[index] = Object.freeze({
-                        ...existing,
-                        allTogetherResult: Object.freeze({
-                          ...current,
-                          [setControl.setKey]: result,
-                        }),
-                      });
-                      return Object.freeze({
-                        ...offer,
-                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      });
-                    },
                     forOffer: (offer: AuthoredTraitOfferTraits) =>
                       Object.freeze({
                         load: () => {
@@ -2686,16 +2644,13 @@ export function bindWorkspaceInteractions(
                           );
                           if (evaluated.kind !== 'allTogetherSetDomain') return undefined;
                           return Object.freeze({
-                            choices: Object.freeze(
-                              evaluated.result.values.map((value) =>
-                                Object.freeze({
-                                  label:
-                                    value === null
-                                      ? 'No grant (set exhausted)'
-                                      : (catalog.traits.byKey[value]?.label ?? value),
-                                  value,
-                                }),
-                              ),
+                            picker: projectDirectTraitOutcomePicker(
+                              evaluated.result.candidates,
+                              (value) =>
+                                value === null
+                                  ? 'No grant (set exhausted)'
+                                  : (catalog.traits.byKey[value]?.label ?? value),
+                              (value) => value ?? '__none__',
                             ),
                           });
                         },

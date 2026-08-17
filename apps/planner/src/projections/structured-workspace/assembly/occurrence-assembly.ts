@@ -15,6 +15,7 @@ import {
   createGorgonPhaseAddress,
   materializeGorgonAthenaOffer,
   createCirceResolutionAddress,
+  createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
@@ -247,6 +248,23 @@ function traitOfferControls(
       selected === undefined
         ? undefined
         : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+    const traitAcquisitionTarget =
+      offer.kind !== 'traits' ||
+      selected === undefined ||
+      input.catalog.traits.byKey[selected.traitKey]?.targetedAcquisition === undefined
+        ? undefined
+        : (() => {
+            const targetAddress = createTraitAcquisitionTargetAddress(
+              address,
+              offer.selectedOptionKey,
+            );
+            return Object.freeze({
+              address: targetAddress,
+              marker: input.markerDestinations.marker(targetAddress),
+              optionKey: offer.selectedOptionKey,
+              ...(selected.targetTraitKey === undefined ? {} : { value: selected.targetTraitKey }),
+            });
+          })();
     const circeResolution =
       offer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
         ? undefined
@@ -287,6 +305,7 @@ function traitOfferControls(
         marker: input.markerDestinations.marker(address),
         offer,
         rewardOwner: owner.address,
+        ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
         ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
         ...(offer.kind === 'traits' &&
@@ -871,6 +890,25 @@ function activeEncounterPhasesForOwner(
               selected === undefined
                 ? undefined
                 : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+            const traitAcquisitionTarget =
+              authoredTraitOffer.kind !== 'traits' ||
+              selected === undefined ||
+              input.catalog.traits.byKey[selected.traitKey]?.targetedAcquisition === undefined
+                ? undefined
+                : (() => {
+                    const targetAddress = createTraitAcquisitionTargetAddress(
+                      traitAddress,
+                      authoredTraitOffer.selectedOptionKey,
+                    );
+                    return Object.freeze({
+                      address: targetAddress,
+                      marker: input.markerDestinations.marker(targetAddress),
+                      optionKey: authoredTraitOffer.selectedOptionKey,
+                      ...(selected.targetTraitKey === undefined
+                        ? {}
+                        : { value: selected.targetTraitKey }),
+                    });
+                  })();
             const circeResolution =
               authoredTraitOffer.kind !== 'traits' || selectedDisposition?.kind !== 'circe'
                 ? undefined
@@ -960,6 +998,7 @@ function activeEncounterPhasesForOwner(
               marker: input.markerDestinations.marker(traitAddress),
               offer: authoredTraitOffer,
               rewardOwner: address,
+              ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
               ...(circeResolution === undefined ? {} : { circeResolution }),
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
               ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),

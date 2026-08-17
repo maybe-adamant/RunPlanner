@@ -93,6 +93,8 @@ export {
   type HubTerminalTakeoverCandidateQuery,
   type TakeoverPrebossBatchCandidateQuery,
   type EvaluatedTraitAcquisitionTargetCandidate,
+  type EvaluatedDirectTraitOutcomeCandidate,
+  type DirectTraitOutcomeSupport,
   type EvaluatedCirceResolutionDomain,
   type CirceResolutionDomainEvaluation,
   type CirceResolutionDomainQuery,

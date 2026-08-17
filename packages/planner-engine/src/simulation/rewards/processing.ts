@@ -8,6 +8,7 @@ import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   createCirceResolutionAddress,
+  createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createAllTogetherSetAddress,
@@ -806,7 +807,6 @@ function applyTraitOfferForAcquisition(
     findings !== undefined &&
     (evaluation.composition.findings.length > 0 ||
       evaluation.replacementComposition.findings.length > 0 ||
-      evaluation.targetedAcquisition.findings.length > 0 ||
       evaluation.assessments.some((assessment) => !assessment.legal))
   ) {
     const owner = traitOwnerAddress(reward.origin);
@@ -852,20 +852,6 @@ function applyTraitOfferForAcquisition(
           undefined,
           finding.detail,
           undefined,
-          findingChronology,
-        );
-      });
-      evaluation.targetedAcquisition.findings.forEach((finding) => {
-        addTraitFinding(
-          findings,
-          owner,
-          role,
-          lifecyclePoint,
-          sequence,
-          finding.code,
-          finding.traitKey,
-          finding.detail,
-          finding.requirementTraitKeys,
           findingChronology,
         );
       });
@@ -917,6 +903,35 @@ function applyTraitOfferForAcquisition(
       ? advanceCurrentKeepsake(catalog, effectiveBranch.keepsakes, selectedDisposition.rankBonus)
       : effectiveBranch.keepsakes;
   let blockedChildAddress: SemanticAddress | undefined;
+  if (
+    evaluation.targetedAcquisition.applies &&
+    !evaluation.targetedAcquisition.legal &&
+    selected !== undefined
+  ) {
+    const owner = traitOwnerAddress(reward.origin);
+    if (owner !== undefined) {
+      const traitAddress = createTraitOfferAddress(owner, role);
+      const address = createTraitAcquisitionTargetAddress(
+        traitAddress,
+        applied.event.selectedOptionKey,
+      );
+      blockedChildAddress = address;
+      if (findings !== undefined)
+        evaluation.targetedAcquisition.findings.forEach((finding) =>
+          addTraitChildFinding(
+            findings,
+            address,
+            lifecyclePoint,
+            sequence,
+            finding.code,
+            finding.traitKey,
+            finding.detail,
+            findingChronology,
+            ownerRegion(traitAddress),
+          ),
+        );
+    }
+  }
   if (selectedDisposition?.kind === 'directTraitSets' && selected !== undefined) {
     const owner = traitOwnerAddress(reward.origin);
     const result = selected.allTogetherResult;
@@ -925,7 +940,32 @@ function applyTraitOfferForAcquisition(
     let invalid = owner === undefined;
     if (owner !== undefined) {
       const traitAddress = createTraitOfferAddress(owner, role);
+      if (result === undefined) {
+        const firstSet = selectedDisposition.sets[0];
+        if (firstSet !== undefined) {
+          const address = createAllTogetherSetAddress(
+            traitAddress,
+            applied.event.selectedOptionKey,
+            firstSet.key,
+          );
+          invalid = true;
+          blockedChildAddress = address;
+          if (findings !== undefined)
+            addTraitChildFinding(
+              findings,
+              address,
+              lifecyclePoint,
+              sequence,
+              'allTogetherResultMissing',
+              selected.traitKey,
+              'unresolved',
+              findingChronology,
+              ownerRegion(traitAddress),
+            );
+        }
+      }
       for (const set of selectedDisposition.sets) {
+        if (result === undefined) break;
         const address = createAllTogetherSetAddress(
           traitAddress,
           applied.event.selectedOptionKey,
@@ -934,16 +974,11 @@ function applyTraitOfferForAcquisition(
         const domains = branchHistories.map((history) =>
           directTraitSetOutcomes(catalog, history, selected.traitKey, set.key),
         );
-        const firstDomain = domains[0] ?? Object.freeze([]);
-        const branchDivergent = domains.some(
-          (domain) =>
-            domain.length !== firstDomain.length ||
-            domain.some((value, index) => value !== firstDomain[index]),
-        );
         const hasResult =
           result !== undefined && Object.prototype.hasOwnProperty.call(result, set.key);
         const value = result?.[set.key];
-        const legal = hasResult && !branchDivergent && firstDomain.includes(value ?? null);
+        const branchSupported = domains.map((domain) => domain.includes(value ?? null));
+        const legal = hasResult && branchSupported.length > 0 && branchSupported.every(Boolean);
         if (!legal) {
           invalid = true;
           blockedChildAddress ??= address;
@@ -955,7 +990,7 @@ function applyTraitOfferForAcquisition(
               sequence,
               hasResult ? 'allTogetherResultUnavailable' : 'allTogetherResultMissing',
               selected.traitKey,
-              branchDivergent ? 'branchDivergence' : String(value),
+              branchSupported.some(Boolean) ? 'branchDivergence' : String(value),
               findingChronology,
               ownerRegion(traitAddress),
             );
@@ -1148,20 +1183,13 @@ export function settleEncounterTraitOffer(
     );
     const applied = appliedSettlement.branch;
     blockedChild ??= appliedSettlement.blockedChild;
-    const preEffect: RewardBranchState = Object.freeze({
-      ...branch,
-      ...(applied.traitEvaluations === undefined
-        ? {}
-        : { traitEvaluations: applied.traitEvaluations }),
-    });
     const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
+      const address = createCirceResolutionAddress(owner, offer.selectedOptionKey);
+      blockedChild = Object.freeze({ address, branch: applied });
       if (findings !== undefined)
         addTraitChildFinding(
           findings,
-          createCirceResolutionAddress(
-            createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole),
-            offer.selectedOptionKey,
-          ),
+          address,
           lifecyclePoint,
           sequence,
           code,
@@ -1169,9 +1197,18 @@ export function settleEncounterTraitOffer(
           detail,
           findingChronology,
         );
-      return preEffect;
+      return applied;
     };
     if (disposition?.kind === 'circe') {
+      if (applied.traitHistory === branch.traitHistory) {
+        if (
+          findings !== undefined &&
+          provisionalFindings !== undefined &&
+          provisionalFindings !== findings
+        )
+          for (const [key, entry] of provisionalFindings) findings.set(key, entry);
+        return applied;
+      }
       if (disposition.effect === 'activateArcana') {
         if (resolution?.kind !== 'activateArcana') return rejectCirce('circeResolutionMissing');
         if (resolution.arcanaKeys.length !== circeDomain!.requiredCount)

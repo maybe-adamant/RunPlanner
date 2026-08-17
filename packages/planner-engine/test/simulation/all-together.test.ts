@@ -335,8 +335,32 @@ describe('All Together direct trait settlement', () => {
         settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
       ).toEqual([]);
       expect([...findings.values()].map((entry) => entry.finding.code)).toContain(code);
+      if (result === undefined) expect(findings.size).toBe(1);
     },
   );
+
+  it('ignores an unresolved dormant All Together child when another option is selected', () => {
+    const unresolved = Object.freeze({
+      ...offer(undefined, false),
+      selectedOptionKey: 'option2' as const,
+    });
+    const findings = new Map();
+    const settled = processEncounterTraitOffer(
+      catalog,
+      branch(requiredHistory()),
+      owner.owner,
+      unresolved,
+      20,
+      'encounterCompleted',
+      findings,
+    );
+    expect(
+      [...findings.values()].filter((entry) => entry.finding.origin.kind === 'allTogetherSet'),
+    ).toEqual([]);
+    expect(
+      settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+    ).toEqual([]);
+  });
 
   it('withholds branch-divergent sets atomically after acquiring the outer trait', () => {
     const first = requiredHistory();
@@ -368,7 +392,7 @@ describe('All Together direct trait settlement', () => {
     ).toBe('branchDivergence');
   });
 
-  it('branch-attests candidate domains and returns nothing when histories disagree', () => {
+  it('branch-attests each candidate instead of combining divergent histories', () => {
     const first = requiredHistory();
     const forced = requiredHistory([acquired(4, 'Hephaestus', 'ElementalDamageBoon')]);
     const single = createTraitOfferCandidateArtifacts(
@@ -407,20 +431,33 @@ describe('All Together direct trait settlement', () => {
         ],
       ]),
     );
-    expect(
-      evaluateAllTogetherSetDomain(
-        catalog,
-        {} as never,
-        { routes: [] } as never,
-        divergentArtifacts,
-        {
-          kind: 'allTogetherSetDomain',
-          trait: owner,
-          value: offer(),
-          optionKey: 'option1',
-          setKey: 'earth',
-        },
-      ),
-    ).toMatchObject({ kind: 'unavailable' });
+    const evaluated = evaluateAllTogetherSetDomain(
+      catalog,
+      {} as never,
+      { routes: [] } as never,
+      divergentArtifacts,
+      {
+        kind: 'allTogetherSetDomain',
+        trait: owner,
+        value: offer(),
+        optionKey: 'option1',
+        setKey: 'earth',
+      },
+    );
+    expect(evaluated.kind).toBe('allTogetherSetDomain');
+    if (evaluated.kind !== 'allTogetherSetDomain') throw new Error('missing All Together domain');
+    expect(evaluated.result.candidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          value: 'ElementalDamageBoon',
+          support: 'impossible',
+          reason: 'branchDivergence',
+        }),
+        expect.objectContaining({
+          value: 'ElementalOlympianDamageBoon',
+          support: 'possible',
+        }),
+      ]),
+    );
   });
 });

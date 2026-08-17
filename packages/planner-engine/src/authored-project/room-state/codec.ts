@@ -253,11 +253,6 @@ function decodeTraitOffers(
           `${rolePath}.options.${key}.traitKey`,
           `${traitKey} is not in giver ${giverKey}`,
         );
-      if (trait.selectedDisposition.kind === 'directTraitSets' && !hasAllTogetherResult)
-        failProjectDocument(
-          `${rolePath}.options.${key}.allTogetherResult`,
-          'is required by this trait',
-        );
       const rarity =
         option.rarity === undefined
           ? undefined

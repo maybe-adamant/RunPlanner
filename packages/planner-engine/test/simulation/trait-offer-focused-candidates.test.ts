@@ -88,7 +88,7 @@ function reachedContext(before = createTraitHistoryState()): TraitOfferCandidate
 }
 
 describe('focused trait offer candidates', () => {
-  it('publishes a branch-aware target union and pins a stale authored target', () => {
+  it('publishes branch-aware targets without combining support and pins a stale target', () => {
     const targetDomain = evaluateTraitAcquisitionTargetDomain(
       catalog,
       project,
@@ -122,8 +122,8 @@ describe('focused trait offer candidates', () => {
         branchSupport: candidate.result.branchSupport,
       })),
     ).toEqual([
-      { traitKey: 'ApolloCastBoon', supported: true, branchSupport: [false, true] },
-      { traitKey: 'DemeterWeaponBoon', supported: true, branchSupport: [true, false] },
+      { traitKey: 'ApolloCastBoon', supported: false, branchSupport: [false, true] },
+      { traitKey: 'DemeterWeaponBoon', supported: false, branchSupport: [true, false] },
       { traitKey: 'ZeusWeaponBoon', supported: false, branchSupport: [false, false] },
     ]);
   });

@@ -6,9 +6,10 @@ import {
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredEchoLastRewardAcquisition,
+  type AuthoredAllTogetherResult,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
-import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import type { DirectTraitSetKey, TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidateProjection';
@@ -55,56 +56,164 @@ function rarityLabel(rarity: TraitRarity): string {
   return rarity;
 }
 
-function AllTogetherSetEditor({
+function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
+  return model.sections
+    .flatMap((section) => section.items)
+    .find((item) => Object.is(item.value, value))?.label;
+}
+
+function AllTogetherSetPicker({
   interaction,
   offer,
-  optionIndex: index,
-  onUpdate,
+  onCancel,
+  onSelect,
 }: {
   readonly interaction: WorkspaceAllTogetherSetInteraction;
   readonly offer: AuthoredTraitOfferTraits;
-  readonly optionIndex: number;
-  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly onCancel: () => void;
+  readonly onSelect: (value: string | null, label: string) => void;
 }) {
   const loadable = useMemo(() => interaction.forOffer(offer), [interaction, offer]);
   const controller = useWorkspaceInteractionController<WorkspaceAllTogetherSetDomain | undefined>();
   const loaded = controller.observe(loadable);
   useEffect(() => {
     controller.activate(loadable);
-    // This exact authored-set loadable is the activation identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadable]);
-  const option = offer.options[index];
-  if (option === undefined) return null;
-  const current = option.allTogetherResult?.[interaction.control.setKey];
-  const choices = loaded.result?.choices ?? Object.freeze([]);
-  const forced = choices.length === 1;
-  const currentLegal = choices.some((choice) => choice.value === current);
-  const label = `${interaction.control.setKey[0]!.toUpperCase()}${interaction.control.setKey.slice(1)} grant`;
+  }, [controller, loadable]);
   return (
-    <label className="trait-circe-resolution">
-      {label}
-      <select
-        aria-disabled={choices.length === 0 ? true : undefined}
-        aria-label={label}
-        disabled={loaded.pending || (forced && currentLegal)}
-        id={semanticOwnerControlElementId(interaction.control.address)}
-        onChange={(event) => {
-          if (choices.length === 0) return;
-          const next = event.target.value === '__none__' ? null : event.target.value;
-          onUpdate(interaction.offerFor(offer, next));
-        }}
-        value={current === null ? '__none__' : (current ?? '')}
-      >
-        {!currentLegal ? <option value="">Choose a legal result</option> : null}
-        {choices.map((choice) => (
-          <option key={choice.value ?? '__none__'} value={choice.value ?? '__none__'}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-      {choices.length === 0 ? <span>Unavailable across current route branches</span> : null}
-    </label>
+    <ContextualPicker
+      cancelLabel="Cancel"
+      choiceLabel={`${interaction.control.setKey[0]!.toUpperCase()}${interaction.control.setKey.slice(1)} grant`}
+      closeOnSelect={false}
+      id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+      label="Grant"
+      loading={loaded.pending}
+      model={loaded.result?.picker ?? { sections: Object.freeze([]) }}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+      onSelect={(value) =>
+        onSelect(
+          value,
+          loaded.result === undefined
+            ? value === null
+              ? 'No grant'
+              : value
+            : (pickerValueLabel(loaded.result.picker, value) ?? String(value)),
+        )
+      }
+      open={true}
+      placeholder="Choose a grant"
+    />
+  );
+}
+
+function AllTogetherOutcomeEditor({
+  interactions,
+  offer,
+  optionIndex: index,
+  onSelect,
+}: {
+  readonly interactions: readonly WorkspaceAllTogetherSetInteraction[];
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly optionIndex: number;
+  readonly onSelect: (result: AuthoredAllTogetherResult) => void;
+}) {
+  const option = offer.options[index];
+  const [draft, setDraft] = useState<Partial<AuthoredAllTogetherResult>>(
+    option?.allTogetherResult ?? Object.freeze({}),
+  );
+  const labelsForControls = () =>
+    Object.freeze(
+      Object.fromEntries(
+        interactions.flatMap((interaction) =>
+          interaction.control.valueLabel === undefined
+            ? []
+            : [[interaction.control.setKey, interaction.control.valueLabel]],
+        ),
+      ),
+    ) as Partial<Record<DirectTraitSetKey, string>>;
+  const [draftLabels, setDraftLabels] = useState(labelsForControls);
+  const [activeIndex, setActiveIndex] = useState<number>();
+  const activeInteraction = activeIndex === undefined ? undefined : interactions[activeIndex];
+  const activeSetKey = activeInteraction?.control.setKey;
+  const complete =
+    interactions.length > 0 &&
+    interactions.every((interaction) =>
+      Object.prototype.hasOwnProperty.call(draft, interaction.control.setKey),
+    );
+
+  const begin = (setIndex = 0): void => {
+    setDraft(option?.allTogetherResult ?? Object.freeze({}));
+    setDraftLabels(labelsForControls());
+    setActiveIndex(setIndex);
+  };
+  const cancel = (): void => {
+    setDraft(option?.allTogetherResult ?? Object.freeze({}));
+    setDraftLabels(labelsForControls());
+    setActiveIndex(undefined);
+  };
+  const choose = (value: string | null, label: string): void => {
+    if (activeSetKey === undefined) return;
+    const next = Object.freeze({ ...draft, [activeSetKey]: value });
+    setDraft(next);
+    setDraftLabels((current) => Object.freeze({ ...current, [activeSetKey]: label }));
+    const nextMissing = interactions.findIndex(
+      (interaction) => !Object.prototype.hasOwnProperty.call(next, interaction.control.setKey),
+    );
+    setActiveIndex(nextMissing < 0 ? undefined : nextMissing);
+  };
+
+  return (
+    <fieldset className="trait-selected-outcome-detail">
+      <legend>Elemental grants</legend>
+      <div className="trait-outcome-summary-list">
+        {interactions.map((interaction, setIndex) => {
+          const key = interaction.control.setKey;
+          const value = draft[key];
+          const label = Object.prototype.hasOwnProperty.call(draft, key)
+            ? (draftLabels[key] ?? (value === null ? 'No grant' : 'Configured'))
+            : 'Unspecified';
+          return (
+            <button
+              className="quiet-action action-compact"
+              id={semanticOwnerControlElementId(interaction.control.address)}
+              key={key}
+              onClick={() => begin(setIndex)}
+              type="button"
+            >
+              {key[0]!.toUpperCase() + key.slice(1)}: {label}
+            </button>
+          );
+        })}
+      </div>
+      {activeInteraction === undefined ? null : (
+        <AllTogetherSetPicker
+          interaction={activeInteraction}
+          offer={offer}
+          onCancel={cancel}
+          onSelect={choose}
+        />
+      )}
+      {complete && activeIndex === undefined ? (
+        <div className="trait-outcome-actions">
+          <button
+            className="quiet-action action-compact"
+            onClick={() => onSelect(Object.freeze(draft) as AuthoredAllTogetherResult)}
+            type="button"
+          >
+            Apply complete outcome
+          </button>
+          <button className="quiet-action action-compact" onClick={cancel} type="button">
+            Cancel
+          </button>
+        </div>
+      ) : null}
+      {!complete && activeIndex === undefined ? (
+        <button className="quiet-action action-compact" onClick={() => begin()} type="button">
+          Choose all grants
+        </button>
+      ) : null}
+    </fieldset>
   );
 }
 
@@ -563,99 +672,167 @@ function replaceOption(
 }
 
 function CirceResolutionEditor({
+  controlId,
   domain,
   option,
   onSelect,
 }: {
+  readonly controlId: string;
   readonly domain: WorkspaceCirceResolutionDomain;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
   const current = option.circeResolution;
-  if (!domain.outerAvailable) {
-    return <p className="feedback-text">This Circe trait has no available outcome here.</p>;
-  }
+  const [lapisDraft, setLapisDraft] = useState<readonly string[]>(
+    current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
+  );
+  const [lapisOpen, setLapisOpen] = useState(false);
+  const unavailableMessage = !domain.outerAvailable
+    ? 'This Circe trait has no available outcome here.'
+    : !domain.branchAgreement
+      ? 'No outcome is supported across every route branch.'
+      : undefined;
   if (domain.effect === 'disableFear') {
     return (
-      <label className="trait-circe-resolution">
-        Black Night Vow
-        <select
-          aria-label="Black Night Vow"
-          onChange={(event) =>
-            onSelect(
-              Object.freeze({
-                kind: 'disableFear',
-                vowKey: event.target.value === '' ? null : event.target.value,
-              }),
-            )
-          }
-          value={current?.kind === 'disableFear' ? (current.vowKey ?? '') : ''}
-        >
-          <option value="">Choose a Vow</option>
-          {domain.vowChoices.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <>
+        {unavailableMessage === undefined ? null : (
+          <p className="feedback-text">{unavailableMessage}</p>
+        )}
+        <ContextualPicker
+          ariaLabel="Black Night Vow"
+          id={controlId}
+          label="Vow to suppress"
+          model={domain.vowPicker}
+          onSelect={(vowKey) => onSelect(Object.freeze({ kind: 'disableFear', vowKey }))}
+          placeholder="Choose a Vow"
+          {...(current?.kind === 'disableFear' && current.vowKey !== null
+            ? { triggerLabel: pickerValueLabel(domain.vowPicker, current.vowKey) ?? current.vowKey }
+            : {})}
+        />
+      </>
     );
   }
   const selected =
     current?.kind === domain.effect ? current.arcanaKeys : (Object.freeze([]) as readonly string[]);
   if (domain.effect === 'activateArcana') {
+    if (domain.requiredCount === 0) {
+      return (
+        <>
+          {unavailableMessage === undefined ? null : (
+            <p className="feedback-text">{unavailableMessage}</p>
+          )}
+          {selected[0] === undefined ? null : (
+            <ContextualPicker
+              ariaLabel="Red Citrine Arcana"
+              id={controlId}
+              label="Authored Arcana"
+              model={domain.arcanaPicker}
+              onSelect={(arcanaKey) =>
+                onSelect(
+                  Object.freeze({
+                    kind: 'activateArcana',
+                    arcanaKeys: Object.freeze([arcanaKey]),
+                  }),
+                )
+              }
+              placeholder="No authored Arcana"
+              triggerLabel={pickerValueLabel(domain.arcanaPicker, selected[0]) ?? selected[0]}
+            />
+          )}
+          {!domain.outerAvailable || !domain.branchAgreement ? null : (
+            <button
+              className="quiet-action action-compact"
+              onClick={() =>
+                onSelect(Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([]) }))
+              }
+              type="button"
+            >
+              Record no Arcana activation
+            </button>
+          )}
+        </>
+      );
+    }
     return (
-      <label className="trait-circe-resolution">
-        Red Citrine Arcana
-        <select
-          aria-label="Red Citrine Arcana"
-          onChange={(event) =>
+      <>
+        {unavailableMessage === undefined ? null : (
+          <p className="feedback-text">{unavailableMessage}</p>
+        )}
+        <ContextualPicker
+          ariaLabel="Red Citrine Arcana"
+          id={controlId}
+          label="Arcana to activate"
+          model={domain.arcanaPicker}
+          onSelect={(arcanaKey) =>
             onSelect(
-              Object.freeze({
-                kind: 'activateArcana',
-                arcanaKeys:
-                  event.target.value === ''
-                    ? Object.freeze([])
-                    : Object.freeze([event.target.value]),
-              }),
+              Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([arcanaKey]) }),
             )
           }
-          value={selected[0] ?? ''}
-        >
-          <option value="">
-            {domain.requiredCount === 0 ? 'No activation available' : 'Choose Arcana'}
-          </option>
-          {domain.arcanaChoices.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          placeholder="Choose Arcana"
+          {...(selected[0] === undefined
+            ? {}
+            : { triggerLabel: pickerValueLabel(domain.arcanaPicker, selected[0]) ?? selected[0] })}
+        />
+      </>
     );
   }
+  const lapisComplete = lapisDraft.length === domain.requiredCount;
   return (
     <fieldset className="trait-circe-resolution">
       <legend>Lapis Arcana ({domain.requiredCount})</legend>
-      {domain.arcanaChoices.map((choice) => {
-        const checked = selected.includes(choice.value);
-        return (
-          <label key={choice.value}>
-            <input
-              checked={checked}
-              disabled={!checked && selected.length >= domain.requiredCount}
-              onChange={() => {
-                const next = checked
-                  ? selected.filter((key) => key !== choice.value)
-                  : [...selected, choice.value];
-                onSelect(Object.freeze({ kind: 'promoteArcana', arcanaKeys: Object.freeze(next) }));
-              }}
-              type="checkbox"
-            />
-            {choice.label}
-          </label>
-        );
-      })}
+      {unavailableMessage === undefined ? null : (
+        <p className="feedback-text">{unavailableMessage}</p>
+      )}
+      <p className="trait-outcome-draft">
+        {lapisDraft.length === 0
+          ? 'No Arcana chosen.'
+          : lapisDraft.map((key) => pickerValueLabel(domain.arcanaPicker, key) ?? key).join(' · ')}
+      </p>
+      <ContextualPicker
+        cancelLabel="Cancel"
+        choiceLabel={`Arcana ${lapisDraft.length + 1} of ${domain.requiredCount}`}
+        closeOnSelect={false}
+        id={controlId}
+        label="Promoted Arcana"
+        model={domain.arcanaPickerFor(lapisDraft)}
+        onOpenChange={(open) => {
+          setLapisOpen(open);
+          if (open && lapisComplete) setLapisDraft(Object.freeze([]));
+          if (!open && !lapisComplete)
+            setLapisDraft(
+              current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
+            );
+        }}
+        onSelect={(arcanaKey) => {
+          const next = Object.freeze([...lapisDraft, arcanaKey]);
+          setLapisDraft(next);
+          if (next.length === domain.requiredCount) setLapisOpen(false);
+        }}
+        open={lapisOpen}
+        placeholder="Choose distinct Arcana"
+      />
+      <div className="trait-outcome-actions">
+        <button
+          className="quiet-action action-compact"
+          disabled={!lapisComplete || !domain.outerAvailable || !domain.branchAgreement}
+          onClick={() => onSelect(Object.freeze({ kind: 'promoteArcana', arcanaKeys: lapisDraft }))}
+          type="button"
+        >
+          Apply Lapis outcome
+        </button>
+        <button
+          className="quiet-action action-compact"
+          onClick={() => {
+            setLapisOpen(false);
+            setLapisDraft(
+              current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
+            );
+          }}
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
     </fieldset>
   );
 }
@@ -688,7 +865,6 @@ function TraitOfferOptionEditor({
   const domain = loaded.result;
   const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
   const rarityPicker = domain?.rarityPickerFor(option.traitKey);
-  const targetPicker = domain?.targetPicker ?? emptyTargetPicker;
   const hasEditableRarity =
     interaction.rarityEditable &&
     interaction.giver.rarityPolicy.kind === 'selectable' &&
@@ -697,58 +873,19 @@ function TraitOfferOptionEditor({
   const selectTrait = (traitKey: string): void => {
     const preferred = domain?.preferredOptionFor(traitKey);
     if (preferred === undefined) return;
-    onUpdate(replaceOption(value, index, preferred));
+    onUpdate(
+      replaceOption(
+        value,
+        index,
+        preferred.traitKey === option.traitKey
+          ? Object.freeze({ ...option, ...preferred })
+          : preferred,
+      ),
+    );
   };
   const selectRarity = (rarity: TraitRarity): void => {
     onUpdate(replaceOption(value, index, { ...option, rarity }));
   };
-  const selectTarget = (targetTraitKey: string): void => {
-    onUpdate(replaceOption(value, index, { ...option, targetTraitKey }));
-  };
-  const circe = loadable.circeResolution;
-  const circeLoadable = useMemo(() => circe?.forOffer(value), [circe, value]);
-  const circeController = useWorkspaceInteractionController<
-    WorkspaceCirceResolutionDomain | undefined
-  >();
-  const circeLoaded = circeController.observe(circeLoadable);
-  useEffect(() => {
-    if (circeLoadable !== undefined) circeController.activate(circeLoadable);
-  }, [circeController, circeLoadable]);
-  const circeDomain = circeLoaded.result;
-  const echoPom = loadable.echoPomTarget;
-  const echoPomLoadable = useMemo(() => echoPom?.forOffer(value), [echoPom, value]);
-  const echoPomController = useWorkspaceInteractionController<
-    WorkspaceEchoPomTargetDomain | undefined
-  >();
-  const echoPomLoaded = echoPomController.observe(echoPomLoadable);
-  useEffect(() => {
-    if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
-  }, [echoPomController, echoPomLoadable]);
-  const echoPomDomain = echoPomLoaded.result;
-  const echoLastRun = loadable.echoLastRunBoon;
-  const echoLastRunLoadable = useMemo(() => echoLastRun?.forOffer(value), [echoLastRun, value]);
-  const echoLastRunController = useWorkspaceInteractionController<
-    WorkspaceEchoLastRunBoonDomain | undefined
-  >();
-  const echoLastRunLoaded = echoLastRunController.observe(echoLastRunLoadable);
-  useEffect(() => {
-    if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
-  }, [echoLastRunController, echoLastRunLoadable]);
-  const echoLastRunDomain = echoLastRunLoaded.result;
-  const echoLastReward = loadable.echoLastReward;
-  const echoLastRewardLoadable = useMemo(
-    () => echoLastReward?.forOffer(value),
-    [echoLastReward, value],
-  );
-  const echoLastRewardController = useWorkspaceInteractionController<
-    WorkspaceEchoLastRewardDomain | undefined
-  >();
-  const echoLastRewardLoaded = echoLastRewardController.observe(echoLastRewardLoadable);
-  useEffect(() => {
-    if (echoLastRewardLoadable !== undefined)
-      echoLastRewardController.activate(echoLastRewardLoadable);
-  }, [echoLastRewardController, echoLastRewardLoadable]);
-  const echoLastRewardDomain = echoLastRewardLoaded.result;
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>{optionKey.replace('option', 'Option ')}</legend>
@@ -784,94 +921,6 @@ function TraitOfferOptionEditor({
           {...(option.rarity === undefined ? {} : { triggerLabel: rarityLabel(option.rarity) })}
         />
       )}
-      {!loadable.hasTargetPicker ? null : (
-        <ContextualPicker
-          ariaLabel={`${optionKey} acquisition target`}
-          id={`${idPrefix}-target`}
-          label="Target"
-          loading={loaded.pending}
-          model={targetPicker}
-          onOpenChange={(open) => {
-            if (open) controller.activate(loadable);
-          }}
-          onSelect={selectTarget}
-          placeholder="Choose an equipped trait"
-          {...(option.targetTraitKey === undefined
-            ? {}
-            : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
-        />
-      )}
-      {circe === undefined || circeDomain === undefined ? null : (
-        <CirceResolutionEditor
-          domain={circeDomain}
-          option={option}
-          onSelect={(resolution) =>
-            onUpdate(replaceOption(value, index, { ...option, circeResolution: resolution }))
-          }
-        />
-      )}
-      {echoPom === undefined || echoPomDomain === undefined ? null : (
-        <label className="trait-circe-resolution">
-          Pom Pom Pom target
-          {echoPomDomain.emptyNoOpAllowed ? (
-            <button
-              onClick={() =>
-                onUpdate(replaceOption(value, index, { ...option, echoPomTarget: null }))
-              }
-              type="button"
-            >
-              Record no eligible target
-            </button>
-          ) : (
-            <select
-              aria-label="Pom Pom Pom target"
-              onChange={(event) =>
-                onUpdate(
-                  replaceOption(value, index, {
-                    ...option,
-                    echoPomTarget: event.target.value,
-                  }),
-                )
-              }
-              value={'echoPomTarget' in option ? (option.echoPomTarget ?? '') : ''}
-            >
-              <option value="">Choose a greatest-level trait</option>
-              {echoPomDomain.choices.map((choice) => (
-                <option key={choice.value} value={choice.value}>
-                  {choice.label}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-      )}
-      {echoLastRun === undefined || echoLastRunDomain === undefined ? null : (
-        <EchoLastRunBoonEditor
-          domain={echoLastRunDomain}
-          {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
-          onSelect={(child) =>
-            onUpdate(replaceOption(value, index, { ...option, echoLastRunBoon: child }))
-          }
-        />
-      )}
-      {echoLastReward === undefined || echoLastRewardDomain === undefined ? null : (
-        <EchoLastRewardEditor
-          domain={echoLastRewardDomain}
-          {...(option.echoLastReward === undefined ? {} : { value: option.echoLastReward })}
-          onSelect={(child) =>
-            onUpdate(replaceOption(value, index, { ...option, echoLastReward: child }))
-          }
-        />
-      )}
-      {loadable.allTogetherSets?.map((setInteraction) => (
-        <AllTogetherSetEditor
-          interaction={setInteraction}
-          key={setInteraction.control.setKey}
-          offer={value}
-          optionIndex={index}
-          onUpdate={onUpdate}
-        />
-      ))}
       <button
         disabled={!rarifySupported}
         onClick={() =>
@@ -897,6 +946,172 @@ function TraitOfferOptionEditor({
         Selected
       </label>
     </fieldset>
+  );
+}
+
+function TraitOfferSelectedOutcomeEditor({
+  interaction,
+  value,
+  onUpdate,
+}: {
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly value: AuthoredTraitOfferTraits;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+}) {
+  const selectedIndex = optionIndex(value.selectedOptionKey);
+  const option = value.options[selectedIndex];
+  if (option === undefined) throw new Error(`Trait offer is missing ${value.selectedOptionKey}`);
+  const loadable = useMemo(
+    () => interaction.optionDomain(value, value.selectedOptionKey),
+    [interaction, value],
+  );
+  const optionController = useWorkspaceInteractionController<TraitOptionDomainProjection>();
+  const optionDomain = optionController.observe(loadable);
+  const circeLoadable = useMemo(
+    () => loadable.circeResolution?.forOffer(value),
+    [loadable.circeResolution, value],
+  );
+  const circeController = useWorkspaceInteractionController<
+    WorkspaceCirceResolutionDomain | undefined
+  >();
+  const circeDomain = circeController.observe(circeLoadable);
+  const echoPomLoadable = useMemo(
+    () => loadable.echoPomTarget?.forOffer(value),
+    [loadable.echoPomTarget, value],
+  );
+  const echoPomController = useWorkspaceInteractionController<
+    WorkspaceEchoPomTargetDomain | undefined
+  >();
+  const echoPomDomain = echoPomController.observe(echoPomLoadable);
+  const echoLastRunLoadable = useMemo(
+    () => loadable.echoLastRunBoon?.forOffer(value),
+    [loadable.echoLastRunBoon, value],
+  );
+  const echoLastRunController = useWorkspaceInteractionController<
+    WorkspaceEchoLastRunBoonDomain | undefined
+  >();
+  const echoLastRunDomain = echoLastRunController.observe(echoLastRunLoadable);
+  const echoLastRewardLoadable = useMemo(
+    () => loadable.echoLastReward?.forOffer(value),
+    [loadable.echoLastReward, value],
+  );
+  const echoLastRewardController = useWorkspaceInteractionController<
+    WorkspaceEchoLastRewardDomain | undefined
+  >();
+  const echoLastRewardDomain = echoLastRewardController.observe(echoLastRewardLoadable);
+  useEffect(() => {
+    if (loadable.hasTargetPicker) optionController.activate(loadable);
+    if (circeLoadable !== undefined) circeController.activate(circeLoadable);
+    if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
+    if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
+    if (echoLastRewardLoadable !== undefined)
+      echoLastRewardController.activate(echoLastRewardLoadable);
+  }, [
+    circeController,
+    circeLoadable,
+    echoLastRewardController,
+    echoLastRewardLoadable,
+    echoLastRunController,
+    echoLastRunLoadable,
+    echoPomController,
+    echoPomLoadable,
+    loadable,
+    optionController,
+  ]);
+
+  const targetDomain = optionDomain.result;
+  const hasOutcome =
+    loadable.hasTargetPicker ||
+    loadable.circeResolution !== undefined ||
+    loadable.echoPomTarget !== undefined ||
+    loadable.echoLastRunBoon !== undefined ||
+    loadable.echoLastReward !== undefined ||
+    loadable.allTogetherSets !== undefined;
+  if (!hasOutcome) return null;
+  return (
+    <section aria-label="Selected trait outcome" className="trait-selected-outcome">
+      <h3>Selected trait outcome</h3>
+      <p className="trait-selected-outcome-name">{interaction.traitLabel(option.traitKey)}</p>
+      {loadable.traitAcquisitionTarget === undefined ? null : (
+        <ContextualPicker
+          ariaLabel={`${value.selectedOptionKey} acquisition target`}
+          id={semanticOwnerControlElementId(loadable.traitAcquisitionTarget.address)}
+          label="Target"
+          loading={optionDomain.pending}
+          model={targetDomain?.targetPicker ?? emptyTargetPicker}
+          onSelect={(targetTraitKey) =>
+            onUpdate(replaceOption(value, selectedIndex, { ...option, targetTraitKey }))
+          }
+          placeholder="Choose an equipped trait"
+          {...(option.targetTraitKey === undefined
+            ? {}
+            : { triggerLabel: interaction.traitLabel(option.targetTraitKey) })}
+        />
+      )}
+      {loadable.circeResolution === undefined || circeDomain.result === undefined ? null : (
+        <CirceResolutionEditor
+          controlId={semanticOwnerControlElementId(loadable.circeResolution.control.address)}
+          domain={circeDomain.result}
+          option={option}
+          onSelect={(resolution) =>
+            onUpdate(
+              replaceOption(value, selectedIndex, { ...option, circeResolution: resolution }),
+            )
+          }
+        />
+      )}
+      {loadable.echoPomTarget === undefined || echoPomDomain.result === undefined ? null : (
+        <ContextualPicker
+          ariaLabel="Pom Pom Pom target"
+          id={semanticOwnerControlElementId(loadable.echoPomTarget.control.address)}
+          label="Greatest-level target"
+          model={echoPomDomain.result.picker}
+          onSelect={(echoPomTarget) =>
+            onUpdate(replaceOption(value, selectedIndex, { ...option, echoPomTarget }))
+          }
+          placeholder={
+            echoPomDomain.result.emptyNoOpAllowed
+              ? 'Choose target or no target'
+              : 'Choose a greatest-level trait'
+          }
+          {...('echoPomTarget' in option && option.echoPomTarget !== undefined
+            ? {
+                triggerLabel:
+                  pickerValueLabel(echoPomDomain.result.picker, option.echoPomTarget) ??
+                  String(option.echoPomTarget),
+              }
+            : {})}
+        />
+      )}
+      {loadable.echoLastRunBoon === undefined || echoLastRunDomain.result === undefined ? null : (
+        <EchoLastRunBoonEditor
+          domain={echoLastRunDomain.result}
+          {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
+          onSelect={(child) =>
+            onUpdate(replaceOption(value, selectedIndex, { ...option, echoLastRunBoon: child }))
+          }
+        />
+      )}
+      {loadable.echoLastReward === undefined || echoLastRewardDomain.result === undefined ? null : (
+        <EchoLastRewardEditor
+          domain={echoLastRewardDomain.result}
+          {...(option.echoLastReward === undefined ? {} : { value: option.echoLastReward })}
+          onSelect={(child) =>
+            onUpdate(replaceOption(value, selectedIndex, { ...option, echoLastReward: child }))
+          }
+        />
+      )}
+      {loadable.allTogetherSets === undefined ? null : (
+        <AllTogetherOutcomeEditor
+          interactions={loadable.allTogetherSets}
+          offer={value}
+          optionIndex={selectedIndex}
+          onSelect={(allTogetherResult) =>
+            onUpdate(replaceOption(value, selectedIndex, { ...option, allTogetherResult }))
+          }
+        />
+      )}
+    </section>
   );
 }
 
@@ -1151,6 +1366,11 @@ function LoadedTraitOfferEditor({
               );
             })}
           </div>
+          <TraitOfferSelectedOutcomeEditor
+            interaction={interaction}
+            onUpdate={updateValue}
+            value={value}
+          />
           {nextTraitOfferDraft === undefined &&
           !canRemoveOption &&
           (fallbackGoldValue === undefined ||
@@ -1288,7 +1508,10 @@ export function TraitOfferDialog({
     }
 
     const exactControl =
-      focusedSemanticOwner?.kind === 'allTogetherSet' &&
+      (focusedSemanticOwner?.kind === 'allTogetherSet' ||
+        focusedSemanticOwner?.kind === 'traitAcquisitionTarget' ||
+        focusedSemanticOwner?.kind === 'circeResolution' ||
+        focusedSemanticOwner?.kind === 'echoPomTarget') &&
       semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
         ? document.getElementById(semanticOwnerControlElementId(focusedSemanticOwner))
         : null;

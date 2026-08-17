@@ -29,6 +29,7 @@ import {
   type AcquisitionEntryAddress,
   type TargetAddress,
   type TraitOfferAddress,
+  type TraitAcquisitionTargetAddress,
   type CirceResolutionAddress,
   type EchoPomTargetAddress,
   type EchoLastRunBoonAddress,
@@ -238,6 +239,8 @@ export interface WorkspaceTraitOfferControl {
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
   readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
+  /** Present only for this offer's currently selected targeted acquisition. */
+  readonly traitAcquisitionTarget?: WorkspaceTraitAcquisitionTargetControl;
   /** Present only for this offer's currently selected Circe special option. */
   readonly circeResolution?: WorkspaceCirceResolutionControl;
   /** Present only for the currently selected Echo Pom row. */
@@ -267,6 +270,13 @@ export interface WorkspaceCirceResolutionControl {
   readonly value?: AuthoredCirceResolution;
 }
 
+export interface WorkspaceTraitAcquisitionTargetControl {
+  readonly address: TraitAcquisitionTargetAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly value?: string | null;
+}
+
 export interface WorkspaceEchoPomTargetControl {
   readonly address: EchoPomTargetAddress;
   readonly marker: WorkspaceMarker;
@@ -294,6 +304,7 @@ export interface WorkspaceAllTogetherSetControl {
   readonly optionKey: TraitOptionKey;
   readonly setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey;
   readonly value?: string | null;
+  readonly valueLabel?: string;
 }
 
 /** One exact declaration-owned Pom child beneath an active reward owner. */
@@ -311,6 +322,7 @@ export interface WorkspaceLevelResolutionControl {
 export interface WorkspaceTraitOptionDomainInteraction {
   /** Whether this exact selected option owns a downstream acquisition-target step. */
   readonly hasTargetPicker: boolean;
+  readonly traitAcquisitionTarget?: WorkspaceTraitAcquisitionTargetControl;
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
   /** Candidate-backed exact outcome editor for a selected Circe option only. */
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
@@ -321,31 +333,24 @@ export interface WorkspaceTraitOptionDomainInteraction {
 }
 
 export interface WorkspaceAllTogetherSetDomain {
-  readonly choices: readonly WorkspaceInteractionChoice<string | null>[];
+  readonly picker: ContextualPickerModel<string | null>;
 }
 
 export interface WorkspaceAllTogetherSetInteraction {
   readonly control: WorkspaceAllTogetherSetControl;
-  readonly intentFor: (
-    value: string | null,
-  ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAllTogetherSet' }>
-  >;
-  readonly offerFor: (
-    offer: AuthoredTraitOfferTraits,
-    value: string | null,
-  ) => AuthoredTraitOfferTraits;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceAllTogetherSetDomain | undefined;
   };
 }
 
 export interface WorkspaceCirceResolutionDomain {
-  readonly arcanaChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly arcanaPicker: ContextualPickerModel<string>;
+  readonly arcanaPickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
+  readonly branchAgreement: boolean;
   readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
   readonly outerAvailable: boolean;
   readonly requiredCount: number;
-  readonly vowChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly vowPicker: ContextualPickerModel<string>;
 }
 
 export interface WorkspaceCirceResolutionInteraction {
@@ -361,8 +366,8 @@ export interface WorkspaceCirceResolutionInteraction {
 }
 
 export interface WorkspaceEchoPomTargetDomain {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly emptyNoOpAllowed: boolean;
+  readonly picker: ContextualPickerModel<string | null>;
 }
 
 export interface WorkspaceEchoPomTargetInteraction {

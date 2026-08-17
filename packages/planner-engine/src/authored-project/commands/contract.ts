@@ -130,8 +130,6 @@ export function projectCommandAddress(
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
       return command.trait;
-    case 'ReplaceAllTogetherSet':
-      return command.set;
     case 'ReplaceLevelResolution':
       return command.levelResolution;
     case 'ReplaceAcquisitionDisposition':
