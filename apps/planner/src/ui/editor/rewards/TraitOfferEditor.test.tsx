@@ -13,6 +13,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   createCirceResolutionAddress,
+  createTraitAcquisitionTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
   createEchoPomTargetAddress,
@@ -42,6 +43,63 @@ import {
 } from '@run-planner/test-fixtures';
 
 afterEach(cleanup);
+
+function pickerModel<T>(entries: readonly { readonly label: string; readonly value: T }[]) {
+  return Object.freeze({
+    sections: Object.freeze([
+      Object.freeze({
+        key: 'available',
+        kind: 'category' as const,
+        label: 'Available',
+        collapsible: false,
+        items: Object.freeze(
+          entries.map((entry, index) =>
+            Object.freeze({
+              key: String(index),
+              label: entry.label,
+              value: entry.value,
+              state: 'possible' as const,
+              selected: false,
+              disabled: false,
+            }),
+          ),
+        ),
+      }),
+    ]),
+  });
+}
+
+function unavailablePickerModel<T>(
+  label: string,
+  value: T,
+  additional: readonly { readonly label: string; readonly value: T }[] = Object.freeze([]),
+) {
+  const items = [Object.freeze({ label, value }), ...additional].map((entry) =>
+    Object.freeze({
+      key: String(entry.value),
+      label: entry.label,
+      value: entry.value,
+      state: 'impossible' as const,
+      selected: true,
+      disabled: true,
+      status: 'Current · unavailable',
+      explanation: 'This outcome is not available at the current route frontier.',
+    }),
+  );
+  const selected = items[0]!;
+  return Object.freeze({
+    selected,
+    sections: Object.freeze([
+      Object.freeze({
+        key: 'selected-invalid',
+        kind: 'selectedInvalid' as const,
+        label: 'Current selection',
+        collapsible: false,
+        items: Object.freeze(items),
+      }),
+    ]),
+  });
+}
 
 describe('trait offer editor', () => {
   it('uses the Calling Card candidate to append ordered row actions through Heroic without mutating base rarity', async () => {
@@ -96,7 +154,7 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
-  it('edits one active All Together set while retaining the complete four-set draft', async () => {
+  it('starts All Together unresolved and applies one complete four-role draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -112,12 +170,6 @@ describe('trait offer editor', () => {
         Object.freeze({
           traitKey: 'AllElementalBoon',
           rarity: 'Legendary' as const,
-          allTogetherResult: Object.freeze({
-            earth: 'ElementalDamageBoon',
-            fire: 'ElementalBaseDamageBoon',
-            air: 'ElementalDamageFloorBoon',
-            water: 'ElementalHealthBoon',
-          }),
         }),
         Object.freeze({ traitKey: 'HeraManaBoon', rarity: 'Common' as const }),
         Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
@@ -145,36 +197,11 @@ describe('trait offer editor', () => {
           optionKey: 'option1' as const,
           setKey,
         }),
-        intentFor: (result: string | null) =>
-          Object.freeze({
-            command: Object.freeze({
-              kind: 'ReplaceAllTogetherSet' as const,
-              set: address,
-              value: result,
-            }),
-          }),
-        offerFor: (offer: AuthoredTraitOfferTraits, result: string | null) => {
-          const option = offer.options[0]!;
-          return Object.freeze({
-            ...offer,
-            options: Object.freeze([
-              Object.freeze({
-                ...option,
-                allTogetherResult: Object.freeze({
-                  ...option.allTogetherResult,
-                  [setKey]: result,
-                }),
-              }),
-              offer.options[1]!,
-              offer.options[2]!,
-            ]) as AuthoredTraitOfferTraits['options'],
-          });
-        },
         forOffer: () =>
           Object.freeze({
             load: () =>
               Object.freeze({
-                choices: Object.freeze(
+                picker: pickerModel(
                   domains[setKey].map((traitKey) =>
                     Object.freeze({
                       label: application.catalog.traits.byKey[traitKey]?.label ?? traitKey,
@@ -246,11 +273,17 @@ describe('trait offer editor', () => {
       </Provider>,
     );
 
-    const earth = await screen.findByLabelText('Earth grant');
-    await waitFor(() => expect(earth).toHaveProperty('disabled', false));
-    expect(screen.getByLabelText('Fire grant')).toHaveProperty('disabled', true);
-    await user.selectOptions(earth, 'ElementalOlympianDamageBoon');
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
+    await user.click(await screen.findByText('Rallying Cry'));
+    await user.click(await screen.findByText('Slow Cooker'));
+    await user.click(await screen.findByText('Air Quality'));
+    await user.click(await screen.findByText('Water Fitness'));
+    expect(commit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Apply complete outcome' }));
+    expect(commit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(commit).toHaveBeenCalledTimes(1);
     expect(
       (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.allTogetherResult,
     ).toEqual({
@@ -287,14 +320,22 @@ describe('trait offer editor', () => {
         optionKey: 'option1' as const,
       });
       const domain = Object.freeze({
-        arcanaChoices: Object.freeze([
+        arcanaPicker: pickerModel([
           Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
           Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
         ]),
+        arcanaPickerFor: (selectedKeys: readonly string[]) =>
+          pickerModel(
+            [
+              Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
+              Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
+            ].filter((entry) => !selectedKeys.includes(entry.value)),
+          ),
+        branchAgreement: true,
         effect,
         outerAvailable: true,
         requiredCount: effect === 'promoteArcana' ? 2 : 1,
-        vowChoices: Object.freeze([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
+        vowPicker: pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
       });
       const interaction = Object.freeze({
         ...base,
@@ -342,15 +383,17 @@ describe('trait offer editor', () => {
         </Provider>,
       );
 
-      expect(screen.getByText(label)).toBeTruthy();
-      expect(screen.queryAllByText(label)).toHaveLength(1);
       if (effect === 'disableFear') {
-        await user.selectOptions(screen.getByLabelText(label), 'VowRivals');
+        await user.click(screen.getByLabelText(label));
+        await user.click(await screen.findByText('Vow of Rivals'));
       } else if (effect === 'activateArcana') {
-        await user.selectOptions(screen.getByLabelText(label), 'ArcanaSorceress');
+        await user.click(screen.getByLabelText(label));
+        await user.click(await screen.findByText('The Sorceress'));
       } else {
-        await user.click(screen.getByLabelText('The Sorceress'));
-        await user.click(screen.getByLabelText('The Titan'));
+        await user.click(screen.getByLabelText('Promoted Arcana'));
+        await user.click(await screen.findByText('The Sorceress'));
+        await user.click(await screen.findByText('The Titan'));
+        await user.click(screen.getByRole('button', { name: 'Apply Lapis outcome' }));
       }
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
       const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
@@ -366,6 +409,174 @@ describe('trait offer editor', () => {
         );
       }
       expect(choiceLabel).toBeTruthy();
+      application.dispose();
+    },
+  );
+
+  it.each([
+    [
+      'Black Night with no removable Vow',
+      'disableFear',
+      Object.freeze({ kind: 'disableFear' as const, vowKey: 'VowRivals' }),
+      false,
+      true,
+      0,
+      'Black Night Vow',
+      'Vow of Rivals',
+    ],
+    [
+      'Red Citrine with an exhausted domain',
+      'activateArcana',
+      Object.freeze({
+        kind: 'activateArcana' as const,
+        arcanaKeys: Object.freeze(['ArcanaSorceress']),
+      }),
+      true,
+      true,
+      0,
+      'Red Citrine Arcana',
+      'The Sorceress',
+    ],
+    [
+      'branch-divergent Lapis',
+      'promoteArcana',
+      Object.freeze({
+        kind: 'promoteArcana' as const,
+        arcanaKeys: Object.freeze(['ArcanaSorceress', 'ArcanaTitan']),
+      }),
+      true,
+      false,
+      2,
+      'Promoted Arcana',
+      'The Sorceress · The Titan',
+    ],
+  ] as const)(
+    'retains the authored %s outcome through the engine-projected unavailable UI',
+    async (
+      _case,
+      effect,
+      resolution,
+      outerAvailable,
+      branchAgreement,
+      requiredCount,
+      controlLabel,
+      retainedText,
+    ) => {
+      const application = createApplication();
+      application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+      const workspace = application.selectStructuredWorkspace(application.store.getState());
+      const base = [...workspace.interactions.traitOffers.values()].find(
+        (candidate) => candidate.value?.kind === 'traits',
+      );
+      if (base?.value?.kind !== 'traits') throw new Error('trait offer fixture is missing');
+      const option = base.value.options[0]!;
+      const value = Object.freeze({
+        ...base.value,
+        options: Object.freeze([
+          Object.freeze({ ...option, circeResolution: resolution }),
+          base.value.options[1],
+          base.value.options[2],
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+      });
+      const address = createCirceResolutionAddress(base.owner, 'option1');
+      const control = Object.freeze({
+        address,
+        marker: Object.freeze({
+          address,
+          assessment: 'blocked' as const,
+          findingCount: 1,
+          focusKey: semanticAddressKey(address),
+        }),
+        optionKey: 'option1' as const,
+        value: resolution,
+      });
+      const arcanaEntries =
+        resolution.kind === 'disableFear'
+          ? unavailablePickerModel('The Sorceress', 'ArcanaSorceress')
+          : unavailablePickerModel(
+              'The Sorceress',
+              resolution.arcanaKeys[0]!,
+              resolution.arcanaKeys.length < 2
+                ? Object.freeze([])
+                : Object.freeze([{ label: 'The Titan', value: resolution.arcanaKeys[1]! }]),
+            );
+      const domain = Object.freeze({
+        arcanaPicker: arcanaEntries,
+        arcanaPickerFor: () => arcanaEntries,
+        branchAgreement,
+        effect,
+        outerAvailable,
+        requiredCount,
+        vowPicker: unavailablePickerModel('Vow of Rivals', 'VowRivals'),
+      });
+      const interaction = Object.freeze({
+        ...base,
+        value,
+        optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+          Object.freeze({
+            hasTargetPicker: false,
+            load: () =>
+              Object.freeze({
+                candidates: Object.freeze([]),
+                preferredOptionFor: () => undefined,
+                rarityPickerFor: () => undefined,
+                traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+              }),
+            ...(draft.kind !== 'traits' || draft.selectedOptionKey !== optionKey
+              ? {}
+              : {
+                  circeResolution: Object.freeze({
+                    control,
+                    intentFor: () =>
+                      Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceTraitOffer' as const,
+                          trait: base.owner,
+                          value: draft,
+                        }),
+                      }),
+                    forOffer: () => Object.freeze({ load: () => domain }),
+                  }),
+                }),
+          }),
+      });
+      const interactions = Object.freeze({
+        ...workspace.interactions,
+        traitOffers: new Map([[interaction.key, interaction]]),
+      });
+      render(
+        <Provider store={application.store}>
+          <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+        </Provider>,
+      );
+
+      if (effect === 'promoteArcana') {
+        expect(screen.getByText(retainedText)).toBeTruthy();
+        expect(
+          (screen.getByRole('button', { name: 'Apply Lapis outcome' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(true);
+      } else {
+        const retained = screen.getByLabelText(controlLabel);
+        expect(retained.textContent).toContain(retainedText);
+        expect(retained.getAttribute('aria-invalid')).toBe('true');
+      }
+      if (effect === 'activateArcana') {
+        expect(
+          (
+            screen.getByRole('button', {
+              name: 'Record no Arcana activation',
+            }) as HTMLButtonElement
+          ).disabled,
+        ).toBe(false);
+      }
+      if (!outerAvailable) {
+        expect(screen.getByText('This Circe trait has no available outcome here.')).toBeTruthy();
+      }
+      if (!branchAgreement) {
+        expect(screen.getByText('No outcome is supported across every route branch.')).toBeTruthy();
+      }
       application.dispose();
     },
   );
@@ -434,7 +645,7 @@ describe('trait offer editor', () => {
                     Object.freeze({
                       load: () =>
                         Object.freeze({
-                          choices: Object.freeze([
+                          picker: pickerModel([
                             Object.freeze({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
                             Object.freeze({ label: 'Heaven Strike', value: 'ZeusWeaponBoon' }),
                           ]),
@@ -461,7 +672,8 @@ describe('trait offer editor', () => {
       </Provider>,
     );
 
-    await user.selectOptions(screen.getByLabelText('Pom Pom Pom target'), 'ApolloWeaponBoon');
+    await user.click(screen.getByLabelText('Pom Pom Pom target'));
+    await user.click(await screen.findByText('Nova Strike'));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]).toMatchObject({
@@ -1065,8 +1277,24 @@ describe('trait offer editor', () => {
         if (value.kind === 'fallbackGold') throw new Error('traits expected');
         const option = value.options[0]!;
         const ownsTarget = optionKey === 'option1' && option.traitKey === 'BoonDecayBoon';
+        const targetAddress = createTraitAcquisitionTargetAddress(base.owner, optionKey);
         return Object.freeze({
           hasTargetPicker: ownsTarget,
+          ...(ownsTarget
+            ? {
+                traitAcquisitionTarget: Object.freeze({
+                  address: targetAddress,
+                  marker: Object.freeze({
+                    address: targetAddress,
+                    assessment: 'blocked' as const,
+                    findingCount: 1,
+                    focusKey: semanticAddressKey(targetAddress),
+                  }),
+                  optionKey,
+                  ...(option.targetTraitKey === undefined ? {} : { value: option.targetTraitKey }),
+                }),
+              }
+            : {}),
           load: () =>
             Object.freeze({
               candidates: Object.freeze([]),
@@ -1121,6 +1349,9 @@ describe('trait offer editor', () => {
     );
 
     const target = screen.getByLabelText('option1 acquisition target');
+    expect(target.closest('.trait-offer-option')).toBeNull();
+    expect(target.closest('[aria-label="Selected trait outcome"]')).not.toBeNull();
+    expect(screen.getAllByRole('group', { name: /Option/ })).toHaveLength(3);
     expect(target.textContent).toContain('Choose an equipped trait');
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,

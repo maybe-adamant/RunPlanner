@@ -726,6 +726,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Acquisition`;
     case 'traitOffer':
       return `${biomeLabel} · Trait offer`;
+    case 'traitAcquisitionTarget':
+      return `${biomeLabel} · Acquisition target`;
     case 'acquisitionRole':
       return `${biomeLabel} · Acquisition`;
     case 'circeResolution':

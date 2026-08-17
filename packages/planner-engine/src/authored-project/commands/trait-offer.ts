@@ -30,36 +30,7 @@ import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effe
 import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
 
 function commandTraitAddress(command: TraitOfferCommand): TraitOfferAddress {
-  return command.kind === 'ReplaceAllTogetherSet' ? command.set.trait : command.trait;
-}
-
-function replaceAllTogetherSet(
-  catalog: Catalog,
-  existing: AuthoredTraitOffer,
-  command: Extract<TraitOfferCommand, { readonly kind: 'ReplaceAllTogetherSet' }>,
-): AuthoredTraitOffer {
-  if (existing.kind !== 'traits') failCommand(command, 'All Together requires a traits offer');
-  const index = optionIndex(command.set.optionKey);
-  const option = existing.options[index];
-  if (option === undefined) failCommand(command, 'All Together option is not materialized');
-  const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
-  if (disposition?.kind !== 'directTraitSets')
-    failCommand(command, 'addressed option is not All Together');
-  const set = disposition.sets.find((candidate) => candidate.key === command.set.setKey);
-  if (set === undefined) failCommand(command, `unknown All Together set ${command.set.setKey}`);
-  if (command.value !== null && !set.traitKeys.includes(command.value))
-    failCommand(command, `${command.value} is not a member of ${set.key}`);
-  const result = option.allTogetherResult;
-  if (result === undefined) failCommand(command, 'All Together result is required');
-  const options = [...existing.options];
-  options[index] = Object.freeze({
-    ...option,
-    allTogetherResult: Object.freeze({ ...result, [set.key]: command.value }),
-  });
-  return Object.freeze({
-    ...existing,
-    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-  });
+  return command.trait;
 }
 
 function replaceTraitOfferValue(
@@ -72,8 +43,6 @@ function replaceTraitOfferValue(
   if (command.kind === 'ReplaceTraitOffer')
     return validateOffer(catalog, command.value, command, omitDeathDefianceContext);
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
-  if (command.kind === 'ReplaceAllTogetherSet')
-    return replaceAllTogetherSet(catalog, existing, command);
   if (command.kind === 'ReplaceTraitSelection')
     return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
   if (command.kind === 'ReplaceGorgonAthenaOffer')
@@ -341,8 +310,6 @@ function validateOffer(
         );
       }
     }
-    if (trait.selectedDisposition.kind === 'directTraitSets' && !('allTogetherResult' in option))
-      failCommand(command, `${option.traitKey} requires an All Together result`);
   }
   const conditionApplicable =
     !omitDeathDefianceContext &&
@@ -891,7 +858,7 @@ export function applyTraitOfferCommand(
     if (isGorgon) {
       const existing = phaseGorgon?.athenaOffer;
       if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
-      if (command.kind === 'ReplaceTraitOffer' || command.kind === 'ReplaceAllTogetherSet')
+      if (command.kind === 'ReplaceTraitOffer')
         failCommand(command, 'Gorgon Athena persists only its bound author decisions');
       const value =
         command.kind === 'ResetEncounterTraitOffer'

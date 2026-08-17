@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createCirceResolutionAddress,
   createEncounterPhaseAddress,
   createRouteAddress,
   createTraitOfferAddress,
@@ -23,6 +24,7 @@ import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-plan
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
@@ -267,11 +269,11 @@ describe('Circe selected trait acquisition', () => {
     ]);
     const unavailable = oEvaluation(withCirce(black));
     expect(unavailable.biome.findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'circeOptionUnavailable' })]),
+      expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     );
     const rivals = oEvaluation(withCirce(black, [], { BossDifficultyShrineUpgrade: 1 }));
     expect(rivals.biome.findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'circeOptionUnavailable' })]),
+      expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     );
     const removable = oEvaluation(withCirce(black, [], { EnemyDamageShrineUpgrade: 1 }));
     expect(removable.biome.rewards.branches[0]!.arcanaFear.fear.effectiveRanks).toMatchObject({
@@ -301,9 +303,9 @@ describe('Circe selected trait acquisition', () => {
       findings,
     );
     expect(repeated.arcanaFear).toBe(disabled.state);
-    expect(
-      [...findings.values()].some((entry) => entry.finding.code === 'circeOptionUnavailable'),
-    ).toBe(true);
+    expect([...findings.values()].some((entry) => entry.finding.code === 'offerContext')).toBe(
+      true,
+    );
   });
 
   it('retains the missing child repair domain at Circe and stops later O state', () => {
@@ -319,8 +321,11 @@ describe('Circe selected trait acquisition', () => {
       expect.arrayContaining([expect.objectContaining({ code: 'circeResolutionMissing' })]),
     );
     expect(
-      biome.rewards.branches[0]?.traitHistory?.equippedTraits.RandomArcanaTrait,
-    ).toBeUndefined();
+      biome.findings.find((finding) => finding.code === 'circeResolutionMissing')?.origin,
+    ).toEqual(createCirceResolutionAddress(circeOwner, 'option1'));
+    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject(
+      { giverKey: 'Circe', providerKind: 'npc' },
+    );
     expect(biome.coverage).toMatchObject({ kind: 'prefix' });
     const domain = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
       kind: 'circeResolutionDomain',
@@ -334,6 +339,40 @@ describe('Circe selected trait acquisition', () => {
       optionKey: 'option1',
     });
     expect(domain).toMatchObject({ kind: 'circeResolutionDomain', result: { requiredCount: 1 } });
+  });
+
+  it('retains an invalid authored Circe child after the outer acquisition without applying it', () => {
+    const branch = initializeTestRewardBranches()[0]!;
+    const findings = new Map();
+    const settlement = settleEncounterTraitOffer(
+      catalog,
+      branch,
+      circeOwner.owner,
+      circeOffer('option1', [
+        {
+          traitKey: 'RandomArcanaTrait',
+          circeResolution: {
+            kind: 'activateArcana',
+            arcanaKeys: ['RetainedUnavailableArcana'],
+          },
+        },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
+      ]),
+      1,
+      'encounterCompleted',
+      findings,
+    );
+    const child = createCirceResolutionAddress(circeOwner, 'option1');
+    expect(settlement.branch.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
+      giverKey: 'Circe',
+      providerKind: 'npc',
+    });
+    expect(settlement.branch.arcanaFear).toBe(branch.arcanaFear);
+    expect(settlement.blockedChild).toEqual({ address: child, branch: settlement.branch });
+    expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+      expect.objectContaining({ code: 'circeResolutionTargetUnavailable', origin: child }),
+    );
   });
 
   it('canonicalizes and deep-freezes Circe Arcana sets, retains dormant detail, and rejects an unknown encoded Vow', () => {
@@ -435,5 +474,26 @@ describe('Circe selected trait acquisition', () => {
       true,
       false,
     ]);
+    const evaluated = evaluateCirceResolutionDomain(
+      catalog,
+      {} as never,
+      { routes: [] } as never,
+      createTraitOfferCandidateArtifacts(catalog, products.candidateContexts),
+      {
+        kind: 'circeResolutionDomain',
+        trait: circeOwner,
+        value: offer,
+        optionKey: 'option1',
+      },
+    );
+    expect(evaluated.kind).toBe('circeResolutionDomain');
+    if (evaluated.kind !== 'circeResolutionDomain') throw new Error('missing Circe domain');
+    expect(
+      evaluated.result.arcanaCandidates.find((candidate) => candidate.value === 'ChanneledCast'),
+    ).toMatchObject({
+      branchSupport: [true, false],
+      reason: 'branchDivergence',
+      support: 'impossible',
+    });
   });
 });

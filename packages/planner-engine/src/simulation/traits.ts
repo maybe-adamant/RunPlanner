@@ -28,7 +28,6 @@ import {
   optionIndex,
   TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
-  withDefaultTraitOptionDetail,
 } from '../authored-project/traits';
 
 export interface TraitOfferEvent {
@@ -1018,7 +1017,6 @@ export function recordReachedTraitOffer(
   const valid =
     evaluation.composition.legal &&
     evaluation.replacementComposition.legal &&
-    evaluation.targetedAcquisition.legal &&
     evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
   if (evaluation.offer.kind === 'fallbackGold')
@@ -2097,7 +2095,7 @@ function traitDraft(
     kind: 'traits',
     giverKey,
     options: Object.freeze(
-      candidates.map((candidate) => candidateToOption(catalog, candidate)),
+      candidates.map((candidate) => candidateToOption(candidate)),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
     rarificationActions: Object.freeze([]),
@@ -2193,11 +2191,8 @@ function assessDraftDomainComposition(
   });
 }
 
-function candidateToOption(
-  catalog: Catalog,
-  candidate: TraitCandidateAssessment,
-): AuthoredTraitOption {
-  return withDefaultTraitOptionDetail(catalog, {
+function candidateToOption(candidate: TraitCandidateAssessment): AuthoredTraitOption {
+  return Object.freeze({
     traitKey: candidate.traitKey,
     ...(candidate.rarity === undefined ? {} : { rarity: candidate.rarity }),
   });

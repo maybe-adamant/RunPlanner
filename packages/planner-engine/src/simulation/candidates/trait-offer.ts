@@ -72,13 +72,22 @@ export interface CirceResolutionDomainQuery {
   readonly value: AuthoredTraitOffer;
   readonly optionKey: TraitOptionKey;
 }
+export type DirectTraitOutcomeSupport = 'forced' | 'possible' | 'impossible';
+export interface EvaluatedDirectTraitOutcomeCandidate<T> {
+  readonly value: T;
+  readonly support: DirectTraitOutcomeSupport;
+  readonly branchSupport: readonly boolean[];
+  readonly selected: boolean;
+  readonly reason?: 'branchDivergence' | 'unavailable';
+}
 export interface EvaluatedCirceResolutionDomain {
   readonly kind: 'circeResolutionDomain';
   readonly result: {
     readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
     readonly requiredCount: number;
-    readonly arcanaKeys: readonly string[];
-    readonly vowKeys: readonly string[];
+    readonly branchAgreement: boolean;
+    readonly arcanaCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
+    readonly vowCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
     readonly outerAvailable: boolean;
   };
 }
@@ -94,7 +103,7 @@ export interface EchoPomTargetDomainQuery {
 export interface EvaluatedEchoPomTargetDomain {
   readonly kind: 'echoPomTargetDomain';
   readonly result: {
-    readonly traitKeys: readonly string[];
+    readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
     readonly emptyNoOpAllowed: boolean;
   };
 }
@@ -154,7 +163,7 @@ export interface EvaluatedAllTogetherSetDomain {
   readonly kind: 'allTogetherSetDomain';
   readonly result: {
     readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
-    readonly values: readonly (string | null)[];
+    readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
   };
 }
 export type AllTogetherSetDomainEvaluation =
@@ -578,7 +587,7 @@ export function evaluateTraitAcquisitionTargetDomain(
               (branch) => branch.sourceSupported && branch.targetTraitKeys.includes(traitKey),
             ),
           );
-          const supported = branchSupport.some(Boolean);
+          const supported = branchSupport.length > 0 && branchSupport.every(Boolean);
           return Object.freeze({
             kind: 'traitAcquisitionTarget' as const,
             result: Object.freeze({
@@ -592,7 +601,7 @@ export function evaluateTraitAcquisitionTargetDomain(
                       Object.freeze({
                         code: 'targetedAcquisitionTargetUnavailable' as const,
                         traitKey,
-                        detail: traitKey,
+                        detail: branchSupport.some(Boolean) ? 'branchDivergence' : traitKey,
                       }),
                     ],
               ),
@@ -605,7 +614,7 @@ export function evaluateTraitAcquisitionTargetDomain(
 }
 
 export function evaluateCirceResolutionDomain(
-  _catalog: Catalog,
+  catalog: Catalog,
   _project: ProjectDocument,
   evaluation: ProjectEvaluation,
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
@@ -616,24 +625,54 @@ export function evaluateCirceResolutionDomain(
   const values = capability.circeResolution(query.value, query.optionKey);
   const first = values[0];
   if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  // A complete authored outcome must be legal at every surviving simulation
-  // branch. Never let presentation inherit one arbitrary branch's frontier.
-  const equivalent = values.every(
-    (value) =>
-      value.effect === first.effect &&
-      value.requiredCount === first.requiredCount &&
-      value.outerAvailable === first.outerAvailable &&
-      value.arcanaKeys.length === first.arcanaKeys.length &&
-      value.arcanaKeys.every((key, index) => key === first.arcanaKeys[index]) &&
-      value.vowKeys.length === first.vowKeys.length &&
-      value.vowKeys.every((key, index) => key === first.vowKeys[index]),
+  const branchAgreement = values.every(
+    (value) => value.effect === first.effect && value.requiredCount === first.requiredCount,
   );
-  if (!equivalent) return unavailableForTraitOffer(evaluation, query.trait);
-  return Object.freeze({ kind: 'circeResolutionDomain', result: first });
+  const option =
+    query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
+  const selectedArcanaKeys =
+    option?.circeResolution?.kind === 'activateArcana' ||
+    option?.circeResolution?.kind === 'promoteArcana'
+      ? option.circeResolution.arcanaKeys
+      : Object.freeze([]);
+  const selectedVowKey =
+    option?.circeResolution?.kind === 'disableFear' ? option.circeResolution.vowKey : null;
+  const arcanaKeys = catalog.arcanaCards.values
+    .map((card) => card.key)
+    .filter(
+      (key) =>
+        values.some((value) => value.arcanaKeys.includes(key)) || selectedArcanaKeys.includes(key),
+    );
+  const vowKeys = catalog.fearVows.values
+    .map((vow) => vow.key)
+    .filter((key) => values.some((value) => value.vowKeys.includes(key)) || selectedVowKey === key);
+  return Object.freeze({
+    kind: 'circeResolutionDomain',
+    result: Object.freeze({
+      effect: first.effect,
+      requiredCount: branchAgreement ? first.requiredCount : 0,
+      branchAgreement,
+      arcanaCandidates: outcomeCandidates(
+        arcanaKeys,
+        values.map((value) => value.arcanaKeys),
+        (key) => selectedArcanaKeys.includes(key),
+        branchAgreement,
+        first.requiredCount,
+      ),
+      vowCandidates: outcomeCandidates(
+        vowKeys,
+        values.map((value) => value.vowKeys),
+        (key) => selectedVowKey === key,
+        branchAgreement,
+        1,
+      ),
+      outerAvailable: values.every((value) => value.outerAvailable),
+    }),
+  });
 }
 
 export function evaluateEchoPomTargetDomain(
-  _catalog: Catalog,
+  catalog: Catalog,
   _project: ProjectDocument,
   evaluation: ProjectEvaluation,
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
@@ -644,13 +683,34 @@ export function evaluateEchoPomTargetDomain(
   const values = capability.echoPomTargets(query.value, query.optionKey);
   const first = values[0];
   if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  const equivalent = values.every(
-    (value) => value.length === first.length && value.every((key, index) => key === first[index]),
+  const option =
+    query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
+  const selected =
+    option !== undefined && 'echoPomTarget' in option ? option.echoPomTarget : undefined;
+  const traitKeys: string[] = catalog.traits.values
+    .map((trait) => trait.key)
+    .filter((key) => values.some((value) => value.includes(key)) || selected === key);
+  const noTargetDomains = values.map((value) => (value.length === 0 ? [null] : []));
+  const candidates = outcomeCandidates<string | null>(
+    [
+      ...traitKeys,
+      ...(values.some((value) => value.length === 0) || selected === null ? [null] : []),
+    ],
+    values.map((value, index) =>
+      Object.freeze([...(value as readonly (string | null)[]), ...noTargetDomains[index]!]),
+    ),
+    (value) => value === selected,
+    true,
+    1,
   );
-  if (!equivalent) return unavailableForTraitOffer(evaluation, query.trait);
   return Object.freeze({
     kind: 'echoPomTargetDomain',
-    result: Object.freeze({ traitKeys: first, emptyNoOpAllowed: first.length === 0 }),
+    result: Object.freeze({
+      candidates,
+      emptyNoOpAllowed: candidates.some(
+        (candidate) => candidate.value === null && candidate.support !== 'impossible',
+      ),
+    }),
   });
 }
 
@@ -766,7 +826,7 @@ export function evaluateEchoLastRewardDomain(
 }
 
 export function evaluateAllTogetherSetDomain(
-  _catalog: Catalog,
+  catalog: Catalog,
   _project: ProjectDocument,
   evaluation: ProjectEvaluation,
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
@@ -777,15 +837,76 @@ export function evaluateAllTogetherSetDomain(
   const branches = capability.allTogetherSet(query.value, query.optionKey, query.setKey);
   const first = branches[0];
   if (first === undefined) return unavailableForTraitOffer(evaluation, query.trait);
-  if (
-    !branches.every(
-      (branch) =>
-        branch.length === first.length && branch.every((value, index) => value === first[index]),
-    )
-  )
-    return unavailableForTraitOffer(evaluation, query.trait);
+  const option =
+    query.value.kind === 'traits' ? query.value.options[optionIndex(query.optionKey)] : undefined;
+  const selected = option?.allTogetherResult?.[query.setKey];
+  const declaration = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
+  const set =
+    declaration?.selectedDisposition.kind === 'directTraitSets'
+      ? declaration.selectedDisposition.sets.find((candidate) => candidate.key === query.setKey)
+      : undefined;
+  const values: (string | null)[] = [
+    ...(set?.traitKeys ?? []),
+    ...(branches.some((branch) => branch.includes(null)) || selected === null ? [null] : []),
+  ].filter(
+    (value, index, all) =>
+      all.indexOf(value) === index &&
+      (branches.some((branch) => branch.includes(value)) || value === selected),
+  );
   return Object.freeze({
     kind: 'allTogetherSetDomain',
-    result: Object.freeze({ setKey: query.setKey, values: first }),
+    result: Object.freeze({
+      setKey: query.setKey,
+      candidates: outcomeCandidates<string | null>(
+        values,
+        branches,
+        (value) => value === selected,
+        true,
+        1,
+      ),
+    }),
   });
+}
+
+function outcomeCandidates<T>(
+  values: readonly T[],
+  branchDomains: readonly (readonly T[])[],
+  selected: (value: T) => boolean,
+  branchAgreement: boolean,
+  requiredCount: number,
+): readonly EvaluatedDirectTraitOutcomeCandidate<T>[] {
+  return Object.freeze(
+    values.map((value) => {
+      const branchSupport = Object.freeze(
+        branchDomains.map((domain) => domain.some((candidate) => Object.is(candidate, value))),
+      );
+      const universallySupported =
+        branchAgreement && branchSupport.length > 0 && branchSupport.every(Boolean);
+      const forced =
+        universallySupported &&
+        requiredCount > 0 &&
+        branchDomains.every(
+          (domain) =>
+            domain.some((candidate) => Object.is(candidate, value)) &&
+            domain.length <= requiredCount,
+        );
+      return Object.freeze({
+        value,
+        support: forced
+          ? ('forced' as const)
+          : universallySupported
+            ? ('possible' as const)
+            : ('impossible' as const),
+        branchSupport,
+        selected: selected(value),
+        ...(!universallySupported
+          ? {
+              reason: branchSupport.some(Boolean)
+                ? ('branchDivergence' as const)
+                : ('unavailable' as const),
+            }
+          : {}),
+      });
+    }),
+  );
 }

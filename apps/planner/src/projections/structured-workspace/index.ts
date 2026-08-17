@@ -60,6 +60,7 @@ export type {
   WorkspaceRailSelectedTarget,
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
+  WorkspaceTraitAcquisitionTargetControl,
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoPomTargetDomain,
   WorkspaceEchoLastRunBoonDomain,

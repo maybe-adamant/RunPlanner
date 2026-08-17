@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createTraitAcquisitionTargetAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
@@ -41,7 +42,10 @@ import {
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
+import {
+  settleEncounterTraitOffer,
+  settleOwnedAcquisitionSite,
+} from '../../src/simulation/rewards/processing';
 import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
@@ -737,6 +741,99 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       traitKey: 'UpgradeHammerBoon',
     });
   });
+});
+
+describe('targeted selected-trait child chronology', () => {
+  const traitOwner = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+    'source',
+  );
+
+  it.each([
+    ['Bridal Glow', 'BoonDecayBoon', undefined, 'targetedAcquisitionTargetMissing'],
+    [
+      'Bridal Glow retained invalid',
+      'BoonDecayBoon',
+      'ApolloCastBoon',
+      'targetedAcquisitionTargetUnavailable',
+    ],
+    ['Latest Model', 'UpgradeHammerBoon', undefined, 'targetedAcquisitionTargetMissing'],
+    [
+      'Latest Model retained invalid',
+      'UpgradeHammerBoon',
+      'StaffDashAttackTrait',
+      'targetedAcquisitionTargetUnavailable',
+    ],
+  ] as const)(
+    'retains %s as the outer acquisition while blocking its exact child',
+    (_label, selectedTraitKey, targetTraitKey, findingCode) => {
+      const before =
+        selectedTraitKey === 'BoonDecayBoon'
+          ? historyFrom([{ giverKey: 'Demeter', traitKey: 'DemeterWeaponBoon', rarity: 'Common' }])
+          : historyFrom([{ giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' }]);
+      const offer: AuthoredTraitOffer = Object.freeze({
+        kind: 'traits',
+        giverKey: selectedTraitKey === 'BoonDecayBoon' ? 'Hera' : 'Icarus',
+        options: Object.freeze(
+          selectedTraitKey === 'BoonDecayBoon'
+            ? [
+                {
+                  traitKey: selectedTraitKey,
+                  rarity: 'Common',
+                  ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+                },
+                { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+                { traitKey: 'HeraCastBoon', rarity: 'Common' },
+              ]
+            : [
+                {
+                  traitKey: selectedTraitKey,
+                  ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+                },
+                { traitKey: 'OmegaExplodeBoon' },
+                { traitKey: 'CastHazardBoon' },
+              ],
+        ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+        selectedOptionKey: 'option1',
+      });
+      const initial = initializeTestRewardBranches()[0]!;
+      const findings = new Map();
+      const settlement = settleEncounterTraitOffer(
+        catalog,
+        Object.freeze({ ...initial, traitHistory: before }),
+        traitOwner.owner,
+        offer,
+        before.events.length + 1,
+        'encounterCompleted',
+        findings,
+        undefined,
+        undefined,
+        'source',
+      );
+      const expectedChild = createTraitAcquisitionTargetAddress(traitOwner, 'option1');
+      expect(settlement.branch.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();
+      expect(settlement.blockedChild?.address).toEqual(expectedChild);
+      expect(settlement.blockedChild?.branch).toBe(settlement.branch);
+      expect([...findings.values()].map((entry) => entry.finding)).toContainEqual(
+        expect.objectContaining({ code: findingCode, origin: expectedChild }),
+      );
+      expect(settlement.branch.traitHistory?.events.at(-1)).not.toHaveProperty(
+        'targetedAcquisitionTransition',
+      );
+      if (selectedTraitKey === 'BoonDecayBoon') {
+        expect(settlement.branch.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
+          rarity: 'Common',
+          level: 1,
+        });
+      } else {
+        expect(settlement.branch.traitHistory?.equippedTraits.StaffDoubleAttackTrait).toMatchObject(
+          {
+            hammerRank: 'RankI',
+          },
+        );
+      }
+    },
+  );
 });
 
 describe('Proper Upbringing rarity lifecycle', () => {

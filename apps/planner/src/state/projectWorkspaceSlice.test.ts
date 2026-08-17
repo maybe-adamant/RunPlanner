@@ -1,7 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createAllTogetherSetAddress,
   createBiomeAddress,
   createDefaultRouteLoadout,
   createEmptyProjectDocument,
@@ -258,7 +257,7 @@ describe('project workspace application state', () => {
     expect(selectPresentProject(store.getState())).toBe(edited);
   });
 
-  it('undoes and redoes one exact All Together set edit without replacing the complete map', () => {
+  it('undoes and redoes one atomic complete All Together result edit', () => {
     const { store } = createStore();
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const trait = createTraitOfferAddress(reward, 'source');
@@ -267,37 +266,51 @@ describe('project workspace application state', () => {
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
+    const initialOffer = Object.freeze({
+      kind: 'traits' as const,
+      giverKey: 'Hera',
+      options: Object.freeze([
+        Object.freeze({
+          traitKey: 'AllElementalBoon',
+          rarity: 'Legendary' as const,
+          allTogetherResult: Object.freeze({
+            earth: 'ElementalDamageBoon',
+            fire: 'ElementalBaseDamageBoon',
+            air: 'ElementalDamageFloorBoon',
+            water: 'ElementalHealthBoon',
+          }),
+        }),
+        Object.freeze({ traitKey: 'HeraManaBoon', rarity: 'Common' as const }),
+        Object.freeze({ traitKey: 'HeraSprintBoon', rarity: 'Common' as const }),
+      ] as const),
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait,
-      value: {
-        kind: 'traits',
-        giverKey: 'Hera',
-        options: [
-          {
-            traitKey: 'AllElementalBoon',
-            rarity: 'Legendary',
-            allTogetherResult: {
-              earth: 'ElementalDamageBoon',
-              fire: 'ElementalBaseDamageBoon',
-              air: 'ElementalDamageFloorBoon',
-              water: 'ElementalHealthBoon',
-            },
-          },
-          { traitKey: 'HeraManaBoon', rarity: 'Common' },
-          { traitKey: 'HeraSprintBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-        rarificationActions: [],
-      },
+      value: initialOffer,
     });
     store.dispatch(authoredProjectReplaced(project));
     const before = selectPresentProject(store.getState());
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'ReplaceAllTogetherSet',
-        set: createAllTogetherSetAddress(trait, 'option1', 'earth'),
-        value: 'ElementalOlympianDamageBoon',
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: Object.freeze({
+          ...initialOffer,
+          options: Object.freeze([
+            Object.freeze({
+              ...initialOffer.options[0],
+              allTogetherResult: Object.freeze({
+                ...initialOffer.options[0].allTogetherResult,
+                earth: 'ElementalOlympianDamageBoon',
+              }),
+            }),
+            initialOffer.options[1],
+            initialOffer.options[2],
+          ] as const),
+        }),
       }),
     );
     const edited = selectPresentProject(store.getState());

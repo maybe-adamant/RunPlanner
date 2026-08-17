@@ -258,6 +258,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'traitOffer':
     case 'levelResolution':
       return rewardOwnerAddress(address.owner);
+    case 'traitAcquisitionTarget':
     case 'circeResolution':
     case 'echoPomTarget':
     case 'echoLastRunBoon':
@@ -273,7 +274,8 @@ function acquisitionRoleAncestor(address: SemanticAddress): AcquisitionRoleAddre
   const trait =
     address.kind === 'traitOffer'
       ? address
-      : address.kind === 'circeResolution' ||
+      : address.kind === 'traitAcquisitionTarget' ||
+          address.kind === 'circeResolution' ||
           address.kind === 'echoPomTarget' ||
           address.kind === 'echoLastRunBoon' ||
           address.kind === 'echoLastReward' ||
@@ -308,13 +310,15 @@ function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | u
   if (
     address.kind === 'traitOffer' ||
     address.kind === 'levelResolution' ||
+    address.kind === 'traitAcquisitionTarget' ||
     address.kind === 'circeResolution' ||
     address.kind === 'echoPomTarget' ||
     address.kind === 'echoLastRunBoon' ||
     address.kind === 'echoLastReward'
   )
     return occurrenceOwnerAddress(
-      address.kind === 'circeResolution' ||
+      address.kind === 'traitAcquisitionTarget' ||
+        address.kind === 'circeResolution' ||
         address.kind === 'echoPomTarget' ||
         address.kind === 'echoLastRunBoon' ||
         address.kind === 'echoLastReward'
@@ -524,7 +528,8 @@ function retainBlockedRegionProducts(
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
       ? blockedAt
-      : blockedAt.kind === 'circeResolution' ||
+      : blockedAt.kind === 'traitAcquisitionTarget' ||
+          blockedAt.kind === 'circeResolution' ||
           blockedAt.kind === 'echoPomTarget' ||
           blockedAt.kind === 'echoLastRunBoon' ||
           blockedAt.kind === 'echoLastReward'
@@ -977,6 +982,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
+    origin.kind === 'traitAcquisitionTarget' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'echoPomTarget' ||
     origin.kind === 'echoLastRunBoon' ||
@@ -992,7 +998,8 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution' ||
+            : origin.kind === 'traitAcquisitionTarget' ||
+                origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
                 origin.kind === 'echoLastReward' ||
@@ -1008,6 +1015,7 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
+    origin.kind === 'traitAcquisitionTarget' ||
     origin.kind === 'circeResolution' ||
     origin.kind === 'echoPomTarget' ||
     origin.kind === 'echoLastRunBoon' ||
@@ -1023,7 +1031,8 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'circeResolution' ||
+            : origin.kind === 'traitAcquisitionTarget' ||
+                origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
                 origin.kind === 'echoLastReward' ||

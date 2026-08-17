@@ -19,24 +19,13 @@ export interface AuthoredTraitOption {
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
   /** Decisions owned by the exact recreated acquisition; replay identity stays derived. */
   readonly echoLastReward?: AuthoredEchoLastRewardAcquisition;
-  /** All Together's complete one-result-per-source-set outcome. */
+  /** All Together's complete one-result-per-source-set outcome when authored. */
   readonly allTogetherResult?: AuthoredAllTogetherResult;
 }
 
 export type AuthoredAllTogetherResult = Readonly<
   Record<import('../catalog-schema').DirectTraitSetKey, string | null>
 >;
-
-export function createDefaultAllTogetherResult(
-  catalog: Catalog,
-  traitKey: string,
-): AuthoredAllTogetherResult | undefined {
-  const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
-  if (disposition?.kind !== 'directTraitSets') return undefined;
-  return Object.freeze(
-    Object.fromEntries(disposition.sets.map((set) => [set.key, set.traitKeys[0]])),
-  ) as AuthoredAllTogetherResult;
-}
 
 export function normalizeAllTogetherResult(
   catalog: Catalog,
@@ -63,21 +52,6 @@ export function normalizeAllTogetherResult(
       }),
     ),
   ) as AuthoredAllTogetherResult;
-}
-
-/** Adds only declaration-complete static option detail. Contextual eligibility
- * remains entirely in simulation/candidate authorities. */
-export function withDefaultTraitOptionDetail(
-  catalog: Catalog,
-  option: AuthoredTraitOption,
-): AuthoredTraitOption {
-  const allTogetherResult = createDefaultAllTogetherResult(catalog, option.traitKey);
-  return Object.freeze({
-    ...option,
-    ...(allTogetherResult === undefined
-      ? {}
-      : { allTogetherResult: option.allTogetherResult ?? allTogetherResult }),
-  });
 }
 
 export interface AuthoredEchoLastRewardAcquisition {

@@ -354,11 +354,6 @@ export type TraitOfferCommand =
       readonly kind: 'ReplaceTraitSelection';
       readonly trait: TraitOfferAddress;
       readonly selectedOptionKey: TraitOptionKey;
-    }
-  | {
-      readonly kind: 'ReplaceAllTogetherSet';
-      readonly set: import('../addresses').AllTogetherSetAddress;
-      readonly value: string | null;
     };
 
 export type LevelResolutionCommand = {

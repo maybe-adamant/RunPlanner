@@ -32,10 +32,6 @@ function derivedPayloadEntryAddress(
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
       return command.trait.owner.kind === 'acquisitionEntry' ? command.trait.owner : undefined;
-    case 'ReplaceAllTogetherSet':
-      return command.set.trait.owner.kind === 'acquisitionEntry'
-        ? command.set.trait.owner
-        : undefined;
     case 'ReplaceLevelResolution':
       return command.levelResolution.owner.kind === 'acquisitionEntry'
         ? command.levelResolution.owner
@@ -155,7 +151,6 @@ function applyUnchecked(
     case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
-    case 'ReplaceAllTogetherSet':
       return applyTraitOfferCommand(
         document,
         catalog,

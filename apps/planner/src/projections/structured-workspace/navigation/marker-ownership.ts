@@ -15,6 +15,7 @@ function rewardControlMarkers(control: {
   readonly marker: WorkspaceMarker;
   readonly traitOffers?: readonly {
     readonly marker: WorkspaceMarker;
+    readonly traitAcquisitionTarget?: { readonly marker: WorkspaceMarker };
     readonly circeResolution?: { readonly marker: WorkspaceMarker };
     readonly echoPomTarget?: { readonly marker: WorkspaceMarker };
     readonly echoLastRunBoon?: { readonly marker: WorkspaceMarker };
@@ -27,6 +28,7 @@ function rewardControlMarkers(control: {
     control.marker,
     ...(control.traitOffers ?? []).flatMap((trait) => [
       trait.marker,
+      ...(trait.traitAcquisitionTarget === undefined ? [] : [trait.traitAcquisitionTarget.marker]),
       ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
       ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
       ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
@@ -139,6 +141,9 @@ export function workspaceOccurrenceOwnedMarkers(
         ? []
         : [
             phase.traitOffer.marker,
+            ...(phase.traitOffer.traitAcquisitionTarget === undefined
+              ? []
+              : [phase.traitOffer.traitAcquisitionTarget.marker]),
             ...(phase.traitOffer.circeResolution === undefined
               ? []
               : [phase.traitOffer.circeResolution.marker]),
@@ -159,6 +164,9 @@ export function workspaceOccurrenceOwnedMarkers(
       control.marker,
       ...(control.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
+        ...(trait.traitAcquisitionTarget === undefined
+          ? []
+          : [trait.traitAcquisitionTarget.marker]),
         ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
         ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
@@ -219,6 +227,9 @@ export function workspaceHubMainRewardMarkers(
         room.roomLocal.marker,
         ...(room.roomLocal.control?.traitOffers ?? []).flatMap((trait) => [
           trait.marker,
+          ...(trait.traitAcquisitionTarget === undefined
+            ? []
+            : [trait.traitAcquisitionTarget.marker]),
           ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
           ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
           ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),

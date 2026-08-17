@@ -462,7 +462,17 @@ describe('Echo Gate A direct choices', () => {
       }),
     ).toEqual({
       kind: 'echoPomTargetDomain',
-      result: { traitKeys: [], emptyNoOpAllowed: true },
+      result: {
+        candidates: [
+          {
+            value: null,
+            support: 'forced',
+            branchSupport: [true],
+            selected: true,
+          },
+        ],
+        emptyNoOpAllowed: true,
+      },
     });
     const findings = new Map();
     const result = processEncounterTraitOffer(
@@ -667,7 +677,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(43);
+    expect(decoded.schemaVersion).toBe(44);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
