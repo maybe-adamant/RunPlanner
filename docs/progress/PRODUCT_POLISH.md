@@ -63,6 +63,9 @@ points.
   candidate replay; only later move controls evaluate order. This closes the
   reported Decision 6 Mystery Box/Pom case and the same blocked-prefix class for
   Narcissus and Fields pickups.
+- The Boss-completion Judgment picker now renders one Arcana choice per row,
+  and fixed Boss/Postboss completion entries are directly selectable. A fully
+  authored Judgment result can therefore be reopened after its finding clears.
 
 ## Recently Completed Presentation
 

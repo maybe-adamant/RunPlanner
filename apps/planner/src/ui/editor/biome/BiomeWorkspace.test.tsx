@@ -1224,7 +1224,7 @@ describe('BiomeWorkspace', () => {
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('publishes and navigates the exact Judgment control only for a reached active Boss capability', () => {
+  it('keeps the reached Judgment picker line-separated and directly reopenable', () => {
     const dormant = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
@@ -1255,15 +1255,36 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getByText('Judgment — choose 5 inactive Arcana cards')).toBeTruthy();
-    const firstChoice = within(inspector).getAllByRole<HTMLInputElement>('checkbox')[0];
-    if (firstChoice === undefined) throw new Error('Judgment picker has no inactive card');
-    act(() => firstChoice.click());
+    const optionList = inspector.querySelector('.completion-judgment-options');
+    if (optionList === null) throw new Error('Judgment options list is missing');
+    expect(optionList.querySelectorAll(':scope > label')).toHaveLength(
+      boss.judgment.inactiveArcanaKeys.length,
+    );
+    for (let index = 0; index < boss.judgment.requiredCount; index += 1) {
+      const next = within(inspector)
+        .getAllByRole<HTMLInputElement>('checkbox')
+        .find((checkbox) => !checkbox.checked);
+      if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
+      act(() => next.click());
+    }
     expect(
       view.application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')?.bossCompletionArcanaKeys,
-    ).toHaveLength(1);
+    ).toHaveLength(5);
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
+      ),
+    );
+    expect(within(inspector).queryByText('Judgment — choose 5 inactive Arcana cards')).toBeNull();
+    act(() => screen.getByRole('button', { name: 'Open Boss completion' }).click());
+    expect(within(inspector).getByText('Judgment — choose 5 inactive Arcana cards')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Open Boss completion' }).getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
