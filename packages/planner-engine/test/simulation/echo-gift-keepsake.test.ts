@@ -618,7 +618,7 @@ describe('Echo Gift Gift Gift', () => {
       value: { kind: 'normal', exitKey: 'exit2' },
     });
     // Derive the reached history before replacing the target: replacement
-    // correctly clears its authored reward leaf in schema 42.
+    // correctly clears its authored reward leaf in the current strict schema.
     const reachedH = simulateProject(catalog, project).routes[0]?.biomes.find(
       (biome) => biome.biomeKey === 'H',
     );

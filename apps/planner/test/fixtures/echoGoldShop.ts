@@ -14,7 +14,11 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createGoldenFGHIProject,
+  goldenHBiome,
+} from '@run-planner/test-fixtures';
 
 /** Bounded Golden H reauthoring that truthfully acquires Gold before its reached Preboss Shop. */
 export function createEchoGoldHPrebossProject(): ProjectDocument {
@@ -34,6 +38,30 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
       occurrenceId: combat09,
     }),
     value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridge },
+        'Encounter',
+      ),
+      'selection',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: [
+        { traitKey: 'EchoDoubleShop' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+      deathDefianceConditionMet: false,
+    },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceOccurrenceRoom',
@@ -74,32 +102,9 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     simulateProjectAssembly(catalog, project),
   ).traitOfferStartingDraft(forcedTrait, replacement.giver.key);
   if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
-  project = applyProjectCommand(project, catalog, {
+  return applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: forcedTrait,
     value: traitDraft,
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(
-      createEncounterPhaseAddress(
-        goldenHBiome,
-        { kind: 'occurrence', occurrenceId: bridge },
-        'Encounter',
-      ),
-      'selection',
-    ),
-    value: {
-      kind: 'traits',
-      giverKey: 'Echo',
-      options: [
-        { traitKey: 'EchoDoubleShop' },
-        { traitKey: 'DiminishingDodgeBoon' },
-        { traitKey: 'DiminishingHealthAndManaBoon' },
-      ],
-      selectedOptionKey: 'option1',
-      rarificationActions: [],
-      deathDefianceConditionMet: false,
-    },
   });
 }

@@ -1754,6 +1754,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
     historySequence: number,
     targetFindings: Map<string, FindingRegionEntry>,
   ): readonly RewardBranchState[] {
+    if (room.pickupSite === undefined && room.entryState?.kind !== 'shop') {
+      return sourceBranches;
+    }
     if (room.pickupSite !== undefined && room.entryState?.kind !== 'shop') {
       const producer = selectedPickupProducer(catalog, room.encounters);
       if (producer === undefined) fail('pickup site has no selected pickup producer');
@@ -4309,14 +4312,53 @@ export function evaluateBiomeRewardsAssemblyInternal(
             semanticAddressKey(encounterPhaseAddress),
           );
           const gorgonOffer =
-            result?.athenaOffer === undefined || gorgonSnapshot?.rarity === undefined
+            result?.athenaOffer == null || gorgonSnapshot?.rarity === undefined
               ? undefined
               : materializeGorgonAthenaOffer(catalog, result.athenaOffer, gorgonSnapshot.rarity);
           if (
             phase?.blocksGorgon !== true &&
             declaration.blocksGorgon !== true &&
             result?.deathDefianceConditionMet === true &&
-            result.athenaOffer !== undefined &&
+            result.athenaOffer === null &&
+            !blockedGorgonPhases.has(gorgonKey)
+          ) {
+            const gorgonEffect = catalog.keepsakes.values.find(
+              (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
+            )?.effect;
+            const settlements = branches.map((branch) =>
+              settleEncounterTraitOffer(
+                catalog,
+                branch,
+                gorgonAddress.owner,
+                null,
+                event.sequence,
+                'encounterCompleted',
+                findings,
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+                result.deathDefianceConditionMet,
+                'gorgonAthena',
+                gorgonSnapshot?.rarity,
+                routeLoadout,
+                undefined,
+                gorgonEffect?.kind === 'gorgonAmulet' ? gorgonEffect.providerKey : undefined,
+              ),
+            );
+            for (const settlement of settlements) {
+              if (settlement.blockedChild === undefined) continue;
+              recordTraitChildSettlements([settlement.blockedChild], room.origin);
+            }
+            blockedGorgonPhases.add(gorgonKey);
+            gorgonEvaluationBlocked = true;
+          } else if (
+            phase?.blocksGorgon !== true &&
+            declaration.blocksGorgon !== true &&
+            result?.deathDefianceConditionMet === true &&
+            result.athenaOffer != null &&
             gorgonOffer !== undefined &&
             assessGorgonChildSettlement(catalog, result.athenaOffer) &&
             !blockedGorgonPhases.has(gorgonKey)
@@ -4383,10 +4425,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ownerRegion(gorgonAddress.owner),
               historyFindingChronology(event.sequence),
             );
-          } else if (
-            result?.deathDefianceConditionMet === true &&
-            result.athenaOffer !== undefined
-          ) {
+          } else if (result?.deathDefianceConditionMet === true && result.athenaOffer != null) {
             blockedGorgonPhases.add(gorgonKey);
             gorgonEvaluationBlocked = true;
             addRewardFinding(
@@ -4496,7 +4535,53 @@ export function evaluateBiomeRewardsAssemblyInternal(
           selectedEncounterKey === undefined
             ? undefined
             : room.encounters.traitOffersByPhase?.[event.phaseKey]?.[selectedEncounterKey];
-        if (authoredEncounterOffer !== undefined && selectedEncounterKey !== undefined) {
+        if (authoredEncounterOffer === null && selectedEncounterKey !== undefined) {
+          const producer =
+            catalog.encounterDefinitions.byKey[selectedEncounterKey]?.traitOfferProducer;
+          const phaseOwner =
+            room.origin.kind === 'occurrence'
+              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
+              : {
+                  kind: 'localChild' as const,
+                  occurrenceId: room.origin.occurrenceId,
+                  groupKey: room.origin.groupKey,
+                  slotKey: room.origin.slotKey,
+                };
+          const phaseAddress = createEncounterPhaseAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            phaseOwner,
+            event.phaseKey,
+          );
+          const settlements = branches.map((branch) =>
+            settleEncounterTraitOffer(
+              catalog,
+              branch,
+              phaseAddress,
+              null,
+              event.sequence,
+              'encounterCompleted',
+              findings,
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+              undefined,
+              'selection',
+              undefined,
+              routeLoadout,
+              undefined,
+              producer?.giverKey,
+            ),
+          );
+          for (const settlement of settlements) {
+            if (settlement.blockedChild === undefined) continue;
+            recordTraitChildSettlements([settlement.blockedChild], room.origin);
+          }
+          break;
+        }
+        if (authoredEncounterOffer != null && selectedEncounterKey !== undefined) {
           const phaseOwner =
             room.origin.kind === 'occurrence'
               ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }

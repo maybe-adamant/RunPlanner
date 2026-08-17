@@ -152,6 +152,7 @@ function applyUnchecked(
       return applyUnchecked(materialized, catalog, command.edit);
     }
     case 'ReplaceTraitOffer':
+    case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
     case 'ReplaceAllTogetherSet':

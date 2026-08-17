@@ -799,7 +799,7 @@ function activeEncounterPhasesForOwner(
     const gorgonPhaseAddress = createGorgonPhaseAddress(address);
     const gorgonAthenaOffer =
       input.facts.detailsActive && gorgonResult?.deathDefianceConditionMet === true
-        ? gorgonResult.athenaOffer === undefined
+        ? gorgonResult.athenaOffer == null
           ? undefined
           : materializeGorgonAthenaOffer(
               input.catalog,
@@ -815,7 +815,10 @@ function activeEncounterPhasesForOwner(
         ? input.catalog.traitGivers.byKey[gorgonEffect.providerKey]
         : undefined;
     const gorgonAthena =
-      gorgonAthenaOffer !== undefined && gorgonGiver !== undefined
+      input.facts.detailsActive &&
+      gorgonResult?.deathDefianceConditionMet === true &&
+      gorgonResult.athenaOffer !== undefined &&
+      gorgonGiver !== undefined
         ? Object.freeze({
             acquisitionRoleLabel: 'Gorgon Athena',
             address: createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
@@ -823,7 +826,7 @@ function activeEncounterPhasesForOwner(
             marker: input.markerDestinations.marker(
               createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
             ),
-            offer: gorgonAthenaOffer,
+            offer: gorgonResult.athenaOffer === null ? null : gorgonAthenaOffer!,
             rarityEditable: false,
             rewardOwner: gorgonPhaseAddress,
           })
@@ -834,6 +837,15 @@ function activeEncounterPhasesForOwner(
       authoredTraitOffer !== undefined && producer !== undefined && giver !== undefined
         ? (() => {
             const traitAddress = createTraitOfferAddress(address, 'selection');
+            if (authoredTraitOffer === null)
+              return Object.freeze({
+                acquisitionRoleLabel: 'Selection',
+                address: traitAddress,
+                giver,
+                marker: input.markerDestinations.marker(traitAddress),
+                offer: null,
+                rewardOwner: address,
+              });
             const selected =
               authoredTraitOffer.kind === 'traits'
                 ? traitOfferOption(authoredTraitOffer, authoredTraitOffer.selectedOptionKey)

@@ -15,7 +15,11 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createGoldenFGHIProject,
+  goldenHBiome,
+} from '@run-planner/test-fixtures';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
@@ -63,6 +67,23 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: echo,
+    value: {
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: [
+        { traitKey: 'EchoRepeatKeepsakeBoon' },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+      deathDefianceConditionMet: false,
+    },
+  });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
@@ -106,22 +127,6 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     kind: 'ReplaceTraitOffer',
     trait: forcedTrait,
     value: traitDraft,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: echo,
-    value: {
-      kind: 'traits',
-      giverKey: 'Echo',
-      options: [
-        { traitKey: 'EchoRepeatKeepsakeBoon' },
-        { traitKey: 'DiminishingDodgeBoon' },
-        { traitKey: 'DiminishingHealthAndManaBoon' },
-      ],
-      selectedOptionKey: 'option1',
-      rarificationActions: [],
-      deathDefianceConditionMet: false,
-    },
   });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',

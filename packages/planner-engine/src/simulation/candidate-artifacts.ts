@@ -697,9 +697,20 @@ export function createTraitOfferCandidateArtifacts(
           ),
         traitsStartingDraft: (giverKey: string) =>
           branchContexts
-            .map((context) =>
-              traitOfferStartingDraft(catalog, giverKey, context.before, context.context),
-            )
+            .map((context) => {
+              const draft = traitOfferStartingDraft(
+                catalog,
+                giverKey,
+                context.before,
+                context.context,
+              );
+              return draft === undefined || context.context.deathDefianceConditionMet === undefined
+                ? draft
+                : Object.freeze({
+                    ...draft,
+                    deathDefianceConditionMet: context.context.deathDefianceConditionMet,
+                  });
+            })
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
         nextTraitOptionDraft: (value: AuthoredTraitOffer) => {
           if (value.kind === 'fallbackGold') return undefined;

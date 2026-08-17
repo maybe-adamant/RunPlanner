@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
-import type {
-  RawTraitDeclaration,
-  RawTraitGiverDeclaration,
-  RawTraitOfferDefaults,
-} from '../../src/declarations/traits';
+import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../../src/declarations/traits';
 import type { ScalableGodTraitRarityFloorEffect } from '@run-planner/engine/catalog-schema';
 
 const expectedPositiveRequirementOwners = [
@@ -987,10 +983,6 @@ describe('trait offer catalog closure', () => {
     for (const giverKey of raritylessProviders) {
       const giver = traits.givers.byKey[giverKey];
       expect(giver?.rarityPolicy, giverKey).toEqual({ kind: 'none' });
-      expect(
-        giver?.defaultOffer?.options.every((option) => option.rarity === undefined),
-        giverKey,
-      ).toBe(true);
       for (const traitKey of giver?.traitKeys ?? []) {
         expect(traits.traits.byKey[traitKey], `${giverKey}:${traitKey}`).toMatchObject({
           rarityDomain: { kind: 'none' },
@@ -1022,14 +1014,6 @@ describe('trait offer catalog closure', () => {
       'EchoDoubleShop',
       'EchoRepeatKeepsakeBoon',
     ]);
-    expect(giver?.defaultOffer).toEqual({
-      options: [
-        { traitKey: 'DiminishingDodgeBoon' },
-        { traitKey: 'DiminishingHealthAndManaBoon' },
-        { traitKey: 'EchoDoubleLevelBoon' },
-      ],
-      selectedOption: 0,
-    });
     expect(
       giver?.traitKeys.map((key) => ({
         key,
@@ -1708,7 +1692,7 @@ describe('trait offer catalog closure', () => {
     ).toThrow(/rarityless traits cannot declare/);
   });
 
-  it('rejects unknown pools at the catalog boundary without requiring Hammer defaults', () => {
+  it('rejects unknown pools at the catalog boundary', () => {
     const unknownPool = {
       ...declarations,
       traitCatalog: {
@@ -1719,11 +1703,9 @@ describe('trait offer catalog closure', () => {
       },
     };
     expect(() => createCatalog(unknownPool)).toThrow(/unknown trait/);
-
-    expect(traits?.givers.byKey.WeaponUpgrade?.defaultOffer).toBeUndefined();
   });
 
-  it('rejects malformed priority declarations and non-priority Olympian defaults', () => {
+  it('rejects malformed priority declarations and retired giver authoring seeds', () => {
     const duplicatePriority = {
       ...declarations,
       traitCatalog: {
@@ -1740,101 +1722,33 @@ describe('trait offer catalog closure', () => {
     };
     expect(() => createCatalog(duplicatePriority)).toThrow(/priorityTraitKeys/);
 
-    const nonPriorityDefault = {
+    const retiredSeed = {
       ...declarations,
       traitCatalog: {
         ...declarations.traitCatalog,
         givers: declarations.traitCatalog.givers.map((giver) =>
-          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
+          giver.key === 'Aphrodite'
             ? {
                 ...giver,
                 defaultOffer: {
-                  ...giver.defaultOffer,
                   options: [
-                    giver.defaultOffer.options[0]!,
-                    giver.defaultOffer.options[1]!,
-                    { traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
+                    { traitKey: 'AphroditeWeaponBoon', rarity: 'Common' as const },
+                    { traitKey: 'AphroditeSpecialBoon', rarity: 'Common' as const },
+                    { traitKey: 'AphroditeCastBoon', rarity: 'Common' as const },
                   ] as const,
+                  selectedOption: 0 as const,
                 },
               }
             : giver,
         ),
       },
     };
-    expect(() => createCatalog(nonPriorityDefault)).toThrow(/priority traits only/);
-
-    const meleeOnlyDefault = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        givers: declarations.traitCatalog.givers.map((giver) =>
-          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
-            ? {
-                ...giver,
-                defaultOffer: {
-                  ...giver.defaultOffer,
-                  options: [
-                    giver.defaultOffer.options[0]!,
-                    giver.defaultOffer.options[2]!,
-                    { traitKey: 'AphroditeSprintBoon', rarity: 'Common' as const },
-                  ] as const,
-                },
-              }
-            : giver,
-        ),
-      },
-    };
-    expect(() => createCatalog(meleeOnlyDefault)).not.toThrow();
-
-    const noMeleeOrSecondaryDefault = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        givers: declarations.traitCatalog.givers.map((giver) =>
-          giver.key === 'Aphrodite' && giver.defaultOffer !== undefined
-            ? {
-                ...giver,
-                defaultOffer: {
-                  ...giver.defaultOffer,
-                  options: [
-                    giver.defaultOffer.options[2]!,
-                    { traitKey: 'AphroditeSprintBoon', rarity: 'Common' as const },
-                    { traitKey: 'AphroditeManaBoon', rarity: 'Common' as const },
-                  ] as const,
-                },
-              }
-            : giver,
-        ),
-      },
-    };
-    expect(() => createCatalog(noMeleeOrSecondaryDefault)).toThrow(/Melee or Secondary traits/);
+    expect(() => createCatalog(retiredSeed as typeof declarations)).toThrow(
+      /defaultOffer.*not supported/,
+    );
   });
 
   it('preserves Legendary rarity while keeping Hammer declarations un-rarified', () => {
-    const aphrodite = declarations.traitCatalog.givers.find((giver) => giver.key === 'Aphrodite');
-    if (aphrodite === undefined || aphrodite.defaultOffer === undefined) throw new Error('fixture');
-    const legendaryDefault = {
-      ...aphrodite,
-      defaultOffer: {
-        ...aphrodite.defaultOffer,
-        options: [
-          aphrodite.defaultOffer.options[0],
-          aphrodite.defaultOffer.options[1],
-          { traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
-        ] as const,
-      },
-    };
-    const valid = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        givers: declarations.traitCatalog.givers.map((giver) =>
-          giver.key === 'Aphrodite' ? legendaryDefault : giver,
-        ),
-      },
-    };
-    expect(() => createCatalog(valid)).toThrow(/priority traits only/);
-
     const hammerTrait = declarations.traitCatalog.traits.find(
       (trait) => trait.key === 'StaffTripleShotTrait',
     );
@@ -1860,7 +1774,7 @@ describe('trait offer catalog closure', () => {
     expect(Object.isFrozen(catalog.traitGivers.byKey.WeaponUpgrade?.rarityPolicy)).toBe(true);
   });
 
-  it('rejects malformed rarityless declarations, giver policies, and defaults', () => {
+  it('rejects malformed rarityless declarations and giver policies', () => {
     const withTrait = (
       traitKey: string,
       replacement: (trait: RawTraitDeclaration) => RawTraitDeclaration,
@@ -1953,20 +1867,6 @@ describe('trait offer catalog closure', () => {
         ),
       ).toThrow(/rarity policy must contain exactly/);
     }
-    expect(() =>
-      createCatalog(
-        withGiver('Echo', (giver) => ({
-          ...giver,
-          defaultOffer: {
-            ...giver.defaultOffer!,
-            options: giver.defaultOffer!.options.map((option) => ({
-              ...option,
-              rarity: 'Common' as const,
-            })) as unknown as RawTraitOfferDefaults['options'],
-          },
-        })),
-      ),
-    ).toThrow(/rarityless trait .* has no rarity/);
   });
 
   it('rejects malformed raw booleans, rarity domains, and requirement discriminators', () => {

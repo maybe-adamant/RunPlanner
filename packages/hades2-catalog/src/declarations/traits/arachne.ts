@@ -78,12 +78,4 @@ export const arachneGiver = {
     'EscalatingCostume',
   ],
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'AgilityCostume' },
-      { traitKey: 'ManaCostume' },
-      { traitKey: 'VitalityCostume' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

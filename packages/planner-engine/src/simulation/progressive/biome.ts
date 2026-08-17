@@ -286,6 +286,16 @@ function acquisitionRoleAncestor(address: SemanticAddress): AcquisitionRoleAddre
     : undefined;
 }
 
+function derivedAcquisitionEntryAncestor(
+  address: SemanticAddress,
+): AcquisitionEntryAddress | undefined {
+  if (address.kind === 'acquisitionEntry') return address;
+  if (address.kind === 'acquisitionRole')
+    return address.owner.kind === 'acquisitionEntry' ? address.owner : undefined;
+  const owner = rewardOwnerAddress(address);
+  return owner?.kind === 'acquisitionEntry' ? owner : undefined;
+}
+
 function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
   // A room-exit settlement finding is addressed to its atomic entry, whose
@@ -529,8 +539,7 @@ function retainBlockedRegionProducts(
   const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =
     blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
   const blockedAcquisitionAt = acquisitionRoleAncestor(blockedAt);
-  const blockedDerivedAcquisitionAt: AcquisitionEntryAddress | undefined =
-    blockedAt.kind === 'acquisitionEntry' ? blockedAt : undefined;
+  const blockedDerivedAcquisitionAt = derivedAcquisitionEntryAncestor(blockedAt);
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {

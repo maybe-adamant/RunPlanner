@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
@@ -245,6 +246,18 @@ describe('structured workspace occurrence assembly', () => {
       value: true,
     });
     project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+      value: {
+        traitKeys: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
       encounterKey: 'AthenaCombatP',
@@ -271,7 +284,7 @@ describe('structured workspace occurrence assembly', () => {
     });
     if (retained?.gorgonAthena?.offer?.kind !== 'traits')
       throw new Error('retained Gorgon Athena offer is missing');
-    expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === 'Epic')).toBe(
+    expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === undefined)).toBe(
       true,
     );
   });
@@ -328,10 +341,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(encounter?.traitOffer).toMatchObject({
       acquisitionRoleLabel: 'Selection',
       giver: { key: 'Artemis' },
-      offer: {
-        giverKey: 'Artemis',
-        selectedOptionKey: 'option1',
-      },
+      offer: null,
     });
     expect(encounter?.traitOffer?.address.owner).toEqual(phase);
   });

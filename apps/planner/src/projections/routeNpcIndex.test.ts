@@ -19,6 +19,7 @@ import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
   createCompleteFGProject,
+  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -48,7 +49,9 @@ function selectEncounter(
   phase: typeof fArtemisPhase,
   encounterKey: string,
 ): ProjectDocument {
-  return applyProjectCommand(project, catalog, { kind: 'SelectEncounter', phase, encounterKey });
+  return authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, { kind: 'SelectEncounter', phase, encounterKey }),
+  );
 }
 
 function underworldRoute(

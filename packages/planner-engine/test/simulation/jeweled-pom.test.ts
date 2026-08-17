@@ -22,19 +22,14 @@ import {
 import { foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 
-function defaultOffer(giverKey: string): AuthoredTraitOffer {
-  const defaults = catalog.traitGivers.byKey[giverKey]?.defaultOffer;
-  if (defaults === undefined) throw new Error(`missing ${giverKey} defaults`);
+function authoredOffer(giverKey: string): AuthoredTraitOffer {
+  const keys = catalog.traitGivers.byKey[giverKey]?.traitKeys.slice(0, 3);
+  if (keys?.length !== 3) throw new Error(`missing ${giverKey} fixture traits`);
   return Object.freeze({
     kind: 'traits',
     giverKey,
-    options: Object.freeze(defaults.options.map((option) => Object.freeze({ ...option }))),
-    selectedOptionKey:
-      defaults.selectedOption === 0
-        ? 'option1'
-        : defaults.selectedOption === 1
-          ? 'option2'
-          : 'option3',
+    options: Object.freeze(keys.map((traitKey) => Object.freeze({ traitKey, rarity: 'Common' }))),
+    selectedOptionKey: 'option1',
   }) as AuthoredTraitOffer;
 }
 
@@ -77,7 +72,7 @@ describe('Jeweled Pom', () => {
       catalog,
       equipped,
       encounter,
-      defaultOffer('Apollo'),
+      authoredOffer('Apollo'),
       2,
       'encounterCompleted',
     );
@@ -134,7 +129,7 @@ describe('Jeweled Pom', () => {
       catalog,
       Object.freeze({ ...equipped, keepsakes: neutral }),
       encounter,
-      defaultOffer('Apollo'),
+      authoredOffer('Apollo'),
       2,
       'encounterCompleted',
     );

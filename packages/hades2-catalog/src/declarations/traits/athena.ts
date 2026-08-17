@@ -140,12 +140,4 @@ export const athenaGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
-      { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
-      { traitKey: 'FocusLastStandBoon', rarity: 'Common' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

@@ -495,21 +495,4 @@ export const demeterGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'DemeterWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'DemeterSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'DemeterCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

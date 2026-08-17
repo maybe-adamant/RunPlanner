@@ -91,12 +91,4 @@ export const circeGiver = {
   priorityTraitKeys: [],
   traitKeys: circeTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'CirceShrinkTrait' },
-      { traitKey: 'CirceEnlargeTrait' },
-      { traitKey: 'HealAmplifyTrait' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

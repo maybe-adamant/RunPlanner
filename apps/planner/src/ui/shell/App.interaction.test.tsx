@@ -75,11 +75,13 @@ function projectWithArtemisInErebus() {
   );
   return {
     phase,
-    project: applyProjectCommand(initial, catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'ArtemisCombatF',
-    }),
+    project: authorLegalTraitOffers(
+      applyProjectCommand(initial, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'ArtemisCombatF',
+      }),
+    ),
   };
 }
 
@@ -341,6 +343,17 @@ describe('planner history interaction', () => {
       historyBeforeSave.past.length + 1,
     );
 
+    await view.user.click(within(customize).getByRole('button', { name: /Edit Trait:/ }));
+    const completedDialog = await screen.findByRole('dialog');
+    await view.user.click(
+      within(completedDialog).getByRole('button', { name: 'Reset to unresolved' }),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.traitOffers.get(semanticAddressKey(traitAddress))?.value,
+    ).toBeNull();
+
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     const restoredInteraction = application
       .selectStructuredWorkspace(application.store.getState())
@@ -348,7 +361,7 @@ describe('planner history interaction', () => {
     if (restoredInteraction?.value?.kind !== 'traits') {
       throw new Error('restored Artemis offer must contain traits');
     }
-    expect(restoredInteraction.value.selectedOptionKey).toBe('option1');
+    expect(restoredInteraction.value.selectedOptionKey).toBe('option2');
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {

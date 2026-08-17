@@ -90,12 +90,4 @@ export const echoGiver = {
   priorityTraitKeys: [],
   traitKeys: echoTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'DiminishingDodgeBoon' },
-      { traitKey: 'DiminishingHealthAndManaBoon' },
-      { traitKey: 'EchoDoubleLevelBoon' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

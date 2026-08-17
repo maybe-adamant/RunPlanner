@@ -126,6 +126,7 @@ export function projectCommandAddress(
     case 'ReplaceGorgonDeathDefianceCondition':
       return command.phase;
     case 'ReplaceTraitOffer':
+    case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
       return command.trait;

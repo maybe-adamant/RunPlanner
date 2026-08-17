@@ -25,7 +25,10 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
+import {
+  processEncounterTraitOffer,
+  settleEncounterTraitOffer,
+} from '../../src/simulation/rewards/processing';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 
 const surface = createRouteAddress('Surface');
@@ -96,6 +99,70 @@ function authoredCirceOffer(
 }
 
 describe('Circe selected trait acquisition', () => {
+  it('publishes manual-grasp and removable-Vow options before the outer offer is authored', () => {
+    const loadout = Object.freeze({
+      ...createDefaultRouteLoadout(catalog),
+      manualArcanaKeys: Object.freeze(['CastCount', 'ChanneledCast']),
+      fearRanks: Object.freeze({
+        ...createDefaultRouteLoadout(catalog).fearRanks,
+        EnemyDamageShrineUpgrade: 1,
+      }),
+    });
+    const branch = initializeTestRewardBranches(createArcanaFearState(catalog, loadout))[0]!;
+    const findings = new Map();
+    const settlement = settleEncounterTraitOffer(
+      catalog,
+      branch,
+      circeOwner.owner,
+      null,
+      1,
+      'encounterCompleted',
+      findings,
+      undefined,
+      undefined,
+      'selection',
+      undefined,
+      loadout,
+      undefined,
+      'Circe',
+    );
+    expect(settlement.branch).toBe(branch);
+    expect(
+      [...findings.values()].filter(
+        (entry) =>
+          entry.finding.code === 'traitOfferMissing' &&
+          semanticAddressKey(entry.finding.origin) === semanticAddressKey(circeOwner),
+      ),
+    ).toHaveLength(1);
+    const context = settlement.blockedChild?.candidateContext;
+    if (context === undefined) throw new Error('unresolved Circe candidate context is missing');
+
+    const value = circeOffer('option3', [
+      { traitKey: 'ArcanaRarityTrait' },
+      { traitKey: 'RemoveShrineTrait' },
+      { traitKey: 'CirceShrinkTrait' },
+    ]);
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(circeOwner), [context]]]),
+    ).at(circeOwner);
+    if (capability === undefined) throw new Error('Circe candidate capability is missing');
+    expect(
+      capability
+        .evaluateOffer(value)
+        .every((evaluation) => evaluation.assessments.every((assessment) => assessment.legal)),
+    ).toBe(true);
+    expect(capability.circeResolution(value, 'option1')[0]).toMatchObject({
+      effect: 'promoteArcana',
+      outerAvailable: true,
+    });
+    expect(capability.circeResolution(value, 'option2')[0]).toMatchObject({
+      effect: 'disableFear',
+      outerAvailable: true,
+      vowKeys: ['EnemyDamageShrineUpgrade'],
+    });
+  });
+
   it('binds the catalog-owned nine-choice provider and applies direct selection plus Red at its pre-effect frontier', () => {
     expect(catalog.traitGivers.byKey.Circe?.traitKeys).toHaveLength(9);
     const project = withCirce(

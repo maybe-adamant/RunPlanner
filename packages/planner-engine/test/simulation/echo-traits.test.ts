@@ -10,6 +10,7 @@ import {
   createExitSelectionAddress,
   createLocalRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -29,7 +30,11 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createGoldenFGHProject,
+  goldenHBiome,
+} from '@run-planner/test-fixtures';
 import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
@@ -145,14 +150,29 @@ function echoRewardOffer(child?: AuthoredEchoLastRewardAcquisition): AuthoredTra
   ]);
 }
 
-function selectGoldenBridge(project = createGoldenFGHProject()) {
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetExitSelection',
-    selection: createExitSelectionAddress(goldenHBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('golden-h-combat09'),
+function completeGoldenFGHProject() {
+  return authorLegalTraitOffers(createGoldenFGHProject());
+}
+
+function selectGoldenBridge(project = completeGoldenFGHProject()) {
+  const selected = authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
     }),
-    value: { kind: 'normal', exitKey: 'exit2' },
+  );
+  return applyProjectCommand(selected, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: echoOwner,
+    value: echoOffer('option1', [
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'DiminishingHealthAndManaBoon' },
+      { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+    ]),
   });
 }
 
@@ -327,7 +347,7 @@ describe('Echo Gate A direct choices', () => {
   ] as const)(
     'keeps ordinary exact-three offers legal with DD condition %s',
     (deathDefianceConditionMet, optionTraitKeys) => {
-      const project = createGoldenFGHProject();
+      const project = completeGoldenFGHProject();
       const evaluation = simulateProjectAssembly(catalog, project).evaluation;
       const value = echoOffer(
         'option1',
@@ -374,7 +394,7 @@ describe('Echo Gate A direct choices', () => {
   );
 
   it('marks Survive unavailable, without affecting the three unconditional identities', () => {
-    const project = createGoldenFGHProject();
+    const project = completeGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const value = echoOffer('option1', [
       { traitKey: 'EchoDeathDefianceRefill' },
@@ -412,7 +432,7 @@ describe('Echo Gate A direct choices', () => {
   });
 
   it('settles an explicit empty-domain Pom as a legal outer-only no-op', () => {
-    const project = createGoldenFGHProject();
+    const project = completeGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const value = echoOffer('option1', [
       { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
@@ -628,15 +648,7 @@ describe('Echo Gate A direct choices', () => {
   });
 
   it('binds the real H Bridge offer, preserves its strict child through codec, and publishes Run State', () => {
-    let project = createGoldenFGHProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    const project = selectGoldenBridge();
     const bridge = project.routes
       .find((route) => route.routeKey === 'Underworld')!
       .biomes.find((biome) => biome.biomeKey === 'H')!
@@ -655,7 +667,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(42);
+    expect(decoded.schemaVersion).toBe(43);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -684,7 +696,7 @@ describe('Echo Gate A direct choices', () => {
   });
 
   it('rejects unknown and non-Pom encoded Echo target children', () => {
-    const project = createGoldenFGHProject();
+    const project = selectGoldenBridge();
     const unknownDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const unknownOffer = echoOfferInDocument(unknownDocument);
     const unknownOptions = unknownOffer.options as JsonRecord[];
@@ -707,15 +719,7 @@ describe('Echo Gate A direct choices', () => {
   });
 
   it('retains the real H invalid Pom outer checkpoint and excludes later state', () => {
-    let project = createGoldenFGHProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let project = selectGoldenBridge();
     const bridge = project.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
@@ -901,7 +905,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
   });
 
   it('publishes row-distinct replacement and append domains from the engine candidate product', () => {
-    const project = createGoldenFGHProject();
+    const project = completeGoldenFGHProject();
     const history = createTraitHistoryState();
     const child = echoBoonChild(
       Object.freeze([
@@ -1406,15 +1410,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
   });
 
   it('round-trips the strict child and rejects malformed cardinality, sources, rarities, and Duo duplicates', () => {
-    let project = createGoldenFGHProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let project = selectGoldenBridge();
     const bridge = project.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
@@ -1528,7 +1524,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
   });
 
   it('settles the real H Echo fold into Run State with the nested trait and future pool source', () => {
-    let project = createGoldenFGHProject();
+    let project = completeGoldenFGHProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -1579,8 +1575,100 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(snapshot?.traits.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
   });
 
+  it('stops the real H bridge at the unresolved Echo offer without applying an Echo effect', () => {
+    let project = completeGoldenFGHProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ResetEncounterTraitOffer',
+      trait: echoOwner,
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    if (!('rewards' in h)) throw new Error('H must be evaluated');
+    expect(
+      h.findings.filter(
+        (finding) =>
+          finding.code === 'traitOfferMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(echoOwner),
+      ),
+    ).toHaveLength(1);
+    expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
+    expect(
+      h.rewards.branches.every((branch) =>
+        Object.keys(branch.traitHistory?.equippedTraits ?? {}).every(
+          (traitKey) => !traitKey.startsWith('Echo'),
+        ),
+      ),
+    ).toBe(true);
+
+    const draft = createPreparedProjectCandidateSession(catalog, assembly).traitOfferStartingDraft(
+      echoOwner,
+      'Echo',
+    );
+    expect(draft).toMatchObject({
+      kind: 'traits',
+      giverKey: 'Echo',
+      selectedOptionKey: 'option1',
+    });
+    expect(draft?.kind === 'traits' ? draft.options : []).toHaveLength(3);
+  });
+
+  it('retains Reward and Gift domains at the unresolved real H Echo frontier', () => {
+    const replacement = replaceLatestGoldenRewardWithConsumable();
+    let project = applyProjectCommand(replacement.project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ResetEncounterTraitOffer',
+      trait: echoOwner,
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const value = echoOffer('option3', [
+      { traitKey: 'EchoLastReward' },
+      { traitKey: 'EchoRepeatKeepsakeBoon' },
+      { traitKey: 'DiminishingDodgeBoon' },
+    ]);
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const offer = session.evaluate({ kind: 'traitOffer', trait: echoOwner, value });
+    expect(offer.kind).toBe('traitOffer');
+    if (offer.kind !== 'traitOffer') throw new Error('Echo offer candidate is unavailable');
+    expect(offer.result.supported).toBe(true);
+    expect(offer.result.assessments.every((assessment) => assessment.legal)).toBe(true);
+    const reward = session.evaluate({
+      kind: 'echoLastRewardDomain',
+      trait: echoOwner,
+      value,
+      optionKey: 'option1',
+    });
+    expect(reward).toMatchObject({
+      kind: 'echoLastRewardDomain',
+      result: {
+        rewardType: replacement.rewardType,
+        initialValue: { disposition: { kind: 'normal' } },
+      },
+    });
+    const h = assembly.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!;
+    if (!('rewards' in h)) throw new Error('H must be evaluated');
+    expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
+    expect(
+      h.rewards.branches.every(
+        (branch) => branch.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon === undefined,
+      ),
+    ).toBe(true);
+  });
+
   it('keeps the real H invalid child addressable while excluding later route state', () => {
-    let project = createGoldenFGHProject();
+    let project = completeGoldenFGHProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -1638,7 +1726,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const money = catalog.rewards.acquisitions.byKey.RoomMoneyDrop?.lastRewardRecreation;
     if (gift === undefined || money === undefined)
       throw new Error('Replay declarations are missing');
-    const project = createGoldenFGHProject();
+    const project = completeGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,

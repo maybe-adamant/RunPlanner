@@ -333,21 +333,4 @@ export const poseidonGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'PoseidonWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'PoseidonSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'PoseidonCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

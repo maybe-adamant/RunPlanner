@@ -88,12 +88,4 @@ export const dionysusGiver = {
     'RandomBaseDamageBoon',
   ],
   rarityPolicy: { kind: 'selectable', rarities: ['Common', 'Rare', 'Epic'] },
-  defaultOffer: {
-    options: [
-      { traitKey: 'CastLobBoon', rarity: 'Common' },
-      { traitKey: 'HiddenMaxHealthBoon', rarity: 'Common' },
-      { traitKey: 'FirstHangoverBoon', rarity: 'Common' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

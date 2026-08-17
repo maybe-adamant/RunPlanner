@@ -473,21 +473,4 @@ export const heraGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'HeraWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HeraSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HeraCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

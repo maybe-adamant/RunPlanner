@@ -132,22 +132,19 @@ function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
     ),
     'selection',
   );
-  const bridge = document.routes[0]?.biomes
-    .find((candidate) => candidate.biomeKey === 'H')
-    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
-  const current = bridge?.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
-  if (current?.kind !== 'traits') throw new Error('Echo offer is missing');
   const value = Object.freeze({
-    ...current,
+    kind: 'traits' as const,
+    giverKey: 'Echo',
     options: Object.freeze([
       Object.freeze({
         traitKey: 'EchoLastReward',
         ...(child === undefined ? {} : { echoLastReward: child }),
       }),
-      current.options[1],
-      current.options[2],
+      Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+      Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon' }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1' as const,
+    deathDefianceConditionMet: false,
   });
   document = applyProjectCommand(document, catalog, {
     kind: 'ReplaceTraitOffer',

@@ -67,7 +67,8 @@ function replaceTraitOfferValue(
   existing: AuthoredTraitOffer | null,
   command: TraitOfferCommand,
   omitDeathDefianceContext = false,
-): AuthoredTraitOffer {
+): AuthoredTraitOffer | null {
+  if (command.kind === 'ResetEncounterTraitOffer') return null;
   if (command.kind === 'ReplaceTraitOffer')
     return validateOffer(catalog, command.value, command, omitDeathDefianceContext);
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
@@ -893,9 +894,13 @@ export function applyTraitOfferCommand(
       if (command.kind === 'ReplaceTraitOffer' || command.kind === 'ReplaceAllTogetherSet')
         failCommand(command, 'Gorgon Athena persists only its bound author decisions');
       const value =
-        command.kind === 'ReplaceTraitSelection'
-          ? Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
-          : validateGorgonAthenaOffer(catalog, command.value, command);
+        command.kind === 'ResetEncounterTraitOffer'
+          ? null
+          : command.kind === 'ReplaceTraitSelection'
+            ? existing === null
+              ? failCommand(command, 'trait offer must be authored as one complete offer')
+              : Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey })
+            : validateGorgonAthenaOffer(catalog, command.value, command);
       if (sameOccurrenceValue(value, existing)) return document;
       nextEncounters = Object.freeze({
         ...currentEncounters,
@@ -915,16 +920,17 @@ export function applyTraitOfferCommand(
       const expectedProducer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
       if (expectedProducer === undefined)
         failCommand(command, `encounter ${encounterKey} has no trait offer producer`);
-      if (existing.giverKey !== expectedProducer.giverKey)
+      if (existing !== null && existing.giverKey !== expectedProducer.giverKey)
         failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
       if (
         command.kind === 'ReplaceTraitSelection' &&
-        (existing.kind !== 'traits' ||
+        (existing === null ||
+          existing.kind !== 'traits' ||
           traitOfferOption(existing, command.selectedOptionKey) === undefined)
       )
         failCommand(command, 'selected option is not materialized by this trait offer');
       const value = replaceTraitOfferValue(catalog, existing, command, false);
-      if (value.giverKey !== expectedProducer.giverKey)
+      if (value !== null && value.giverKey !== expectedProducer.giverKey)
         failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
       if (sameOccurrenceValue(value, existing)) return document;
       nextEncounters = Object.freeze({
@@ -966,6 +972,8 @@ export function applyTraitOfferCommand(
     );
   }
   const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
+  if (command.kind === 'ResetEncounterTraitOffer')
+    failCommand(command, 'only encounter-owned trait offers can be reset');
   if (reward === undefined) failCommand(command, `no trait offer at role ${trait.acquisitionRole}`);
   const existing = reward.reward.traitOffersByAcquisitionRole[trait.acquisitionRole];
   if (existing === undefined)
@@ -997,6 +1005,7 @@ export function applyTraitOfferCommand(
   )
     failCommand(command, 'selected option is not materialized by this trait offer');
   const value = replaceTraitOfferValue(catalog, existing, command);
+  if (value === null) failCommand(command, 'only encounter-owned trait offers can be reset');
   if (value.giverKey !== expectedGiver) {
     failCommand(command, `trait offer giver must be ${expectedGiver}`);
   }

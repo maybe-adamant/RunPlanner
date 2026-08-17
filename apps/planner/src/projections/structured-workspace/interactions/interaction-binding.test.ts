@@ -179,6 +179,41 @@ function bind(
   };
 }
 
+function reachedEchoProject(): ProjectDocument {
+  const bridgeId = createOccurrenceId('golden-h-bridge01');
+  let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-combat09'),
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Echo',
+      options: [
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+        { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+      ],
+      selectedOptionKey: 'option1',
+      deathDefianceConditionMet: false,
+    },
+  });
+  return project;
+}
+
 describe('structured workspace interaction binding', () => {
   it('binds the exact Gorgon condition replacement command', () => {
     const project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
@@ -221,18 +256,17 @@ describe('structured workspace interaction binding', () => {
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.owner.owner.kind === 'gorgonPhase',
     );
-    if (interaction === undefined || interaction.value?.kind !== 'traits')
-      throw new Error('Gorgon Athena interaction is missing');
+    if (interaction === undefined) throw new Error('Gorgon Athena interaction is missing');
+    expect(interaction.value).toBeNull();
+    expect(interaction.resetIntent).toBeUndefined();
     expect(interaction.rarityEditable).toBe(false);
-    expect(interaction.value.options.every((option) => option.rarity === 'Epic')).toBe(true);
+    const draft = interaction.traitsStartingDraft?.();
+    if (draft?.kind !== 'traits') throw new Error('Gorgon Athena draft is missing');
+    expect(draft.options.every((option) => option.rarity === 'Epic')).toBe(true);
 
     const changed = {
-      ...interaction.value,
-      options: [
-        interaction.value.options[2]!,
-        interaction.value.options[0]!,
-        interaction.value.options[1]!,
-      ],
+      ...draft,
+      options: [draft.options[2]!, draft.options[0]!, draft.options[1]!],
       selectedOptionKey: 'option2' as const,
       rarificationActions: ['option1' as const],
       deathDefianceConditionMet: true,
@@ -244,6 +278,14 @@ describe('structured workspace interaction binding', () => {
         traitKeys: changed.options.map((option) => option.traitKey),
         selectedOptionKey: 'option2',
       },
+    });
+    const authored = applyProjectCommand(project, catalog, interaction.intentFor(changed).command);
+    const completed = [...bind(authored, 'Surface', 'P').interactions.traitOffers.values()].find(
+      (candidate) => candidate.owner.owner.kind === 'gorgonPhase',
+    );
+    expect(completed?.resetIntent?.command).toEqual({
+      kind: 'ResetEncounterTraitOffer',
+      trait: interaction.owner,
     });
   });
 
@@ -392,15 +434,7 @@ describe('structured workspace interaction binding', () => {
 
   it('binds the real H Bridge Pom draft and its invalid authored target to the exact child', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
-    let project = createGoldenFGHIProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let project = reachedEchoProject();
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
         goldenHBiome,
@@ -413,16 +447,16 @@ describe('structured workspace interaction binding', () => {
       .find((route) => route.routeKey === 'Underworld')!
       .biomes.find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
-    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const pomOffer = Object.freeze({
-      ...defaultOffer,
+      ...authoredOffer,
       selectedOptionKey: 'option3' as const,
       options: Object.freeze([
-        defaultOffer.options[0],
-        defaultOffer.options[1],
+        authoredOffer.options[0],
+        authoredOffer.options[1],
         Object.freeze({
-          ...defaultOffer.options[2],
+          ...authoredOffer.options[2],
           echoPomTarget: 'ZeusWeaponBoon',
         }),
       ]) as AuthoredTraitOfferTraits['options'],
@@ -552,15 +586,7 @@ describe('structured workspace interaction binding', () => {
 
   it('adapts the engine-owned Echo Boon row and append domains without recomputing distinctness', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
-    let project = createGoldenFGHIProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let project = reachedEchoProject();
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
         goldenHBiome,
@@ -573,8 +599,8 @@ describe('structured workspace interaction binding', () => {
       .find((route) => route.routeKey === 'Underworld')!
       .biomes.find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
-    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const child = Object.freeze({
       options: Object.freeze([
         Object.freeze({
@@ -591,11 +617,11 @@ describe('structured workspace interaction binding', () => {
       selectedOptionKey: 'option1' as const,
     });
     const boonOffer = Object.freeze({
-      ...defaultOffer,
+      ...authoredOffer,
       options: Object.freeze([
         Object.freeze({ traitKey: 'EchoLastRunBoon', echoLastRunBoon: child }),
-        defaultOffer.options[1],
-        defaultOffer.options[2],
+        authoredOffer.options[1],
+        authoredOffer.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
@@ -638,15 +664,7 @@ describe('structured workspace interaction binding', () => {
 
   it('binds the exact Echo replay owner to existing acquisition candidate products', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
-    let project = createGoldenFGHIProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(goldenHBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('golden-h-combat09'),
-      }),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
+    let project = reachedEchoProject();
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
         goldenHBiome,
@@ -658,14 +676,14 @@ describe('structured workspace interaction binding', () => {
     const bridge = project.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    const defaultOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
-    if (defaultOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
     const rewardOffer = Object.freeze({
-      ...defaultOffer,
+      ...authoredOffer,
       options: Object.freeze([
         Object.freeze({ traitKey: 'EchoLastReward' }),
-        defaultOffer.options[1],
-        defaultOffer.options[2],
+        authoredOffer.options[1],
+        authoredOffer.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1' as const,
     });
@@ -2173,6 +2191,68 @@ describe('structured workspace interaction binding', () => {
       expect(
         interactions.acquisitionConversions.get(semanticAddressKey(unreached))?.visible ?? false,
       ).toBe(false);
+    },
+  );
+
+  it.each(['Boon', 'HermesUpgrade', 'WeaponUpgrade'] as const)(
+    'keeps the %s trait editor usable after the opening Boon is consumed by Forfeit',
+    (replacementRewardType) => {
+      const { project: authored, acquisition } =
+        createFConversionFrontierProject('MetaCurrencyDrop');
+      const unresolved = applyProjectCommand(authored, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer', replacement: null },
+      });
+      const initial = bind(unresolved, 'Underworld', 'F').interactions.acquisitionConversions.get(
+        semanticAddressKey(acquisition),
+      );
+      if (initial === undefined) throw new Error('Artificer conversion interaction is missing');
+      const replacement = initial.artificerReplacementOptions.find(
+        (option) => option.offer.rewardType === replacementRewardType,
+      );
+      if (replacement === undefined) {
+        throw new Error(`${replacementRewardType} Artificer replacement option is missing`);
+      }
+      const project = applyProjectCommand(unresolved, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer', replacement },
+      });
+      const assembly = simulateProjectAssembly(catalog, project);
+      let bound: ReturnType<typeof bind>['interactions'] | undefined;
+      expect(() => {
+        bound = bind(project, 'Underworld', 'F').interactions;
+      }).not.toThrow();
+      const conversion = bound?.acquisitionConversions.get(semanticAddressKey(acquisition));
+      const traitControls = conversion?.artificerReplacementControl?.traitOffers ?? [];
+      expect(
+        traitControls.length,
+        JSON.stringify({
+          findings: assembly.evaluation.findings,
+          replacement,
+          projected: conversion?.artificerReplacementControl,
+        }),
+      ).toBeGreaterThan(0);
+      for (const control of traitControls) {
+        const interaction = bound?.traitOffers.get(semanticAddressKey(control.address));
+        expect(interaction?.value).toBeNull();
+        let draft: AuthoredTraitOfferTraits | undefined;
+        expect(() => {
+          draft = interaction?.traitsStartingDraft?.();
+        }).not.toThrow();
+        expect(draft).toMatchObject({ kind: 'traits', options: expect.any(Array) });
+        if (draft === undefined || interaction === undefined)
+          throw new Error(`${replacementRewardType} trait draft is missing`);
+        expect(draft.options).toHaveLength(3);
+        const intent = interaction.intentFor(draft);
+        expect(intent.command).toMatchObject({
+          kind: 'ReplaceAcquisitionDisposition',
+          acquisition,
+          value: { kind: 'artificer' },
+        });
+        expect(() => applyProjectCommand(project, catalog, intent.command)).not.toThrow();
+      }
     },
   );
 
