@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
@@ -1222,7 +1222,69 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
-  it('renders only materialized rows and clamps the selected key when removing the trailing row', async () => {
+  it('renders a fixed high-tier rarity as read-only instead of a picker', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'olympian',
+    );
+    if (base === undefined) throw new Error('Olympian trait editor fixture is missing');
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: base.giver.key,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'LightningVulnerabilityBoon', rarity: 'Duo' }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: draft.kind !== 'fallbackGold',
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: () =>
+        Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }) satisfies TraitOptionDomainProjection,
+        }),
+    }) satisfies WorkspaceTraitOfferInteraction;
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as unknown as WorkspaceInteractionCatalog;
+
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+      </Provider>,
+    );
+
+    expect(await screen.findByText('Rarity: Duo')).toBeTruthy();
+    expect(screen.queryByLabelText('option1 rarity')).toBeNull();
+    application.dispose();
+  });
+
+  it('omits offer-shape actions when no optional high-tier draft is available', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -1244,13 +1306,13 @@ describe('trait offer editor', () => {
       ...base,
       value,
       load: (draft = value) => base.load(draft),
-      nextTraitOfferDraft: () => undefined,
+      nextOptionalHighTierDraft: () => undefined,
+      previousOptionalHighTierDraft: () => undefined,
     });
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
     }) as unknown as WorkspaceInteractionCatalog;
-    const user = userEvent.setup();
     render(
       <Provider store={application.store}>
         <TraitOfferEditor address={interaction.owner} interactions={interactions} />
@@ -1260,14 +1322,9 @@ describe('trait offer editor', () => {
     expect(screen.getByLabelText('option1 trait')).toBeTruthy();
     expect(screen.getByLabelText('option2 trait')).toBeTruthy();
     expect(screen.queryByLabelText('option3 trait')).toBeNull();
-    expect(
-      (screen.getByRole('button', { name: 'Remove last option' }) as HTMLButtonElement).disabled,
-    ).toBe(false);
-    expect((screen.getByRole('button', { name: 'Add option' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
-    expect((screen.getByLabelText('Selected') as HTMLInputElement).checked).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove last option' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     application.dispose();
   });
 
@@ -1293,13 +1350,31 @@ describe('trait offer editor', () => {
         base.value.options[1]!,
       ]) as AuthoredTraitOfferTraits['options'],
     });
-    const append = vi.fn(() => two);
+    const append = vi.fn((draft: AuthoredTraitOfferTraits) =>
+      draft.options.length === 1 ? two : undefined,
+    );
     const starting = vi.fn(() => one);
     const interaction = Object.freeze({
       ...base,
       value: one,
-      load: (draft = one) => base.load(draft),
-      nextTraitOfferDraft: append,
+      load: (draft: AuthoredTraitOffer = one) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      nextOptionalHighTierDraft: append,
+      previousOptionalHighTierDraft: (draft: AuthoredTraitOfferTraits) =>
+        draft.options.length === 2 ? one : undefined,
       traitsStartingDraft: starting,
     });
     const interactions: WorkspaceInteractionCatalog = Object.freeze({
@@ -1313,15 +1388,27 @@ describe('trait offer editor', () => {
       </Provider>,
     );
 
-    const fallback = screen.getByRole('button', { name: 'Select Fallback Gold' });
+    const actions = await screen.findByRole('group', { name: 'Offer shape actions' });
+    const fallback = within(actions).getByRole('button', { name: 'Select Fallback Gold' });
+    const add = within(actions).getByRole('button', { name: 'Add option' });
     const firstTrait = screen.getByLabelText('option1 trait');
     expect(
-      fallback.compareDocumentPosition(firstTrait) & Node.DOCUMENT_POSITION_FOLLOWING,
+      firstTrait.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(add.classList.contains('quiet-action')).toBe(true);
+    expect(add.classList.contains('action-compact')).toBe(true);
+    expect(fallback.className).toBe(add.className);
+    await user.click(add);
     expect(append).toHaveBeenCalledWith(one);
     expect(screen.getByLabelText('option2 trait')).toBeTruthy();
-    await user.click(fallback);
+    expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
+    const remove = await screen.findByRole('button', { name: 'Remove last option' });
+    expect(remove.className).toBe(fallback.className);
+    await user.click(remove);
+    expect(screen.queryByLabelText('option2 trait')).toBeNull();
+    expect((screen.getByLabelText('Selected') as HTMLInputElement).checked).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.click(screen.getByRole('button', { name: 'Select Fallback Gold' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
     expect(screen.queryByLabelText('option1 trait')).toBeNull();
     expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();

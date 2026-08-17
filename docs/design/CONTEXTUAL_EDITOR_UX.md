@@ -529,13 +529,16 @@ hidden as a fresh technical probe and appears only for a retained authored
 value or an engine-supported Epic-to-Heroic replacement.
 
 The same modal renders engine-backed shape controls for exhausted Olympian and
-Hermes offers. Adding a position consumes an exact engine-produced next draft;
-returning from Fallback Gold consumes an exact engine-produced starting draft.
-Removing a trailing position and selecting Fallback Gold still run complete
-candidate assessment before Save. Fallback Gold occupies the whole offer and
-therefore renders no option-local rarity, target, Circe, or Death Defiance
-control. The application never counts ordinary, high-tier, or replacement
-candidates to decide which control is available.
+Hermes offers. Add, Remove, and supported Fallback Gold are one compact,
+consistently styled action row outside the option grid, and
+exist only when the engine exposes a next or previous optional Duo/Legendary
+draft under the `O/H/R` exhaustion contract. Removal still requires the shorter
+complete offer to pass candidate assessment. Returning from Fallback Gold
+consumes an exact engine-produced starting draft, and selecting Fallback Gold
+itself is visible only when that whole-offer outcome is supported. Fallback
+Gold renders no option-local rarity, target, Circe, or Death Defiance control.
+The application never counts ordinary, high-tier, or replacement candidates to
+decide which control is available.
 
 A declaration-owned targeted option adds one target picker backed by the exact
 trait-offer capability. It uses the same lazy boundary and catalog labels as

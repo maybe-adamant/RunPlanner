@@ -380,8 +380,7 @@ function EchoLastRewardEditor({
             const optionKey = OPTION_KEYS[index]!;
             const optionDomain = domain.traitOptionDomains[index];
             const traitPicker = optionDomain?.traitPicker ?? emptyTraitPicker;
-            const rarityPicker =
-              optionDomain?.rarityPickerFor(traitOption.traitKey) ?? emptyRarityPicker;
+            const rarityPicker = optionDomain?.rarityPickerFor(traitOption.traitKey);
             const targetPicker = optionDomain?.targetPicker ?? emptyTargetPicker;
             return (
               <div key={optionKey}>
@@ -398,7 +397,13 @@ function EchoLastRewardEditor({
                   placeholder="Choose a trait"
                   triggerLabel={traitOption.traitKey}
                 />
-                {!domain.traitRarityEditable ? null : (
+                {!domain.traitRarityEditable || rarityPicker === undefined ? (
+                  traitOption.rarity === undefined ? null : (
+                    <p className="trait-offer-fixed-rarity">
+                      Rarity: {rarityLabel(traitOption.rarity)}
+                    </p>
+                  )
+                ) : (
                   <ContextualPicker
                     ariaLabel={`Replayed ${optionKey} rarity`}
                     id={`echo-replay-${domain.rewardType}-${optionKey}-rarity`}
@@ -682,10 +687,12 @@ function TraitOfferOptionEditor({
   const loaded = controller.observe(loadable);
   const domain = loaded.result;
   const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
-  const rarityPicker = domain?.rarityPickerFor(option.traitKey) ?? emptyRarityPicker;
+  const rarityPicker = domain?.rarityPickerFor(option.traitKey);
   const targetPicker = domain?.targetPicker ?? emptyTargetPicker;
-  const hasRarity =
-    interaction.rarityEditable && interaction.giver.rarityPolicy.kind === 'selectable';
+  const hasEditableRarity =
+    interaction.rarityEditable &&
+    interaction.giver.rarityPolicy.kind === 'selectable' &&
+    interaction.rarityEditableFor(option.traitKey);
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
   const selectTrait = (traitKey: string): void => {
     const preferred = domain?.preferredOptionFor(traitKey);
@@ -758,13 +765,17 @@ function TraitOfferOptionEditor({
         placeholder="Choose a trait"
         triggerLabel={interaction.traitLabel(option.traitKey)}
       />
-      {!hasRarity ? null : (
+      {!hasEditableRarity ? (
+        option.rarity === undefined ? null : (
+          <p className="trait-offer-fixed-rarity">Rarity: {rarityLabel(option.rarity)}</p>
+        )
+      ) : (
         <ContextualPicker
           ariaLabel={`${optionKey} rarity`}
           id={`${idPrefix}-rarity`}
           label="Rarity"
           loading={loaded.pending}
-          model={rarityPicker}
+          model={rarityPicker ?? emptyRarityPicker}
           onOpenChange={(open) => {
             if (open) controller.activate(loadable);
           }}
@@ -1015,14 +1026,60 @@ function LoadedTraitOfferEditor({
     [interaction, value],
   );
   const nextTraitOfferDraft = useMemo(
-    () => (value.kind === 'traits' ? interaction.nextTraitOfferDraft?.(value) : undefined),
+    () => (value.kind === 'traits' ? interaction.nextOptionalHighTierDraft?.(value) : undefined),
     [interaction, value],
   );
+  const previousTraitOfferDraft = useMemo(
+    () =>
+      value.kind === 'traits' ? interaction.previousOptionalHighTierDraft?.(value) : undefined,
+    [interaction, value],
+  );
+  const previousTraitOfferLoadable = useMemo(
+    () =>
+      previousTraitOfferDraft === undefined
+        ? undefined
+        : traitOfferLoadable(interaction, previousTraitOfferDraft),
+    [interaction, previousTraitOfferDraft],
+  );
+  const previousTraitOfferController = useWorkspaceInteractionController<TraitOfferCandidates>();
+  const previousTraitOfferLoaded = previousTraitOfferController.observe(previousTraitOfferLoadable);
+  const previousTraitOfferSupport = candidateSupport(previousTraitOfferLoaded.result?.[0]);
+  const canRemoveOption =
+    previousTraitOfferDraft !== undefined &&
+    (previousTraitOfferSupport === 'possible' || previousTraitOfferSupport === 'forced');
+  const fallbackGoldValue = useMemo(
+    () =>
+      value.kind !== 'traits' ||
+      (interaction.giver.providerKind !== 'olympian' && interaction.giver.providerKind !== 'hermes')
+        ? undefined
+        : (Object.freeze({
+            kind: 'fallbackGold' as const,
+            giverKey: value.giverKey,
+          }) satisfies AuthoredTraitOffer),
+    [interaction.giver.providerKind, value],
+  );
+  const fallbackGoldLoadable = useMemo(
+    () =>
+      fallbackGoldValue === undefined
+        ? undefined
+        : traitOfferLoadable(interaction, fallbackGoldValue),
+    [fallbackGoldValue, interaction],
+  );
+  const fallbackGoldController = useWorkspaceInteractionController<TraitOfferCandidates>();
+  const fallbackGoldLoaded = fallbackGoldController.observe(fallbackGoldLoadable);
+  const fallbackGoldSupport = candidateSupport(fallbackGoldLoaded.result?.[0]);
   useEffect(() => {
     controller.activate(loadable);
     // Activation is deliberately tied to the opened dialog, not to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadable]);
+  useEffect(() => {
+    if (fallbackGoldLoadable !== undefined) fallbackGoldController.activate(fallbackGoldLoadable);
+  }, [fallbackGoldController, fallbackGoldLoadable]);
+  useEffect(() => {
+    if (previousTraitOfferLoadable !== undefined)
+      previousTraitOfferController.activate(previousTraitOfferLoadable);
+  }, [previousTraitOfferController, previousTraitOfferLoadable]);
   const updateValue = (nextValue: AuthoredTraitOffer): void => {
     const nextLoadable = traitOfferLoadable(interaction, nextValue);
     setValue(nextValue);
@@ -1063,17 +1120,6 @@ function LoadedTraitOfferEditor({
         </section>
       ) : (
         <>
-          {interaction.giver.providerKind !== 'olympian' &&
-          interaction.giver.providerKind !== 'hermes' ? null : (
-            <button
-              onClick={() =>
-                updateValue(Object.freeze({ kind: 'fallbackGold', giverKey: value.giverKey }))
-              }
-              type="button"
-            >
-              Select Fallback Gold
-            </button>
-          )}
           <div className="trait-offer-options">
             {value.options.map((_, index) => {
               const optionKey = OPTION_KEYS[index]!;
@@ -1104,41 +1150,46 @@ function LoadedTraitOfferEditor({
                 </div>
               );
             })}
-            {value.options.length <= 1 ||
-            (interaction.giver.providerKind !== 'olympian' &&
-              interaction.giver.providerKind !== 'hermes') ? null : (
-              <button
-                onClick={() => {
-                  const options = value.options.slice(
-                    0,
-                    -1,
-                  ) as unknown as AuthoredTraitOfferTraits['options'];
-                  const selectedIndex = OPTION_KEYS.indexOf(value.selectedOptionKey);
-                  updateValue(
-                    Object.freeze({
-                      ...value,
-                      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      selectedOptionKey: OPTION_KEYS[Math.min(selectedIndex, options.length - 1)]!,
-                    }),
-                  );
-                }}
-                type="button"
-              >
-                Remove last option
-              </button>
-            )}
-            {value.options.length >= OPTION_KEYS.length ? null : (
-              <button
-                disabled={nextTraitOfferDraft === undefined}
-                onClick={() => {
-                  if (nextTraitOfferDraft !== undefined) updateValue(nextTraitOfferDraft);
-                }}
-                type="button"
-              >
-                Add option
-              </button>
-            )}
           </div>
+          {nextTraitOfferDraft === undefined &&
+          !canRemoveOption &&
+          (fallbackGoldValue === undefined ||
+            (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced')) ? null : (
+            <div
+              aria-label="Offer shape actions"
+              className="trait-offer-shape-actions"
+              role="group"
+            >
+              {nextTraitOfferDraft === undefined ? null : (
+                <button
+                  className="quiet-action action-compact"
+                  onClick={() => updateValue(nextTraitOfferDraft)}
+                  type="button"
+                >
+                  Add option
+                </button>
+              )}
+              {!canRemoveOption || previousTraitOfferDraft === undefined ? null : (
+                <button
+                  className="quiet-action action-compact"
+                  onClick={() => updateValue(previousTraitOfferDraft)}
+                  type="button"
+                >
+                  Remove last option
+                </button>
+              )}
+              {fallbackGoldValue === undefined ||
+              (fallbackGoldSupport !== 'possible' && fallbackGoldSupport !== 'forced') ? null : (
+                <button
+                  className="quiet-action action-compact"
+                  onClick={() => updateValue(fallbackGoldValue)}
+                  type="button"
+                >
+                  Select Fallback Gold
+                </button>
+              )}
+            </div>
+          )}
         </>
       )}
       <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">

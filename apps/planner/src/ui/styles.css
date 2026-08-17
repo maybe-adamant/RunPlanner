@@ -681,6 +681,19 @@ button:disabled {
   border-color: var(--danger, #b42318);
 }
 
+.trait-offer-fixed-rarity {
+  color: var(--muted, #98a2b3);
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.trait-offer-shape-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .trait-offer-feedback {
   display: grid;
   min-height: 5rem;

@@ -447,6 +447,8 @@ export interface WorkspaceTraitOfferInteraction {
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
   readonly rarityEditable: boolean;
+  /** Declaration-backed editability for the currently selected trait's rarity. */
+  readonly rarityEditableFor: (traitKey: string) => boolean;
   readonly resetIntent?: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ResetEncounterTraitOffer' }>
   >;
@@ -467,7 +469,10 @@ export interface WorkspaceTraitOfferInteraction {
   readonly value: AuthoredTraitOffer | null;
   /** Exact engine-backed traits draft for returning from Fallback Gold. */
   readonly traitsStartingDraft?: () => AuthoredTraitOfferTraits | undefined;
-  readonly nextTraitOfferDraft?: (
+  readonly nextOptionalHighTierDraft?: (
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly previousOptionalHighTierDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
   readonly deathDefianceCondition?: {

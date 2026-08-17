@@ -2527,7 +2527,7 @@ export function bindWorkspaceInteractions(
                       const traitOffer = current?.traitOffer ?? evaluated.result.traitOfferDraft;
                       const nextTraitOffer =
                         traitOffer?.kind === 'traits'
-                          ? candidates.nextTraitOfferDraft(trait, traitOffer)
+                          ? candidates.nextOptionalHighTierTraitOfferDraft(trait, traitOffer)
                           : undefined;
                       const nestedGiver =
                         traitOffer?.kind === 'traits'
@@ -2750,6 +2750,13 @@ export function bindWorkspaceInteractions(
         load,
         owner: control.address,
         rarityEditable: control.rarityEditable !== false,
+        rarityEditableFor: (traitKey: string) => {
+          const declaration = catalog.traits.byKey[traitKey];
+          return (
+            declaration?.rarityDomain.kind === 'ranked' &&
+            declaration.rarityDomain.equippedRarities.length > 1
+          );
+        },
         ...(control.offer !== null &&
         (control.address.owner.kind === 'encounterPhase' ||
           control.address.owner.kind === 'gorgonPhase')
@@ -2776,8 +2783,10 @@ export function bindWorkspaceInteractions(
           ),
         value: control.offer,
         traitsStartingDraft: startingDraft,
-        nextTraitOfferDraft: (value: AuthoredTraitOfferTraits) =>
-          candidates.nextTraitOfferDraft(control.address, value),
+        nextOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
+          candidates.nextOptionalHighTierTraitOfferDraft(control.address, value),
+        previousOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
+          candidates.previousOptionalHighTierTraitOfferDraft(control.address, value),
         ...(control.deathDefianceCondition === undefined
           ? {}
           : {

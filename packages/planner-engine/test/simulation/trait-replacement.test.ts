@@ -7,6 +7,8 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
   nextTraitOfferDraft,
+  nextOptionalHighTierTraitOfferDraft,
+  previousOptionalHighTierTraitOfferDraft,
   traitOfferCompositionDomains,
   traitCandidates,
   recordReachedTraitOffer,
@@ -112,6 +114,46 @@ function narrowHeraDraftCatalog() {
         ),
       ),
       byKey: Object.freeze({ ...catalog.traitGivers.byKey, Hera: narrowed }),
+    }),
+  });
+}
+
+function optionalHighTierApolloCatalog() {
+  const giver = catalog.traitGivers.byKey.Apollo!;
+  const traitKeys = ['ApolloWeaponBoon', 'DoubleExManaBoon', 'ApolloSecondStageCastBoon'] as const;
+  const narrowedGiver = Object.freeze({
+    ...giver,
+    traitKeys: Object.freeze([...traitKeys]),
+    priorityTraitKeys: Object.freeze([...traitKeys]),
+  });
+  const highTierKeys = new Set(traitKeys.slice(1));
+  const narrowedTraits = Object.freeze(
+    Object.fromEntries(
+      Object.entries(catalog.traits.byKey).map(([key, declaration]) => [
+        key,
+        highTierKeys.has(key as (typeof traitKeys)[number])
+          ? Object.freeze({ ...declaration, offerRequirements: Object.freeze([]) })
+          : declaration,
+      ]),
+    ),
+  ) as typeof catalog.traits.byKey;
+  return Object.freeze({
+    ...catalog,
+    traitGivers: Object.freeze({
+      ...catalog.traitGivers,
+      values: Object.freeze(
+        catalog.traitGivers.values.map((candidate) =>
+          candidate.key === 'Apollo' ? narrowedGiver : candidate,
+        ),
+      ),
+      byKey: Object.freeze({ ...catalog.traitGivers.byKey, Apollo: narrowedGiver }),
+    }),
+    traits: Object.freeze({
+      ...catalog.traits,
+      values: Object.freeze(
+        catalog.traits.values.map((declaration) => narrowedTraits[declaration.key]!),
+      ),
+      byKey: narrowedTraits,
     }),
   });
 }
@@ -581,6 +623,31 @@ describe('derived Olympian trait replacement', () => {
     const completed = nextTraitOfferDraft(catalog, next!, before);
     expect(completed?.options).toHaveLength(3);
     expect(assessTraitReplacementComposition(catalog, completed!, before).legal).toBe(true);
+  });
+
+  it('exposes shape transitions only for optional Duo and Legendary outcomes', () => {
+    const testCatalog = optionalHighTierApolloCatalog();
+    const before = createTraitHistoryState();
+    const initial = traitOfferStartingDraft(testCatalog, 'Apollo', before);
+    expect(initial?.options.map((option) => option.rarity)).toEqual(['Common', 'Legendary', 'Duo']);
+    const withoutDuo = previousOptionalHighTierTraitOfferDraft(testCatalog, initial!);
+    expect(withoutDuo?.options.map((option) => option.rarity)).toEqual(['Common', 'Legendary']);
+    const withoutHighTier = previousOptionalHighTierTraitOfferDraft(testCatalog, withoutDuo!);
+    expect(withoutHighTier?.options.map((option) => option.rarity)).toEqual(['Common']);
+    expect(previousOptionalHighTierTraitOfferDraft(testCatalog, withoutHighTier!)).toBeUndefined();
+    expect(
+      nextOptionalHighTierTraitOfferDraft(testCatalog, withoutHighTier!, before)?.options.map(
+        (option) => option.rarity,
+      ),
+    ).toEqual(['Common', 'Legendary']);
+
+    const ordinaryOnly = offer(
+      'Apollo',
+      Object.freeze([{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }]),
+    ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>;
+    expect(
+      nextOptionalHighTierTraitOfferDraft(narrowApolloCatalog(), ordinaryOnly, before),
+    ).toBeUndefined();
   });
 
   it('reports typed whole-offer findings for unsupported fallback and missing exhaustion fill', () => {

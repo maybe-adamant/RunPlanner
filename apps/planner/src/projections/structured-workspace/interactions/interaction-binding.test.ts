@@ -313,13 +313,7 @@ describe('structured workspace interaction binding', () => {
       expect.arrayContaining([expect.objectContaining({ code: 'fullTraitOfferWidthRequired' })]),
     );
 
-    const repaired = interaction.nextTraitOfferDraft?.(removed);
-    if (repaired === undefined) throw new Error('engine did not provide an append draft');
-    const [repairedCandidate] = interaction.load(repaired);
-    expect(repairedCandidate?.evaluation).toMatchObject({
-      kind: 'traitOffer',
-      result: { supported: true },
-    });
+    expect(interaction.nextOptionalHighTierDraft?.(removed)).toBeUndefined();
 
     const [fallbackCandidate] = interaction.load({
       kind: 'fallbackGold',
