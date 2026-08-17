@@ -430,30 +430,32 @@ function CompletionWorkbench({
             Judgment — choose {node.judgment.requiredCount} inactive Arcana cards
             <SemanticOwnerMarker address={control.owner} />
           </legend>
-          {control.choices
-            .filter(
-              (choice) =>
-                node.judgment!.inactiveArcanaKeys.includes(choice.value) ||
-                control.value.includes(choice.value),
-            )
-            .map((choice) => {
-              const checked = control.value.includes(choice.value);
-              return (
-                <label key={choice.value}>
-                  <input
-                    checked={checked}
-                    onChange={() => {
-                      const next = checked
-                        ? control.value.filter((key) => key !== choice.value)
-                        : [...control.value, choice.value];
-                      dispatch(authoredProjectCommandDispatched(control.intentFor(next).command));
-                    }}
-                    type="checkbox"
-                  />
-                  {choice.label}
-                </label>
-              );
-            })}
+          <div className="completion-judgment-options">
+            {control.choices
+              .filter(
+                (choice) =>
+                  node.judgment!.inactiveArcanaKeys.includes(choice.value) ||
+                  control.value.includes(choice.value),
+              )
+              .map((choice) => {
+                const checked = control.value.includes(choice.value);
+                return (
+                  <label key={choice.value}>
+                    <input
+                      checked={checked}
+                      onChange={() => {
+                        const next = checked
+                          ? control.value.filter((key) => key !== choice.value)
+                          : [...control.value, choice.value];
+                        dispatch(authoredProjectCommandDispatched(control.intentFor(next).command));
+                      }}
+                      type="checkbox"
+                    />
+                    {choice.label}
+                  </label>
+                );
+              })}
+          </div>
         </fieldset>
       )}
       {keepsake === undefined || node.keepsakeSelection === undefined ? null : (
@@ -707,9 +709,12 @@ function InspectorNode({
 
 function CompletionOutline({
   completion,
+  selectedNodeKey,
 }: {
   readonly completion: WorkspaceBiome['completionOutline'];
+  readonly selectedNodeKey?: string;
 }) {
+  const dispatch = useAppDispatch();
   if (completion.length === 0) return null;
   return (
     <section aria-label="Biome completion" className="biome-completion-outline">
@@ -719,8 +724,18 @@ function CompletionOutline({
           const roleLabel = node.role === 'postboss' ? 'Postboss' : 'Boss';
           return (
             <li key={node.key}>
-              <span>{roleLabel}</span>
-              {node.label === roleLabel ? null : <strong>{node.label}</strong>}
+              <button
+                aria-label={`Open ${roleLabel} completion`}
+                aria-pressed={selectedNodeKey === node.key}
+                className="biome-completion-node"
+                data-assessment={node.marker.assessment}
+                data-findings={node.marker.findingCount > 0}
+                onClick={() => dispatch(semanticOwnerFocused(node.marker.address))}
+                type="button"
+              >
+                <span>{roleLabel}</span>
+                {node.label === roleLabel ? null : <strong>{node.label}</strong>}
+              </button>
             </li>
           );
         })}
@@ -834,7 +849,12 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
             />
           ))}
         </div>
-        <CompletionOutline completion={biome.completionOutline} />
+        <CompletionOutline
+          completion={biome.completionOutline}
+          {...(subject?.kind === 'node' && subject.node.kind === 'completion'
+            ? { selectedNodeKey: subject.node.key }
+            : {})}
+        />
       </section>
       <aside aria-label="Details" className="biome-inspector">
         <header className="biome-inspector-heading">

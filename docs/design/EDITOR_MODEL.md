@@ -867,7 +867,10 @@ cost/capacity and assesses each proposed Arcana toggle or Void rank; React only
 disables proposals that the engine rejects. Ordinary automatic Arcana
 indicators and the derived Fear total are read-only engine products. The same
 workspace exposes a reached Judgment completion control only at its exact
-derived completion owner; there is no route-level Judgment editor.
+derived completion owner; there is no route-level Judgment editor. The fixed
+Boss and Postboss entries in the completion outline are selectable inspector
+destinations, so a completed Judgment result remains reopenable after its
+finding disappears. The Judgment picker renders one Arcana choice per row.
 
 Run State presents the engine-folded banned-trait labels and Forfeit's
 current-biome inactive, available, or consumed status. React neither accumulates
