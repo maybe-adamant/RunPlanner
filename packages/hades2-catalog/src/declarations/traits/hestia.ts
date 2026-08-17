@@ -350,21 +350,4 @@ export const hestiaGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'HestiaWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HestiaSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HestiaCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

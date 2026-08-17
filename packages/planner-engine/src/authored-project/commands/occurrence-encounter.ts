@@ -2,7 +2,6 @@ import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catal
 import type { EncounterPhaseAddress } from '../addresses';
 import type { ProjectDocument, RoomEncounterState, RoomOccurrence } from '../model';
 import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounters';
-import { createDefaultEncounterTraitOffer, createDefaultGorgonAthenaOffer } from '../traits';
 import {
   failCommand,
   requireOccurrence,
@@ -61,12 +60,17 @@ function updatedSelections(
   if (!set.encounterDefinitionKeys.includes(encounterKey)) {
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
   }
-  if (current.encounterKeyByPhase[phase.phaseKey] === encounterKey) return current;
+  const selectionUnchanged = current.encounterKeyByPhase[phase.phaseKey] === encounterKey;
   const priorOffers = current.traitOffersByPhase ?? {};
   const phaseOffers = { ...(priorOffers[phase.phaseKey] ?? {}) };
-  const defaultOffer = createDefaultEncounterTraitOffer(catalog, encounterKey);
-  if (defaultOffer !== undefined && phaseOffers[encounterKey] === undefined) {
-    phaseOffers[encounterKey] = defaultOffer;
+  const producer = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer;
+  if (selectionUnchanged && command.kind !== 'ResetEncounter') return current;
+  if (selectionUnchanged && producer === undefined) return current;
+  if (
+    producer !== undefined &&
+    (command.kind === 'ResetEncounter' || phaseOffers[encounterKey] === undefined)
+  ) {
+    phaseOffers[encounterKey] = null;
   }
   const traitOffersByPhase =
     Object.keys(phaseOffers).length === 0
@@ -108,9 +112,7 @@ function updatedGorgonResult(
   if (selectedKey === undefined || !gorgonSlotOwnedByDeclaration(catalog, binding, room.gameName))
     failCommand(command, `${room.gameName}.${phase.phaseKey} is not a Gorgon-hosting declaration`);
   const nextOffer =
-    command.value === true && prior.athenaOffer === undefined
-      ? createDefaultGorgonAthenaOffer(catalog)
-      : prior.athenaOffer;
+    command.value === true && prior.athenaOffer === undefined ? null : prior.athenaOffer;
   const next = Object.freeze({
     deathDefianceConditionMet: command.value,
     ...(nextOffer === undefined ? {} : { athenaOffer: nextOffer }),

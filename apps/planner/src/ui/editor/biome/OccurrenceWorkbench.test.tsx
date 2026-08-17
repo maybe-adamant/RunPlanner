@@ -10,6 +10,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -625,6 +626,83 @@ describe('OccurrenceWorkbench', () => {
     ).toBeTruthy();
   });
 
+  it('authors an Artificer Boon trait offer after the opening Boon is consumed by Forfeit', async () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const source = createIncomingRewardAddress(goldenFBiome, occurrenceId);
+    const acquisition = createAcquisitionRoleAddress(source, 'self');
+    let project = applyProjectCommand(
+      createFConversionFrontierProject('MetaCurrencyDrop').project,
+      catalog,
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer', replacement: null },
+      },
+    );
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const workspace = workspaceProjection(view.application);
+    const conversion = workspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    const boon = conversion?.artificerReplacementOptions.find(
+      (option) => option.offer.rewardType === 'Boon',
+    );
+    const replacement = conversion?.artificerReplacementControl;
+    const rewardInteraction =
+      replacement === undefined
+        ? undefined
+        : workspace.interactions.rewards.get(semanticAddressKey(replacement.owner.address));
+    if (boon === undefined || rewardInteraction === undefined)
+      throw new Error('Artificer Boon replacement interaction is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(rewardInteraction.intentFor(boon.offer).command),
+      ),
+    );
+    expect(await screen.findByRole('button', { name: 'Edit Trait: Choose trait' })).toBeTruthy();
+    const editedWorkspace = workspaceProjection(view.application);
+    const editedConversion = editedWorkspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    const traitControl = editedConversion?.artificerReplacementControl?.traitOffers?.[0];
+    const traitInteraction =
+      traitControl === undefined
+        ? undefined
+        : editedWorkspace.interactions.traitOffers.get(semanticAddressKey(traitControl.address));
+    const draft = traitInteraction?.traitsStartingDraft?.();
+    if (traitInteraction === undefined || draft === undefined)
+      throw new Error('Artificer Boon trait draft is missing');
+    expect(draft.options).toHaveLength(3);
+    expect(() =>
+      act(() =>
+        view.application.store.dispatch(
+          authoredProjectCommandDispatched(traitInteraction.intentFor(draft).command),
+        ),
+      ),
+    ).not.toThrow();
+    project = view.application.store.getState().projectWorkspace.history.present;
+    expect(occurrenceState(project, 'Underworld', 'F', occurrenceId)).toMatchObject({
+      reward: {
+        dispositionByAcquisitionRole: {
+          self: {
+            kind: 'artificer',
+            replacement: {
+              offer: { rewardType: 'Boon' },
+              traitOffersByAcquisitionRole: {
+                source: { kind: 'traits', rarificationActions: [] },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
@@ -639,7 +717,7 @@ describe('OccurrenceWorkbench', () => {
     expect(condition.disabled).toBe(false);
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Edit Trait: Divine Dash/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Edit Trait: Choose trait' })).toBeTruthy();
     });
     expect(
       view.application.store
@@ -669,6 +747,18 @@ describe('OccurrenceWorkbench', () => {
       value: true,
     });
     project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+      value: {
+        traitKeys: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
       encounterKey: 'AthenaCombatP',
@@ -679,7 +769,7 @@ describe('OccurrenceWorkbench', () => {
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
-    expect(screen.getByRole('button', { name: /Edit Trait: Divine Dash · Epic/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Trait: Divine Dash' })).toBeTruthy();
   });
 
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {

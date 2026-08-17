@@ -447,6 +447,9 @@ export interface WorkspaceTraitOfferInteraction {
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
   readonly rarityEditable: boolean;
+  readonly resetIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetEncounterTraitOffer' }>
+  >;
   readonly optionDomain: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,

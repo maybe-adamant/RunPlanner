@@ -406,71 +406,6 @@ export function createUnresolvedTraitOffers(
   );
 }
 
-/** Creates the declaration-owned default for an encounter-local field-NPC offer. */
-export function createDefaultEncounterTraitOffer(
-  catalog: Catalog,
-  encounterKey: string,
-): AuthoredTraitOffer | undefined {
-  const encounter = catalog.encounterDefinitions.byKey[encounterKey];
-  const producer = encounter?.traitOfferProducer;
-  if (producer === undefined) return undefined;
-  const giver = catalog.traitGivers.byKey[producer.giverKey];
-  const defaults = giver?.defaultOffer;
-  if (giver === undefined || defaults === undefined) return undefined;
-  return Object.freeze({
-    kind: 'traits',
-    giverKey: giver.key,
-    options: Object.freeze(
-      defaults.options.map((option) => {
-        const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
-        return withDefaultTraitOptionDetail(catalog, {
-          ...option,
-          ...(disposition?.kind === 'echo' && disposition.effect === 'doubleLevel'
-            ? { echoPomTarget: null }
-            : {}),
-        });
-      }),
-    ) as AuthoredTraitOfferTraits['options'],
-    selectedOptionKey:
-      defaults.selectedOption === 0
-        ? 'option1'
-        : defaults.selectedOption === 1
-          ? 'option2'
-          : 'option3',
-    rarificationActions: Object.freeze([]),
-    ...(traitGiverUsesOfferContext(catalog, giver.key, 'deathDefianceConditionMet')
-      ? { deathDefianceConditionMet: false }
-      : {}),
-  });
-}
-
-/** Declaration-owned Athena decisions for one Gorgon child. */
-export function createDefaultGorgonAthenaOffer(
-  catalog: Catalog,
-): AuthoredGorgonAthenaOffer | undefined {
-  const keepsake = catalog.keepsakes.values.find(
-    (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
-  );
-  const effect = keepsake?.effect;
-  const providerKey = effect?.kind === 'gorgonAmulet' ? effect.providerKey : undefined;
-  const giver = providerKey === undefined ? undefined : catalog.traitGivers.byKey[providerKey];
-  const defaults = giver?.defaultOffer;
-  if (giver === undefined || defaults === undefined) return undefined;
-  return Object.freeze({
-    traitKeys: Object.freeze(defaults.options.map((option) => option.traitKey)) as readonly [
-      string,
-      string,
-      string,
-    ],
-    selectedOptionKey:
-      defaults.selectedOption === 0
-        ? 'option1'
-        : defaults.selectedOption === 1
-          ? 'option2'
-          : 'option3',
-  });
-}
-
 /** Transient full offer consumed by ordinary assessment and presentation. */
 export function materializeGorgonAthenaOffer(
   catalog: Catalog,
@@ -590,6 +525,7 @@ export function selectedPickupProducer(
   const producers = Object.values(encounters.traitOffersByPhase ?? {})
     .flatMap((offers) => Object.values(offers))
     .flatMap((offer) => {
+      if (offer === null) return [];
       if (offer.kind === 'fallbackGold') return [];
       const selected = offer.options[optionIndex(offer.selectedOptionKey)];
       if (selected === undefined) return [];

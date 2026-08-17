@@ -121,7 +121,6 @@ export {
   selectedPickupProducer,
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
-  createDefaultGorgonAthenaOffer,
   materializeGorgonAthenaOffer,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,

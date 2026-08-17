@@ -88,12 +88,4 @@ export const hadesGiver = {
     'HadesInvisibilityRetaliateBoon',
   ],
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'HadesLifestealBoon' },
-      { traitKey: 'HadesCastProjectileBoon' },
-      { traitKey: 'HadesPreDamageBoon' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

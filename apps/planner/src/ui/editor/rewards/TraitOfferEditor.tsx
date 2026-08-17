@@ -932,10 +932,12 @@ export function TraitOfferEditor({
   address,
   interactions,
   onCommit,
+  onReset,
 }: {
   readonly address: TraitOfferAddress;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
+  readonly onReset?: () => void;
 }) {
   const interaction = requireWorkspaceInteraction(
     interactions.traitOffers,
@@ -955,6 +957,7 @@ export function TraitOfferEditor({
       interaction={interaction}
       key={traitOfferRevision(interaction)}
       {...(onCommit === undefined ? {} : { onCommit })}
+      {...(onReset === undefined ? {} : { onReset })}
     />
   );
 }
@@ -963,10 +966,12 @@ function LoadedTraitOfferEditor({
   initialValue,
   interaction,
   onCommit,
+  onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
+  readonly onReset?: () => void;
 }) {
   const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
@@ -1173,6 +1178,11 @@ function LoadedTraitOfferEditor({
       >
         Save trait offer
       </button>
+      {onReset === undefined ? null : (
+        <button className="quiet-action" onClick={onReset} type="button">
+          Reset to unresolved
+        </button>
+      )}
     </div>
   );
 }
@@ -1295,6 +1305,14 @@ export function TraitOfferDialog({
             executeIntent(interaction.intentFor(value));
             close();
           }}
+          {...(interaction.resetIntent === undefined
+            ? {}
+            : {
+                onReset: () => {
+                  executeIntent(interaction.resetIntent!);
+                  close();
+                },
+              })}
         />
       </div>
     </dialog>

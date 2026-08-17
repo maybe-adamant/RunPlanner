@@ -646,8 +646,10 @@ function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext)
     context.deathDefianceConditionMet,
     context.echoLastRewardAvailable,
     context.echoLastRewardRecreation,
+    context.freshRarityOverride,
     context.circeRemovableFearVow,
     context.manualArcanaGraspCost,
+    context.currentKeepsakeKey,
   ]);
 }
 
@@ -1827,10 +1829,14 @@ export function traitCandidates(
       candidates.push(Object.freeze({ traitKey, available: assessment.legal, assessment }));
       continue;
     }
-    for (const rarity of trait.rarityDomain.freshOfferRarities) {
-      // Heroic is intentionally never in a fresh domain, even when a source
-      // declaration accidentally exposes it through a broader giver policy.
-      if (rarity === 'Heroic') continue;
+    const freshRarities =
+      context.freshRarityOverride === undefined
+        ? trait.rarityDomain.freshOfferRarities
+        : [context.freshRarityOverride];
+    for (const rarity of freshRarities) {
+      // Ordinary fresh generation never admits Heroic. A chronological source
+      // override such as progressed Gorgon rarity is already the exact result.
+      if (rarity === 'Heroic' && context.freshRarityOverride !== 'Heroic') continue;
       const rarityAssessment = addCompositionContext(
         traitKey,
         assessTraitOption(
@@ -2052,6 +2058,7 @@ function traitDraft(
       candidates.map((candidate) => candidateToOption(catalog, candidate)),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
+    rarificationActions: Object.freeze([]),
   });
 }
 

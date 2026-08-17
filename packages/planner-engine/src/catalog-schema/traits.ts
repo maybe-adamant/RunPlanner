@@ -207,20 +207,6 @@ export interface TraitDeclaration {
   readonly hammerCompatibility?: HammerCompatibility;
 }
 
-export interface TraitOfferOptionDefault {
-  readonly traitKey: string;
-  readonly rarity?: TraitRarity;
-}
-
-export interface TraitOfferDefaults {
-  readonly options: readonly [
-    TraitOfferOptionDefault,
-    TraitOfferOptionDefault,
-    TraitOfferOptionDefault,
-  ];
-  readonly selectedOption: 0 | 1 | 2;
-}
-
 /** The rarity controls a giver exposes while authoring a fresh offer. */
 export type TraitGiverRarityPolicy =
   | { readonly kind: 'none' }
@@ -237,7 +223,6 @@ export interface TraitGiverDeclaration {
   readonly rarityPolicy: TraitGiverRarityPolicy;
   /** Closed source-menu participation normalized for Calling Card. */
   readonly callingCardMenu: boolean;
-  readonly defaultOffer?: TraitOfferDefaults;
   readonly denialParticipates?: boolean;
 }
 

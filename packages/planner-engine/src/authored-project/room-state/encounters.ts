@@ -18,11 +18,7 @@ import {
 } from '../traits';
 import { decodeEchoLastRunBoon } from './echo-last-run';
 import { decodeAllTogetherResult } from './all-together';
-import {
-  TRAIT_OPTION_KEYS,
-  createDefaultEncounterTraitOffer,
-  traitGiverUsesOfferContext,
-} from '../traits';
+import { TRAIT_OPTION_KEYS, traitGiverUsesOfferContext } from '../traits';
 import type { RoomEncounterState } from '../model';
 import {
   expectArray,
@@ -188,13 +184,13 @@ export function createDefaultRoomEncounterState(
     if (hostsGorgon)
       gorgonResultByPhase[binding.slotKey] ??= Object.freeze({ deathDefianceConditionMet: false });
   }
-  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   for (const binding of bindings.values()) {
     const encounterKey =
       binding.kind === 'fixed' ? binding.encounterDefinitionKey : values[binding.slotKey];
     if (encounterKey === undefined) continue;
-    const offer = createDefaultEncounterTraitOffer(catalog, encounterKey);
-    if (offer !== undefined) traitOffersByPhase[binding.slotKey] = { [encounterKey]: offer };
+    if (catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer !== undefined)
+      traitOffersByPhase[binding.slotKey] = { [encounterKey]: null };
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(values),
@@ -732,21 +728,29 @@ export function decodeRoomEncounterState(
       result.deathDefianceConditionMet,
       `${path}.gorgonResultByPhase.${phaseKey}.deathDefianceConditionMet`,
     );
-    let athenaOffer: AuthoredGorgonAthenaOffer | undefined;
-    if (hasOffer) {
-      athenaOffer = decodeGorgonAthenaOffer(
-        result.athenaOffer,
-        catalog,
-        gorgonProviderKey,
+    if (deathDefianceConditionMet && !hasOffer)
+      failProjectDocument(
         `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
+        'is required while the Gorgon condition is active',
       );
+    let athenaOffer: AuthoredGorgonAthenaOffer | null | undefined;
+    if (hasOffer) {
+      athenaOffer =
+        result.athenaOffer === null
+          ? null
+          : decodeGorgonAthenaOffer(
+              result.athenaOffer,
+              catalog,
+              gorgonProviderKey,
+              `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
+            );
     }
     gorgonResultByPhase[phaseKey] = Object.freeze({
       deathDefianceConditionMet,
       ...(athenaOffer === undefined ? {} : { athenaOffer }),
     });
   }
-  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   if (state.traitOffersByPhase !== undefined) {
     const rawByPhase = expectRecord(state.traitOffersByPhase, `${path}.traitOffersByPhase`);
     // Fixed phases are persistable only when their declaration owns a trait
@@ -778,7 +782,7 @@ export function decodeRoomEncounterState(
           : legalTraitOfferEncounterKeys(catalog, binding);
       if (Object.keys(rawByEncounter).length === 0)
         failProjectDocument(`${path}.traitOffersByPhase.${phaseKey}`, 'must not be empty');
-      const phaseOffers: Record<string, AuthoredTraitOffer> = {};
+      const phaseOffers: Record<string, AuthoredTraitOffer | null> = {};
       for (const encounterKey of Object.keys(rawByEncounter)) {
         if (!legalEncounterKeys.includes(encounterKey))
           failProjectDocument(
@@ -791,15 +795,33 @@ export function decodeRoomEncounterState(
             `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
             'encounter has no trait offer producer',
           );
-        phaseOffers[encounterKey] = decodeEncounterTraitOffer(
-          rawByEncounter[encounterKey],
-          catalog,
-          producer.giverKey,
-          `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
-        );
+        phaseOffers[encounterKey] =
+          rawByEncounter[encounterKey] === null
+            ? null
+            : decodeEncounterTraitOffer(
+                rawByEncounter[encounterKey],
+                catalog,
+                producer.giverKey,
+                `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
+              );
       }
       traitOffersByPhase[phaseKey] = phaseOffers;
     }
+  }
+  for (const binding of bindings.values()) {
+    const encounterKey =
+      binding.kind === 'fixed'
+        ? binding.encounterDefinitionKey
+        : encounterKeyByPhase[binding.slotKey];
+    if (
+      encounterKey !== undefined &&
+      catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer !== undefined &&
+      !Object.hasOwn(traitOffersByPhase[binding.slotKey] ?? {}, encounterKey)
+    )
+      failProjectDocument(
+        `${path}.traitOffersByPhase.${binding.slotKey}.${encounterKey}`,
+        'is required for the selected trait-producing encounter',
+      );
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
@@ -883,7 +905,7 @@ export function reconcileRoomEncounterState(
               : { athenaOffer: priorGorgon.athenaOffer }),
           });
   }
-  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer>> = {};
+  const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   for (const binding of replacementBindings.values()) {
     const selected =
       binding.kind === 'fixed' ? binding.encounterDefinitionKey : selections[binding.slotKey];
@@ -897,22 +919,25 @@ export function reconcileRoomEncounterState(
           ).encounterDefinitionKeys,
     );
     const priorPhase = previous.traitOffersByPhase?.[binding.slotKey];
-    const phaseOffers: Record<string, AuthoredTraitOffer> = {};
+    const phaseOffers: Record<string, AuthoredTraitOffer | null> = {};
     if (priorPhase !== undefined) {
       for (const [encounterKey, offer] of Object.entries(priorPhase)) {
         if (
           legalKeys.has(encounterKey) &&
-          catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer?.giverKey ===
-            offer.giverKey
+          (offer === null ||
+            catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer?.giverKey ===
+              offer.giverKey)
         ) {
           phaseOffers[encounterKey] = offer;
         }
       }
     }
-    if (selected !== undefined && phaseOffers[selected] === undefined) {
-      const fallback = createDefaultEncounterTraitOffer(catalog, selected);
-      if (fallback !== undefined) phaseOffers[selected] = fallback;
-    }
+    if (
+      selected !== undefined &&
+      phaseOffers[selected] === undefined &&
+      catalog.encounterDefinitions.byKey[selected]?.traitOfferProducer !== undefined
+    )
+      phaseOffers[selected] = null;
     if (Object.keys(phaseOffers).length > 0) traitOffersByPhase[binding.slotKey] = phaseOffers;
   }
   return Object.freeze({

@@ -23,6 +23,7 @@ import {
   createCompleteFGProject,
   createGoldenFGHProject,
   createRepresentativeNOPQProject,
+  authorLegalTraitOffers,
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
@@ -284,6 +285,7 @@ describe('keepsake selection candidates', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
+    project = authorLegalTraitOffers(project);
     const assembled = simulateProjectAssembly(catalog, project);
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembled, phase)

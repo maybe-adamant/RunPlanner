@@ -553,21 +553,4 @@ export const aphroditeGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'AphroditeWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'AphroditeSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'AphroditeCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

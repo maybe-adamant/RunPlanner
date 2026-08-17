@@ -270,21 +270,4 @@ export const hermesGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'HermesWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HermesSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HermesCastDiscountBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

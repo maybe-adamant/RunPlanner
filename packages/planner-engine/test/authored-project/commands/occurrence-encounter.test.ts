@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
@@ -152,11 +153,13 @@ describe('authored encounter occurrence commands', () => {
       { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
       'Encounter',
     );
-    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'ArtemisCombatF',
-    });
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'ArtemisCombatF',
+      }),
+    );
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceTraitSelection',
@@ -164,6 +167,56 @@ describe('authored encounter occurrence commands', () => {
         selectedOptionKey: 'option4' as never,
       }),
     ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceTraitSelection' }));
+  });
+
+  it('resets an encounter offer to unresolved, including when its encounter is already the default', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const authored = authorLegalTraitOffers(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'ArtemisCombatF',
+      }),
+    );
+    const trait = createTraitOfferAddress(phase, 'selection');
+    const resetOffer = applyProjectCommand(authored, catalog, {
+      kind: 'ResetEncounterTraitOffer',
+      trait,
+    });
+    expect(
+      occurrence(resetOffer, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+        ?.Encounter?.ArtemisCombatF,
+    ).toBeNull();
+
+    const fSet = catalog.encounterSets.byKey.FEncountersDefault!;
+    const defaultArtemisSet = Object.freeze({
+      ...fSet,
+      defaultEncounterDefinitionKey: 'ArtemisCombatF',
+    });
+    const encounterSetValues = Object.freeze(
+      catalog.encounterSets.values.map((set) => (set.key === fSet.key ? defaultArtemisSet : set)),
+    );
+    const defaultArtemisCatalog = Object.freeze({
+      ...catalog,
+      encounterSets: Object.freeze({
+        values: encounterSetValues,
+        byKey: Object.freeze({
+          ...catalog.encounterSets.byKey,
+          [fSet.key]: defaultArtemisSet,
+        }),
+      }),
+    }) as Catalog;
+    const resetEncounter = applyProjectCommand(authored, defaultArtemisCatalog, {
+      kind: 'ResetEncounter',
+      phase,
+    });
+    const resetState = occurrence(resetEncounter, 'F', goldenFOccurrenceId(5, 1)).encounters;
+    expect(resetState.encounterKeyByPhase.Encounter).toBe('ArtemisCombatF');
+    expect(resetState.traitOffersByPhase?.Encounter?.ArtemisCombatF).toBeNull();
   });
 
   it('applies a valid top-level selection, resets it, and records one atomic history edit', () => {

@@ -2750,6 +2750,18 @@ export function bindWorkspaceInteractions(
         load,
         owner: control.address,
         rarityEditable: control.rarityEditable !== false,
+        ...(control.offer !== null &&
+        (control.address.owner.kind === 'encounterPhase' ||
+          control.address.owner.kind === 'gorgonPhase')
+          ? {
+              resetIntent: Object.freeze({
+                command: Object.freeze({
+                  kind: 'ResetEncounterTraitOffer' as const,
+                  trait: control.address,
+                }),
+              }),
+            }
+          : {}),
         optionDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>

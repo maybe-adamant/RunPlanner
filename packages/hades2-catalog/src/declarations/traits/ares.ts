@@ -520,21 +520,4 @@ export const aresGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'AresWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'AresSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'AresCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

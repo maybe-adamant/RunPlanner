@@ -83,12 +83,4 @@ export const medeaGiver = {
     'NewStatusDamage',
   ],
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'HealingOnDeathCurse' },
-      { traitKey: 'MoneyOnDeathCurse' },
-      { traitKey: 'ManaOverTimeCurse' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

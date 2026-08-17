@@ -1,7 +1,6 @@
 import type {
   TraitCatalog,
   TraitDeclaration,
-  TraitOfferDefaults,
   TraitRequirementExpression,
   TraitRarity,
   ScalableGodTraitRarityFloorEffect,
@@ -51,20 +50,6 @@ export interface RawAspectDeclaration {
   readonly weaponKey: string;
 }
 
-export interface RawTraitOfferOptionDefault {
-  readonly traitKey: string;
-  readonly rarity?: TraitRarity;
-}
-
-export interface RawTraitOfferDefaults {
-  readonly options: readonly [
-    RawTraitOfferOptionDefault,
-    RawTraitOfferOptionDefault,
-    RawTraitOfferOptionDefault,
-  ];
-  readonly selectedOption: 0 | 1 | 2;
-}
-
 export interface RawTraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
@@ -75,7 +60,6 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'selectable'; readonly rarities: readonly TraitRarity[] }
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
-  readonly defaultOffer?: RawTraitOfferDefaults;
   readonly denialParticipates?: boolean;
 }
 
@@ -103,4 +87,4 @@ export interface RawTraitCatalogInput {
   readonly deferredTraitKeys: readonly string[];
 }
 
-export type { TraitCatalog, TraitOfferDefaults, TraitRequirementExpression, TraitRarity };
+export type { TraitCatalog, TraitRequirementExpression, TraitRarity };

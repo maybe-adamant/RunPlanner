@@ -557,21 +557,4 @@ export const apolloGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'ApolloWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'ApolloSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'ApolloCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

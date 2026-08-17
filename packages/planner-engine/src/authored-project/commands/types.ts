@@ -341,6 +341,11 @@ export type TraitOfferCommand =
       readonly value: AuthoredTraitOffer;
     }
   | {
+      /** Clears only an encounter-owned generated offer back to unresolved. */
+      readonly kind: 'ResetEncounterTraitOffer';
+      readonly trait: TraitOfferAddress;
+    }
+  | {
       readonly kind: 'ReplaceGorgonAthenaOffer';
       readonly trait: TraitOfferAddress;
       readonly value: AuthoredGorgonAthenaOffer;
@@ -372,7 +377,7 @@ export type AcquisitionDispositionCommand = {
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
 export type DerivedShopEntryPayloadCommand =
   | Extract<AcquisitionSiteCommand, { readonly kind: 'ReplaceAcquisitionEntryOffer' }>
-  | TraitOfferCommand
+  | Exclude<TraitOfferCommand, { readonly kind: 'ResetEncounterTraitOffer' }>
   | LevelResolutionCommand
   | AcquisitionDispositionCommand;
 

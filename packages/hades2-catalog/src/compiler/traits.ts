@@ -6,8 +6,6 @@ import type {
   TraitDeclaration,
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
-  TraitOfferDefaults,
-  TraitOfferOptionDefault,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   TargetedTraitAcquisition,
@@ -33,8 +31,6 @@ import type {
   RawTraitCatalogInput,
   RawTraitDeclaration,
   RawTraitGiverDeclaration,
-  RawTraitOfferDefaults,
-  RawTraitOfferOptionDefault,
   RawWeaponDeclaration,
 } from '../declarations/traits';
 
@@ -365,47 +361,6 @@ function normalizeRequirement(
     default:
       fail(`${path}.kind`, `unknown requirement kind ${String(requirement.kind)}`);
   }
-}
-
-function normalizeDefaults(
-  defaults: TraitOfferDefaults,
-  giver: Pick<TraitGiverDeclaration, 'traitKeys'>,
-  traits: CatalogCollection<TraitDeclaration>,
-  path: string,
-): TraitOfferDefaults {
-  const declaration = requireObject(defaults, path) as unknown as RawTraitOfferDefaults;
-  const rawOptions = requireArray(declaration.options, `${path}.options`);
-  if (rawOptions.length !== 3) fail(`${path}.options`, 'must contain exactly three options');
-  const options = rawOptions.map((rawOption, index): TraitOfferOptionDefault => {
-    const optionPath = `${path}.options[${index}]`;
-    const option = requireObject(rawOption, optionPath) as unknown as RawTraitOfferOptionDefault;
-    const traitKey = requireNonEmpty(option.traitKey, `${optionPath}.traitKey`);
-    if (!giver.traitKeys.includes(traitKey))
-      fail(`${optionPath}.traitKey`, 'must belong to giver pool');
-    const trait = traits.byKey[traitKey];
-    if (trait === undefined) fail(`${optionPath}.traitKey`, `unknown trait ${traitKey}`);
-    if (trait.rarityDomain.kind === 'none') {
-      if (option.rarity !== undefined) {
-        fail(`${optionPath}.rarity`, `rarityless trait ${traitKey} has no rarity`);
-      }
-      return Object.freeze({ traitKey });
-    }
-    const rarity = closedValue(option.rarity, RARITIES, `${optionPath}.rarity`);
-    if (!trait.rarityDomain.freshOfferRarities.includes(rarity)) {
-      fail(`${optionPath}.rarity`, `${rarity} is not a fresh rarity for ${traitKey}`);
-    }
-    return Object.freeze({ traitKey, rarity });
-  });
-  if (new Set(options.map((option) => option.traitKey)).size !== 3) {
-    fail(`${path}.options`, 'trait keys must be distinct');
-  }
-  if (![0, 1, 2].includes(declaration.selectedOption)) {
-    fail(`${path}.selectedOption`, 'must be 0, 1, or 2');
-  }
-  return Object.freeze({
-    options: Object.freeze(options) as TraitOfferDefaults['options'],
-    selectedOption: declaration.selectedOption,
-  });
 }
 
 function normalizeWeapons(
@@ -873,7 +828,6 @@ function normalizeGivers(
       'traitKeys',
       'priorityTraitKeys',
       'rarityPolicy',
-      'defaultOffer',
       'denialParticipates',
     ]);
     const unsupportedKey = Object.keys(giver).find((key) => !allowedKeys.has(key));
@@ -1009,51 +963,6 @@ function normalizeGivers(
     } else if (priorityTraitKeys.length !== 0) {
       fail(`${path}.priorityTraitKeys`, 'non-Olympian givers must not declare priority traits');
     }
-    if (providerKind !== 'hammer' && giver.defaultOffer === undefined)
-      fail(`${path}.defaultOffer`, 'is required');
-    const defaultOffer =
-      giver.defaultOffer === undefined
-        ? undefined
-        : normalizeDefaults(giver.defaultOffer, { traitKeys }, traits, `${path}.defaultOffer`);
-    const validateDefaultPolicy = (defaults: TraitOfferDefaults, defaultsPath: string): void => {
-      defaults.options.forEach((option, optionIndex) => {
-        const trait = traits.byKey[option.traitKey];
-        if (
-          frozenRarityPolicy.kind === 'selectable' &&
-          option.rarity !== undefined &&
-          !(frozenRarityPolicy.rarities as readonly TraitRarity[]).includes(option.rarity) &&
-          !(
-            trait?.rarityDomain.kind === 'ranked' &&
-            trait.rarityDomain.freshOfferRarities.length === 1 &&
-            trait.rarityDomain.freshOfferRarities[0] === option.rarity
-          )
-        ) {
-          fail(
-            `${defaultsPath}.options[${optionIndex}].rarity`,
-            `${option.rarity} is outside the giver rarity domain`,
-          );
-        }
-        if (frozenRarityPolicy.kind === 'fixed' && option.rarity !== frozenRarityPolicy.rarity) {
-          fail(
-            `${defaultsPath}.options[${optionIndex}].rarity`,
-            `${option.rarity ?? 'missing'} is outside the fixed giver rarity`,
-          );
-        }
-      });
-    };
-    if (defaultOffer !== undefined) validateDefaultPolicy(defaultOffer, `${path}.defaultOffer`);
-    if (providerKind === 'olympian' && defaultOffer !== undefined) {
-      const prioritySet = new Set(priorityTraitKeys);
-      if (defaultOffer.options.some((option) => !prioritySet.has(option.traitKey))) {
-        fail(`${path}.defaultOffer`, 'Olympian defaults must use priority traits only');
-      }
-      const defaultSlots = defaultOffer.options.map(
-        (option) => traits.byKey[option.traitKey]?.ordinaryBoonSlot,
-      );
-      if (!defaultSlots.includes('Melee') && !defaultSlots.includes('Secondary')) {
-        fail(`${path}.defaultOffer`, 'Olympian defaults must include Melee or Secondary traits');
-      }
-    }
     return Object.freeze({
       key: requireNonEmpty(giver.key, `${path}.key`),
       label: requireNonEmpty(giver.label, `${path}.label`),
@@ -1063,7 +972,6 @@ function normalizeGivers(
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
       ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
-      ...(defaultOffer === undefined ? {} : { defaultOffer }),
     });
   });
   const denialKeys = values.filter((giver) => giver.denialParticipates).map((giver) => giver.key);

@@ -249,23 +249,6 @@ function createFConversionLoadoutProject(): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(
-      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
-      'source',
-    ),
-    value: {
-      kind: 'traits',
-      giverKey: 'Apollo',
-      options: [
-        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-    },
-  });
   return project;
 }
 

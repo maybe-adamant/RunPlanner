@@ -1424,6 +1424,7 @@ export function decodeBiomeTopology(
     const selectedPickupDispositions = Object.values(encounters.traitOffersByPhase ?? {})
       .flatMap((phase) => Object.values(phase))
       .map((offer) => {
+        if (offer === null) return undefined;
         if (offer.kind === 'fallbackGold') return undefined;
         const selected = offer.options[optionIndex(offer.selectedOptionKey)];
         return selected === undefined

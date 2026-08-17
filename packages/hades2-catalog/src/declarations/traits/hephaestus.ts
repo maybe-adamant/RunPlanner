@@ -421,21 +421,4 @@ export const hephaestusGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'HephaestusWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HephaestusSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'HephaestusCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

@@ -125,8 +125,4 @@ export const narcissusGiver = {
   priorityTraitKeys: [],
   traitKeys: narcissusTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [{ traitKey: 'NarcissusA' }, { traitKey: 'NarcissusD' }, { traitKey: 'NarcissusE' }],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

@@ -81,12 +81,4 @@ export const icarusGiver = {
     'UpgradeHammerBoon',
   ],
   rarityPolicy: { kind: 'none' },
-  defaultOffer: {
-    options: [
-      { traitKey: 'FocusAttackDamageTrait' },
-      { traitKey: 'FocusSpecialDamageTrait' },
-      { traitKey: 'OmegaExplodeBoon' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

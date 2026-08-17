@@ -26,6 +26,7 @@ import type {
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedShopAcquisitionRewardState,
+  traitGiverUsesOfferContext,
 } from '../../authored-project/traits';
 import {
   artificerReplacementEntryKey,
@@ -103,6 +104,7 @@ import {
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
+  type TraitOfferContext,
 } from '../traits';
 import {
   optionIndex,
@@ -544,9 +546,10 @@ function applyTraitOfferForAcquisition(
   if (authored === null) {
     const owner = traitOwnerAddress(reward.origin);
     const giver =
-      reward.offer === undefined
+      reward.traitContext?.resolvedProviderKey ??
+      (reward.offer === undefined
         ? undefined
-        : traitGiverForAcquisitionRole(catalog, reward.offer, role);
+        : traitGiverForAcquisitionRole(catalog, reward.offer, role));
     if (findings !== undefined && owner !== undefined)
       addTraitFinding(
         findings,
@@ -1010,10 +1013,37 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
 export interface EncounterTraitOfferSettlement {
   readonly branch: RewardBranchState;
   /** Exact post-outer/pre-effect branch retained when an authored child blocks settlement. */
-  readonly blockedChild?: {
-    readonly address: SemanticAddress;
-    readonly branch: RewardBranchState;
-  };
+  readonly blockedChild?: ReachedTraitChildCheckpoint;
+}
+
+function encounterPreOfferTraitContext(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  providerKey: string,
+  loadout: { readonly weaponKey: string; readonly aspectKey: string } | undefined,
+  deathDefianceConditionMet: boolean | undefined,
+  freshRarityOverride: import('../../catalog-schema').TraitRarity | undefined,
+): TraitOfferContext {
+  const effectiveDeathDefianceCondition =
+    deathDefianceConditionMet ??
+    (traitGiverUsesOfferContext(catalog, providerKey, 'deathDefianceConditionMet')
+      ? false
+      : undefined);
+  const recreation = branch.history.lastRewardRecreation;
+  return Object.freeze({
+    ...(loadout ?? {}),
+    resolvedProviderKey: providerKey,
+    manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
+    circeRemovableFearVow: circeResolutionDomain(catalog, branch.arcanaFear, 'disableFear')
+      .outerAvailable,
+    echoLastRewardAvailable: recreation !== undefined,
+    ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
+    ...(effectiveDeathDefianceCondition === undefined
+      ? {}
+      : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
+    ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
+    currentKeepsakeKey: branch.keepsakes.currentKey,
+  });
 }
 
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
@@ -1021,7 +1051,7 @@ export function settleEncounterTraitOffer(
   catalog: Catalog,
   branch: RewardBranchState,
   origin: SemanticAddress,
-  offer: AuthoredTraitOffer,
+  offer: AuthoredTraitOffer | null,
   sequence: number,
   lifecyclePoint: string,
   findings?: Map<string, FindingRegionEntry>,
@@ -1031,7 +1061,37 @@ export function settleEncounterTraitOffer(
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
   loadout?: { readonly weaponKey: string; readonly aspectKey: string },
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
+  unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
+  const providerKey = offer?.giverKey ?? unresolvedProviderKey;
+  if (providerKey === undefined)
+    throw new Error('encounter trait offer settlement requires its known provider');
+  const traitContext = encounterPreOfferTraitContext(
+    catalog,
+    branch,
+    providerKey,
+    loadout,
+    offer?.kind === 'traits'
+      ? (offer.deathDefianceConditionMet ?? deathDefianceConditionMet)
+      : deathDefianceConditionMet,
+    freshRarityOverride,
+  );
+  if (offer === null) {
+    return applyTraitOfferForAcquisition(
+      catalog,
+      branch,
+      {
+        origin,
+        traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: null }),
+        traitContext,
+      },
+      acquisitionRole,
+      lifecyclePoint,
+      sequence,
+      findings,
+      findingChronology,
+    );
+  }
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
   const settledBranch = ((): RewardBranchState => {
     if (offer.kind === 'fallbackGold') {
@@ -1041,9 +1101,7 @@ export function settleEncounterTraitOffer(
         {
           origin,
           traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-          ...(deathDefianceConditionMet === undefined
-            ? {}
-            : { traitContext: Object.freeze({ deathDefianceConditionMet }) }),
+          traitContext,
         },
         acquisitionRole,
         lifecyclePoint,
@@ -1059,8 +1117,6 @@ export function settleEncounterTraitOffer(
         : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
     const resolution = selected?.circeResolution;
     const preChoiceTraitHistory = branch.traitHistory ?? createTraitHistoryState();
-    const effectiveDeathDefianceCondition =
-      offer.deathDefianceConditionMet ?? deathDefianceConditionMet;
     const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
     const circeDomain =
       disposition?.kind === 'circe'
@@ -1069,20 +1125,7 @@ export function settleEncounterTraitOffer(
     const source = {
       origin,
       traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-      traitContext: Object.freeze({
-        ...(loadout === undefined ? {} : loadout),
-        manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
-        circeRemovableFearVow: circeDomain?.effect === 'disableFear' && circeDomain.outerAvailable,
-        echoLastRewardAvailable: branch.history.lastRewardRecreation !== undefined,
-        ...(branch.history.lastRewardRecreation === undefined
-          ? {}
-          : { echoLastRewardRecreation: branch.history.lastRewardRecreation }),
-        ...(effectiveDeathDefianceCondition === undefined
-          ? {}
-          : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
-        ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
-        currentKeepsakeKey: branch.keepsakes.currentKey,
-      }),
+      traitContext,
     } as const;
     // Record the exact pre-effect frontier before validating Circe's authored
     // child. Circe's ordinary offer findings stay provisional until that child
@@ -1251,9 +1294,9 @@ export function settleEncounterTraitOffer(
           traitContext: Object.freeze({
             freshRarityOverride: outcome.effectiveRarity,
             ordinarySlotReplacement: 'forbidden',
-            ...(effectiveDeathDefianceCondition === undefined
+            ...(traitContext.deathDefianceConditionMet === undefined
               ? {}
-              : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
+              : { deathDefianceConditionMet: traitContext.deathDefianceConditionMet }),
           }),
         },
         'echoLastRunSelection',

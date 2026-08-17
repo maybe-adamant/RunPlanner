@@ -145,12 +145,4 @@ export const artemisGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      { traitKey: 'SupportingFireBoon', rarity: 'Common' },
-      { traitKey: 'CritBonusBoon', rarity: 'Common' },
-      { traitKey: 'DashOmegaBuffBoon', rarity: 'Common' },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

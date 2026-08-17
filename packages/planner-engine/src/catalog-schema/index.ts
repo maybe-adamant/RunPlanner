@@ -19,8 +19,6 @@ export type {
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
   TraitOfferContextKey,
-  TraitOfferDefaults,
-  TraitOfferOptionDefault,
   TraitOrdinaryBoonSlot,
   TraitProviderKind,
   TraitRarity,

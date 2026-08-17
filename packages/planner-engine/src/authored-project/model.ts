@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 42 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 43 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -118,7 +118,7 @@ export interface ShipCombatState {
 export interface AuthoredGorgonPhaseResult {
   readonly deathDefianceConditionMet: boolean;
   /** Conditional ordinary Athena offer; omitted while dormant. */
-  readonly athenaOffer?: AuthoredGorgonAthenaOffer;
+  readonly athenaOffer?: AuthoredGorgonAthenaOffer | null;
 }
 
 export type SideRoomGeneration = 'generated' | 'notGenerated';
@@ -138,7 +138,7 @@ export interface RoomEncounterState {
   readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
   /** Sparse authored offers keyed by stable phase and concrete encounter. */
   readonly traitOffersByPhase?: Readonly<
-    Record<string, Readonly<Record<string, AuthoredTraitOffer>>>
+    Record<string, Readonly<Record<string, AuthoredTraitOffer | null>>>
   >;
 }
 

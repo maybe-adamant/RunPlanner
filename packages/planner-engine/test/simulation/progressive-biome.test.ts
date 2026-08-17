@@ -19,6 +19,7 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
+  traitGiverForAcquisitionRole,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
@@ -445,6 +446,58 @@ describe('progressive biome evaluation', () => {
       result: { artificerSupported: true, artificerConvertible: true },
     });
   });
+
+  it.each(['Boon', 'HermesUpgrade', 'WeaponUpgrade'] as const)(
+    'retains the source Artificer capability while its %s replacement trait offer blocks',
+    (replacementRewardType) => {
+      const fixture = createFConversionFrontierProject('MetaCurrencyDrop');
+      let project = applyProjectCommand(fixture.project, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: fixture.acquisition,
+        value: { kind: 'artificer', replacement: null },
+      });
+      const unresolved = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'acquisitionConversion', acquisition: fixture.acquisition });
+      if (
+        unresolved.kind !== 'acquisitionConversion' ||
+        unresolved.result.artificerReplacementAddress === undefined
+      ) {
+        throw new Error('Artificer replacement frontier is missing');
+      }
+      const replacement = unresolved.result.artificerReplacementOptions?.find(
+        (option) => option.offer.rewardType === replacementRewardType,
+      );
+      if (replacement === undefined)
+        throw new Error(`${replacementRewardType} Artificer replacement is missing`);
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: fixture.acquisition,
+        value: { kind: 'artificer', replacement },
+      });
+      const assembly = simulateProjectAssembly(catalog, project);
+      const role = Object.keys(replacement.traitOffersByAcquisitionRole)[0];
+      if (role === undefined) throw new Error(`${replacementRewardType} has no trait role`);
+      const giverKey = traitGiverForAcquisitionRole(catalog, replacement.offer, role);
+      if (giverKey === undefined) throw new Error(`${replacementRewardType} has no trait giver`);
+      const trait = createTraitOfferAddress(unresolved.result.artificerReplacementAddress, role);
+      expect(assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
+      );
+      const selected = createPreparedProjectCandidateSession(catalog, assembly);
+      expect(
+        selected.evaluate({ kind: 'acquisitionConversion', acquisition: fixture.acquisition }),
+      ).toMatchObject({
+        kind: 'acquisitionConversion',
+        result: { artificerSupported: true, artificerReplacementAddress: trait.owner },
+      });
+      expect(selected.traitOfferStartingDraft(trait, giverKey)).toMatchObject({
+        kind: 'traits',
+        options: expect.any(Array),
+      });
+    },
+  );
 
   it('retains an earlier acquisition conversion capability when a later reward region is invalid', () => {
     const fixture = createFInvalidLaterConversionProject();

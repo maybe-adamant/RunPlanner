@@ -354,21 +354,4 @@ export const zeusGiver = {
     kind: 'selectable',
     rarities: ['Common', 'Rare', 'Epic'],
   },
-  defaultOffer: {
-    options: [
-      {
-        traitKey: 'ZeusWeaponBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'ZeusSpecialBoon',
-        rarity: 'Common',
-      },
-      {
-        traitKey: 'ZeusCastBoon',
-        rarity: 'Common',
-      },
-    ],
-    selectedOption: 0,
-  },
 } as const satisfies RawTraitGiverDeclaration;

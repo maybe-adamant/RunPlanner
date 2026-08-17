@@ -21,7 +21,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 function authoredTraits(
-  offer: AuthoredTraitOffer | undefined,
+  offer: AuthoredTraitOffer | null | undefined,
 ): Extract<AuthoredTraitOffer, { kind: 'traits' }> {
   if (offer?.kind !== 'traits') throw new Error('expected a materialized trait offer');
   return offer;
@@ -537,10 +537,10 @@ describe('field NPC encounter requirements', () => {
     expect(support(project, fNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatF');
     expect(support(project, gNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatG');
 
-    project = select(project, gNpcPhase, 'ArtemisCombatG');
+    project = authorLegalTraitOffers(select(project, gNpcPhase, 'ArtemisCombatG'));
     expect(support(project, fNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatF');
 
-    project = select(project, fNpcPhase, 'ArtemisCombatF');
+    project = authorLegalTraitOffers(select(project, fNpcPhase, 'ArtemisCombatF'));
     const gSupport = support(project, gNpcPhase);
 
     expect(gSupport).toMatchObject({
@@ -563,17 +563,31 @@ describe('field NPC encounter requirements', () => {
   it('authors Artemis offers by concrete encounter, retains dormant edits, and equips only when reached', () => {
     let project = createCompleteFGProject();
     project = select(project, fNpcPhase, 'ArtemisCombatF');
-    const selected = authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1));
-    const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatF;
-    if (initialOffer?.kind !== 'traits') throw new Error('Artemis encounter must offer traits');
+    expect(
+      authoredOccurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.traitOffersByPhase
+        ?.Encounter?.ArtemisCombatF,
+    ).toBeNull();
+    const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
+    const unresolvedAssembly = simulateProjectAssembly(catalog, project);
+    expect(unresolvedAssembly.evaluation.routes[0]?.findings).toContainEqual(
+      expect.objectContaining({ code: 'traitOfferMissing', origin: traitAddress }),
+    );
+    const initialOffer = createPreparedProjectCandidateSession(
+      catalog,
+      unresolvedAssembly,
+    ).traitOfferStartingDraft(traitAddress, 'Artemis');
+    if (initialOffer === undefined) throw new Error('Artemis candidate offer is missing');
     expect(initialOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
-    expect(initialOffer?.options.map((option) => option.traitKey)).toEqual([
+    expect(initialOffer.options.map((option) => option.traitKey)).toEqual([
       'SupportingFireBoon',
       'CritBonusBoon',
       'DashOmegaBuffBoon',
     ]);
-
-    const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: traitAddress,
+      value: initialOffer,
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
       trait: traitAddress,
@@ -625,6 +639,11 @@ describe('field NPC encounter requirements', () => {
       occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
       gameName: 'F_Story01',
     });
+    expect(
+      authoredOccurrence(project, 'F', occurrenceId).encounters.traitOffersByPhase?.Encounter
+        ?.Story_Arachne_01,
+    ).toBeNull();
+    project = authorLegalTraitOffers(project);
     const selected = authoredOccurrence(project, 'F', occurrenceId);
     const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.Story_Arachne_01;
     expect(initialOffer).toMatchObject({
@@ -764,6 +783,11 @@ describe('field NPC encounter requirements', () => {
       value: { kind: 'normal', exitKey: 'exit2' },
     });
     const storyPhase = phase(goldenIBiome, reachedStoryId);
+    expect(
+      authoredOccurrence(project, 'I', reachedStoryId).encounters.traitOffersByPhase?.Encounter
+        ?.Story_Hades_01,
+    ).toBeNull();
+    project = authorLegalTraitOffers(project);
     const storyOffer = authoredOccurrence(project, 'I', reachedStoryId).encounters
       .traitOffersByPhase?.Encounter?.Story_Hades_01;
     expect(storyOffer).toMatchObject({
@@ -771,8 +795,8 @@ describe('field NPC encounter requirements', () => {
       deathDefianceConditionMet: false,
       options: [
         { traitKey: 'HadesLifestealBoon' },
-        { traitKey: 'HadesCastProjectileBoon' },
         { traitKey: 'HadesPreDamageBoon' },
+        { traitKey: 'HadesChronosDebuffBoon' },
       ],
     });
     const editedOffer = {
@@ -912,10 +936,10 @@ describe('field NPC encounter requirements', () => {
     if (selected.state.kind !== 'ephyraCombat') throw new Error('N side-room state is missing');
     const sideOffer =
       selected.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
-    expect(sideOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
+    expect(sideOffer).toBeNull();
     const dormantOffer =
       selected.state.sideRooms.sideDoor2?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
-    expect(dormantOffer).toMatchObject({ giverKey: 'Artemis', selectedOptionKey: 'option1' });
+    expect(dormantOffer).toBeNull();
     project = applyProjectCommand(project, sideCatalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(nLocalPhase, 'selection'),
@@ -1209,10 +1233,8 @@ describe('field NPC encounter requirements', () => {
     expect(
       authoredOccurrence(project, 'O', occurrenceId).encounters.traitOffersByPhase?.Combat1
         ?.IcarusCombatO,
-    ).toMatchObject({
-      giverKey: 'Icarus',
-      selectedOptionKey: 'option1',
-    });
+    ).toBeNull();
+    project = authorLegalTraitOffers(project);
     expect(support(project, combat2)?.candidateEncounterKeys).not.toContain('IcarusCombatO');
     expect(authoredOccurrence(project, 'O', occurrenceId).state).toEqual(originalState);
 
@@ -1304,6 +1326,7 @@ describe('field NPC encounter requirements', () => {
     let project = fixture.project;
     expect(support(project, fixture.encounter)?.candidateEncounterKeys).toContain('IcarusCombatP');
     project = select(project, fixture.encounter, 'IcarusCombatP');
+    project = authorLegalTraitOffers(project);
 
     const traitAddress = createTraitOfferAddress(fixture.encounter, 'selection');
     project = applyProjectCommand(project, catalog, {
@@ -1411,6 +1434,7 @@ describe('field NPC encounter requirements', () => {
 
     expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
     project = select(project, athenaPhase, 'AthenaCombatP');
+    project = authorLegalTraitOffers(project);
     const selected = authoredOccurrence(project, 'P', occurrenceId);
     const athenaOffer = authoredTraits(
       selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP,

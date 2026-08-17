@@ -37,6 +37,7 @@ import {
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
@@ -198,6 +199,29 @@ describe('project workspace application state', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
+    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: bridgeId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
     store.dispatch(authoredProjectReplaced(project));
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
@@ -298,6 +322,29 @@ describe('project workspace application state', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
+    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: bridgeId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'EchoLastRunBoon' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+        ],
+        selectedOptionKey: 'option2',
+        deathDefianceConditionMet: false,
+      },
+    });
     store.dispatch(authoredProjectReplaced(project));
     const trait = createTraitOfferAddress(
       createEncounterPhaseAddress(
@@ -358,6 +405,29 @@ describe('project workspace application state', () => {
         occurrenceId: createOccurrenceId('golden-h-combat09'),
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = authorLegalTraitOffers(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: bridgeId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'EchoLastReward' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+        ],
+        selectedOptionKey: 'option2',
+        deathDefianceConditionMet: false,
+      },
     });
     store.dispatch(authoredProjectReplaced(project));
     const trait = createTraitOfferAddress(
