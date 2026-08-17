@@ -35,6 +35,8 @@ import {
   assessTraitOffer,
   assessTraitOfferBeforeRarification,
   nextTraitOfferDraft,
+  nextOptionalHighTierTraitOfferDraft,
+  previousOptionalHighTierTraitOfferDraft,
   traitOfferStartingDraft,
   assessSelectedTargetedAcquisition,
   targetedAcquisitionTargetKeys,
@@ -94,6 +96,12 @@ export interface TraitOfferCandidateCapability {
   /** One exact supported traits draft for returning from Fallback Gold, if any. */
   readonly traitsStartingDraft: (giverKey: string) => AuthoredTraitOfferTraits | undefined;
   readonly nextTraitOptionDraft: (
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly nextOptionalHighTierDraft: (
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly previousOptionalHighTierDraft: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
   readonly targetedAcquisitionTargets: (
@@ -725,6 +733,19 @@ export function createTraitOfferCandidateArtifacts(
             )
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined);
         },
+        nextOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
+          branchContexts
+            .map((context) =>
+              nextOptionalHighTierTraitOfferDraft(
+                catalog,
+                value,
+                context.before,
+                traitOfferCandidateContext(context.context, value),
+              ),
+            )
+            .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
+        previousOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
+          previousOptionalHighTierTraitOfferDraft(catalog, value),
         targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.map((context) => {

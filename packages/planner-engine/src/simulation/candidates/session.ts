@@ -271,6 +271,14 @@ export interface ProjectCandidateSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
+  readonly nextOptionalHighTierTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly previousOptionalHighTierTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
 }
 
 function assertNever(value: never): never {
@@ -603,5 +611,13 @@ export function createPreparedProjectCandidateSession(
       traitCapability(owner)?.traitsStartingDraft(giverKey),
     nextTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>
       traitCapability(owner)?.nextTraitOptionDraft(value),
+    nextOptionalHighTierTraitOfferDraft: (
+      owner: TraitOfferAddress,
+      value: AuthoredTraitOfferTraits,
+    ) => traitCapability(owner)?.nextOptionalHighTierDraft(value),
+    previousOptionalHighTierTraitOfferDraft: (
+      owner: TraitOfferAddress,
+      value: AuthoredTraitOfferTraits,
+    ) => traitCapability(owner)?.previousOptionalHighTierDraft(value),
   });
 }

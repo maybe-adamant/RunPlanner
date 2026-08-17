@@ -26,6 +26,7 @@ import type { TraitFindingCode } from './model';
 export type { TraitFindingCode } from './model';
 import {
   optionIndex,
+  TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
   withDefaultTraitOptionDetail,
 } from '../authored-project/traits';
@@ -2044,6 +2045,47 @@ export function nextTraitOfferDraft(
     if (canComplete(next)) return next;
   }
   return undefined;
+}
+
+function isOptionalHighTierOption(catalog: Catalog, option: AuthoredTraitOption): boolean {
+  const declaration = catalog.traits.byKey[option.traitKey];
+  return (
+    declaration?.rarityDomain.kind === 'ranked' &&
+    declaration.rarityDomain.freshOfferRarities.length > 0 &&
+    declaration.rarityDomain.freshOfferRarities.every(
+      (rarity) => rarity === 'Duo' || rarity === 'Legendary',
+    )
+  );
+}
+
+/** Adds only one optional Duo/Legendary outcome to an otherwise retained offer shape. */
+export function nextOptionalHighTierTraitOfferDraft(
+  catalog: Catalog,
+  draft: AuthoredTraitOfferTraits,
+  history: TraitHistoryState,
+  context: TraitOfferContext = {},
+): AuthoredTraitOfferTraits | undefined {
+  const next = nextTraitOfferDraft(catalog, draft, history, context);
+  if (next === undefined || next.options.length !== draft.options.length + 1) return undefined;
+  const appended = next.options.at(draft.options.length);
+  return appended !== undefined && isOptionalHighTierOption(catalog, appended) ? next : undefined;
+}
+
+/** Removes only a trailing optional Duo/Legendary outcome; candidate assessment owns legality. */
+export function previousOptionalHighTierTraitOfferDraft(
+  catalog: Catalog,
+  draft: AuthoredTraitOfferTraits,
+): AuthoredTraitOfferTraits | undefined {
+  if (draft.options.length <= 1) return undefined;
+  const removed = draft.options.at(-1);
+  if (removed === undefined || !isOptionalHighTierOption(catalog, removed)) return undefined;
+  const options = Object.freeze(draft.options.slice(0, -1)) as AuthoredTraitOfferTraits['options'];
+  const selectedIndex = optionIndex(draft.selectedOptionKey);
+  return Object.freeze({
+    ...draft,
+    options,
+    selectedOptionKey: TRAIT_OPTION_KEYS[Math.min(selectedIndex, options.length - 1)]!,
+  });
 }
 
 function traitDraft(

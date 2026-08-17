@@ -215,7 +215,11 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     giverKey: string,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly nextTraitOfferDraft: (
+  readonly nextOptionalHighTierTraitOfferDraft: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ) => AuthoredTraitOfferTraits | undefined;
+  readonly previousOptionalHighTierTraitOfferDraft: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
@@ -863,15 +867,26 @@ export function createCandidateSessionFactory(
         ).evaluator.traitOfferStartingDraft(owner, giverKey);
         return draft?.kind === 'traits' ? draft : undefined;
       },
-      nextTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) => {
-        const draft = requireProjectCache(
+      nextOptionalHighTierTraitOfferDraft: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOfferTraits,
+      ) =>
+        requireProjectCache(
           cache,
           assembly,
           catalog,
           options,
-        ).evaluator.nextTraitOfferDraft(owner, value);
-        return draft?.kind === 'traits' ? draft : undefined;
-      },
+        ).evaluator.nextOptionalHighTierTraitOfferDraft(owner, value),
+      previousOptionalHighTierTraitOfferDraft: (
+        owner: TraitOfferAddress,
+        value: AuthoredTraitOfferTraits,
+      ) =>
+        requireProjectCache(
+          cache,
+          assembly,
+          catalog,
+          options,
+        ).evaluator.previousOptionalHighTierTraitOfferDraft(owner, value),
       traitOfferFocusedOptions: (
         owner: TraitOfferAddress,
         value: AuthoredTraitOffer,

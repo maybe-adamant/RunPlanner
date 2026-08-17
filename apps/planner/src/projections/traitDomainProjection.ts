@@ -276,7 +276,10 @@ export function createTraitDomainProjection(
       ): ContextualPickerModel<TraitRarity> | undefined => {
         if (rarityModels.has(traitKey)) return rarityModels.get(traitKey);
         const declaration = catalog.traits.byKey[traitKey];
-        if (declaration?.rarityDomain.kind !== 'ranked') {
+        if (
+          declaration?.rarityDomain.kind !== 'ranked' ||
+          declaration.rarityDomain.equippedRarities.length <= 1
+        ) {
           rarityModels.set(traitKey, undefined);
           return undefined;
         }

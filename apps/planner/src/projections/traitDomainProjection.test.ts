@@ -206,7 +206,7 @@ describe('trait option domain projection', () => {
     expect(repair.preferredOptionFor(second)).toEqual(rankedOption(second, 'Rare'));
   });
 
-  it('hides fresh Heroic probes, exposes a supported Heroic replacement, omits Hammer rarity, and drops losing-branch evidence', () => {
+  it('hides fresh Heroic probes, exposes a supported replacement, and omits fixed rarity pickers', () => {
     const apollo = giver('Apollo');
     const first = apollo.traitKeys[0];
     const second = apollo.traitKeys[1];
@@ -292,6 +292,25 @@ describe('trait option domain projection', () => {
       Object.freeze(hammerPrepared.variants.map((option) => candidate(option, focused(true)))),
     );
     expect(hammerProjection.rarityPickerFor(hammer1)).toBeUndefined();
+
+    const poseidon = giver('Poseidon');
+    for (const [traitKey, rarity] of [
+      ['LightningVulnerabilityBoon', 'Duo'],
+      ['AmplifyConeBoon', 'Legendary'],
+    ] as const) {
+      const fixedDraft = offer(
+        'Poseidon',
+        Object.freeze([Object.freeze({ traitKey, rarity })]) as AuthoredTraitOfferTraits['options'],
+      );
+      const fixedPrepared = service.prepare(poseidon, fixedDraft, 'option1');
+      const fixedProjection = service.project(
+        poseidon,
+        fixedDraft,
+        fixedPrepared,
+        Object.freeze(fixedPrepared.variants.map((option) => candidate(option, focused(true)))),
+      );
+      expect(fixedProjection.rarityPickerFor(traitKey)).toBeUndefined();
+    }
   });
 
   it('projects exact acquisition targets with catalog labels and pins a stale authored target', () => {

@@ -799,11 +799,13 @@ in React. A room/reward summary, the chronological route Traits panel, and a
 finding destination all reference the same `TraitOfferAddress` and bound
 interaction. The shared modal renders the one to three materialized option
 rows, their selected option, and contextual trait pickers, or the mutually
-exclusive Fallback Gold outcome. Engine-projected controls add the next
-supported row, remove only a trailing row, select fallback, or return to one
-supported trait draft. Selectable-rarity givers receive a contextual rarity
-picker; fixed-rarity providers retain their declaration-owned rarity without a
-control, while rarityless NPC and Hammer rows omit rarity entirely. Giver
+exclusive Fallback Gold outcome. When fewer than three dependable ordinary
+boons remain, engine-projected controls may add or remove only a trailing
+optional Duo/Legendary outcome; otherwise the shape controls are absent. The
+engine likewise owns fallback availability and the supported draft for
+returning to traits. Selectable-rarity traits receive a contextual rarity
+picker; declaration-fixed Duo/Legendary traits retain their rarity as read-only
+text, while rarityless NPC and Hammer rows omit rarity entirely. Giver
 labels, selected trait labels, contextual support,
 and findings are presentation products derived from catalog and engine outputs.
 

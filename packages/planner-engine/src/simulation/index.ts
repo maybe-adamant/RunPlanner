@@ -326,6 +326,8 @@ export {
   assessTraitOfferDomainComposition,
   traitOfferStartingDraft,
   nextTraitOfferDraft,
+  nextOptionalHighTierTraitOfferDraft,
+  previousOptionalHighTierTraitOfferDraft,
   isPomEligibleTrait,
   targetedAcquisitionTargetKeys,
   createTraitHistoryState,
