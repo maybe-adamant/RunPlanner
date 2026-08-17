@@ -123,3 +123,18 @@ export interface SemanticFinding {
   readonly origin: SemanticAddress;
   readonly evidence: FindingEvidence;
 }
+
+/**
+ * Missing authored payload that may stop an acquisition chronology without
+ * making its persisted participation/order structurally impossible.
+ */
+export function isAcquisitionAuthorshipMissingFinding(finding: SemanticFinding): boolean {
+  switch (finding.code) {
+    case 'rewardMissing':
+    case 'traitOfferMissing':
+    case 'allTogetherResultMissing':
+      return true;
+    default:
+      return false;
+  }
+}

@@ -10,6 +10,7 @@ import {
   createOccurrenceAddress,
   createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -30,7 +31,13 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
-import { authorLegalTraitOffers, createCompleteFGProject } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  createCompleteFGProject,
+  createFMidshopUnresolvedBlindBoxBeforePomProject,
+  fMidshopPomShopId,
+  goldenFBiome,
+} from '@run-planner/test-fixtures';
 import {
   createFGenerationProject,
   fGenerationBaselineBatches,
@@ -352,6 +359,62 @@ describe('F candidate support', () => {
       { kind: 'shopOffer', result: { supported: true, findings: [] } },
       { kind: 'acquisitionOrder', result: { supported: true, findings: [] } },
     ]);
+  });
+
+  it('separates a structural later purchase from its blocked chronology evaluation', () => {
+    const project = createFMidshopUnresolvedBlindBoxBeforePomProject();
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      'roomExit',
+    );
+    const hiddenSource = createTraitOfferAddress(
+      createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Boon'),
+      'hiddenSource',
+    );
+    const selected = simulateProject(catalog, project);
+    expect(
+      selected.findings.filter(
+        (finding) =>
+          finding.code === 'traitOfferMissing' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(hiddenSource),
+      ),
+    ).toHaveLength(1);
+
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({ kind: 'acquisitionOrder', site, entryKeys: ['Boon', 'Minor'] });
+    expect(candidate).toMatchObject({
+      kind: 'acquisitionOrder',
+      result: {
+        supported: false,
+        findings: [
+          {
+            code: 'traitOfferMissing',
+            origin: hiddenSource,
+          },
+        ],
+      },
+    });
+
+    const ordered = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['Boon', 'Minor'],
+    });
+    expect(
+      ordered.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fMidshopPomShopId)
+        ?.acquisitionSites?.roomExit?.order,
+    ).toEqual(['Boon', 'Minor']);
+    const evaluation = simulateProject(catalog, ordered);
+    expect(evaluation.findings.map((finding) => finding.code)).toContain('traitOfferMissing');
+    expect(evaluation.findings.map((finding) => finding.code)).not.toContain(
+      'shopPurchaseUnavailable',
+    );
+    expect(evaluation.findings.map((finding) => finding.code)).not.toContain('missingPomTarget');
   });
 
   it('preserves same-batch Boon-source peer exclusion at the incoming-reward owner', () => {

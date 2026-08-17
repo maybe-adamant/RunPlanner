@@ -39,7 +39,6 @@ textarea {
 
 select[data-candidate-support='impossible'],
 .purchase-control[data-candidate-support='impossible'],
-.shop-purchase-membership[data-candidate-support='impossible'],
 .hub-membership-control[data-candidate-support='impossible'] {
   border-color: #ee8f8f;
   color: #f2a0a0;

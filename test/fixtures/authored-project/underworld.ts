@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   applyProjectCommand,
   createBatchRewardStoreAddress,
@@ -11,6 +12,7 @@ import {
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
@@ -443,6 +445,31 @@ export function createFMidshopPomFrontierProject(): ProjectDocument {
     value: { rewardType: 'StoreRewardRandomStack' },
   });
   return authorLegalTraitOffers(project);
+}
+
+/**
+ * Selected F Midshop from the reported Decision 6 contact: a purchased
+ * Mystery Box is waiting on its hidden-source offer while the Pom remains an
+ * unpurchased inventory row.
+ */
+export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocument {
+  let project = createFMidshopPomFrontierProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Boon'),
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
+    },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionOrder',
+    site: createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      'roomExit',
+    ),
+    entryKeys: ['Boon'],
+  });
 }
 
 function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {

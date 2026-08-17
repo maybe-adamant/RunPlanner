@@ -58,6 +58,7 @@ import {
   createCombat08ArtificerRegressionProject,
   createFConversionFrontierProject,
   createFMidshopPomFrontierProject,
+  createFMidshopUnresolvedBlindBoxBeforePomProject,
   fMidshopPomShopId,
   authorLegalTraitOffers,
   authorSurfaceWorldShop,
@@ -1041,6 +1042,77 @@ describe('OccurrenceWorkbench', () => {
     });
   });
 
+  it('adds a later Narcissus pickup while an earlier participant is context-invalid', async () => {
+    let project = createGoldenFGHIProject();
+    const occurrence = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
+    if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenGBiome,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusD' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusE' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+      },
+    });
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+      'roomExit',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(
+        createAcquisitionEntryAddress(site, 'psyche'),
+        'self',
+      ),
+      value: { kind: 'timePiece' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site,
+      entryKeys: ['psyche'],
+    });
+    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
+      const node = biome.nodes.find(
+        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
+          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === occurrence.occurrenceId,
+      );
+      return node === undefined ? undefined : { kind: 'node', node };
+    });
+    const maxMana = screen.getByRole('checkbox', { name: 'Picked up maxMana' });
+    expect((maxMana as HTMLInputElement).disabled).toBe(false);
+
+    await view.user.click(maxMana);
+
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.acquisitionSites?.roomExit?.order,
+    ).toEqual(['psyche', 'maxMana']);
+  });
+
   it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();
@@ -1802,10 +1874,31 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('authors Fields optional count and chronology-derived interaction with undoable retention', async () => {
+  it('authors Fields optional participation independently of context-invalid earlier chronology', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const source = createLocalRewardAddress(
+      goldenHBiome,
+      occurrenceId,
+      'optionalRewards',
+      'optional1',
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: { kind: 'timePiece' },
+    });
+    const authored = occurrenceState(project, 'Underworld', 'H', occurrenceId);
+    if (authored.kind !== 'fieldsCombat') throw new Error('Fields state is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsActionOrder',
+      occurrence: createOccurrenceAddress(goldenHBiome, occurrenceId),
+      actionOrder: Object.freeze([
+        ...authored.actionOrder,
+        Object.freeze({ kind: 'interactOptionalReward' as const, slotKey: 'optional1' }),
+      ]),
+    });
     const view = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
+      project,
       'Underworld',
       'H',
       occurrenceById(occurrenceId),
@@ -1822,6 +1915,20 @@ describe('OccurrenceWorkbench', () => {
       name: 'Interact with Optional 2',
     }) as HTMLInputElement;
     expect(interact.checked).toBe(false);
+    const initial = occurrenceState(
+      view.application.store.getState().projectWorkspace.history.present,
+      'Underworld',
+      'H',
+      occurrenceId,
+    );
+    if (initial.kind !== 'fieldsCombat') throw new Error('Fields state is missing');
+    expect(initial.optionalRewards.optional1?.dispositionByAcquisitionRole.self).toEqual({
+      kind: 'timePiece',
+    });
+    expect(initial.actionOrder).toContainEqual({
+      kind: 'interactOptionalReward',
+      slotKey: 'optional1',
+    });
 
     await view.user.click(interact);
     await waitFor(() => expect(interact.checked).toBe(true));
@@ -2545,6 +2652,46 @@ describe('OccurrenceWorkbench', () => {
     );
   }, 15_000);
 
+  it('purchases a Pom while the earlier Mystery Box trait remains unresolved', async () => {
+    const view = renderOccurrenceWorkbench(
+      createFMidshopUnresolvedBlindBoxBeforePomProject(),
+      'Underworld',
+      'F',
+      occurrenceById(fMidshopPomShopId),
+    );
+    const authoredShop = () => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fMidshopPomShopId);
+      if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined) {
+        throw new Error('reported F Midshop is missing');
+      }
+      return Object.freeze({ occurrence, shop: occurrence.state.shop });
+    };
+    expect(authoredShop().occurrence.acquisitionSites?.roomExit?.order).toEqual(['Boon']);
+    expect(
+      authoredShop().shop.offers.Boon?.reward?.traitOffersByAcquisitionRole.hiddenSource,
+    ).toBeNull();
+
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(screen.getByLabelText('Purchase Offer 3'));
+
+    await waitFor(() =>
+      expect(authoredShop().occurrence.acquisitionSites?.roomExit?.order).toEqual([
+        'Boon',
+        'Minor',
+      ]),
+    );
+    expect(
+      authoredShop().shop.offers.Boon?.reward?.traitOffersByAcquisitionRole.hiddenSource,
+    ).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
+    );
+  }, 15_000);
+
   it('authors the Travel Deal refill through the Shop checkbox and one acquisition chronology', async () => {
     const shopId = createOccurrenceId('golden-g-preboss-shop');
     const project = travelDealGPrebossProject();
@@ -2757,7 +2904,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByText('Purchased')).toBeNull();
   });
 
-  it('keeps an impossible Shop purchase disabled while allowing its selected repair', async () => {
+  it('authors Shop participation independently of contextual purchase validity', async () => {
     const offer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
     const purchase = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(
@@ -2787,34 +2934,25 @@ describe('OccurrenceWorkbench', () => {
     ) as HTMLInputElement | null;
     if (checkbox === null) throw new Error('Boon Shop purchase control is missing');
     await view.user.click(checkbox);
-    expect(checkbox.checked).toBe(false);
-    expect(checkbox.disabled).toBe(true);
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
-    cleanup();
-
-    const selectedInvalidProject = applyProjectCommand(invalidOfferProject, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-        'roomExit',
-      ),
-      entryKeys: ['Boon'],
-    });
-    const repair = renderOccurrenceWorkbench(
-      selectedInvalidProject,
-      'Surface',
-      'P',
-      occurrenceById(pOccurrenceIds.prebossShop),
+    expect(checkbox.checked).toBe(true);
+    expect(checkbox.disabled).toBe(false);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
     );
-    const repairBefore = repair.application.store.getState().projectWorkspace.history.past.length;
-    const repairCheckbox = document.getElementById(
-      `shop-${semanticAddressKey(purchase)}-purchased`,
-    ) as HTMLInputElement | null;
-    if (repairCheckbox === null) throw new Error('selected Boon Shop purchase control is missing');
-    await repair.user.click(repairCheckbox);
-    expect(repairCheckbox.checked).toBe(false);
-    expect(repair.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      repairBefore + 1,
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
+        )?.acquisitionSites?.roomExit?.order,
+    ).toEqual(['Boon']);
+
+    await view.user.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 2,
     );
   });
 

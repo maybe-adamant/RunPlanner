@@ -1409,6 +1409,20 @@ only as a sequence, its aggregate finding belongs to the exact
 `acquisitionSite`, with that authored order in evidence; supported sibling
 entries are not marked invalid.
 
+Participation is structural and chronology is semantic. A Purchase, Picked up,
+or Fields Interact checkbox inserts or removes one active participant without
+replaying the authored order; insertion appends after the retained participants
+and removal preserves their relative order. The later move controls alone ask
+the simulator whether a chronological position is possible. This invariant is
+shared by Shops, declaration-produced pickups such as Narcissus, and optional
+Fields actions. An unresolved or context-invalid earlier participant therefore
+cannot suppress a later membership edit.
+
+Missing acquisition authorship is not an aggregate Shop failure. Selected
+simulation retains the exact missing reward, whole trait offer, or All Together
+finding without adding `shopPurchaseUnavailable`, and still stops before every
+later acquisition until the missing child is authored.
+
 Completeness and legality findings use the same address domain. Contract
 errors remain a separate result class because they indicate malformed data or
 implementation failure rather than correctable user intent.
