@@ -5,6 +5,7 @@ import {
   createDefaultRouteLoadout,
   createEmptyProjectDocument,
   createEncounterPhaseAddress,
+  echoLastRewardPickupEntryKey,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
@@ -407,7 +408,7 @@ describe('project workspace application state', () => {
     expect(selectPresentProject(store.getState())).toBe(edited);
   });
 
-  it('undoes and redoes one atomic Echo last-reward child edit with its outer selection', () => {
+  it('undoes and redoes an Echo replay selection with its required generated row', () => {
     const { store } = createStore();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     let project = createGoldenFGHProject();
@@ -460,22 +461,17 @@ describe('project workspace application state', () => {
     const editedOffer = Object.freeze({
       ...offer,
       selectedOptionKey: 'option1' as const,
-      options: Object.freeze([
-        Object.freeze({
-          traitKey: 'EchoLastReward',
-          echoLastReward: Object.freeze({
-            disposition: Object.freeze({ kind: 'normal' as const }),
-          }),
-        }),
-        offer.options[1],
-        offer.options[2],
-      ]) as typeof offer.options,
     });
     store.dispatch(
       authoredProjectCommandDispatched({ kind: 'ReplaceTraitOffer', trait, value: editedOffer }),
     );
     const edited = selectPresentProject(store.getState());
     expect(edited).not.toBe(before);
+    expect(
+      edited.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === bridgeId,
+      )!.acquisitionSites?.roomExit?.order,
+    ).toEqual([echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1')]);
 
     store.dispatch(authoredProjectUndoRequested());
     expect(selectPresentProject(store.getState())).toBe(before);

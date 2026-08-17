@@ -65,7 +65,6 @@ export type {
   WorkspaceEchoPomTargetDomain,
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoLastRunBoonCandidate,
-  WorkspaceEchoLastRewardDomain,
   WorkspaceAllTogetherSetDomain,
   WorkspaceAllTogetherSetInteraction,
   WorkspaceLevelResolutionControl,

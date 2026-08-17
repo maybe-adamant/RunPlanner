@@ -206,7 +206,7 @@ function defaultOccurrence(
   const pickupEntries =
     pickupProducer === undefined
       ? Object.freeze({})
-      : createSelectedPickupEntries(catalog, pickupProducer.traitKey);
+      : createSelectedPickupEntries(catalog, pickupProducer);
   const contractEntries = createInfernalContractEntries(catalog, room.gameName);
   return Object.freeze({
     occurrenceId,

@@ -10,7 +10,6 @@ import {
   type CirceResolutionDomainEvaluation,
   type EchoPomTargetDomainEvaluation,
   type EchoLastRunBoonDomainEvaluation,
-  type EchoLastRewardDomainEvaluation,
   type AllTogetherSetDomainEvaluation,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -256,11 +255,6 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => EchoLastRunBoonDomainEvaluation;
-  readonly echoLastReward: (
-    owner: TraitOfferAddress,
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-  ) => EchoLastRewardDomainEvaluation;
   readonly allTogetherSet: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
@@ -358,7 +352,6 @@ function candidateOptionEvaluation(
     evaluation.kind === 'circeResolutionDomain' ||
     evaluation.kind === 'echoPomTargetDomain' ||
     evaluation.kind === 'echoLastRunBoonDomain' ||
-    evaluation.kind === 'echoLastRewardDomain' ||
     evaluation.kind === 'allTogetherSetDomain'
   ) {
     throw new Error('a target-domain aggregate cannot be projected as one candidate option');
@@ -972,17 +965,6 @@ export function createCandidateSessionFactory(
       ) =>
         requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
           kind: 'echoLastRunBoonDomain',
-          trait: owner,
-          value,
-          optionKey,
-        }),
-      echoLastReward: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'echoLastRewardDomain',
           trait: owner,
           value,
           optionKey,

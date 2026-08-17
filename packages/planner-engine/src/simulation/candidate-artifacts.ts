@@ -16,10 +16,6 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../authored-project/traits';
 import { optionIndex, type TraitOptionKey } from '../authored-project/traits';
-import {
-  createUnresolvedEchoLastRewardAcquisition,
-  traitGiverForAcquisitionRole,
-} from '../authored-project/traits';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
   createEmptyRewardProducerCandidateArtifacts,
@@ -132,19 +128,6 @@ export interface TraitOfferCandidateCapability {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => readonly (readonly import('./traits').EchoLastRunBoonOutcome[])[];
-  /** Branch-correlated exact replay descriptors, unresolved persisted shape, and
-   * engine-owned complete proposals for fresh nested authoring. */
-  readonly echoLastReward: (
-    value: AuthoredTraitOffer,
-    optionKey: TraitOptionKey,
-  ) => readonly {
-    readonly recreation: NonNullable<
-      import('../reward-kernel/model').RewardHistoryState['lastRewardRecreation']
-    >;
-    readonly initialValue: import('../authored-project/traits').AuthoredEchoLastRewardAcquisition;
-    readonly traitOfferDraft?: import('../authored-project/traits').AuthoredTraitOffer;
-    readonly levelResolutionDraft?: import('../authored-project/traits').AuthoredLevelResolution;
-  }[];
   /** Exact ownership-only All Together set domains for surviving branches. */
   readonly allTogetherSet: (
     value: AuthoredTraitOffer,
@@ -251,6 +234,7 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: import('../authored-project/model').AuthoredRewardState;
+  readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 }
 export interface DerivedAcquisitionEntryCandidateArtifacts {
@@ -279,6 +263,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         frontier.slotIndex !== first.slotIndex ||
         JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
         JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
+        frontier.retainedSourceMismatch !== first.retainedSourceMismatch ||
         JSON.stringify(frontier.eligibleSourceOfferKeys) !==
           JSON.stringify(first.eligibleSourceOfferKeys),
     )
@@ -290,6 +275,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
     ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
     ...(first.fixedReward === undefined ? {} : { fixedReward: first.fixedReward }),
+    ...(first.retainedSourceMismatch === undefined
+      ? {}
+      : { retainedSourceMismatch: first.retainedSourceMismatch }),
     ...(first.eligibleSourceOfferKeys === undefined
       ? {}
       : { eligibleSourceOfferKeys: first.eligibleSourceOfferKeys }),
@@ -821,63 +809,6 @@ export function createTraitOfferCandidateArtifacts(
                   context.before,
                   traitOfferCandidateContext(context.context, value),
                 ),
-              ];
-            }),
-          ),
-        echoLastReward: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
-          Object.freeze(
-            branchContexts.flatMap((context) => {
-              if (value.kind === 'fallbackGold') return [];
-              const option = value.options[optionIndex(optionKey)];
-              const disposition =
-                option === undefined
-                  ? undefined
-                  : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
-              const recreation = context.context.echoLastRewardRecreation;
-              if (
-                disposition?.kind !== 'echo' ||
-                disposition.effect !== 'lastReward' ||
-                recreation === undefined
-              )
-                return [];
-              const unresolved = createUnresolvedEchoLastRewardAcquisition(catalog, recreation);
-              const giverKey = traitGiverForAcquisitionRole(catalog, recreation.offer, 'self');
-              const freshTraitOffer =
-                giverKey === undefined
-                  ? undefined
-                  : traitOfferStartingDraft(
-                      catalog,
-                      giverKey,
-                      context.before,
-                      Object.freeze({
-                        ...context.context,
-                        resolvedProviderKey: giverKey,
-                      }),
-                    );
-              const levelResolution = unresolved.levelResolution;
-              const eligibleLevelTargets = pomEligibleTargetKeys(catalog, context.before);
-              const reachedLevelResolution =
-                levelResolution?.kind === 'choice'
-                  ? Object.freeze({
-                      kind: 'choice' as const,
-                      offeredTraitKeys: Object.freeze(eligibleLevelTargets.slice(0, 3)),
-                      selectedTraitKey: eligibleLevelTargets[0] ?? null,
-                    })
-                  : levelResolution?.kind === 'random'
-                    ? Object.freeze({
-                        kind: 'random' as const,
-                        targetTraitKey: eligibleLevelTargets[0] ?? null,
-                      })
-                    : undefined;
-              return [
-                Object.freeze({
-                  recreation,
-                  initialValue: unresolved,
-                  ...(freshTraitOffer === undefined ? {} : { traitOfferDraft: freshTraitOffer }),
-                  ...(reachedLevelResolution === undefined
-                    ? {}
-                    : { levelResolutionDraft: reachedLevelResolution }),
-                }),
               ];
             }),
           ),

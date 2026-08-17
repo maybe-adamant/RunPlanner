@@ -103,12 +103,14 @@ export interface WorkspaceBiomeSource {
     readonly kind:
       | 'echoDoubleShopPlaceholder'
       | 'echoDoubleShopReward'
+      | 'echoLastReward'
       | 'infernalContractReward'
       | 'travelDealPlaceholder'
       | 'travelDealRefill';
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];
+    readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];
   readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>

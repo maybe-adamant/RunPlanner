@@ -195,6 +195,7 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly kind:
     | 'echoDoubleShopPlaceholder'
     | 'echoDoubleShopReward'
+    | 'echoLastReward'
     | 'infernalContractReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
@@ -205,6 +206,8 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly rewardTypes?: readonly string[];
   /** Exact engine-derived state when the source offer is copied without fresh payload resolution. */
   readonly fixedReward?: AuthoredRewardState;
+  /** The retained authored identity disagrees with this exact derived source. */
+  readonly retainedSourceMismatch?: boolean;
   /** Candidate support for editing the exact derived reward before participation is selected. */
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[];
   /** Paid entries that can source a first-eligible derived child in this Shop. */
@@ -1950,6 +1953,7 @@ export interface OfferProcessingContext {
     readonly origin: SemanticAddress;
     readonly offer: ResolvedRewardOffer;
     readonly producerLifecycleKey: string;
+    readonly requiredEntryKeys?: ReadonlySet<string>;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly resolvedStoreKey?: string;
   };
@@ -3686,6 +3690,7 @@ export function settlePickupAcquisitionSite(
     readonly entries: Readonly<Record<string, AuthoredRewardState | null>>;
     readonly order: readonly string[];
     readonly producerLifecycleKey: string;
+    readonly requiredEntryKeys?: ReadonlySet<string>;
     readonly historySequence: number;
     readonly facts: RewardFactsFactory;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
@@ -3712,7 +3717,11 @@ export function settlePickupAcquisitionSite(
         address: entry,
         source: entry,
         acquisitionRoles: Object.freeze([]),
-        participation: request.order.includes(key) ? ('optional' as const) : ('dormant' as const),
+        participation: request.order.includes(key)
+          ? request.requiredEntryKeys?.has(key) === true
+            ? ('mandatory' as const)
+            : ('optional' as const)
+          : ('dormant' as const),
       });
     }
     const lifecycle =
@@ -3731,7 +3740,11 @@ export function settlePickupAcquisitionSite(
       address: entry,
       source: entry,
       acquisitionRoles: roles,
-      participation: request.order.includes(key) ? 'optional' : 'dormant',
+      participation: request.order.includes(key)
+        ? request.requiredEntryKeys?.has(key) === true
+          ? 'mandatory'
+          : 'optional'
+        : 'dormant',
     });
   });
   for (const [sourceKey, definition] of definitions) {

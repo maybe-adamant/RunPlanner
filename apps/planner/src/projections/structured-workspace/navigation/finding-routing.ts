@@ -57,61 +57,6 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
 }
 
 /**
- * Reward Reward Reward's recreated entry is generated from one authored child
- * inside the outer Echo row. Only findings from that exact generated ancestry
- * share the outer row's editor; ordinary acquisition descendants keep their
- * existing independently registered destinations.
- */
-function echoLastRewardOwner(
-  address: SemanticAddress,
-): Extract<SemanticAddress, { readonly kind: 'echoLastReward' }> | undefined {
-  if (address.kind === 'echoLastReward') return address;
-  const site =
-    address.kind === 'acquisitionSite'
-      ? address
-      : address.kind === 'acquisitionEntry'
-        ? address.site
-        : (address.kind === 'traitOffer' ||
-              address.kind === 'levelResolution' ||
-              address.kind === 'acquisitionRole') &&
-            address.acquisitionRole === 'self' &&
-            address.owner.kind === 'acquisitionEntry'
-          ? address.owner.site
-          : undefined;
-  if (
-    site?.pointKey !== 'echoReplay' ||
-    site.owner.kind !== 'echoLastReward' ||
-    (address.kind === 'acquisitionEntry' && address.entryKey !== 'recreatedReward') ||
-    ((address.kind === 'traitOffer' ||
-      address.kind === 'levelResolution' ||
-      address.kind === 'acquisitionRole') &&
-      address.owner.kind === 'acquisitionEntry' &&
-      address.owner.entryKey !== 'recreatedReward')
-  )
-    return undefined;
-  return site.owner;
-}
-
-function registerEchoLastRewardFindingDestination(
-  origin: SemanticAddress,
-  focusByOwner: Map<string, WorkspaceInspectorDestination>,
-): void {
-  const replay = echoLastRewardOwner(origin);
-  const originKey = semanticAddressKey(origin);
-  if (replay === undefined || focusByOwner.has(originKey)) return;
-  const replayDestination = focusByOwner.get(semanticAddressKey(replay));
-  if (replayDestination === undefined) return;
-  focusByOwner.set(
-    originKey,
-    Object.freeze({
-      ...replayDestination,
-      ownerAddress: origin,
-      traitDialogTarget: replay.trait,
-    }),
-  );
-}
-
-/**
  * A fine-grained finding reaches this point only after final presentation has
  * bound its exact semantic owner. Unlike a coarse finding, it must resolve to
  * the structural node selected for that owner rather than inheriting a default
@@ -185,7 +130,6 @@ export function registerWorkspaceFindingDestinations(
 ): void {
   for (const finding of findings) {
     const key = semanticAddressKey(finding.origin);
-    registerEchoLastRewardFindingDestination(finding.origin, focusByOwner);
     const existing = focusByOwner.get(key);
     if (isFineGrainedFindingOwner(finding.origin)) {
       assertFineGrainedFindingDestination(finding.origin, existing, routes);

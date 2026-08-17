@@ -35,7 +35,6 @@ import {
   type EchoLastRunBoonAddress,
   type EchoLastRewardAddress,
   type AllTogetherSetAddress,
-  type AuthoredEchoLastRewardAcquisition,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
@@ -293,9 +292,10 @@ export interface WorkspaceEchoLastRunBoonControl {
 
 export interface WorkspaceEchoLastRewardControl {
   readonly address: EchoLastRewardAddress;
+  readonly acquisitionEntry: AcquisitionEntryAddress;
   readonly marker: WorkspaceMarker;
   readonly optionKey: TraitOptionKey;
-  readonly value?: AuthoredEchoLastRewardAcquisition;
+  readonly spawnLabel?: string;
 }
 
 export interface WorkspaceAllTogetherSetControl {
@@ -328,7 +328,6 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly circeResolution?: WorkspaceCirceResolutionInteraction;
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
-  readonly echoLastReward?: WorkspaceEchoLastRewardInteraction;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
 }
 
@@ -408,34 +407,11 @@ export interface WorkspaceEchoLastRunBoonInteraction {
   };
 }
 
-export interface WorkspaceEchoLastRewardDomain {
-  readonly rewardType: string;
-  readonly rewardLabel: string;
-  readonly initialValue: AuthoredEchoLastRewardAcquisition;
-  readonly traitOfferDraft?: AuthoredTraitOffer;
-  readonly levelResolutionDraft?: import('@run-planner/engine/authored-project').AuthoredLevelResolution;
-  readonly goldSupported: boolean;
-  readonly traitOptionDomains: readonly TraitOptionDomainProjection[];
-  readonly traitRarityEditable: boolean;
-  readonly nextTraitOffer?: AuthoredTraitOfferTraits;
-  readonly levelTargetChoices: readonly WorkspaceInteractionChoice<string>[];
-  readonly emptyLevelTargetAllowed: boolean;
-}
-
-export interface WorkspaceEchoLastRewardInteraction {
-  readonly control: WorkspaceEchoLastRewardControl;
-  readonly intentFor: (
-    offer: AuthoredTraitOfferTraits,
-    value: AuthoredEchoLastRewardAcquisition,
-  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
-  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
-    readonly load: () => WorkspaceEchoLastRewardDomain | undefined;
-  };
-}
-
 export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  /** Read-only summary of the generated pickup owned by Acquisitions. */
+  readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly giver: TraitGiverDeclaration;
   readonly intentFor: (value: AuthoredTraitOffer) => WorkspacePayloadEditIntent<
     Extract<
@@ -1000,6 +976,12 @@ interface WorkspaceRewardControlBase {
   readonly authoringSeed?: ResolvedRewardOffer;
   readonly marker: WorkspaceMarker;
   readonly offer: ResolvedRewardOffer | null;
+  /** Application-owned picker entry point for this exact visible edit surface. */
+  readonly offerEditStartStep?: RewardPickerStep;
+  /** Application-owned presentation fact; React does not infer identity authoring from offer shape. */
+  readonly offerEditVisibility: 'hidden' | 'visible';
+  /** Engine-attested retained identity disagreement requiring a visible repair path. */
+  readonly retainedSourceMismatch: boolean;
   readonly owner: RewardCandidateOwner;
   readonly traitOffers?: readonly WorkspaceTraitOfferControl[];
   readonly levelResolutions?: readonly WorkspaceLevelResolutionControl[];

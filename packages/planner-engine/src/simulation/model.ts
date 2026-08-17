@@ -89,8 +89,6 @@ export type TraitFindingCode =
   | 'echoPomTargetUnavailable'
   | 'echoLastRunBoonMissing'
   | 'echoLastRunBoonOptionUnavailable'
-  | 'echoLastRewardChildMissing'
-  | 'echoLastRewardChildUnavailable'
   | 'echoShopDuplicateChildMissing'
   | 'allTogetherResultMissing'
   | 'allTogetherResultUnavailable';

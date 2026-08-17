@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createEchoLastRewardAddress,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
@@ -17,8 +18,8 @@ import {
   createProjectDocument,
   createTargetAddress,
   createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
   semanticAddressKey,
-  type AuthoredEchoLastRewardAcquisition,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
   type SemanticAddress,
@@ -110,8 +111,12 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
   });
 }
 
-function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
+function echoReplayProject(child?: {
+  readonly disposition: { readonly kind: 'normal' | 'timePiece' };
+  readonly traitOffer?: AuthoredTraitOfferTraits;
+}): {
   readonly document: ProjectDocument;
+  readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
   readonly replay: ReturnType<typeof createEchoLastRewardAddress>;
   readonly trait: ReturnType<typeof createTraitOfferAddress>;
 } {
@@ -138,7 +143,6 @@ function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
     options: Object.freeze([
       Object.freeze({
         traitKey: 'EchoLastReward',
-        ...(child === undefined ? {} : { echoLastReward: child }),
       }),
       Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
       Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon' }),
@@ -151,8 +155,32 @@ function echoReplayProject(child?: AuthoredEchoLastRewardAcquisition): {
     trait,
     value,
   });
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
+    echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+  );
+  if (child !== undefined) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    if (child.traitOffer !== undefined)
+      document = applyProjectCommand(document, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(entry, 'self'),
+        value: child.traitOffer,
+      });
+    if (child.disposition.kind === 'timePiece')
+      document = applyProjectCommand(document, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(entry, 'self'),
+        value: child.disposition,
+      });
+  }
   return Object.freeze({
     document,
+    entry,
     replay: createEchoLastRewardAddress(trait, 'option1'),
     trait,
   });
@@ -252,26 +280,27 @@ describe('workspace inspector destinations', () => {
     ).toBe(true);
   });
 
-  it('routes a real missing Echo replay finding to its containing trait inspector', () => {
+  it('routes a missing generated Echo pickup to its exact Acquisitions row', () => {
     const configured = echoReplayProject();
     const assembly = simulateProjectAssembly(catalog, configured.document);
     const finding = assembly.evaluation.findings.find(
-      (candidate) => candidate.code === 'echoLastRewardChildMissing',
+      (candidate) =>
+        candidate.code === 'rewardMissing' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
     );
-    expect(finding?.origin).toEqual(configured.replay);
+    expect(finding?.origin).toEqual(configured.entry);
 
     const workspace = structuredWorkspace.project(assembly);
-    const replayDestination = destination(workspace, configured.replay);
+    const replayDestination = destination(workspace, configured.entry);
     expect(replayDestination).toMatchObject({
-      ownerAddress: configured.replay,
-      focusAddress: configured.replay,
-      traitDialogTarget: configured.trait,
+      ownerAddress: configured.entry,
+      focusAddress: configured.entry,
       inspectorSubject: { kind: 'node', nodeKey: replayDestination.nodeKey },
     });
-    expect(replayDestination.selectedRailKey).toBeDefined();
+    expect(replayDestination).not.toHaveProperty('traitDialogTarget');
   });
 
-  it('redirects only reached generated Echo replay findings to the same trait inspector', () => {
+  it('routes generated Echo pickup trait findings to the nested trait editor', () => {
     const configured = echoReplayProject(
       Object.freeze({
         disposition: { kind: 'normal' as const },
@@ -298,27 +327,21 @@ describe('workspace inspector destinations', () => {
         (finding) =>
           finding.origin.kind === 'traitOffer' &&
           finding.origin.owner.kind === 'acquisitionEntry' &&
-          finding.origin.owner.entryKey === 'recreatedReward' &&
-          finding.origin.owner.site.owner.kind === 'echoLastReward',
+          semanticAddressKey(finding.origin.owner) === semanticAddressKey(configured.entry),
       ),
     ).toBe(true);
 
     const workspace = structuredWorkspace.project(assembly);
-    const replayDestination = destination(workspace, configured.replay);
     for (const finding of findings) {
       expect(destination(workspace, finding.origin)).toMatchObject({
         ownerAddress: finding.origin,
-        focusAddress: configured.replay,
-        focusKey: semanticAddressKey(configured.replay),
-        nodeKey: replayDestination.nodeKey,
-        selectedRailKey: replayDestination.selectedRailKey,
-        traitDialogTarget: configured.trait,
-        inspectorSubject: replayDestination.inspectorSubject,
+        focusAddress: finding.origin,
+        traitDialogTarget: finding.origin,
       });
     }
   });
 
-  it('routes a real invalid Echo replay conversion role to the same trait inspector', () => {
+  it('routes an invalid generated Echo conversion through the acquisition workbench', () => {
     const configured = echoReplayProject(
       Object.freeze({
         disposition: { kind: 'timePiece' as const },
@@ -342,28 +365,14 @@ describe('workspace inspector destinations', () => {
     expect(finding?.origin).toMatchObject({
       kind: 'acquisitionRole',
       acquisitionRole: 'self',
-      owner: {
-        kind: 'acquisitionEntry',
-        entryKey: 'recreatedReward',
-        site: {
-          kind: 'acquisitionSite',
-          pointKey: 'echoReplay',
-          owner: configured.replay,
-        },
-      },
+      owner: configured.entry,
     });
     if (finding === undefined) throw new Error('Echo replay conversion finding is missing');
 
     const workspace = structuredWorkspace.project(assembly);
-    const replayDestination = destination(workspace, configured.replay);
     expect(destination(workspace, finding.origin)).toMatchObject({
       ownerAddress: finding.origin,
-      focusAddress: configured.replay,
-      focusKey: semanticAddressKey(configured.replay),
-      nodeKey: replayDestination.nodeKey,
-      selectedRailKey: replayDestination.selectedRailKey,
-      traitDialogTarget: configured.trait,
-      inspectorSubject: replayDestination.inspectorSubject,
+      inspectorSubject: { kind: 'node' },
     });
   });
 

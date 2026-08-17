@@ -12,7 +12,6 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
-  type AuthoredEchoLastRewardAcquisition,
   type AuthoredCirceResolution,
   type TraitOptionKey,
 } from '../traits';
@@ -202,97 +201,6 @@ export function createDefaultRoomEncounterState(
   });
 }
 
-function decodeEchoLastReward(
-  value: unknown,
-  catalog: Catalog,
-  path: string,
-): AuthoredEchoLastRewardAcquisition {
-  const record = expectRecord(value, path);
-  const hasTraitOffer = record.traitOffer !== undefined;
-  const hasLevelResolution = record.levelResolution !== undefined;
-  expectExactKeys(
-    record,
-    [
-      'disposition',
-      ...(hasTraitOffer ? ['traitOffer'] : []),
-      ...(hasLevelResolution ? ['levelResolution'] : []),
-    ],
-    path,
-  );
-  const dispositionRecord = expectRecord(record.disposition, `${path}.disposition`);
-  expectExactKeys(dispositionRecord, ['kind'], `${path}.disposition`);
-  const dispositionKind = expectString(dispositionRecord.kind, `${path}.disposition.kind`);
-  if (dispositionKind !== 'normal' && dispositionKind !== 'timePiece')
-    failProjectDocument(`${path}.disposition.kind`, 'must be normal or timePiece');
-  let traitOffer: AuthoredTraitOffer | null | undefined;
-  if (hasTraitOffer) {
-    if (record.traitOffer === null) traitOffer = null;
-    else {
-      const rawOffer = expectRecord(record.traitOffer, `${path}.traitOffer`);
-      const giverKey = expectString(rawOffer.giverKey, `${path}.traitOffer.giverKey`);
-      traitOffer = decodeEncounterTraitOffer(
-        rawOffer,
-        catalog,
-        giverKey,
-        `${path}.traitOffer`,
-        true,
-        true,
-      );
-    }
-  }
-  let levelResolution: AuthoredEchoLastRewardAcquisition['levelResolution'];
-  if (hasLevelResolution) {
-    const rawLevel = expectRecord(record.levelResolution, `${path}.levelResolution`);
-    const kind = expectString(rawLevel.kind, `${path}.levelResolution.kind`);
-    if (kind === 'choice') {
-      expectExactKeys(
-        rawLevel,
-        ['kind', 'offeredTraitKeys', 'selectedTraitKey'],
-        `${path}.levelResolution`,
-      );
-      const offeredTraitKeys = expectArray(
-        rawLevel.offeredTraitKeys,
-        `${path}.levelResolution.offeredTraitKeys`,
-      ).map((entry, index) => {
-        const key = expectString(entry, `${path}.levelResolution.offeredTraitKeys[${index}]`);
-        if (catalog.traits.byKey[key] === undefined)
-          failProjectDocument(
-            `${path}.levelResolution.offeredTraitKeys[${index}]`,
-            'unknown trait',
-          );
-        return key;
-      });
-      if (new Set(offeredTraitKeys).size !== offeredTraitKeys.length)
-        failProjectDocument(`${path}.levelResolution.offeredTraitKeys`, 'must be distinct');
-      const selectedTraitKey =
-        rawLevel.selectedTraitKey === null
-          ? null
-          : expectString(rawLevel.selectedTraitKey, `${path}.levelResolution.selectedTraitKey`);
-      if (selectedTraitKey !== null && !offeredTraitKeys.includes(selectedTraitKey))
-        failProjectDocument(`${path}.levelResolution.selectedTraitKey`, 'must be an offered trait');
-      levelResolution = Object.freeze({
-        kind,
-        offeredTraitKeys: Object.freeze(offeredTraitKeys),
-        selectedTraitKey,
-      });
-    } else if (kind === 'random') {
-      expectExactKeys(rawLevel, ['kind', 'targetTraitKey'], `${path}.levelResolution`);
-      const targetTraitKey =
-        rawLevel.targetTraitKey === null
-          ? null
-          : expectString(rawLevel.targetTraitKey, `${path}.levelResolution.targetTraitKey`);
-      if (targetTraitKey !== null && catalog.traits.byKey[targetTraitKey] === undefined)
-        failProjectDocument(`${path}.levelResolution.targetTraitKey`, 'unknown trait');
-      levelResolution = Object.freeze({ kind, targetTraitKey });
-    } else failProjectDocument(`${path}.levelResolution.kind`, 'must be choice or random');
-  }
-  return Object.freeze({
-    disposition: Object.freeze({ kind: dispositionKind }),
-    ...(traitOffer === undefined ? {} : { traitOffer }),
-    ...(levelResolution === undefined ? {} : { levelResolution }),
-  });
-}
-
 export function decodeEncounterTraitOffer(
   value: unknown,
   catalog: Catalog,
@@ -345,7 +253,6 @@ export function decodeEncounterTraitOffer(
     const hasCirceResolution = option.circeResolution !== undefined;
     const hasEchoPomTarget = 'echoPomTarget' in option;
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
-    const hasEchoLastReward = 'echoLastReward' in option;
     const hasAllTogetherResult = 'allTogetherResult' in option;
     expectExactKeys(
       option,
@@ -356,7 +263,6 @@ export function decodeEncounterTraitOffer(
         ...(hasCirceResolution ? ['circeResolution'] : []),
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
-        ...(hasEchoLastReward ? ['echoLastReward'] : []),
         ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
       ],
       `${path}.options.${optionKey}`,
@@ -522,22 +428,6 @@ export function decodeEncounterTraitOffer(
         `${path}.options.${optionKey}.echoLastRunBoon`,
         'is supported only by Echo Boon Boon Boon',
       );
-    const echoLastReward = hasEchoLastReward
-      ? decodeEchoLastReward(
-          option.echoLastReward,
-          catalog,
-          `${path}.options.${optionKey}.echoLastReward`,
-        )
-      : undefined;
-    if (
-      hasEchoLastReward &&
-      (trait.selectedDisposition.kind !== 'echo' ||
-        trait.selectedDisposition.effect !== 'lastReward')
-    )
-      failProjectDocument(
-        `${path}.options.${optionKey}.echoLastReward`,
-        'is supported only by Echo Reward Reward Reward',
-      );
     const allTogetherResult = hasAllTogetherResult
       ? decodeAllTogetherResult(
           option.allTogetherResult,
@@ -554,7 +444,6 @@ export function decodeEncounterTraitOffer(
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
-            ...(echoLastReward === undefined ? {} : { echoLastReward }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           }
         : {
@@ -564,7 +453,6 @@ export function decodeEncounterTraitOffer(
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
-            ...(echoLastReward === undefined ? {} : { echoLastReward }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           };
     options.push(Object.freeze(decodedOption));

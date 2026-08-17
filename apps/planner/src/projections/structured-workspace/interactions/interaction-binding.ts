@@ -4,10 +4,7 @@ import {
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
-  createEchoLastRewardAddress,
   createAllTogetherSetAddress,
-  createAcquisitionSiteAddress,
-  createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createTraitOfferAddress,
   createLevelResolutionAddress,
@@ -33,7 +30,6 @@ import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredEchoLastRunBoonOffer,
-  AuthoredEchoLastRewardAcquisition,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -142,7 +138,9 @@ function createArtificerReplacementControl(
       kind: 'explicitReward' as const,
       marker: markerFor(replacementAddress),
       offer: null,
+      offerEditVisibility: 'visible' as const,
       owner,
+      retainedSourceMismatch: false,
       traitOffers: Object.freeze([]),
       levelResolutions: Object.freeze([]),
       conversions: Object.freeze([]),
@@ -219,7 +217,10 @@ function createArtificerReplacementControl(
     kind: 'explicitReward' as const,
     marker: markerFor(replacementAddress),
     offer: replacement.offer,
+    offerEditVisibility:
+      replacement.offer.payload === undefined ? ('hidden' as const) : ('visible' as const),
     owner,
+    retainedSourceMismatch: false,
     traitOffers,
     levelResolutions,
     conversions,
@@ -2231,17 +2232,6 @@ export function bindWorkspaceInteractions(
               ...(option?.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon }),
             })
           : undefined;
-      const echoLastRewardControl =
-        value.selectedOptionKey === optionKey &&
-        declaration?.selectedDisposition.kind === 'echo' &&
-        declaration.selectedDisposition.effect === 'lastReward'
-          ? Object.freeze({
-              address: createEchoLastRewardAddress(control.address, optionKey),
-              marker: control.echoLastReward?.marker ?? control.marker,
-              optionKey,
-              ...(option?.echoLastReward === undefined ? {} : { value: option.echoLastReward }),
-            })
-          : undefined;
       const allTogetherSetControls =
         value.selectedOptionKey === optionKey &&
         declaration?.selectedDisposition.kind === 'directTraitSets'
@@ -2474,158 +2464,6 @@ export function bindWorkspaceInteractions(
                   }),
               }),
             }),
-        ...(echoLastRewardControl === undefined
-          ? {}
-          : {
-              echoLastReward: Object.freeze({
-                control: echoLastRewardControl,
-                intentFor: (
-                  offer: AuthoredTraitOfferTraits,
-                  child: AuthoredEchoLastRewardAcquisition,
-                ) => {
-                  const index = optionIndex(optionKey);
-                  const existing = offer.options[index];
-                  if (existing === undefined)
-                    throw new StructuredWorkspaceProjectionContractError(
-                      `${semanticAddressKey(control.address)} is missing ${optionKey}`,
-                    );
-                  const options = [...offer.options];
-                  options[index] = Object.freeze({ ...existing, echoLastReward: child });
-                  return derivedShopPayloadIntent(
-                    derivedShopEntryEdit,
-                    ordinaryTraitOfferCommandFor(
-                      control.address,
-                      Object.freeze({
-                        ...offer,
-                        options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-                      }),
-                    ),
-                    artificerReplacementEdit,
-                  );
-                },
-                forOffer: (offer: AuthoredTraitOfferTraits) =>
-                  Object.freeze({
-                    load: () => {
-                      const evaluated = candidates.echoLastReward(
-                        control.address,
-                        offer,
-                        optionKey,
-                      );
-                      if (evaluated.kind !== 'echoLastRewardDomain') return undefined;
-                      const replayOwner = createEchoLastRewardAddress(control.address, optionKey);
-                      const site = createAcquisitionSiteAddress(replayOwner, 'echoReplay');
-                      const entry = createAcquisitionEntryAddress(site, 'recreatedReward');
-                      const role = createAcquisitionRoleAddress(entry, 'self');
-                      const trait = createTraitOfferAddress(entry, 'self');
-                      const level = createLevelResolutionAddress(entry, 'self');
-                      const current = offer.options[optionIndex(optionKey)]?.echoLastReward;
-                      const traitOffer = current?.traitOffer ?? evaluated.result.traitOfferDraft;
-                      const nextTraitOffer =
-                        traitOffer?.kind === 'traits'
-                          ? candidates.nextOptionalHighTierTraitOfferDraft(trait, traitOffer)
-                          : undefined;
-                      const nestedGiver =
-                        traitOffer?.kind === 'traits'
-                          ? catalog.traitGivers.byKey[traitOffer.giverKey]
-                          : undefined;
-                      const traitOptionDomains =
-                        traitOffer?.kind === 'traits' && nestedGiver !== undefined
-                          ? Object.freeze(
-                              traitOffer.options.map((_traitOption, index) => {
-                                const nestedOptionKey = (
-                                  ['option1', 'option2', 'option3'] as const
-                                )[index]!;
-                                const nestedPrepared = services.traitDomain.prepare(
-                                  nestedGiver,
-                                  traitOffer,
-                                  nestedOptionKey,
-                                );
-                                const focused = candidates.traitOfferFocusedOptions(
-                                  trait,
-                                  traitOffer,
-                                  nestedOptionKey,
-                                  nestedPrepared.variants,
-                                );
-                                const nestedOption = traitOffer.options[index];
-                                const declaration =
-                                  nestedOption === undefined
-                                    ? undefined
-                                    : catalog.traits.byKey[nestedOption.traitKey];
-                                const targets =
-                                  nestedOption !== undefined &&
-                                  traitOffer.selectedOptionKey === nestedOptionKey &&
-                                  declaration?.targetedAcquisition !== undefined
-                                    ? candidates.traitAcquisitionTargets(
-                                        trait,
-                                        traitOffer,
-                                        nestedOptionKey,
-                                        nestedOption.targetTraitKey,
-                                      )
-                                    : undefined;
-                                return services.traitDomain.project(
-                                  nestedGiver,
-                                  traitOffer,
-                                  nestedPrepared,
-                                  focused,
-                                  targets,
-                                );
-                              }),
-                            )
-                          : Object.freeze([]);
-                      const levelValue =
-                        current?.levelResolution ?? evaluated.result.levelResolutionDraft;
-                      const levelProjection =
-                        levelValue === undefined
-                          ? undefined
-                          : candidates.levelResolution(level, levelValue);
-                      const levelGroups = levelProjection?.groups ?? [];
-                      const levelTargetKeys =
-                        levelGroups.length === 0
-                          ? []
-                          : levelGroups[0]!.surface.eligibleTargetTraitKeys.filter((traitKey) =>
-                              levelGroups.every((group) =>
-                                group.surface.eligibleTargetTraitKeys.includes(traitKey),
-                              ),
-                            );
-                      const conversion = candidates.acquisitionConversion(role);
-                      return Object.freeze({
-                        rewardType: evaluated.result.rewardType,
-                        rewardLabel:
-                          catalog.rewards.rewardTypes.byKey[evaluated.result.rewardType]?.label ??
-                          evaluated.result.rewardType,
-                        initialValue: evaluated.result.initialValue,
-                        ...(evaluated.result.traitOfferDraft === undefined
-                          ? {}
-                          : { traitOfferDraft: evaluated.result.traitOfferDraft }),
-                        ...(evaluated.result.levelResolutionDraft === undefined
-                          ? {}
-                          : { levelResolutionDraft: evaluated.result.levelResolutionDraft }),
-                        goldSupported:
-                          conversion.kind === 'acquisitionConversion' &&
-                          conversion.result.timePieceSupported,
-                        traitOptionDomains,
-                        traitRarityEditable: nestedGiver?.rarityPolicy.kind === 'selectable',
-                        ...(nextTraitOffer === undefined ? {} : { nextTraitOffer }),
-                        levelTargetChoices: Object.freeze(
-                          levelTargetKeys.map((traitKey) =>
-                            Object.freeze({
-                              label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                              value: traitKey,
-                            }),
-                          ),
-                        ),
-                        emptyLevelTargetAllowed:
-                          levelGroups.length > 0 &&
-                          levelGroups.every(
-                            (group) =>
-                              group.surface.emptyTargetAllowed === true &&
-                              group.surface.eligibleTargetTraitKeys.length === 0,
-                          ),
-                      });
-                    },
-                  }),
-              }),
-            }),
         ...(allTogetherSetControls === undefined
           ? {}
           : {
@@ -2702,6 +2540,7 @@ export function bindWorkspaceInteractions(
             artificerReplacementEdit,
           ),
         key,
+        ...(control.echoLastReward === undefined ? {} : { echoLastReward: control.echoLastReward }),
         load,
         owner: control.address,
         rarityEditable: control.rarityEditable !== false,

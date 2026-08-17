@@ -96,7 +96,6 @@ import {
   evaluateCirceResolutionDomain,
   evaluateEchoPomTargetDomain,
   evaluateEchoLastRunBoonDomain,
-  evaluateEchoLastRewardDomain,
   evaluateAllTogetherSetDomain,
   type CirceResolutionDomainEvaluation,
   type CirceResolutionDomainQuery,
@@ -107,9 +106,6 @@ import {
   type EchoLastRunBoonDomainQuery,
   type EchoLastRunBoonDomainEvaluation,
   type EvaluatedEchoLastRunBoonDomain,
-  type EchoLastRewardDomainQuery,
-  type EchoLastRewardDomainEvaluation,
-  type EvaluatedEchoLastRewardDomain,
   type AllTogetherSetDomainQuery,
   type AllTogetherSetDomainEvaluation,
   type EvaluatedAllTogetherSetDomain,
@@ -176,7 +172,6 @@ export type ProjectCandidateSessionQuery =
   | CirceResolutionDomainQuery
   | EchoPomTargetDomainQuery
   | EchoLastRunBoonDomainQuery
-  | EchoLastRewardDomainQuery
   | AllTogetherSetDomainQuery;
 
 export type ProjectCandidateEvaluation =
@@ -216,7 +211,6 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedCirceResolutionDomain
   | EvaluatedEchoPomTargetDomain
   | EvaluatedEchoLastRunBoonDomain
-  | EvaluatedEchoLastRewardDomain
   | EvaluatedAllTogetherSetDomain;
 
 export type CandidateEvaluationEvent =
@@ -251,8 +245,6 @@ export interface ProjectCandidateSession {
     (queries: readonly EchoPomTargetDomainQuery[]): readonly EchoPomTargetDomainEvaluation[];
     (query: EchoLastRunBoonDomainQuery): EchoLastRunBoonDomainEvaluation;
     (queries: readonly EchoLastRunBoonDomainQuery[]): readonly EchoLastRunBoonDomainEvaluation[];
-    (query: EchoLastRewardDomainQuery): EchoLastRewardDomainEvaluation;
-    (queries: readonly EchoLastRewardDomainQuery[]): readonly EchoLastRewardDomainEvaluation[];
     (query: AllTogetherSetDomainQuery): AllTogetherSetDomainEvaluation;
     (queries: readonly AllTogetherSetDomainQuery[]): readonly AllTogetherSetDomainEvaluation[];
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
@@ -509,15 +501,6 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
-    case 'echoLastRewardDomain':
-      return evaluateEchoLastRewardDomain(
-        catalog,
-        project,
-        evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
-          ?.traitOffers,
-        query,
-      );
     case 'allTogetherSetDomain':
       return evaluateAllTogetherSetDomain(
         catalog,
@@ -567,10 +550,6 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly EchoLastRunBoonDomainQuery[],
   ): readonly EchoLastRunBoonDomainEvaluation[];
-  function evaluate(query: EchoLastRewardDomainQuery): EchoLastRewardDomainEvaluation;
-  function evaluate(
-    queries: readonly EchoLastRewardDomainQuery[],
-  ): readonly EchoLastRewardDomainEvaluation[];
   function evaluate(query: AllTogetherSetDomainQuery): AllTogetherSetDomainEvaluation;
   function evaluate(
     queries: readonly AllTogetherSetDomainQuery[],

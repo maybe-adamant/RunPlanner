@@ -547,8 +547,9 @@ export function decodeNullableRewardState(
   catalog: Catalog,
   path: string,
   source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  allowArtificer = true,
 ): AuthoredRewardState | null {
-  return value === null ? null : decodeRewardState(value, catalog, path, source);
+  return value === null ? null : decodeRewardState(value, catalog, path, source, allowArtificer);
 }
 
 /**

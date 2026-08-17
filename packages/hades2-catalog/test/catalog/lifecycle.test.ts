@@ -33,7 +33,7 @@ describe('room lifecycle catalog', () => {
       'EphyraSideRoom',
       'EphyraHubRoom',
       'ClockworkGoalRoom',
-      'NarcissusStoryRoom',
+      'StoryPickupRoom',
       'RewardlessRoom',
       'DevotionRoom',
       'FieldsCombatRoom',

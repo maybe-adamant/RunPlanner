@@ -100,6 +100,8 @@ export function applyAcquisitionSiteCommand(
     const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
     const entry = authoredAcquisitionEntry(catalog, occurrence, command.entry.entryKey);
+    const producer = selectedPickupProducer(catalog, occurrence.encounters);
+    const pickup = producer?.pickups.find((candidate) => candidate.key === command.entry.entryKey);
     const supplementalEntry =
       command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
       command.entry.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
@@ -112,11 +114,10 @@ export function applyAcquisitionSiteCommand(
       failCommand(command, 'does not own a materialized pickup entry');
     if (
       !supplementalEntry &&
-      entry !== undefined &&
-      entry !== null &&
-      entry.offer.rewardType !== command.value.rewardType
+      pickup?.rewardType !== undefined &&
+      pickup.rewardType !== command.value.rewardType
     )
-      failCommand(command, `must retain declared reward type ${entry.offer.rewardType}`);
+      failCommand(command, `must retain declared reward type ${pickup.rewardType}`);
     if (entry !== undefined && entry !== null && sameOccurrenceValue(entry.offer, command.value))
       return document;
     const route = document.routes.find((candidate) => candidate.routeKey === site.routeKey);
@@ -163,8 +164,9 @@ export function applyAcquisitionSiteCommand(
         ),
       );
     }
-    const producer = selectedPickupProducer(catalog, occurrence.encounters);
     if (producer === undefined) failCommand(command, 'has no selected pickup producer');
+    if (!producer.pickups.some((pickup) => pickup.key === command.entry.entryKey))
+      failCommand(command, 'does not name an active pickup entry');
     return updateOccurrenceTopology(
       document,
       located,
@@ -181,7 +183,7 @@ export function applyAcquisitionSiteCommand(
                 [command.entry.entryKey]: createUnresolvedPickupRewardState(
                   catalog,
                   command.value,
-                  producer.disposition.producerLifecycleKey,
+                  producer.producerLifecycleKey,
                 ),
               }),
             }),
@@ -202,12 +204,21 @@ export function applyAcquisitionSiteCommand(
   const topology = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
   const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+  const pickupProducer = selectedPickupProducer(catalog, occurrence.encounters);
   const shopOffers =
     occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined
       ? occurrence.state.shop.offers
       : undefined;
   if (shopOffers === undefined && pickupEntries === undefined)
     failCommand(command, 'does not own a materialized authorable acquisition site');
+  if (
+    shopOffers === undefined &&
+    (pickupProducer?.pickups.some(
+      (pickup) => pickup.required && !command.entryKeys.includes(pickup.key),
+    ) ??
+      false)
+  )
+    failCommand(command, 'must retain every required pickup in the acquisition order');
   const seen = new Set<string>();
   for (const key of command.entryKeys) {
     const parsedArtificer = parseArtificerReplacementEntryKey(key);
@@ -215,7 +226,7 @@ export function applyAcquisitionSiteCommand(
       parsedArtificer === undefined ? undefined : pickupEntries?.[parsedArtificer.sourceKey];
     const belongs =
       shopOffers === undefined
-        ? pickupEntries?.[key] !== undefined ||
+        ? pickupProducer?.pickups.some((pickup) => pickup.key === key) === true ||
           artificerSource?.dispositionByAcquisitionRole[parsedArtificer!.acquisitionRole]?.kind ===
             'artificer'
         : shopOffers[key] !== undefined ||

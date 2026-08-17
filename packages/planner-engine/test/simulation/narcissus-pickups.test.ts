@@ -1120,6 +1120,6 @@ describe('Narcissus pickup producer', () => {
           }),
         }),
       ),
-    ).toMatchObject({ traitKey: 'NarcissusI', disposition: { kind: 'producePickups' } });
+    ).toMatchObject({ traitKey: 'NarcissusI', producerLifecycleKey: 'NarcissusPickup' });
   });
 });

@@ -793,6 +793,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
+    lifecycleProfileKey: 'StoryPickupRoom',
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
