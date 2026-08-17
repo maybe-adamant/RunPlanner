@@ -381,8 +381,10 @@ A materialized Shop preserves declaration order for inventory rows while
 deriving `Purchased` membership from its one occurrence-owned
 `acquisitionSites.roomExit.order` list. Each inventory row exposes only that
 membership toggle; the containing Acquisitions workbench owns ordered move
-controls and publishes one complete replacement order. Candidate support is
-evaluated for those complete proposals; impossible positions remain visible
+controls and publishes one complete replacement order. Membership changes are
+structural set edits and do not activate chronological candidate evaluation;
+the same rule applies to declaration-produced pickup and Fields interaction
+checkboxes. Candidate support is evaluated only for move proposals; impossible positions remain visible
 with their evidence, and a selected invalid order remains editable for repair.
 Per-offer Shop-purchase markers and finding destinations remain stable even
 though the aggregate acquisition-order candidate and order finding are owned by

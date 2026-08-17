@@ -782,8 +782,13 @@ sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
 
-Purchase and pickup participation plus chronology are one occurrence-owned
-exact acquisition-site order, not Shop state or a simulation witness. A Blind Box
+Purchase and pickup participation plus chronology are persisted in one
+occurrence-owned exact acquisition-site order, not Shop state or a simulation
+witness. Presence forms the unordered participant set exposed by Purchase and
+Picked up checkboxes; position is the later chronology. Membership insertion or
+deletion is structural, preserves the relative order of retained participants,
+and never requires the current chronology to settle. New participants append
+until the author uses the separate move controls. A Blind Box
 offer persists its intended eventual `BoonSource`, but source support is not
 validated while the box is merely offered. When the box is purchased, the
 simulator applies the one authored order, evaluates each purchase against the
@@ -822,7 +827,8 @@ those roles into loot/use history, trait acquisition, and level effects.
 
 Mandatory ordinary entries use derived participation and chronology. Optional
 Shop purchases and spawned pickups use one authored site order, where presence
-is participation and position is chronology. Shop inventory continues to own
+is participation and position is chronology. Fields optional pickups apply the
+same membership-before-order invariant in their mixed action sequence. Shop inventory continues to own
 the purchased offers; a spawned pickup instead owns its exact authored reward
 and acquisition-time children at the site. No producer owns a parallel
 purchase or pickup order.

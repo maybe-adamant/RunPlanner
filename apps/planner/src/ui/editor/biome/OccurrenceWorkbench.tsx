@@ -507,14 +507,7 @@ function FieldsOptionalRewardRows({
     interactions.fieldsActionOrders,
     chronology.interactionKey,
   );
-  const chronologyCandidates = useWorkspaceInteraction(chronologyInteraction);
   const applyParticipation = (proposalKey: string): void => {
-    const proposalIndex = chronologyInteraction.proposals.findIndex(
-      (proposal) => proposal.key === proposalKey,
-    );
-    if (proposalIndex < 0) return;
-    const evaluated = chronologyCandidates.result ?? chronologyCandidates.activate();
-    if (!candidateMayBeAuthored(evaluated?.[proposalIndex])) return;
     executeIntent(chronologyInteraction.intentFor(proposalKey));
   };
   return room.optionalRewards.map((reward) => (
@@ -526,12 +519,9 @@ function FieldsOptionalRewardRows({
         </div>
         <label className="purchase-control">
           <input
-            aria-busy={chronologyCandidates.pending || undefined}
             aria-label={`Interact with ${reward.label}`}
             checked={reward.interacted}
             onChange={() => applyParticipation(reward.participationProposalKey)}
-            onFocus={chronologyCandidates.activate}
-            onPointerDown={chronologyCandidates.activate}
             type="checkbox"
           />
           Interact
@@ -569,6 +559,9 @@ function FieldsChronologyWorkbench({
     if (proposalIndex < 0) return;
     const evaluated = candidates.result ?? candidates.activate();
     if (!candidateMayBeAuthored(evaluated?.[proposalIndex])) return;
+    executeIntent(interaction.intentFor(proposalKey));
+  };
+  const applyParticipation = (proposalKey: string): void => {
     executeIntent(interaction.intentFor(proposalKey));
   };
 
@@ -630,12 +623,9 @@ function FieldsChronologyWorkbench({
               ) : (
                 <label className="purchase-control">
                   <input
-                    aria-busy={candidates.pending || undefined}
                     aria-label={`Interact with ${row.label}`}
                     checked={row.state === 'active'}
-                    onChange={() => applyProposal(row.participationProposalKey!)}
-                    onFocus={candidates.activate}
-                    onPointerDown={candidates.activate}
+                    onChange={() => applyParticipation(row.participationProposalKey!)}
                     type="checkbox"
                   />
                   Interact
@@ -828,7 +818,6 @@ function ShopWorkbench({
                   </th>
                   <ShopPurchaseControl
                     address={offer.purchase.address}
-                    interactions={interactions}
                     label={offer.label}
                     onChange={(offerKeys) =>
                       dispatch(
@@ -870,7 +859,6 @@ function ShopWorkbench({
                   </th>
                   <ShopPurchaseControl
                     address={offer.purchase.address}
-                    interactions={interactions}
                     label={offer.label}
                     participationLabel={offer.participationLabel}
                     onChange={(offerKeys) =>
@@ -897,7 +885,6 @@ function ShopWorkbench({
                     </th>
                     <ShopPurchaseControl
                       address={offer.purchase.address}
-                      interactions={interactions}
                       label={offer.label}
                       participationLabel={offer.participationLabel}
                       onChange={(offerKeys) =>
@@ -1002,7 +989,6 @@ export function AcquisitionsWorkbench({
             {entry.participation === undefined ? null : (
               <PickupParticipationControl
                 entry={entry.address}
-                interactions={interactions}
                 label={entry.participation.label}
                 selected={entry.participation.selected}
                 toggleEntryKeys={entry.participation.toggleEntryKeys}
@@ -1036,29 +1022,17 @@ export function AcquisitionsWorkbench({
 
 function PickupParticipationControl({
   entry,
-  interactions,
   label,
   selected,
   toggleEntryKeys,
 }: {
   readonly entry: import('@run-planner/engine/authored-project').AcquisitionEntryAddress;
-  readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly selected: boolean;
   readonly toggleEntryKeys: readonly string[];
 }) {
   const dispatch = useAppDispatch();
-  const interaction = requireWorkspaceInteraction(
-    interactions.acquisitionOrders,
-    workspaceInteractionKey(entry.site),
-  );
-  const projection = useWorkspaceInteraction(interaction);
   const apply = () => {
-    projection.activate();
-    // Membership is the repair surface for optional pickups in either
-    // direction: an invalid active entry must always be removable, just as a
-    // dormant entry must be activatable to expose its hidden children. Only
-    // chronological Move earlier/later proposals remain candidate-gated.
     dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceAcquisitionOrder',
@@ -1072,10 +1046,7 @@ function PickupParticipationControl({
       <input
         aria-label={`${label} ${entry.entryKey}`}
         checked={selected}
-        disabled={projection.pending}
         onChange={apply}
-        onFocus={projection.activate}
-        onPointerDown={projection.activate}
         type="checkbox"
       />
       {label}

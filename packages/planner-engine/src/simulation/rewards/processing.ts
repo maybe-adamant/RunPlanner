@@ -72,11 +72,12 @@ import type {
   CanonicalLocalChildRoom,
   CanonicalResolvedIncomingReward,
 } from '../materialization';
-import type {
-  FindingEvidence,
-  RewardGenerationFindingCode,
-  SemanticFinding,
-  TraitFindingCode,
+import {
+  isAcquisitionAuthorshipMissingFinding,
+  type FindingEvidence,
+  type RewardGenerationFindingCode,
+  type SemanticFinding,
+  type TraitFindingCode,
 } from '../model';
 import {
   findingRegion,
@@ -2404,6 +2405,7 @@ export function settleShopAcquisitionSite(
   }));
   if (new Set(entry.order).size !== entry.order.length)
     return fail(`${room.gameName} acquisition order contains a duplicate entry`);
+  const findingKeysBeforeSettlement = new Set(findings.keys());
   const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
@@ -3206,7 +3208,13 @@ export function settleShopAcquisitionSite(
     void completed;
     next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
   }
-  if (next.length === 0 && !entryPurchaseFailureRecorded) {
+  const settlementFindings = [...findings].flatMap(([key, finding]) =>
+    findingKeysBeforeSettlement.has(key) ? [] : [finding.finding],
+  );
+  const stoppedOnlyForMissingAuthorship =
+    settlementFindings.length > 0 &&
+    settlementFindings.every(isAcquisitionAuthorshipMissingFinding);
+  if (next.length === 0 && !entryPurchaseFailureRecorded && !stoppedOnlyForMissingAuthorship) {
     addRewardFinding(
       findings,
       rewardFinding('shopPurchaseUnavailable', site, {

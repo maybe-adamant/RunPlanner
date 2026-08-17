@@ -58,6 +58,11 @@ points.
   exposes and saves Boon, Hermes, and Hammer trait offers. Progressive clamping
   retains the source Artificer capability through the generated child, and
   transient trait drafts persist as complete command-safe values.
+- Purchase, pickup, and optional Fields participation now behave as structural
+  set membership. Adding or removing a participant never waits on chronological
+  candidate replay; only later move controls evaluate order. This closes the
+  reported Decision 6 Mystery Box/Pom case and the same blocked-prefix class for
+  Narcissus and Fields pickups.
 
 ## Recently Completed Presentation
 
