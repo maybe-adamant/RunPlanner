@@ -2,16 +2,13 @@
 
 ## Status
 
-Locked delivery plan on clean base
-`8e8f83e26cec58fabdf4d147c70f6f285012063c`. Final adversarial review and
-bounded verification are READY. The plan promotes Ephyra side rooms into
-ordinary room occurrences, makes normal/additional decision exits lightweight
-occurrence-backed door choices, and cuts room-local chronology over to one
-shared action authority. The reviews split topology/presentation normalization
-from chronology behavior, qualified multi-contact reward actions, preserved
-the existing lifecycle/history/reward folds, and made generation handoff,
-checkpoint, address, reconciliation, O phase-local generation, validation, and
-deletion contracts exact.
+Locked delivery plan. Gate A landed as `e1e3af0` and Gate B landed as
+`f38247d`. Product review after Gate B found one bounded pre-closure correction:
+door-visible reward identity must remain part of the predecessor's door
+contract, and every occurrence stage must render its outgoing decision state
+without requiring separate frontier navigation. The correction is locked
+below before Gate C durable closure. Gate C has not started and may not absorb
+the superseded Gate-A presentation shape.
 
 This document is temporary delivery authority. It must not be linked from the
 README or stable design documents. At phase closure, absorb its durable
@@ -46,21 +43,21 @@ occurrence.
 
 Realign decision presentation with that same ownership. Every normal or
 additional exit remains backed by its retained continuation `RoomOccurrence`,
-but its decision card is only a lightweight door-transition surface: exit
-identity, the compact door reward when the source creates one (otherwise its
-target/envelope summary), picked state, status/findings, and genuine topology
-transitions such as removing an existing Contract or natural Chaos exit and
-anomaly takeover/revert.
+but its decision card is a door-transition surface: target room identity,
+every reward identity visible on that door, picked state, status/findings, and
+genuine topology transitions such as removing an existing Contract or natural
+Chaos exit and anomaly takeover/revert. The card owns reward-identity
+authoring, but never pickup participation, disposition, trait/Pom resolution,
+or action timing.
 
 The visible stage is anchored by the current/source occurrence, not by one of
 its targets:
 
 ```text
 current occurrence workbench
-  predecessor-generated handoff edited through its exact reward-owner interaction
-  room identity, payloads, encounters, internal state, and—after Gate B—actions
+  room-internal generation, encounters, internal state, and actions
 outgoing decision sourced by this occurrence
-  lightweight normal/additional exit cards
+  target room and door-visible reward authoring, selection, and transitions
 ```
 
 The source occurrence workbench owns creation of an absent source-owned
@@ -90,10 +87,14 @@ may contain only one player action. A complex Fields or O room contains fixed
 checkpoints, dependencies, and several reorderable actions in one ranked view.
 
 An occurrence stage therefore presents the current room first and its outgoing
-decision second. Picking a normal, Contract, or natural Chaos exit chooses the
-next stage without rewriting the source or any retained target. Exit cards do
-not host the room reward editor, ordinary/Chaos room editor, Customize surface,
-or suggested actions. The anomaly identity controls are the closed
+decision second. The outgoing section is total: it renders the authored
+decision, the exact authoring frontier or blocker when the decision does not
+yet exist, or an explicit terminal state. Picking a normal, Contract, or
+natural Chaos exit chooses the next stage without rewriting the source or any
+retained target. Exit cards host only target-room and door-visible reward
+identity authoring plus selection and genuine door transitions. They do not
+host pickup/disposition/trait/Pom timing, encounter editing, Customize, or
+suggested actions. The anomaly identity controls remain the closed
 door-transition exception.
 
 The model keeps these questions independent:
@@ -324,11 +325,12 @@ after the last active O window clears.
 
 The persisted reward payload may remain on its exact occurrence/reward owner;
 this contract describes semantic generation and settlement authority, not a
-UI-driven storage move. Application projection may present predecessor-owned
-door facts in the selected occurrence workbench, but its commands retain their
-exact engine owners. The boundary must be observable in command types,
-projection products, undo entries, and tests rather than inferred from visual
-placement.
+UI-driven storage move. The application door-contract projection binds the
+exact identity editor only when preview mode is `visible`. The selected
+occurrence workbench receives only read-only handoff context and exact Room
+Action settlement children; it cannot bind a second identity editor. The
+boundary must be observable in command types, projection products, undo
+entries, and tests rather than inferred from visual placement.
 
 ### 3. Every occurrence owns one authored action order
 
@@ -463,7 +465,9 @@ The action model never owns the payload it resolves:
 An incoming door reward has an explicit cross-occurrence handoff. The preceding
 generation contract—an occurrence-sourced exit decision, Hub decision, or local
 visit decision—owns creation of the door/visit, its target occurrence, and the
-frozen reward identity shown on that transition. An explicit structural
+frozen reward identity retained by that generation handoff. Only a `visible`
+door contract shows the identity and binds its exact reward-owner editor;
+`hidden` and `none` expose no reward summary or editor. An explicit structural
 transition such as anomaly takeover/revert or adding/removing Contract or
 natural Chaos rewrites that authored generation contract and causes a fresh
 evaluation; it is not an in-room action. The target occurrence does not
@@ -471,9 +475,10 @@ regenerate its incoming decision. Once entered, its Room Actions chronology
 owns what happens to the incoming reward object: ordinary pickup, Time Piece,
 Artificer source destruction/use and replacement creation, later replacement
 pickup, and resulting trait/Pom/effect settlement. The selected occurrence
-workbench may present the predecessor-generated reward fact through its exact
-reward-owner interaction, but presentation does not move semantic generation
-authority into React or duplicate the reward in occurrence state.
+workbench may summarize a visible predecessor-generated reward only as
+read-only context; exact Room Action rows bind its settlement children.
+Presentation does not move semantic generation authority into React or
+duplicate the reward in occurrence state.
 
 Structural controls choose what exists: reward identity, Shop inventory, wheel
 offer set, encounter identity, optional generation, and similar producer facts.
@@ -733,6 +738,24 @@ dependencies/checkpoints/proposals; total prefix execution; encounter action
 settlement; Artificer source-site separation; and canonical reward/trait/Pom,
 Time Piece, bag, and lifecycle transitions.
 
+The pre-closure correction also gives the engine one closed
+`OccurrenceOutgoingStatus` query/product. Given an exact occurrence and the
+project's retained/progressive evaluation, it classifies that occurrence as:
+
+- an authored outgoing decision, with its exact decision owner;
+- the current authorable exit frontier, with the exact source occurrence,
+  candidate capability/command owner, and any finding at that frontier;
+- blocked or unentered, with the exact blocker owner and findings but no
+  fabricated authoring capability;
+- topology-owned Hub/local continuation, with its exact Hub or local-visit
+  owner rather than an occurrence-local exit; or
+- terminal/no physical outgoing, including the selected Preboss completion
+  boundary.
+
+This query owns progression/topology classification. Application assembly may
+adapt it, but may not infer a case from rendered position, the biome-global
+completeness frontier, room kind, or absent decision lookup.
+
 It uses no hidden registration, mutable semantic table, sidecar keyed by roster
 output, or second authored order.
 
@@ -742,14 +765,17 @@ Owns Hub/main/local navigation; dormant structural customization versus active
 entered chronology; roster presentation; bound insert/remove/move actions;
 payload/finding/inspector/focus destinations; and Redux undo/redo.
 
-Decision presentation owns only generated-exit comparison, selection, and
-genuine topology transitions. Each normal, Contract, or natural Chaos exit
-remains linked to its continuation occurrence, but the stage renders the
-current/source occurrence workbench followed by the outgoing decision sourced
-by it. The current workbench may present its incoming reward through controls
-for the predecessor-generated handoff, but edits it through the existing exact
-reward-owner interaction. Presentation moves neither generation authority nor
-persisted reward ownership.
+Decision presentation owns generated target-room identity, each door's exact
+reward-preview mode, every reward identity visible on that door, selection,
+and genuine topology transitions.
+Each normal, Contract, or natural Chaos exit remains linked to its continuation
+occurrence, but the stage renders the current/source occurrence workbench
+followed by the outgoing decision or outgoing authoring frontier sourced by it.
+The continuation workbench may summarize its incoming handoff read-only and
+Room Action rows may expose chronology-owned child editors, but neither may
+offer a second base reward-identity editor. Presentation moves neither
+generation authority nor persisted reward ownership; the decision product
+binds the existing exact reward-owner interaction.
 Missing targets may expose the minimal door-level creation control because no
 occurrence exists yet. Retained unselected occurrences remain repairable
 through exact inspector/finding navigation without changing selection. A
@@ -761,7 +787,10 @@ target occurrence's identity. Chaos map selection, anomaly cleared state,
 reward acquisition, and every other inside-room edit belong to the occurrence
 workbench. Hub-sourced decisions remain composed by the Hub workbench.
 
-Application projection also owns the closed occurrence presentation shape.
+Application projection adapts the engine's closed outgoing-status product to
+`WorkspaceOccurrenceStage.outgoing`; React performs only keyed rendering of
+the authored decision, frontier/blocker, topology-owned handoff, or terminal
+case. Application projection also owns the closed occurrence presentation shape.
 Fields and ShipCombat receive deliberate compositions over the same engine
 roster rather than accumulating conditionals in one catch-all workbench. N's
 Hub/visit hierarchy remains specialized topology presentation; its actual room
@@ -781,19 +810,22 @@ semantics. Gate B then replaces the three competing chronology paths in one
 behavior cutover. No gate lands a context-only wrapper or a temporary fourth
 order.
 
-These are two delivery gates for one product correction, not independent
-features. Gate A removes timing/payload editors from door cards only by moving
-the still-current controls intact into the occurrence workbench; no authoring
-or repair path may disappear before Gate B. Gate B then replaces those legacy
-timing paths with the one occurrence roster and moves chronology-sensitive
-controls onto their exact action rows. The completed product is accepted only
-when both the lightweight-door surface and Room Actions surface are present and
-their command domains remain disjoint.
+Gate A and Gate B are the two completed delivery gates for one product
+correction, not independent features. Gate A separates the occurrence
+workbench from its outgoing door surface. Gate B replaces the legacy timing
+paths with one occurrence roster and moves chronology-sensitive controls onto
+their exact action rows. The bounded pre-closure correction restores base
+reward-identity authoring to the door surface and makes the outgoing section
+total without changing Room Actions.
+The completed product is accepted only when the door-contract and Room Actions
+surfaces are both present and their command domains remain disjoint.
 
 Each gate receives its own fresh executor, independent reviewer, holistic diff
 review, full repository check, and Conventional Commit. Stop after Gate A for
-the requested hierarchy/topology product review, and after Gate B for Room
-Actions product review. Gate C is docs-only durable closure.
+the requested hierarchy/topology product review, after Gate B for Room Actions
+product review, and after the bounded correction for door/stage product review.
+Gate C remains docs-only durable closure unless its fresh audit finds a concrete
+defect.
 
 ## Gate A — Room-Occurrence and Decision Presentation Normalization
 
@@ -825,17 +857,17 @@ a new topology, selection, reward, or chronology model.
   `LocalVisitOrderAddress` plus exact generation/order commands.
 - Keep every normal, Contract, and natural Chaos exit backed by its retained
   continuation occurrence while reducing the exit card to exit identity,
-  compact door reward when present (otherwise target/envelope summary), picked
-  state, status/findings, and genuine topology transitions: remove an existing
-  Contract or Chaos exit and anomaly takeover/revert. Creation of an absent
-  source-owned additional exit stays on the source occurrence workbench in the
-  same occurrence stage.
+  door-visible reward authoring when present (otherwise target/envelope
+  summary), picked state, status/findings, and genuine topology transitions:
+  remove an existing Contract or Chaos exit and anomaly takeover/revert.
+  Creation of an absent source-owned additional exit stays on the source
+  occurrence workbench in the same occurrence stage.
 - Project one full current/source occurrence workbench before the outgoing exit
-  cards sourced by that occurrence. Present its incoming handoff through the
-  existing exact reward-owner interaction without moving the predecessor's
-  generation authority, and move ordinary/Chaos room identity and reward
-  editing, Customize, suggested actions, encounters, and anomaly cleared/reward
-  state into that occurrence stage. Keep anomaly
+  cards sourced by that occurrence. Keep ordinary/Chaos room-internal
+  generation, Customize, suggested actions, encounters, and anomaly
+  cleared/reward state in that occurrence stage, but keep target-room and
+  door-visible base reward identity on the predecessor's door product through
+  the existing exact reward-owner interaction. Keep anomaly
   takeover, replacement-map selection, and revert together on the source
   stage's normal-exit card.
 - Preserve every existing acquisition participation/order, reward disposition,
@@ -860,10 +892,11 @@ a new topology, selection, reward, or chronology model.
   `LocalChildAddress`, `LocalChildGroupAddress`, and every local-child-specific
   codec, command, candidate, materialization, history, finding, workspace, and
   UI branch in the same commit.
-- Delete the inline full `RoomOfferEditor`, existing-occurrence room/map
-  selectors, Customize, suggested-action, and anomaly-clearance surfaces from
-  normal-target, `ZagreusContractExit`, and `NaturalChaosExit` cards; do not
-  replace them with a second selected-room editor.
+- Delete the inline full `RoomOfferEditor`, Customize, suggested-action,
+  encounter, anomaly-clearance, and chronology-sensitive child surfaces from
+  normal-target, `ZagreusContractExit`, and `NaturalChaosExit` cards. Retain the
+  bounded target-room and door-visible reward identity editors; do not replace
+  them with a second selected-room editor.
 
 ### Primary Gate-A witnesses
 
@@ -879,10 +912,12 @@ a new topology, selection, reward, or chronology model.
   restore, and route continuation do not replay generation or settlement.
 - Closing/replacing a main target and undo/redo preserve complete descendant
   closure with no orphan occurrence or decision.
-- Normal, Contract, and natural Chaos exit cards show only door
-  comparison/selection facts and genuine topology transitions; they contain no
-  full room reward editor, ordinary/Chaos existing-occurrence editor, Customize
-  surface, suggested actions, encounter editor, or anomaly cleared control.
+- Normal, Contract, and natural Chaos exit cards show target-room identity,
+  their declaration-owned `visible | hidden | none` reward-preview state,
+  comparison/selection facts, and genuine topology transitions. Only a
+  `visible` preview carries the base reward editor; Contract and natural-Chaos
+  entry cards remain hidden. They contain no pickup disposition, trait/Pom
+  child, Customize, suggested action, encounter, or anomaly-cleared control.
   The normal card may expose the closed anomaly identity transition
   (takeover/map/revert). A missing normal target retains only its explicit
   creation control.
@@ -890,23 +925,23 @@ a new topology, selection, reward, or chronology model.
   compact additional-exit card immediately appears below with selection and
   removal. Add, remove, and undo/redo stay in one occurrence stage and never
   create a second additional-exit editor.
-- The current occurrence workbench owns ordinary/Chaos room authoring, complete
-  incoming-reward authoring through the existing exact reward-owner
-  interaction, room customization, suggested actions, encounter editing, and
-  anomaly cleared/reward state. It cannot takeover, retarget, or revert its own
-  Anomaly identity.
-- When present, the current workbench shows the exact predecessor-generated
-  incoming reward, but resolving it—pickup, Time Piece, Artificer, replacement
-  acquisition, and nested effects—belongs only to the current occurrence;
-  those actions cannot regenerate or rewrite the predecessor's exit batch. O
-  instead shows its envelope and phase-local wheel rewards at their own reached
-  checkpoints.
+- The current occurrence workbench owns room-internal generation, room
+  customization, suggested actions, encounter editing, anomaly cleared state,
+  and Room Actions. It may summarize the exact predecessor-generated incoming
+  reward read-only, but cannot edit its base identity, takeover, retarget, or
+  revert its own Anomaly identity.
+- A predecessor door with a `visible` preview edits the exact incoming base
+  reward identity; hidden/none doors expose no reward editor. Resolving a
+  reward—pickup, Time Piece, Artificer, replacement acquisition, and nested
+  effects—belongs only to the entered occurrence and cannot regenerate or
+  rewrite the predecessor's exit batch. O instead shows only its envelope on
+  the door and owns phase-local wheel rewards at their reached checkpoints.
 - Selecting or editing a door changes only target/generated facts and produces
   no acquisition, NPC, trait, Pom, disposition, participation, or action-order
   command. Gate-A undo/redo proves those domains remain separate.
-- Every timing/payload control removed from an exit card remains reachable in
-  the occurrence workbench with the same pre-Gate-B semantic command and repair
-  behavior.
+- Every chronology-sensitive control removed from an exit card remains
+  reachable on its exact Room Action row. Base door-visible reward identity
+  remains editable only on the exit card through the existing semantic command.
 - An O transition card contains no wheel reward summary/editor. Switching to an
   O ShipCombat target presents its retained encounter envelope without
   materializing or validating Wheel 1 or Wheel 2 at the predecessor decision.
@@ -916,14 +951,16 @@ a new topology, selection, reward, or chronology model.
   loses authored state.
 - A finding on a retained unselected occurrence opens and repairs that exact
   occurrence without changing the picked exit. A missing target can be created
-  from its compact door card and is then edited through its occurrence
+  from its compact door card; its target-room/visible-reward identity remains
+  on that card while its room-internal state is edited through its occurrence
   workbench.
 - Decision, occurrence, inspector, finding, focus, and Redux witnesses prove
-  there is one room editor authority rather than an inline-card and
-  occurrence-workbench pair.
-- Stage composition witnesses prove every occurrence-sourced decision is nested
-  beneath its exact source occurrence, while Hub-sourced handoffs remain under
-  the Hub workbench and never attach to a selected target by rendered position.
+  there is one base door identity/reward editor and one disjoint room-internal
+  editor rather than duplicated authority across the card and workbench.
+- Stage composition witnesses prove every occurrence-sourced authored decision,
+  outgoing frontier, or outgoing blocker is nested beneath its exact source
+  occurrence, while Hub-sourced handoffs remain under the Hub workbench and
+  never attach to a selected target by rendered position.
 
 ### Gate-A validation and boundary
 
@@ -1177,11 +1214,150 @@ once before committing `feat(planner): unify room action chronology`. Stop for
 user product review. This full check is required because Gate B changes strict
 schema and shared engine/application behavior.
 
+## Pre-Closure Correction — Door Contract and Total Outgoing Stage
+
+Gate B product review found two coupled Gate-A presentation defects. The
+decision projection currently derives a target's reward by inspecting the
+target occurrence workbench, so the door card and decision rail join room
+identity from the decision with reward identity from a second presentation
+owner. An occurrence stage also pairs only an already-authored outgoing
+decision node; when the outgoing decision is still an authoring frontier, the
+doors disappear behind separate navigation such as `Move to next decision`, a
+finding, or an unrelated additional-exit edit.
+
+Correct both before Gate C. This is one bounded application/engine-product
+slice, not a new topology, reward, or chronology model.
+
+### Door contract
+
+- Project one explicit immutable door-contract product per physical target.
+  It contains the target room identity, a declaration/canonical reward-preview
+  mode, exact door-visible reward identities when the mode is `visible`,
+  picked/availability/retained state, and genuine transition capabilities.
+  Door cards and decision-rail summaries consume this same product; neither may
+  rediscover reward identity from `WorkspaceRoomSummary` or an occurrence
+  workbench.
+- Reward-preview mode is closed:
+  - `visible` carries the exact identity plus its existing owner interaction;
+  - `hidden` records that the physical door deliberately withholds preview and
+    exposes no reward editor or summary; and
+  - `none` means the door has no door-visible reward product.
+    Being reward-bearing internally is not sufficient to select `visible`.
+    Catalog/canonical door facts own the mode; React must not dispatch on room or
+    detour kind.
+- Bind reward identity through the existing exact reward-owner interaction.
+  Do not copy reward payload into new authored state or move persisted ownership.
+  Generated/evaluated and retained-unreached evidence must remain distinguishable
+  under progressive evaluation rather than being joined by rendered position.
+- Ordinary visible-preview doors edit that base reward identity on the door
+  card. The entered room may show it read-only for context. Its Room Action row
+  alone owns disposition, pickup, trait/Pom child, Artificer replacement, and
+  timing controls.
+- The natural-Chaos entry gate and Zagreus Contract entry door are `hidden`:
+  neither exposes the generated Chaos reward or the Contract room's forced
+  output. The automatic Anomaly and Contract host-return doors are also
+  `hidden`. A normal exit from an entered Chaos room is an ordinary visible
+  host-return door and uses the ordinary door contract. An Anomaly entry that
+  replaced an ordinary visible door retains the already-authored Anomaly
+  reward as that visible door's reward; takeover/revert remains a door identity
+  transition. These cases require separate witnesses rather than one generic
+  special-door rule.
+- An H outgoing decision owns its shared declaration-derived cage outcome/count,
+  and each H target door card owns the identity of its two or three active cage
+  rewards because those are visible before entry. The entered Fields room owns
+  side-reward count and identities because those are generated/revealed on the
+  map, plus all cage/side participation and Room Action chronology. Cage action
+  rows may summarize their reward and expose chronology-dependent child
+  controls, but cannot edit the base cage identity.
+- An O door carries only target/envelope identity. Wheel stores, offers, picked
+  wheel identity, and reward payload remain phase-local products of the entered
+  ShipCombat occurrence. No generic door product may fabricate an O reward.
+- N Hub and local-visit doors preserve their existing topology owners. Where
+  they display a generated main/local reward, their presentation must consume
+  the same owner-complete door/visit handoff fact rather than derive it from the
+  entered room workbench.
+
+### Total outgoing occurrence stage
+
+- Add the engine-owned `OccurrenceOutgoingStatus` query described above. It
+  consumes an exact occurrence plus retained/progressive evaluation and returns
+  one closed case: authored decision, current authorable exit frontier,
+  blocked/unentered, topology-owned Hub/local continuation, or terminal/no
+  physical outgoing. Frontier and blocker cases carry their exact semantic
+  source address, candidate capability/command owner when authorable, and exact
+  findings; the product never substitutes the biome-global frontier for an
+  occurrence-local fact.
+- Replace optional `outgoingDecisionNodeKey` with the application adaptation
+  `WorkspaceOccurrenceStage.outgoing`. Application assembly joins the engine
+  status to exact workspace nodes/interactions once; React performs keyed
+  rendering only and contains no room-kind, topology, or progression inference.
+- Every selected or directly opened occurrence renders its outgoing section
+  immediately after its workbench. After creating an Underworld opening room,
+  the same inspector therefore shows the outgoing authoring frontier without a
+  separate rail click, finding, Chaos gate, or `Move to next decision` action.
+- Authoring the frontier replaces that section in place with the outgoing door
+  cards. Door selection advances to the chosen target occurrence stage; it does
+  not detach the source workbench from its own outgoing section.
+- A blocked frontier remains visible with its exact finding/repair destination.
+  A terminal occurrence shows an explicit terminal state. Hub-sourced handoffs
+  remain composed by the Hub workbench and are not attached to a target by
+  rendered order.
+- A retained unselected or directly opened occurrence reports its truthful
+  blocked/unentered or authored status without borrowing the selected route's
+  global frontier. N main/local occurrences report their topology-owned
+  Hub/local continuation; rooms that merely source an additional Contract or
+  Chaos exit still derive their ordinary outgoing status independently. A
+  selected Preboss reports terminal/no physical outgoing.
+- Remove the redundant `Move to next decision` detour once every occurrence
+  stage has a total outgoing product. Navigation, findings, and rail entries may
+  still focus that same product but are no longer required to reveal it.
+
+### Primary correction witnesses
+
+- Starting an Underworld project and selecting the opening room immediately
+  renders its outgoing frontier below the room workbench. Authoring the batch in
+  place renders its doors without another navigation action; undo restores the
+  frontier in the same stage.
+- A completed and a progressively blocked ordinary decision project room and
+  reward from one door-contract product. The selected decision rail consumes
+  that exact product and never calls the occurrence-room reward adapter.
+- Editing an ordinary door reward changes only the door reward identity and its
+  derived future-action reconciliation. The entered room has no second base
+  identity editor; its exact pickup row retains disposition/trait/Pom controls.
+- Natural-Chaos and Zagreus Contract entry cards show their destinations but no
+  reward preview/editor. Automatic Anomaly and Contract return doors remain
+  hidden. The ordinary return from an entered Chaos room shows its normal
+  visible reward contract. Anomaly takeover/revert retains the visible reward
+  on the replaced ordinary door without creating a hidden-return editor.
+- An H outgoing decision authors the shared two/three-cage outcome and each exit
+  card authors its active cage reward identities. The entered H room authors
+  side rewards separately and presents cage completion/pickup plus side
+  participation/order in Room Actions with no duplicate cage identity editor.
+- An O exit card has no reward editor or reward summary. After entry, Wheel 1
+  and optional Wheel 2 remain editable only at their reached phase-owned
+  products and their pickup children remain on Room Action rows.
+- Normal, Contract, natural Chaos, anomaly takeover/revert, Hub/local visit,
+  finding focus, rail selection, and unselected retained-room repair retain
+  exact owner and undo/redo behavior.
+- Engine status witnesses cover an authored ordinary decision, current
+  authorable frontier, retained-unselected blocker, N main and local
+  topology-owned continuations, a source room with an additional Contract or
+  Chaos exit, and selected-Preboss terminal. Application contract tests prove
+  each becomes the matching `WorkspaceOccurrenceStage.outgoing` case without
+  consulting room kind or the biome-global frontier.
+
+Use a fresh executor and independent reviewer. Run the narrow engine/planner/UI/
+contract/product owners while developing, then one `npm run check` after review
+if production, tests, or shared products changed. Commit the correction as
+`fix(planner): restore door contract staging`, then resume Gate C from that
+commit.
+
 ## Gate C — Durable Closure
 
-After user product review, perform a fresh architecture/gameplay audit. Correct
-only concrete defects through bounded review, absorb schemas 46/47 and chronology
-into stable authorities, and delete this plan.
+After the pre-closure correction commit and user product review, perform a fresh
+architecture/gameplay audit. Correct only concrete defects through bounded
+review, absorb schemas 46/47, door contracts, total occurrence staging, and
+chronology into stable authorities, and delete this plan.
 
 Confirm:
 
@@ -1212,7 +1388,8 @@ bounded production correction found by closure audit.
 
 ## Validation Policy
 
-During Gates A and B use the narrowest truthful lane:
+During Gates A, B, and the pre-closure correction use the narrowest truthful
+lane:
 
 - `npm run test:catalog` for declaration/topology/lifecycle;
 - `npm run test:engine` for schema, commands, contributions, roster,
@@ -1257,19 +1434,22 @@ not add private participation/order models.
    fully deleting the local-child exception?
 3. Are the generated-unentered reward controls and dormant encounter/action
    controls exactly the same as current N behavior?
-4. Are normal, Contract, and natural Chaos exit cards limited to door
-   facts/selection and genuine topology transitions while one occurrence
-   workbench owns ordinary/Chaos room authoring, reward/customization, anomaly
-   clearance, and exact selected/unselected repair without selection mutation?
+4. Are normal, Contract, and natural Chaos exit cards limited to target-room
+   identity, the exact declaration-owned reward-preview mode and visible base
+   reward identity when applicable, selection, and genuine topology transitions
+   while one occurrence workbench owns room-internal generation, customization,
+   anomaly clearance, chronology children, and exact selected/unselected repair
+   without selection mutation?
    Do anomaly takeover, replacement-map selection, and revert remain together
    on the parent normal-door transition rather than its occurrence workbench?
 5. Does the source occurrence add an absent Contract/Chaos exit and its compact
    card remove/select it in the same tab without a split or duplicate editor?
-6. Does each stage keep the current/source occurrence workbench with the
-   outgoing decision it sources, while selecting a normal or additional exit
-   advances to that continuation's own stage without mutating any retained
-   occurrence? Can a missing target still be created without reintroducing an
-   inline room editor, and do Hub-sourced handoffs remain Hub-owned?
+6. Does each stage keep the current/source occurrence workbench with a total
+   outgoing state—authored decision, frontier/blocker, or terminal—while
+   selecting a normal or additional exit advances to that continuation's own
+   stage without mutating any retained occurrence? Can a missing target still
+   be created without reintroducing an inline room editor, and do Hub-sourced
+   handoffs remain Hub-owned?
 7. Do Gate A and Gate B form the two complete legs of one product—lightweight
    generated doors and occurrence-owned action timing—without an interim lost
    editor, a door command writing chronology, or an action command rewriting a
@@ -1305,10 +1485,14 @@ not add private participation/order models.
 19. Does the occurrence claim remain limited to authored main/local rooms,
     leaving Boss/Postboss derived completion nodes and excluded completion
     interactions under their existing authority?
-20. Do deletion scans eliminate local-child, normal/Contract/Chaos inline
-    decision-card room editors, Fields, Acquisitions, automatic O reward
-    acquisition, and encounter chronology as parallel paths?
+20. Do deletion scans eliminate local-child, normal/Contract/Chaos inline full
+    room/chronology editors, `Move to next decision`, Fields, Acquisitions,
+    automatic O reward acquisition, and encounter chronology as parallel paths,
+    while retaining the one bounded door identity/reward editor?
 21. Does each broad gate run one complete repository check before commit?
+22. Do door cards and decision rails consume one exact door-contract product,
+    with H cage rewards on the door, Fields side rewards in the room, and O
+    wheel rewards phase-local after entry?
 
 Any material contradiction stops execution for another amendment. Review may
 not silently reinterpret the gate or defer a competing path to closure.
