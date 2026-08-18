@@ -103,10 +103,17 @@ active main slot. Both identities leave the existing wheel ownership and
 selected reward behavior on their exact Combat slots unchanged.
 
 When `IcarusCombatO` is selected and entered, its exact phase owns Icarus's
-three-choice player-rarityless trait offer and folds the selected trait at
-encounter completion. Latest Model may target one exact eligible equipped
-Rank-I Hammer and upgrade it to Rank II through the shared
-targeted-acquisition lifecycle.
+three-choice player-rarityless trait offer. Source chronology makes the later
+Icarus interaction and the selected wheel-reward interaction parallel required
+objects after that combat; either may resolve first, and both must clear before
+the next ShipCombat phase. Latest Model may target one exact eligible equipped
+Rank-I Hammer and upgrade it to Rank II through the shared targeted-acquisition
+lifecycle.
+
+The current planner still folds the Icarus trait at encounter completion. The
+source-backed correction and its relationship to wheel selection, repeated
+combat checkpoints, and room-local ordering are owned by
+[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
 The remaining NPC event, interaction, reward, and external-profile paths are
 not encounter candidates. The raw source composition remains documented in the

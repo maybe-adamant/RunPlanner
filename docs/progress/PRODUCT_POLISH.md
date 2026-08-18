@@ -39,6 +39,28 @@ No previously recorded presentation item remains queued. New observations may
 start a fresh polish iteration without inheriting already-resolved contact
 points.
 
+## Foundational Queue
+
+- Room-local interaction order is currently divided between automatic
+  encounter-trait settlement, a Fields-only action order, and checkpoint-local
+  Acquisitions orders. The source-backed
+  [room action order audit](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
+  closes the game facts and planner disposition for one general chronology in
+  every entered room. It requires a locked cross-lane implementation plan
+  before code changes. Its ordering interaction should match the mature ranked
+  Hub/Acquisitions experience rather than retain the Fields selector sketch.
+  H and O are the implementation stress cases: H interleaves many already-
+  present objects across cage barriers, while O repeats wheel-before-combat and
+  required post-combat action windows in one physical room. N is the boundary
+  case whose Hub visits and side-room entry remain topology between distinct
+  occurrence-local chronologies. The same plan should project Gorgon Athena as
+  the forced effective encounter when its Death Defiance condition is active,
+  while retaining the hosted encounter as internal provenance and keeping the
+  later Athena trait interaction in Room Action order. It should also split the
+  current nested Artificer disposition: the source keeps only its interaction
+  intent, while the source-derived produced-object owner carries the
+  replacement identity and its later pickup row owns trait/Pom resolution.
+
 ## Recently Completed Correctness
 
 - Starting manual Arcana now obey the 30-Grasp baseline and Vow of Void's exact

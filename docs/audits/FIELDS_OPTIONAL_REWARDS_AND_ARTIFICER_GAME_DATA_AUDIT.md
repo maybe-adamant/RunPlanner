@@ -20,6 +20,11 @@ planner contracts live in the authored, reward, lifecycle,
 simulation/validation, workspace, and H biome authorities; this audit retains
 the source evidence and final disposition rather than delivery mechanics.
 
+`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md` records the later cross-room conclusion:
+the mixed Fields chronology is the correct local evidence but not the final
+general owner. It must be absorbed with acquisition and combat-NPC interactions
+into one entered-room chronology rather than remain a Fields-private order.
+
 ## Sources
 
 Primary evidence:
