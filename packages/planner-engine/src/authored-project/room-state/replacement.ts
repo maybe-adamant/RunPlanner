@@ -97,23 +97,11 @@ function reconcileFieldsCombatState(
     previousState.optionalRewardCount,
     replacementOptional.optionalRewardCapacity,
   );
-  const admittedOptionalActions = new Set(
-    replacementOptional.slotKeys
-      .slice(0, optionalRewardCount)
-      .map((slotKey) => `interactOptional:${slotKey}`),
-  );
   return Object.freeze({
     kind: 'fieldsCombat',
     cages: Object.freeze(cages),
     optionalRewardCount,
     optionalRewards: Object.freeze(optionalRewards),
-    actionOrder: Object.freeze(
-      previousState.actionOrder.filter(
-        (action) =>
-          action.kind !== 'interactOptionalReward' ||
-          admittedOptionalActions.has(`interactOptional:${action.slotKey}`),
-      ),
-    ),
   });
 }
 

@@ -71,7 +71,6 @@ export function reconcileNormalTargetEntryStates(
         : {
             acquisitionSites: Object.freeze({
               roomExit: Object.freeze({
-                order: Object.freeze([]),
                 ...(room.infernalContractReward === undefined
                   ? {}
                   : {

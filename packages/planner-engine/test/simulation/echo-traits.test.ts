@@ -12,11 +12,13 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  roomActionKey,
   echoLastRewardPickupEntryKey,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
@@ -34,6 +36,7 @@ import {
 import {
   authorLegalTraitOffers,
   createGoldenFGHProject,
+  editTestRoomActionOrder,
   goldenHBiome,
 } from '@run-planner/test-fixtures';
 import { describe, expect, it } from 'vitest';
@@ -157,6 +160,20 @@ function echoReplayEntry() {
   return createAcquisitionEntryAddress(echoReplaySite(), echoReplayEntryKey);
 }
 
+function bridgeRoom(project: ReturnType<typeof createGoldenFGHProject>) {
+  const h = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
+    (biome) => biome.biomeKey === 'H',
+  );
+  if (h === undefined || !('rewards' in h)) throw new Error('H must be evaluated');
+  const snapshot = 'snapshot' in h ? h.snapshot : h.materializedPrefix;
+  const room = snapshot.decisions
+    .filter((decision) => decision.kind === 'batch')
+    .flatMap((decision) => decision.targets.map((target) => target.room))
+    .find((candidate) => candidate.occurrenceId === bridgeId);
+  if (room?.kind !== 'authored') throw new Error('Echo bridge room is missing');
+  return room;
+}
+
 function completeGoldenFGHProject() {
   return authorLegalTraitOffers(createGoldenFGHProject());
 }
@@ -183,6 +200,24 @@ function selectGoldenBridge(project = completeGoldenFGHProject()) {
   });
 }
 
+function placeCombat09Cage2Last(project: ReturnType<typeof createGoldenFGHProject>) {
+  return editTestRoomActionOrder(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09')),
+    (order) => {
+      const cage2 = order.find(
+        (reference) =>
+          reference.kind === 'interactLocalReward' &&
+          reference.groupKey === 'cages' &&
+          reference.slotKey === 'cage2',
+      );
+      if (cage2 === undefined) throw new Error('Combat09 Cage 2 action is missing');
+      return [...order.filter((reference) => reference !== cage2), cage2];
+    },
+  );
+}
+
 function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge()) {
   const selectedReward = createLocalRewardAddress(
     goldenHBiome,
@@ -201,13 +236,14 @@ function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge())
     reward: siblingReward,
     value: { rewardType: 'WeaponUpgrade' },
   });
+  const replaced = applyProjectCommand(swappedSibling, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: selectedReward,
+    value: { rewardType: 'MaxHealthDrop' },
+  });
   return Object.freeze({
     rewardType: 'MaxHealthDrop' as const,
-    project: applyProjectCommand(swappedSibling, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: selectedReward,
-      value: { rewardType: 'MaxHealthDrop' },
-    }),
+    project: placeCombat09Cage2Last(replaced),
   });
 }
 
@@ -706,7 +742,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(46);
+    expect(decoded.schemaVersion).toBe(47);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -1970,7 +2006,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
 });
 
 describe('Echo Gate C Reward Reward Reward', () => {
-  it('creates one required unresolved room-exit pickup and cannot omit it from order', () => {
+  it('creates one required unresolved room-exit pickup with an exact Echo-contact dependency', () => {
     const project = applyProjectCommand(selectGoldenBridge(), catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
@@ -1980,16 +2016,32 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(occurrence.acquisitionSites?.roomExit).toEqual({
-      order: [echoReplayEntryKey],
       pickupEntries: { [echoReplayEntryKey]: null },
     });
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: echoReplaySite(),
-        entryKeys: [],
-      }),
-    ).toThrow(/required pickup/);
+    const materializedBridge = bridgeRoom(project);
+    const row = materializedBridge.roomActionRoster.rows.find(
+      (candidate) =>
+        candidate.reference.kind === 'interactAcquisitionEntry' &&
+        candidate.reference.entryKey === echoReplayEntryKey,
+    );
+    expect(row).toMatchObject({
+      participation: 'required',
+      rank: expect.any(Number),
+      dependencies: [
+        {
+          kind: 'afterAction',
+          action: { kind: 'interactEncounter', phaseKey: 'Encounter' },
+        },
+      ],
+    });
+    expect(
+      materializedBridge.roomActionRoster.proposals.some(
+        (proposal) =>
+          proposal.kind === 'remove' &&
+          proposal.reference.kind === 'interactAcquisitionEntry' &&
+          proposal.reference.entryKey === echoReplayEntryKey,
+      ),
+    ).toBe(false);
   });
 
   it('replays the latest consumable source at Echo without regenerating the room exit', () => {
@@ -2101,9 +2153,38 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(dormantOccurrence.acquisitionSites?.roomExit).toMatchObject({
-      order: [],
       pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
     });
+    const dormantReference = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: echoReplayEntryKey,
+    });
+    const dormantRoom = bridgeRoom(project);
+    expect(
+      dormantRoom.roomActionRoster.rows.find(
+        (candidate) => candidate.key === roomActionKey(dormantReference),
+      ),
+    ).toMatchObject({ stale: true, executable: false });
+    expect(
+      dormantRoom.roomActionRoster.proposals.find(
+        (proposal) =>
+          proposal.kind === 'remove' &&
+          roomActionKey(proposal.reference) === roomActionKey(dormantReference),
+      ),
+    ).toMatchObject({ structurallyAuthorable: true });
+    const removedDormant = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(dormantReference)),
+    });
+    expect(() =>
+      applyProjectCommand(removedDormant, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(dormantReference)),
+        reference: dormantReference,
+        index: 0,
+      }),
+    ).toThrow('room action is not active for this occurrence');
     const dormantH = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
@@ -2131,12 +2212,21 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (biome) => biome.biomeKey === 'H',
     )!.topology!.occurrences.find((candidate) => candidate.occurrenceId === bridgeId)!;
     expect(restoredOccurrence.acquisitionSites?.roomExit).toMatchObject({
-      order: [echoReplayEntryKey],
       pickupEntries: { [echoReplayEntryKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
+    });
+    const restoredRow = bridgeRoom(project).roomActionRoster.rows.find(
+      (candidate) =>
+        candidate.reference.kind === 'interactAcquisitionEntry' &&
+        candidate.reference.entryKey === echoReplayEntryKey,
+    );
+    expect(restoredRow).toMatchObject({
+      participation: 'required',
+      rank: expect.any(Number),
+      stale: false,
     });
   });
 
-  it('round-trips schema 46 and rejects the retired nested replay child', () => {
+  it('round-trips schema 47 and rejects the retired nested replay child', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -2166,6 +2256,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
+    project = placeCombat09Cage2Last(project);
     project = makeBridgeOutgoingEligible(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -2198,6 +2289,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
       trait: echoOwner,
       value: echoRewardOffer(),
     });
+    project = placeCombat09Cage2Last(project);
     project = makeBridgeOutgoingEligible(project);
     const incomplete = simulateProjectAssembly(catalog, project);
     const incompleteH = incomplete.evaluation.routes[0]!.biomes.find(

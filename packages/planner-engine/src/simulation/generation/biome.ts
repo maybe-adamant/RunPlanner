@@ -2110,13 +2110,13 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
         );
       }
       const takeoverOwner = requireSource(rooms, batch.parent.origin);
-      if (
-        !history.rooms.some(
-          (room) => semanticAddressKey(room.origin) === semanticAddressKey(takeoverOwner.origin),
-        )
-      ) {
-        // A missing reward leaf can stop the source before its outgoing
-        // lifecycle without invalidating the already-authored takeover shape.
+      const takeoverOwnerHistory = history.rooms.find(
+        (room) => semanticAddressKey(room.origin) === semanticAddressKey(takeoverOwner.origin),
+      );
+      if (takeoverOwnerHistory?.preOutgoing === undefined) {
+        // A missing reward leaf or required chronology action can stop the
+        // source before outgoing generation without invalidating the already
+        // authored takeover shape.
         continue;
       }
       const support = evaluateTakeoverPrebossBatchCandidate(

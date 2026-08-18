@@ -26,7 +26,6 @@ const effectKinds = {
   recordEnteredRewardStore: true,
   recordExit: true,
   recordOfferPoint: true,
-  recordPhaseOfferAcquisition: true,
   recordPhaseOfferPoint: true,
   recordOutgoingGeneration: true,
   recordPreparation: true,
@@ -59,18 +58,11 @@ const expectedEffects = {
     'advanceEncounterDepth',
     'recordEncounterCompletion',
   ],
-  runFieldsActionSequence: [
-    'recordEncounterStart',
-    'advanceEncounterDepth',
-    'recordEncounterCompletion',
-    'recordAcquisitionPoint',
-  ],
   runRewardEncounterSequence: [
     'recordPhaseOfferPoint',
     'recordEncounterStart',
     'advanceEncounterDepth',
     'recordEncounterCompletion',
-    'recordPhaseOfferAcquisition',
   ],
   advanceProducer: ['recordProducerPoint'],
   generateOutgoingBatch: ['recordOutgoingGeneration'],
@@ -127,7 +119,6 @@ function normalizeOperation(raw: RoomLifecycleOperation, path: string): RoomLife
     case 'completeRequiredObjects':
     case 'generateOutgoingBatch':
     case 'runEncounterSequence':
-    case 'runFieldsActionSequence':
     case 'runRewardEncounterSequence':
     case 'commitRoom':
     case 'exitRoom':
@@ -270,7 +261,6 @@ function validateOperationSequence(
       encounterCompleted = true;
     } else if (
       operation.kind === 'runEncounterSequence' ||
-      operation.kind === 'runFieldsActionSequence' ||
       operation.kind === 'runRewardEncounterSequence'
     ) {
       encounterCompleted = true;
@@ -331,9 +321,7 @@ function validateEncounterCompatibility(
   );
   const usesEncounterSequence = profile.operations.some(
     (operation) =>
-      operation.kind === 'runEncounterSequence' ||
-      operation.kind === 'runFieldsActionSequence' ||
-      operation.kind === 'runRewardEncounterSequence',
+      operation.kind === 'runEncounterSequence' || operation.kind === 'runRewardEncounterSequence',
   );
   const usesRewardEncounterSequence = profile.operations.some(
     (operation) => operation.kind === 'runRewardEncounterSequence',
@@ -345,7 +333,6 @@ function validateEncounterCompatibility(
     profile.operations.filter(
       (operation) =>
         operation.kind === 'runEncounterSequence' ||
-        operation.kind === 'runFieldsActionSequence' ||
         operation.kind === 'runRewardEncounterSequence',
     ).length > 1
   ) {

@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 46 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 47 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -21,9 +21,7 @@ export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTrait
 export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;
 
 export type AcquisitionDisposition =
-  | { readonly kind: 'normal' }
-  | { readonly kind: 'timePiece' }
-  | { readonly kind: 'artificer'; readonly replacement: AuthoredRewardState | null };
+  { readonly kind: 'normal' } | { readonly kind: 'timePiece' } | { readonly kind: 'artificer' };
 
 export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
@@ -72,13 +70,8 @@ export interface ShopState {
   readonly offers: Readonly<Record<string, ShopOfferState>>;
 }
 
-/**
- * Occurrence-owned authoring for one exact acquisition point.  Its one order
- * is both optional-entry membership and chronology; producer state never
- * carries a second purchase order.
- */
+/** Occurrence-owned payloads for one exact acquisition point. */
 export interface AuthoredAcquisitionSiteState {
-  readonly order: readonly string[];
   /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
   readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
 }
@@ -88,19 +81,39 @@ export interface FieldsCombatState {
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
-  readonly actionOrder: readonly FieldsCombatAction[];
 }
 
-export type FieldsCombatAction =
-  | { readonly kind: 'completeCage'; readonly phaseKey: string }
-  | { readonly kind: 'interactCageReward'; readonly slotKey: string }
-  | { readonly kind: 'interactOptionalReward'; readonly slotKey: string }
+/**
+ * One stable reference to a player-triggered interaction owned by a room
+ * occurrence. Payload remains on the referenced semantic owner; this union
+ * stores chronology identity only.
+ */
+export type RoomActionReference =
+  | { readonly kind: 'completeFieldsCage'; readonly phaseKey: string }
   | {
-      readonly kind: 'interactArtificerReplacement';
-      readonly sourceGroup: 'cages' | 'optionalRewards';
-      readonly slotKey: string;
+      readonly kind: 'interactIncomingReward';
+      readonly producerPoint: string;
       readonly acquisitionRole: string;
+    }
+  | {
+      readonly kind: 'interactLocalReward';
+      readonly groupKey: string;
+      readonly slotKey: string;
+    }
+  | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
+  | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
+  | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
+  | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
+  | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
+  | {
+      readonly kind: 'interactAcquisitionEntry';
+      readonly siteKey: string;
+      readonly entryKey: string;
     };
+
+export interface RoomActionState {
+  readonly order: readonly RoomActionReference[];
+}
 
 export interface RewardWheelState {
   readonly storeKey: string;
@@ -197,6 +210,8 @@ export interface RoomOccurrence {
   /** Sparse because ordinary mandatory singleton points need no authored state. */
   readonly acquisitionSites?: Readonly<Record<string, AuthoredAcquisitionSiteState>>;
   readonly encounters: RoomEncounterState;
+  /** One explicit occurrence-local chronology; fixed checkpoints stay derived. */
+  readonly roomActions: RoomActionState;
   /** Source-owned closed sibling continuations emitted by this occurrence. */
   readonly additionalExits: readonly AuthoredAdditionalExit[];
 }

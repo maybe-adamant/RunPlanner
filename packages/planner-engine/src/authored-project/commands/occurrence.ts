@@ -17,7 +17,6 @@ export function applyOccurrenceCommand(
   command: OccurrenceLeafCommand,
 ): ProjectDocument {
   switch (command.kind) {
-    case 'ReplaceFieldsActionOrder':
     case 'ReplaceFieldsOptionalRewardCount':
       return applyFieldsOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceIncomingReward':

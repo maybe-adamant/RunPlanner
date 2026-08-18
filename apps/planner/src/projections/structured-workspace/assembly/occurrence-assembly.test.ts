@@ -31,6 +31,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  authorRequiredTestRoomActions,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -61,10 +62,11 @@ function biomeSource(
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined,
 ) {
-  const assembly = simulateProjectAssembly(catalog, project);
+  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const assembly = simulateProjectAssembly(catalog, authoredProject);
   const source = createWorkspaceProjectSourceIndex(
     catalog,
-    project,
+    authoredProject,
     assembly.evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
     undefined,
@@ -105,6 +107,17 @@ function assemble(
   const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
+  const evaluatedRoom = (() => {
+    if (source.entryRoom?.occurrenceId === occurrenceId) return source.entryRoom;
+    for (const decision of source.exitDecisions) {
+      const batch = source.evaluatedBatch(
+        createExitDecisionAddress(source.biome, decision.source),
+      )?.batch;
+      const room = batch?.targets.find((target) => target.room.occurrenceId === occurrenceId)?.room;
+      if (room !== undefined) return room;
+    }
+    return undefined;
+  })();
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
   const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId);
@@ -128,6 +141,7 @@ function assemble(
     facts,
     levelResolutionAssessment: source.levelResolutionAssessment,
     derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
+    ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
     markerDestinations: markers.emitter,
     ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
     occurrence,
@@ -188,7 +202,10 @@ describe('structured workspace occurrence assembly', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    let engineAssembly = simulateProjectAssembly(catalog, project);
+    let engineAssembly = simulateProjectAssembly(
+      catalog,
+      authorRequiredTestRoomActions(project, catalog),
+    );
     expect(
       encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, phase)?.supported,
     ).toBe(true);
@@ -230,7 +247,10 @@ describe('structured workspace occurrence assembly', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    engineAssembly = simulateProjectAssembly(catalog, project);
+    engineAssembly = simulateProjectAssembly(
+      catalog,
+      authorRequiredTestRoomActions(project, catalog),
+    );
     const retained = assemble(
       project,
       'Surface',
@@ -401,19 +421,35 @@ describe('structured workspace occurrence assembly', () => {
         (cage) => Object.isFrozen(cage) && Object.isFrozen(cage.control),
       ),
     ).toBe(true);
-    const chronology = fields.node.room.roomLocal.chronology;
-    if (chronology === undefined) throw new Error('Fields chronology is withheld');
-    expect(chronology.rows.map((row) => row.label)).toEqual([
-      'Complete Cage 1',
-      'Interact with Cage 1 reward',
-      'Complete Cage 2',
-      'Interact with Cage 2 reward',
+    const roomActions = fields.node.room.roomActions;
+    if (roomActions === undefined) throw new Error('Fields room actions are withheld');
+    expect(roomActions.rows.map((row) => row.reference.kind)).toEqual([
+      'completeFieldsCage',
+      'interactLocalReward',
+      'completeFieldsCage',
+      'interactLocalReward',
+      'interactLocalReward',
+      'interactLocalReward',
     ]);
-    expect(chronology.proposals.length).toBeGreaterThan(0);
-    expect(fields.node.room.localDetailMarkers).toContain(chronology.rows[0]?.marker);
+    const cageOne = roomActions.rows.find(
+      (row) =>
+        row.reference.kind === 'interactLocalReward' &&
+        row.reference.groupKey === 'cages' &&
+        row.reference.slotKey === 'cage1',
+    );
+    expect(cageOne?.rewardPayload?.control.owner.address).toEqual(
+      createLocalRewardAddress(
+        goldenHBiome,
+        createOccurrenceId('golden-h-combat02'),
+        'cages',
+        'cage1',
+      ),
+    );
+    expect(roomActions.proposals.length).toBeGreaterThan(0);
+    expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     expect(fields.occurrenceInteractionRequirements).toContainEqual(
       expect.objectContaining({
-        kind: 'fieldsActionOrder',
+        kind: 'roomActions',
         owner: fields.node.room.address,
       }),
     );
@@ -491,17 +527,10 @@ describe('structured workspace occurrence assembly', () => {
     expect(selected.node.room.roomLocal.materialized).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal.offers)).toBe(true);
-    expect(selected.node.room.roomLocal.acquisitionOrder).toEqual([]);
-    expect(
-      selected.node.room.roomLocal.offers.map((offer) => [
-        offer.key,
-        offer.label,
-        offer.purchase.purchased,
-      ]),
-    ).toEqual([
-      ['Boon', 'Offer 1', false],
-      ['MajorNonBoon', 'Offer 2', false],
-      ['Minor', 'Offer 3', false],
+    expect(selected.node.room.roomLocal.offers.map((offer) => [offer.key, offer.label])).toEqual([
+      ['Boon', 'Offer 1'],
+      ['MajorNonBoon', 'Offer 2'],
+      ['Minor', 'Offer 3'],
     ]);
     expect(
       selected.node.room.roomLocal.offers.every(
@@ -511,7 +540,7 @@ describe('structured workspace occurrence assembly', () => {
           Object.isFrozen(offer.rewardControl),
       ),
     ).toBe(true);
-    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('acquisitionOrder');
+    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('roomActions');
     const selectedOffer = selected.node.room.roomLocal.offers.find(
       (offer) => offer.key === 'MajorNonBoon',
     );
@@ -522,9 +551,6 @@ describe('structured workspace occurrence assembly', () => {
           createAcquisitionSiteAddress(createOccurrenceAddress(goldenFBiome, shop), 'roomExit'),
           'MajorNonBoon',
         ),
-        purchased: false,
-        toggleOfferKeys: ['MajorNonBoon'],
-        proposalOfferKeys: [[], ['Boon'], ['MajorNonBoon'], ['Minor']],
       },
       rewardControl: {
         owner: { address: createShopOfferAddress(goldenFBiome, shop, 'MajorNonBoon') },
@@ -558,7 +584,6 @@ describe('structured workspace occurrence assembly', () => {
       site,
       entryKey: 'echoDoubleShopReward',
       sourceOfferKey: 'Boon',
-      entryKeys: ['Minor', 'Boon', 'MajorNonBoon', 'echoDoubleShopReward'],
     });
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
     const projected = assemble(project, 'Underworld', 'F', shopId, undefined, (candidateSite) =>
@@ -576,31 +601,30 @@ describe('structured workspace occurrence assembly', () => {
     );
     const result = projected.assembly;
 
-    expect(result.node.room.acquisitions?.entries.map((entry) => entry.key)).toEqual([
-      'Minor',
-      'Boon',
-      'MajorNonBoon',
-      'echoDoubleShopReward',
-    ]);
-    const derived = result.node.room.acquisitions?.entries[3];
+    const actions = result.node.room.roomActions;
+    if (actions === undefined) throw new Error('Shop room actions are withheld');
+    const derived = actions.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === 'roomExit' &&
+        row.reference.entryKey === 'echoDoubleShopReward',
+    );
     expect(derived).toMatchObject({
-      address: duplicate,
-      label: 'Gold Gold Gold duplicate of Offer 1',
-      rewardPresentation: 'resolutionOnly',
+      reference: {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'echoDoubleShopReward',
+      },
     });
-    expect(derived?.rewardControl).toBeUndefined();
+    expect(derived?.rewardPayload?.control).toMatchObject({
+      kind: 'explicitReward',
+      owner: { kind: 'acquisitionEntry', address: duplicate },
+    });
     expect(result.node.room.roomLocal.kind).toBe('shop');
     if (result.node.room.roomLocal.kind !== 'shop') throw new Error('Shop summary is missing');
-    expect(result.node.room.roomLocal.acquisitionOrder).toEqual([
-      'Minor',
-      'Boon',
-      'MajorNonBoon',
-      'echoDoubleShopReward',
-    ]);
     expect(result.node.room.roomLocal.supplementalOffers).toContainEqual(
       expect.objectContaining({
         kind: 'echoDoubleShopReward',
-        participationLabel: 'Picked up',
         sourceOfferKey: 'Boon',
         rewardControl: expect.objectContaining({
           kind: 'explicitReward',
@@ -610,7 +634,7 @@ describe('structured workspace occurrence assembly', () => {
       }),
     );
     expect(result.occurrenceInteractionRequirements).toEqual([
-      expect.objectContaining({ kind: 'acquisitionOrder' }),
+      expect.objectContaining({ kind: 'roomActions' }),
     ]);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
@@ -739,14 +763,24 @@ describe('structured workspace occurrence assembly', () => {
                             ? candidate
                             : {
                                 ...candidate,
+                                roomActions: {
+                                  order: [
+                                    { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+                                    {
+                                      kind: 'interactAcquisitionEntry',
+                                      siteKey: 'roomExit',
+                                      entryKey: 'travelDealRefill',
+                                    },
+                                    {
+                                      kind: 'interactAcquisitionEntry',
+                                      siteKey: 'roomExit',
+                                      entryKey: 'echoDoubleShopReward',
+                                    },
+                                  ],
+                                },
                                 acquisitionSites: {
                                   ...(candidate.acquisitionSites ?? {}),
                                   roomExit: {
-                                    order: [
-                                      'MajorNonBoon',
-                                      'travelDealRefill',
-                                      'echoDoubleShopReward',
-                                    ],
                                     pickupEntries: {
                                       travelDealRefill: source,
                                       echoDoubleShopReward: source,
@@ -781,11 +815,14 @@ describe('structured workspace occurrence assembly', () => {
             },
           ],
     ).assembly.node.room;
-    expect(result.acquisitions?.entries.map((entry) => entry.key)).toEqual([
-      'MajorNonBoon',
-      'travelDealRefill',
-      'echoDoubleShopReward',
-    ]);
+    expect(
+      result.roomActions?.rows.flatMap((row) => {
+        if (row.rank === null) return [];
+        if (row.reference.kind === 'interactShopOffer') return [row.reference.offerKey];
+        if (row.reference.kind === 'interactAcquisitionEntry') return [row.reference.entryKey];
+        return [];
+      }),
+    ).toEqual(['MajorNonBoon', 'travelDealRefill', 'echoDoubleShopReward']);
   });
 
   it('projects the active Narcissus reward editor before its independent pickup choice', () => {
@@ -796,26 +833,21 @@ describe('structured workspace occurrence assembly', () => {
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
     const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
-    expect(result.node.room.acquisitions).toMatchObject({
-      entries: [
-        {
-          key: 'pom',
-          participation: expect.objectContaining({ label: 'Picked up', selected: false }),
-          rewardPresentation: 'editableOfferAndResolution',
-        },
-      ],
-    });
-    expect(result.node.room.acquisitions?.entries[0]?.rewardControl).toMatchObject({
+    const action = result.node.room.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === 'pom',
+    );
+    expect(action?.rewardPayload?.control).toMatchObject({
       kind: 'explicitReward',
       offer: { rewardType: 'StoreRewardRandomStack' },
       rewardTypes: ['StoreRewardRandomStack'],
     });
     expect(result.occurrenceInteractionRequirements).toContainEqual(
-      expect.objectContaining({ kind: 'acquisitionOrder' }),
+      expect.objectContaining({ kind: 'roomActions' }),
     );
   });
 
-  it('projects Psyche and Max Magick as distinct ordered Narcissus acquisition rows', () => {
+  it('projects Psyche and Max Magick as distinct Narcissus action payloads', () => {
     let project = createCompleteFGProject();
     const occurrence = project.routes
       .flatMap((route) => route.biomes)
@@ -844,29 +876,30 @@ describe('structured workspace occurrence assembly', () => {
         deathDefianceConditionMet: false,
       },
     });
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['maxMana', 'psyche'],
-    });
-    const acquisitions = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly.node
-      .room.acquisitions;
-    expect(acquisitions?.entries.map((entry) => [entry.key, entry.label])).toEqual([
-      ['maxMana', 'Max Magick'],
-      ['psyche', 'Psyche'],
+    const actions = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly.node.room
+      .roomActions;
+    expect(
+      actions?.rows
+        .filter((row) => row.reference.kind === 'interactAcquisitionEntry')
+        .map((row) => [
+          row.reference.kind === 'interactAcquisitionEntry' ? row.reference.entryKey : '',
+          row.label,
+        ])
+        .sort(([left], [right]) => left!.localeCompare(right!)),
+    ).toEqual([
+      ['maxMana', 'Pick up Max Magick'],
+      ['psyche', 'Pick up Psyche'],
     ]);
-    expect(acquisitions?.entries.map((entry) => entry.rewardControl?.offer)).toEqual([
-      { rewardType: 'MaxManaDrop' },
-      { rewardType: 'MemPointsCommonDrop' },
-    ]);
-    expect(acquisitions?.entries.map((entry) => entry.participation?.selected)).toEqual([
-      true,
-      true,
-    ]);
+    expect(
+      actions?.rows
+        .flatMap((row) =>
+          row.reference.kind === 'interactAcquisitionEntry'
+            ? [[row.reference.entryKey, row.rewardPayload?.control.offer] as const]
+            : [],
+        )
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([, offer]) => offer),
+    ).toEqual([{ rewardType: 'MaxManaDrop' }, { rewardType: 'MemPointsCommonDrop' }]);
   });
 
   it('projects one picked Narcissus pickup with its fixed type and unresolved payload', () => {
@@ -902,16 +935,13 @@ describe('structured workspace occurrence assembly', () => {
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
       'roomExit',
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['mysteryBoon'],
-    });
     const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
-    const entry = result.node.room.acquisitions?.entries.find(
-      (candidate) => candidate.key === 'mysteryBoon',
+    const entry = result.node.room.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.entryKey === 'mysteryBoon',
     );
-    expect(entry?.rewardControl).toMatchObject({
+    expect(entry?.rewardPayload?.control).toMatchObject({
       owner: {
         kind: 'acquisitionEntry',
         address: createAcquisitionEntryAddress(site, 'mysteryBoon'),
@@ -921,7 +951,7 @@ describe('structured workspace occurrence assembly', () => {
       authoringStartStep: 'source',
       authoringSeed: { rewardType: 'BlindBoxLoot' },
     });
-    expect(entry?.rewardControl?.traitOffers).toEqual([]);
+    expect(entry?.rewardPayload?.control.traitOffers).toEqual([]);
   });
 
   it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {

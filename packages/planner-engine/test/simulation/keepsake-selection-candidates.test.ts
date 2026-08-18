@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -27,6 +27,12 @@ import {
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
+
+let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
+
+beforeAll(() => {
+  representativeNOPQProject = createRepresentativeNOPQProject();
+});
 import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
 import {
   createKeepsakeState,
@@ -279,7 +285,7 @@ describe('keepsake selection candidates', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat10', 6, 1) },
       'Combat',
     );
-    let project = createRepresentativeNOPQProject();
+    let project = representativeNOPQProject;
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,

@@ -15,7 +15,6 @@ export const shipRoomLifecycleProfiles = [
           'recordEncounterStart',
           'advanceEncounterDepth',
           'recordEncounterCompletion',
-          'recordPhaseOfferAcquisition',
         ],
       },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },

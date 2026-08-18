@@ -38,6 +38,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
+  authorRequiredTestRoomActions,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -76,11 +77,12 @@ function prefix(
   readonly snapshot: MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom };
   readonly history: BiomeHistoryPrefix;
 } {
+  const authored = authorRequiredTestRoomActions(project, catalog);
   const snapshot = materializeBiomePrefix(
     catalog,
     biome,
-    plan(project, biome),
-    traitContext(project, biome),
+    plan(authored, biome),
+    traitContext(authored, biome),
   );
   if (snapshot === null || snapshot.entryRoom === undefined) {
     throw new Error(`${biome.biomeKey} did not materialize an entry prefix`);

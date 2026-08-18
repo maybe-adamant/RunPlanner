@@ -30,8 +30,17 @@ import {
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
+  authorRequiredTestRoomActions,
   goldenHBiome,
 } from '@run-planner/test-fixtures';
+
+function evaluatedProject(project: ReturnType<typeof createGoldenFGHProject>) {
+  return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+}
+
+function assembledProject(project: ReturnType<typeof createGoldenFGHProject>) {
+  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+}
 
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
@@ -74,7 +83,7 @@ function route() {
 
 function evaluatedG() {
   const { project } = route();
-  const value = simulateProject(catalog, project)
+  const value = evaluatedProject(project)
     .routes.find((candidate) => candidate.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'G');
   if (value?.authoring !== 'complete' || value.validity !== 'valid')
@@ -457,7 +466,7 @@ describe('Echo Gift Gift Gift', () => {
     const result = evaluateKeepsakeEquipResultCandidate(
       catalog,
       project,
-      simulateProject(catalog, project),
+      evaluatedProject(project),
       { at: () => context, entries: () => Object.freeze([]) },
       { kind: 'keepsakeEquipResult', result: resultAddress, value: { kind: 'exhausted' } },
     );
@@ -473,7 +482,7 @@ describe('Echo Gift Gift Gift', () => {
     const exhausted = evaluateKeepsakeEquipResultCandidate(
       catalog,
       project,
-      simulateProject(catalog, project),
+      evaluatedProject(project),
       {
         at: () => ({
           frontiers: Object.freeze([
@@ -576,9 +585,7 @@ describe('Echo Gift Gift Gift', () => {
         deathDefianceConditionMet: false,
       },
     });
-    const h = simulateProject(catalog, project).routes[0]?.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    );
+    const h = evaluatedProject(project).routes[0]?.biomes.find((biome) => biome.biomeKey === 'H');
     if (h?.authoring !== 'complete') throw new Error('expected complete H');
     expect(h.rewards.branches[0]?.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
@@ -619,7 +626,7 @@ describe('Echo Gift Gift Gift', () => {
     });
     // Derive the reached history before replacing the target: replacement
     // correctly clears its authored reward leaf in the current strict schema.
-    const reachedH = simulateProject(catalog, project).routes[0]?.biomes.find(
+    const reachedH = evaluatedProject(project).routes[0]?.biomes.find(
       (biome) => biome.biomeKey === 'H',
     );
     if (
@@ -720,7 +727,7 @@ describe('Echo Gift Gift Gift', () => {
       createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
       'experimentalHammer',
     );
-    const pending = simulateProjectAssembly(catalog, project);
+    const pending = assembledProject(project);
     expect(pending.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultMissing', origin: iReplay }),
     );
@@ -742,9 +749,7 @@ describe('Echo Gift Gift Gift', () => {
       result: iReplay,
       value: selected.value,
     });
-    const i = simulateProject(catalog, project).routes[0]?.biomes.find(
-      (biome) => biome.biomeKey === 'I',
-    );
+    const i = evaluatedProject(project).routes[0]?.biomes.find((biome) => biome.biomeKey === 'I');
     if (i?.authoring !== 'complete' || i.validity !== 'valid')
       throw new Error(`expected valid I replay, got ${i?.validity ?? 'missing'}`);
     expect(i.rewards.branches[0]?.traitHistory?.events).toContainEqual(

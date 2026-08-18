@@ -54,20 +54,9 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   appendMarker(markers, room.marker);
   for (const phase of room.encounterPhases) appendMarker(markers, phase.marker);
   for (const control of room.rewardControls) appendRewardControlMarkers(markers, control);
+  for (const row of room.roomActions?.rows ?? []) appendMarker(markers, row.marker);
   appendMarker(markers, room.zagreusSpawn?.marker);
   appendMarker(markers, room.naturalChaosSpawn?.marker);
-  if (room.acquisitions !== undefined) {
-    appendMarker(markers, room.acquisitions.marker);
-    for (const entry of room.acquisitions.entries) {
-      for (const trait of entry.rewardControl?.traitOffers ?? []) {
-        appendMarker(markers, trait.marker);
-        appendMarker(markers, trait.circeResolution?.marker);
-      }
-      for (const resolution of entry.rewardControl?.levelResolutions ?? []) {
-        appendMarker(markers, resolution.marker);
-      }
-    }
-  }
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':

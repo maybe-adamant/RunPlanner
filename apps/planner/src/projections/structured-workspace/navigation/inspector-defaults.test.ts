@@ -11,7 +11,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
@@ -42,9 +42,19 @@ import {
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
+let completeProject: ReturnType<typeof createGoldenFGHIProject>;
+let completeWorkspace: ReturnType<typeof project>;
+let surfaceWorkspace: ReturnType<typeof project>;
+
 function project(projectDocument: ProjectDocument) {
   return structuredWorkspace.project(simulateProjectAssembly(catalog, projectDocument));
 }
+
+beforeAll(() => {
+  completeProject = createGoldenFGHIProject();
+  completeWorkspace = project(completeProject);
+  surfaceWorkspace = project(createRepresentativeNOPQProject());
+});
 
 function biome(projectDocument: ProjectDocument, biomeKey: string): WorkspaceBiome {
   return requireWorkspaceBiome(project(projectDocument), biomeKey);
@@ -153,8 +163,6 @@ describe('workspace inspector defaults', () => {
   });
 
   it('keeps ordinary default priority in final projection order', () => {
-    const complete = createGoldenFGHIProject();
-    const completeWorkspace = project(complete);
     for (const biomeKey of ['F', 'G', 'H', 'I'] as const) {
       const value = requireWorkspaceBiome(completeWorkspace, biomeKey);
       expect(value.defaultInspectorDestination?.kind).toBe('node');
@@ -163,8 +171,6 @@ describe('workspace inspector defaults', () => {
         /ordinaryBatch|mixedBatch|takeoverBatch/,
       );
     }
-    const surface = createRepresentativeNOPQProject();
-    const surfaceWorkspace = project(surface);
     for (const biomeKey of ['O', 'P', 'Q'] as const) {
       const value = requireWorkspaceBiome(surfaceWorkspace, biomeKey);
       expect(value.defaultInspectorDestination?.kind).toBe('node');
@@ -175,7 +181,10 @@ describe('workspace inspector defaults', () => {
     }
 
     const partial = biome(
-      withUnresolvedFSelections(complete, [goldenFOccurrenceId(1, 1), goldenFOccurrenceId(2, 1)]),
+      withUnresolvedFSelections(completeProject, [
+        goldenFOccurrenceId(1, 1),
+        goldenFOccurrenceId(2, 1),
+      ]),
       'F',
     );
     const latestIncomplete = partial.nodes
@@ -192,7 +201,7 @@ describe('workspace inspector defaults', () => {
     expectNode(partial.defaultInspectorDestination, latestIncomplete.key);
 
     const retained = biome(
-      applyProjectCommand(complete, catalog, {
+      applyProjectCommand(completeProject, catalog, {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
         gameName: 'F_Combat01',
@@ -206,7 +215,10 @@ describe('workspace inspector defaults', () => {
       'ordinaryBatch',
     );
 
-    const blocked = biome(withUnresolvedFSelections(complete, [goldenFOccurrenceId(1, 1)]), 'G');
+    const blocked = biome(
+      withUnresolvedFSelections(completeProject, [goldenFOccurrenceId(1, 1)]),
+      'G',
+    );
     expect(blocked.status).toBe('blocked');
     expect(blocked.defaultInspectorDestination?.kind).toBe('node');
     if (blocked.defaultInspectorDestination?.kind !== 'node') return;

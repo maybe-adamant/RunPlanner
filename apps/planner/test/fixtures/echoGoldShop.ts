@@ -16,6 +16,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
   goldenHBiome,
 } from '@run-planner/test-fixtures';
@@ -68,6 +69,7 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTarget),
     gameName: 'H_MiniBoss02',
   });
+  project = authorRequiredTestRoomActions(project, catalog);
   const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTarget);
   const rewardSession = createPreparedProjectCandidateSession(
     catalog,
@@ -96,6 +98,7 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     reward: forcedReward,
     value: replacement.offer,
   });
+  project = authorRequiredTestRoomActions(project, catalog);
   const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,

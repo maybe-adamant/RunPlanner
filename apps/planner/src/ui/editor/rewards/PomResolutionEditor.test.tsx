@@ -59,21 +59,22 @@ describe('Pom resolution editor', () => {
       );
     }
     if (control === undefined) throw new Error('Pom control is not projected');
+    const incompleteValue: AuthoredLevelResolution = {
+      kind: 'choice',
+      offeredTraitKeys: [],
+      selectedTraitKey: null,
+    };
     const incompleteProject = applyProjectCommand(
       authoredProject,
       application.catalog,
-      control.intentFor(control.value).command,
+      control.intentFor(incompleteValue).command,
     );
     application.store.dispatch(authoredProjectReplaced(incompleteProject));
     workspace = application.selectStructuredWorkspace(application.store.getState());
     control = workspace.interactions.levelResolutions.get(control.key);
     if (control === undefined) throw new Error('incomplete Pom control is not projected');
 
-    expect(control.value).toEqual({
-      kind: 'choice',
-      offeredTraitKeys: [],
-      selectedTraitKey: null,
-    });
+    expect(control.value).toEqual(incompleteValue);
     expect(workspace.focusByOwner.get(control.key)?.ownerAddress).toEqual(control.owner);
 
     const projectedControl = (() => {

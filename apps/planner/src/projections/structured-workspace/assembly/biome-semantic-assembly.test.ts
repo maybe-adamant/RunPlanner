@@ -27,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   appendCompleteN,
+  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
   createRepresentativeNOPQProject,
   goldenFBiome,
@@ -46,9 +47,13 @@ function biomeSource(
   routeKey = 'Surface',
   biomeKey = 'N',
 ): WorkspaceBiomeSource {
-  const assembly = simulateProjectAssembly(catalog, project);
-  const source = createWorkspaceProjectSourceIndex(catalog, project, assembly.evaluation, (phase) =>
-    encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
+  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const assembly = simulateProjectAssembly(catalog, authoredProject);
+  const source = createWorkspaceProjectSourceIndex(
+    catalog,
+    authoredProject,
+    assembly.evaluation,
+    (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);

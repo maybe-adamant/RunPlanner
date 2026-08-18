@@ -41,7 +41,8 @@ import {
   selectedExitContinuation,
   selectedExitKey,
 } from '../topology/query';
-import { fieldsDefaultActiveCageCount } from '../fields-actions';
+import { fieldsDefaultActiveCageCount } from '../fields';
+import { createEmptyRoomActionState } from '../room-actions';
 import { createInfernalContractEntries } from '../shop';
 import {
   failCommand,
@@ -235,7 +236,6 @@ function defaultOccurrence(
       ? {
           acquisitionSites: Object.freeze({
             roomExit: Object.freeze({
-              order: Object.freeze([]),
               ...(Object.keys(contractEntries).length === 0
                 ? {}
                 : { pickupEntries: contractEntries }),
@@ -245,11 +245,12 @@ function defaultOccurrence(
       : Object.keys(pickupEntries).length > 0
         ? {
             acquisitionSites: Object.freeze({
-              roomExit: Object.freeze({ order: Object.freeze([]), pickupEntries }),
+              roomExit: Object.freeze({ pickupEntries }),
             }),
           }
         : {}),
     encounters,
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
   });
 }

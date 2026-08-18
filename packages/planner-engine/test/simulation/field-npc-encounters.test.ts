@@ -45,7 +45,7 @@ import {
   type HistoryStateView,
   type RoomAppearanceHistoryEntry,
 } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createCompleteFGProject,
@@ -65,8 +65,15 @@ import {
   createRepresentativeNProject,
   createRepresentativeNOPQProject,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   oBiome,
 } from '@run-planner/test-fixtures';
+
+let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
+
+beforeAll(() => {
+  goldenFGHIProject = createGoldenFGHIProject();
+});
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import {
   createCompleteNProject,
@@ -91,14 +98,14 @@ const nDormantLocalPhase = createEncounterPhaseAddress(
 
 function support(project: ProjectDocument, owner: ReturnType<typeof phase>) {
   return encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-    simulateProjectAssembly(catalog, project),
+    simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
     owner,
   );
 }
 
 function sequenceStatus(project: ProjectDocument, owner: ReturnType<typeof phase>) {
   return encounterPhaseSequenceStatusForProjectEvaluationAssembly(
-    simulateProjectAssembly(catalog, project),
+    simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
     owner,
   );
 }
@@ -155,7 +162,7 @@ function reachedPOutdoorIcarusFixture(): {
 }
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
-  const result = simulateProject(catalog, project);
+  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
   const biome = result.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
@@ -166,7 +173,7 @@ function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I
 }
 
 function evaluatedSurfaceBiome(project: ProjectDocument, biomeKey: 'N' | 'O' | 'P') {
-  const result = simulateProject(catalog, project);
+  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
   const biome = result.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
@@ -576,7 +583,10 @@ describe('field NPC encounter requirements', () => {
         ?.Encounter?.ArtemisCombatF,
     ).toBeNull();
     const traitAddress = createTraitOfferAddress(fNpcPhase, 'selection');
-    const unresolvedAssembly = simulateProjectAssembly(catalog, project);
+    const unresolvedAssembly = simulateProjectAssembly(
+      catalog,
+      authorRequiredTestRoomActions(project, catalog),
+    );
     expect(unresolvedAssembly.evaluation.routes[0]?.findings).toContainEqual(
       expect.objectContaining({ code: 'traitOfferMissing', origin: traitAddress }),
     );
@@ -634,7 +644,7 @@ describe('field NPC encounter requirements', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, project),
+        simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
       ).evaluate({ kind: 'traitOffer', trait: traitAddress, value: initialOffer! }),
     ).toMatchObject({ kind: 'traitOffer', result: { supported: true } });
   });
@@ -669,7 +679,7 @@ describe('field NPC encounter requirements', () => {
       trait: traitAddress,
       selectedOptionKey: 'option2',
     });
-    const result = simulateProject(catalog, project);
+    const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
     const biome = result.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'F');
@@ -742,7 +752,7 @@ describe('field NPC encounter requirements', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, project),
+        simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
       ).evaluate({
         kind: 'traitOffer',
         trait: createTraitOfferAddress(storyPhase, 'selection'),
@@ -782,7 +792,7 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ available: true });
 
     const reachedStoryId = createOccurrenceId('golden-i-story01');
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let project = applyProjectCommand(goldenFGHIProject, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenIBiome, {
         kind: 'occurrence',
@@ -981,7 +991,10 @@ describe('field NPC encounter requirements', () => {
     if (editedOffer?.kind !== 'traits') throw new Error('Artemis side-room must offer traits');
     expect(editedOffer.selectedOptionKey).toBe('option2');
 
-    const evaluation = simulateProject(sideCatalog, project);
+    const evaluation = simulateProject(
+      sideCatalog,
+      authorRequiredTestRoomActions(project, sideCatalog),
+    );
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');

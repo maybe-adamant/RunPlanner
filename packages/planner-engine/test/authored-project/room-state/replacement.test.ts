@@ -103,15 +103,7 @@ describe('authored room-state replacement', () => {
       entryActive: true,
     });
     if (defaultPreviousState.kind !== 'fieldsCombat') throw new Error('missing Fields default');
-    const previousState = Object.freeze({
-      ...defaultPreviousState,
-      actionOrder: Object.freeze([
-        defaultPreviousState.actionOrder[0]!,
-        defaultPreviousState.actionOrder[2]!,
-        defaultPreviousState.actionOrder[1]!,
-        defaultPreviousState.actionOrder[3]!,
-      ]),
-    });
+    const previousState = defaultPreviousState;
     const replacementRoom = room('H_Combat02');
     const replacementDefault = createDefaultRoomState(catalog, replacementRoom, {
       role: 'ordinary',

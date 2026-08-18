@@ -2,7 +2,6 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   semanticAddressKey,
-  type AcquisitionSiteAddress,
   type OccurrenceAddress,
   type RewardWheelAddress,
 } from '../../authored-project/addresses';
@@ -11,26 +10,18 @@ import type {
   RewardWheelState,
   ShipCombatState,
 } from '../../authored-project/model';
-import {
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../authored-project/shop';
 import type { SemanticFinding } from '../model';
 import { materializeShipCombatState } from '../materialization';
 import type { EncounterCandidateArtifacts } from '../encounters';
 import type { ProjectEvaluation } from '../project';
-import type {
-  RoomLifecycleCandidateArtifacts,
-  RoomLifecycleCandidateResult,
-} from '../rewards/lifecycle-artifacts';
+import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import {
   coverageUnavailable,
-  producerUnavailable,
   unavailableForBiome,
   type CandidateContextUnavailable,
 } from './availability';
 import { CandidateEvaluationContractError } from './contract';
-import { candidateBiome, planFor, type CandidateBiomeEvaluation } from './evaluated-biome';
+import { candidateBiome, type CandidateBiomeEvaluation } from './evaluated-biome';
 import { shipState, wheelState } from './ship-owner';
 
 export interface ShipEncounterCountCandidateQuery {
@@ -57,18 +48,11 @@ export interface RewardWheelPickedCandidateQuery {
   readonly pickedOfferIndex: number;
 }
 
-export interface AcquisitionOrderCandidateQuery {
-  readonly kind: 'acquisitionOrder';
-  readonly site: AcquisitionSiteAddress;
-  readonly entryKeys: readonly string[];
-}
-
 export type RoomLifecycleCandidateQuery =
   | ShipEncounterCountCandidateQuery
   | RewardWheelOfferCountCandidateQuery
   | RewardWheelStoreCandidateQuery
-  | RewardWheelPickedCandidateQuery
-  | AcquisitionOrderCandidateQuery;
+  | RewardWheelPickedCandidateQuery;
 
 export interface ShipEncounterCountCandidateSupport {
   readonly encounterCount: 2 | 3;
@@ -109,18 +93,12 @@ export interface EvaluatedRewardWheelPickedCandidate {
   readonly result: RewardWheelLifecycleCandidateSupport & { readonly pickedOfferIndex: number };
 }
 
-export interface EvaluatedAcquisitionOrderCandidate {
-  readonly kind: 'acquisitionOrder';
-  readonly result: RoomLifecycleCandidateResult;
-}
-
 export type RoomLifecycleCandidateEvaluation =
   | CandidateContextUnavailable
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedRewardWheelOfferCountCandidate
   | EvaluatedRewardWheelStoreCandidate
-  | EvaluatedRewardWheelPickedCandidate
-  | EvaluatedAcquisitionOrderCandidate;
+  | EvaluatedRewardWheelPickedCandidate;
 
 type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress;
 
@@ -360,67 +338,4 @@ export function evaluateRewardWheelLifecycleCandidate(
         }),
       });
   }
-}
-
-export function evaluateAcquisitionOrderCandidate(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
-  query: AcquisitionOrderCandidateQuery,
-): RoomLifecycleCandidateEvaluation {
-  if (query.site.owner.kind !== 'occurrence' || query.site.pointKey !== 'roomExit') {
-    throw new CandidateEvaluationContractError('unsupported acquisition site');
-  }
-  const shop = query.site.owner;
-  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, shop);
-  if (source === undefined) {
-    return unavailableForBiome(
-      evaluation,
-      shop.routeKey,
-      shop.biomeKey,
-      shop,
-      'afterRoomLifecycle',
-    );
-  }
-  const plan = planFor(project, shop.routeKey, shop.biomeKey);
-  const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === shop.occurrenceId,
-  );
-  const shopOffers = occurrence?.state.kind === 'shop' ? occurrence.state.shop?.offers : undefined;
-  const pickupEntries = occurrence?.acquisitionSites?.roomExit?.pickupEntries;
-  if (shopOffers === undefined && pickupEntries === undefined)
-    throw new CandidateEvaluationContractError('acquisition-site owner has no active entry domain');
-  if (!Array.isArray(query.entryKeys) || !query.entryKeys.every((key) => typeof key === 'string')) {
-    throw new CandidateEvaluationContractError('acquisition order must contain entry keys');
-  }
-  const seen = new Set<string>();
-  for (const offerKey of query.entryKeys) {
-    const belongs =
-      shopOffers === undefined
-        ? pickupEntries?.[offerKey] !== undefined
-        : shopOffers[offerKey] !== undefined ||
-          pickupEntries?.[offerKey] !== undefined ||
-          offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-          offerKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
-    if (!belongs) {
-      throw new CandidateEvaluationContractError(
-        `acquisition order has no declared entry ${offerKey}`,
-      );
-    }
-    if (seen.has(offerKey)) {
-      throw new CandidateEvaluationContractError(`acquisition order duplicates ${offerKey}`);
-    }
-    seen.add(offerKey);
-  }
-  const context = source.artifacts?.acquisitionOrderAt(shop);
-  if (context === undefined) {
-    return source.evaluation.coverage.kind === 'prefix'
-      ? coverageUnavailable(evaluation, shop, 'afterRoomLifecycle')
-      : producerUnavailable(shop);
-  }
-  return Object.freeze({
-    kind: 'acquisitionOrder',
-    result: context.evaluateOrder(Object.freeze([...query.entryKeys])),
-  });
 }

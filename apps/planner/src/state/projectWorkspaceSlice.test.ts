@@ -467,11 +467,22 @@ describe('project workspace application state', () => {
     );
     const edited = selectPresentProject(store.getState());
     expect(edited).not.toBe(before);
+    const editedBridge = edited.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    expect(editedBridge.roomActions.order).toEqual([
+      { kind: 'interactEncounter', phaseKey: 'Encounter' },
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+      },
+    ]);
     expect(
-      edited.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === bridgeId,
-      )!.acquisitionSites?.roomExit?.order,
-    ).toEqual([echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1')]);
+      editedBridge.acquisitionSites?.roomExit?.pickupEntries?.[
+        echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1')
+      ],
+    ).toBeDefined();
 
     store.dispatch(authoredProjectUndoRequested());
     expect(selectPresentProject(store.getState())).toBe(before);

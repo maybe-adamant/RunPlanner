@@ -15,6 +15,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  evaluateBiomeCompleteness,
+  materializeBiome,
+  roomActionContributions,
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
@@ -39,7 +42,15 @@ function evaluateO(project = createRepresentativeNOProject()) {
 
 function evaluateValidO(project = createRepresentativeNOProject()) {
   const result = evaluateO(project);
-  if (result.biome.validity !== 'valid') throw new Error('O fixture did not complete-valid');
+  if (result.biome.validity !== 'valid') {
+    throw new Error(
+      `O fixture did not complete-valid: ${JSON.stringify({
+        findings: result.biome.findings,
+        rewardFindings: result.biome.rewards.findings,
+        branchCount: result.biome.rewards.branches.length,
+      })}`,
+    );
+  }
   return { ...result, biome: result.biome };
 }
 
@@ -57,6 +68,24 @@ function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject(
     project,
     target: createTargetAddress(oBiome, decision.source, 'exit1'),
   };
+}
+
+function materializedORoom(
+  project: ReturnType<typeof createRepresentativeNOProject>,
+  occurrenceId: typeof oOccurrenceIds.combat07,
+) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  if (route === undefined || plan === undefined) throw new Error('O fixture plan is missing');
+  const completeness = evaluateBiomeCompleteness(catalog, oBiome, plan);
+  if (completeness.completion !== 'complete') throw new Error('O fixture is incomplete');
+  const snapshot = materializeBiome(catalog, oBiome, completeness, route.loadout);
+  const room = snapshot.decisions
+    .filter((decision) => decision.kind === 'batch')
+    .flatMap((decision) => decision.targets.map((target) => target.room))
+    .find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (room?.kind !== 'authored') throw new Error('materialized O room is missing');
+  return room;
 }
 
 describe('selected O validation', () => {
@@ -100,6 +129,294 @@ describe('selected O validation', () => {
       ),
     ).toMatchObject({ selectedPossible: true, selectedExclusionReasons: [] });
     expect(o.rewards.targetHistory).toHaveLength(7);
+  });
+
+  it('keeps one authored chronology across both Ship combat windows and resolves the final wheel store', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: predecessorWheel,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel1,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
+      value: { rewardType: 'MetaCardPointsCommonBigDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: wheel2,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel2,
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    for (const occurrenceId of [oOccurrenceIds.devotion, oOccurrenceIds.story]) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(
+          oBiome,
+          createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId }).source,
+        ),
+        storeKey: 'RunProgress',
+      });
+    }
+
+    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    const sourceDecision = biome.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === oOccurrenceIds.combat07,
+    );
+    if (sourceDecision?.kind !== 'batch') throw new Error('Ship source decision is missing');
+    const room = biome.snapshot.decisions
+      .filter((decision) => decision.kind === 'batch')
+      .flatMap((decision) => decision.targets.map((target) => target.room))
+      .find((candidate) => candidate.occurrenceId === oOccurrenceIds.combat07);
+    if (room?.kind !== 'authored') throw new Error('Ship source room is missing');
+
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
+      { kind: 'interactWheelReward', wheelKey: 'wheel2' },
+    ]);
+    const declaration = catalog.rooms.byKey[room.gameName];
+    if (declaration === undefined) throw new Error('Ship declaration is missing');
+    const activeReferences = room.roomActionRoster.rows
+      .filter((row) => !row.stale)
+      .map((row) => row.reference);
+    expect(() =>
+      roomActionContributions({
+        catalog,
+        declaration,
+        room,
+        activeReferences: [
+          ...activeReferences,
+          { kind: 'interactAcquisitionEntry', siteKey: 'missing', entryKey: 'missing' },
+        ],
+      }),
+    ).toThrow(/invented=\[\] missing=\[/);
+    expect(() =>
+      roomActionContributions({
+        catalog,
+        declaration,
+        room,
+        activeReferences: activeReferences.slice(1),
+      }),
+    ).toThrow(/invented=\[/);
+    expect(room.roomActionRoster.checkpoints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
+        expect.objectContaining({ checkpointKey: 'nextPhaseUsable:wheel1', afterRank: 2 }),
+        expect.objectContaining({ checkpointKey: 'combat:Combat2', afterRank: 4 }),
+        expect.objectContaining({ checkpointKey: 'outgoingGeneration', afterRank: 4 }),
+        expect.objectContaining({ checkpointKey: 'exitUsable', afterRank: 4 }),
+      ]),
+    );
+    expect(
+      room.roomActionRoster.proposals.find(
+        (proposal) =>
+          proposal.kind === 'move' &&
+          proposal.reference.kind === 'chooseRewardWheel' &&
+          proposal.reference.wheelKey === 'wheel2' &&
+          proposal.toIndex === 1,
+      ),
+    ).toMatchObject({ structurallyAuthorable: false });
+    expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
+    expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
+  });
+
+  it('keeps dormant Wheel 2 out of a two-phase chronology and resolves outgoing from Wheel 1', () => {
+    const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: predecessorWheel,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel2,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: wheel2,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    for (const occurrenceId of [oOccurrenceIds.devotion]) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(
+          oBiome,
+          createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId }).source,
+        ),
+        storeKey: 'RunProgress',
+      });
+    }
+
+    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    const decisions = biome.snapshot.decisions.filter((decision) => decision.kind === 'batch');
+    const sourceDecision = decisions.find(
+      (decision) =>
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === oOccurrenceIds.combat07,
+    );
+    const predecessorDecision = decisions.find(
+      (decision) =>
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === oOccurrenceIds.combat04,
+    );
+    const room = decisions
+      .flatMap((decision) => decision.targets.map((target) => target.room))
+      .find((candidate) => candidate.occurrenceId === oOccurrenceIds.combat07);
+    if (sourceDecision === undefined || predecessorDecision === undefined || room === undefined) {
+      throw new Error('two-phase Ship chronology is missing');
+    }
+
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+    ]);
+    expect(
+      room.roomActionRoster.checkpoints.some(
+        (checkpoint) =>
+          checkpoint.checkpointKey.includes('wheel2') ||
+          checkpoint.checkpointKey === 'combat:Combat2',
+      ),
+    ).toBe(false);
+    expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
+    expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
+    expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
+  });
+
+  it('keeps a retained Combat2 NPC contact dormant across a 3 -> 2 -> 3 edit', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat2');
+    let withThree = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    withThree = applyProjectCommand(withThree, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'IcarusCombatO',
+    });
+    withThree = authorLegalTraitOffers(withThree);
+
+    const withTwo = applyProjectCommand(withThree, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 2,
+    });
+    const dormantRoom = materializedORoom(withTwo, oOccurrenceIds.combat07);
+    const dormantContact = dormantRoom.roomActionRoster.rows.find(
+      (row) => row.reference.kind === 'interactEncounter' && row.reference.phaseKey === 'Combat2',
+    );
+    expect(dormantContact).toMatchObject({ stale: true });
+    expect(
+      dormantRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
+    ).not.toContain('combat:Combat2');
+
+    const restored = applyProjectCommand(withTwo, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const restoredRoom = materializedORoom(restored, oOccurrenceIds.combat07);
+    expect(
+      restoredRoom.roomActionRoster.rows.find(
+        (row) => row.reference.kind === 'interactEncounter' && row.reference.phaseKey === 'Combat2',
+      ),
+    ).toMatchObject({ stale: false, participation: 'required' });
+  });
+
+  it('assesses a retained Wheel 2 reward only after Wheel 1 acquisition history', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel1,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel2,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: wheel2,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const evaluated = evaluateO(authorLegalTraitOffers(project)).biome;
+
+    expect(evaluated.rewards.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      }),
+    );
+    expect(evaluated.rewards.findings).not.toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
+      }),
+    );
   });
 
   it('preserves a non-Ship terminal base store through the Preboss takeover and completion tail', () => {

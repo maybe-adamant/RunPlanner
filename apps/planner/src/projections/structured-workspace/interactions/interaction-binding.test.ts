@@ -46,7 +46,6 @@ import {
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
-  createCombat08ArtificerRegressionProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -60,6 +59,7 @@ import {
   appendCompleteN,
   appendNEntry,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -91,6 +91,75 @@ const services = {
   traitDomain: createTraitDomainProjection(catalog, contextualPicker),
 };
 
+function enteredShopProject(): { readonly project: ProjectDocument; readonly shopId: string } {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const start = createOccurrenceId('interaction-binding-shop-start');
+  const combat = createOccurrenceId('interaction-binding-shop-combat');
+  const shop = createOccurrenceId('interaction-binding-shop');
+  let project = createProjectDocument(catalog, {
+    projectId: 'interaction-binding-entered-shop',
+    name: 'Interaction binding entered Shop',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: start,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: start,
+    }),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: start }, 'exit1'),
+    occurrenceId: combat,
+    gameName: 'F_Combat03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: combat }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: combat,
+    }),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: combat }, 'exit1'),
+    occurrenceId: createOccurrenceId('interaction-binding-shop-sibling'),
+    gameName: 'F_Combat04',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: combat }, 'exit2'),
+    occurrenceId: shop,
+    gameName: 'F_Shop01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: combat,
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  return { project, shopId: shop };
+}
+
 function bind(
   project: ProjectDocument,
   routeKey: string,
@@ -98,11 +167,12 @@ function bind(
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
   candidateSession?: CandidateProjectionSession,
 ) {
-  const projectAssembly = simulateProjectAssembly(catalog, project);
+  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const projectAssembly = simulateProjectAssembly(catalog, authoredProject);
   const evaluation = projectAssembly.evaluation;
   const source = createWorkspaceProjectSourceIndex(
     catalog,
-    project,
+    authoredProject,
     evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
     (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(projectAssembly, phase),
@@ -1430,11 +1500,6 @@ describe('structured workspace interaction binding', () => {
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
       'roomExit',
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['mysteryBoon'],
-    });
     const entry = createAcquisitionEntryAddress(site, 'mysteryBoon');
     const interaction = bind(project, 'Underworld', 'G').interactions.rewards.get(
       semanticAddressKey(entry),
@@ -1923,17 +1988,15 @@ describe('structured workspace interaction binding', () => {
     expect(assembly.preliminaryFocusDestinations.has(semanticAddressKey(combat2))).toBe(true);
   });
 
-  it('binds Ship-wheel and Shop-purchase authored values from occurrence requirements', () => {
+  it('binds Ship-wheel values and Shop actions from occurrence requirements', () => {
     const surface = createRepresentativeNOPQProject();
     const ship = bind(surface, 'Surface', 'O').interactions;
-    const shop = bind(surface, 'Surface', 'N').interactions;
+    const enteredShop = enteredShopProject();
+    const shop = bind(enteredShop.project, 'Underworld', 'F').interactions;
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
-    const purchase = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
-        'roomExit',
-      ),
-      'MajorNonBoon',
+    const shopOwner = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId(enteredShop.shopId),
     );
 
     expect(
@@ -1953,9 +2016,20 @@ describe('structured workspace interaction binding', () => {
       owner: wheel,
       selected: 1,
     });
-    expect(shop.acquisitionOrders.get(semanticAddressKey(purchase.site))).toMatchObject({
-      owner: purchase.site,
-      selected: [],
+    const shopActions = shop.roomActions.get(semanticAddressKey(shopOwner));
+    expect(shopActions).toMatchObject({ owner: shopOwner });
+    const insert = shopActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'insert' &&
+        proposal.reference.kind === 'interactShopOffer' &&
+        proposal.reference.offerKey === 'MajorNonBoon',
+    );
+    if (insert === undefined) throw new Error('Shop purchase insertion is missing');
+    expect(shopActions?.intentFor(insert.key)).toMatchObject({
+      command: {
+        kind: 'InsertRoomAction',
+        reference: { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+      },
     });
   });
 
@@ -2054,12 +2128,18 @@ describe('structured workspace interaction binding', () => {
         visible: true,
         timePieceSupported: true,
         artificerSupported: true,
-        artificerReplacementOptions: expect.any(Array),
       });
       expect(
-        interactions.acquisitionConversions.get(semanticAddressKey(acquisition))
-          ?.artificerReplacementOptions.length,
-      ).toBeGreaterThan(0);
+        interactions.acquisitionConversions
+          .get(semanticAddressKey(acquisition))
+          ?.intentFor({ kind: 'artificer' }),
+      ).toEqual({
+        command: {
+          kind: 'ReplaceAcquisitionDisposition',
+          acquisition,
+          value: { kind: 'artificer' },
+        },
+      });
       const unreached = createAcquisitionRoleAddress(
         createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
         'self',
@@ -2069,307 +2149,6 @@ describe('structured workspace interaction binding', () => {
       ).toBe(false);
     },
   );
-
-  it.each(['Boon', 'HermesUpgrade', 'WeaponUpgrade'] as const)(
-    'keeps the %s trait editor usable after the opening Boon is consumed by Forfeit',
-    (replacementRewardType) => {
-      const { project: authored, acquisition } =
-        createFConversionFrontierProject('MetaCurrencyDrop');
-      const unresolved = applyProjectCommand(authored, catalog, {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition,
-        value: { kind: 'artificer', replacement: null },
-      });
-      const initial = bind(unresolved, 'Underworld', 'F').interactions.acquisitionConversions.get(
-        semanticAddressKey(acquisition),
-      );
-      if (initial === undefined) throw new Error('Artificer conversion interaction is missing');
-      const replacement = initial.artificerReplacementOptions.find(
-        (option) => option.offer.rewardType === replacementRewardType,
-      );
-      if (replacement === undefined) {
-        throw new Error(`${replacementRewardType} Artificer replacement option is missing`);
-      }
-      const project = applyProjectCommand(unresolved, catalog, {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition,
-        value: { kind: 'artificer', replacement },
-      });
-      const assembly = simulateProjectAssembly(catalog, project);
-      let bound: ReturnType<typeof bind>['interactions'] | undefined;
-      expect(() => {
-        bound = bind(project, 'Underworld', 'F').interactions;
-      }).not.toThrow();
-      const conversion = bound?.acquisitionConversions.get(semanticAddressKey(acquisition));
-      const traitControls = conversion?.artificerReplacementControl?.traitOffers ?? [];
-      expect(
-        traitControls.length,
-        JSON.stringify({
-          findings: assembly.evaluation.findings,
-          replacement,
-          projected: conversion?.artificerReplacementControl,
-        }),
-      ).toBeGreaterThan(0);
-      for (const control of traitControls) {
-        const interaction = bound?.traitOffers.get(semanticAddressKey(control.address));
-        expect(interaction?.value).toBeNull();
-        let draft: AuthoredTraitOfferTraits | undefined;
-        expect(() => {
-          draft = interaction?.traitsStartingDraft?.();
-        }).not.toThrow();
-        expect(draft).toMatchObject({ kind: 'traits', options: expect.any(Array) });
-        if (draft === undefined || interaction === undefined)
-          throw new Error(`${replacementRewardType} trait draft is missing`);
-        expect(draft.options).toHaveLength(3);
-        const intent = interaction.intentFor(draft);
-        expect(intent.command).toMatchObject({
-          kind: 'ReplaceAcquisitionDisposition',
-          acquisition,
-          value: { kind: 'artificer' },
-        });
-        expect(() => applyProjectCommand(project, catalog, intent.command)).not.toThrow();
-      }
-    },
-  );
-
-  it('keeps the attached Decision 3 F_Combat08 Artificer replacement unresolved and editable', () => {
-    const first = goldenFOccurrenceId(1, 1);
-    const secondSelected = goldenFOccurrenceId(2, 1);
-    const thirdSelected = goldenFOccurrenceId(3, 2);
-    const acquisition = createAcquisitionRoleAddress(
-      createIncomingRewardAddress(goldenFBiome, thirdSelected),
-      'self',
-    );
-    const attached = createCombat08ArtificerRegressionProject();
-    const route = attached.routes.find((candidate) => candidate.routeKey === 'Underworld');
-    const f = route?.biomes.find((candidate) => candidate.biomeKey === 'F');
-    const opening = f?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === goldenFStartId,
-    );
-    const combat = f?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === thirdSelected,
-    );
-    const selectedDecision = f?.topology?.decisions.find(
-      (decision) =>
-        decision.kind === 'exit' &&
-        decision.normal.kind === 'batch' &&
-        decision.normal.targets.some((target) => target.occurrenceId === thirdSelected),
-    );
-    expect(route?.loadout).toMatchObject({
-      manualArcanaKeys: expect.arrayContaining(['MetaToRunUpgrade']),
-      fearRanks: {
-        BoonSkipShrineUpgrade: 1,
-        BanUnpickedBoonsShrineUpgrade: 1,
-      },
-    });
-    expect(opening?.state).toMatchObject({
-      reward: { offer: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } } },
-    });
-    expect(combat).toMatchObject({
-      gameName: 'F_Combat08',
-      state: {
-        reward: {
-          offer: { rewardType: 'MetaCardPointsCommonDrop' },
-          dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
-        },
-      },
-    });
-    if (selectedDecision?.kind !== 'exit' || selectedDecision.normal.kind !== 'batch') {
-      throw new Error('Combat08 attachment lost its selected Decision 3 batch');
-    }
-    expect(selectedDecision.selection).toEqual({ kind: 'normal', exitKey: 'exit2' });
-    expect(selectedDecision.normal.targets).toHaveLength(2);
-    expect(selectedDecision.normal.targets[1]).toMatchObject({
-      exitKey: 'exit2',
-      occurrenceId: thirdSelected,
-    });
-    const fEvaluation = simulateProjectAssembly(catalog, attached)
-      .evaluation.routes.find((candidate) => candidate.routeKey === 'Underworld')
-      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
-    if (fEvaluation === undefined || !('rewards' in fEvaluation)) {
-      throw new Error('Combat08 attachment did not reach its F reward history');
-    }
-    expect(
-      fEvaluation.rewards.branches.some((branch) =>
-        branch.events.some(
-          (event) =>
-            event.kind === 'artificerConversion' &&
-            semanticAddressKey(event.origin) ===
-              semanticAddressKey(createIncomingRewardAddress(goldenFBiome, first)),
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      fEvaluation.rewards.branches.some((branch) =>
-        branch.events.some(
-          (event) =>
-            event.kind === 'concreteAcquisition' &&
-            semanticAddressKey(event.origin) ===
-              semanticAddressKey(createIncomingRewardAddress(goldenFBiome, secondSelected)) &&
-            event.acquisition.acquisition.gameName === 'ApolloUpgrade',
-        ),
-      ),
-    ).toBe(true);
-    const project = applyProjectCommand(attached, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition,
-      value: { kind: 'artificer', replacement: null },
-    });
-    let interactions: ReturnType<typeof bind>['interactions'] | undefined;
-    expect(() => {
-      interactions = bind(project, 'Underworld', 'F').interactions;
-    }).not.toThrow();
-    const conversion = interactions?.acquisitionConversions.get(semanticAddressKey(acquisition));
-    expect(conversion).toMatchObject({
-      owner: acquisition,
-      visible: true,
-      artificerSupported: true,
-      artificerReplacementControl: expect.objectContaining({
-        offer: null,
-      }),
-    });
-    expect(conversion).not.toHaveProperty('artificerDefaultReplacement');
-    expect(conversion?.artificerReplacementOptions.length).toBeGreaterThan(0);
-    const replacement = conversion?.artificerReplacementOptions[0];
-    if (replacement === undefined) throw new Error('Combat08 Artificer options are missing');
-    expect(conversion?.intentFor({ kind: 'artificer', replacement })).toMatchObject({
-      command: {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition,
-        value: { kind: 'artificer', replacement },
-      },
-    });
-  });
-
-  it('reuses ordinary Hammer and Pom child interactions for an Artificer replacement', () => {
-    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
-    const acquisition = createAcquisitionRoleAddress(source, 'self');
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceManualArcanaSelection',
-      route: createRouteAddress('Underworld'),
-      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
-    });
-    const initial = bind(project, 'Underworld', 'F').interactions.acquisitionConversions.get(
-      semanticAddressKey(acquisition),
-    );
-    const replacementOptions = initial?.artificerReplacementOptions ?? [];
-    const hammer = replacementOptions.find((option) => option.offer.rewardType === 'WeaponUpgrade');
-    if (hammer === undefined) throw new Error('Artificer Hammer option is missing');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition,
-      value: { kind: 'artificer', replacement: hammer },
-    });
-    const replacementAddress = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
-        'roomRewardPickup',
-      ),
-      'artificer:self:self',
-    );
-    const candidateSessionFor = (current: ProjectDocument): CandidateProjectionSession => {
-      const ordinary = services.candidateSessions.bind(simulateProjectAssembly(catalog, current));
-      return Object.freeze({
-        ...ordinary,
-        acquisitionConversion: (owner: typeof acquisition) =>
-          semanticAddressKey(owner) !== semanticAddressKey(acquisition)
-            ? ordinary.acquisitionConversion(owner)
-            : Object.freeze({
-                kind: 'acquisitionConversion' as const,
-                result: Object.freeze({
-                  timePieceSupported: false,
-                  timePieceConvertible: true,
-                  artificerSupported: true,
-                  artificerConvertible: true,
-                  artificerReplacementOptions: replacementOptions,
-                  artificerReplacementAddress: replacementAddress,
-                  branchCount: 1,
-                  unsupportedEvidence: Object.freeze([]),
-                }),
-              }),
-        levelResolution: (
-          owner: Parameters<CandidateProjectionSession['levelResolution']>[0],
-          value: Parameters<CandidateProjectionSession['levelResolution']>[1],
-        ) =>
-          semanticAddressKey(owner.owner) !== semanticAddressKey(replacementAddress)
-            ? ordinary.levelResolution(owner, value)
-            : Object.freeze({
-                groups: Object.freeze([
-                  Object.freeze({
-                    key: 'artificer-pom',
-                    branchIndices: Object.freeze([0]),
-                    surface: Object.freeze({
-                      effectKind: 'choice' as const,
-                      levelCount: 1,
-                      eligibleTargetTraitKeys: Object.freeze(['ApolloWeaponBoon']),
-                    }),
-                    evaluations: Object.freeze([]),
-                  }),
-                ]),
-              }),
-      });
-    };
-
-    const hammerBound = bind(
-      project,
-      'Underworld',
-      'F',
-      undefined,
-      candidateSessionFor(project),
-    ).interactions;
-    const conversion = hammerBound.acquisitionConversions.get(semanticAddressKey(acquisition));
-    const hammerControl = conversion?.artificerReplacementControl?.traitOffers?.[0];
-    if (hammerControl === undefined) throw new Error('Artificer Hammer child control is missing');
-    const hammerInteraction = hammerBound.traitOffers.get(
-      semanticAddressKey(hammerControl.address),
-    );
-    if (hammerInteraction === undefined || hammerInteraction.value !== null)
-      throw new Error('Artificer Hammer child interaction is missing');
-    const hammerDraft = hammerInteraction.traitsStartingDraft?.();
-    if (hammerDraft === undefined) throw new Error('Artificer Hammer draft is missing');
-    const authoredHammer = Object.freeze({ ...hammerDraft, selectedOptionKey: 'option2' as const });
-    expect(hammerInteraction.intentFor(authoredHammer)).toEqual({
-      command: {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition,
-        value: {
-          kind: 'artificer',
-          replacement: {
-            ...hammer,
-            traitOffersByAcquisitionRole: {
-              ...hammer.traitOffersByAcquisitionRole,
-              [hammerControl.address.acquisitionRole]: authoredHammer,
-            },
-          },
-        },
-      },
-    });
-
-    const pom = conversion?.artificerReplacementControl?.artificerReplacementEdit?.options.find(
-      (option) => option.offer.rewardType === 'StackUpgrade',
-    );
-    if (pom === undefined) throw new Error('Artificer Pom option is missing');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition,
-      value: { kind: 'artificer', replacement: pom },
-    });
-    const pomBound = bind(
-      project,
-      'Underworld',
-      'F',
-      undefined,
-      candidateSessionFor(project),
-    ).interactions;
-    const pomConversion = pomBound.acquisitionConversions.get(semanticAddressKey(acquisition));
-    const pomControl = pomConversion?.artificerReplacementControl?.levelResolutions?.[0];
-    expect(pomControl).toBeDefined();
-    expect(
-      pomControl === undefined
-        ? undefined
-        : pomBound.levelResolutions.get(semanticAddressKey(pomControl.address)),
-    ).toBeDefined();
-  });
 
   it('constructs takeover repair commands from bound existing target identities', () => {
     const { assembly, interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');

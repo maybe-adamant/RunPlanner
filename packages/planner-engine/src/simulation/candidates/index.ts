@@ -16,11 +16,6 @@ export type {
   FieldsCageOutcomeCandidateSupport,
 } from './fields-cage-outcome';
 export type {
-  EvaluatedFieldsActionOrderCandidate,
-  FieldsActionOrderCandidateQuery,
-  FieldsActionOrderCandidateSupport,
-} from './fields-action-order';
-export type {
   EvaluatedHubSlotCandidate,
   EvaluatedHubVisitOrderCandidate,
   EvaluatedSideRoomEntryOrderCandidate,
@@ -49,14 +44,12 @@ export type {
   EvaluatedRewardWheelPickedCandidate,
   EvaluatedRewardWheelStoreCandidate,
   EvaluatedShipEncounterCountCandidate,
-  EvaluatedAcquisitionOrderCandidate,
   RewardWheelLifecycleCandidateSupport,
   RewardWheelOfferCountCandidateQuery,
   RewardWheelPickedCandidateQuery,
   RewardWheelStoreCandidateQuery,
   ShipEncounterCountCandidateQuery,
   ShipEncounterCountCandidateSupport,
-  AcquisitionOrderCandidateQuery,
 } from './room-lifecycle';
 export type { EvaluatedRoomTargetCandidate, RoomTargetCandidateQuery } from './room-target';
 export {

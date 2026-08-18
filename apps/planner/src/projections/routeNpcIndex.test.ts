@@ -21,6 +21,7 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
   createCompleteFGProject,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -95,8 +96,14 @@ function withoutArtemisPresentationMetadata(): Catalog {
     blocksGorgon: original.blocksGorgon,
     hostsGorgon: original.hostsGorgon,
     skipEndEncounterEffects: original.skipEndEncounterEffects,
+    ...(original.blocksKeepsakeSelectionKeys === undefined
+      ? {}
+      : { blocksKeepsakeSelectionKeys: original.blocksKeepsakeSelectionKeys }),
     ...(original.requirements === undefined ? {} : { requirements: original.requirements }),
     ...(original.sequenceEffect === undefined ? {} : { sequenceEffect: original.sequenceEffect }),
+    ...(original.traitOfferProducer === undefined
+      ? {}
+      : { traitOfferProducer: original.traitOfferProducer }),
   });
   return Object.freeze({
     ...catalog,
@@ -284,7 +291,8 @@ describe('route NPC index projection', () => {
       expect(localIndex.groups[0]?.entries.map((entry) => entry.phase)).toContainEqual(localPhase);
 
       const metadataFreeCatalog = withoutArtemisPresentationMetadata();
-      const metadataFreeAssembly = simulateProjectAssembly(metadataFreeCatalog, project);
+      const authoredProject = authorRequiredTestRoomActions(project, catalog);
+      const metadataFreeAssembly = simulateProjectAssembly(metadataFreeCatalog, authoredProject);
       expect(
         encounterPhaseCandidateSupportForProjectEvaluationAssembly(
           metadataFreeAssembly,
@@ -292,17 +300,22 @@ describe('route NPC index projection', () => {
         ),
       ).toEqual(
         encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-          simulateProjectAssembly(catalog, project),
+          simulateProjectAssembly(catalog, authoredProject),
           fArtemisPhase,
         ),
       );
       const metadataFreeRoute = metadataFreeAssembly.evaluation.routes.find(
         (route) => route.routeKey === 'Underworld',
       );
+      const standardRoute = simulateProjectAssembly(
+        catalog,
+        authoredProject,
+      ).evaluation.routes.find((route) => route.routeKey === 'Underworld');
       if (metadataFreeRoute === undefined)
         throw new Error('metadata-free Underworld route is missing');
+      if (standardRoute === undefined) throw new Error('standard Underworld route is missing');
       expect(latestHistory(metadataFreeRoute).ledgers.encounterRecords).toEqual(
-        latestHistory(fixture.route).ledgers.encounterRecords,
+        latestHistory(standardRoute).ledgers.encounterRecords,
       );
       expect(
         projectRouteNpcIndex(metadataFreeCatalog, metadataFreeRoute, fixture.workspace.focusByOwner)

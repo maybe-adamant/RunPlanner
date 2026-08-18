@@ -32,6 +32,9 @@ import {
   echoLastRewardPickupEntryKeys,
   selectedPickupProducer,
 } from '../../authored-project/traits';
+import { activeRoomActionReferences } from '../../authored-project/room-actions';
+import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
+import { assembleRoomActionRoster, roomActionContributions } from '../room-actions';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -84,7 +87,6 @@ interface MaterializedRoomLeaf {
   readonly unresolvedLocalRewards?: CanonicalAuthoredRoom['unresolvedLocalRewards'];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
   readonly unresolvedFieldsOptionalRewards?: CanonicalAuthoredRoom['unresolvedFieldsOptionalRewards'];
-  readonly fieldsActions?: readonly import('../../authored-project/model').FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly clockworkReward?: 'goal' | 'nonGoal';
@@ -435,7 +437,6 @@ function materializeFieldsCombat(
     unresolvedFieldsOptionalRewards: Object.freeze(
       optionalLeaves.flatMap(({ base, reward }) => (reward === null ? [base] : [])),
     ),
-    fieldsActions: state.actionOrder,
   });
 }
 
@@ -634,7 +635,6 @@ function materializeShopEntry(
           : [];
       }),
     ),
-    order: context.occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]),
   });
 }
 
@@ -807,11 +807,7 @@ export function materializeAuthoredRoom(
               Object.entries(authoredPickupEntries).filter(([key]) => pickupIsActive(key)),
             ),
           );
-  const activePickupOrder =
-    context.occurrence.state.kind === 'shop'
-      ? (authoredPickupSite?.order ?? [])
-      : (authoredPickupSite?.order.filter(pickupIsActive) ?? []);
-  return Object.freeze({
+  const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
@@ -825,6 +821,22 @@ export function materializeAuthoredRoom(
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
+    roomActions: context.occurrence.roomActions,
+    acquisitionSites: Object.freeze(
+      Object.fromEntries(
+        Object.entries(context.occurrence.acquisitionSites ?? {}).map(([siteKey, site]) => [
+          siteKey,
+          Object.freeze({
+            address:
+              acquisitionSiteFromStorageKey(
+                createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
+                siteKey,
+              ) ?? fail(`${context.room.gameName} has an invalid acquisition site key`),
+            entries: site.pickupEntries ?? Object.freeze({}),
+          }),
+        ]),
+      ),
+    ),
     ...(context.room.requiredObjects === undefined
       ? {}
       : { requiredObjects: context.room.requiredObjects }),
@@ -842,17 +854,43 @@ export function materializeAuthoredRoom(
     ...(leaf.unresolvedFieldsOptionalRewards === undefined
       ? {}
       : { unresolvedFieldsOptionalRewards: leaf.unresolvedFieldsOptionalRewards }),
-    ...(leaf.fieldsActions === undefined ? {} : { fieldsActions: leaf.fieldsActions }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
     ...(activePickupEntries === undefined || Object.keys(activePickupEntries).length === 0
       ? {}
       : {
           pickupSite: Object.freeze({
-            order: activePickupOrder,
             entries: activePickupEntries,
           }),
         }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
+  }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster'>;
+  return Object.freeze({
+    ...base,
+    roomActionRoster: assembleRoomActionRoster({
+      owner: base.origin,
+      order: base.roomActions.order,
+      contributions: roomActionContributions({
+        catalog: context.catalog,
+        declaration: context.room,
+        room: base,
+        activeReferences: activeRoomActionReferences(
+          context.catalog,
+          context.biome,
+          context.occurrence,
+          {
+            activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
+            incomingRewardActive:
+              (base.incomingReward !== undefined &&
+                base.incomingReward.acquisitionEnabled !== false) ||
+              base.unresolvedIncomingReward !== undefined,
+            shopInventoryActive: base.entryState?.kind === 'shop',
+            ...(base.rewardWheels === undefined
+              ? {}
+              : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),
+          },
+        ),
+      }),
+    }),
   });
 }

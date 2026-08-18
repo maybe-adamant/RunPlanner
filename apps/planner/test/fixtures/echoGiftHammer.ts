@@ -17,6 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
   goldenHBiome,
 } from '@run-planner/test-fixtures';
@@ -89,6 +90,7 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
     gameName: 'H_MiniBoss02',
   });
+  project = authorRequiredTestRoomActions(project, catalog);
   const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTargetId);
   const rewardSession = createPreparedProjectCandidateSession(
     catalog,
@@ -117,6 +119,7 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     reward: forcedReward,
     value: supportedSource.offer,
   });
+  project = authorRequiredTestRoomActions(project, catalog);
   const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,

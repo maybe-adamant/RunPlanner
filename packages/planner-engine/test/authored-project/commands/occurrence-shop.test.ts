@@ -6,14 +6,11 @@ import {
   applyProjectHistoryCommand,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
-  createBatchRewardStoreAddress,
-  createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createLevelResolutionAddress,
   createShopOfferAddress,
   createProjectHistory,
-  createTargetAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -22,8 +19,12 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { createCompleteNProject } from '../support/complete-n-project';
-import { gBiome, gProject, nBiome } from '../support/configured-projects';
-import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures';
+import { nBiome } from '../support/configured-projects';
+import {
+  createGoldenFGHIProject,
+  goldenIBiome,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures';
 
 describe('authored-project Shop occurrence commands', () => {
   it('rejects a level-resolution child on Shop GiftDrop', () => {
@@ -83,11 +84,7 @@ describe('authored-project Shop occurrence commands', () => {
       offer,
       value: { rewardType: 'MaxHealthDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(shop, 'roomExit'),
-      entryKeys: ['MajorNonBoon'],
-    });
+    project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
     const state = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N')
@@ -106,15 +103,9 @@ describe('authored-project Shop occurrence commands', () => {
         .find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
-        ?.acquisitionSites,
-    ).toMatchObject({ roomExit: { order: ['MajorNonBoon'] } });
-    expect(
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: createAcquisitionSiteAddress(shop, 'roomExit'),
-        entryKeys: ['MajorNonBoon'],
-      }),
-    ).toBe(project);
+        ?.roomActions.order,
+    ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'MajorNonBoon' });
+    expect(replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon'])).toBe(project);
   });
 
   it('replaces the structural Infernal Contract reward across its declared type domain', () => {
@@ -170,95 +161,6 @@ describe('authored-project Shop occurrence commands', () => {
       expect.objectContaining({
         commandKind: 'ReplaceShopOffer',
         detail: 'unknown shop offer Unknown',
-      }),
-    );
-    expect(() =>
-      applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
-        entryKeys: 'yes' as unknown as readonly string[],
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceAcquisitionOrder',
-        detail: 'entryKeys must be an array of entry keys',
-      }),
-    );
-    expect(() =>
-      applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
-        entryKeys: ['Unknown'],
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceAcquisitionOrder',
-        detail: 'unknown entry Unknown',
-      }),
-    );
-    expect(() =>
-      applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, shopId), 'roomExit'),
-        entryKeys: ['MajorNonBoon', 'MajorNonBoon'],
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceAcquisitionOrder',
-        detail: 'entry MajorNonBoon is duplicated',
-      }),
-    );
-
-    let project = applyProjectCommand(gProject(), catalog, {
-      kind: 'CreateStart',
-      biome: gBiome,
-      occurrenceId: createOccurrenceId('shop-intro'),
-    });
-    const introDecision = createExitDecisionAddress(gBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('shop-intro'),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      decision: introDecision,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(gBiome, introDecision.source),
-      storeKey: 'RunProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(gBiome, introDecision.source, 'exit1'),
-      occurrenceId: createOccurrenceId('shop-source'),
-      gameName: 'G_Combat02',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTakeoverBatch',
-      decision: createExitDecisionAddress(gBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('shop-source'),
-      }),
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: {
-        exit1: createOccurrenceId('shop-unselected'),
-        exit2: createOccurrenceId('shop-free-2'),
-        exit3: createOccurrenceId('shop-free-3'),
-      },
-    });
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceAcquisitionOrder',
-        site: createAcquisitionSiteAddress(
-          createOccurrenceAddress(gBiome, createOccurrenceId('shop-unselected')),
-          'roomExit',
-        ),
-        entryKeys: ['Boon'],
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceAcquisitionOrder',
-        detail: 'does not own a materialized authorable acquisition site',
       }),
     );
   });

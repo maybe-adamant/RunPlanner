@@ -64,9 +64,11 @@ import type { FindingRegionEntry } from './finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyFromSelectedProducts,
+  occurrenceOwnerAddress,
   type BiomeGenerationValidation,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
+import { prefixAuthoredRooms } from './candidates/evaluated-biome';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
 import type {
   BiomeRewardSimulation,
@@ -426,6 +428,39 @@ export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
       .biomeAt(createBiomeAddress(site.routeKey, site.biomeKey))
       ?.derivedAcquisitionEntries.entriesAt(site) ?? Object.freeze([])
   ).map(({ address, capability }) => Object.freeze({ address, ...capability }));
+}
+
+/**
+ * The exact blocked occurrence remains an authored repair surface even when
+ * execution assessment stops inside one of its actions. Later occurrences in
+ * the materialized plan remain hidden until their own execution frontier is
+ * reached.
+ */
+export function blockedOccurrenceRoomForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+): CanonicalAuthoredRoom | undefined {
+  const exact = requireExactProjectEvaluationAssembly(assembly);
+  const biome = exact.evaluation.routes
+    .find((route) => route.routeKey === occurrence.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === occurrence.biomeKey);
+  if (
+    biome?.coverage.kind !== 'prefix' ||
+    biome.coverage.blockedAt === undefined ||
+    !('materializedPrefix' in biome)
+  ) {
+    return undefined;
+  }
+  const blockedOccurrence = occurrenceOwnerAddress(biome.coverage.blockedAt);
+  if (
+    blockedOccurrence === undefined ||
+    semanticAddressKey(blockedOccurrence) !== semanticAddressKey(occurrence)
+  ) {
+    return undefined;
+  }
+  return prefixAuthoredRooms(biome.materializedPrefix).find(
+    (room) => semanticAddressKey(room.origin) === semanticAddressKey(occurrence),
+  );
 }
 
 /** Exact-assembly entry point for one synchronous counted-reward authoring domain. */

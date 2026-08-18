@@ -1,5 +1,7 @@
 import {
   applyProjectCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
@@ -36,7 +38,12 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
+import {
+  authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+  authorTestArtificerReplacement,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures';
 
 import {
   createFGenerationProject,
@@ -45,6 +52,15 @@ import {
 import { createCompleteFTakeoverProject } from '../../support/f-takeover-project';
 
 const biome = createBiomeAddress('Underworld', 'F');
+
+function replaceShopActions(
+  project: ProjectDocument,
+  site: ReturnType<typeof createAcquisitionSiteAddress>,
+  offerKeys: readonly string[],
+): ProjectDocument {
+  if (site.owner.kind !== 'occurrence') throw new Error('F Shop site must be occurrence-owned');
+  return replaceTestShopOfferActions(project, catalog, site.owner, offerKeys);
+}
 
 interface TargetSpec {
   readonly id: OccurrenceId;
@@ -521,11 +537,11 @@ function shopTimingProject(): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'AresUpgrade' },
     },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionOrder',
-    site: createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
-    entryKeys: ['Boon'],
-  });
+  project = replaceShopActions(
+    project,
+    createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    ['Boon'],
+  );
   project = addBatch(project, shop, 'RunProgress', [
     {
       id: fifth,
@@ -700,11 +716,11 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionOrder',
-    site: createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
-    entryKeys: ['Boon'],
-  });
+  project = replaceShopActions(
+    project,
+    createAcquisitionSiteAddress(createOccurrenceAddress(biome, shop), 'roomExit'),
+    ['Boon'],
+  );
   project = addTakeover(project, shop, [
     createOccurrenceId('blind-preboss-shop'),
     createOccurrenceId('blind-preboss-free'),
@@ -1083,16 +1099,8 @@ describe('F reward-history simulation', () => {
       return JSON.stringify(batch);
     };
     const base = shopTimingProject();
-    const empty = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: [],
-    });
-    const reordered = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['MajorNonBoon', 'Boon'],
-    });
+    const empty = replaceShopActions(base, site, []);
+    const reordered = replaceShopActions(base, site, ['MajorNonBoon', 'Boon']);
     const traitEdited = applyProjectCommand(base, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(createShopOfferAddress(biome, shop, 'Boon'), 'source'),
@@ -1112,11 +1120,7 @@ describe('F reward-history simulation', () => {
       offer: createShopOfferAddress(biome, shop, 'Minor'),
       value: { rewardType: 'StoreRewardRandomStack' },
     });
-    pomEdited = applyProjectCommand(pomEdited, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['Minor'],
-    });
+    pomEdited = replaceShopActions(pomEdited, site, ['Minor']);
     pomEdited = applyProjectCommand(pomEdited, catalog, {
       kind: 'ReplaceLevelResolution',
       levelResolution: createLevelResolutionAddress(
@@ -1181,14 +1185,14 @@ describe('F reward-history simulation', () => {
   it('addresses unsupported shop inventory and purchased options separately', () => {
     const offerResult = evaluate(invalidShopOfferProject()).rewards;
     let purchaseProject = invalidBlindBoxPurchaseProject();
-    purchaseProject = applyProjectCommand(purchaseProject, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
+    purchaseProject = replaceShopActions(
+      purchaseProject,
+      createAcquisitionSiteAddress(
         createOccurrenceAddress(biome, createOccurrenceId('blind-shop')),
         'roomExit',
       ),
-      entryKeys: ['Boon', 'MajorNonBoon'],
-    });
+      ['Boon', 'MajorNonBoon'],
+    );
     const purchaseResult = evaluate(purchaseProject).rewards;
     const offerFindings = offerResult.findings.filter(
       (finding) => finding.code === 'shopOfferUnavailable',
@@ -1277,11 +1281,10 @@ describe('F reward-history simulation', () => {
         payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
       },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(shop, 'roomExit'),
-      entryKeys: ['Boon', 'MajorNonBoon'],
-    });
+    project = replaceShopActions(project, createAcquisitionSiteAddress(shop, 'roomExit'), [
+      'Boon',
+      'MajorNonBoon',
+    ]);
     const preShopOffers = [
       {
         owner: createIncomingRewardAddress(biome, fGenerationOccurrenceId(2, 1)),
@@ -1355,13 +1358,6 @@ describe('F reward-history simulation', () => {
     );
     expect(evaluated.coverage).toMatchObject({ kind: 'prefix', blockedAt: blockedPurchase });
     const session = createPreparedProjectCandidateSession(catalog, assembly);
-    expect(
-      session.evaluate({
-        kind: 'acquisitionOrder',
-        site: createAcquisitionSiteAddress(shop, 'roomExit'),
-        entryKeys: ['MajorNonBoon'],
-      }),
-    ).toEqual({ kind: 'acquisitionOrder', result: { supported: true, findings: [] } });
     expect(
       session.evaluate({
         kind: 'incomingReward',
@@ -1456,28 +1452,24 @@ describe('F reward-history simulation', () => {
       route: createRouteAddress('Underworld'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition: createAcquisitionRoleAddress(source, 'self'),
-      value: {
-        kind: 'artificer',
-        replacement: Object.freeze({
-          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
-          traitOffersByAcquisitionRole: Object.freeze({}),
-          dispositionByAcquisitionRole: Object.freeze({
-            self: Object.freeze({ kind: 'normal' as const }),
-          }),
+    project = authorTestArtificerReplacement(
+      project,
+      catalog,
+      createAcquisitionRoleAddress(source, 'self'),
+      Object.freeze({
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({
+          self: Object.freeze({ kind: 'normal' as const }),
         }),
-      },
-    });
+      }),
+    );
+    project = authorRequiredTestRoomActions(project, catalog);
     const result = evaluate(project).rewards;
     const branch = firstBranch(result);
     const expected = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(biome, occurrenceId),
-        'roomRewardPickup',
-      ),
-      'artificer:self:self',
+      artificerAcquisitionSite(createOccurrenceAddress(biome, occurrenceId), source),
+      artificerReplacementEntryKey(source, 'self'),
     );
     const conversion = branch.events.find(
       (event) =>
@@ -1553,6 +1545,7 @@ describe('F reward-history simulation', () => {
       createOccurrenceId('retained-invalid-preboss-shop'),
       createOccurrenceId('retained-invalid-preboss-free'),
     ]);
+    project = authorRequiredTestRoomActions(project, catalog);
 
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: reward }),
@@ -1563,6 +1556,7 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, retainedCombat),
       gameName: 'F_Combat06',
     });
+    project = authorRequiredTestRoomActions(project, catalog);
 
     expect(
       fPlan(project).topology?.occurrences.find(

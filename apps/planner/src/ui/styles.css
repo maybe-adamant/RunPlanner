@@ -2238,16 +2238,6 @@ select {
   overflow-wrap: anywhere;
 }
 
-.shop-offer-table .shop-purchase-membership {
-  width: 78px;
-  text-align: center;
-}
-
-.shop-purchase-membership .purchase-control {
-  justify-content: center;
-  gap: 4px;
-}
-
 .shop-offer-reward > td {
   padding: 10px 11px 12px;
   background: rgb(10 11 14 / 18%);
@@ -2255,32 +2245,6 @@ select {
 
 .shop-offer-reward .reward-value-editor {
   gap: 6px;
-}
-
-.acquisitions-workbench {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.acquisitions-workbench > .owner-markers h4 {
-  margin: 0;
-}
-
-.acquisition-ranked-board {
-  padding: 0;
-}
-
-.acquisition-entry-primary {
-  align-items: center;
-}
-
-.acquisition-entry-identity > .owner-markers {
-  min-width: 0;
-}
-
-.acquisition-entry-identity strong {
-  overflow-wrap: anywhere;
 }
 
 .acquisition-entry-resolution {
@@ -2840,6 +2804,64 @@ select {
   min-width: 30px;
   padding: 4px;
   font-size: 0.95rem;
+}
+
+.room-actions-workbench {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #34353e;
+  border-radius: 10px;
+  background: rgb(10 11 14 / 35%);
+}
+
+.room-action-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-action-row,
+.room-action-checkpoint {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #34353e;
+  border-radius: 8px;
+  background: rgb(18 19 24 / 72%);
+}
+
+.room-action-row > .owner-markers {
+  min-width: 0;
+}
+
+.room-action-row > .acquisition-entry-resolution,
+.room-action-row > .field-control,
+.room-action-issues {
+  grid-column: 1 / -1;
+}
+
+.room-action-issues {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 7px 9px 7px 26px;
+  border-radius: 6px;
+  color: #d3bd94;
+  background: rgb(211 189 148 / 8%);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.room-action-checkpoint {
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  color: #aaa7af;
+  background: rgb(10 11 14 / 35%);
 }
 
 .hub-owner-assessment {

@@ -22,12 +22,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createRepresentativeNOPProject,
+  replaceTestShopOfferActions,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../../../../src/simulation/project';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
@@ -219,14 +219,12 @@ describe('P core loop', () => {
         payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
       },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-        'roomExit',
-      ),
-      entryKeys: ['Boon'],
-    });
+    project = replaceTestShopOfferActions(
+      project,
+      catalog,
+      createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      ['Boon'],
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluation = assembly.evaluation;
     const surface = evaluation.routes.find((route) => route.routeKey === 'Surface');
@@ -251,23 +249,15 @@ describe('P core loop', () => {
             },
           })
         : null;
-    const shopOwner = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
     expect(progressive).not.toBeNull();
     expect(progressive?.evaluation.blockedAt).toEqual(purchase);
     expect(
-      progressive?.candidateArtifacts.roomLifecycles.acquisitionOrderAt(shopOwner),
-    ).toBeDefined();
-    expect(
-      candidateArtifactsForProjectEvaluationAssembly(assembly)
-        .biomeAt(pBiome)
-        ?.roomLifecycles.acquisitionOrderAt(shopOwner),
-    ).toBeDefined();
-    expect(
-      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-        kind: 'acquisitionOrder',
-        site: createAcquisitionSiteAddress(shopOwner, 'roomExit'),
-        entryKeys: [],
-      }),
-    ).toEqual({ kind: 'acquisitionOrder', result: { supported: true, findings: [] } });
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
+        )?.roomActions.order,
+    ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
   });
 });

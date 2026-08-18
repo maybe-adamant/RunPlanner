@@ -5,7 +5,7 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
@@ -61,6 +61,10 @@ function representativeWorkspacePair() {
   });
   return representativeWorkspaces;
 }
+
+beforeAll(() => {
+  representativeWorkspacePair();
+});
 
 /*
  * A15.2 inventory of the former umbrella cases and their focused owners:

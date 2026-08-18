@@ -13,6 +13,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { createFConversionFrontierProject, goldenFBiome, goldenFOccurrenceId } from './underworld';
+import { authorTestArtificerReplacement } from './room-actions';
 
 /**
  * Sanitized reconstruction of run-plan.runplanner(3) through Decision 3. The
@@ -31,36 +32,31 @@ export function createCombat08ArtificerRegressionProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenFBiome, first),
     gameName: 'F_Combat06',
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionDisposition',
-    acquisition: createAcquisitionRoleAddress(
-      createIncomingRewardAddress(goldenFBiome, first),
-      'self',
-    ),
-    value: {
-      kind: 'artificer',
-      replacement: {
-        offer: {
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
-        traitOffersByAcquisitionRole: {
-          source: {
-            kind: 'traits',
-            giverKey: 'Apollo',
-            options: [
-              { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-              { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-            ],
-            selectedOptionKey: 'option1',
-            rarificationActions: [],
-          },
-        },
-        dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+  project = authorTestArtificerReplacement(
+    project,
+    catalog,
+    createAcquisitionRoleAddress(createIncomingRewardAddress(goldenFBiome, first), 'self'),
+    {
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
+      traitOffersByAcquisitionRole: {
+        source: {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [
+            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      },
+      dispositionByAcquisitionRole: { source: { kind: 'normal' } },
     },
-  });
+  );
 
   const secondDecision = createExitDecisionAddress(goldenFBiome, {
     kind: 'occurrence',

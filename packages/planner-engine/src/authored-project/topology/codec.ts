@@ -17,8 +17,12 @@ import type {
   NextRoomDecision,
   OccurrenceId,
   RoomOccurrence,
+  RoomActionReference,
+  RoomActionState,
   AuthoredRewardState,
 } from '../model';
+import { roomActionKey } from '../room-actions';
+import { parseArtificerReplacementEntryKey } from '../artificer';
 import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
 import { echoLastRewardPickupEntryKeys, selectedPickupProducer } from '../traits';
 import {
@@ -27,7 +31,6 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 import { decodeRoomEncounterState } from '../room-state/encounters';
-import { parseArtificerReplacementEntryKey } from '../artificer';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
@@ -59,6 +62,7 @@ interface RawOccurrence {
   readonly hasAnomalyReplacement: boolean;
   readonly state: unknown;
   readonly encounters: unknown;
+  readonly roomActions: unknown;
   readonly additionalExits: unknown;
   readonly acquisitionSites: unknown;
   readonly hasAcquisitionSites: boolean;
@@ -74,18 +78,6 @@ interface OccurrenceOwner {
   readonly path: string;
 }
 
-function isActiveArtificerReplacement(
-  key: string,
-  entries: Readonly<Record<string, AuthoredRewardState | null>> | undefined,
-): boolean {
-  const parsed = parseArtificerReplacementEntryKey(key);
-  return (
-    parsed !== undefined &&
-    entries?.[parsed.sourceKey]?.dispositionByAcquisitionRole[parsed.acquisitionRole]?.kind ===
-      'artificer'
-  );
-}
-
 interface RawDecision {
   readonly value: Record<string, unknown>;
   readonly path: string;
@@ -93,6 +85,72 @@ interface RawDecision {
 
 function occurrenceId(value: unknown, path: string): OccurrenceId {
   return expectNonBlankString(value, path) as OccurrenceId;
+}
+
+function decodeRoomActionReference(value: unknown, path: string): RoomActionReference {
+  const reference = expectRecord(value, path);
+  const kind = expectString(reference.kind, `${path}.kind`);
+  if (kind === 'completeFieldsCage' || kind === 'interactEncounter' || kind === 'interactGorgon') {
+    expectExactKeys(reference, ['kind', 'phaseKey'], path);
+    return Object.freeze({
+      kind,
+      phaseKey: expectNonBlankString(reference.phaseKey, `${path}.phaseKey`),
+    });
+  }
+  if (kind === 'interactIncomingReward') {
+    expectExactKeys(reference, ['kind', 'producerPoint', 'acquisitionRole'], path);
+    return Object.freeze({
+      kind,
+      producerPoint: expectNonBlankString(reference.producerPoint, `${path}.producerPoint`),
+      acquisitionRole: expectNonBlankString(reference.acquisitionRole, `${path}.acquisitionRole`),
+    });
+  }
+  if (kind === 'interactLocalReward') {
+    expectExactKeys(reference, ['kind', 'groupKey', 'slotKey'], path);
+    return Object.freeze({
+      kind,
+      groupKey: expectNonBlankString(reference.groupKey, `${path}.groupKey`),
+      slotKey: expectNonBlankString(reference.slotKey, `${path}.slotKey`),
+    });
+  }
+  if (kind === 'chooseRewardWheel' || kind === 'interactWheelReward') {
+    expectExactKeys(reference, ['kind', 'wheelKey'], path);
+    return Object.freeze({
+      kind,
+      wheelKey: expectNonBlankString(reference.wheelKey, `${path}.wheelKey`),
+    });
+  }
+  if (kind === 'interactShopOffer') {
+    expectExactKeys(reference, ['kind', 'offerKey'], path);
+    return Object.freeze({
+      kind,
+      offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
+    });
+  }
+  if (kind === 'interactAcquisitionEntry') {
+    expectExactKeys(reference, ['kind', 'siteKey', 'entryKey'], path);
+    return Object.freeze({
+      kind,
+      siteKey: expectNonBlankString(reference.siteKey, `${path}.siteKey`),
+      entryKey: expectNonBlankString(reference.entryKey, `${path}.entryKey`),
+    });
+  }
+  failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);
+}
+
+function decodeRoomActionState(value: unknown, path: string): RoomActionState {
+  const state = expectRecord(value, path);
+  expectExactKeys(state, ['order'], path);
+  const seen = new Set<string>();
+  const order = expectArray(state.order, `${path}.order`).map((rawReference, index) => {
+    const referencePath = `${path}.order[${index}]`;
+    const reference = decodeRoomActionReference(rawReference, referencePath);
+    const key = roomActionKey(reference);
+    if (seen.has(key)) failProjectDocument(referencePath, `duplicates room action ${key}`);
+    seen.add(key);
+    return reference;
+  });
+  return Object.freeze({ order: Object.freeze(order) });
 }
 
 function requireKnownRoom(occurrence: RawOccurrence, catalog: Catalog): RoomDeclaration {
@@ -271,7 +329,6 @@ function decodeAcquisitionSites(
   Record<
     string,
     {
-      readonly order: readonly string[];
       readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
     }
   >
@@ -280,35 +337,24 @@ function decodeAcquisitionSites(
   const decoded: Record<
     string,
     {
-      readonly order: readonly string[];
       readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
     }
   > = {};
   for (const [pointKey, rawSite] of Object.entries(sites)) {
+    const artificerSite = pointKey !== 'roomExit';
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
     const hasPickups = site.pickupEntries !== undefined;
     expectExactKeys(
       site,
-      ['order', ...(hasPickups ? ['pickupEntries'] : [])],
+      hasPickups ? ['pickupEntries'] : [],
       `${occurrence.path}.acquisitionSites.${pointKey}`,
     );
-    const order = expectArray(
-      site.order,
-      `${occurrence.path}.acquisitionSites.${pointKey}.order`,
-    ).map((key, index) =>
-      expectNonBlankString(key, `${occurrence.path}.acquisitionSites.${pointKey}.order[${index}]`),
-    );
-    if (new Set(order).size !== order.length) {
-      failProjectDocument(
-        `${occurrence.path}.acquisitionSites.${pointKey}.order`,
-        'contains a duplicate entry',
-      );
-    }
     if (
       hasPickups &&
       pickupProducerLifecycleKey === undefined &&
       echoLastRewardEntryKeys.size === 0 &&
-      shopProfileKey === undefined
+      shopProfileKey === undefined &&
+      !artificerSite
     )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
@@ -328,29 +374,30 @@ function decodeAcquisitionSites(
                 raw,
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
-                shopProfileKey === undefined
-                  ? {
-                      kind: 'producerLifecycle',
-                      key: echoLastRewardEntryKeys.has(key)
-                        ? 'EchoLastReward'
-                        : pickupProducerLifecycleKey!,
-                    }
-                  : key === INFERNAL_CONTRACT_ENTRY_KEY
+                artificerSite
+                  ? { kind: 'producerLifecycle', key: 'RoomReward' }
+                  : shopProfileKey === undefined
                     ? {
                         kind: 'producerLifecycle',
-                        key:
-                          catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
-                            ?.producerLifecycleKey ?? '',
+                        key: echoLastRewardEntryKeys.has(key)
+                          ? 'EchoLastReward'
+                          : pickupProducerLifecycleKey!,
                       }
-                    : { kind: 'shopProfile', key: shopProfileKey },
-                echoLastRewardEntryKeys.has(key) ? false : true,
+                    : key === INFERNAL_CONTRACT_ENTRY_KEY
+                      ? {
+                          kind: 'producerLifecycle',
+                          key:
+                            catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
+                              ?.producerLifecycleKey ?? '',
+                        }
+                      : { kind: 'shopProfile', key: shopProfileKey },
+                artificerSite || echoLastRewardEntryKeys.has(key) ? false : true,
               ),
             ]),
           ),
         )
       : undefined;
     decoded[pointKey] = Object.freeze({
-      order: Object.freeze(order),
       ...(pickupEntries === undefined ? {} : { pickupEntries }),
     });
   }
@@ -1233,6 +1280,7 @@ export function decodeBiomeTopology(
         'gameName',
         'state',
         'encounters',
+        'roomActions',
         'additionalExits',
         ...(hasAnomalyReplacement ? ['anomalyReplacement'] : []),
         ...(hasAcquisitionSites ? ['acquisitionSites'] : []),
@@ -1251,6 +1299,7 @@ export function decodeBiomeTopology(
         hasAnomalyReplacement,
         state: occurrence.state,
         encounters: occurrence.encounters,
+        roomActions: occurrence.roomActions,
         additionalExits: occurrence.additionalExits,
         acquisitionSites: occurrence.acquisitionSites,
         hasAcquisitionSites,
@@ -1593,17 +1642,24 @@ export function decodeBiomeTopology(
           state.kind === 'shop' ? state.shop?.profileKey : undefined,
         )
       : undefined;
+    const invalidArtificerSite = Object.entries(acquisitionSites ?? {}).some(
+      ([siteKey, site]) =>
+        siteKey !== 'roomExit' &&
+        Object.keys(site.pickupEntries ?? {}).some(
+          (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
+        ),
+    );
+    if (invalidArtificerSite) {
+      failProjectDocument(
+        `${rawOccurrence.path}.acquisitionSites`,
+        'source-local sites may contain only Artificer replacement entries',
+      );
+    }
     if (state.kind === 'shop' && state.shop !== undefined) {
       if (acquisitionSites === undefined || acquisitionSites.roomExit === undefined) {
         failProjectDocument(
           `${rawOccurrence.path}.acquisitionSites`,
           'materialized Shop requires roomExit state',
-        );
-      }
-      if (Object.keys(acquisitionSites).some((pointKey) => pointKey !== 'roomExit')) {
-        failProjectDocument(
-          `${rawOccurrence.path}.acquisitionSites`,
-          'Shop only authors roomExit state',
         );
       }
       for (const [entryKey, entry] of Object.entries(
@@ -1640,34 +1696,13 @@ export function decodeBiomeTopology(
           `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
           'must contain exactly the declaration-owned Infernal Contract entry',
         );
-      for (const entryKey of acquisitionSites.roomExit.order) {
-        const supplemental = acquisitionSites.roomExit.pickupEntries?.[entryKey];
-        if (
-          state.shop.offers[entryKey] === undefined &&
-          supplemental === undefined &&
-          !isActiveArtificerReplacement(entryKey, acquisitionSites.roomExit.pickupEntries)
-        ) {
-          failProjectDocument(
-            `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
-            `${entryKey} is not a Shop acquisition entry`,
-          );
-        }
-      }
     } else {
-      if (
-        acquisitionSites !== undefined &&
-        Object.keys(acquisitionSites).some((pointKey) => pointKey !== 'roomExit')
-      )
-        failProjectDocument(
-          `${rawOccurrence.path}.acquisitionSites`,
-          'pickup producers author only roomExit',
-        );
       const expected = pickupProducer?.pickups ?? [];
       const structurallyOwnedKeys = new Set([
         ...expected.map((pickup) => pickup.key),
         ...echoEntryKeys,
       ]);
-      if (structurallyOwnedKeys.size === 0 && acquisitionSites !== undefined) {
+      if (structurallyOwnedKeys.size === 0 && acquisitionSites?.roomExit !== undefined) {
         failProjectDocument(
           `${rawOccurrence.path}.acquisitionSites`,
           'has no authorable acquisition site',
@@ -1699,21 +1734,6 @@ export function decodeBiomeTopology(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
             'does not match selected descriptor pickups',
           );
-        for (const required of expected.filter((pickup) => pickup.required)) {
-          if (!acquisitionSites?.roomExit?.order.includes(required.key))
-            failProjectDocument(
-              `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
-              `${required.key} is a required pickup`,
-            );
-        }
-        const activeKeys = new Set(expected.map((pickup) => pickup.key));
-        for (const key of acquisitionSites?.roomExit?.order ?? []) {
-          if (!activeKeys.has(key) && !isActiveArtificerReplacement(key, entries))
-            failProjectDocument(
-              `${rawOccurrence.path}.acquisitionSites.roomExit.order`,
-              `${key} is not an active pickup`,
-            );
-        }
       }
     }
     return Object.freeze({
@@ -1724,6 +1744,10 @@ export function decodeBiomeTopology(
         : { anomalyReplacement: owner.anomalyReplacement }),
       state,
       encounters,
+      roomActions: decodeRoomActionState(
+        rawOccurrence.roomActions,
+        `${rawOccurrence.path}.roomActions`,
+      ),
       ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,

@@ -42,7 +42,6 @@ import {
   selectedExitKey,
 } from '../../authored-project/topology/query';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
-import { assessFieldsActionOrder } from '../../authored-project/fields-actions';
 import type { CompleteBiomeCompletenessResult } from '../completeness';
 import { materializeCompletionRooms } from './completion';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
@@ -808,26 +807,6 @@ function isCompleteBatch(
   );
 }
 
-function selectedFieldsActionOrderReady(
-  catalog: Catalog,
-  layout: BiomeLayout,
-  topology: BiomeTopology,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  decision: ExitDecision,
-): boolean {
-  const selected = selectedExitContinuation(
-    decision,
-    additionalExitsForDecision(topology, decision),
-  );
-  if (selected?.kind !== 'normal') return true;
-  const occurrence = occurrences.get(selected.target.occurrenceId);
-  if (occurrence?.state.kind !== 'fieldsCombat') return true;
-  const room = catalog.rooms.byKey[occurrence.gameName];
-  const facts = fieldsBatchFacts(catalog, layout, (id) => occurrences.get(id), decision);
-  if (room === undefined || facts === undefined) return false;
-  return assessFieldsActionOrder(catalog, room, occurrence.state, facts.doorCageRewardCount).valid;
-}
-
 function materializeContiguousBatchPrefix(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -1064,15 +1043,6 @@ export function materializeBiomePrefix(
           hubContinuation,
           additional,
         ),
-      );
-    }
-    if (!selectedFieldsActionOrderReady(catalog, layout, topology, occurrences, decision)) {
-      return prefix(
-        biome,
-        biomeState,
-        entryRoom,
-        decisions,
-        decisionFrontier(biome, decision, source, roomReference(current)),
       );
     }
     const materialized = materializeBatch(

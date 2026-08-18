@@ -3,7 +3,7 @@ import {
   createAdditionalExitAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
-  createFieldsActionAddress,
+  createRoomActionAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -23,10 +23,6 @@ import {
   traitOfferOption,
   traitGiverUsesOfferContext,
   semanticAddressKey,
-  assessFieldsActionOrder,
-  fieldsActionKey,
-  fieldsActionOrderProposals,
-  fieldsCageActionDomain,
   type BiomeAddress,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
@@ -34,10 +30,10 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
   type AuthoredRewardState,
-  type FieldsCombatAction,
-  type FieldsCombatState,
   type LevelResolutionAddress,
-  shopAcquisitionOrderProposals,
+  roomActionKey,
+  acquisitionSiteFromStorageKey,
+  parseArtificerReplacementEntryKey,
   selectedPickupProducer,
   echoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
@@ -89,7 +85,7 @@ import {
   type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
-  type WorkspaceFieldsChronology,
+  type WorkspaceRoomActions,
   type WorkspaceShopSupplementalDescriptor,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
@@ -1058,38 +1054,9 @@ function activeEncounterPhasesForOwner(
   return Object.freeze(phases);
 }
 
-/** Complete semantic proposals for the one authorable site order. */
-function acquisitionOrderProposals(
-  order: readonly string[],
-  offerKeys: readonly string[],
-): readonly (readonly string[])[] {
-  const proposals: string[][] = [[...order]];
-  for (const offerKey of offerKeys) {
-    const index = order.indexOf(offerKey);
-    proposals.push(index < 0 ? [...order, offerKey] : order.filter((key) => key !== offerKey));
-  }
-  for (let index = 0; index < order.length - 1; index += 1) {
-    const swapped = [...order];
-    const next = swapped[index + 1];
-    swapped[index + 1] = swapped[index]!;
-    swapped[index] = next!;
-    proposals.push(swapped);
-  }
-  const seen = new Set<string>();
-  return Object.freeze(
-    proposals.flatMap((proposal) => {
-      const key = JSON.stringify(proposal);
-      if (seen.has(key)) return [];
-      seen.add(key);
-      return [Object.freeze(proposal)];
-    }),
-  );
-}
-
 interface ShopSupplementalAssemblyContext {
-  readonly acquisitionOrder: readonly string[];
+  readonly selectedActionKeys: readonly string[];
   readonly acquisitionSite: AcquisitionSiteAddress;
-  readonly completeProposals: readonly (readonly string[])[];
   readonly input: WorkspaceOccurrenceAssemblyInput;
   readonly offers: readonly { readonly key: string; readonly label: string }[];
   readonly pickupEntries: Readonly<Record<string, AuthoredRewardState | null>>;
@@ -1099,16 +1066,11 @@ interface ShopSupplementalAssemblyContext {
 function supplementalPurchase(
   context: ShopSupplementalAssemblyContext,
   entryKey: string,
-  purchased: boolean,
-  toggleOfferKeys: readonly string[],
 ): WorkspaceShopPurchaseDescriptor {
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
   return Object.freeze({
     address,
     marker: context.input.markerDestinations.marker(address),
-    purchased,
-    toggleOfferKeys,
-    proposalOfferKeys: context.completeProposals,
   });
 }
 
@@ -1121,23 +1083,17 @@ function derivedRewardSupplementalOffer(
   const entryKey = gold ? ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY : TRAVEL_DEAL_REFILL_ENTRY_KEY;
   const activeKind = gold ? 'echoDoubleShopReward' : 'travelDealRefill';
   const placeholderKind = gold ? 'echoDoubleShopPlaceholder' : 'travelDealPlaceholder';
-  const selected = context.acquisitionOrder.includes(entryKey);
+  const selected = context.selectedActionKeys.includes(entryKey);
 
   if (selected && capability?.kind !== activeKind) {
-    const purchase = supplementalPurchase(
-      context,
-      entryKey,
-      true,
-      Object.freeze(context.acquisitionOrder.filter((candidate) => candidate !== entryKey)),
-    );
+    const purchase = supplementalPurchase(context, entryKey);
     return gold
       ? Object.freeze({
           kind: 'echoDoubleShopInvalid' as const,
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
           explanation:
-            'This selected duplicate has no active eligible paid source. Clear Picked up to repair the Shop.',
-          participationLabel: 'Picked up' as const,
+            'This selected duplicate has no active eligible paid source. Remove its Room Action to repair the Shop.',
           purchase,
         })
       : Object.freeze({
@@ -1145,8 +1101,7 @@ function derivedRewardSupplementalOffer(
           key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
           label: 'Travel Deal refill',
           explanation:
-            'This selected refill has no active triggering purchase. Remove it from the acquisition order to repair the Shop.',
-          participationLabel: 'Purchased' as const,
+            'This selected refill has no active triggering purchase. Remove its Room Action to repair the Shop.',
           purchase,
         });
   }
@@ -1158,13 +1113,13 @@ function derivedRewardSupplementalOffer(
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
           explanation:
-            'Purchase order needs one paid non-Spell Shop offer before this duplicate can be edited.',
+            'A prior paid non-Spell Shop action is required before this duplicate can be edited.',
         })
       : Object.freeze({
           kind: 'travelDealPlaceholder' as const,
           key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
           label: 'Travel Deal refill',
-          explanation: 'Purchase order needs one paid Shop offer before this refill can be edited.',
+          explanation: 'A prior paid Shop action is required before this refill can be edited.',
         });
   }
   if (capability.kind !== activeKind || capability.sourceOfferKey === undefined) {
@@ -1181,10 +1136,6 @@ function derivedRewardSupplementalOffer(
     (gold && capability.sourceOfferKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
       ? 'Travel Deal refill'
       : capability.sourceOfferKey);
-  const toggleOfferKeys =
-    context.completeProposals.find((proposal) =>
-      selected ? !proposal.includes(entryKey) : proposal.includes(entryKey),
-    ) ?? context.acquisitionOrder;
   const authored = context.pickupEntries[entryKey] ?? capability.fixedReward ?? null;
   const materialized = Object.hasOwn(context.pickupEntries, entryKey);
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
@@ -1203,7 +1154,7 @@ function derivedRewardSupplementalOffer(
           sourceOfferKey: capability.sourceOfferKey,
         }),
   ) as WorkspaceExplicitRewardControl;
-  const purchase = supplementalPurchase(context, entryKey, selected, toggleOfferKeys);
+  const purchase = supplementalPurchase(context, entryKey);
 
   if (gold) {
     if (eligibleSourceOfferKeys === undefined) {
@@ -1218,7 +1169,6 @@ function derivedRewardSupplementalOffer(
       sourceOfferKey: capability.sourceOfferKey,
       eligibleSourceOfferKeys,
       materialized,
-      participationLabel: 'Picked up' as const,
       purchase,
       rewardControl: projectedReward,
     });
@@ -1229,7 +1179,6 @@ function derivedRewardSupplementalOffer(
     label: `Travel Deal refill after ${sourceOfferLabel}`,
     sourceOfferKey: capability.sourceOfferKey,
     materialized,
-    participationLabel: 'Purchased' as const,
     purchase,
     rewardControl: projectedReward,
   });
@@ -1239,7 +1188,7 @@ function contractSupplementalOffer(
   capability: WorkspaceDerivedAcquisitionEntry | undefined,
   context: ShopSupplementalAssemblyContext,
 ): WorkspaceShopSupplementalDescriptor | undefined {
-  const selected = context.acquisitionOrder.includes(INFERNAL_CONTRACT_ENTRY_KEY);
+  const selected = context.selectedActionKeys.includes(INFERNAL_CONTRACT_ENTRY_KEY);
   if (capability === undefined && !selected) return undefined;
   const authored = context.pickupEntries[INFERNAL_CONTRACT_ENTRY_KEY];
   if (authored === undefined) {
@@ -1256,19 +1205,12 @@ function contractSupplementalOffer(
     context.acquisitionSite,
     INFERNAL_CONTRACT_ENTRY_KEY,
   );
-  const toggleOfferKeys =
-    context.completeProposals.find((proposal) =>
-      selected
-        ? !proposal.includes(INFERNAL_CONTRACT_ENTRY_KEY)
-        : proposal.includes(INFERNAL_CONTRACT_ENTRY_KEY),
-    ) ?? context.acquisitionOrder;
   return Object.freeze({
     kind: 'infernalContractReward' as const,
     key: INFERNAL_CONTRACT_ENTRY_KEY,
     label: 'Infernal Contract reward',
     materialized: true,
-    participationLabel: 'Picked up' as const,
-    purchase: supplementalPurchase(context, INFERNAL_CONTRACT_ENTRY_KEY, selected, toggleOfferKeys),
+    purchase: supplementalPurchase(context, INFERNAL_CONTRACT_ENTRY_KEY),
     rewardControl: rewardControl(
       context.input,
       { kind: 'acquisitionEntry' as const, address },
@@ -1280,132 +1222,242 @@ function contractSupplementalOffer(
   });
 }
 
-function fieldsActionLabel(
-  action: FieldsCombatAction,
-  ordinals: ReadonlyMap<string, number>,
+function roomActionLabel(
+  catalog: Catalog,
+  reference: import('@run-planner/engine/authored-project').RoomActionReference,
+  roomLocal: WorkspaceRoomLocal,
+  encounterPhases: readonly WorkspaceEncounterPhase[],
+  rewardControl: WorkspaceRewardControl | undefined,
 ): string {
-  const ordinal = ordinals.get(
-    action.kind === 'interactArtificerReplacement'
-      ? action.sourceGroup === 'cages'
-        ? `interact:${action.slotKey}`
-        : `interactOptional:${action.slotKey}`
-      : fieldsActionKey(action),
-  );
-  if (ordinal === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `Fields action ${fieldsActionKey(action)} has no declaration ordinal`,
-    );
+  const phase =
+    'phaseKey' in reference
+      ? encounterPhases.find((candidate) => candidate.address.phaseKey === reference.phaseKey)
+      : undefined;
+  switch (reference.kind) {
+    case 'completeFieldsCage':
+      return `Complete ${phase?.label ?? reference.phaseKey}`;
+    case 'interactIncomingReward':
+      return `Pick up ${workspaceAcquisitionRoleLabel(reference.acquisitionRole)}`;
+    case 'interactLocalReward': {
+      const local =
+        roomLocal.kind !== 'fields'
+          ? undefined
+          : [...roomLocal.cages, ...roomLocal.optionalRewards].find(
+              (candidate) =>
+                candidate.control.owner.address.kind === 'localReward' &&
+                candidate.control.owner.address.groupKey === reference.groupKey &&
+                candidate.control.owner.address.slotKey === reference.slotKey,
+            );
+      return `Pick up ${local?.label ?? reference.slotKey}`;
+    }
+    case 'chooseRewardWheel': {
+      const wheel =
+        roomLocal.kind === 'ship'
+          ? roomLocal.wheels.find((candidate) => candidate.key === reference.wheelKey)
+          : undefined;
+      return `Choose ${wheel?.label ?? reference.wheelKey}`;
+    }
+    case 'interactWheelReward': {
+      const wheel =
+        roomLocal.kind === 'ship'
+          ? roomLocal.wheels.find((candidate) => candidate.key === reference.wheelKey)
+          : undefined;
+      return `Pick up ${wheel?.label ?? `${reference.wheelKey} reward`}`;
+    }
+    case 'interactShopOffer': {
+      const offer =
+        roomLocal.kind === 'shop'
+          ? roomLocal.offers.find((candidate) => candidate.key === reference.offerKey)
+          : undefined;
+      const rewardLabel =
+        rewardControl?.offer === null || rewardControl?.offer === undefined
+          ? undefined
+          : summarizeRewardOffer(catalog, rewardControl.offer);
+      return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
+    }
+    case 'interactEncounter':
+      return `Interact with ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`;
+    case 'interactGorgon':
+      return 'Interact with Athena';
+    case 'interactAcquisitionEntry': {
+      const supplemental =
+        roomLocal.kind === 'shop'
+          ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
+          : undefined;
+      const rewardLabel =
+        rewardControl?.offer === null || rewardControl?.offer === undefined
+          ? undefined
+          : summarizeRewardOffer(catalog, rewardControl.offer);
+      const entryLabel =
+        parseArtificerReplacementEntryKey(reference.entryKey) === undefined
+          ? reference.entryKey
+          : 'Artificer replacement';
+      return `Pick up ${supplemental?.label ?? rewardLabel ?? entryLabel}`;
+    }
   }
-  return action.kind === 'completeCage'
-    ? `Complete Cage ${ordinal}`
-    : action.kind === 'interactCageReward'
-      ? `Interact with Cage ${ordinal} reward`
-      : action.kind === 'interactOptionalReward'
-        ? `Interact with Optional ${ordinal}`
-        : `Pick up ${action.sourceGroup === 'cages' ? `Cage ${ordinal}` : `Optional ${ordinal}`} Artificer replacement`;
 }
 
-function fieldsChronology(
+function roomActionsForOccurrence(
   input: WorkspaceOccurrenceAssemblyInput,
-  room: RoomDeclaration,
-  state: FieldsCombatState,
-  activeCageCount: number,
-): WorkspaceFieldsChronology {
+  roomLocal: WorkspaceRoomLocal,
+  encounterPhases: readonly WorkspaceEncounterPhase[],
+  controls: readonly WorkspaceRewardControl[],
+): WorkspaceRoomActions | undefined {
+  const roster = input.evaluatedRoom?.roomActionRoster;
+  if (roster === undefined || input.evaluatedRoom?.entered !== true) return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const domain = fieldsCageActionDomain(input.catalog, room);
-  const ordinals = new Map<string, number>();
-  for (const [index, entry] of domain.entries()) {
-    ordinals.set(`complete:${entry.phaseKey}`, index + 1);
-    ordinals.set(`interact:${entry.slotKey}`, index + 1);
-  }
-  for (const [index, slotKey] of (room.fieldsOptionalRewards?.slotKeys ?? []).entries()) {
-    ordinals.set(`interactOptional:${slotKey}`, index + 1);
-  }
-  const assessment = assessFieldsActionOrder(input.catalog, room, state, activeCageCount);
-  const inactiveKeys = new Set(
-    assessment.issues
-      .filter((issue) => issue.kind === 'inactive')
-      .map((issue) => fieldsActionKey(issue.action)),
+  const proposals = roster.proposals.map((proposal, index) =>
+    Object.freeze({
+      kind: proposal.kind,
+      key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+      label:
+        proposal.kind === 'remove'
+          ? 'Remove from room actions'
+          : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+      reference: proposal.reference,
+      structurallyAuthorable: proposal.structurallyAuthorable,
+      ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+    }),
   );
-  const engineProposals = fieldsActionOrderProposals(
-    input.catalog,
-    room,
-    state,
-    activeCageCount,
-  ).filter((proposal) => proposal.structurallyAuthorable || proposal.kind === 'insert');
-  const proposals = engineProposals.map((proposal, index) => {
-    const actionKey = fieldsActionKey(proposal.action);
-    const label =
-      proposal.kind === 'remove'
-        ? 'Remove inactive action'
-        : proposal.kind === 'insert'
-          ? `Insert at position ${(proposal.toIndex ?? 0) + 1}`
-          : `Move to position ${(proposal.toIndex ?? 0) + 1}`;
-    return Object.freeze({
-      actionKey,
-      key: `${proposal.kind}:${index}:${actionKey}`,
-      label,
-      order: proposal.order,
-      ...(proposal.defaultParticipation === true ? { defaultParticipation: true } : {}),
-    });
-  });
-  const proposalsByAction = new Map<string, string[]>();
+  const proposalKeysByAction = new Map<string, string[]>();
   for (const proposal of proposals) {
-    proposalsByAction.set(proposal.actionKey, [
-      ...(proposalsByAction.get(proposal.actionKey) ?? []),
-      proposal.key,
-    ]);
+    const key = roomActionKey(proposal.reference);
+    proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), proposal.key]);
   }
-  const currentKeys = new Set(state.actionOrder.map(fieldsActionKey));
-  const missingActions = assessment.issues.flatMap((issue) =>
-    issue.kind === 'missing' && !currentKeys.has(fieldsActionKey(issue.action))
-      ? [issue.action]
-      : [],
-  );
-  const optionalAvailableActions = engineProposals.flatMap((proposal) =>
-    proposal.defaultParticipation === true &&
-    fieldsActionKey(proposal.action).startsWith('interactArtificer:') &&
-    !currentKeys.has(fieldsActionKey(proposal.action))
-      ? [proposal]
-      : [],
-  );
-  const optionalAvailableKeys = new Set(
-    optionalAvailableActions.map((proposal) => fieldsActionKey(proposal.action)),
-  );
-  const rowActions = [
-    ...state.actionOrder,
-    ...missingActions,
-    ...optionalAvailableActions.map((proposal) => proposal.action),
-  ];
-  const rows = rowActions.map((action) => {
-    const key = fieldsActionKey(action);
-    const address = createFieldsActionAddress(input.biome, input.occurrence.occurrenceId, key);
-    const participationProposal = proposals.find(
-      (proposal) => proposal.actionKey === key && proposal.defaultParticipation === true,
+  const controlAt = (address: SemanticAddress): WorkspaceRewardControl | undefined =>
+    controls.find(
+      (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(address),
     );
-    return Object.freeze({
-      address,
-      key,
-      label: fieldsActionLabel(action, ordinals),
-      marker: input.markerDestinations.marker(address),
-      proposalKeys: Object.freeze(proposalsByAction.get(key) ?? []),
-      ...(participationProposal === undefined
-        ? {}
-        : { participationProposalKey: participationProposal.key }),
-      state: optionalAvailableKeys.has(key)
-        ? ('available' as const)
-        : !currentKeys.has(key)
-          ? ('missing' as const)
-          : inactiveKeys.has(key)
-            ? ('inactive' as const)
-            : ('active' as const),
-    });
-  });
+  const issuesFor = (actionKey: string): readonly string[] =>
+    Object.freeze(
+      roster.issues.flatMap((issue) => {
+        if (roomActionKey(issue.reference) !== actionKey) return [];
+        switch (issue.kind) {
+          case 'dependency':
+            return [`Dependency: ${issue.detail}`];
+          case 'window':
+            return [`Timing: ${issue.detail}`];
+          case 'stale':
+            return ['This action no longer belongs to the room.'];
+          case 'unrankedRequired':
+            return ['This required action has not been placed.'];
+        }
+      }),
+    );
+  const controlForRole = (
+    control: WorkspaceRewardControl,
+    role: string,
+  ): WorkspaceRewardControl => {
+    const traitOffers = control.traitOffers?.filter(
+      (child) => child.address.acquisitionRole === role,
+    );
+    const levelResolutions = control.levelResolutions?.filter(
+      (child) => child.address.acquisitionRole === role,
+    );
+    const conversions = control.conversions?.filter(
+      (child) => child.address.acquisitionRole === role,
+    );
+    const children = {
+      ...(traitOffers === undefined ? {} : { traitOffers }),
+      ...(levelResolutions === undefined ? {} : { levelResolutions }),
+      ...(conversions === undefined ? {} : { conversions }),
+    };
+    return control.kind === 'countedReward'
+      ? Object.freeze({ ...control, ...children })
+      : Object.freeze({ ...control, ...children });
+  };
   return Object.freeze({
+    checkpoints: Object.freeze(
+      roster.checkpoints.map((checkpoint) =>
+        Object.freeze({
+          key: checkpoint.checkpointKey,
+          label: checkpoint.label,
+          afterRank: checkpoint.afterRank,
+        }),
+      ),
+    ),
     interactionKey: semanticAddressKey(owner),
     owner,
     proposals: Object.freeze(proposals),
-    rows: Object.freeze(rows),
+    rows: Object.freeze(
+      roster.rows.map((row) => {
+        const address = createRoomActionAddress(
+          input.biome,
+          input.occurrence.occurrenceId,
+          row.key,
+        );
+        const directControl = controlAt(row.owner);
+        const incomingControl =
+          row.reference.kind === 'interactIncomingReward' && row.owner.kind === 'acquisitionRole'
+            ? controlAt(row.owner.owner)
+            : undefined;
+        const wheelKey =
+          row.reference.kind === 'interactWheelReward' ? row.reference.wheelKey : undefined;
+        const wheel =
+          roomLocal.kind === 'ship'
+            ? roomLocal.wheels.find((candidate) => candidate.key === wheelKey)
+            : undefined;
+        const wheelControl = wheel?.offers.find(
+          (_offer, index) => index + 1 === wheel.pickedOfferIndex,
+        )?.control;
+        const rewardControl = directControl ?? incomingControl ?? wheelControl;
+        const phase = encounterPhases.find((candidate) =>
+          row.reference.kind === 'interactGorgon'
+            ? candidate.gorgonAthena !== undefined &&
+              semanticAddressKey(candidate.gorgonAthena.rewardOwner) ===
+                semanticAddressKey(row.owner)
+            : semanticAddressKey(candidate.address) === semanticAddressKey(row.owner),
+        );
+        const traitOffer =
+          row.reference.kind === 'interactEncounter'
+            ? phase?.traitOffer
+            : row.reference.kind === 'interactGorgon'
+              ? phase?.gorgonAthena
+              : undefined;
+        const resolvedRewardControl =
+          rewardControl === undefined
+            ? undefined
+            : row.reference.kind === 'interactIncomingReward'
+              ? controlForRole(rewardControl, row.reference.acquisitionRole)
+              : rewardControl;
+        return Object.freeze({
+          address,
+          issues: issuesFor(row.key),
+          key: row.key,
+          label: roomActionLabel(
+            input.catalog,
+            row.reference,
+            roomLocal,
+            encounterPhases,
+            resolvedRewardControl,
+          ),
+          marker: input.markerDestinations.marker(address),
+          proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
+          reference: row.reference,
+          participation: row.participation,
+          rank: row.rank,
+          ...(row.stale || resolvedRewardControl === undefined
+            ? {}
+            : {
+                rewardPayload: Object.freeze({
+                  control: resolvedRewardControl,
+                  showOffer:
+                    row.reference.kind === 'interactLocalReward' ||
+                    (row.reference.kind === 'interactAcquisitionEntry' &&
+                      input.occurrence.state.kind !== 'shop'),
+                }),
+              }),
+          stale: row.stale,
+          ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
+          ...(row.stale ||
+          row.reference.kind !== 'chooseRewardWheel' ||
+          row.owner.kind !== 'rewardWheel'
+            ? {}
+            : { wheelPick: row.owner }),
+          executable: row.executable,
+        });
+      }),
+    ),
   });
 }
 
@@ -1482,39 +1534,21 @@ function roomLocalForOccurrence(
           `${room.gameName} Fields state has no optional reward declaration`,
         );
       }
-      const chronology =
-        fieldsFacts === undefined
-          ? undefined
-          : fieldsChronology(input, room, occurrence.state, fieldsFacts.doorCageRewardCount);
-      const interactedKeys = new Set(occurrence.state.actionOrder.map(fieldsActionKey));
-      const optionalRewards = (
-        chronology === undefined
-          ? []
-          : optionalDescriptor.slotKeys.slice(0, occurrence.state.optionalRewardCount)
-      ).map((slotKey, index) => {
-        const address = createLocalRewardAddress(
-          input.biome,
-          occurrence.occurrenceId,
-          optionalDescriptor.key,
-          slotKey,
-        );
-        const actionKey = `interactOptional:${slotKey}`;
-        const participationProposal = chronology?.proposals.find(
-          (proposal) => proposal.actionKey === actionKey && proposal.defaultParticipation === true,
-        );
-        if (participationProposal === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName}.${slotKey} has no Fields participation proposal`,
+      const optionalRewards = optionalDescriptor.slotKeys
+        .slice(0, occurrence.state.optionalRewardCount)
+        .map((slotKey, index) => {
+          const address = createLocalRewardAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            optionalDescriptor.key,
+            slotKey,
           );
-        }
-        return Object.freeze({
-          control: requireProjectedRewardControl(controls, address, 'countedReward'),
-          interacted: interactedKeys.has(actionKey),
-          key: slotKey,
-          label: `Optional ${index + 1}`,
-          participationProposalKey: participationProposal.key,
+          return Object.freeze({
+            control: requireProjectedRewardControl(controls, address, 'countedReward'),
+            key: slotKey,
+            label: `Optional ${index + 1}`,
+          });
         });
-      });
       return Object.freeze({
         kind: 'fields' as const,
         cages: Object.freeze(cages),
@@ -1528,7 +1562,6 @@ function roomLocalForOccurrence(
           ),
         ),
         optionalRewards: Object.freeze(optionalRewards),
-        ...(chronology === undefined ? {} : { chronology }),
         groupKey: group.key,
       });
     }
@@ -1596,7 +1629,6 @@ function roomLocalForOccurrence(
           materialized: false,
           offers: Object.freeze([]),
           supplementalOffers: Object.freeze([]),
-          acquisitionOrder: Object.freeze([]),
         });
       }
       const profile = input.catalog.rewards.shops.byKey[shop.profileKey];
@@ -1605,9 +1637,15 @@ function roomLocalForOccurrence(
           `${room.gameName} shop profile ${shop.profileKey} is missing`,
         );
       }
-      const acquisitionOrder = Object.freeze([
-        ...(occurrence.acquisitionSites?.roomExit?.order ?? []),
-      ]);
+      const selectedActionKeys = Object.freeze(
+        occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'interactShopOffer'
+            ? [reference.offerKey]
+            : reference.kind === 'interactAcquisitionEntry'
+              ? [reference.entryKey]
+              : [],
+        ),
+      );
       const acquisitionSite = createAcquisitionSiteAddress(
         createOccurrenceAddress(input.biome, occurrence.occurrenceId),
         'roomExit',
@@ -1623,65 +1661,6 @@ function roomLocalForOccurrence(
         (entry) =>
           entry.kind === 'echoDoubleShopReward' || entry.kind === 'echoDoubleShopPlaceholder',
       );
-      const selectedContract = acquisitionOrder.includes(INFERNAL_CONTRACT_ENTRY_KEY);
-      const selectedTravel = acquisitionOrder.includes(TRAVEL_DEAL_REFILL_ENTRY_KEY);
-      const selectedGold = acquisitionOrder.includes(ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-      const activeSupplementalKeys = Object.freeze([
-        ...(contractCapability === undefined && !selectedContract
-          ? []
-          : [INFERNAL_CONTRACT_ENTRY_KEY]),
-        ...(travelCapability?.kind !== 'travelDealRefill' && !selectedTravel
-          ? []
-          : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
-        ...(goldCapability?.kind !== 'echoDoubleShopReward' && !selectedGold
-          ? []
-          : [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]),
-      ]);
-      const derivedDependencies = Object.freeze([
-        ...(travelCapability?.kind === 'travelDealRefill' &&
-        travelCapability.sourceOfferKey !== undefined
-          ? [
-              Object.freeze({
-                kind: 'fixedSource' as const,
-                entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
-                sourceOfferKey: travelCapability.sourceOfferKey,
-              }),
-            ]
-          : []),
-        ...(goldCapability?.eligibleSourceOfferKeys === undefined
-          ? []
-          : [
-              Object.freeze({
-                kind: 'firstEligibleSource' as const,
-                entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-                eligibleSourceOfferKeys: goldCapability.eligibleSourceOfferKeys,
-              }),
-            ]),
-      ]);
-      const completeProposals = shopAcquisitionOrderProposals(
-        acquisitionOrder,
-        Object.freeze([...profile.slots.values.map((slot) => slot.key), ...activeSupplementalKeys]),
-        derivedDependencies,
-      );
-      const purchasedKeys = new Set<string>();
-      for (const offerKey of acquisitionOrder) {
-        if (
-          shop.offers[offerKey] === undefined &&
-          offerKey !== INFERNAL_CONTRACT_ENTRY_KEY &&
-          offerKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY &&
-          offerKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
-        ) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} acquisition order has unknown entry ${offerKey}`,
-          );
-        }
-        if (purchasedKeys.has(offerKey)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} acquisition order duplicates ${offerKey}`,
-          );
-        }
-        purchasedKeys.add(offerKey);
-      }
       const offers = profile.slots.values.map((slot) => {
         if (shop.offers[slot.key] === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1696,31 +1675,20 @@ function roomLocalForOccurrence(
           ),
           slot.key,
         );
-        const purchaseIndex = acquisitionOrder.indexOf(slot.key);
-        const toggleOfferKeys =
-          completeProposals.find((proposal) =>
-            purchaseIndex < 0
-              ? proposal.includes(slot.key) && proposal.length > acquisitionOrder.length
-              : !proposal.includes(slot.key),
-          ) ?? acquisitionOrder;
         return Object.freeze({
           key: slot.key,
           label: slot.label,
           purchase: Object.freeze({
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
-            purchased: purchaseIndex >= 0,
-            toggleOfferKeys,
-            proposalOfferKeys: completeProposals,
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
       });
       const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
       const supplementalContext: ShopSupplementalAssemblyContext = Object.freeze({
-        acquisitionOrder,
+        selectedActionKeys,
         acquisitionSite,
-        completeProposals,
         input,
         offers,
         pickupEntries,
@@ -1745,7 +1713,6 @@ function roomLocalForOccurrence(
             }),
         offers: Object.freeze(offers),
         supplementalOffers,
-        acquisitionOrder,
       });
     }
   }
@@ -1851,26 +1818,12 @@ function occurrenceInteractionRequirements(
       Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
   }
-  const pickupAcquisitions = room.acquisitions?.entries.filter(
-    (entry) => entry.participation?.label === 'Picked up',
-  );
-  if (
-    pickupAcquisitions !== undefined &&
-    pickupAcquisitions.length > 0 &&
-    room.acquisitions !== undefined
-  ) {
-    const selectedEntryKeys = pickupAcquisitions
-      .filter((entry) => entry.participation?.selected)
-      .map((entry) => entry.key);
+  if (room.roomActions !== undefined) {
     requirements.push(
       Object.freeze({
-        kind: 'acquisitionOrder' as const,
-        owner: room.acquisitions.site,
-        proposalEntryKeys: acquisitionOrderProposals(
-          selectedEntryKeys,
-          pickupAcquisitions.map((entry) => entry.key),
-        ),
-        selectedEntryKeys: Object.freeze(selectedEntryKeys),
+        kind: 'roomActions' as const,
+        owner: room.roomActions.owner,
+        proposals: room.roomActions.proposals,
       }),
     );
   }
@@ -1881,15 +1834,6 @@ function occurrenceInteractionRequirements(
     case 'incomingReward':
       return Object.freeze(requirements);
     case 'fields':
-      if (room.roomLocal.chronology !== undefined) {
-        requirements.push(
-          Object.freeze({
-            kind: 'fieldsActionOrder' as const,
-            owner: room.roomLocal.chronology.owner,
-            proposals: room.roomLocal.chronology.proposals,
-          }),
-        );
-      }
       return Object.freeze(requirements);
     case 'ship': {
       const declaration = requireRoom(catalog, room.gameName);
@@ -1938,18 +1882,9 @@ function occurrenceInteractionRequirements(
     }
     case 'shop': {
       const shop = room.roomLocal;
-      const firstOffer = shop.offers[0];
-      if (!shop.materialized || firstOffer === undefined) {
+      if (!shop.materialized) {
         return Object.freeze(requirements);
       }
-      requirements.push(
-        Object.freeze({
-          kind: 'acquisitionOrder' as const,
-          owner: room.acquisitions?.site ?? createAcquisitionSiteAddress(room.address, 'roomExit'),
-          proposalEntryKeys: firstOffer.purchase.proposalOfferKeys,
-          selectedEntryKeys: shop.acquisitionOrder,
-        }),
-      );
       if (shop.deathDefianceCondition !== undefined) {
         requirements.push(
           Object.freeze({
@@ -2038,34 +1973,34 @@ export function assembleWorkspaceOccurrence(
             owner,
           });
         })();
-  const pickupSite = occurrence.acquisitionSites?.roomExit?.pickupEntries;
-  const pickupAcquisitions =
-    !input.facts.detailsActive || pickupSite === undefined || occurrence.state.kind === 'shop'
-      ? undefined
+  const pickupRewardControls =
+    !input.facts.detailsActive || occurrence.acquisitionSites === undefined
+      ? Object.freeze([])
       : (() => {
-          const site = createAcquisitionSiteAddress(address, 'roomExit');
-          const order = occurrence.acquisitionSites?.roomExit?.order ?? Object.freeze([]);
           const pickupProducer = selectedPickupProducer(input.catalog, occurrence.encounters);
           const activePickups = pickupProducer?.pickups ?? Object.freeze([]);
           const activeKeys = new Set(activePickups.map((pickup) => pickup.key));
           const structuralEchoKeys = new Set(
             echoLastRewardPickupEntryKeys(input.catalog, occurrence.encounters),
           );
-          const entryIsActive = (key: string): boolean =>
-            !structuralEchoKeys.has(key) || activeKeys.has(key);
-          const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
-          return Object.freeze({
-            site,
-            marker: input.markerDestinations.marker(site),
-            entries: Object.freeze(
-              [
-                ...order.filter(entryIsActive),
-                ...Object.keys(pickupSite).filter(
-                  (key) => entryIsActive(key) && !order.includes(key),
-                ),
-              ].map((key) => {
-                const reward = pickupSite[key] ?? null;
-                const pickup = activePickups.find((candidate) => candidate.key === key);
+          return Object.freeze(
+            Object.entries(occurrence.acquisitionSites).flatMap(([siteKey, state]) => {
+              if (occurrence.state.kind === 'shop' && siteKey === 'roomExit') return [];
+              const site = acquisitionSiteFromStorageKey(address, siteKey);
+              if (site === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${semanticAddressKey(address)} has invalid acquisition site ${siteKey}`,
+                );
+              }
+              const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
+              return Object.entries(state.pickupEntries ?? {}).flatMap(([key, reward]) => {
+                if (siteKey === 'roomExit' && structuralEchoKeys.has(key) && !activeKeys.has(key)) {
+                  return [];
+                }
+                const pickup =
+                  siteKey === 'roomExit'
+                    ? activePickups.find((candidate) => candidate.key === key)
+                    : undefined;
                 const capability = derivedEntries.find(
                   (entry) => entry.kind === 'echoLastReward' && entry.address.entryKey === key,
                 );
@@ -2074,20 +2009,9 @@ export function assembleWorkspaceOccurrence(
                   (pickup?.rewardType === undefined
                     ? Object.freeze([])
                     : Object.freeze([pickup.rewardType]));
-                const presentedOffer = reward?.offer ?? capability?.fixedReward?.offer ?? null;
                 const entry = createAcquisitionEntryAddress(site, key);
-                const selected = order.includes(key);
-                const toggleEntryKeys = Object.freeze(
-                  selected ? order.filter((candidate) => candidate !== key) : [...order, key],
-                );
-                return Object.freeze({
-                  key,
-                  address: entry,
-                  label:
-                    presentedOffer === null
-                      ? 'Choose reward'
-                      : summarizeRewardOffer(input.catalog, presentedOffer),
-                  rewardControl: rewardControl(
+                return [
+                  rewardControl(
                     input,
                     { kind: 'acquisitionEntry' as const, address: entry },
                     undefined,
@@ -2097,21 +2021,29 @@ export function assembleWorkspaceOccurrence(
                     undefined,
                     capability?.retainedSourceMismatch === true,
                   ) as WorkspaceExplicitRewardControl,
-                  rewardPresentation: 'editableOfferAndResolution' as const,
-                  ...(pickup?.required === true
-                    ? {}
-                    : {
-                        participation: Object.freeze({
-                          label: 'Picked up' as const,
-                          selected,
-                          toggleEntryKeys,
-                        }),
-                      }),
-                });
-              }),
-            ),
-          });
+                ];
+              });
+            }),
+          );
         })();
+  const supplementalRewardControls = Object.freeze(
+    roomLocal.kind !== 'shop'
+      ? []
+      : roomLocal.supplementalOffers.flatMap((offer) =>
+          'rewardControl' in offer ? [offer.rewardControl] : [],
+        ),
+  );
+  const allRewardControls = Object.freeze([
+    ...rewardControls,
+    ...pickupRewardControls,
+    ...supplementalRewardControls,
+  ]);
+  const roomActions = roomActionsForOccurrence(
+    input,
+    roomLocal,
+    encounterPhases,
+    allRewardControls,
+  );
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
@@ -2119,6 +2051,7 @@ export function assembleWorkspaceOccurrence(
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...workspaceLocalDetailMarkers(roomLocal),
+    ...(roomActions?.rows.map((row) => row.marker) ?? []),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
@@ -2149,75 +2082,8 @@ export function assembleWorkspaceOccurrence(
     label: room.label,
     localDetailMarkers,
     marker: input.markerDestinations.marker(address),
-    ...(pickupAcquisitions !== undefined
-      ? { acquisitions: pickupAcquisitions }
-      : roomLocal.kind === 'shop' && roomLocal.materialized
-        ? {
-            acquisitions: Object.freeze({
-              site: createAcquisitionSiteAddress(address, 'roomExit'),
-              marker: input.markerDestinations.marker(
-                createAcquisitionSiteAddress(address, 'roomExit'),
-              ),
-              entries: (() => {
-                const acquisitionSite = createAcquisitionSiteAddress(address, 'roomExit');
-                return Object.freeze(
-                  roomLocal.acquisitionOrder.flatMap((entryKey) => {
-                    const offer = roomLocal.offers.find((candidate) => candidate.key === entryKey);
-                    if (offer !== undefined) {
-                      return [
-                        Object.freeze({
-                          key: offer.key,
-                          address: createAcquisitionEntryAddress(acquisitionSite, offer.key),
-                          label:
-                            offer.rewardControl.offer === null
-                              ? offer.label
-                              : summarizeRewardOffer(input.catalog, offer.rewardControl.offer),
-                          rewardControl: offer.rewardControl,
-                          rewardPresentation: 'resolutionOnly' as const,
-                        }),
-                      ];
-                    }
-                    const supplemental = roomLocal.supplementalOffers.find(
-                      (
-                        candidate,
-                      ): candidate is Exclude<
-                        (typeof roomLocal.supplementalOffers)[number],
-                        {
-                          readonly kind:
-                            | 'travelDealPlaceholder'
-                            | 'travelDealInvalid'
-                            | 'echoDoubleShopPlaceholder'
-                            | 'echoDoubleShopInvalid';
-                        }
-                      > =>
-                        candidate.kind !== 'travelDealPlaceholder' &&
-                        candidate.kind !== 'travelDealInvalid' &&
-                        candidate.kind !== 'echoDoubleShopPlaceholder' &&
-                        candidate.kind !== 'echoDoubleShopInvalid' &&
-                        candidate.key === entryKey,
-                    );
-                    return supplemental === undefined
-                      ? []
-                      : [
-                          Object.freeze({
-                            key: supplemental.key,
-                            address: supplemental.purchase.address,
-                            label: supplemental.label,
-                            rewardPresentation: 'resolutionOnly' as const,
-                            ...(supplemental.kind === 'echoDoubleShopReward'
-                              ? {}
-                              : {
-                                  rewardControl: supplemental.rewardControl,
-                                }),
-                          }),
-                        ];
-                  }),
-                );
-              })(),
-            }),
-          }
-        : {}),
     occurrenceId: occurrence.occurrenceId,
+    ...(roomActions === undefined ? {} : { roomActions }),
     ...(occurrence.state.kind !== 'anomaly'
       ? {}
       : (() => {
@@ -2252,28 +2118,8 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? {} : { zagreusSpawn }),
     ...(naturalChaosSpawn === undefined ? {} : { naturalChaosSpawn }),
     roomLocal,
-    rewardControls,
+    rewardControls: allRewardControls,
   });
-  const acquisitionRewardControls = Object.freeze(
-    (roomSummary.acquisitions?.entries ?? []).flatMap((entry) =>
-      entry.rewardControl?.owner.kind !== 'acquisitionEntry' ? [] : [entry.rewardControl],
-    ),
-  );
-  const acquisitionRewardControlKeys = new Set(
-    acquisitionRewardControls.map((control) => semanticAddressKey(control.owner.address)),
-  );
-  const dormantSupplementalRewardControls = Object.freeze(
-    roomSummary.roomLocal.kind !== 'shop'
-      ? []
-      : roomSummary.roomLocal.supplementalOffers.flatMap((offer) =>
-          (offer.kind !== 'infernalContractReward' &&
-            offer.kind !== 'travelDealRefill' &&
-            offer.kind !== 'echoDoubleShopReward') ||
-          acquisitionRewardControlKeys.has(semanticAddressKey(offer.rewardControl.owner.address))
-            ? []
-            : [offer.rewardControl],
-        ),
-  );
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
@@ -2291,10 +2137,6 @@ export function assembleWorkspaceOccurrence(
     node,
     occurrenceInteractionRequirements: localInteractionRequirements,
     roomControls,
-    rewardControls: Object.freeze([
-      ...rewardControls,
-      ...acquisitionRewardControls,
-      ...dormantSupplementalRewardControls,
-    ]),
+    rewardControls: allRewardControls,
   });
 }

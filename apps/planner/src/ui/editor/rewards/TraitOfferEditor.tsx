@@ -1016,7 +1016,7 @@ function TraitOfferSelectedOutcomeEditor({
             }}
             type="button"
           >
-            Configure in Acquisitions
+            Configure in Room Actions
           </button>
         </fieldset>
       )}

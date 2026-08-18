@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendNEntry,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   createRepresentativeNProject,
   nBiome,
   nOccurrenceIds,
@@ -47,7 +48,7 @@ describe('canonical N Hub materialization', () => {
       name: 'N incomplete',
       configuredBiomeCounts: { Surface: 1 },
     });
-    const biome = simulateProject(catalog, project)
+    const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
       .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
 
@@ -98,7 +99,7 @@ describe('canonical N Hub materialization', () => {
       decision: openingDecision,
     });
 
-    const biome = simulateProject(catalog, project)
+    const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
       .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (
@@ -229,7 +230,7 @@ describe('canonical N Hub materialization', () => {
       hubContinuation: { kind: 'terminalTakeover', hubKey: 'hub' },
     });
 
-    const evaluation = simulateProject(catalog, project);
+    const evaluation = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');

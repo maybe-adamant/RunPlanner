@@ -40,7 +40,7 @@ export type ExpectedWorkspaceLeafInteractionKind =
   | 'rewardWheelPick'
   | 'rewardWheelStore'
   | 'shipCombatPhaseCount'
-  | 'acquisitionOrder'
+  | 'roomActions'
   | 'localVisitOrder'
   | 'localVisitGeneration'
   | 'levelResolution'
@@ -245,6 +245,12 @@ export function expectedWorkspaceLeafRequirements(
     if (notGeneratedLocalOccurrences.has(occurrence.occurrenceId)) continue;
     const room = requireExpectedRoom(catalog, occurrence.gameName);
     const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
+    if (detailsActive.has(occurrence.occurrenceId)) {
+      requireLeaf(
+        occurrenceAddress,
+        expectedLeafInteraction('roomActions', workspaceTestOwnerKey(occurrenceAddress)),
+      );
+    }
     const incoming = createIncomingRewardAddress(biome, occurrence.occurrenceId);
     switch (occurrence.state.kind) {
       case 'none':
@@ -346,14 +352,6 @@ export function expectedWorkspaceLeafRequirements(
         for (const slot of profile.slots.values) {
           const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
           requireRewardWithTraits(offer, occurrence.state.shop.offers[slot.key]!.reward);
-          const site = createAcquisitionSiteAddress(
-            createOccurrenceAddress(biome, occurrence.occurrenceId),
-            'roomExit',
-          );
-          requireLeaf(
-            site,
-            expectedLeafInteraction('acquisitionOrder', workspaceTestOwnerKey(site)),
-          );
         }
         break;
       }
@@ -361,8 +359,7 @@ export function expectedWorkspaceLeafRequirements(
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
     if (pickupEntries !== undefined && detailsActive.has(occurrence.occurrenceId)) {
       const site = createAcquisitionSiteAddress(occurrenceAddress, 'roomExit');
-      requireLeaf(site, expectedLeafInteraction('acquisitionOrder', workspaceTestOwnerKey(site)));
-      for (const entryKey of occurrence.acquisitionSites?.roomExit?.order ?? []) {
+      for (const entryKey of Object.keys(pickupEntries)) {
         const reward = pickupEntries[entryKey];
         if (reward === undefined) throw new Error(`pickup order has no entry ${entryKey}`);
         const entry = createAcquisitionEntryAddress(site, entryKey);

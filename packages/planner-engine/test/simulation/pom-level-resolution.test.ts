@@ -14,6 +14,7 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -21,7 +22,6 @@ import {
   attachTraitHistory,
   recordReachedLevelResolution,
   levelResolutionCandidateForProjectEvaluationAssembly,
-  createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
@@ -36,14 +36,13 @@ import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import {
-  createGoldenFGHIProject,
   createFMidshopPomFrontierProject,
   createRepresentativeNOPQProject,
   fMidshopPomShopId,
   goldenFBiome,
   oBiome,
   oOccurrenceIds,
-  targetOccurrenceId,
+  replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures';
 
 const owner = { kind: 'project' } as const;
@@ -474,14 +473,12 @@ describe('Pom level resolutions', () => {
   });
 
   it('publishes a purchased Midshop Pom at the unresolved outgoing frontier', () => {
-    const project = applyProjectCommand(createFMidshopPomFrontierProject(), catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-        'roomExit',
-      ),
-      entryKeys: ['Minor'],
-    });
+    const project = replaceTestShopOfferActions(
+      createFMidshopPomFrontierProject(),
+      catalog,
+      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+      ['Minor'],
+    );
     const address = createLevelResolutionAddress(
       createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
       'self',
@@ -540,19 +537,18 @@ describe('Pom level resolutions', () => {
   });
 
   it('keeps the selected Midshop room-exit settlement product identical before and after its outgoing continuation', () => {
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-      'roomExit',
-    );
+    const shop = createOccurrenceAddress(goldenFBiome, fMidshopPomShopId);
+    const site = createAcquisitionSiteAddress(shop, 'roomExit');
     const level = createLevelResolutionAddress(
       createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
       'self',
     );
-    const frontier = applyProjectCommand(createFMidshopPomFrontierProject(), catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['Minor'],
-    });
+    const frontier = replaceTestShopOfferActions(
+      createFMidshopPomFrontierProject(),
+      catalog,
+      shop,
+      ['Minor'],
+    );
     const decision = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: fMidshopPomShopId,
@@ -637,19 +633,6 @@ describe('Pom level resolutions', () => {
       );
     expect(capabilityState(frontierAssembly)).toEqual(capabilityState(continuedAssembly));
     expect(
-      createPreparedProjectCandidateSession(catalog, frontierAssembly).evaluate({
-        kind: 'acquisitionOrder',
-        site,
-        entryKeys: ['Minor'],
-      }),
-    ).toEqual(
-      createPreparedProjectCandidateSession(catalog, continuedAssembly).evaluate({
-        kind: 'acquisitionOrder',
-        site,
-        entryKeys: ['Minor'],
-      }),
-    );
-    expect(
       rewardProduct(frontierAssembly).branches.map((branch) => branch.history.lootTypeHistory),
     ).toEqual(
       rewardProduct(continuedAssembly).branches.map((branch) => branch.history.lootTypeHistory),
@@ -660,20 +643,57 @@ describe('Pom level resolutions', () => {
   });
 
   it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const shop = createOccurrenceAddress(goldenFBiome, fMidshopPomShopId);
+    const address = createLevelResolutionAddress(
+      createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
+      'self',
+    );
+    let project = replaceTestShopOfferActions(createFMidshopPomFrontierProject(), catalog, shop, [
+      'Minor',
+    ]);
+    const prepared = simulateProjectAssembly(catalog, project);
+    const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(prepared, address)
+      ?.branches[0]?.eligibleTargetTraitKeys[0];
+    if (targetTraitKey === undefined) throw new Error('Midshop Pom has no initial target');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: address,
+      value: { kind: 'random', targetTraitKey },
+    });
+    const openingReward = createIncomingRewardAddress(
+      goldenFBiome,
+      createOccurrenceId('midshop-pom-start'),
+    );
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(
-        createBiomeAddress('Underworld', 'F'),
-        targetOccurrenceId('F', 2, 1),
-      ),
-      value: { rewardType: 'MaxManaDrop' },
+      reward: openingReward,
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(openingReward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hestia',
+        options: [
+          { traitKey: 'HestiaWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HestiaSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HestiaCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const f = assembly.evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F reward product');
-    const findings = f.findings.filter((finding) => finding.origin.kind === 'levelResolution');
+    const findings = f.rewards.findings.filter(
+      (finding) => finding.origin.kind === 'levelResolution',
+    );
     expect(findings).not.toHaveLength(0);
     for (const finding of findings) {
       if (finding.origin.kind !== 'levelResolution') continue;

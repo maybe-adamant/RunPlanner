@@ -39,18 +39,6 @@ function rewardControlMarkers(control: {
   ]);
 }
 
-/** Acquisition descendants remain owned by their producing room package. */
-function workspaceAcquisitionMarkers(
-  acquisitions: NonNullable<WorkspaceRoomSummary['acquisitions']>,
-): readonly WorkspaceMarker[] {
-  return Object.freeze([
-    acquisitions.marker,
-    ...acquisitions.entries.flatMap((entry) =>
-      entry.rewardControl === undefined ? [] : rewardControlMarkers(entry.rewardControl),
-    ),
-  ]);
-}
-
 /** A workbench's room-local surface excludes its incoming offer. */
 export function workspaceLocalDetailMarkers(
   roomLocal: WorkspaceRoomLocal,
@@ -63,7 +51,6 @@ export function workspaceLocalDetailMarkers(
     case 'fields':
       return Object.freeze([
         ...roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)),
-        ...(roomLocal.chronology?.rows.map((row) => row.marker) ?? []),
       ]);
     case 'ship':
       return Object.freeze(
@@ -155,7 +142,7 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
-    ...(room.acquisitions === undefined ? [] : workspaceAcquisitionMarkers(room.acquisitions)),
+    ...(room.roomActions?.rows.map((row) => row.marker) ?? []),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),

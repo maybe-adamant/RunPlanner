@@ -408,6 +408,8 @@ function createUnresolvedAcquisitionRewardStateForEffect(
 export interface SelectedPickupProducer {
   readonly traitKey: string;
   readonly producerLifecycleKey: string;
+  /** Exact encounter contact whose selected trait activates these pickup rows. */
+  readonly sourcePhaseKey: string;
   readonly pickups: readonly {
     readonly key: string;
     /** Omitted when exact prior history derives the generated reward identity. */
@@ -470,6 +472,7 @@ export function selectedPickupProducer(
           Object.freeze({
             traitKey,
             producerLifecycleKey: disposition.producerLifecycleKey,
+            sourcePhaseKey: phaseKey,
             pickups: Object.freeze(
               disposition.pickups.map((pickup) =>
                 Object.freeze({ ...pickup, required: false as const }),
@@ -482,6 +485,7 @@ export function selectedPickupProducer(
           Object.freeze({
             traitKey,
             producerLifecycleKey: 'EchoLastReward',
+            sourcePhaseKey: phaseKey,
             pickups: Object.freeze([
               Object.freeze({
                 key: echoLastRewardPickupEntryKey(phaseKey, encounterKey, offer.selectedOptionKey),

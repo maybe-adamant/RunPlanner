@@ -19,11 +19,6 @@ import {
   type FieldsCageOutcomeCandidateQuery,
 } from './fields-cage-outcome';
 import {
-  evaluateFieldsActionOrderCandidate,
-  type EvaluatedFieldsActionOrderCandidate,
-  type FieldsActionOrderCandidateQuery,
-} from './fields-action-order';
-import {
   evaluateHubSlotCandidate,
   evaluateHubVisitOrderCandidate,
   evaluateSideRoomEntryOrderCandidate,
@@ -53,17 +48,14 @@ import {
 import {
   evaluateRewardWheelLifecycleCandidate,
   evaluateShipEncounterCountCandidate,
-  evaluateAcquisitionOrderCandidate,
   type EvaluatedRewardWheelOfferCountCandidate,
   type EvaluatedRewardWheelPickedCandidate,
   type EvaluatedRewardWheelStoreCandidate,
   type EvaluatedShipEncounterCountCandidate,
-  type EvaluatedAcquisitionOrderCandidate,
   type RewardWheelOfferCountCandidateQuery,
   type RewardWheelPickedCandidateQuery,
   type RewardWheelStoreCandidateQuery,
   type ShipEncounterCountCandidateQuery,
-  type AcquisitionOrderCandidateQuery,
 } from './room-lifecycle';
 import {
   evaluateRoomTargetCandidate,
@@ -139,7 +131,6 @@ import {
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
   | FieldsCageOutcomeCandidateQuery
-  | FieldsActionOrderCandidateQuery
   | HubSlotCandidateQuery
   | HubVisitOrderCandidateQuery
   | IncomingRewardCandidateQuery
@@ -152,7 +143,6 @@ export type ProjectCandidateQuery =
   | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
   | AcquisitionEntryOfferCandidateQuery
-  | AcquisitionOrderCandidateQuery
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery
@@ -178,7 +168,6 @@ export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
   | EvaluatedBatchRewardStoreCandidate
   | EvaluatedFieldsCageOutcomeCandidate
-  | EvaluatedFieldsActionOrderCandidate
   | EvaluatedHubSlotCandidate
   | EvaluatedHubVisitOrderCandidate
   | EvaluatedIncomingRewardCandidate
@@ -191,7 +180,6 @@ export type ProjectCandidateEvaluation =
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedAcquisitionEntryOfferCandidate
-  | EvaluatedAcquisitionOrderCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
@@ -282,7 +270,6 @@ function evaluateCandidateQuery(
   assembly: ProjectEvaluationAssembly,
   candidateArtifacts: ProjectCandidateArtifacts,
   query: ProjectCandidateSessionQuery,
-  observe?: (event: CandidateEvaluationEvent) => void,
 ): ProjectCandidateSessionEvaluation {
   const { project, evaluation } = assembly;
   switch (query.kind) {
@@ -341,10 +328,6 @@ function evaluateCandidateQuery(
       return evaluateBatchRewardStoreCandidate(catalog, project, evaluation, query);
     case 'fieldsCageOutcome':
       return evaluateFieldsCageOutcomeCandidate(catalog, project, evaluation, query);
-    case 'fieldsActionOrder':
-      return evaluateFieldsActionOrderCandidate(catalog, project, evaluation, query, (owner) =>
-        observe?.(Object.freeze({ kind: 'fieldsActionBiomeReplay', owner })),
-      );
     case 'hubSlot':
       return evaluateHubSlotCandidate(catalog, project, evaluation, query);
     case 'hubVisitOrder':
@@ -435,15 +418,6 @@ function evaluateCandidateQuery(
         project,
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.wheel.routeKey, query.wheel.biomeKey))
-          ?.roomLifecycles,
-        query,
-      );
-    case 'acquisitionOrder':
-      return evaluateAcquisitionOrderCandidate(
-        catalog,
-        project,
-        evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(query.site.routeKey, query.site.biomeKey))
           ?.roomLifecycles,
         query,
       );
@@ -567,15 +541,12 @@ export function createPreparedProjectCandidateSession(
         assembly,
         candidateArtifacts,
         queryOrQueries as ProjectCandidateSessionQuery,
-        options.observe,
       );
     }
     const queries = queryOrQueries as readonly ProjectCandidateSessionQuery[];
     options.observe?.(Object.freeze({ kind: 'queryBatch', queryCount: queries.length }));
     return Object.freeze(
-      queries.map((query) =>
-        evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query, options.observe),
-      ),
+      queries.map((query) => evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query)),
     );
   }
   const traitCapability = (owner: TraitOfferAddress) =>

@@ -15,10 +15,12 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createProjectDocument,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
+  roomActionKey,
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
@@ -31,6 +33,7 @@ import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
+  editTestRoomActionOrder,
   goldenFBiome,
   goldenGBiome,
   goldenHBiome,
@@ -56,8 +59,12 @@ import type {
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
+function assembly(projectDocument: ProjectDocument) {
+  return simulateProjectAssembly(catalog, projectDocument);
+}
+
 function project(projectDocument: ProjectDocument): StructuredWorkspaceProjection {
-  return structuredWorkspace.project(simulateProjectAssembly(catalog, projectDocument));
+  return structuredWorkspace.project(assembly(projectDocument));
 }
 
 function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): WorkspaceBiome {
@@ -135,7 +142,18 @@ function echoReplayProject(child?: {
   readonly trait: ReturnType<typeof createTraitOfferAddress>;
 } {
   const bridgeId = createOccurrenceId('golden-h-bridge01');
-  let document = applyProjectCommand(createGoldenFGHProject(), catalog, {
+  let document = editTestRoomActionOrder(
+    createGoldenFGHProject(),
+    catalog,
+    createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09')),
+    () => [
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+    ],
+  );
+  document = applyProjectCommand(document, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenHBiome, {
       kind: 'occurrence',
@@ -173,6 +191,37 @@ function echoReplayProject(child?: {
     createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
     echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
   );
+  const pickupReference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: entry.entryKey,
+  };
+  const encounterReference = {
+    kind: 'interactEncounter' as const,
+    phaseKey: 'Encounter',
+  };
+  const bridge = document.routes
+    .flatMap((route) => route.biomes)
+    .find((biome) => biome.biomeKey === 'H')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
+  if (bridge === undefined) throw new Error('Golden H Echo bridge is missing');
+  const encounterAlreadyRanked = bridge.roomActions.order.some(
+    (reference) => roomActionKey(reference) === roomActionKey(encounterReference),
+  );
+  if (!encounterAlreadyRanked) {
+    document = applyProjectCommand(document, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(encounterReference)),
+      reference: encounterReference,
+      index: bridge.roomActions.order.length,
+    });
+  }
+  document = applyProjectCommand(document, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(pickupReference)),
+    reference: pickupReference,
+    index: bridge.roomActions.order.length + (encounterAlreadyRanked ? 0 : 1),
+  });
   if (child !== undefined) {
     document = applyProjectCommand(document, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -217,6 +266,19 @@ function staleTravelDealShopProject(): {
     reward: incoming,
     value: { rewardType: 'HermesUpgrade' },
   });
+  document = editTestRoomActionOrder(
+    document,
+    catalog,
+    createOccurrenceAddress(goldenGBiome, sourceOccurrenceId),
+    (order) => [
+      ...order.filter((reference) => reference.kind !== 'interactIncomingReward'),
+      {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      },
+    ],
+  );
   document = applyProjectCommand(document, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(incoming, 'self'),
@@ -239,26 +301,32 @@ function staleTravelDealShopProject(): {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: 'travelDealRefill',
+  };
   document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceAcquisitionOrder',
-    site,
-    entryKeys: ['MajorNonBoon', 'travelDealRefill'],
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenGBiome, shopId, roomActionKey(reference)),
+    reference,
+    index: 0,
   });
   return { document, entry };
 }
 
 describe('workspace inspector destinations', () => {
-  it('routes a stale Travel Deal refill finding to its containing Shop and reward editor', () => {
+  it('routes an invalid Travel Deal refill finding to its containing Shop and remove-only action row', () => {
     const configured = staleTravelDealShopProject();
-    const assembly = simulateProjectAssembly(catalog, configured.document);
-    const finding = assembly.evaluation.findings.find(
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
     );
     if (finding === undefined)
       throw new Error(
-        `stale Travel Deal finding is missing: ${JSON.stringify(assembly.evaluation.findings)}`,
+        `stale Travel Deal finding is missing: ${JSON.stringify(assembled.evaluation.findings)}`,
       );
-    const workspace = structuredWorkspace.project(assembly);
+    const workspace = structuredWorkspace.project(assembled);
     const target = destination(workspace, finding.origin);
     const shop = biome(workspace, 'G').nodes.find(
       (node) =>
@@ -284,27 +352,41 @@ describe('workspace inspector destinations', () => {
       inspectorSubject: { kind: 'node', nodeKey: shopWorkbench.key },
       nodeKey: shopWorkbench.key,
     });
+    const invalidRow = shopRoom.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.entryKey === configured.entry.entryKey,
+    );
+    expect(invalidRow).toMatchObject({
+      participation: 'optional',
+      stale: false,
+    });
+    expect(invalidRow).not.toHaveProperty('rewardPayload');
     expect(
       shopRoom.roomLocal.supplementalOffers.some(
-        (offer) =>
-          offer.kind === 'travelDealRefill' &&
-          semanticAddressKey(offer.rewardControl.owner.address) ===
-            semanticAddressKey(configured.entry),
+        (offer) => offer.kind === 'travelDealInvalid' && offer.key === configured.entry.entryKey,
+      ),
+    ).toBe(true);
+    expect(
+      invalidRow?.proposalKeys.some(
+        (key) =>
+          shopRoom.roomActions?.proposals.find((proposal) => proposal.key === key)?.kind ===
+          'remove',
       ),
     ).toBe(true);
   });
 
-  it('routes a missing generated Echo pickup to its exact Acquisitions row', () => {
+  it('routes a missing generated Echo pickup to its exact Room Action row', () => {
     const configured = echoReplayProject();
-    const assembly = simulateProjectAssembly(catalog, configured.document);
-    const finding = assembly.evaluation.findings.find(
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
       (candidate) =>
         candidate.code === 'rewardMissing' &&
         semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
     );
     expect(finding?.origin).toEqual(configured.entry);
 
-    const workspace = structuredWorkspace.project(assembly);
+    const workspace = structuredWorkspace.project(assembled);
     const replayDestination = destination(workspace, configured.entry);
     expect(replayDestination).toMatchObject({
       ownerAddress: configured.entry,
@@ -331,8 +413,8 @@ describe('workspace inspector destinations', () => {
         }),
       }),
     );
-    const assembly = simulateProjectAssembly(catalog, configured.document);
-    const findings = assembly.evaluation.findings.filter(
+    const assembled = assembly(configured.document);
+    const findings = assembled.evaluation.findings.filter(
       (candidate) => candidate.code === 'wrongHammerLoadout',
     );
     expect(findings).toHaveLength(3);
@@ -345,7 +427,7 @@ describe('workspace inspector destinations', () => {
       ),
     ).toBe(true);
 
-    const workspace = structuredWorkspace.project(assembly);
+    const workspace = structuredWorkspace.project(assembled);
     for (const finding of findings) {
       expect(destination(workspace, finding.origin)).toMatchObject({
         ownerAddress: finding.origin,
@@ -372,8 +454,8 @@ describe('workspace inspector destinations', () => {
         }),
       }),
     );
-    const assembly = simulateProjectAssembly(catalog, configured.document);
-    const finding = assembly.evaluation.findings.find(
+    const assembled = assembly(configured.document);
+    const finding = assembled.evaluation.findings.find(
       (candidate) => candidate.code === 'timePieceConversionUnavailable',
     );
     expect(finding?.origin).toMatchObject({
@@ -383,7 +465,7 @@ describe('workspace inspector destinations', () => {
     });
     if (finding === undefined) throw new Error('Echo replay conversion finding is missing');
 
-    const workspace = structuredWorkspace.project(assembly);
+    const workspace = structuredWorkspace.project(assembled);
     expect(destination(workspace, finding.origin)).toMatchObject({
       ownerAddress: finding.origin,
       inspectorSubject: { kind: 'node' },

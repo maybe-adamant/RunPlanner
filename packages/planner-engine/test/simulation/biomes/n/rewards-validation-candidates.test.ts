@@ -38,6 +38,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendCompleteN,
   createRepresentativeNProject,
+  replaceTestShopOfferActions,
   nBiome,
   nLocalOccurrenceId,
   nLocalOccurrenceIdsBySlot,
@@ -46,6 +47,7 @@ import {
   nOpenSlotKeys,
   nVisitSlotKeys,
   authorLegalTraitOffers,
+  authorTestArtificerReplacement,
 } from '@run-planner/test-fixtures';
 
 function completeN(project = createRepresentativeNProject()) {
@@ -1082,11 +1084,17 @@ describe('N Hub rewards, validation, and candidates', () => {
       'Boon',
     ]);
 
-    const invalidProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let invalidProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
     });
+    invalidProject = replaceTestShopOfferActions(
+      invalidProject,
+      catalog,
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+      ['MajorNonBoon'],
+    );
     const invalidBiome = completeN(invalidProject).biome;
     expect(invalidBiome.coverage).toMatchObject({
       kind: 'prefix',
@@ -1099,14 +1107,12 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     );
 
-    const purchasedProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
-        'roomExit',
-      ),
-      entryKeys: ['Minor'],
-    });
+    const purchasedProject = replaceTestShopOfferActions(
+      createRepresentativeNProject(),
+      catalog,
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+      ['Minor'],
+    );
     expect(
       completeN(purchasedProject).biome.rewards.branches.some((branch) =>
         branch.events.some(
@@ -1505,20 +1511,18 @@ describe('N Hub rewards, validation, and candidates', () => {
       reward: owner,
       value: { rewardType: 'MetaCurrencyDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition: createAcquisitionRoleAddress(owner, 'self'),
-      value: {
-        kind: 'artificer',
-        replacement: Object.freeze({
-          offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
-          traitOffersByAcquisitionRole: Object.freeze({}),
-          dispositionByAcquisitionRole: Object.freeze({
-            self: Object.freeze({ kind: 'normal' as const }),
-          }),
+    project = authorTestArtificerReplacement(
+      project,
+      catalog,
+      createAcquisitionRoleAddress(owner, 'self'),
+      Object.freeze({
+        offer: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        traitOffersByAcquisitionRole: Object.freeze({}),
+        dispositionByAcquisitionRole: Object.freeze({
+          self: Object.freeze({ kind: 'normal' as const }),
         }),
-      },
-    });
+      }),
+    );
     const baseline = validN().biome.rewards.branches[0]?.bags.HubRewards;
     const converted = completeN(project).biome;
     const branch = converted.rewards.branches[0];

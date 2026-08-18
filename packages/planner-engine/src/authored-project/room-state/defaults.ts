@@ -26,7 +26,6 @@ import {
 } from './declaration';
 import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
-import { createDefaultFieldsActionOrder } from '../fields-actions';
 
 function requireCountedStore(
   binding: CountedRewardBinding,
@@ -186,7 +185,6 @@ export function createDefaultRoomState(
         const optionalRewards = defaultFieldsOptionalRewards(room, path);
         return Object.freeze({
           kind: 'fieldsCombat',
-          actionOrder: createDefaultFieldsActionOrder(catalog, room, context.activeCageCount),
           optionalRewardCount: 2,
           optionalRewards: Object.freeze(
             Object.fromEntries(Object.entries(optionalRewards).map(([slotKey]) => [slotKey, null])),

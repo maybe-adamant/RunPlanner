@@ -98,6 +98,8 @@ export interface WorkspaceBiomeSource {
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
+  /** Exact engine-retained room whose own action currently blocks assessment. */
+  readonly blockedOccurrenceRoom: (occurrenceId: OccurrenceId) => CanonicalAuthoredRoom | undefined;
   /** True only when every evaluated branch records the engine-owned Forfeit veto. */
   readonly ordinaryRewardForfeited: (owner: SemanticAddress) => boolean;
   readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
@@ -600,6 +602,9 @@ function createWorkspaceBiomeSource(
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
   gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined,
   derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'],
+  blockedOccurrenceRoom: (
+    occurrence: ReturnType<typeof createOccurrenceAddress>,
+  ) => CanonicalAuthoredRoom | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -729,6 +734,8 @@ function createWorkspaceBiomeSource(
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
+    blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
+      blockedOccurrenceRoom(createOccurrenceAddress(biome, occurrenceId)),
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     ordinaryRewardForfeited: (owner: SemanticAddress) =>
       forfeitedRewardOwnersByBranch.length > 0 &&
@@ -771,6 +778,9 @@ export function createWorkspaceProjectSourceIndex(
     undefined,
   derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'] = () =>
     Object.freeze([]),
+  blockedOccurrenceRoom: (
+    occurrence: ReturnType<typeof createOccurrenceAddress>,
+  ) => CanonicalAuthoredRoom | undefined = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -790,6 +800,7 @@ export function createWorkspaceProjectSourceIndex(
                 figLeafSupport,
                 gorgonSupport,
                 derivedAcquisitionEntries,
+                blockedOccurrenceRoom,
               ),
             ),
           ),

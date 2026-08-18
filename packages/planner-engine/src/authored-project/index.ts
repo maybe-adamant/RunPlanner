@@ -1,15 +1,12 @@
-export { artificerReplacementEntryKey, parseArtificerReplacementEntryKey } from './artificer';
 export {
-  assessFieldsActionOrder,
-  createDefaultFieldsActionOrder,
-  fieldsActionKey,
-  fieldsActionOrderProposals,
-  fieldsCageActionDomain,
-  type FieldsActionOrderAssessment,
-  type FieldsActionOrderIssue,
-  type FieldsActionOrderProposal,
-  type FieldsCageActionDomainEntry,
-} from './fields-actions';
+  acquisitionSiteStorageKey,
+  acquisitionSiteFromStorageKey,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  parseArtificerReplacementEntryKey,
+} from './artificer';
+export { activeRoomActionReferences, roomActionReferenceSupported } from './room-actions';
+export { deriveFieldsActiveCageCount, fieldsDefaultActiveCageCount } from './fields';
 export {
   decodeProjectDocument,
   encodeProjectDocument,
@@ -48,7 +45,7 @@ export {
   createLocalVisitSlotAddress,
   createLocalVisitOrderAddress,
   createLocalRewardAddress,
-  createFieldsActionAddress,
+  createRoomActionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
@@ -96,7 +93,7 @@ export {
   type LocalVisitSlotAddress,
   type LocalVisitOrderAddress,
   type LocalRewardAddress,
-  type FieldsActionAddress,
+  type RoomActionAddress,
   type OccurrenceAddress,
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
@@ -141,7 +138,6 @@ export {
 } from './traits';
 export {
   shopProfileUsesDeathDefianceCondition,
-  shopAcquisitionOrderProposals,
   createInfernalContractEntries,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -214,7 +210,6 @@ export {
   type BatchRewardStoreState,
   type FieldsCageBatchState,
   type FieldsCombatState,
-  type FieldsCombatAction,
   type HubTargetReference,
   type EphyraCombatState,
   type LocalVisitDecision,
@@ -234,11 +229,14 @@ export {
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
+  type RoomActionReference,
+  type RoomActionState,
   type RoomEncounterState,
   type AuthoredGorgonPhaseResult,
   type ShopOfferState,
   type ShopState,
 } from './model';
+export { createEmptyRoomActionState, roomActionKey } from './room-actions';
 export {
   assessStartingArcanaGrasp,
   createDefaultRouteLoadout,

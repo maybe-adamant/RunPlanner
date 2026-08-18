@@ -9,8 +9,46 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { AcquisitionDispositionCommand } from './types';
 import { createNormalDispositionByAcquisitionRole } from '../reward-state';
-import { fieldsActionKey } from '../fields-actions';
 import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
+import {
+  acquisitionSiteStorageKey,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+} from '../artificer';
+import { createOccurrenceAddress } from '../addresses';
+
+function retainArtificerReplacementEntry(
+  occurrence: RoomOccurrence,
+  located: LocatedBiome,
+  source: import('../addresses').TraitOfferOwnerAddress,
+  acquisitionRole: string,
+  active: boolean,
+): RoomOccurrence {
+  if (!active) return occurrence;
+  const site = artificerAcquisitionSite(
+    createOccurrenceAddress(
+      { routeKey: source.routeKey, biomeKey: source.biomeKey, kind: 'biome' },
+      occurrence.occurrenceId,
+    ),
+    source,
+  );
+  const siteKey = acquisitionSiteStorageKey(site);
+  const entryKey = artificerReplacementEntryKey(source, acquisitionRole);
+  const current = occurrence.acquisitionSites?.[siteKey];
+  return Object.freeze({
+    ...occurrence,
+    acquisitionSites: Object.freeze({
+      ...(occurrence.acquisitionSites ?? {}),
+      [siteKey]: Object.freeze({
+        ...current,
+        pickupEntries: Object.freeze({
+          ...(current?.pickupEntries ?? {}),
+          [entryKey]: current?.pickupEntries?.[entryKey] ?? null,
+        }),
+      }),
+    }),
+  });
+}
 
 function updateReward(
   reward: AuthoredRewardState,
@@ -48,25 +86,6 @@ export function applyAcquisitionDispositionCommand(
     command.value.kind !== 'artificer'
   ) {
     failCommand(command, 'disposition must be normal, timePiece, or artificer');
-  }
-  if (command.value.kind === 'artificer') {
-    const runProgress = catalog.rewards.stores.byKey.RunProgress;
-    const rewardType = command.value.replacement?.offer.rewardType;
-    if (
-      command.value.replacement !== null &&
-      (runProgress === undefined ||
-        rewardType === 'Devotion' ||
-        rewardType === 'SpellDrop' ||
-        !runProgress.entries.some((entry) => entry.rewardType === rewardType))
-    )
-      failCommand(command, 'Artificer replacement must be an eligible RunProgress reward');
-    if (
-      command.value.replacement !== null &&
-      Object.values(command.value.replacement.dispositionByAcquisitionRole).some(
-        (disposition) => disposition.kind === 'artificer',
-      )
-    )
-      failCommand(command, 'Artificer replacement cannot recurse');
   }
   const topology = requireTopology(located.plan, command);
   const owner = command.acquisition.owner;
@@ -108,14 +127,17 @@ export function applyAcquisitionDispositionCommand(
       const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
       if (site === undefined || entry === undefined || entry === null)
         failCommand(command, 'missing or unresolved pickup entry');
-      return updateOccurrenceTopology(
-        document,
-        located,
-        replaceOccurrence(
-          topology,
+      const replaced = replaceOccurrence(
+        topology,
+        retainArtificerReplacementEntry(
           replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, replace(entry)),
+          located,
+          owner,
+          role,
+          command.value.kind === 'artificer',
         ),
       );
+      return updateOccurrenceTopology(document, located, replaced);
     }
     case 'incomingReward':
       switch (occurrence.state.kind) {
@@ -145,47 +167,8 @@ export function applyAcquisitionDispositionCommand(
         if (reward === null)
           failCommand(command, 'cannot edit acquisition disposition before reward authorship');
         const nextReward = replace(reward);
-        const retainedArtificerChronology =
-          reward.dispositionByAcquisitionRole[role]?.kind === 'artificer' &&
-          command.value.kind === 'artificer';
-        const actionOrder = [
-          ...(retainedArtificerChronology
-            ? occurrence.state.actionOrder
-            : occurrence.state.actionOrder.filter(
-                (action) =>
-                  action.kind !== 'interactArtificerReplacement' ||
-                  action.sourceGroup !== owner.groupKey ||
-                  action.slotKey !== owner.slotKey ||
-                  action.acquisitionRole !== role,
-              )),
-        ];
-        if (
-          !retainedArtificerChronology &&
-          owner.groupKey === 'cages' &&
-          command.value.kind === 'artificer'
-        ) {
-          const sourceKey = fieldsActionKey({
-            kind: 'interactCageReward',
-            slotKey: owner.slotKey,
-          });
-          const sourceIndex = actionOrder.findIndex(
-            (action) => fieldsActionKey(action) === sourceKey,
-          );
-          const replacementAction = Object.freeze({
-            kind: 'interactArtificerReplacement' as const,
-            sourceGroup: 'cages' as const,
-            slotKey: owner.slotKey,
-            acquisitionRole: role,
-          });
-          actionOrder.splice(
-            sourceIndex < 0 ? actionOrder.length : sourceIndex + 1,
-            0,
-            replacementAction,
-          );
-        }
         state = Object.freeze({
           ...occurrence.state,
-          actionOrder: Object.freeze(actionOrder),
           ...(owner.groupKey === 'cages'
             ? {
                 cages: Object.freeze({
@@ -250,9 +233,16 @@ export function applyAcquisitionDispositionCommand(
     case 'encounterPhase':
       return failCommand(command, 'encounter trait offers are not reward acquisition roles');
   }
+  const replacedOccurrence = retainArtificerReplacementEntry(
+    Object.freeze({ ...occurrence, state }),
+    located,
+    owner,
+    role,
+    command.value.kind === 'artificer',
+  );
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, { ...occurrence, state }),
+    replaceOccurrence(topology, replacedOccurrence),
   );
 }
