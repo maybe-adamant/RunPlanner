@@ -380,20 +380,46 @@ export interface WorkspaceEchoPomTargetInteraction {
   };
 }
 
-export interface WorkspaceEchoLastRunBoonCandidate {
-  readonly label: string;
-  readonly value: AuthoredEchoLastRunBoonOption;
-  readonly effectiveRarity: TraitRarity;
-  readonly supported: boolean;
-  readonly targetChoices: readonly WorkspaceInteractionChoice<string>[];
+export interface WorkspaceEchoLastRunBoonTraitIdentity {
+  readonly giverKey: string;
+  readonly traitKey: string;
+}
+
+export interface WorkspaceEchoLastRunBoonDraftRow {
+  readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
+  readonly rarity?: TraitRarity;
+  readonly targetTraitKey?: string;
+}
+
+export interface WorkspaceEchoLastRunBoonDraftSupport {
+  readonly rowSupport: readonly boolean[];
+  readonly selectedTargetSupported: boolean;
+  readonly complete: boolean;
+  readonly remainingTraitIdentities: readonly WorkspaceEchoLastRunBoonTraitIdentity[];
+  readonly canAppend: boolean;
 }
 
 export interface WorkspaceEchoLastRunBoonDomain {
-  readonly candidates: readonly WorkspaceEchoLastRunBoonCandidate[];
-  /** Engine-owned distinctness domain for each existing authored row. */
-  readonly candidatesByOption: readonly (readonly WorkspaceEchoLastRunBoonCandidate[])[];
-  /** Engine-selected first supported trait identity not already present. */
-  readonly appendCandidate?: WorkspaceEchoLastRunBoonCandidate;
+  readonly draftSupportFor: (
+    rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
+    selectedIndex: number,
+  ) => WorkspaceEchoLastRunBoonDraftSupport;
+  readonly effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) => TraitRarity | undefined;
+  readonly labelFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => string;
+  readonly summaryFor: (value: AuthoredEchoLastRunBoonOffer) => string;
+  readonly rarityPickerFor: (
+    identity: WorkspaceEchoLastRunBoonTraitIdentity,
+    selected?: TraitRarity,
+  ) => ContextualPickerModel<TraitRarity>;
+  readonly targetPickerFor: (
+    option: AuthoredEchoLastRunBoonOption,
+  ) => ContextualPickerModel<string>;
+  readonly targetRequiredFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => boolean;
+  /** Engine-owned trait distinctness for one transient compound-draft row. */
+  readonly traitPickerFor: (
+    occupiedTraitKeys: readonly string[],
+    selected?: WorkspaceEchoLastRunBoonTraitIdentity,
+  ) => ContextualPickerModel<WorkspaceEchoLastRunBoonTraitIdentity>;
 }
 
 export interface WorkspaceEchoLastRunBoonInteraction {

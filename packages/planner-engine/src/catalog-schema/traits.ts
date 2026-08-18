@@ -231,6 +231,8 @@ export interface EchoLastRunBoonVariantDeclaration {
   readonly key: string;
   readonly giverKey: string;
   readonly traitKey: string;
+  /** Source `GameStateRequirements`, distinct from ordinary boon prerequisites. */
+  readonly requiresDeathDefianceCondition?: boolean;
   /** Present only when source `GetLootSourceName` records this provider. */
   readonly lootHistorySource?: string;
 }

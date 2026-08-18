@@ -478,7 +478,7 @@ must not synthesize a generic Boon, Pom, or consumable alias.
 The planner can support Boon Boon Boon without pretending to know the previous
 run. The authored approximation is one to three source-resolved
 `{giver, trait, rarity}` outcomes from the source-valid Echo domain that remain
-legal at Echo's current pre-offer state, followed by one direct selection. A
+legal under Echo's replay-specific current-run exclusions, followed by one direct selection. A
 row also retains only the declaration-owned selected-acquisition detail needed
 to settle that exact trait. In the current participating union this adds an
 optional target solely for `BoonDecayBoon`; its acquisition chooses one exact
@@ -506,8 +506,9 @@ giver's loot history and equips one copy of the trait; it never adds both gods.
 The authored rarity must belong to the trait's exact equipped-rarity domain,
 including Heroic, Legendary, and Duo. The active rarity floor changes only a
 Common result to Rare. Direct settlement bypasses ordinary offer composition,
-replacement composition, Calling Card actions, and Vow of Denial's unselected
-row bans while retaining the selected trait's own acquisition behavior.
+`TraitRequirements`, replacement composition, and Calling Card actions while
+retaining the selected trait's own acquisition behavior. Current Vow of Denial
+bans remain replay exclusions, but unselected BBB rows do not create new bans.
 
 The source-valid domain is closed over the giver inventories already recorded
 in this audit. `IsGodTrait(..., { ForShop = true, ForLastRunBoon = true })`
@@ -516,9 +517,12 @@ does not admit the other field-NPC or Story providers, Hammers, Selene, or
 Chaos. Hades otherwise participates in the shop-style god predicate, but
 `NPC_Hades_Field_01.ExcludeFromLastRunBoon = true` removes the entire Hades
 pool. A member of this union is still eligible only when its exact key is in
-the previous-run rarity cache, it is not currently equipped, its current
-`IsTraitEligible` requirements pass, its ordinary slot is open when it has a
-slot, and it does not set `ExcludeTraitFromLastRunBoonPool`. Boon Boon Boon is
+the previous-run rarity cache, it is not currently equipped or banned, its
+ordinary slot is open when it has a slot, its queryable source
+`GameStateRequirements` pass, and it does not set
+`ExcludeTraitFromLastRunBoonPool`. Source `IsTraitEligible` checks those
+current-run and game-state exclusions; it does not re-run the ordinary boon
+`TraitRequirements` graph. Boon Boon Boon is
 therefore neither the union of every giver in this document nor the current
 run's ordinary god pool.
 

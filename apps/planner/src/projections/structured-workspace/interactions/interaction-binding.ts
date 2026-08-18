@@ -32,9 +32,14 @@ import type {
   AuthoredEchoLastRunBoonOffer,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
-import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type { Catalog, RoomDeclaration, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import {
+  evaluateEchoLastRunBoonDraftSupport,
+  echoLastRunBoonRarityCandidates,
+  echoLastRunBoonTraitCandidatesForRow,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 
 import {
   candidateSupport,
@@ -2424,41 +2429,121 @@ export function bindWorkspaceInteractions(
                         optionKey,
                       );
                       if (evaluated.kind !== 'echoLastRunBoonDomain') return undefined;
-                      const projectCandidate = (
-                        candidate: (typeof evaluated.result.candidates)[number],
-                      ) => {
-                        const giver = catalog.traitGivers.byKey[candidate.option.giverKey];
-                        const trait = catalog.traits.byKey[candidate.option.traitKey];
-                        return Object.freeze({
-                          label: `${giver?.label ?? candidate.option.giverKey} · ${trait?.label ?? candidate.option.traitKey} · ${candidate.option.rarity}`,
-                          value: candidate.option,
-                          effectiveRarity: candidate.effectiveRarity,
-                          supported: candidate.supported,
-                          targetChoices: Object.freeze(
-                            candidate.targetTraitKeys.map((traitKey) =>
+                      const domainCandidates = evaluated.result.candidates;
+                      const identityKey = (identity: {
+                        readonly giverKey: string;
+                        readonly traitKey: string;
+                      }) => `${identity.giverKey}:${identity.traitKey}`;
+                      const identityLabel = (identity: {
+                        readonly giverKey: string;
+                        readonly traitKey: string;
+                      }) =>
+                        `${catalog.traitGivers.byKey[identity.giverKey]?.label ?? identity.giverKey} · ${catalog.traits.byKey[identity.traitKey]?.label ?? identity.traitKey}`;
+                      return Object.freeze({
+                        draftSupportFor: (
+                          rows: readonly {
+                            readonly identity?: {
+                              readonly giverKey: string;
+                              readonly traitKey: string;
+                            };
+                            readonly rarity?: TraitRarity;
+                            readonly targetTraitKey?: string;
+                          }[],
+                          selectedIndex: number,
+                        ) =>
+                          evaluateEchoLastRunBoonDraftSupport(
+                            domainCandidates,
+                            rows.map((row) =>
                               Object.freeze({
-                                label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                                value: traitKey,
+                                ...(row.identity === undefined
+                                  ? {}
+                                  : {
+                                      giverKey: row.identity.giverKey,
+                                      traitKey: row.identity.traitKey,
+                                    }),
+                                ...(row.rarity === undefined ? {} : { rarity: row.rarity }),
+                                ...(row.targetTraitKey === undefined
+                                  ? {}
+                                  : { targetTraitKey: row.targetTraitKey }),
                               }),
                             ),
+                            selectedIndex,
                           ),
-                        });
-                      };
-                      const projectedCandidates = Object.freeze(
-                        evaluated.result.candidates.map(projectCandidate),
-                      );
-                      return Object.freeze({
-                        candidates: projectedCandidates,
-                        candidatesByOption: Object.freeze(
-                          evaluated.result.candidatesByOption.map((row) =>
-                            Object.freeze(row.map(projectCandidate)),
+                        effectiveRarityFor: (
+                          option: AuthoredEchoLastRunBoonOffer['options'][number],
+                        ) =>
+                          domainCandidates.find(
+                            (candidate) =>
+                              candidate.option.giverKey === option.giverKey &&
+                              candidate.option.traitKey === option.traitKey &&
+                              candidate.option.rarity === option.rarity,
+                          )?.effectiveRarity,
+                        labelFor: identityLabel,
+                        summaryFor: (child: AuthoredEchoLastRunBoonOffer) => {
+                          const selected = child.options[optionIndex(child.selectedOptionKey)];
+                          if (selected === undefined) return 'Choice required';
+                          const candidate = domainCandidates.find(
+                            (entry) =>
+                              entry.option.giverKey === selected.giverKey &&
+                              entry.option.traitKey === selected.traitKey &&
+                              entry.option.rarity === selected.rarity,
+                          );
+                          const rarity =
+                            candidate?.effectiveRarity === undefined ||
+                            candidate.effectiveRarity === selected.rarity
+                              ? selected.rarity
+                              : `${selected.rarity} → ${candidate.effectiveRarity}`;
+                          return `${identityLabel(selected)} · ${rarity}`;
+                        },
+                        rarityPickerFor: (
+                          identity: {
+                            readonly giverKey: string;
+                            readonly traitKey: string;
+                          },
+                          selected?: TraitRarity,
+                        ) =>
+                          projectDirectTraitOutcomePicker(
+                            echoLastRunBoonRarityCandidates(domainCandidates, identity, selected),
+                            (rarity) => rarity,
+                            (rarity) => rarity,
                           ),
-                        ),
-                        ...(evaluated.result.appendCandidate === undefined
-                          ? {}
-                          : {
-                              appendCandidate: projectCandidate(evaluated.result.appendCandidate),
-                            }),
+                        targetPickerFor: (
+                          option: AuthoredEchoLastRunBoonOffer['options'][number],
+                        ) => {
+                          const candidate = domainCandidates.find(
+                            (entry) =>
+                              entry.option.giverKey === option.giverKey &&
+                              entry.option.traitKey === option.traitKey &&
+                              entry.option.rarity === option.rarity,
+                          );
+                          return projectDirectTraitOutcomePicker(
+                            candidate?.targetCandidates ?? Object.freeze([]),
+                            (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                            (traitKey) => traitKey,
+                          );
+                        },
+                        targetRequiredFor: (identity: {
+                          readonly giverKey: string;
+                          readonly traitKey: string;
+                        }) =>
+                          catalog.traits.byKey[identity.traitKey]?.targetedAcquisition !==
+                          undefined,
+                        traitPickerFor: (
+                          occupiedTraitKeys: readonly string[],
+                          selected?: {
+                            readonly giverKey: string;
+                            readonly traitKey: string;
+                          },
+                        ) =>
+                          projectDirectTraitOutcomePicker(
+                            echoLastRunBoonTraitCandidatesForRow(
+                              domainCandidates,
+                              occupiedTraitKeys,
+                              selected,
+                            ),
+                            identityLabel,
+                            identityKey,
+                          ),
                       });
                     },
                   }),

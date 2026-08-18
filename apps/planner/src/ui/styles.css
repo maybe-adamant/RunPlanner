@@ -710,6 +710,53 @@ button:disabled {
   min-width: 0;
 }
 
+.trait-dependent-choice-row,
+.echo-last-run-choice-header,
+.echo-last-run-choice-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.trait-dependent-choice-row h4,
+.trait-dependent-choice-row p,
+.echo-last-run-choice h3,
+.echo-last-run-choice p {
+  margin: 0;
+}
+
+.echo-last-run-choice {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.echo-last-run-choice-header {
+  align-items: flex-start;
+}
+
+.echo-last-run-choice-header > div,
+.echo-last-run-option,
+.echo-last-run-target {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.echo-last-run-options {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.echo-last-run-option,
+.echo-last-run-target {
+  border: 1px solid var(--border, #ccd3df);
+  border-radius: 0.45rem;
+  padding: 0.75rem;
+}
+
 .trait-outcome-summary-list,
 .trait-outcome-actions {
   display: flex;

@@ -23,9 +23,11 @@ function item<T>(
   const explanation =
     candidate.reason === 'branchDivergence'
       ? 'This outcome is not supported by every current route branch.'
-      : candidate.reason === 'unavailable'
-        ? 'This outcome is not available at the current route frontier.'
-        : undefined;
+      : candidate.reason === 'duplicateTrait'
+        ? 'This trait already occupies another Boon Boon Boon row.'
+        : candidate.reason === 'unavailable'
+          ? 'This outcome is not available at the current route frontier.'
+          : undefined;
   return Object.freeze({
     key: key(candidate.value),
     value: candidate.value,
