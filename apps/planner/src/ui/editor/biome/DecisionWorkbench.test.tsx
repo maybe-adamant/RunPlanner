@@ -3,6 +3,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
@@ -33,7 +34,9 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import {
   authorLegalTraitOffers,
+  createFMidshopPomFrontierProject,
   createGoldenFGHIProject,
+  fMidshopPomShopId,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -300,6 +303,53 @@ describe('DecisionWorkbench', () => {
     expect(screen.getByRole('button', { name: 'Remove contract' })).toBeTruthy();
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
   });
+
+  it('keeps a Midshop acquisition panel on the decision that selected the shop', () => {
+    let project = createFMidshopPomFrontierProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionOrder',
+      site: createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+        'roomExit',
+      ),
+      entryKeys: ['Minor'],
+    });
+    const outgoingOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: fMidshopPomShopId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: outgoingOwner,
+    });
+    const incomingDecision = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.normal.kind === 'batch' &&
+          decision.normal.targets.some((target) => target.occurrenceId === fMidshopPomShopId),
+      );
+    if (incomingDecision?.kind !== 'exit') {
+      throw new Error('Midshop incoming decision is missing');
+    }
+
+    renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'F',
+      subjectForOwner(createExitDecisionAddress(goldenFBiome, incomingDecision.source)),
+    );
+    expect(screen.getByRole('heading', { level: 4, name: 'Acquisitions' })).toBeTruthy();
+    expect(screen.getAllByText('Pom Slice')).toHaveLength(2);
+
+    cleanup();
+    renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(outgoingOwner));
+    expect(screen.queryByRole('heading', { level: 4, name: 'Acquisitions' })).toBeNull();
+    expect(screen.queryByText('Pom Slice')).toBeNull();
+  });
+
   it('authors the fixed N start through the ordinary batch frontier', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
     expect(screen.getByText('Start with Opening')).toBeTruthy();

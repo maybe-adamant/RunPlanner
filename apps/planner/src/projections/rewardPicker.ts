@@ -55,9 +55,7 @@ export function summarizeRewardOffer(catalog: Catalog, offer: ResolvedRewardOffe
   }
   if (offer.payload.kind === 'BoonSource') {
     const source = sourceLabel(catalog, offer.payload.source);
-    return hasEventualSource(catalog, offer)
-      ? `${declaration.label} · ${source} (eventual)`
-      : `${declaration.label} · ${source}`;
+    return `${declaration.label} · ${source}`;
   }
   return `${declaration.label} · ${sourceLabel(catalog, offer.payload.chosenSource)} / ${sourceLabel(catalog, offer.payload.spurnedSource)}`;
 }

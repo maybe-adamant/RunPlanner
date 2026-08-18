@@ -833,6 +833,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(derived).toMatchObject({
       address: duplicate,
       label: 'Gold Gold Gold duplicate of Offer 1',
+      rewardPresentation: 'resolutionOnly',
     });
     expect(derived?.rewardControl).toBeUndefined();
     expect(result.node.room.roomLocal.kind).toBe('shop');
@@ -865,7 +866,7 @@ describe('structured workspace occurrence assembly', () => {
     });
   });
 
-  it('counts active Contract and generated Travel opportunities but never the disabled placeholder', () => {
+  it('projects active Contract and generated Travel rows but never the disabled placeholder', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const shopOccurrence = project.routes
@@ -896,7 +897,6 @@ describe('structured workspace occurrence assembly', () => {
     );
     expect(contractOnly).toMatchObject({
       kind: 'shop',
-      totalOpportunityCount: 4,
       supplementalOffers: [
         {
           kind: 'infernalContractReward',
@@ -919,7 +919,6 @@ describe('structured workspace occurrence assembly', () => {
     );
     expect(placeholder).toMatchObject({
       kind: 'shop',
-      totalOpportunityCount: 4,
       supplementalOffers: [{ kind: 'travelDealPlaceholder' }, { kind: 'infernalContractReward' }],
     });
 
@@ -943,7 +942,6 @@ describe('structured workspace occurrence assembly', () => {
     );
     expect(active).toMatchObject({
       kind: 'shop',
-      totalOpportunityCount: 5,
       supplementalOffers: [
         {
           kind: 'travelDealRefill',
@@ -1046,11 +1044,11 @@ describe('structured workspace occurrence assembly', () => {
     if (occurrence === undefined) throw new Error('Golden G has no Narcissus story');
     const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
     expect(result.node.room.acquisitions).toMatchObject({
-      placement: 'postOutgoing',
       entries: [
         {
           key: 'pom',
           participation: expect.objectContaining({ label: 'Picked up', selected: false }),
+          rewardPresentation: 'editableOfferAndResolution',
         },
       ],
     });

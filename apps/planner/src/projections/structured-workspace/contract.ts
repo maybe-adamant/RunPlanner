@@ -1176,12 +1176,10 @@ export interface WorkspaceShopConditionControl {
   readonly value: boolean;
 }
 
-/** One canonical post-outgoing settlement surface for an orderable room site. */
+/** One canonical room-owned settlement surface for an orderable acquisition site. */
 export interface WorkspaceAcquisitionsWorkbench {
   readonly site: AcquisitionSiteAddress;
   readonly marker: WorkspaceMarker;
-  /** The lifecycle point determines the containing inspector, never React. */
-  readonly placement: 'afterProducer' | 'postOutgoing';
   readonly entries: readonly WorkspaceAcquisitionEntryDescriptor[];
 }
 export interface WorkspaceAcquisitionEntryDescriptor {
@@ -1194,6 +1192,8 @@ export interface WorkspaceAcquisitionEntryDescriptor {
    * editing surface.
    */
   readonly rewardControl?: WorkspaceExplicitRewardControl;
+  /** Whether this site owns the outer reward identity or only its acquisition resolution. */
+  readonly rewardPresentation: 'editableOfferAndResolution' | 'resolutionOnly';
   /** Optional site entry participation; Shop calls this Purchased, drops Picked up. */
   readonly participation?: {
     readonly label: 'Purchased' | 'Picked up';
@@ -1336,7 +1336,6 @@ export type WorkspaceRoomLocal =
       readonly materialized: boolean;
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
       readonly supplementalOffers: readonly WorkspaceShopSupplementalDescriptor[];
-      readonly totalOpportunityCount: number;
       readonly deathDefianceCondition?: WorkspaceShopConditionControl;
       /** One occurrence-owned authored order, separate from inventory rows. */
       readonly acquisitionOrder: readonly string[];
@@ -1495,8 +1494,6 @@ interface WorkspaceBatchNodeBase {
   readonly rewardStore?: WorkspaceMarker;
   readonly selection: WorkspaceMarker;
   readonly source: ExitDecisionSourceAddress;
-  /** Cached source-room settlement product projected at its post-outgoing point. */
-  readonly acquisitions?: WorkspaceAcquisitionsWorkbench;
   readonly targets: readonly WorkspacePhysicalTarget[];
   readonly topologyState: 'complete' | 'partial' | 'retained';
   readonly runState?: WorkspaceRunStateLauncher;

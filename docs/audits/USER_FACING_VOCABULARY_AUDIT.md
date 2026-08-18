@@ -69,8 +69,9 @@ Some terms are deliberately retained rather than translated mechanically:
 - `Pylon visit order` is a genuine Ephyra game concept.
 - `Dormant` describes a visible but inactive H/O reward offer and remains the
   current H/O presentation decision.
-- `Eventual God` and `(eventual)` remain the intentional Blind Box planning
-  concepts documented in `docs/design/EDITOR_MODEL.md`.
+- `Eventual God` remains the intentional Blind Box picker concept documented in
+  `docs/design/EDITOR_MODEL.md`; the compact reward summary omits the redundant
+  `(eventual)` qualifier.
 - `Findings`, `Empty project`, `Not configured`, `Project editor`, and the
   picker states `Required`, `Not evaluated`, and `Unavailable` are already
   understandable product copy.

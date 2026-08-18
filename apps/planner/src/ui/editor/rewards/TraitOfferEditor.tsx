@@ -158,7 +158,12 @@ function AllTogetherOutcomeEditor({
     const nextMissing = interactions.findIndex(
       (interaction) => !Object.prototype.hasOwnProperty.call(next, interaction.control.setKey),
     );
-    setActiveIndex(nextMissing < 0 ? undefined : nextMissing);
+    if (nextMissing < 0) {
+      setActiveIndex(undefined);
+      onSelect(next as AuthoredAllTogetherResult);
+      return;
+    }
+    setActiveIndex(nextMissing);
   };
 
   return (
@@ -192,20 +197,6 @@ function AllTogetherOutcomeEditor({
           onSelect={choose}
         />
       )}
-      {complete && activeIndex === undefined ? (
-        <div className="trait-outcome-actions">
-          <button
-            className="quiet-action action-compact"
-            onClick={() => onSelect(Object.freeze(draft) as AuthoredAllTogetherResult)}
-            type="button"
-          >
-            Apply complete outcome
-          </button>
-          <button className="quiet-action action-compact" onClick={cancel} type="button">
-            Cancel
-          </button>
-        </div>
-      ) : null}
       {!complete && activeIndex === undefined ? (
         <button className="quiet-action action-compact" onClick={() => begin()} type="button">
           Choose all grants

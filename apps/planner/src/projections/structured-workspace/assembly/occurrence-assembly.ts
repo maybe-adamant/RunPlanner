@@ -114,7 +114,6 @@ import { workspaceRewardStoreLabel } from './reward-labels';
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly postOutgoingSettlement: boolean;
 }
 
 type WorkspaceDerivedAcquisitionEntry = {
@@ -1790,7 +1789,6 @@ function roomLocalForOccurrence(
           materialized: false,
           offers: Object.freeze([]),
           supplementalOffers: Object.freeze([]),
-          totalOpportunityCount: 0,
           acquisitionOrder: Object.freeze([]),
         });
       }
@@ -1940,15 +1938,6 @@ function roomLocalForOccurrence(
             }),
         offers: Object.freeze(offers),
         supplementalOffers,
-        totalOpportunityCount:
-          offers.length +
-          supplementalOffers.filter(
-            (offer) =>
-              offer.kind !== 'travelDealPlaceholder' &&
-              offer.kind !== 'travelDealInvalid' &&
-              offer.kind !== 'echoDoubleShopPlaceholder' &&
-              offer.kind !== 'echoDoubleShopInvalid',
-          ).length,
         acquisitionOrder,
       });
     }
@@ -2305,7 +2294,6 @@ export function assembleWorkspaceOccurrence(
           return Object.freeze({
             site,
             marker: input.markerDestinations.marker(site),
-            placement: 'postOutgoing' as const,
             entries: Object.freeze(
               [
                 ...order.filter(entryIsActive),
@@ -2346,6 +2334,7 @@ export function assembleWorkspaceOccurrence(
                     undefined,
                     capability?.retainedSourceMismatch === true,
                   ) as WorkspaceExplicitRewardControl,
+                  rewardPresentation: 'editableOfferAndResolution' as const,
                   ...(pickup?.required === true
                     ? {}
                     : {
@@ -2406,10 +2395,6 @@ export function assembleWorkspaceOccurrence(
               marker: input.markerDestinations.marker(
                 createAcquisitionSiteAddress(address, 'roomExit'),
               ),
-              placement:
-                room.kind === 'Preboss' || !input.facts.postOutgoingSettlement
-                  ? ('afterProducer' as const)
-                  : ('postOutgoing' as const),
               entries: (() => {
                 const acquisitionSite = createAcquisitionSiteAddress(address, 'roomExit');
                 return Object.freeze(
@@ -2420,8 +2405,12 @@ export function assembleWorkspaceOccurrence(
                         Object.freeze({
                           key: offer.key,
                           address: createAcquisitionEntryAddress(acquisitionSite, offer.key),
-                          label: offer.label,
+                          label:
+                            offer.rewardControl.offer === null
+                              ? offer.label
+                              : summarizeRewardOffer(input.catalog, offer.rewardControl.offer),
                           rewardControl: offer.rewardControl,
+                          rewardPresentation: 'resolutionOnly' as const,
                         }),
                       ];
                     }
@@ -2451,9 +2440,12 @@ export function assembleWorkspaceOccurrence(
                             key: supplemental.key,
                             address: supplemental.purchase.address,
                             label: supplemental.label,
+                            rewardPresentation: 'resolutionOnly' as const,
                             ...(supplemental.kind === 'echoDoubleShopReward'
                               ? {}
-                              : { rewardControl: supplemental.rewardControl }),
+                              : {
+                                  rewardControl: supplemental.rewardControl,
+                                }),
                           }),
                         ];
                   }),

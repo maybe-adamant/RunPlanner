@@ -167,3 +167,24 @@ export function useWorkspaceInteraction<Result>(
     result: current.result,
   };
 }
+
+/**
+ * Observes a capability that is intentionally absent when the rendered owner
+ * has no meaningful interaction (for example, a singleton ranked order).
+ */
+export function useOptionalWorkspaceInteraction<Result>(
+  interaction: WorkspaceLoadableInteraction<Result> | undefined,
+): {
+  readonly activate: () => Result | undefined;
+  readonly pending: boolean;
+  readonly result: Result | undefined;
+} {
+  const controller = useWorkspaceInteractionController<Result>();
+  const current = controller.observe(interaction);
+
+  return {
+    activate: () => (interaction === undefined ? undefined : controller.activate(interaction)),
+    pending: current.pending,
+    result: current.result,
+  };
+}

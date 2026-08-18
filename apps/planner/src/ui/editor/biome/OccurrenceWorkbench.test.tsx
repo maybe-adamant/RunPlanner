@@ -35,7 +35,7 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
@@ -93,6 +93,8 @@ import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldSh
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  delete (document as unknown as { elementFromPoint?: Document['elementFromPoint'] })
+    .elementFromPoint;
 });
 
 function occurrenceById(
@@ -103,6 +105,17 @@ function occurrenceById(
       (node): node is WorkspaceOccurrenceWorkbenchNode =>
         node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
     );
+}
+
+function decisionContainingOccurrence(occurrenceId: OccurrenceId) {
+  return (biome: WorkspaceBiome) => {
+    const node = biome.nodes.find(
+      (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
+        (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
+        candidate.targets.some((target) => target.room.occurrenceId === occurrenceId),
+    );
+    return node === undefined ? undefined : { kind: 'node' as const, node };
+  };
 }
 
 function nHubOccurrence(application: PlannerApplication, hubSlotKey: string) {
@@ -883,15 +896,12 @@ describe('OccurrenceWorkbench', () => {
       ),
       'mysteryBoon',
     );
-    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
-      const node = biome.nodes.find(
-        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
-          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
-          candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === occurrence.occurrenceId,
-      );
-      return node === undefined ? undefined : { kind: 'node', node };
-    });
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      decisionContainingOccurrence(occurrence.occurrenceId),
+    );
     const pickedUp = screen.getByRole('checkbox', { name: 'Picked up mysteryBoon' });
     expect((pickedUp as HTMLInputElement).disabled).toBe(false);
     const acquisitions = screen.getByText('Acquisitions').closest('section');
@@ -1003,15 +1013,12 @@ describe('OccurrenceWorkbench', () => {
         deathDefianceConditionMet: false,
       },
     });
-    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
-      const node = biome.nodes.find(
-        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
-          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
-          candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === occurrence.occurrenceId,
-      );
-      return node === undefined ? undefined : { kind: 'node', node };
-    });
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      decisionContainingOccurrence(occurrence.occurrenceId),
+    );
     const authoredSite = () =>
       view.application.store
         .getState()
@@ -1088,15 +1095,12 @@ describe('OccurrenceWorkbench', () => {
       site,
       entryKeys: ['psyche'],
     });
-    const view = renderDecisionWorkbench(project, 'Underworld', 'G', (biome) => {
-      const node = biome.nodes.find(
-        (candidate): candidate is WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode =>
-          (candidate.kind === 'ordinaryBatch' || candidate.kind === 'mixedBatch') &&
-          candidate.source.kind === 'occurrence' &&
-          candidate.source.occurrenceId === occurrence.occurrenceId,
-      );
-      return node === undefined ? undefined : { kind: 'node', node };
-    });
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      decisionContainingOccurrence(occurrence.occurrenceId),
+    );
     const maxMana = screen.getByRole('checkbox', { name: 'Picked up maxMana' });
     expect((maxMana as HTMLInputElement).disabled).toBe(false);
 
@@ -2582,7 +2586,8 @@ describe('OccurrenceWorkbench', () => {
       'P',
       occurrenceById(pOccurrenceIds.prebossShop),
     );
-    expect(screen.getAllByText('Participation')).not.toHaveLength(0);
+    expect(screen.getByRole('columnheader', { name: 'Buy' })).toBeTruthy();
+    expect(screen.queryByText('Participation')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     expect(screen.queryByLabelText('Customize')).toBeNull();
   });
@@ -2645,10 +2650,63 @@ describe('OccurrenceWorkbench', () => {
     await view.user.click(screen.getByLabelText('Purchase Offer 3'));
     expect(order()).toEqual(['MajorNonBoon', 'Minor']);
 
-    await view.user.click(screen.getAllByRole('button', { name: 'Move earlier' })[1]!);
+    const pomCard = document.querySelector<HTMLElement>('[data-acquisition-entry-key="Minor"]');
+    if (pomCard === null) throw new Error('Pom acquisition rank card is missing');
+    expect(within(pomCard).getByText('Max Magick')).toBeTruthy();
+    await view.user.click(within(pomCard).getByRole('button', { name: 'Move Max Magick earlier' }));
     expect(order()).toEqual(['Minor', 'MajorNonBoon']);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 3,
+    );
+
+    const board = screen.getByRole('group', { name: 'Ranked acquisition order' });
+    const source = board.querySelector<HTMLElement>('[data-acquisition-entry-key="Minor"]');
+    const target = board.querySelector<HTMLElement>('[data-acquisition-entry-key="MajorNonBoon"]');
+    const handle = source?.querySelector<HTMLElement>('[data-acquisition-drag-handle]');
+    if (source === null || target === null || handle === null || handle === undefined) {
+      throw new Error('ranked acquisition drag surface is missing');
+    }
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+      bottom: 180,
+      height: 120,
+      left: 0,
+      right: 360,
+      toJSON: () => ({}),
+      top: 60,
+      width: 360,
+      x: 0,
+      y: 60,
+    } as DOMRect);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => target,
+    });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 12,
+      clientY: 12,
+      isPrimary: true,
+      pointerId: 41,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerMove(board, {
+      clientX: 24,
+      clientY: 150,
+      isPrimary: true,
+      pointerId: 41,
+      pointerType: 'mouse',
+    });
+    expect(source.dataset.dragging).toBe('true');
+    fireEvent.pointerUp(board, {
+      clientX: 24,
+      clientY: 150,
+      isPrimary: true,
+      pointerId: 41,
+      pointerType: 'mouse',
+    });
+    await waitFor(() => expect(order()).toEqual(['MajorNonBoon', 'Minor']));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 4,
     );
   }, 15_000);
 
@@ -2674,6 +2732,16 @@ describe('OccurrenceWorkbench', () => {
     expect(
       authoredShop().shop.offers.Boon?.reward?.traitOffersByAcquisitionRole.hiddenSource,
     ).toBeNull();
+    const mysteryBoonAcquisition = document.querySelector<HTMLElement>(
+      '[data-acquisition-entry-key="Boon"]',
+    );
+    if (mysteryBoonAcquisition === null) {
+      throw new Error('purchased Mystery Boon acquisition row is missing');
+    }
+    expect(within(mysteryBoonAcquisition).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(
+      within(screen.getByRole('table')).getAllByRole('button', { name: 'Reward' }).length,
+    ).toBe(3);
 
     const before = view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(screen.getByLabelText('Purchase Offer 3'));
@@ -2687,6 +2755,11 @@ describe('OccurrenceWorkbench', () => {
     expect(
       authoredShop().shop.offers.Boon?.reward?.traitOffersByAcquisitionRole.hiddenSource,
     ).toBeNull();
+    const pomAcquisition = document.querySelector<HTMLElement>(
+      '[data-acquisition-entry-key="Minor"]',
+    );
+    if (pomAcquisition === null) throw new Error('purchased Pom acquisition row is missing');
+    expect(within(pomAcquisition).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
@@ -2712,7 +2785,7 @@ describe('OccurrenceWorkbench', () => {
         ?.acquisitionSites?.roomExit?.order;
     };
 
-    expect(screen.getByText('3 opportunities')).toBeTruthy();
+    expect(screen.queryByText(/opportunities$/)).toBeNull();
     expect(
       screen.getByText(
         'Purchase order needs one paid Shop offer before this refill can be edited.',
@@ -2722,7 +2795,7 @@ describe('OccurrenceWorkbench', () => {
     const refill = await screen.findByRole('checkbox', {
       name: 'Purchase Travel Deal refill after Offer 2',
     });
-    expect(screen.getByText('4 opportunities')).toBeTruthy();
+    expect(screen.queryByText(/opportunities$/)).toBeNull();
     expect((refill as HTMLInputElement).checked).toBe(false);
     expect(order()).toEqual(['MajorNonBoon']);
     const refillShopRow = screen.getByText('Travel Deal refill after Offer 2').closest('tr');
@@ -2762,7 +2835,11 @@ describe('OccurrenceWorkbench', () => {
       .map((label) => label.closest('.acquisition-entry'))
       .find((entry): entry is HTMLElement => entry !== null);
     if (refillEntry === undefined) throw new Error('Travel Deal acquisition entry is missing');
-    await view.user.click(within(refillEntry).getByRole('button', { name: 'Move later' }));
+    await view.user.click(
+      within(refillEntry).getByRole('button', {
+        name: 'Move Travel Deal refill after Offer 2 later',
+      }),
+    );
     expect(order()).toEqual(['MajorNonBoon', 'Minor', 'travelDealRefill']);
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
@@ -2827,7 +2904,11 @@ describe('OccurrenceWorkbench', () => {
       .find((entry): entry is HTMLElement => entry !== null);
     if (goldAcquisition === undefined) throw new Error('Gold chronology entry is missing');
     expect(within(goldAcquisition).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.click(within(goldAcquisition).getByRole('button', { name: 'Move later' }));
+    await view.user.click(
+      within(goldAcquisition).getByRole('button', {
+        name: 'Move Gold Gold Gold duplicate of Offer 3 later',
+      }),
+    );
     expect(authoredSite()?.order).toEqual(['Minor', 'MajorNonBoon', 'echoDoubleShopReward']);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(authoredSite()?.order).toEqual(['Minor', 'echoDoubleShopReward', 'MajorNonBoon']);
@@ -2981,8 +3062,11 @@ describe('OccurrenceWorkbench', () => {
       'P',
       occurrenceById(pOccurrenceIds.prebossShop),
     );
-    const moveLater = screen.getAllByRole('button', { name: 'Move later' })[0] as
-      HTMLButtonElement | undefined;
+    const boonCard = document.querySelector<HTMLElement>('[data-acquisition-entry-key="Boon"]');
+    if (boonCard === null) throw new Error('Boon acquisition rank card is missing');
+    const moveLater = within(boonCard).getByRole('button', {
+      name: / later$/,
+    }) as HTMLButtonElement;
     if (moveLater === undefined) throw new Error('first acquisition move button is missing');
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 

@@ -6,8 +6,11 @@
 export { requireWorkspaceInteraction, workspaceInteractionKey } from './contract';
 export {
   dropHubBoardRoom,
+  dropRankedPrefixItem,
   moveHubBoardRoom,
+  moveRankedPrefixItem,
   reconcileHubBoardRanking,
+  reconcileRankedPrefix,
 } from './presentation/hub-ranking';
 export type {
   StructuredWorkspaceProjection,
@@ -93,5 +96,9 @@ export type {
   HubBoardMove,
   HubBoardMoveResult,
   HubBoardRanking,
+  RankedPrefix,
+  RankedPrefixDropTarget,
+  RankedPrefixMove,
+  RankedPrefixMoveResult,
 } from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';

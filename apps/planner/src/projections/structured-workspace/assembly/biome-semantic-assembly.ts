@@ -557,8 +557,6 @@ export function assembleWorkspaceBiomeSemantics(
     const assembly: WorkspaceDecisionAssembly =
       evaluated === undefined
         ? assembleWorkspaceDecision({
-            acquisitionsForSource: (occurrenceId) =>
-              occurrenceAssemblies.get(occurrenceId)?.assembly.node.room.acquisitions,
             assembleOccurrence,
             catalog,
             decision: decision as WorkspaceAuthoredBatchDecision,
@@ -575,8 +573,6 @@ export function assembleWorkspaceBiomeSemantics(
             source,
           })
         : assembleWorkspaceDecision({
-            acquisitionsForSource: (occurrenceId) =>
-              occurrenceAssemblies.get(occurrenceId)?.assembly.node.room.acquisitions,
             assembleOccurrence,
             catalog,
             decision: decision as WorkspaceAuthoredBatchDecision,
