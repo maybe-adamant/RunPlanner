@@ -165,7 +165,8 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     decision: preHubDecision,
     hub: createHubDecisionAddress(nBiome, 'hub'),
   });
-  for (const slotKey of nOpenSlotKeys.slice(0, slotCount)) {
+  const boardSlotKeys = [...nOpenSlotKeys, 'combat12'] as const;
+  for (const slotKey of boardSlotKeys.slice(0, slotCount)) {
     project = applyProjectCommand(project, catalog, {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', slotKey),
@@ -305,6 +306,40 @@ describe('Hub progressive biome evaluation', () => {
     });
   });
 
+  it.each([9, 10])(
+    'authors every participant on a %i-door board before any Hub visit is selected',
+    (slotCount) => {
+      const project = openHub(slotCount);
+      const hub = project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+      if (hub?.kind !== 'hub') throw new Error('partial Hub board lost its authored decision');
+      expect(hub.openTargets).toHaveLength(slotCount);
+      expect(hub.visitOrder).toEqual([]);
+
+      const candidates = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      );
+      for (const target of hub.openTargets) {
+        expect(
+          candidates.evaluate({
+            kind: 'incomingReward',
+            reward: createIncomingRewardAddress(nBiome, target.occurrenceId),
+            value: {
+              rewardType: 'Boon',
+              payload: { kind: 'BoonSource', source: 'AresUpgrade' },
+            },
+          }),
+        ).toMatchObject({
+          kind: 'incomingReward',
+          result: { supported: true, findings: [] },
+        });
+      }
+    },
+  );
+
   it('retains an explicit side-generation violation at the local visit boundary', () => {
     let project = createRepresentativeNProject();
     project = applyProjectCommand(project, catalog, {
@@ -410,6 +445,110 @@ describe('Hub progressive biome evaluation', () => {
         }),
       ],
     });
+  });
+
+  it('stops the engine walk at a later main-room blocker without replaying prior restores', () => {
+    const blockedOccurrence = nOccurrenceId('combat02');
+    const laterOccurrence = nOccurrenceId('combat11');
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: blockedOccurrence },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatN',
+    });
+    const biome = simulateProject(catalogWithImpossibleEncounters(['ArtemisCombatN']), project)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (
+      biome?.authoring !== 'complete' ||
+      biome.validity !== 'invalid' ||
+      !('assessmentPrefix' in biome)
+    ) {
+      throw new Error('main-room blocker did not produce a bounded Hub walk');
+    }
+
+    expect(biome.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      origin: createHubVisitAddress(nBiome, 'hub', 3),
+      phase: 'targetLifecycle',
+    });
+    expect(
+      biome.history.ledgers.roomCreations.filter((event) => event.source === 'hubTarget'),
+    ).toHaveLength(9);
+    expect(
+      biome.history.ledgers.roomRestores.filter((event) => event.restoreKind === 'hub'),
+    ).toHaveLength(2);
+    expect(
+      biome.history.events.filter(
+        (event) =>
+          event.kind === 'roomEntered' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === nOccurrenceId('combat05'),
+      ),
+    ).toHaveLength(1);
+    expect(
+      biome.history.events.some(
+        (event) =>
+          event.kind === 'roomEntered' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === laterOccurrence,
+      ),
+    ).toBe(false);
+  });
+
+  it('stops inside a side room after one parent restore without replaying its main room', () => {
+    const firstSide = nLocalOccurrenceId('combat05', 'sideDoor2');
+    const blockedSide = nLocalOccurrenceId('combat05', 'sideDoor1');
+    const main = nOccurrenceId('combat05');
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: firstSide },
+        'Encounter',
+      ),
+      encounterKey: 'GeneratedNSubRoom_Bigger',
+    });
+    const biome = simulateProject(catalogWithImpossibleEncounters(['GeneratedNSubRoom']), project)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (
+      biome?.authoring !== 'complete' ||
+      biome.validity !== 'invalid' ||
+      !('assessmentPrefix' in biome)
+    ) {
+      throw new Error('side-room blocker did not produce a bounded Hub walk');
+    }
+
+    expect(biome.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      origin: createHubVisitAddress(nBiome, 'hub', 1),
+      phase: 'localRoomLifecycle',
+      enteredLocalRooms: [
+        expect.objectContaining({ occurrenceId: firstSide }),
+        expect.objectContaining({ occurrenceId: blockedSide }),
+      ],
+      parentRestores: [
+        expect.objectContaining({ room: expect.objectContaining({ occurrenceId: main }) }),
+      ],
+    });
+    expect(
+      biome.history.ledgers.roomRestores.filter((event) => event.restoreKind === 'parent'),
+    ).toHaveLength(1);
+    expect(
+      biome.history.ledgers.roomRestores.filter((event) => event.restoreKind === 'hub'),
+    ).toHaveLength(0);
+    expect(
+      biome.history.events.filter(
+        (event) =>
+          event.kind === 'roomEntered' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === main,
+      ),
+    ).toHaveLength(1);
   });
 
   it('publishes the reached visit as coverage at a Hub local frontier', () => {

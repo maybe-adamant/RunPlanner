@@ -24,8 +24,10 @@ import type {
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
   appendCompleteN,
+  createRepresentativeNProject,
   createRepresentativeNOPQProject,
   nBiome,
+  nOccurrenceId,
 } from '@run-planner/test-fixtures';
 import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
 
@@ -87,6 +89,29 @@ function firstInteraction(
 }
 
 describe('workspace candidate interaction families', () => {
+  it('keeps an unrelated Hub door reward editor loadable under an invalid board peer', async () => {
+    const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: invalidPeer,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const services = createStructuredWorkspaceTestServices();
+    const workspace = services.structuredWorkspace.project(
+      simulateProjectAssembly(catalog, project),
+    );
+    const owner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+    const interaction = workspace.interactions.rewards.get(semanticAddressKey(owner));
+    if (interaction === undefined) throw new Error('Hub board reward interaction is missing');
+
+    const domain = await interaction.load();
+    expect(
+      domain.offers.find((entry) => entry.value.rewardType === 'SpellDrop')?.evaluation,
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+    expect([...workspace.interactions.hubSlots.values()].some((slot) => !slot.selected)).toBe(true);
+    expect(workspace.interactions.hubVisitOrders.size).toBe(1);
+  });
+
   it('binds a topology-free authored-choice start lazily from its declaration domain', () => {
     const events: CandidateEvaluationEvent[] = [];
     const services = createStructuredWorkspaceTestServices({

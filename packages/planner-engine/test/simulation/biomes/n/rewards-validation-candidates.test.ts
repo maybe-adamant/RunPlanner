@@ -579,16 +579,16 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(biome.rewards.validity).toBe('valid');
   });
 
-  it('discards a failed first Hub-board completion before accepting a later sibling proposal', () => {
+  it('assesses a resolved participant without existentially completing unresolved Hub peers', () => {
     let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'OpenHubSlot',
-      slot: createHubSlotAddress(nBiome, 'hub', 'story'),
-      occurrenceId: nOccurrenceId('story'),
-      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('story'),
+      slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
+      occurrenceId: nOccurrenceId('combat12'),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat12'),
     });
-    // Free the singleton Max Health entry. The unresolved story slot first
-    // proposes that same entry, so the focused combat09 candidate initially
-    // fails and must be retried with a later story-domain proposal.
+    // Free the singleton Max Health entry. Combat 12 remains unresolved:
+    // candidate evaluation must use the current partial board and must not
+    // search that sibling's complete reward domain for a completion witness.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
@@ -610,9 +610,18 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'incomingReward',
       result: { supported: true, findings: [] },
     });
+    expect(
+      simulateProject(catalog, project)
+        .routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'N'),
+    ).toMatchObject({
+      authoring: 'complete',
+      validity: 'invalid',
+      findings: [expect.objectContaining({ code: 'rewardMissing' })],
+    });
   });
 
-  it('reports the authored sibling cohort while one Hub reward is repaired structurally', () => {
+  it('keeps participant repair total while the complete authored board remains invalid', () => {
     let project = createRepresentativeNProject();
     const repeatedDefault = {
       rewardType: 'Boon' as const,
@@ -635,10 +644,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       session.evaluate({ kind: 'incomingReward', reward, value: repeatedDefault }),
     ).toMatchObject({
       kind: 'incomingReward',
-      result: {
-        supported: false,
-        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
-      },
+      result: { supported: true, findings: [] },
     });
     expect(
       session.evaluate({
@@ -651,14 +657,15 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     ).toMatchObject({
       kind: 'incomingReward',
-      result: {
-        supported: false,
-        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
-      },
+      result: { supported: true, findings: [] },
+    });
+    expect(completeN(project).biome).toMatchObject({
+      validity: 'invalid',
+      findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
     });
   });
 
-  it('still rejects a repeated Hub source when no hidden generation order reaches the cap', () => {
+  it('separates focused participant support from complete-board source failure', () => {
     let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat11')),
@@ -682,10 +689,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     ).toMatchObject({
       kind: 'incomingReward',
-      result: {
-        supported: false,
-        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
-      },
+      result: { supported: true, findings: [] },
     });
 
     project = applyProjectCommand(project, catalog, {
@@ -698,6 +702,76 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(biome.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardSourceUnavailable' }),
     );
+  });
+
+  it('keeps unrelated board reward authoring available under a retained-invalid peer', () => {
+    const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
+    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: invalidPeer,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    expect(biome).toMatchObject({
+      validity: 'invalid',
+      findings: [
+        expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: invalidPeer }),
+      ],
+    });
+
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+        value: { rewardType: 'SpellDrop' },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+  });
+
+  it('derives board candidates independently from Hub visit and nested-room chronology', () => {
+    const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+    const value = { rewardType: 'SpellDrop' } as const;
+    const baseline = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, createRepresentativeNProject()),
+    ).evaluate({ kind: 'incomingReward', reward, value });
+
+    let blocked = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat02', 'combat05', 'miniBoss01', 'combat11', 'combat23', 'combat09'],
+    });
+    blocked = applyProjectCommand(blocked, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms'),
+      occurrenceIds: [nLocalOccurrenceId('combat02', 'sideDoor1')],
+    });
+    blocked = applyProjectCommand(blocked, catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(
+        nBiome,
+        nOccurrenceId('combat02'),
+        'sideRooms',
+        'sideDoor2',
+      ),
+      generation: 'notGenerated',
+    });
+    const blockedAssembly = simulateProjectAssembly(catalog, blocked);
+    expect(
+      blockedAssembly.evaluation.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'N'),
+    ).toMatchObject({ validity: 'invalid' });
+
+    const candidate = createPreparedProjectCandidateSession(catalog, blockedAssembly).evaluate({
+      kind: 'incomingReward',
+      reward,
+      value,
+    });
+    expect(candidate).toEqual(baseline);
   });
 
   it('jointly consumes generated side siblings but acquires only the entered local rooms', () => {
