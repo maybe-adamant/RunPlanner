@@ -282,6 +282,51 @@ describe('BiomeWorkspace', () => {
     expect(start.textContent).not.toContain('Choose the first room');
   });
 
+  it('edits authored start identity beside the read-only room workbench and undoes exactly', async () => {
+    const occurrenceId = createOccurrenceId('start-identity-surface');
+    const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId,
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
+    const identity = screen.getByRole('region', { name: 'Start room identity' });
+    const workbench = document.querySelector('.biome-occurrence-workbench');
+    if (!(workbench instanceof HTMLElement)) throw new Error('start workbench is missing');
+    expect(within(workbench).queryByLabelText('Start room')).toBeNull();
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(within(identity).getByRole('button', { name: 'Start room' }));
+    const replacement = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      );
+    if (replacement === undefined) throw new Error('F start has no replacement room');
+    await view.user.click(replacement);
+
+    const authoredStart = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
+        ?.gameName;
+    expect(authoredStart()).not.toBe('F_Opening01');
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      occurrence,
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authoredStart()).toBe('F_Opening01');
+  });
+
   it('uses one concise player-facing name for the Hub rail stop', () => {
     renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
 
@@ -330,7 +375,7 @@ describe('BiomeWorkspace', () => {
     expect(clear.closest('.biome-structure-title-row')).not.toBeNull();
   });
 
-  it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', () => {
+  it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     const biome = workspaceBiome(view.application, 'Surface', 'N');
     const opening = biome.rail.find(
@@ -376,6 +421,13 @@ describe('BiomeWorkspace', () => {
         '.biome-rail-selection',
       )?.textContent,
     ).toContain(firstVisit.mainReward.label);
+    await view.user.click(hubRailButton());
+    const hubCard = screen.getByRole('article', {
+      name: `${firstVisit.node.room.label} Hub room`,
+    });
+    expect(hubCard.querySelector('.hub-main-reward')?.textContent).toContain(
+      firstVisit.mainReward.label,
+    );
   });
 
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
@@ -397,7 +449,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
     await view.user.selectOptions(
       within(inspector).getByLabelText('Side Room 03 generation'),
       'notGenerated',
@@ -420,7 +472,8 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
     );
-    expect(within(inspector).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(within(inspector).getByText(/Incoming door reward:/)).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('returns from local Hub reward context to the exact closed board picker without authoring', async () => {
@@ -567,8 +620,10 @@ describe('BiomeWorkspace', () => {
     const before = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (before === null) throw new Error('P selected room rail context is missing');
     const beforeText = before.textContent;
-    act(() => view.application.store.dispatch(semanticOwnerFocused(picked.room.address)));
-    await view.user.click(within(inspector).getByRole('button', { name: 'Reward' }));
+    const pickedDoor = within(inspector).getByRole('article', {
+      name: `${picked.door.room.label} room offer`,
+    });
+    await view.user.click(within(pickedDoor).getByRole('button', { name: 'Reward' }));
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .find(
@@ -583,9 +638,7 @@ describe('BiomeWorkspace', () => {
     const after = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (after === null) throw new Error('P updated room rail context is missing');
     expect(after.textContent).not.toBe(beforeText);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      picked.room.address,
-    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
   });
 
   it('keeps the owning decision rail selected when the next physical target takes focus', async () => {
@@ -630,10 +683,10 @@ describe('BiomeWorkspace', () => {
     );
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
-    expect(within(inspector).queryByText('Continue from this room')).toBeNull();
+    expect(within(inspector).getByText('Continue from this room')).toBeTruthy();
     const continuation = within(inspector).getByRole('button', { name: 'Add next decision' });
     expect(continuation.classList.contains('primary-action')).toBe(true);
-    expect(continuation.closest('.workbench-action-row')).not.toBeNull();
+    expect(continuation.closest('.frontier-actions')).not.toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
     await view.user.click(continuation);
@@ -668,6 +721,35 @@ describe('BiomeWorkspace', () => {
     );
     expect(screen.getByRole('complementary', { name: 'Details' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
+  });
+
+  it('renders topology-owned and terminal outgoing states on their exact N occurrences', () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceId('combat02'))),
+      ),
+    );
+    let outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole(
+      'region',
+      { name: 'Outgoing doors' },
+    );
+    expect(
+      within(outgoing).getByText('Continuation is owned by this room’s local visits.'),
+    ).toBeTruthy();
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceId('preboss'))),
+      ),
+    );
+    outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
+      name: 'Outgoing doors',
+    });
+    expect(
+      within(outgoing).getByText('No physical outgoing door before biome completion.'),
+    ).toBeTruthy();
   });
 
   it('renders N’s entry frontiers without an unauthored Hub rail stop', () => {
@@ -1120,7 +1202,7 @@ describe('BiomeWorkspace', () => {
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });
 
-  it('focuses a fixed Story reward inside its owning occurrence workbench', () => {
+  it('focuses a fixed Story reward on its owning predecessor door', () => {
     const project = createRepresentativeNOPQProject();
     const view = renderWorkspace(project, 'Surface', 'P');
     const storyOccurrenceId = pOccurrenceId('P_Story01', 7, 1);
@@ -1137,9 +1219,10 @@ describe('BiomeWorkspace', () => {
     );
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const workbench = inspector.querySelector<HTMLElement>('.biome-occurrence-workbench');
-    if (workbench === null) throw new Error('P Story occurrence inspector is missing');
-    expect(within(workbench).getByText(/^Fixed reward:/)).toBeTruthy();
+    const door = within(inspector).getByRole('article', {
+      name: `${story.room.label} room offer`,
+    });
+    expect(within(door).getByText('Door reward')).toBeTruthy();
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {

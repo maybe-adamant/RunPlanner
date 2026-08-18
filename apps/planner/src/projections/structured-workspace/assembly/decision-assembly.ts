@@ -57,16 +57,41 @@ import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
+import { projectWorkspaceDoorContract } from './door-contract';
 
 export type WorkspaceAuthoredBatchDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
 };
 type AuthoredBatchDecision = WorkspaceAuthoredBatchDecision;
 type AuthoredBatchTarget = WorkspaceAuthoredBatchDecision['normal']['targets'][number];
+
+function additionalRewardPreview(
+  input: WorkspaceDecisionAssemblyInput,
+  decision: AuthoredBatchDecision,
+  kind: 'naturalChaos' | 'zagreusContract',
+): 'hidden' | 'visible' {
+  if (decision.source.kind !== 'occurrence') {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(createExitDecisionAddress(input.source.biome, decision.source))} has ${kind} without an occurrence source`,
+    );
+  }
+  const sourceOccurrence = input.source.occurrence(decision.source.occurrenceId);
+  const declaration =
+    sourceOccurrence === undefined
+      ? undefined
+      : requireWorkspaceRoom(input.catalog, sourceOccurrence.gameName).additionalExits.find(
+          (exit) => exit.kind === kind,
+        );
+  if (declaration === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${decision.source.occurrenceId} has authored ${kind} without a declaration`,
+    );
+  }
+  return declaration.physicalExit.behavior.rewardPreview;
+}
 
 type WorkspaceMissingTargetSetupPrerequisite = Extract<
   WorkspaceMissingTargetAuthoring,
@@ -408,42 +433,17 @@ function projectAuthoredTargetWithOverlay(
       ...(roomPicker === undefined ? {} : { roomPicker }),
     }),
   );
+  const door = projectWorkspaceDoorContract(
+    occurrenceAssembly.node.room,
+    declaredExit?.behavior.rewardPreview ?? 'visible',
+  );
   const node = Object.freeze({
     ...occurrenceAssembly.node,
+    incomingDoor: door,
+    inspectorPresentation: 'doorTarget' as const,
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: markerForTarget,
   });
-  const doorRewardLabel = (() => {
-    switch (node.room.roomLocal.kind) {
-      case 'fixed':
-        return node.room.roomLocal.offer === null ? undefined : node.room.roomLocal.summary;
-      case 'incomingReward':
-        return node.room.roomLocal.control.offer === null
-          ? undefined
-          : summarizeRewardOffer(input.catalog, node.room.roomLocal.control.offer);
-      case 'none':
-      case 'fields':
-      case 'ship':
-      case 'shop':
-        return undefined;
-    }
-  })();
-  const fieldsCageOffers =
-    node.room.roomLocal.kind === 'fields'
-      ? Object.freeze(
-          node.room.roomLocal.cages.flatMap((cage) =>
-            cage.control.offer === null
-              ? []
-              : [
-                  Object.freeze({
-                    cageKey: cage.key,
-                    cageLabel: cage.label,
-                    rewardLabel: summarizeRewardOffer(input.catalog, cage.control.offer),
-                  }),
-                ],
-          ),
-        )
-      : undefined;
   return Object.freeze({
     node,
     occurrenceInteractionRequirements: occurrenceAssembly.occurrenceInteractionRequirements,
@@ -453,8 +453,7 @@ function projectAuthoredTargetWithOverlay(
       ...(evaluatedTarget?.room.clockworkReward === undefined
         ? {}
         : { clockworkReward: evaluatedTarget.room.clockworkReward }),
-      ...(doorRewardLabel === undefined ? {} : { doorRewardLabel }),
-      ...(fieldsCageOffers === undefined ? {} : { fieldsCageOffers }),
+      door,
       exitKey: target.exitKey,
       index:
         evaluatedTarget?.exit.index ??
@@ -465,7 +464,7 @@ function projectAuthoredTargetWithOverlay(
       selected,
       retained: evaluatedTarget === undefined || physicalState === 'unavailable',
       nextPath: evaluatedTarget?.continuation ?? fallbackContinuation,
-      room: node.room,
+      room: door.room,
       ...(occurrence.state.kind === 'counted' &&
       occurrence.anomalyReplacement === undefined &&
       anomalyTakeoverAvailable
@@ -616,7 +615,7 @@ function batchInteractionRequirements(
       ? undefined
       : Object.freeze({
           owner: batch.naturalChaos.owner,
-          occurrence: batch.naturalChaos.chaosRoom.address,
+          occurrence: batch.naturalChaos.door.room.address,
           mapChoices: batch.naturalChaos.mapChoices,
         });
   if (
@@ -830,6 +829,7 @@ function assembleBatchDecision(
                 : zagreusAdditional.occurrenceId,
               zagreusAdditional.key,
             ),
+            rewardPreview: additionalRewardPreview(input, decision, 'zagreusContract'),
             selected:
               decision.selection.kind === 'additional' &&
               decision.selection.additionalExitKey === zagreusAdditional.key,
@@ -882,6 +882,7 @@ function assembleBatchDecision(
               }),
             ),
             owner: additionalOwner,
+            rewardPreview: additionalRewardPreview(input, decision, 'naturalChaos'),
             selected:
               decision.selection.kind === 'additional' &&
               decision.selection.additionalExitKey === naturalChaosAdditional.key,
@@ -898,7 +899,10 @@ function assembleBatchDecision(
       ? {}
       : {
           zagreusContract: Object.freeze({
-            contractRoom: zagreusContract.contractRoom,
+            door: projectWorkspaceDoorContract(
+              zagreusContract.contractRoom,
+              zagreusContract.rewardPreview,
+            ),
             marker: zagreusContract.marker,
             owner: zagreusContract.owner,
             selected: zagreusContract.selected,
@@ -908,7 +912,7 @@ function assembleBatchDecision(
       ? {}
       : {
           naturalChaos: Object.freeze({
-            chaosRoom: naturalChaos.chaosRoom,
+            door: projectWorkspaceDoorContract(naturalChaos.chaosRoom, naturalChaos.rewardPreview),
             mapChoices: naturalChaos.mapChoices,
             marker: naturalChaos.marker,
             owner: naturalChaos.owner,
@@ -1016,19 +1020,22 @@ function assembleBatchDecision(
     ]),
     workbenches: Object.freeze([
       ...projectedTargets.map((target) => target.node),
-      ...(zagreusContract === undefined ? [] : [zagreusContract.assembly.node]),
+      ...(zagreusContract === undefined
+        ? []
+        : [
+            Object.freeze({
+              ...zagreusContract.assembly.node,
+              incomingDoor: batch.zagreusContract!.door,
+              inspectorPresentation: 'doorTarget' as const,
+            }),
+          ]),
       ...(naturalChaos === undefined
         ? []
         : [
             Object.freeze({
               ...naturalChaos.assembly.node,
-              naturalChaosExit: Object.freeze({
-                chaosRoom: naturalChaos.chaosRoom,
-                mapChoices: naturalChaos.mapChoices,
-                marker: naturalChaos.marker,
-                owner: naturalChaos.owner,
-                selected: naturalChaos.selected,
-              }),
+              incomingDoor: batch.naturalChaos!.door,
+              inspectorPresentation: 'doorTarget' as const,
             }),
           ]),
     ]),

@@ -14,6 +14,7 @@ import {
 import {
   CompletenessContractError,
   evaluateBiomeCompleteness,
+  evaluateOccurrenceOutgoingStatus,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -48,6 +49,50 @@ function findingKeys(project: ProjectDocument): readonly string[] {
 }
 
 describe('F takeover completeness', () => {
+  it('publishes closed occurrence-local outgoing states without borrowing a global frontier', () => {
+    const startProject = createFStart();
+    const startPlan = fPlan(startProject);
+    const startCompleteness = evaluateBiomeCompleteness(catalog, fBiome, startPlan);
+    expect(
+      evaluateOccurrenceOutgoingStatus({
+        biome: fBiome,
+        catalog,
+        completeness: startCompleteness,
+        findings: startCompleteness.findings,
+        occurrenceId: startPlan.topology!.startOccurrenceId,
+        plan: startPlan,
+      }),
+    ).toMatchObject({
+      kind: 'frontier',
+      capability: 'createBatch',
+      owner: fDecision(),
+    });
+
+    const authoredProject = createFOpeningTarget();
+    const authoredPlan = fPlan(authoredProject);
+    const authoredCompleteness = evaluateBiomeCompleteness(catalog, fBiome, authoredPlan);
+    expect(
+      evaluateOccurrenceOutgoingStatus({
+        biome: fBiome,
+        catalog,
+        completeness: authoredCompleteness,
+        findings: authoredCompleteness.findings,
+        occurrenceId: authoredPlan.topology!.startOccurrenceId,
+        plan: authoredPlan,
+      }),
+    ).toMatchObject({ kind: 'authoredDecision', owner: fDecision() });
+    expect(
+      evaluateOccurrenceOutgoingStatus({
+        biome: fBiome,
+        catalog,
+        completeness: authoredCompleteness,
+        findings: authoredCompleteness.findings,
+        occurrenceId: fCombatId,
+        plan: authoredPlan,
+      }),
+    ).toMatchObject({ kind: 'frontier', owner: fDecision(fCombatId) });
+  });
+
   it('rejects evaluation outside the declared F route placement', () => {
     expect(() =>
       evaluateBiomeCompleteness(catalog, createBiomeAddress('Surface', 'F'), fPlan(createFStart())),

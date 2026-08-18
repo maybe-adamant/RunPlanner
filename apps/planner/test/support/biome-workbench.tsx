@@ -244,6 +244,7 @@ export function renderOccurrenceWorkbench(
       if (node === undefined) return <p>No occurrence workbench</p>;
       return (
         <OccurrenceWorkbench
+          {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
           interactions={workspace.interactions}
           presentation={node.inspectorPresentation}
           room={node.room}
@@ -267,6 +268,7 @@ export function renderStaticOccurrenceWorkbench(
   return render(
     <Provider store={store}>
       <OccurrenceWorkbench
+        {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
         interactions={workspace.interactions}
         presentation={node.inspectorPresentation}
         room={node.room}

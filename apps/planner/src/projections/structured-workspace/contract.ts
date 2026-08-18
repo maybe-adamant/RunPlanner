@@ -1045,6 +1045,7 @@ export interface WorkspaceFieldsCageDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  readonly summary: string;
 }
 
 export interface WorkspaceFieldsOptionalRewardDescriptor {
@@ -1254,6 +1255,7 @@ interface WorkspaceLocalVisitSlotBase {
 /** A generated local target publishes its retained ordinary occurrence workbench. */
 export type WorkspaceLocalVisitSlot =
   | (WorkspaceLocalVisitSlotBase & {
+      readonly door: WorkspaceDoorContract;
       readonly generation: 'generated';
       readonly room: WorkspaceRoomSummary;
     })
@@ -1283,6 +1285,7 @@ export type WorkspaceRoomLocal =
       readonly kind: 'incomingReward';
       readonly control: WorkspaceCountedRewardControl;
       readonly clockworkReward?: 'goal' | 'nonGoal';
+      readonly summary: string;
     }
   | {
       readonly kind: 'fields';
@@ -1347,7 +1350,7 @@ export interface WorkspaceRoomSummary {
 }
 
 export interface WorkspaceZagreusContractControl {
-  readonly contractRoom: WorkspaceRoomSummary;
+  readonly door: WorkspaceDoorContract;
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
   readonly selected: boolean;
@@ -1361,7 +1364,7 @@ export interface WorkspaceZagreusSpawnControl {
 }
 
 export interface WorkspaceNaturalChaosExitControl {
-  readonly chaosRoom: WorkspaceRoomSummary;
+  readonly door: WorkspaceDoorContract;
   readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
@@ -1379,17 +1382,30 @@ export interface WorkspaceAnomalyControl {
   readonly success: boolean;
 }
 
-/** Read-only identity for one active Fields cage whose reward offer is prepared. */
-export interface WorkspaceFieldsCageOfferSummary {
-  readonly cageKey: string;
-  readonly cageLabel: string;
-  readonly rewardLabel: string;
+export interface WorkspaceDoorVisibleReward {
+  readonly control?: WorkspaceRewardControl;
+  readonly key: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly offer: ResolvedRewardOffer | null;
+  readonly summary: string;
+}
+
+/** One immutable predecessor-owned physical-door handoff product. */
+export interface WorkspaceDoorContract {
+  readonly rewardPreview:
+    | { readonly kind: 'hidden' }
+    | { readonly kind: 'none' }
+    | {
+        readonly kind: 'visible';
+        readonly rewards: readonly WorkspaceDoorVisibleReward[];
+      };
+  readonly room: WorkspaceRoomSummary;
 }
 
 export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
-  /** Compact predecessor-generated handoff summary for the lightweight door card. */
-  readonly doorRewardLabel?: string;
+  readonly door: WorkspaceDoorContract;
   readonly exitKey: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
@@ -1397,9 +1413,8 @@ export interface WorkspacePhysicalTarget {
   readonly selected: boolean;
   readonly retained: boolean;
   readonly nextPath: 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
+  /** Occurrence workbench identity; door UI and decision rails consume `door`. */
   readonly room: WorkspaceRoomSummary;
-  /** Bounded comparison summary; all Fields reward editors stay on the occurrence workbench. */
-  readonly fieldsCageOffers?: readonly WorkspaceFieldsCageOfferSummary[];
   /** A declaration-owned target capability, not a React eligibility result. */
   readonly anomalyTakeover?: {
     readonly label: string;
@@ -1529,6 +1544,8 @@ export interface WorkspaceHubSlot {
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly open: boolean;
   readonly physicalDoorId: number;
+  /** Exact immutable main-door handoff owned by the Hub slot. */
+  readonly door?: WorkspaceDoorContract;
   readonly room?: WorkspaceRoomSummary;
   readonly roomKind: RoomDeclaration['kind'];
   readonly visited: boolean;
@@ -1539,6 +1556,8 @@ export type WorkspaceHubVisitState = 'authored' | 'next' | 'locked';
 export interface WorkspaceHubVisit {
   readonly authoring: WorkspaceHubVisitState;
   readonly marker: WorkspaceMarker;
+  /** The authored visit carries its slot-owned door without reconstructing reward identity. */
+  readonly door?: WorkspaceDoorContract;
   readonly room?: WorkspaceRoomSummary;
   readonly hubSlotKey?: string;
   readonly visitIndex: number;
@@ -1697,11 +1716,11 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   /** Parent-owned local topology; local payloads remain ordinary occurrence workbenches. */
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly marker: WorkspaceMarker;
-  /** Existing natural-Chaos map identity, edited inside that retained occurrence. */
-  readonly naturalChaosExit?: WorkspaceNaturalChaosExitControl;
   /** A completed-Hub outer decision rendered through its visible Preboss room. */
   readonly runState?: WorkspaceRunStateLauncher;
-  readonly inspectorPresentation: 'full' | 'hubRoomLocal';
+  readonly inspectorPresentation: 'doorTarget' | 'full' | 'hubRoomLocal';
+  /** Predecessor-owned door context. The occurrence may only render this read-only. */
+  readonly incomingDoor?: WorkspaceDoorContract;
   readonly sourceDecisionRemoval?: WorkspaceStageDecisionRemoval;
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
@@ -1771,10 +1790,35 @@ export type WorkspaceNode =
   | WorkspaceOccurrenceWorkbenchNode
   | WorkspaceCompletionNode;
 
+export type WorkspaceOccurrenceStageOutgoing =
+  | {
+      readonly kind: 'authoredDecision';
+      readonly decisionNodeKey: string;
+    }
+  | {
+      readonly kind: 'frontier';
+      readonly frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
+    }
+  | {
+      readonly kind: 'blockedOrUnentered';
+      readonly marker: WorkspaceMarker;
+      readonly message: string;
+    }
+  | {
+      readonly kind: 'topologyOwned';
+      readonly label: string;
+      readonly marker: WorkspaceMarker;
+    }
+  | {
+      readonly kind: 'terminal';
+      readonly label: string;
+      readonly marker: WorkspaceMarker;
+    };
+
 /** Projection-owned occurrence/decision composition consumed by React as a keyed stage. */
 export interface WorkspaceOccurrenceStage {
+  readonly outgoing: WorkspaceOccurrenceStageOutgoing;
   readonly sourceOccurrenceNodeKey: string;
-  readonly outgoingDecisionNodeKey?: string;
 }
 
 export interface WorkspaceHubVisitRailEntry {

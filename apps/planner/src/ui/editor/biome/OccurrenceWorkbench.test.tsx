@@ -305,6 +305,29 @@ function enteredShopProject(): {
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('presents an incoming ordinary room identity read-only under its target-owned door control', () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const node = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    );
+    if (node === undefined) throw new Error('ordinary entered occurrence is missing');
+
+    expect(node.inspectorPresentation).toBe('doorTarget');
+    expect(node.room.roomPicker).toMatchObject({
+      address: expect.objectContaining({ kind: 'target' }),
+      kind: 'targetRoomPicker',
+    });
+    expect(screen.getByRole('heading', { level: 3, name: node.room.label })).toBeTruthy();
+    expect(screen.queryByLabelText('Room')).toBeNull();
+  });
+
   it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
     renderStaticOccurrenceWorkbench(
       createFConversionFrontierProject('GiftDrop').project,
@@ -836,10 +859,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrenceId),
       application,
     );
-    const reward = screen.getByLabelText('Reward');
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
     expect((cleared as HTMLInputElement).checked).toBe(true);
-    expect(reward.compareDocumentPosition(cleared) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(screen.queryByLabelText('Reward')).toBeNull();
+    expect(screen.getByText(/Incoming door reward/)).toBeTruthy();
     expect(screen.queryByLabelText('Map')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     expect(screen.queryByLabelText('Customize')).toBeNull();
@@ -853,6 +876,7 @@ describe('OccurrenceWorkbench', () => {
       decisionContainingOccurrence(occurrenceId),
       application,
     );
+    expect(screen.getByLabelText('Reward')).toBeTruthy();
     const map = screen.getByLabelText('Map');
     const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
     expect((map as HTMLSelectElement).value).toBe('B_Combat01');

@@ -139,7 +139,7 @@ describe('structured workspace Hub assembly', () => {
     expect(
       assembly.workbenches.every((node) =>
         localOccurrenceIds.has(node.room.occurrenceId)
-          ? node.inspectorPresentation === 'full'
+          ? node.inspectorPresentation === 'doorTarget'
           : node.inspectorPresentation === 'hubRoomLocal',
       ),
     ).toBe(true);
@@ -153,6 +153,15 @@ describe('structured workspace Hub assembly', () => {
     const visited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat02');
     const unvisited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat03');
     expect(visited).toMatchObject({ canClose: false, open: true, visited: true });
+    const visitedWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.occurrenceId === visited?.room?.occurrenceId,
+    );
+    const visitedVisit = assembly.node.visits.find(
+      (visit) => visit.hubSlotKey === visited?.hubSlotKey,
+    );
+    expect(visited?.door).toBeDefined();
+    expect(visitedWorkbench?.incomingDoor).toBe(visited?.door);
+    expect(visitedVisit?.door).toBe(visited?.door);
     expect(unvisited).toMatchObject({ canClose: true, open: true, visited: false });
     const closeSlot = assembly.hubInteractionRequirements[0]?.slots.find(
       (slot) => slot.owner.hubSlotKey === 'combat03',

@@ -51,9 +51,11 @@ import type {
   DecisionRunStateAvailability,
   DecisionRunStateSnapshot,
   SelectedLevelResolutionAssessment,
+  OccurrenceOutgoingStatus,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
+  evaluateOccurrenceOutgoingStatus,
   materializedBiomePrefixCoveragePoint,
 } from '@run-planner/engine/simulation';
 
@@ -98,6 +100,8 @@ export interface WorkspaceBiomeSource {
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
+  /** Closed engine-owned outgoing state for one exact retained occurrence. */
+  readonly outgoingStatus: (occurrenceId: OccurrenceId) => OccurrenceOutgoingStatus;
   /** Exact engine-retained room whose own action currently blocks assessment. */
   readonly blockedOccurrenceRoom: (occurrenceId: OccurrenceId) => CanonicalAuthoredRoom | undefined;
   /** True only when every evaluated branch records the engine-owned Forfeit veto. */
@@ -737,6 +741,15 @@ function createWorkspaceBiomeSource(
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
       blockedOccurrenceRoom(createOccurrenceAddress(biome, occurrenceId)),
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
+    outgoingStatus: (occurrenceId: OccurrenceId) =>
+      evaluateOccurrenceOutgoingStatus({
+        biome,
+        catalog,
+        completeness,
+        findings: evaluation?.findings ?? Object.freeze([]),
+        occurrenceId,
+        plan,
+      }),
     ordinaryRewardForfeited: (owner: SemanticAddress) =>
       forfeitedRewardOwnersByBranch.length > 0 &&
       forfeitedRewardOwnersByBranch.every((owners) => owners.has(semanticAddressKey(owner))),

@@ -67,6 +67,7 @@ export type OrdinaryBatchCreationEligibility =
  * being flattened into ordinary batch doors by application projections.
  */
 export interface DeclaredPhysicalExit {
+  readonly behavior: RoomExit['behavior'];
   readonly compatibilityPolicyKey: string;
   readonly exitKey: string;
   readonly index: number;
@@ -95,6 +96,7 @@ function physicalExit(
   exit: RoomExit,
 ): DeclaredPhysicalExit {
   return Object.freeze({
+    behavior: exit.behavior,
     compatibilityPolicyKey: exit.compatibilityPolicyKey,
     exitKey,
     index: exit.index,

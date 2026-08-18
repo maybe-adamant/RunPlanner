@@ -1,8 +1,4 @@
-import {
-  semanticAddressKey,
-  type OccurrenceAddress,
-  type ProjectCommand,
-} from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   Fragment,
   useLayoutEffect,
@@ -18,7 +14,7 @@ import {
   reconcileRankedPrefix,
   workspaceInteractionKey,
   type RankedPrefixDropTarget,
-  type WorkspaceCommandIntent,
+  type WorkspaceDoorContract,
   type WorkspaceEncounterInteraction,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
@@ -41,22 +37,18 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { CandidateSelect } from './CandidateSelect';
-import { hubMainRewardPresentation } from './hubMainRewardPresentation';
-import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
+import { DoorRewardEditor } from './DoorRewardEditor';
 
 const emptyEncounterPicker: import('@planner/projections/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
 
 interface OccurrenceWorkbenchProps {
+  readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
-  readonly nextDecisionIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
-  >;
   /** Hub visits retain their editable main offer on the Hub board. */
-  readonly presentation: 'full' | 'hubRoomLocal';
-  readonly naturalChaosExit?: WorkspaceNaturalChaosExitControl;
+  readonly presentation: 'doorTarget' | 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
 }
@@ -167,6 +159,15 @@ function LocalVisitSlotRow({
       <td>
         <LocalVisitOrderSelect interactions={interactions} localVisit={localVisit} slot={slot} />
       </td>
+      <td>
+        {slot.generation !== 'generated' ? null : (
+          <DoorRewardEditor
+            door={slot.door}
+            idPrefix={`local-door-${slot.marker.focusKey}`}
+            interactions={interactions}
+          />
+        )}
+      </td>
     </tr>
   );
 }
@@ -198,6 +199,7 @@ function LocalVisitWorkbench({
               <th scope="col">Priority</th>
               <th scope="col">Generated</th>
               <th scope="col">Visit order</th>
+              <th scope="col">Door reward</th>
             </tr>
           </thead>
           <tbody>
@@ -216,7 +218,7 @@ function LocalVisitWorkbench({
   );
 }
 
-function NaturalChaosMapWorkbench({
+export function NaturalChaosMapWorkbench({
   control,
   interactions,
 }: {
@@ -229,12 +231,12 @@ function NaturalChaosMapWorkbench({
     workspaceInteractionKey(control.owner),
   );
   return (
-    <label className="field-control" htmlFor={`chaos-map-${control.chaosRoom.occurrenceId}`}>
+    <label className="field-control" htmlFor={`chaos-map-${control.door.room.occurrenceId}`}>
       <span>Map</span>
       <select
-        id={`chaos-map-${control.chaosRoom.occurrenceId}`}
+        id={`chaos-map-${control.door.room.occurrenceId}`}
         onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
-        value={control.chaosRoom.gameName}
+        value={control.door.room.gameName}
       >
         {control.mapChoices.map((choice) => (
           <option key={choice.value} value={choice.value}>
@@ -246,25 +248,21 @@ function NaturalChaosMapWorkbench({
   );
 }
 
-function HubRewardContext({
-  interactions,
-  room,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
-}) {
+function HubRewardContext({ door }: { readonly door?: WorkspaceDoorContract }) {
   const dispatch = useAppDispatch();
-  const context = hubMainRewardPresentation(room, interactions);
-  if (context === undefined) return null;
+  const preview = door?.rewardPreview;
+  const reward =
+    preview?.kind === 'visible' && preview.rewards.length === 1 ? preview.rewards[0] : undefined;
+  if (reward === undefined) return null;
 
   return (
     <section aria-label="Hub reward" className="hub-reward-context">
       <span className="hub-reward-context-label">Hub reward</span>
-      <span className="hub-reward-summary">{context.summary}</span>
-      {context.control === undefined ? null : (
+      <span className="hub-reward-summary">{reward.summary}</span>
+      {reward.control === undefined ? null : (
         <button
           className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(context.marker.address))}
+          onClick={() => dispatch(semanticOwnerFocused(reward.marker.address))}
           type="button"
         >
           Edit Hub reward
@@ -1275,22 +1273,43 @@ function RoomCustomizationDisclosure({
  */
 export function RoomOfferEditor({
   idPrefix,
+  incomingDoor,
   interactions,
   presentation,
   room,
 }: {
   readonly idPrefix: string;
+  readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly presentation: 'full' | 'hubRoomLocal';
+  readonly presentation: 'doorTarget' | 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
 }) {
   const state = room.roomLocal;
   const showMainReward = presentation === 'full';
+  const visibleIncomingRewards =
+    presentation === 'doorTarget' && incomingDoor?.rewardPreview.kind === 'visible'
+      ? incomingDoor.rewardPreview.rewards
+      : Object.freeze([]);
 
   return (
     <>
       {presentation === 'hubRoomLocal' ? (
-        <HubRewardContext interactions={interactions} room={room} />
+        <HubRewardContext {...(incomingDoor === undefined ? {} : { door: incomingDoor })} />
+      ) : null}
+      {visibleIncomingRewards.length === 1 ? (
+        <p className="fixed-room-state">
+          Incoming door reward: {visibleIncomingRewards[0]!.summary}
+        </p>
+      ) : null}
+      {visibleIncomingRewards.length > 1 ? (
+        <dl className="fields-batch-summary fixed-room-state">
+          {visibleIncomingRewards.map((reward) => (
+            <div key={reward.key}>
+              <dt>{reward.label}</dt>
+              <dd>{reward.summary}</dd>
+            </div>
+          ))}
+        </dl>
       ) : null}
       {showMainReward && state.kind === 'none' ? (
         <p className="fixed-room-state">No room reward.</p>
@@ -1370,24 +1389,14 @@ export function RoomOfferEditor({
 
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
+  incomingDoor,
   interactions,
   localVisit,
-  naturalChaosExit,
-  nextDecisionIntent,
   presentation,
   room,
   runState,
 }: OccurrenceWorkbenchProps) {
-  const dispatch = useAppDispatch();
-  const executeIntent = useCommandIntent();
   const idPrefix = `occurrence-${room.occurrenceId}`;
-  const roomInteraction =
-    room.roomPicker === undefined
-      ? undefined
-      : requireWorkspaceInteraction(
-          interactions.rooms,
-          workspaceInteractionKey(room.roomPicker.address),
-        );
 
   return (
     <article className="room-card biome-occurrence-workbench">
@@ -1402,45 +1411,15 @@ export function OccurrenceWorkbench({
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>
-      {roomInteraction === undefined ? null : (
-        <RoomSelector
-          idPrefix={idPrefix}
-          interaction={roomInteraction}
-          label="Room"
-          onSelect={(gameName) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceOccurrenceRoom',
-                occurrence: room.address,
-                gameName,
-              }),
-            )
-          }
-        />
-      )}
-      {naturalChaosExit === undefined ? null : (
-        <NaturalChaosMapWorkbench control={naturalChaosExit} interactions={interactions} />
-      )}
       <RoomOfferEditor
         idPrefix={idPrefix}
+        {...(incomingDoor === undefined ? {} : { incomingDoor })}
         interactions={interactions}
         presentation={presentation}
         room={room}
       />
       {localVisit === undefined ? null : (
         <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-      )}
-      {nextDecisionIntent === undefined ? null : (
-        <div className="workbench-action-row">
-          <button
-            className="primary-action"
-            data-command={nextDecisionIntent.command.kind}
-            onClick={() => executeIntent(nextDecisionIntent)}
-            type="button"
-          >
-            Add next decision
-          </button>
-        </div>
       )}
     </article>
   );

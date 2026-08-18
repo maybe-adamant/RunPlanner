@@ -1,7 +1,6 @@
 import type {
   BatchRewardStoreAddress,
   ExitSelectionAddress,
-  ProjectCommand,
   TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -12,7 +11,6 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
-  type WorkspaceCommandIntent,
   type WorkspaceHubTakeoverInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
@@ -35,9 +33,10 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
-import { AnomalyIdentityControls } from './OccurrenceWorkbench';
+import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
+import { DoorRewardEditor } from './DoorRewardEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -92,7 +91,7 @@ function batchRewardStoreAddress(marker: WorkspaceMarker): BatchRewardStoreAddre
 }
 
 function roomStatus(target: WorkspacePhysicalTarget): string {
-  if (target.room.entered) return 'Door taken';
+  if (target.door.room.entered) return 'Door taken';
   if (target.selected) return 'Room selected';
   if (target.physicalState === 'unavailable') return 'Unavailable saved room';
   if (target.retained) return 'Saved room';
@@ -168,9 +167,10 @@ function TargetRow({
     (choice) => choice.value === target.exitKey,
   );
   const selection = exitSelectionAddress(node.selection);
+  const door = target.door;
   return (
     <article
-      aria-label={`${target.room.label} room offer`}
+      aria-label={`${door.room.label} room offer`}
       className="exit-row biome-target-row"
       data-available={target.physicalState === 'available'}
       data-picked={target.selected}
@@ -180,9 +180,9 @@ function TargetRow({
         <div className="exit-marker" aria-hidden="true" />
       ) : (
         <label className="picked-control">
-          <span className="visually-hidden">{`Pick ${target.room.label} from Door ${target.index}`}</span>
+          <span className="visually-hidden">{`Pick ${door.room.label} from Door ${target.index}`}</span>
           <input
-            aria-label={`Pick ${target.room.label} from Door ${target.index}`}
+            aria-label={`Pick ${door.room.label} from Door ${target.index}`}
             checked={selectionInteraction?.selectedExitKey === target.exitKey}
             disabled={target.physicalState === 'unavailable'}
             name={`selection-${node.key}`}
@@ -203,21 +203,31 @@ function TargetRow({
         <div className="exit-heading">
           <div>
             <p className="card-kicker">Door {target.index}</p>
-            <h4>{target.room.label}</h4>
+            <h4>{door.room.label}</h4>
           </div>
           <div className="owner-markers">
             <SemanticOwnerMarker address={target.marker.address} />
-            <SemanticOwnerMarker address={target.room.address} />
+            <SemanticOwnerMarker address={door.room.address} />
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
         <button
           className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(target.room.address))}
+          onClick={() => dispatch(semanticOwnerFocused(door.room.address))}
           type="button"
         >
-          Open {target.room.label} room
+          Open {door.room.label} room
         </button>
+        {node.targetInteraction !== 'replaceable' ||
+        door.room.roomPicker === undefined ||
+        door.room.anomaly !== undefined ? null : (
+          <TargetRoomSelector
+            idPrefix={`target-${target.marker.focusKey}`}
+            interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
+            interactions={interactions}
+            label={`Door ${target.index} room`}
+          />
+        )}
         {node.targetInteraction === 'readOnly' ? (
           <p className="fixed-room-state">These Preboss doors are changed together.</p>
         ) : target.physicalState === 'unavailable' ? (
@@ -225,22 +235,11 @@ function TargetRow({
             This saved door is no longer available here. Fix the earlier route first.
           </p>
         ) : null}
-        {target.doorRewardLabel === undefined ? null : (
-          <p className="fixed-room-state">Door reward: {target.doorRewardLabel}</p>
-        )}
-        {target.fieldsCageOffers === undefined || target.fieldsCageOffers.length === 0 ? null : (
-          <dl
-            aria-label={`${target.room.label} Fields cage offers`}
-            className="fields-batch-summary fixed-room-state"
-          >
-            {target.fieldsCageOffers.map((offer) => (
-              <div key={offer.cageKey}>
-                <dt>{offer.cageLabel}</dt>
-                <dd>{offer.rewardLabel}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        <DoorRewardEditor
+          door={door}
+          idPrefix={`door-${target.marker.focusKey}`}
+          interactions={interactions}
+        />
         {target.anomalyTakeover === undefined ? null : (
           <button
             className="quiet-action action-compact"
@@ -258,7 +257,7 @@ function TargetRow({
             {target.anomalyTakeover.label}
           </button>
         )}
-        <AnomalyIdentityControls room={target.room} />
+        <AnomalyIdentityControls room={door.room} />
       </div>
     </article>
   );
@@ -360,13 +359,13 @@ function ZagreusContractExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <p className="fixed-room-state">Room: {control.contractRoom.label}</p>
+        <p className="fixed-room-state">Room: {control.door.room.label}</p>
         <button
           className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(control.contractRoom.address))}
+          onClick={() => dispatch(semanticOwnerFocused(control.door.room.address))}
           type="button"
         >
-          Open {control.contractRoom.label} room
+          Open {control.door.room.label} room
         </button>
         <button
           className="danger-action action-compact"
@@ -426,11 +425,12 @@ function NaturalChaosExit({
         </div>
         <button
           className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(control.chaosRoom.address))}
+          onClick={() => dispatch(semanticOwnerFocused(control.door.room.address))}
           type="button"
         >
-          Open {control.chaosRoom.label} room
+          Open {control.door.room.label} room
         </button>
+        <NaturalChaosMapWorkbench control={control} interactions={interactions} />
         <button
           className="danger-action action-compact"
           data-command="RemoveNaturalChaos"
@@ -647,17 +647,12 @@ function BatchSettings({
 export function BatchWorkbench({
   interactions,
   label,
-  nextDecisionIntent,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
-  readonly nextDecisionIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
-  >;
   readonly node: BatchNode;
 }) {
-  const executeIntent = useCommandIntent();
   const projectedTakeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
@@ -763,16 +758,6 @@ export function BatchWorkbench({
       <div className="workbench-action-row">
         {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
         <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-        {nextDecisionIntent === undefined ? null : (
-          <button
-            className="primary-action"
-            data-command={nextDecisionIntent.command.kind}
-            onClick={() => executeIntent(nextDecisionIntent)}
-            type="button"
-          >
-            Add next decision
-          </button>
-        )}
       </div>
     </section>
   );

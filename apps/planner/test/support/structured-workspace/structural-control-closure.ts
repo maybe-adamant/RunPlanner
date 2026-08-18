@@ -247,15 +247,15 @@ function assertRenderedNodeControls(
           interaction.selectIntent.command.value.kind !== 'additional' ||
           interaction.selectIntent.command.value.additionalExitKey !==
             chaos.owner.additionalExitKey ||
-          interaction.mapIntent(chaos.chaosRoom.gameName).command.kind !==
+          interaction.mapIntent(chaos.door.room.gameName).command.kind !==
             'ReplaceNaturalChaosMap' ||
           workspaceTestOwnerKey(
-            interaction.mapIntent(chaos.chaosRoom.gameName).command.occurrence,
-          ) !== workspaceTestOwnerKey(chaos.chaosRoom.address)
+            interaction.mapIntent(chaos.door.room.gameName).command.occurrence,
+          ) !== workspaceTestOwnerKey(chaos.door.room.address)
         ) {
           throw new Error(`natural Chaos ${chaos.marker.focusKey} has no exact bound intents`);
         }
-        assertRenderedRoomControls(chaos.chaosRoom, interactions);
+        assertRenderedRoomControls(chaos.door.room, interactions);
       }
       assertExactObservedInteraction(
         interactions.topologyRemovals.get(ownerKey),

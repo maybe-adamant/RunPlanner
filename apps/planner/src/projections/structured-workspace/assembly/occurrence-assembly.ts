@@ -1442,7 +1442,9 @@ function roomActionsForOccurrence(
                 rewardPayload: Object.freeze({
                   control: resolvedRewardControl,
                   showOffer:
-                    row.reference.kind === 'interactLocalReward' ||
+                    (row.reference.kind === 'interactLocalReward' &&
+                      (roomLocal.kind !== 'fields' ||
+                        row.reference.groupKey !== roomLocal.groupKey)) ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
                       input.occurrence.state.kind !== 'shop'),
                 }),
@@ -1496,6 +1498,10 @@ function roomLocalForOccurrence(
       return Object.freeze({
         kind: 'incomingReward' as const,
         control,
+        summary:
+          control.offer === null
+            ? 'Choose reward'
+            : summarizeRewardOffer(input.catalog, control.offer),
         ...(input.evaluatedRoom?.clockworkReward === undefined
           ? {}
           : { clockworkReward: input.evaluatedRoom.clockworkReward }),
@@ -1503,7 +1509,14 @@ function roomLocalForOccurrence(
     }
     case 'ephyraCombat': {
       const incomingReward = requireProjectedRewardControl(controls, incoming, 'countedReward');
-      return Object.freeze({ kind: 'incomingReward' as const, control: incomingReward });
+      return Object.freeze({
+        kind: 'incomingReward' as const,
+        control: incomingReward,
+        summary:
+          incomingReward.offer === null
+            ? 'Choose reward'
+            : summarizeRewardOffer(input.catalog, incomingReward.offer),
+      });
     }
     case 'fieldsCombat': {
       const fieldsFacts = input.fieldsBatchFacts;
@@ -1526,6 +1539,12 @@ function roomLocalForOccurrence(
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
             label: `Cage ${index + 1}`,
+            summary: (() => {
+              const control = requireProjectedRewardControl(controls, address, 'countedReward');
+              return control.offer === null
+                ? 'Choose reward'
+                : summarizeRewardOffer(input.catalog, control.offer);
+            })(),
           });
         });
       const optionalDescriptor = room.fieldsOptionalRewards;

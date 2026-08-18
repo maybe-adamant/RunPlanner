@@ -1409,6 +1409,7 @@ describe('structured workspace interaction binding', () => {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(goldenFBiome, existingId),
       },
+      focus: { owner: existingTarget, timing: 'after' },
     });
     expect(allocations).toBe(0);
     expect(() => missing.intentFor('F_Opening01')).toThrow(

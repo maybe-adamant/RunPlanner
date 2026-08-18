@@ -293,9 +293,23 @@ describe('structured workspace biome presentation', () => {
     ) {
       throw new Error('first Hub visit is missing its Ephyra main reward');
     }
+    const firstVisitModel = hub.node.visits.find(
+      (visit) => visit.visitIndex === firstVisit.visitIndex,
+    );
+    const firstVisitSlot = hub.node.slots.find(
+      (slot) => slot.hubSlotKey === firstVisitModel?.hubSlotKey,
+    );
+    const firstDoorReward =
+      firstVisitSlot?.door?.rewardPreview.kind === 'visible'
+        ? firstVisitSlot.door.rewardPreview.rewards[0]
+        : undefined;
+    if (firstDoorReward?.offer === null || firstDoorReward?.offer === undefined) {
+      throw new Error('first Hub visit has no slot-owned door reward');
+    }
+    expect(firstVisit.node.incomingDoor).toBe(firstVisitSlot?.door);
     expect(firstVisit.mainReward).toEqual({
-      label: summarizeRewardOffer(catalog, firstVisit.node.room.roomLocal.control.offer),
-      offer: firstVisit.node.room.roomLocal.control.offer,
+      label: firstDoorReward.summary,
+      offer: firstDoorReward.offer,
     });
     expect(
       completePresentation.presentation.focusDestinations.get(firstVisit.node.room.marker.focusKey),

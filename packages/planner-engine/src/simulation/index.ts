@@ -26,6 +26,11 @@ export {
   type IncompleteBiomeCompletenessResult,
 } from './completeness';
 export {
+  evaluateOccurrenceOutgoingStatus,
+  type OccurrenceOutgoingStatus,
+  type OccurrenceOutgoingStatusInput,
+} from './occurrence-outgoing';
+export {
   CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
   type BatchRewardStoreCandidateQuery,

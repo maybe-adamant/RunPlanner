@@ -194,7 +194,7 @@ describe('App', () => {
     const markup = appMarkup(application);
     expect(markup).toContain('Route structure');
     expect(markup).toContain('<strong>Opening</strong>');
-    expect(markup).not.toContain('Opening 01');
+    expect(markup).toContain('<h3>Opening 01</h3>');
     expect(markup).toContain('Details');
     expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');

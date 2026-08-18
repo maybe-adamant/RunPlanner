@@ -19,6 +19,7 @@ import {
   exitDecisionForSource,
   fixedWidthOneTakeoverForSource,
   fixedWidthOneTakeoverTransitionForSource,
+  hostContinuationExitForDetourRoom,
   selectedExitKey,
   selectedExitTarget,
   selectedOrdinaryBatchIndex,
@@ -42,6 +43,18 @@ function requireExitDecision(
 }
 
 describe('authored topology queries', () => {
+  it('keeps automatic special returns hidden while an entered Chaos return stays visible', () => {
+    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.B_Combat01!)).toMatchObject({
+      behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
+    });
+    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.C_Boss01!)).toMatchObject({
+      behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },
+    });
+    expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.Chaos_01!)).toMatchObject({
+      behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+    });
+  });
+
   it('looks up exact occurrence and Hub sources without conflating either address kind', () => {
     const topology = topologyFor(createRepresentativeNProject(), 'N');
 
@@ -151,6 +164,10 @@ describe('authored topology queries', () => {
       }),
     ).toEqual([
       {
+        behavior: {
+          kind: 'playerSelected',
+          rewardPreview: 'visible',
+        },
         kind: 'normal',
         exitKey: 'exit1',
         index: 1,
@@ -165,6 +182,10 @@ describe('authored topology queries', () => {
       }),
     ).toEqual([
       {
+        behavior: {
+          kind: 'playerSelected',
+          rewardPreview: 'visible',
+        },
         kind: 'normal',
         exitKey: 'prehub',
         index: 1,
@@ -179,6 +200,10 @@ describe('authored topology queries', () => {
       }),
     ).toEqual([
       {
+        behavior: {
+          kind: 'playerSelected',
+          rewardPreview: 'visible',
+        },
         kind: 'completedHub',
         exitKey: 'preboss',
         index: 1,
