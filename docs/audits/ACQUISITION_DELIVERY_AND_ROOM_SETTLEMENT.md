@@ -53,6 +53,13 @@ The Shop- and Well-specific lifecycle and future pool work remains recorded in
 supported outcome dispositions remain recorded in
 `TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`.
 
+The later `ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md` owns the broader conclusion
+that checkpoint acquisitions must interleave with combat barriers, room
+rewards, and combat-NPC interactions through one room chronology. The
+producer-versus-pickup and multi-checkpoint facts in this document remain
+authoritative; its previously delivered per-site order is not a second order
+to preserve alongside that general chronology.
+
 ## Terms
 
 **Producer action**

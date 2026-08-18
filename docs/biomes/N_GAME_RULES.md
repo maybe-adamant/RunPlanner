@@ -209,9 +209,18 @@ without promoting it to global topology. Artemis and Heracles requirements use
 exact definition history, not a Hub-specific NPC ledger.
 
 When `ArtemisCombatN` is the selected active main-room definition, its exact
-phase owns Artemis's three-choice trait offer and folds the selected trait at
-encounter completion. Heracles and the Ephyra side-room definitions do not
-declare a trait provider; this does not create a Hub-wide trait surface.
+phase owns Artemis's three-choice trait offer. Source chronology acquires that
+trait only through the separate post-combat Artemis interaction, which shares
+the main occurrence's local action window with its room reward. The current
+planner still folds it at encounter completion; the correction is owned by
+[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
+Heracles and the Ephyra side-room definitions do not declare a trait provider;
+this does not create a Hub-wide trait surface.
+
+The Hub visit list and each parent-local side-room entry list remain topology
+between distinct room occurrences. Every entered main or side occurrence owns
+its own local room chronology; restoration does not combine them into one
+Hub-wide action order or replay already-settled parent actions.
 
 ### Canonical baseline and exclusions
 

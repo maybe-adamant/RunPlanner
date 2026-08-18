@@ -23,7 +23,10 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   reconciles only compatible cage keys.
 - It also owns a zero-through-capacity optional count, complete retained
   optional reward values, and one mixed action chronology for atomic cage
-  completions plus cage, optional, and Artificer-replacement interactions.
+  completions plus cage, optional, and Artificer-replacement interactions. The
+  current Fields-private chronology is incomplete for phase-produced NPCs;
+  [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
+  owns its replacement by one entered-room chronology.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so
@@ -107,7 +110,9 @@ interacted with before its matching completion. Optional interactions may be
 placed before the first cage, between completed cages, or after the final cage.
 Required cage rewards must resolve, while optional pickups may remain on the
 ground. The same action order carries a later Artificer replacement pickup;
-there is no cage-only order or Fields-private acquisition fold.
+there is no cage-only order or Fields-private acquisition fold. Phase-produced
+required NPC interactions, including Gorgon Athena, must join the later general
+room chronology rather than create another Fields-only order.
 
 ### Depth, force, and completion facts
 
