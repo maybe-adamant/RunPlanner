@@ -28,6 +28,7 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceLocalVisitOrderKey,
+  type WorkspaceDoorContract,
   type WorkspaceHubDecisionNode,
   type WorkspaceLocalVisitOrderControl,
   type WorkspaceLocalVisitOrderOption,
@@ -46,6 +47,7 @@ import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-bui
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { presentRunState } from '../presentation/run-state';
+import { projectWorkspaceDoorContract } from './door-contract';
 
 /**
  * The Hub board owns its slots, visits, room-local workbenches, and the
@@ -170,6 +172,7 @@ function projectHubNode(
   const roomControls: WorkspaceRoomPickerControl[] = [];
   const rewardControls: WorkspaceRewardControl[] = [];
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
+  const doorsBySlot = new Map<string, WorkspaceDoorContract>();
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
   const projectLocalVisit = (
     sourceOccurrence: RoomOccurrence,
@@ -268,15 +271,18 @@ function projectHubNode(
         );
         roomControls.push(...occurrenceAssembly.roomControls);
         rewardControls.push(...occurrenceAssembly.rewardControls);
+        const door = projectWorkspaceDoorContract(occurrenceAssembly.node.room, 'visible');
         const workbench = Object.freeze({
           ...occurrenceAssembly.node,
-          inspectorPresentation: 'full' as const,
+          incomingDoor: door,
+          inspectorPresentation: 'doorTarget' as const,
           railMarker: descriptor.marker,
           railVisibility: 'inspectorOnly' as const,
         });
         workbenches.push(workbench);
         return Object.freeze({
           ...descriptor,
+          door,
           generation: 'generated' as const,
           room: workbench.room,
         });
@@ -347,6 +353,10 @@ function projectHubNode(
       occurrence === undefined || target === undefined
         ? undefined
         : projectLocalVisit(occurrence, target, detailsActive);
+    const door =
+      occurrenceNode === undefined
+        ? undefined
+        : projectWorkspaceDoorContract(occurrenceNode.room, 'visible');
     if (occurrenceNode !== undefined) {
       occurrenceInteractionRequirements.push(
         ...occurrenceAssembly!.occurrenceInteractionRequirements,
@@ -355,13 +365,25 @@ function projectHubNode(
       rewardControls.push(...occurrenceAssembly!.rewardControls);
       const workbench = Object.freeze({
         ...occurrenceNode,
+        incomingDoor: door!,
         inspectorPresentation: 'hubRoomLocal' as const,
         ...(localVisit === undefined ? {} : { localVisit }),
         railMarker: slotMarker,
         railVisibility: 'inspectorOnly' as const,
       });
       workbenches.push(workbench);
+      doorsBySlot.set(slot.slotKey, door!);
       roomsBySlot.set(slot.slotKey, workbench.room);
+      if (localVisit !== undefined) {
+        markerDestinations.redirect(
+          localVisit.slots.flatMap((localSlot) =>
+            localSlot.generation !== 'generated' || localSlot.door.rewardPreview.kind !== 'visible'
+              ? []
+              : localSlot.door.rewardPreview.rewards.map((reward) => reward.marker),
+          ),
+          workbench.key,
+        );
+      }
       const mainRewards = workspaceHubMainRewardMarkers(workbench.room);
       for (const mainReward of mainRewards) {
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
@@ -402,6 +424,7 @@ function projectHubNode(
       ...(localVisit === undefined ? {} : { localVisit }),
       open: target !== undefined,
       physicalDoorId: slot.physicalDoorId,
+      ...(door === undefined ? {} : { door }),
       ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
       roomKind: slotRoom.kind,
       visited: detailsActive,
@@ -422,6 +445,9 @@ function projectHubNode(
         createHubVisitAddress(biome, descriptor.hubKey, visitIndex),
       ),
       ...(hubSlotKey === undefined ? {} : { hubSlotKey }),
+      ...(hubSlotKey === undefined || doorsBySlot.get(hubSlotKey) === undefined
+        ? {}
+        : { door: doorsBySlot.get(hubSlotKey)! }),
       ...(hubSlotKey === undefined || roomsBySlot.get(hubSlotKey) === undefined
         ? {}
         : { room: roomsBySlot.get(hubSlotKey)! }),

@@ -14,6 +14,7 @@ import {
   type ExitDecision,
   type KeepsakeEquipResultAddress,
   type OccurrenceAddress,
+  type OccurrenceId,
   type RoomOccurrence,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -40,6 +41,7 @@ import {
   type WorkspaceMarker,
   type WorkspaceNode,
   type WorkspaceOccurrenceWorkbenchNode,
+  type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceProjectionSource,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
@@ -122,6 +124,7 @@ export interface WorkspaceBiomeSemanticAssembly {
     string,
     WorkspaceOccurrenceInteractionRequirement
   >;
+  readonly occurrenceOutgoing: ReadonlyMap<OccurrenceId, WorkspaceOccurrenceStageOutgoing>;
   readonly preliminaryFocusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
   /** Presentation needs only this declared rail policy, never the full layout. */
   readonly progressionKind: BiomeLayout['progression']['kind'];
@@ -642,6 +645,75 @@ export function assembleWorkspaceBiomeSemantics(
   }
   const structuralNodes = Object.freeze([...nodes]);
   frontier = enrichFrontierPredecessor(frontier, structuralNodes);
+  const occurrenceOutgoing = new Map<OccurrenceId, WorkspaceOccurrenceStageOutgoing>();
+  if (plan.topology !== null) {
+    for (const occurrence of plan.topology.occurrences) {
+      const status = source.outgoingStatus(occurrence.occurrenceId);
+      switch (status.kind) {
+        case 'authoredDecision':
+          // Presentation binds the exact decision node after node titles are finalized.
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({
+              kind: 'authoredDecision' as const,
+              decisionNodeKey: semanticAddressKey(status.owner),
+            }),
+          );
+          break;
+        case 'frontier': {
+          if (
+            frontier?.kind !== 'exitDecision' ||
+            semanticAddressKey(frontier.owner) !== semanticAddressKey(status.owner)
+          ) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(status.owner)} engine frontier has no matching workspace frontier`,
+            );
+          }
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({ kind: 'frontier' as const, frontier }),
+          );
+          break;
+        }
+        case 'blockedOrUnentered':
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({
+              kind: 'blockedOrUnentered' as const,
+              marker: markerDestinations.marker(status.owner),
+              message:
+                status.reason === 'unentered'
+                  ? 'Enter this room before authoring its outgoing doors.'
+                  : 'This room is not the current outgoing authoring frontier.',
+            }),
+          );
+          break;
+        case 'topologyOwned':
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({
+              kind: 'topologyOwned' as const,
+              label:
+                status.topology === 'hub'
+                  ? 'Continuation is owned by the Hub.'
+                  : 'Continuation is owned by this room’s local visits.',
+              marker: markerDestinations.marker(status.owner),
+            }),
+          );
+          break;
+        case 'terminal':
+          occurrenceOutgoing.set(
+            occurrence.occurrenceId,
+            Object.freeze({
+              kind: 'terminal' as const,
+              label: 'No physical outgoing door before biome completion.',
+              marker: markerDestinations.marker(status.owner),
+            }),
+          );
+          break;
+      }
+    }
+  }
   const completion = Object.freeze(
     layout.completion.rooms.map((descriptor) => {
       const address = createCompletionRoomAddress(biome, descriptor.role);
@@ -780,6 +852,7 @@ export function assembleWorkspaceBiomeSemantics(
     marker: biomeMarker,
     nodes: completedNodes,
     occurrenceInteractionRequirements,
+    occurrenceOutgoing,
     preliminaryFocusDestinations,
     progressionKind: layout.progression.kind,
     roomControls,

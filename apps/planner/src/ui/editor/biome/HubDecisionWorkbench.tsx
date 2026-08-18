@@ -28,9 +28,8 @@ import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { hubMainRewardPresentation } from './hubMainRewardPresentation';
-import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
+import { DoorRewardEditor } from './DoorRewardEditor';
 import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
@@ -698,7 +697,9 @@ function OpenHubRoomCard({
 }) {
   const dispatch = useAppDispatch();
   const card = useRef<HTMLElement>(null);
-  const reward = hubMainRewardPresentation(slot.room, interactions);
+  const rewards =
+    slot.door?.rewardPreview.kind === 'visible' ? slot.door.rewardPreview.rewards : undefined;
+  const reward = rewards?.length === 1 ? rewards[0] : undefined;
   const rewardOwnerKey =
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);
   const focusedMainReward = rewardOwnerKey === focusedRewardOwnerKey;
@@ -794,22 +795,17 @@ function OpenHubRoomCard({
           slot={slot}
         />
       </div>
-      {reward === undefined ? null : (
+      {rewards === undefined || rewards.length === 0 || slot.door === undefined ? null : (
         <div
           className="hub-main-reward room-state-with-marker"
           data-focused-main-reward={focusedMainReward || undefined}
           data-hub-main-reward-owner={rewardOwnerKey}
         >
-          <SemanticOwnerMarker address={reward.marker.address} />
-          {reward.control === undefined ? (
-            <p className="fixed-room-state">Fixed reward: {reward.summary}</p>
-          ) : (
-            <RewardControlEditor
-              control={reward.control}
-              idPrefix={`hub-${slot.hubSlotKey}`}
-              interactions={interactions}
-            />
-          )}
+          <DoorRewardEditor
+            door={slot.door}
+            idPrefix={`hub-${slot.hubSlotKey}`}
+            interactions={interactions}
+          />
         </div>
       )}
       {encounterTraitOffers.length === 0 ? null : (

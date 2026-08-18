@@ -242,7 +242,7 @@ describe('structured workspace biome semantic assembly', () => {
       throw new Error('semantic assembly additional-only decision is missing');
     }
     expect(node.targets).toEqual([]);
-    expect(node.zagreusContract?.contractRoom.entered).toBe(true);
+    expect(node.zagreusContract?.door.room.entered).toBe(true);
     expect(
       assembly.preliminaryFocusDestinations.get(semanticAddressKey(fixture.additional))?.nodeKey,
     ).toBe(node.key);

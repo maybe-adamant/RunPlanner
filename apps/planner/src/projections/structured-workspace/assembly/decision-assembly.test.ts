@@ -26,6 +26,7 @@ import {
   goldenHBiome,
   goldenIBiome,
   nOccurrenceIds,
+  oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -196,6 +197,7 @@ describe('structured workspace decision assembly', () => {
     const selectedWorkbench = assembly.workbenches.find(
       (workbench) => workbench.room.occurrenceId === selected.room.occurrenceId,
     );
+    expect(selectedWorkbench?.inspectorPresentation).toBe('doorTarget');
     expect(selectedWorkbench?.room.roomPicker).toEqual({
       address: selected.marker.address,
       kind: 'targetRoomPicker',
@@ -205,6 +207,8 @@ describe('structured workspace decision assembly', () => {
         selectedGameName: selected.room.gameName,
       },
     });
+    expect(selected.door.room).toBe(selectedWorkbench?.room);
+    expect(selectedWorkbench?.incomingDoor).toBe(selected.door);
     expect(kit.markers.destinations().get(selected.marker.focusKey)?.nodeKey).toBe(
       assembly.batch.key,
     );
@@ -430,28 +434,32 @@ describe('structured workspace decision assembly', () => {
 
     expect(
       assembly.batch.targets.map((target) => ({
-        fieldsCageOffers: target.fieldsCageOffers,
-        room: target.room.label,
+        preview:
+          target.door.rewardPreview.kind === 'visible'
+            ? target.door.rewardPreview.rewards.map((reward) => ({
+                key: reward.key,
+                label: reward.label,
+                summary: reward.summary,
+              }))
+            : target.door.rewardPreview.kind,
+        room: target.door.room.label,
       })),
     ).toEqual([
       {
-        fieldsCageOffers: [
-          { cageKey: 'cage1', cageLabel: 'Cage 1', rewardLabel: 'Hermes' },
-          { cageKey: 'cage2', cageLabel: 'Cage 2', rewardLabel: 'Hammer' },
+        preview: [
+          { key: 'cage1', label: 'Cage 1', summary: 'Hermes' },
+          { key: 'cage2', label: 'Cage 2', summary: 'Hammer' },
         ],
         room: 'Combat 09',
       },
       {
-        fieldsCageOffers: [
-          { cageKey: 'cage1', cageLabel: 'Cage 1', rewardLabel: 'Max Health' },
-          { cageKey: 'cage2', cageLabel: 'Cage 2', rewardLabel: "Selene's Gift" },
+        preview: [
+          { key: 'cage1', label: 'Cage 1', summary: 'Max Health' },
+          { key: 'cage2', label: 'Cage 2', summary: "Selene's Gift" },
         ],
         room: 'Combat 03',
       },
     ]);
-    expect(assembly.batch.targets.every((target) => target.doorRewardLabel === undefined)).toBe(
-      true,
-    );
     expect(
       assembly.batch.targets.every(
         (target) =>
@@ -459,6 +467,29 @@ describe('structured workspace decision assembly', () => {
           target.room.roomLocal.cages.every((cage) => cage.control.kind === 'countedReward'),
       ),
     ).toBe(true);
+  });
+
+  it('keeps ShipCombat wheel rewards phase-local instead of fabricating a door reward', () => {
+    const source = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'O');
+    const decision = batchDecisionAt(source, oOccurrenceIds.intro);
+    const evaluated = source.evaluatedBatch(
+      createExitDecisionAddress(source.biome, decision.source),
+    );
+    if (evaluated === undefined) throw new Error('O Intro decision evaluation is missing');
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      evaluated,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('O Intro decision is not a batch');
+    expect(assembly.batch.targets).toHaveLength(1);
+    expect(assembly.batch.targets[0]?.door.rewardPreview).toEqual({ kind: 'none' });
+    expect(assembly.batch.targets[0]?.room.roomLocal.kind).toBe('ship');
   });
 
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
@@ -655,7 +686,7 @@ describe('structured workspace decision assembly', () => {
     expect(
       kit.markers.destinations().get(retainedTarget.room.rewardControls[0]!.marker.focusKey)
         ?.nodeKey,
-    ).toBe(retainedWorkbench?.key);
+    ).toBe(assembly.batch.key);
   });
 
   it('keeps takeover targets read-only at the decision-owned batch boundary', () => {

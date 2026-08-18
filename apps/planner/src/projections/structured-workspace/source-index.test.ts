@@ -684,6 +684,28 @@ describe('structured workspace source index', () => {
     ).toBe(false);
   });
 
+  it('publishes exact Hub, local-visit, and terminal occurrence outgoing owners', () => {
+    const project = createRepresentativeNOPQProject();
+    const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
+    const main = nOccurrenceId('combat02');
+    const localDecision = source.plan.topology?.decisions.find(
+      (decision) => decision.kind === 'localVisit' && decision.sourceOccurrenceId === main,
+    );
+    if (localDecision?.kind !== 'localVisit') throw new Error('N local decision is missing');
+    const local = localDecision.visitOrder[0];
+    if (local === undefined) throw new Error('N visited local occurrence is missing');
+
+    expect(source.outgoingStatus(main)).toMatchObject({
+      kind: 'topologyOwned',
+      topology: 'localVisit',
+    });
+    expect(source.outgoingStatus(local)).toMatchObject({
+      kind: 'topologyOwned',
+      topology: 'localVisit',
+    });
+    expect(source.outgoingStatus(nOccurrenceId('preboss'))).toMatchObject({ kind: 'terminal' });
+  });
+
   it('keeps evaluator products and findings addressed to authored owners', () => {
     const combat = nOccurrenceId('combat10');
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {

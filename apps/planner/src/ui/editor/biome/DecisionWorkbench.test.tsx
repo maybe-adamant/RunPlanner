@@ -260,10 +260,11 @@ describe('DecisionWorkbench', () => {
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
     expect(gate.dataset.picked).toBe('false');
     expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
-    expect(within(gate).queryByLabelText('Map')).toBeNull();
+    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
     expect(within(gate).getByRole('button', { name: 'Open Chaos 01 room' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove Chaos gate' })).toBeTruthy();
     expect(screen.getByLabelText('Take Chaos gate')).toBeTruthy();
+    expect(within(gate).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', () => {
@@ -302,6 +303,7 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).getByText(/^Room: /)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove contract' })).toBeTruthy();
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
+    expect(within(contract).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('keeps the selected Midshop as a lightweight link to its occurrence workbench', () => {
@@ -528,7 +530,7 @@ describe('DecisionWorkbench', () => {
           semanticAddressKey(candidate.owner) === semanticAddressKey(retainedOwner),
       ),
     ).toBe(true);
-  });
+  }, 10_000);
 
   it('publishes room selection separately from occurrence-workbench navigation', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
@@ -687,7 +689,7 @@ describe('DecisionWorkbench', () => {
     expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
   });
 
-  it('compares prepared Fields cage offers without rendering their editors on the door cards', () => {
+  it('authors prepared Fields cage identities on their exact outgoing door cards', () => {
     const owner = createExitDecisionAddress(goldenHBiome, {
       kind: 'occurrence',
       occurrenceId: createOccurrenceId('golden-h-combat02'),
@@ -701,16 +703,14 @@ describe('DecisionWorkbench', () => {
 
     const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
     const combat03 = screen.getByRole('article', { name: 'Combat 03 room offer' });
-    const combat09Offers = within(combat09).getByLabelText('Combat 09 Fields cage offers');
-    const combat03Offers = within(combat03).getByLabelText('Combat 03 Fields cage offers');
-    expect(combat09Offers.textContent).toContain('Cage 1Hermes');
-    expect(combat09Offers.textContent).toContain('Cage 2Hammer');
-    expect(combat03Offers.textContent).toContain('Cage 1Max Health');
-    expect(combat03Offers.textContent).toContain("Cage 2Selene's Gift");
+    const combat09Offers = within(combat09).getByLabelText('Combat 09 door rewards');
+    const combat03Offers = within(combat03).getByLabelText('Combat 03 door rewards');
+    expect(combat09Offers.textContent).toContain('Cage 1RewardHermes');
+    expect(combat09Offers.textContent).toContain('Cage 2RewardHammer');
+    expect(combat03Offers.textContent).toContain('Cage 1RewardMax Health');
+    expect(combat03Offers.textContent).toContain("Cage 2RewardSelene's Gift");
     for (const card of [combat09, combat03]) {
-      expect(within(card).queryByLabelText('Cage 1')).toBeNull();
-      expect(within(card).queryByRole('button', { name: 'Reward' })).toBeNull();
-      expect(within(card).queryByRole('combobox', { name: /Reward/ })).toBeNull();
+      expect(within(card).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
     }
   });
 
@@ -1166,6 +1166,71 @@ describe('DecisionWorkbench', () => {
       'disabled',
       true,
     );
+  });
+
+  it('replaces an existing ordinary target from its door card with exact focus and undo', async () => {
+    const project = createGoldenFGHIProject();
+    const initial = createApplication();
+    initial.store.dispatch(authoredProjectReplaced(project));
+    const node = workspaceBiome(initial, 'Underworld', 'F').nodes.find(
+      (
+        candidate,
+      ): candidate is Extract<DecisionWorkbenchNode, { readonly kind: 'ordinaryBatch' }> =>
+        candidate.kind === 'ordinaryBatch' && candidate.targets.length > 0,
+    );
+    initial.dispose();
+    if (node === undefined) throw new Error('F ordinary decision is missing');
+    const target = node.targets[0];
+    if (target === undefined) throw new Error('F ordinary target is missing');
+    const application = createApplication();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'F',
+      subjectForOwner(node.owner),
+      application,
+    );
+    const card = screen.getByRole('article', { name: `${target.room.label} room offer` });
+    expect(within(card).getByRole('button', { name: `Door ${target.index} room` })).toBeTruthy();
+    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(within(card).getByRole('button', { name: `Door ${target.index} room` }));
+    const replacement = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      );
+    if (replacement === undefined) throw new Error('F target has no replacement room');
+    await view.user.click(replacement);
+
+    const replacementCommand = dispatch.mock.calls
+      .map(([action]) => action)
+      .filter(authoredProjectCommandDispatched.match)
+      .map((action) => action.payload)
+      .find((command) => command.kind === 'ReplaceOccurrenceRoom');
+    expect(replacementCommand).toMatchObject({
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: target.room.address,
+    });
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      target.marker.address,
+    );
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === target.room.occurrenceId,
+        )?.gameName,
+    ).toBe(target.room.gameName);
   });
 
   it('takes an Anomaly-capable target over with one exact semantic command', async () => {

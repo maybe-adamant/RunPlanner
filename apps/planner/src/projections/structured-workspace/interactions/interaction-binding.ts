@@ -1748,6 +1748,7 @@ export function bindWorkspaceInteractions(
                 kind: 'ReplaceOccurrenceRoom' as const,
                 occurrence: control.target.occurrence,
               }),
+              focus: Object.freeze({ owner: control.address, timing: 'after' as const }),
             });
           }
           const occurrenceId = allocateOccurrenceId();

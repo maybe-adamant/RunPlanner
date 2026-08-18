@@ -1,8 +1,4 @@
-import {
-  semanticAddressKey,
-  type ProjectCommand,
-  type SemanticAddress,
-} from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { useState, type ReactNode } from 'react';
 
 import {
@@ -11,7 +7,6 @@ import {
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceCompletionNode,
-  type WorkspaceCommandIntent,
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
@@ -23,6 +18,7 @@ import {
   type WorkspaceRailReward,
   type WorkspaceRailSelectedTarget,
   type WorkspaceAuthoringFrontier,
+  type WorkspaceOccurrenceStageOutgoing,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -32,7 +28,9 @@ import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './Deci
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+import { RoomSelector } from './RoomSelector';
 import { RunStateSheet } from './RunStateSheet';
+import { BiomeWorkspaceContractError } from './workspaceContract';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
@@ -653,18 +651,16 @@ function InspectorNode({
   frontier,
   interactions,
   label,
-  nextDecisionIntent,
   node,
+  outgoing,
   outgoingDecision,
   sourceOccurrence,
 }: {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
-  readonly nextDecisionIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
-  >;
   readonly node: WorkspaceNode;
+  readonly outgoing?: WorkspaceOccurrenceStageOutgoing;
   readonly outgoingDecision?: Extract<
     WorkspaceNode,
     { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
@@ -683,12 +679,10 @@ function InspectorNode({
             );
       return (
         <>
+          <StartRoomIdentityEditor interactions={interactions} node={node} />
           <OccurrenceWorkbench
+            {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
             interactions={interactions}
-            {...(node.naturalChaosExit === undefined
-              ? {}
-              : { naturalChaosExit: node.naturalChaosExit })}
-            {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
             {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
             presentation={node.inspectorPresentation}
             room={node.room}
@@ -704,6 +698,9 @@ function InspectorNode({
               node={outgoingDecision}
             />
           )}
+          {outgoingDecision !== undefined || outgoing === undefined ? null : (
+            <OccurrenceOutgoing interactions={interactions} outgoing={outgoing} />
+          )}
         </>
       );
     }
@@ -713,20 +710,23 @@ function InspectorNode({
       return (
         <>
           {sourceOccurrence === undefined ? null : (
-            <OccurrenceWorkbench
-              interactions={interactions}
-              {...(sourceOccurrence.naturalChaosExit === undefined
-                ? {}
-                : { naturalChaosExit: sourceOccurrence.naturalChaosExit })}
-              {...(sourceOccurrence.localVisit === undefined
-                ? {}
-                : { localVisit: sourceOccurrence.localVisit })}
-              presentation={sourceOccurrence.inspectorPresentation}
-              room={sourceOccurrence.room}
-              {...(sourceOccurrence.runState === undefined
-                ? {}
-                : { runState: sourceOccurrence.runState })}
-            />
+            <>
+              <StartRoomIdentityEditor interactions={interactions} node={sourceOccurrence} />
+              <OccurrenceWorkbench
+                {...(sourceOccurrence.incomingDoor === undefined
+                  ? {}
+                  : { incomingDoor: sourceOccurrence.incomingDoor })}
+                interactions={interactions}
+                {...(sourceOccurrence.localVisit === undefined
+                  ? {}
+                  : { localVisit: sourceOccurrence.localVisit })}
+                presentation={sourceOccurrence.inspectorPresentation}
+                room={sourceOccurrence.room}
+                {...(sourceOccurrence.runState === undefined
+                  ? {}
+                  : { runState: sourceOccurrence.runState })}
+              />
+            </>
           )}
           <BatchWorkbench interactions={interactions} label={label} node={node} />
         </>
@@ -735,6 +735,84 @@ function InspectorNode({
       return <CompletionWorkbench interactions={interactions} node={node} />;
     case 'hubDecision':
       return <HubDecisionWorkbench frontier={frontier} interactions={interactions} node={node} />;
+  }
+}
+
+/** Start identity is structural authoring beside, never inside, the entered-room workbench. */
+function StartRoomIdentityEditor({
+  interactions,
+  node,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+}) {
+  const dispatch = useAppDispatch();
+  const picker = node.room.roomPicker;
+  if (picker?.kind !== 'startRoomPicker') return null;
+  const interaction = requireWorkspaceInteraction(
+    interactions.rooms,
+    workspaceInteractionKey(picker.address),
+  );
+  if (interaction.kind !== 'startRoom') {
+    throw new BiomeWorkspaceContractError(`${interaction.key} is not a start-room interaction.`);
+  }
+  return (
+    <section aria-label="Start room identity" className="start-room-identity">
+      <div className="owner-markers">
+        <h3>Room identity</h3>
+        <SemanticOwnerMarker address={node.room.address} />
+      </div>
+      <RoomSelector
+        idPrefix={`start-${node.room.occurrenceId}`}
+        interaction={interaction}
+        label="Start room"
+        onSelect={(gameName) => {
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'ReplaceOccurrenceRoom',
+              occurrence: node.room.address,
+              gameName,
+            }),
+          );
+          dispatch(semanticOwnerFocused(node.room.address));
+        }}
+      />
+    </section>
+  );
+}
+
+function OccurrenceOutgoing({
+  interactions,
+  outgoing,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly outgoing: WorkspaceOccurrenceStageOutgoing;
+}) {
+  switch (outgoing.kind) {
+    case 'authoredDecision':
+      throw new BiomeWorkspaceContractError(
+        `${outgoing.decisionNodeKey} authored outgoing decision was not joined to its node.`,
+      );
+    case 'frontier':
+      return (
+        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
+          <AuthoringFrontier frontier={outgoing.frontier} interactions={interactions} />
+        </section>
+      );
+    case 'blockedOrUnentered':
+    case 'topologyOwned':
+    case 'terminal':
+      return (
+        <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
+          <div className="owner-markers">
+            <h3>Outgoing doors</h3>
+            <SemanticOwnerMarker address={outgoing.marker.address} />
+          </div>
+          <p className="fixed-room-state">
+            {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
+          </p>
+        </section>
+      );
   }
 }
 
@@ -809,23 +887,6 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
       : subject?.kind === 'node'
         ? structureLabelForNode(biome, subject.node)
         : biome.label;
-  const exitFrontier =
-    biome.frontier?.kind === 'exitDecision' && biome.frontier.owner.source.kind !== 'hubDecision'
-      ? biome.frontier
-      : undefined;
-  const nearbyFrontier =
-    subject?.kind === 'node' &&
-    exitFrontier?.predecessorNodeKey !== undefined &&
-    subject.node.key === exitFrontier.predecessorNodeKey
-      ? exitFrontier
-      : undefined;
-  const nextDecisionIntent =
-    nearbyFrontier === undefined
-      ? undefined
-      : (() => {
-          const structural = interactions.structural.get(nearbyFrontier.interactionKey);
-          return structural?.action === 'createBatch' ? structural.intent : undefined;
-        })();
   const clearTopology =
     biome.entry === undefined
       ? undefined
@@ -845,14 +906,20 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
   const runState =
     runStateNode !== undefined && 'runState' in runStateNode ? runStateNode.runState : undefined;
   const selectedNodeKey = subject?.kind === 'node' ? subject.node.key : undefined;
-  const selectedStage =
-    selectedNodeKey === undefined
-      ? undefined
-      : biome.occurrenceStages.find(
-          (stage) =>
-            stage.sourceOccurrenceNodeKey === selectedNodeKey ||
-            stage.outgoingDecisionNodeKey === selectedNodeKey,
-        );
+  const selectedStage = biome.occurrenceStages.find((stage) => {
+    if (stage.sourceOccurrenceNodeKey === selectedNodeKey) return true;
+    if (
+      stage.outgoing.kind === 'authoredDecision' &&
+      stage.outgoing.decisionNodeKey === selectedNodeKey
+    ) {
+      return true;
+    }
+    return (
+      subject?.kind === 'frontier' &&
+      stage.outgoing.kind === 'frontier' &&
+      stage.outgoing.frontier.marker.focusKey === subject.marker.focusKey
+    );
+  });
   const sourceOccurrenceCandidate =
     selectedStage === undefined
       ? undefined
@@ -861,10 +928,11 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
     sourceOccurrenceCandidate?.kind === 'occurrenceWorkbench'
       ? sourceOccurrenceCandidate
       : undefined;
+  const selectedOutgoing = selectedStage?.outgoing;
   const outgoingDecisionCandidate =
-    selectedStage?.outgoingDecisionNodeKey === undefined
+    selectedOutgoing?.kind !== 'authoredDecision'
       ? undefined
-      : biome.nodes.find((node) => node.key === selectedStage.outgoingDecisionNodeKey);
+      : biome.nodes.find((node) => node.key === selectedOutgoing.decisionNodeKey);
   const outgoingDecision =
     outgoingDecisionCandidate?.kind === 'ordinaryBatch' ||
     outgoingDecisionCandidate?.kind === 'mixedBatch' ||
@@ -935,7 +1003,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
         )}
         {subject === undefined ? (
           <p className="fixed-room-state">Choose the first room to start this biome.</p>
-        ) : subject.kind === 'frontier' ? (
+        ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (
           biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision' ? (
             <AuthoringFrontier frontier={biome.frontier} interactions={interactions} />
           ) : null
@@ -944,8 +1012,8 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
             frontier={biome.frontier}
             interactions={interactions}
             label={inspectorTitle}
-            {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
-            node={subject.node}
+            node={subject.kind === 'node' ? subject.node : sourceOccurrence!}
+            {...(selectedStage === undefined ? {} : { outgoing: selectedStage.outgoing })}
             {...(outgoingDecision === undefined ? {} : { outgoingDecision })}
             {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
           />

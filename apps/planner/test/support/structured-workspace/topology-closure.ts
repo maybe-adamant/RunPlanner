@@ -124,10 +124,10 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
       additional.address.additionalExitKey === 'zagreusContract'
         ? decision.zagreusContract === undefined
           ? undefined
-          : { room: decision.zagreusContract.contractRoom, ...decision.zagreusContract }
+          : { room: decision.zagreusContract.door.room, ...decision.zagreusContract }
         : decision.naturalChaos === undefined
           ? undefined
-          : { room: decision.naturalChaos.chaosRoom, ...decision.naturalChaos };
+          : { room: decision.naturalChaos.door.room, ...decision.naturalChaos };
     if (additionalExit?.owner.additionalExitKey !== additional.address.additionalExitKey) {
       throw new Error(
         `${workspaceTestOwnerKey(additional.address)} is not contained by its authored decision`,

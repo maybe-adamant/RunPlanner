@@ -579,12 +579,12 @@ describe('workspace inspector destinations', () => {
       expectNodeRailDestination(complete, owner, decision.key, decisionRail.marker.focusKey);
     }
     const targetWorkbench = occurrenceWorkbenchFor(f, target.room.occurrenceId);
-    for (const owner of [
-      target.room.marker.address,
-      ...target.room.rewardControls.map((control) => control.marker.address),
-    ]) {
+    expect(destination(complete, target.room.marker.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: targetWorkbench.key },
+    });
+    for (const owner of target.room.rewardControls.map((control) => control.marker.address)) {
       expect(destination(complete, owner)).toMatchObject({
-        inspectorSubject: { kind: 'node', nodeKey: targetWorkbench.key },
+        inspectorSubject: { kind: 'node', nodeKey: decision.key },
       });
     }
 
@@ -668,12 +668,12 @@ describe('workspace inspector destinations', () => {
       preHubDecision.key,
       preHubRailKey,
     );
-    for (const owner of [
-      preHubTarget.room.marker.address,
-      ...preHubTarget.room.rewardControls.map((control) => control.marker.address),
-    ]) {
+    expect(destination(complete, preHubTarget.room.marker.address)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: preHubWorkbench.key },
+    });
+    for (const owner of preHubTarget.room.rewardControls.map((control) => control.marker.address)) {
       expect(destination(complete, owner)).toMatchObject({
-        inspectorSubject: { kind: 'node', nodeKey: preHubWorkbench.key },
+        inspectorSubject: { kind: 'node', nodeKey: preHubDecision.key },
       });
     }
 
@@ -820,7 +820,6 @@ describe('workspace inspector destinations', () => {
     if (fieldsDecision === undefined || fieldsRoom?.roomLocal.kind !== 'fields') {
       throw new Error('H Fields room-local surface is missing');
     }
-    const fieldsWorkbench = occurrenceWorkbenchFor(h, fieldsRoom.occurrenceId);
     if (fieldsDecision.fieldsCageOutcome !== undefined) {
       expect(destination(underworld, fieldsDecision.fieldsCageOutcome.address)).toMatchObject({
         inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
@@ -828,7 +827,7 @@ describe('workspace inspector destinations', () => {
     }
     for (const owner of fieldsRoom.roomLocal.cages.map((cage) => cage.control.marker.address)) {
       expect(destination(underworld, owner)).toMatchObject({
-        inspectorSubject: { kind: 'node', nodeKey: fieldsWorkbench.key },
+        inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
       });
     }
 

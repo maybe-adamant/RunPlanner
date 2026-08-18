@@ -50,7 +50,7 @@ export const exitTypes = [
   {
     key: 'ChaosExitDoor',
     compatibilityPolicyKey: 'Unconstrained',
-    behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+    behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
   },
   {
     key: 'ChaosReturnExitDoor',

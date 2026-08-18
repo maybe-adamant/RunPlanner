@@ -349,7 +349,7 @@ describe('route detour catalog declarations', () => {
         physicalExit: {
           type: 'ChaosExitDoor',
           compatibilityPolicyKey: 'Unconstrained',
-          behavior: { kind: 'playerSelected', rewardPreview: 'visible' },
+          behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
         },
       });
     }

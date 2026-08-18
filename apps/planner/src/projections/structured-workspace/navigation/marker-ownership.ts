@@ -161,6 +161,11 @@ export function workspaceDecisionOwnedMarkers(
     ...(node.zagreusContract === undefined ? [] : [node.zagreusContract.marker]),
     ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),
     ...node.targets.map((target) => target.marker),
+    ...node.targets.flatMap((target) =>
+      target.door.rewardPreview.kind !== 'visible'
+        ? []
+        : target.door.rewardPreview.rewards.map((reward) => reward.marker),
+    ),
     ...node.missingTargets.map((target) => target.marker),
   ]);
 }

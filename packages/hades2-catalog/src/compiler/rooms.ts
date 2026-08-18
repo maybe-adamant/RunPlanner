@@ -420,9 +420,9 @@ function normalizeAdditionalExits(
         }
         if (
           exitType.behavior.kind !== 'playerSelected' ||
-          exitType.behavior.rewardPreview !== 'visible'
+          exitType.behavior.rewardPreview !== 'hidden'
         ) {
-          fail(`${exitPath}.exitType`, 'natural Chaos exits must be player-selected and visible');
+          fail(`${exitPath}.exitType`, 'natural Chaos exits must be player-selected and hidden');
         }
         const requirement =
           raw.requirement === undefined

@@ -1293,12 +1293,13 @@ describe('structured workspace overlay contract', () => {
       value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
     });
     expect(interaction?.removeIntent.command).toEqual({ kind: 'RemoveNaturalChaos', additional });
-    expect(interaction?.mapIntent(batch.naturalChaos.chaosRoom.gameName).command).toEqual({
+    expect(interaction?.mapIntent(batch.naturalChaos.door.room.gameName).command).toEqual({
       kind: 'ReplaceNaturalChaosMap',
       occurrence: createOccurrenceAddress(biome, chaosId),
-      gameName: batch.naturalChaos.chaosRoom.gameName,
+      gameName: batch.naturalChaos.door.room.gameName,
     });
-    expect(batch.naturalChaos.chaosRoom.occurrenceId).toBe(chaosId);
+    expect(batch.naturalChaos.door.room.occurrenceId).toBe(chaosId);
+    expect(batch.naturalChaos.door.rewardPreview).toEqual({ kind: 'hidden' });
     expect(projected.focusByOwner.get(semanticAddressKey(additional))?.nodeKey).toBe(batch.key);
     const chaosWorkbench = workspace?.nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
@@ -1308,7 +1309,7 @@ describe('structured workspace overlay contract', () => {
     }
     for (const address of [
       createOccurrenceAddress(biome, chaosId),
-      ...batch.naturalChaos.chaosRoom.rewardControls.map((control) => control.owner.address),
+      ...batch.naturalChaos.door.room.rewardControls.map((control) => control.owner.address),
     ]) {
       expect(projected.focusByOwner.get(semanticAddressKey(address))?.nodeKey).toBe(
         chaosWorkbench.key,
@@ -1422,7 +1423,8 @@ describe('structured workspace overlay contract', () => {
           node.kind === 'takeoverBatch') &&
         semanticAddressKey(node.owner) === semanticAddressKey(decision),
     );
-    expect(selectedContract?.zagreusContract?.contractRoom.entered).toBe(true);
+    expect(selectedContract?.zagreusContract?.door.room.entered).toBe(true);
+    expect(selectedContract?.zagreusContract?.door.rewardPreview).toEqual({ kind: 'hidden' });
     const contractPackages = observed.roomPackagesByOccurrence.get(contractId);
     expect(contractPackages).toHaveLength(1);
     expect(contractPackages?.[0]?.nodeKey).toBe(
@@ -1438,6 +1440,14 @@ describe('structured workspace overlay contract', () => {
         (roomPackage) => roomPackage.nodeKey === `batch:${semanticAddressKey(contractDecision)}`,
       ),
     ).toBe(true);
+    const automaticReturn = workspace.nodes.find(
+      (node): node is WorkspaceBatchNode =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        semanticAddressKey(node.owner) === semanticAddressKey(contractDecision),
+    );
+    expect(automaticReturn?.targets[0]?.door.rewardPreview).toEqual({ kind: 'hidden' });
     expect(
       projected.interactions.zagreusContracts.get(semanticAddressKey(additional))?.owner,
     ).toEqual(additional);

@@ -40,6 +40,7 @@ import {
   goldenHBiome,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures';
@@ -78,6 +79,67 @@ describe('underworld product loop', () => {
     });
     expect(document.body.textContent).not.toContain('F_Combat');
     expect(document.body.textContent).not.toContain('Linear topology');
+  });
+
+  it('replaces an existing room on its door card while the entered workbench stays identity-read-only', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const view = renderPlannerForInteraction({ application });
+    const source = { kind: 'occurrence' as const, occurrenceId: goldenFStartId };
+    const decision = createExitDecisionAddress(goldenFBiome, source);
+    const target = createTargetAddress(goldenFBiome, source, 'exit1');
+    const targetOccurrenceId = goldenFOccurrenceId(1, 1);
+    const originalGameName = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === targetOccurrenceId,
+      )?.gameName;
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() => application.store.dispatch(semanticOwnerFocused(decision)));
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(inspector).getByRole('button', { name: 'Door 1 room' }));
+    const replacement = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      );
+    if (replacement === undefined) throw new Error('F target has no replacement room');
+    await view.user.click(replacement);
+
+    const replaced = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === targetOccurrenceId);
+    expect(replaced?.gameName).not.toBe(originalGameName);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
+    const replacedRoom =
+      replaced?.gameName === undefined
+        ? undefined
+        : application.catalog.rooms.byKey[replaced.gameName];
+    if (replacedRoom === undefined) throw new Error('replaced F target room is missing');
+    await view.user.click(
+      within(inspector).getByRole('button', { name: `Open ${replacedRoom.label} room` }),
+    );
+    const workbench = inspector.querySelector('.biome-occurrence-workbench');
+    if (!(workbench instanceof HTMLElement)) throw new Error('entered target workbench is missing');
+    expect(within(workbench).queryByLabelText(/room$/i)).toBeNull();
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === targetOccurrenceId)
+        ?.gameName,
+    ).toBe(originalGameName);
   });
 
   it('repairs a stale Echo replay identity through the focused generated Room Action row', async () => {
@@ -358,8 +420,17 @@ describe('underworld product loop', () => {
     await view.user.click(normalRoom);
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.click(within(gate).getByRole('button', { name: 'Open Chaos 01 room' }));
-    await view.user.selectOptions(screen.getByLabelText('Map'), 'Chaos_06');
+    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
+    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_06');
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
+    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
+    await view.user.click(within(gate).getByRole('button', { name: 'Open Chaos 06 room' }));
+    const enteredChaos = screen.getByRole('complementary', { name: 'Details' });
+    expect(within(enteredChaos).queryByLabelText('Map')).toBeNull();
+    expect(within(enteredChaos).queryByLabelText('Room')).toBeNull();
+    expect(within(enteredChaos).queryByLabelText('Reward')).toBeNull();
+    expect(within(enteredChaos).queryByText(/Incoming door reward|Trial Upgrade/)).toBeNull();
     act(() =>
       application.store.dispatch(
         semanticOwnerFocused(createExitDecisionAddress(goldenFBiome, source)),
@@ -381,6 +452,13 @@ describe('underworld product loop', () => {
     ).toMatchObject({
       selection: { kind: 'additional', additionalExitKey: 'naturalChaos' },
     });
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
+      ),
+    );
+    expect(within(enteredChaos).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
+    expect(within(enteredChaos).queryByText(/Incoming door reward/)).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
     await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
@@ -937,10 +1015,25 @@ describe('underworld product loop', () => {
     expect((screen.getByLabelText('Take Zagreus contract') as HTMLInputElement).checked).toBe(
       false,
     );
+    const contractCard = screen.getByRole('article', { name: 'Zagreus contract exit' });
+    await view.user.click(within(contractCard).getByRole('button', { name: /^Open .* room$/ }));
+    const contractWorkbench = screen.getByRole('complementary', { name: 'Details' });
+    expect(
+      within(contractWorkbench).queryByText(/Incoming door reward|Infernal Contract Boon/),
+    ).toBeNull();
+    expect(within(contractWorkbench).queryByRole('button', { name: 'Reward' })).toBeNull();
+    act(() =>
+      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(fBiome, source))),
+    );
     await view.user.click(screen.getByLabelText('Take Zagreus contract'));
     expect(
       screen.getByRole('article', { name: 'Zagreus contract exit' }).getAttribute('data-picked'),
     ).toBe('true');
+    act(() =>
+      application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(fBiome, contract))),
+    );
+    expect(within(contractWorkbench).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
+    expect(within(contractWorkbench).queryByText(/Incoming door reward/)).toBeNull();
     let selected = application.store.getState().projectWorkspace.history.present;
     selected = applyProjectCommand(selected, application.catalog, {
       kind: 'CreateBatch',

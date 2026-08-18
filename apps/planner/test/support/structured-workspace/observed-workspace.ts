@@ -91,6 +91,14 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   return markers;
 }
 
+function appendDoorRewardMarkers(
+  markers: WorkspaceMarker[],
+  door: Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }>['targets'][number]['door'],
+): void {
+  if (door.rewardPreview.kind !== 'visible') return;
+  for (const reward of door.rewardPreview.rewards) appendMarker(markers, reward.marker);
+}
+
 /** Hub nodes publish only the declaration-defined main reward package for a room. */
 function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   const local = room.roomLocal;
@@ -138,13 +146,14 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
       if (node.fieldsCageOutcome !== undefined) appendMarker(markers, node.fieldsCageOutcome);
       for (const target of node.targets) {
         appendMarker(markers, target.marker);
+        appendDoorRewardMarkers(markers, target.door);
         markers.push(...roomMarkers(target.room));
       }
       if (node.zagreusContract !== undefined) {
-        markers.push(...roomMarkers(node.zagreusContract.contractRoom));
+        markers.push(...roomMarkers(node.zagreusContract.door.room));
       }
       if (node.naturalChaos !== undefined) {
-        markers.push(...roomMarkers(node.naturalChaos.chaosRoom));
+        markers.push(...roomMarkers(node.naturalChaos.door.room));
       }
       for (const target of node.missingTargets) appendMarker(markers, target.marker);
       break;
@@ -166,6 +175,9 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
     case 'occurrenceWorkbench':
       if (node.railMarker !== undefined) appendMarker(markers, node.railMarker);
       for (const marker of node.localDetailMarkers) appendMarker(markers, marker);
+      for (const local of node.localVisit?.slots ?? []) {
+        if (local.generation === 'generated') appendDoorRewardMarkers(markers, local.door);
+      }
       markers.push(...roomMarkers(node.room));
       break;
     case 'completion':

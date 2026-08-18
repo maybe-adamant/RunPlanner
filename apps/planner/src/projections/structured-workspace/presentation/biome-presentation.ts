@@ -1,4 +1,4 @@
-import type { OccurrenceId } from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type OccurrenceId } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import {
@@ -7,6 +7,7 @@ import {
   type WorkspaceHubDecisionNode,
   type WorkspaceHubRailEntry,
   type WorkspaceHubVisitRailEntry,
+  type WorkspaceDoorContract,
   type WorkspaceInspectorDestination,
   type WorkspaceMarker,
   type WorkspaceMixedBatchNode,
@@ -23,8 +24,8 @@ import {
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
-import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 
 /** Final biome products derived from completed semantics and immutable catalog display metadata. */
 export interface WorkspaceBiomePresentation {
@@ -135,39 +136,40 @@ function nodeRailPresentation(
 }
 
 /**
- * The rail describes authored primary-room context even when evaluation has
- * not reached it. Ephyra's incoming reward is one explicit main reward;
- * side-room offers remain local detail and never become an aggregate token.
+ * The rail consumes the exact predecessor-owned door handoff. It never
+ * reconstructs a reward identity from room-local state.
  */
-function mainRailRewardForRoom(
+function mainRailRewardForDoor(
+  door: WorkspaceDoorContract | undefined,
+): WorkspaceRailReward | undefined {
+  const preview = door?.rewardPreview;
+  const reward =
+    preview?.kind === 'visible' && preview.rewards.length === 1 ? preview.rewards[0] : undefined;
+  return reward?.offer === null || reward?.offer === undefined
+    ? undefined
+    : Object.freeze({ label: reward.summary, offer: reward.offer });
+}
+
+/** The authored biome entry has no predecessor door, so its own opening reward is explicit here. */
+function entryRailReward(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
 ): WorkspaceRailReward | undefined {
-  switch (room.roomLocal.kind) {
-    case 'fixed':
-      return room.roomLocal.offer === null
-        ? undefined
-        : Object.freeze({
-            label: room.roomLocal.summary,
-            offer: room.roomLocal.offer,
-          });
-    case 'incomingReward':
-      if (room.roomLocal.clockworkReward === 'goal') return undefined;
-      if (room.roomLocal.control.offer === null) return undefined;
-      return Object.freeze({
-        label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
-        offer: room.roomLocal.control.offer,
-      });
-    case 'none':
-    case 'fields':
-    case 'ship':
-    case 'shop':
-      return undefined;
+  if (room.roomLocal.kind === 'fixed') {
+    return room.roomLocal.offer === null
+      ? undefined
+      : Object.freeze({ label: room.roomLocal.summary, offer: room.roomLocal.offer });
   }
+  if (room.roomLocal.kind !== 'incomingReward' || room.roomLocal.control.offer === null) {
+    return undefined;
+  }
+  return Object.freeze({
+    label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
+    offer: room.roomLocal.control.offer,
+  });
 }
 
 function selectedTargetRailPresentation(
-  catalog: Catalog,
   node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode,
 ): WorkspaceRailSelectedTarget | undefined {
   const selectedTargets = node.targets.filter((target) => target.selected);
@@ -178,10 +180,16 @@ function selectedTargetRailPresentation(
       `${node.key} has no selected target after cardinality check`,
     );
   }
-  const reward = mainRailRewardForRoom(catalog, target.room);
+  const visible = target.door.rewardPreview;
+  const onlyReward =
+    visible.kind === 'visible' && visible.rewards.length === 1 ? visible.rewards[0] : undefined;
+  const reward =
+    onlyReward?.offer === null || onlyReward?.offer === undefined
+      ? undefined
+      : Object.freeze({ label: onlyReward.summary, offer: onlyReward.offer });
   return Object.freeze({
     ...(reward === undefined ? {} : { reward }),
-    roomLabel: target.room.label,
+    roomLabel: target.door.room.label,
   });
 }
 
@@ -191,7 +199,6 @@ function selectedTargetRailPresentation(
  * React join visits to occurrences or infer which Hub rooms are shown.
  */
 function projectHubRailEntry(
-  catalog: Catalog,
   node: WorkspaceHubDecisionNode,
   structuralNodes: readonly WorkspaceNode[],
 ): WorkspaceHubRailEntry {
@@ -222,7 +229,7 @@ function projectHubRailEntry(
         `Hub visit ${visit.visitIndex} must use a room-local workbench presentation`,
       );
     }
-    const mainReward = mainRailRewardForRoom(catalog, workbench.room);
+    const mainReward = mainRailRewardForDoor(visit.door);
     visits.push(
       Object.freeze({
         key: `${node.key}:visit:${visit.visitIndex}`,
@@ -319,11 +326,11 @@ export function presentWorkspaceBiome(
       : undefined;
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
-    if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
+    if (node.kind === 'hubDecision') return projectHubRailEntry(node, structuralNodes);
     if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
-      const selectedTarget = selectedTargetRailPresentation(catalog, node);
+      const selectedTarget = selectedTargetRailPresentation(node);
       return Object.freeze({
         kind: 'node' as const,
         key: node.key,
@@ -336,7 +343,9 @@ export function presentWorkspaceBiome(
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
     const mainReward =
       semantic.progressionKind === 'hub' && node.kind === 'occurrenceWorkbench'
-        ? mainRailRewardForRoom(catalog, node.room)
+        ? node.key === entry?.key
+          ? entryRailReward(catalog, node.room)
+          : mainRailRewardForDoor(node.incomingDoor)
         : undefined;
     return Object.freeze({
       kind: 'node' as const,
@@ -406,6 +415,7 @@ export function presentWorkspaceBiome(
     ),
   );
   const outgoingDecisionBySource = new Map<OccurrenceId, WorkspaceNode>();
+  const outgoingDecisionByOwner = new Map<string, WorkspaceNode>();
   for (const node of nodes) {
     if (
       (node.kind !== 'ordinaryBatch' &&
@@ -426,13 +436,31 @@ export function presentWorkspaceBiome(
       );
     }
     outgoingDecisionBySource.set(node.source.occurrenceId, node);
+    outgoingDecisionByOwner.set(semanticAddressKey(node.owner), node);
   }
   const occurrenceStages = Object.freeze(
     [...occurrenceNodeById.entries()].map(([occurrenceId, occurrence]) => {
-      const outgoing = outgoingDecisionBySource.get(occurrenceId);
+      const semanticOutgoing = semantic.occurrenceOutgoing.get(occurrenceId);
+      if (semanticOutgoing === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${occurrenceId} has no occurrence-local outgoing product`,
+        );
+      }
+      const outgoing =
+        semanticOutgoing.kind === 'authoredDecision'
+          ? outgoingDecisionByOwner.get(semanticOutgoing.decisionNodeKey)
+          : undefined;
+      if (semanticOutgoing.kind === 'authoredDecision' && outgoing === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticOutgoing.decisionNodeKey} has no outgoing workspace decision node`,
+        );
+      }
       return Object.freeze({
+        outgoing:
+          outgoing === undefined
+            ? semanticOutgoing
+            : Object.freeze({ kind: 'authoredDecision' as const, decisionNodeKey: outgoing.key }),
         sourceOccurrenceNodeKey: occurrence.key,
-        ...(outgoing === undefined ? {} : { outgoingDecisionNodeKey: outgoing.key }),
       });
     }),
   );
