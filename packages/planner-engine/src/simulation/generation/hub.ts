@@ -217,33 +217,33 @@ function validateVisit(
   const required = requiredGeneratedCount(descriptor, visit.visitIndex);
   let generated = generatedBefore;
   const ordered = [...visit.localSlots].sort(
-    (left, right) => left.availabilityRank - right.availabilityRank,
+    (left, right) => left.localVisit.availabilityRank - right.localVisit.availabilityRank,
   );
   const entries = ordered.map((slot, index): HubSideRoomGenerationSupportEntry => {
-    if (slot.availabilityRank !== index + 1) {
+    if (slot.localVisit.availabilityRank !== index + 1) {
       fail(`Hub visit ${visit.visitIndex} has non-contiguous side availability ranks`);
     }
     const supportOutcomes: readonly SideRoomGenerationOutcome[] = Object.freeze(
       generated < required ? ['generated'] : ['generated', 'notGenerated'],
     );
-    const selectedPossible = supportOutcomes.includes(slot.generation);
+    const selectedPossible = supportOutcomes.includes(slot.localVisit.generation);
     const entry: HubSideRoomGenerationSupportEntry = Object.freeze({
-      origin: slot.origin,
+      origin: slot.localVisit.origin,
       visitIndex: visit.visitIndex,
-      availabilityRank: slot.availabilityRank,
+      availabilityRank: slot.localVisit.availabilityRank,
       generatedBefore: generated,
       requiredGeneratedCount: required,
-      selectedOutcome: slot.generation,
+      selectedOutcome: slot.localVisit.generation,
       supportOutcomes,
       selectedPossible,
     });
     if (!selectedPossible) {
-      const value = finding('sideRoomGenerationUnavailable', slot.origin, {
+      const value = finding('sideRoomGenerationUnavailable', slot.localVisit.origin, {
         visitIndex: visit.visitIndex,
-        availabilityRank: slot.availabilityRank,
+        availabilityRank: slot.localVisit.availabilityRank,
         generatedBefore: generated,
         requiredGeneratedCount: required,
-        selectedOutcome: slot.generation,
+        selectedOutcome: slot.localVisit.generation,
         supportOutcomes,
       });
       findings.push(value);
@@ -258,7 +258,7 @@ function validateVisit(
         findingRegion(value, ownerRegion(value.origin), chronology, 'generation'),
       );
     }
-    if (slot.generation === 'generated') generated += 1;
+    if (slot.localVisit.generation === 'generated') generated += 1;
     return entry;
   });
   if (

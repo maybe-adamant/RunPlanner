@@ -62,7 +62,7 @@ interface PendingTargetGeneration {
   readonly creation: Extract<
     RoomCreatedHistoryEvent,
     {
-      readonly source: 'generatedTarget' | 'hubDecision' | 'hubTarget' | 'localChild';
+      readonly source: 'generatedTarget' | 'hubDecision' | 'hubTarget' | 'localVisit';
     }
   >;
   readonly before: HistoryStateView;
@@ -321,10 +321,10 @@ function foldHistoryEventStream(
             );
           }
         }
-        if (event.source === 'localChild') {
+        if (event.source === 'localVisit') {
           if (ledgers.counters.numSubRoomsSpawned === undefined) {
             throw new HistoryFoldContractError(
-              'local child generation appeared outside a Hub biome',
+              'local visit generation appeared outside a Hub biome',
             );
           }
           ledgers.counters.numSubRoomsSpawned += 1;
@@ -333,7 +333,7 @@ function foldHistoryEventStream(
           event.source === 'generatedTarget' ||
           event.source === 'hubTarget' ||
           event.source === 'hubDecision' ||
-          event.source === 'localChild'
+          event.source === 'localVisit'
         ) {
           if (pendingTargetGeneration !== undefined) {
             throw new HistoryFoldContractError('target generations cannot overlap');

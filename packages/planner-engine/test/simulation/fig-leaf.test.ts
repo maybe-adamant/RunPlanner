@@ -28,6 +28,7 @@ import {
   createRepresentativeNOPProject,
   createRepresentativeNOPQProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
@@ -550,10 +551,8 @@ describe('Fig Leaf state contract', () => {
     const phase = createEncounterPhaseAddress(
       nBiome,
       {
-        kind: 'localChild',
-        occurrenceId: nOccurrenceId('combat02'),
-        groupKey: 'sideRooms',
-        slotKey: 'sideDoor1',
+        kind: 'occurrence',
+        occurrenceId: nLocalOccurrenceId('combat02', 'sideDoor1'),
       },
       'Encounter',
     );
@@ -570,14 +569,14 @@ describe('Fig Leaf state contract', () => {
     expect(blocked).toBeDefined();
     expect(blocked && semanticAddressKey(blocked.origin)).toBe(semanticAddressKey(phase));
     expect(blocked?.evidence.reason).toBe('envelopeBlocker');
-    const parent = authored.routes
+    const localRoom = authored.routes
       .flatMap((route) => route.biomes)
       .find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === nOccurrenceId('combat02'),
+        (candidate) => candidate.occurrenceId === nLocalOccurrenceId('combat02', 'sideDoor1'),
       );
-    if (parent?.state.kind !== 'ephyraCombat') throw new Error('N combat parent missing');
-    expect(parent.state.sideRooms.sideDoor1?.encounters.figLeafSkipByPhase).toEqual({
+    if (localRoom === undefined) throw new Error('N local room missing');
+    expect(localRoom.encounters.figLeafSkipByPhase).toEqual({
       Encounter: true,
     });
   });

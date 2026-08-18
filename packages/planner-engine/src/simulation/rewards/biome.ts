@@ -53,7 +53,6 @@ import type {
   CanonicalBiome,
   CanonicalHubRoom,
   CanonicalHubTarget,
-  CanonicalLocalChildRoom,
   CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
@@ -183,7 +182,7 @@ import {
   preparePickupAcquisitionOrderCandidateContext,
 } from './acquisition-order-candidates';
 
-type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
+type CanonicalRewardRoom = CanonicalAuthoredRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
 
 interface IncomingOfferCandidateContext {
@@ -268,8 +267,8 @@ function hubFindingChronology(
           kind: 'hubVisit',
           visitIndex,
           phase,
-          ...(phase === 'localRoomLifecycle' && local.enteredOrdinal !== null
-            ? { localLifecycleIndex: local.enteredOrdinal - 1 }
+          ...(phase === 'localRoomLifecycle' && local.localVisit.enteredOrdinal !== null
+            ? { localLifecycleIndex: local.localVisit.enteredOrdinal - 1 }
             : {}),
           history: historyFindingChronology(sequence),
         });
@@ -429,7 +428,7 @@ function acquisitionSiteOwner(
   snapshot: BiomeRewardSnapshot,
   room: CanonicalRewardRoom,
 ): AcquisitionSiteOwnerAddress {
-  if (room.kind === 'localChild') return room.origin;
+  if ('localVisit' in room) return room.origin;
   for (const decision of snapshot.decisions) {
     if (decision.kind !== 'hub') continue;
     const visit = decision.visits.find((candidate) =>
@@ -1367,7 +1366,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       )
       .map((decision) => semanticAddressKey(decision.source.origin)),
   );
-  // Hub visit targets and their entered local children restore to an existing
+  // Hub visit targets and their entered local rooms restore to an existing
   // parent rather than generating another ordinary decision. Their outgoing
   // checkpoints must still advance reward history without inventing a batch.
   const activeHubVisit = hubVisitFrontier(snapshot);
@@ -2290,19 +2289,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
     switch (event.kind) {
       case 'encounterStarted': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        if (room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')) {
+        if (room !== undefined && room.kind === 'authored') {
           const phase = room.encounterPhases.find(
             (candidate) => candidate.slotKey === event.phaseKey,
           );
-          const phaseOwner =
-            room.origin.kind === 'occurrence'
-              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
-              : {
-                  kind: 'localChild' as const,
-                  occurrenceId: room.origin.occurrenceId,
-                  groupKey: room.origin.groupKey,
-                  slotKey: room.origin.slotKey,
-                };
+          const phaseOwner = {
+            kind: 'occurrence' as const,
+            occurrenceId: room.occurrenceId,
+          };
           if (phase !== undefined) {
             const origin = createEncounterPhaseAddress(
               createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
@@ -2380,18 +2374,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
         // is evaluated at the predecessor/pre-room checkpoint after Fig Leaf
         // execution; the pending branch remains untouched until completion.
         const gorgonDeclaration =
-          room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')
+          room !== undefined && room.kind === 'authored'
             ? catalog.rooms.byKey[room.gameName]
             : undefined;
         const gorgonView =
           room === undefined ? undefined : views.get(semanticAddressKey(room.origin));
         const gorgonPhase =
-          room !== undefined && (room.kind === 'authored' || room.kind === 'localChild')
+          room !== undefined && room.kind === 'authored'
             ? room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey)
             : undefined;
         if (
           room !== undefined &&
-          (room.kind === 'authored' || room.kind === 'localChild') &&
+          room.kind === 'authored' &&
           gorgonDeclaration !== undefined &&
           gorgonPhase !== undefined &&
           gorgonView !== undefined
@@ -2410,14 +2404,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           )?.effect;
           const gorgonOrigin = createEncounterPhaseAddress(
             createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
-            room.kind === 'authored'
-              ? { kind: 'occurrence', occurrenceId: room.occurrenceId }
-              : {
-                  kind: 'localChild',
-                  occurrenceId: room.origin.occurrenceId,
-                  groupKey: room.groupKey,
-                  slotKey: room.slotKey,
-                },
+            { kind: 'occurrence', occurrenceId: room.occurrenceId },
             event.phaseKey,
           );
           const gorgonCandidateSupported =
@@ -2940,7 +2927,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           )?.before;
           peerParentOrigin = parent.origin;
           peerCreationSource = 'hubTarget';
-        } else if (event.source === 'localChild') {
+        } else if (event.source === 'localVisit') {
           const parentViews = views.get(semanticAddressKey(event.parentOrigin));
           const parent = rooms.get(semanticAddressKey(event.parentOrigin));
           if (parent?.kind !== 'authored') {
@@ -2955,7 +2942,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(event.targetOrigin),
           )?.before;
           peerParentOrigin = parent.origin;
-          peerCreationSource = 'localChild';
+          peerCreationSource = 'localVisit';
         } else if (localRewards.length !== 0) {
           throw new BiomeRewardSimulationContractError(
             `${room.gameName} materialized local rewards outside a generated target`,
@@ -2985,7 +2972,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   kind: 'hubBoard' as const,
                   history: historyFindingChronology(event.sequence),
                 })
-              : event.source === 'localChild'
+              : event.source === 'localVisit'
                 ? rewardFindingChronologyForRoom(
                     snapshot,
                     room.origin,
@@ -3142,7 +3129,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   kind: 'hubBoard' as const,
                   history: historyFindingChronology(event.sequence),
                 })
-              : event.source === 'localChild'
+              : event.source === 'localVisit'
                 ? rewardFindingChronologyForRoom(
                     snapshot,
                     room.origin,
@@ -3250,7 +3237,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             );
             branches = processRewardOffer(branches, offerContext, findings);
           }
-          if (event.source === 'generatedTarget' || event.source === 'localChild') {
+          if (event.source === 'generatedTarget' || event.source === 'localVisit') {
             peers = Object.freeze([
               ...peers,
               { origin: event.targetOrigin, offer: incoming.offer },
@@ -3260,7 +3247,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         for (const localReward of localRewards) {
           const frontierBranches = branches;
           const offerFindingChronology =
-            event.source === 'localChild'
+            event.source === 'localVisit'
               ? rewardFindingChronologyForRoom(
                   snapshot,
                   room.origin,
@@ -4358,7 +4345,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (
           room !== undefined &&
           declaration !== undefined &&
-          (room.kind === 'authored' || room.kind === 'localChild') &&
+          room.kind === 'authored' &&
           eligibleGorgonPhases.has(`${semanticAddressKey(event.origin)}::${event.phaseKey}`)
         ) {
           const result = room.encounters.gorgonResultByPhase?.[event.phaseKey];
@@ -4367,14 +4354,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           );
           const encounterPhaseAddress = createEncounterPhaseAddress(
             createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
-            room.origin.kind === 'occurrence'
-              ? { kind: 'occurrence', occurrenceId: room.origin.occurrenceId }
-              : {
-                  kind: 'localChild',
-                  occurrenceId: room.origin.occurrenceId,
-                  groupKey: room.origin.groupKey,
-                  slotKey: room.origin.slotKey,
-                },
+            { kind: 'occurrence', occurrenceId: room.occurrenceId },
             event.phaseKey,
           );
           const gorgonPhaseAddress = createGorgonPhaseAddress(encounterPhaseAddress);
@@ -4592,7 +4572,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
-        if (room.kind !== 'authored' && room.kind !== 'localChild') {
+        if (room.kind !== 'authored') {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
@@ -4610,15 +4590,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (authoredEncounterOffer === null && selectedEncounterKey !== undefined) {
           const producer =
             catalog.encounterDefinitions.byKey[selectedEncounterKey]?.traitOfferProducer;
-          const phaseOwner =
-            room.origin.kind === 'occurrence'
-              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
-              : {
-                  kind: 'localChild' as const,
-                  occurrenceId: room.origin.occurrenceId,
-                  groupKey: room.origin.groupKey,
-                  slotKey: room.origin.slotKey,
-                };
+          const phaseOwner = {
+            kind: 'occurrence' as const,
+            occurrenceId: room.occurrenceId,
+          };
           const phaseAddress = createEncounterPhaseAddress(
             createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
             phaseOwner,
@@ -4654,15 +4629,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
           break;
         }
         if (authoredEncounterOffer != null && selectedEncounterKey !== undefined) {
-          const phaseOwner =
-            room.origin.kind === 'occurrence'
-              ? { kind: 'occurrence' as const, occurrenceId: room.origin.occurrenceId }
-              : {
-                  kind: 'localChild' as const,
-                  occurrenceId: room.origin.occurrenceId,
-                  groupKey: room.origin.groupKey,
-                  slotKey: room.origin.slotKey,
-                };
+          const phaseOwner = {
+            kind: 'occurrence' as const,
+            occurrenceId: room.occurrenceId,
+          };
           const phaseAddress = createEncounterPhaseAddress(
             createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
             phaseOwner,

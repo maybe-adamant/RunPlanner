@@ -119,9 +119,29 @@ describe('structured workspace Hub assembly', () => {
     expect(assembly.node.slots).toHaveLength(kit.descriptor.slots.length);
     expect(assembly.node.openSlotCount).toEqual({ current: 9, min: 9, max: 10 });
     expect(assembly.node.visits).toHaveLength(kit.descriptor.requiredVisits);
-    expect(assembly.workbenches).toHaveLength(kit.hub.openTargets.length);
+    expect(assembly.workbenches).toHaveLength(
+      assembly.node.slots.reduce(
+        (count, slot) =>
+          count +
+          (slot.room === undefined ? 0 : 1) +
+          (slot.localVisit?.slots.filter((local) => local.generation === 'generated').length ?? 0),
+        0,
+      ),
+    );
+    const localOccurrenceIds = new Set(
+      assembly.node.slots.flatMap(
+        (slot) =>
+          slot.localVisit?.slots.flatMap((local) =>
+            local.generation === 'generated' ? [local.occurrenceId] : [],
+          ) ?? [],
+      ),
+    );
     expect(
-      assembly.workbenches.every((node) => node.inspectorPresentation === 'hubRoomLocal'),
+      assembly.workbenches.every((node) =>
+        localOccurrenceIds.has(node.room.occurrenceId)
+          ? node.inspectorPresentation === 'full'
+          : node.inspectorPresentation === 'hubRoomLocal',
+      ),
     ).toBe(true);
     expect(assembly.workbenches.every((node) => node.railVisibility === 'inspectorOnly')).toBe(
       true,
@@ -171,7 +191,14 @@ describe('structured workspace Hub assembly', () => {
     expect(assembly.node.visits.map((visit) => visit.hubSlotKey)).toEqual(kit.hub.visitOrder);
     expect(assembly.workbenches.map((node) => node.room.occurrenceId)).toEqual(
       assembly.node.slots.flatMap((slot) =>
-        slot.room === undefined ? [] : [slot.room.occurrenceId],
+        slot.room === undefined
+          ? []
+          : [
+              ...(slot.localVisit?.slots.flatMap((local) =>
+                local.generation === 'generated' ? [local.occurrenceId] : [],
+              ) ?? []),
+              slot.room.occurrenceId,
+            ],
       ),
     );
     expect(assembly.rewardControls.length).toBeGreaterThan(0);

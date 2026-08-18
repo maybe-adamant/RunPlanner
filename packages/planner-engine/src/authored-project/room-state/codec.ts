@@ -15,7 +15,6 @@ import type {
   AuthoredRoomState,
   FieldsCombatAction,
   EphyraCombatState,
-  EphyraSideRoomState,
   RewardWheelState,
   ShipCombatState,
   ShopOfferState,
@@ -42,7 +41,6 @@ import {
   requireShopBinding,
   type RoomStateContext,
 } from './declaration';
-import { decodeRoomEncounterState } from './encounters';
 import {
   traitOfferSupportsExhaustion,
   type AuthoredLevelResolution,
@@ -800,87 +798,8 @@ function decodeEphyraCombatState(
   path: string,
 ): EphyraCombatState {
   expectedKind(value.kind, 'ephyraCombat', path);
-  expectExactKeys(value, ['kind', 'reward', 'sideRooms'], path);
-  const descriptor = requireEphyraSideRooms(room, path);
-  const slots = descriptor?.slots ?? [];
-  const rawSideRooms = expectRecord(value.sideRooms, `${path}.sideRooms`);
-  expectExactKeys(
-    rawSideRooms,
-    slots.map((slot) => slot.slotKey),
-    `${path}.sideRooms`,
-  );
-  const enteredOrdinals = new Set<number>();
-  const sideRooms: Record<string, EphyraSideRoomState> = {};
-  for (const slot of slots) {
-    const slotPath = `${path}.sideRooms.${slot.slotKey}`;
-    const rawState = expectRecord(rawSideRooms[slot.slotKey], slotPath);
-    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'reward', 'encounters'], slotPath);
-    const generation = expectString(rawState.generation, `${slotPath}.generation`);
-    if (generation !== 'generated' && generation !== 'notGenerated') {
-      failProjectDocument(`${slotPath}.generation`, 'must be generated or notGenerated');
-    }
-    let enteredOrdinal: number | null = null;
-    if (rawState.enteredOrdinal !== null) {
-      enteredOrdinal = expectPositiveInteger(rawState.enteredOrdinal, `${slotPath}.enteredOrdinal`);
-      if (enteredOrdinal > slots.length) {
-        failProjectDocument(`${slotPath}.enteredOrdinal`, 'exceeds the local side-room capacity');
-      }
-      if (enteredOrdinals.has(enteredOrdinal)) {
-        failProjectDocument(`${slotPath}.enteredOrdinal`, `duplicates ${enteredOrdinal}`);
-      }
-      enteredOrdinals.add(enteredOrdinal);
-      if (generation !== 'generated') {
-        failProjectDocument(`${slotPath}.enteredOrdinal`, 'requires a generated side room');
-      }
-    }
-    const sideRoom = catalog.rooms.byKey[slot.roomGameName];
-    if (sideRoom === undefined) {
-      failProjectDocument(slotPath, `unknown room ${slot.roomGameName}`);
-    }
-    const sideReward = decodeNullableRewardState(rawState.reward, catalog, `${slotPath}.reward`, {
-      kind: 'producerLifecycle',
-      key: requireCountedBinding(sideRoom, slotPath).producerLifecycleKey,
-    });
-    if (sideReward === null) {
-      sideRooms[slot.slotKey] = Object.freeze({
-        generation,
-        enteredOrdinal,
-        reward: null,
-        encounters: decodeRoomEncounterState(
-          rawState.encounters,
-          catalog,
-          sideRoom,
-          `${slotPath}.encounters`,
-        ),
-      });
-      continue;
-    }
-    const sideOffer = decodeCountedOffer(
-      sideReward.offer,
-      catalog,
-      requireCountedBinding(sideRoom, slotPath),
-      `${slotPath}.reward.offer`,
-    );
-    sideRooms[slot.slotKey] = Object.freeze({
-      generation,
-      enteredOrdinal,
-      reward: Object.freeze({ ...sideReward, offer: sideOffer }),
-      encounters: decodeRoomEncounterState(
-        rawState.encounters,
-        catalog,
-        sideRoom,
-        `${slotPath}.encounters`,
-      ),
-    });
-  }
-  for (let ordinal = 1; ordinal <= enteredOrdinals.size; ordinal += 1) {
-    if (!enteredOrdinals.has(ordinal)) {
-      failProjectDocument(
-        `${path}.sideRooms.enteredOrdinals`,
-        `must contain contiguous ordinal ${ordinal}`,
-      );
-    }
-  }
+  expectExactKeys(value, ['kind', 'reward'], path);
+  requireEphyraSideRooms(room, path);
   const parentReward = decodeNullableRewardState(value.reward, catalog, `${path}.reward`, {
     kind: 'producerLifecycle',
     key: requireCountedBinding(room, path).producerLifecycleKey,
@@ -889,7 +808,6 @@ function decodeEphyraCombatState(
     return Object.freeze({
       kind: 'ephyraCombat',
       reward: null,
-      sideRooms: Object.freeze(sideRooms),
     });
   const offer = decodeCountedOffer(
     parentReward.offer,
@@ -900,7 +818,6 @@ function decodeEphyraCombatState(
   return Object.freeze({
     kind: 'ephyraCombat',
     reward: Object.freeze({ ...parentReward, offer }),
-    sideRooms: Object.freeze(sideRooms),
   });
 }
 

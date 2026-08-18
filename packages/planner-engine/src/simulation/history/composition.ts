@@ -266,7 +266,7 @@ export function appendRoomLifecycle(
     throw new RewardAuthorshipBlocked(room.unresolvedIncomingReward.origin);
   }
   const authoringRoom: EncounterAuthoringRoom | undefined =
-    room.kind === 'authored' || room.kind === 'localChild' ? room : undefined;
+    room.kind === 'authored' ? room : undefined;
   const beforeEncounterPreparation = writer.validatesEncounterResolution
     ? writer.current()
     : undefined;

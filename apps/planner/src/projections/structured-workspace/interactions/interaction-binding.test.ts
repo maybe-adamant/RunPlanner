@@ -12,8 +12,6 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalRewardAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -57,13 +55,13 @@ import {
   goldenIBiome,
   createRepresentativeNOPQProject,
   createRepresentativeNOPProject,
-  createRepresentativeNProject,
   createRepresentativeNOPQShopTraitProject,
   createRepresentativeNOProject,
   appendCompleteN,
   appendNEntry,
   authorLegalTraitOffers,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
@@ -970,25 +968,29 @@ describe('structured workspace interaction binding', () => {
 
     expect(allocated).toEqual([]);
     const firstAttempt = slot.beginOpeningAttempt();
-    expect(allocated).toEqual([createOccurrenceId('bound-hub-opening-1')]);
+    const firstAttemptIds = [...allocated];
+    expect(firstAttemptIds[0]).toBe(createOccurrenceId('bound-hub-opening-1'));
+    expect(firstAttemptIds.length).toBeGreaterThan(1);
     const firstCandidates = firstAttempt.load();
     expect(firstAttempt.load()).toBe(firstCandidates);
-    expect(firstAttempt.intentFor(true)).toEqual({
-      command: {
-        kind: 'OpenHubSlot',
-        occurrenceId: createOccurrenceId('bound-hub-opening-1'),
-        slot: slot.owner,
-      },
+    const firstIntent = firstAttempt.intentFor(true);
+    expect(firstIntent.command).toMatchObject({
+      kind: 'OpenHubSlot',
+      occurrenceId: firstAttemptIds[0],
+      slot: slot.owner,
     });
-    expect(allocated).toHaveLength(1);
+    if (firstIntent.command.kind !== 'OpenHubSlot') {
+      throw new Error('Hub opening intent is missing');
+    }
+    expect(Object.values(firstIntent.command.localOccurrenceIdsBySlot)).toEqual(
+      firstAttemptIds.slice(1),
+    );
+    expect(allocated).toHaveLength(firstAttemptIds.length);
 
     const secondAttempt = slot.beginOpeningAttempt();
     expect(secondAttempt).not.toBe(firstAttempt);
-    expect(allocated).toEqual([
-      createOccurrenceId('bound-hub-opening-1'),
-      createOccurrenceId('bound-hub-opening-2'),
-    ]);
-    expect(secondAttempt.key).toContain('bound-hub-opening-2');
+    expect(allocated).toHaveLength(firstAttemptIds.length * 2);
+    expect(secondAttempt.key).toContain(`bound-hub-opening-${firstAttemptIds.length + 1}`);
   });
 
   it('binds Hub closure and complete visit-order proposals to exact commands', () => {
@@ -1364,12 +1366,7 @@ describe('structured workspace interaction binding', () => {
     };
     const replacement = { rewardType: 'MaxHealthDrop' } as const;
     const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
-    const local = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat05'),
-      'sideRooms',
-      'sideDoor1',
-    );
+    const local = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor1'));
     const wheel = createRewardWheelOfferAddress(
       oBiome,
       oOccurrenceIds.combat04,
@@ -1386,7 +1383,7 @@ describe('structured workspace interaction binding', () => {
     expect(
       surfaceInteractions.N.rewards.get(semanticAddressKey(local))?.intentFor(replacement),
     ).toEqual({
-      command: { kind: 'ReplaceLocalReward', reward: local, value: replacement },
+      command: { kind: 'ReplaceIncomingReward', reward: local, value: replacement },
     });
     expect(
       surfaceInteractions.O.rewards.get(semanticAddressKey(wheel))?.intentFor(replacement),
@@ -1457,51 +1454,6 @@ describe('structured workspace interaction binding', () => {
         },
       },
     });
-  });
-
-  it('withholds an ungenerated Ephyra reward binding while retaining its side controls', () => {
-    const sideRoom = createLocalChildAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor2',
-    );
-    const localReward = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor2',
-    );
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom,
-      generation: 'notGenerated',
-    });
-    const { assembly, interactions } = bind(project, 'Surface', 'N');
-    const combat = assembly.nodes.find(
-      (node) =>
-        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('combat02'),
-    );
-    if (
-      combat?.kind !== 'occurrenceWorkbench' ||
-      combat.room.roomLocal.kind !== 'ephyra' ||
-      combat.room.roomLocal.sideRooms.kind !== 'published'
-    ) {
-      throw new Error('Ephyra ungenerated-side binding fixture is missing');
-    }
-    const slot = combat.room.roomLocal.sideRooms.group.slots.find(
-      (candidate) => candidate.key === 'sideDoor2',
-    );
-    if (slot?.generation !== 'notGenerated') {
-      throw new Error('Ephyra sideDoor2 was not projected as ungenerated');
-    }
-
-    expect(interactions.rewards.has(semanticAddressKey(localReward))).toBe(false);
-    expect(interactions.sideRoomGenerations.get(semanticAddressKey(sideRoom))).toMatchObject({
-      owner: sideRoom,
-      selected: 'notGenerated',
-    });
-    expect(interactions.sideRoomEntryOrders.get(slot.entryOrder.interactionKey)).toBeDefined();
   });
 
   it('binds the only terminal Door 1 takeover choice to its exact replacement command', () => {
@@ -1924,163 +1876,6 @@ describe('structured workspace interaction binding', () => {
     expect(reversedFork).toEqual(normalFork);
     expect(reversedSelectedChild.targets).toEqual(normalSelectedChild.targets);
     expect(reversedSelectedChild.targets.map((target) => target.value)).toEqual(['exit1', 'exit2']);
-  });
-
-  it('binds Ephyra side-room proposals by exact local-child and group ownership', () => {
-    const { assembly, interactions } = bind(createRepresentativeNOPQProject(), 'Surface', 'N');
-    const combat = assembly.nodes.find(
-      (node) =>
-        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('combat05'),
-    );
-    if (
-      combat?.kind !== 'occurrenceWorkbench' ||
-      combat.room.roomLocal.kind !== 'ephyra' ||
-      combat.room.roomLocal.sideRooms.kind !== 'published'
-    ) {
-      throw new Error('active Ephyra binding fixture is missing');
-    }
-    const group = combat.room.roomLocal.sideRooms.group;
-    const sideDoor3 = group.slots.find((slot) => slot.key === 'sideDoor3');
-    if (sideDoor3 === undefined) throw new Error('Ephyra sideDoor3 is missing');
-
-    expect(
-      interactions.sideRoomGenerations.get(semanticAddressKey(sideDoor3.address)),
-    ).toMatchObject({ owner: sideDoor3.address, selected: sideDoor3.generation });
-    expect(interactions.sideRoomEntryOrders.get(sideDoor3.entryOrder.interactionKey)).toMatchObject(
-      {
-        choices: sideDoor3.entryOrder.options.map((option) => ({
-          label: option.label,
-          value: option.proposedEnteredSlotKeys,
-        })),
-        owner: group.address,
-        selected: sideDoor3.entryOrder.options.find(
-          (option) => option.key === sideDoor3.entryOrder.selectedKey,
-        )?.proposedEnteredSlotKeys,
-      },
-    );
-  });
-
-  it('binds customizable encounter phases lazily to exact top-level and local-child commands', () => {
-    const project = createGoldenFGHIProject();
-    const candidateSession = createCandidateSessionFactory(catalog).bind(
-      simulateProjectAssembly(catalog, project),
-    );
-    const encounterPhases = vi.fn(candidateSession.encounterPhases);
-    const observedSession = Object.freeze({ ...candidateSession, encounterPhases });
-    const topLevelInteractions = bind(
-      project,
-      'Underworld',
-      'I',
-      undefined,
-      observedSession,
-    ).interactions;
-    const localInteractions = bind(createRepresentativeNOPQProject(), 'Surface', 'N').interactions;
-    const topLevel = [...topLevelInteractions.encounterPhases.values()].find(
-      (interaction) =>
-        interaction.owner.kind === 'encounterPhase' &&
-        interaction.owner.owner.kind === 'occurrence',
-    );
-    const localChild = [...localInteractions.encounterPhases.values()].find(
-      (interaction) =>
-        interaction.owner.kind === 'encounterPhase' &&
-        interaction.owner.owner.kind === 'localChild',
-    );
-    if (
-      topLevel === undefined ||
-      localChild === undefined ||
-      topLevel.owner.kind !== 'encounterPhase' ||
-      topLevel.owner.owner.kind !== 'occurrence' ||
-      localChild.owner.kind !== 'encounterPhase' ||
-      localChild.owner.owner.kind !== 'localChild'
-    ) {
-      throw new Error('active top-level and local-child encounter interactions are missing');
-    }
-    const selected = topLevel.selected;
-
-    expect(encounterPhases).not.toHaveBeenCalled();
-    const model = topLevel.load();
-    expect(encounterPhases).toHaveBeenCalledOnce();
-    expect(topLevel.load()).toBe(model);
-    expect(model.selected?.value).toBe(selected);
-    expect(model.sections.flatMap((section) => section.items).map((item) => item.value)).toContain(
-      selected,
-    );
-    expect(topLevel.intentFor(selected).command).toEqual({
-      encounterKey: selected,
-      kind: 'SelectEncounter',
-      phase: topLevel.owner,
-    });
-    expect(topLevel.resetIntent.command).toEqual({
-      kind: 'ResetEncounter',
-      phase: topLevel.owner,
-    });
-    expect(localChild.owner.owner).toMatchObject({
-      kind: 'localChild',
-      occurrenceId: expect.any(String),
-    });
-  });
-
-  it('binds Fig Leaf as a separate phase-local command for fixed support and exact local children', () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'SkipEncounterKeepsake',
-    });
-    const { interactions } = bind(project, 'Surface', 'N');
-    const fixed = [...interactions.figLeafSkips.values()].find(
-      (interaction) =>
-        interaction.owner.kind === 'encounterPhase' &&
-        interaction.owner.owner.kind === 'occurrence' &&
-        interaction.owner.owner.occurrenceId === nOccurrenceIds.preHub,
-    );
-    expect(fixed).toBeDefined();
-    expect(fixed?.intentFor(true).command).toMatchObject({
-      kind: 'ReplaceFigLeafSkip',
-      value: true,
-      phase: fixed?.owner,
-    });
-    expect(
-      [...interactions.encounterPhases.values()].some(
-        (interaction) =>
-          interaction.owner.kind === 'encounterPhase' &&
-          interaction.owner.owner.kind === 'occurrence' &&
-          interaction.owner.owner.occurrenceId === nOccurrenceIds.preHub,
-      ),
-    ).toBe(false);
-    expect(
-      [...interactions.figLeafSkips.values()].some(
-        (interaction) =>
-          interaction.owner.kind === 'encounterPhase' &&
-          interaction.owner.owner.kind === 'localChild',
-      ),
-    ).toBe(false);
-  });
-
-  it('retains a selected invalid local-child Fig Leaf control for repair without publishing a candidate', () => {
-    const parent = nOccurrenceId('combat02');
-    const phase = createEncounterPhaseAddress(
-      nBiome,
-      { kind: 'localChild', occurrenceId: parent, groupKey: 'sideRooms', slotKey: 'sideDoor1' },
-      'Encounter',
-    );
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'SkipEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFigLeafSkip',
-      phase,
-      value: true,
-    });
-    const { interactions } = bind(project, 'Surface', 'N');
-    const interaction = interactions.figLeafSkips.get(semanticAddressKey(phase));
-    expect(interaction).toMatchObject({ selected: true, supported: false });
-    expect(interaction?.intentFor(false).command).toEqual({
-      kind: 'ReplaceFigLeafSkip',
-      phase,
-      value: false,
-    });
   });
 
   it('withholds dormant Ship Combat2 and binds its active declaration-invalid multi-choice semantic', () => {

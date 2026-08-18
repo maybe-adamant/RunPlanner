@@ -60,21 +60,6 @@ export function workspaceLocalDetailMarkers(
     case 'fixed':
     case 'incomingReward':
       return Object.freeze([]);
-    case 'ephyra':
-      return roomLocal.sideRooms.kind === 'withheld'
-        ? Object.freeze([])
-        : Object.freeze([
-            roomLocal.sideRooms.group.marker,
-            ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
-              slot.marker,
-              ...slot.encounterPhases.flatMap((phase) => [
-                phase.marker,
-                ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
-                ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
-              ]),
-              ...(slot.generation === 'generated' ? rewardControlMarkers(slot.rewardControl) : []),
-            ]),
-          ]);
     case 'fields':
       return Object.freeze([
         ...roomLocal.cages.flatMap((cage) => rewardControlMarkers(cage.control)),
@@ -110,8 +95,6 @@ export function workspaceCustomizationMarkers(
   roomLocal: WorkspaceRoomLocal,
 ): readonly WorkspaceMarker[] {
   switch (roomLocal.kind) {
-    case 'ephyra':
-      return workspaceLocalDetailMarkers(roomLocal);
     case 'fields':
     case 'none':
     case 'fixed':
@@ -179,7 +162,7 @@ export function workspaceOccurrenceOwnedMarkers(
   ]);
 }
 
-/** Decision-owned markers include each nested authored occurrence package. */
+/** Decision-owned markers are limited to door identity and transition controls. */
 export function workspaceDecisionOwnedMarkers(
   node: WorkspaceDecisionBatchNode,
 ): readonly WorkspaceMarker[] {
@@ -188,22 +171,9 @@ export function workspaceDecisionOwnedMarkers(
     node.selection,
     ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker]),
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
-    ...(node.zagreusContract === undefined
-      ? []
-      : [
-          node.zagreusContract.marker,
-          ...workspaceOccurrenceOwnedMarkers(node.zagreusContract.contractRoom),
-        ]),
-    ...(node.naturalChaos === undefined
-      ? []
-      : [
-          node.naturalChaos.marker,
-          ...workspaceOccurrenceOwnedMarkers(node.naturalChaos.chaosRoom),
-        ]),
-    ...node.targets.flatMap((target) => [
-      target.marker,
-      ...workspaceOccurrenceOwnedMarkers(target.room),
-    ]),
+    ...(node.zagreusContract === undefined ? [] : [node.zagreusContract.marker]),
+    ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),
+    ...node.targets.map((target) => target.marker),
     ...node.missingTargets.map((target) => target.marker),
   ]);
 }
@@ -231,8 +201,6 @@ export function workspaceHubMainRewardMarkers(
       ]);
     case 'incomingReward':
       return Object.freeze(rewardControlMarkers(room.roomLocal.control));
-    case 'ephyra':
-      return Object.freeze(rewardControlMarkers(room.roomLocal.incomingReward));
     case 'none':
     case 'fields':
     case 'ship':

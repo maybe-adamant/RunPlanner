@@ -16,8 +16,9 @@ import {
   type HubOpenSetAddress,
   type HubSlotAddress,
   type HubVisitAddress,
-  type LocalChildAddress,
-  type LocalChildGroupAddress,
+  type LocalVisitDecisionAddress,
+  type LocalVisitOrderAddress,
+  type LocalVisitSlotAddress,
   type FieldsActionAddress,
   type FieldsCombatAction,
   type OccurrenceAddress,
@@ -164,6 +165,24 @@ export interface WorkspaceCandidateInteraction<T> {
   readonly load: () => readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[];
   readonly owner: SemanticAddress;
   readonly selected?: T;
+}
+
+export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandidateInteraction<SideRoomGeneration> {
+  readonly intentFor: (
+    generation: SideRoomGeneration,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetLocalVisitGeneration' }>
+  >;
+  readonly owner: LocalVisitSlotAddress;
+}
+
+export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceCandidateInteraction<
+  readonly OccurrenceId[]
+> {
+  readonly intentFor: (
+    occurrenceIds: readonly OccurrenceId[],
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLocalVisitOrder' }>>;
+  readonly owner: LocalVisitOrderAddress;
 }
 
 /**
@@ -839,14 +858,8 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceShopDeathDefianceConditionInteraction
   >;
-  readonly sideRoomEntryOrders: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<readonly string[]>
-  >;
-  readonly sideRoomGenerations: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<SideRoomGeneration>
-  >;
+  readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
+  readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
   readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
@@ -937,8 +950,8 @@ export function workspaceInteractionKey(owner: SemanticAddress): string {
   return semanticAddressKey(owner);
 }
 
-export function workspaceSideRoomEntryOrderKey(owner: LocalChildAddress): string {
-  return `${semanticAddressKey(owner)}:entry-order`;
+export function workspaceLocalVisitOrderKey(owner: LocalVisitSlotAddress): string {
+  return `${semanticAddressKey(owner)}:visit-order`;
 }
 
 export function requireWorkspaceInteraction<T>(
@@ -1202,16 +1215,16 @@ export interface WorkspaceAcquisitionEntryDescriptor {
   };
 }
 
-export interface WorkspaceEphyraSideRoomEntryOption {
+export interface WorkspaceLocalVisitOrderOption {
   readonly key: string;
   readonly label: string;
   readonly position: number | null;
-  readonly proposedEnteredSlotKeys: readonly string[];
+  readonly proposedOccurrenceIds: readonly OccurrenceId[];
 }
 
-export interface WorkspaceEphyraSideRoomEntryOrderControl {
+export interface WorkspaceLocalVisitOrderControl {
   readonly interactionKey: string;
-  readonly options: readonly WorkspaceEphyraSideRoomEntryOption[];
+  readonly options: readonly WorkspaceLocalVisitOrderOption[];
   readonly selectedKey: string;
 }
 
@@ -1250,49 +1263,38 @@ export interface WorkspaceEncounterPhase {
   };
 }
 
-interface WorkspaceEphyraSideRoomDescriptorBase {
-  readonly address: LocalChildAddress;
+interface WorkspaceLocalVisitSlotBase {
+  readonly address: LocalVisitSlotAddress;
   /** Declared physical availability order for the parent-local pressure rule. */
   readonly availabilityRank: number;
   readonly entered: boolean;
   readonly enteredOrdinal: number | null;
-  readonly entryOrder: WorkspaceEphyraSideRoomEntryOrderControl;
-  /** Empty until this exact local child has an active engine-owned phase. */
-  readonly encounterPhases: readonly WorkspaceEncounterPhase[];
+  readonly occurrenceId: OccurrenceId;
+  readonly order: WorkspaceLocalVisitOrderControl;
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly physicalDoorId: number;
 }
 
-/** A side offer becomes an active editable leaf only after generation. */
-export type WorkspaceEphyraSideRoomDescriptor =
-  | (WorkspaceEphyraSideRoomDescriptorBase & {
+/** A generated local target publishes its retained ordinary occurrence workbench. */
+export type WorkspaceLocalVisitSlot =
+  | (WorkspaceLocalVisitSlotBase & {
       readonly generation: 'generated';
-      readonly rewardControl: WorkspaceCountedRewardControl;
+      readonly room: WorkspaceRoomSummary;
     })
-  | (WorkspaceEphyraSideRoomDescriptorBase & {
+  | (WorkspaceLocalVisitSlotBase & {
       readonly generation: 'notGenerated';
     });
 
-export interface WorkspaceEphyraSideRoomGroup {
-  readonly address: LocalChildGroupAddress;
-  readonly enteredSlotKeys: readonly string[];
+export interface WorkspaceLocalVisitDecision {
+  readonly address: LocalVisitDecisionAddress;
   readonly marker: WorkspaceMarker;
-  readonly slots: readonly WorkspaceEphyraSideRoomDescriptor[];
+  readonly order: LocalVisitOrderAddress;
+  readonly orderMarker: WorkspaceMarker;
+  readonly slots: readonly WorkspaceLocalVisitSlot[];
+  readonly visitOrder: readonly OccurrenceId[];
 }
-
-/**
- * Side rooms are optional picked-room detail. A dormant authored occurrence
- * retains its values but does not publish child owners, controls, or
- * interactions until its authored visit activates it.
- */
-export type WorkspaceEphyraSideRoomSurface =
-  | { readonly kind: 'withheld' }
-  | {
-      readonly group: WorkspaceEphyraSideRoomGroup;
-      readonly kind: 'published';
-    };
 
 export type WorkspaceRoomLocal =
   | { readonly kind: 'none' }
@@ -1307,11 +1309,6 @@ export type WorkspaceRoomLocal =
       readonly kind: 'incomingReward';
       readonly control: WorkspaceCountedRewardControl;
       readonly clockworkReward?: 'goal' | 'nonGoal';
-    }
-  | {
-      readonly kind: 'ephyra';
-      readonly incomingReward: WorkspaceCountedRewardControl;
-      readonly sideRooms: WorkspaceEphyraSideRoomSurface;
     }
   | {
       readonly kind: 'fields';
@@ -1411,8 +1408,17 @@ export interface WorkspaceAnomalyControl {
   readonly success: boolean;
 }
 
+/** Read-only identity for one active Fields cage whose reward offer is prepared. */
+export interface WorkspaceFieldsCageOfferSummary {
+  readonly cageKey: string;
+  readonly cageLabel: string;
+  readonly rewardLabel: string;
+}
+
 export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
+  /** Compact predecessor-generated handoff summary for the lightweight door card. */
+  readonly doorRewardLabel?: string;
   readonly exitKey: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
@@ -1421,6 +1427,8 @@ export interface WorkspacePhysicalTarget {
   readonly retained: boolean;
   readonly nextPath: 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
   readonly room: WorkspaceRoomSummary;
+  /** Bounded comparison summary; all Fields reward editors stay on the occurrence workbench. */
+  readonly fieldsCageOffers?: readonly WorkspaceFieldsCageOfferSummary[];
   /** A declaration-owned target capability, not a React eligibility result. */
   readonly anomalyTakeover?: {
     readonly label: string;
@@ -1547,6 +1555,7 @@ export interface WorkspaceHubSlot {
   readonly hubSlotKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly open: boolean;
   readonly physicalDoorId: number;
   readonly room?: WorkspaceRoomSummary;
@@ -1714,7 +1723,11 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly kind: 'occurrenceWorkbench';
   readonly key: string;
   readonly localDetailMarkers: readonly WorkspaceMarker[];
+  /** Parent-owned local topology; local payloads remain ordinary occurrence workbenches. */
+  readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly marker: WorkspaceMarker;
+  /** Existing natural-Chaos map identity, edited inside that retained occurrence. */
+  readonly naturalChaosExit?: WorkspaceNaturalChaosExitControl;
   /** A completed-Hub outer decision rendered through its visible Preboss room. */
   readonly runState?: WorkspaceRunStateLauncher;
   readonly inspectorPresentation: 'full' | 'hubRoomLocal';
@@ -1787,6 +1800,12 @@ export type WorkspaceNode =
   | WorkspaceOccurrenceWorkbenchNode
   | WorkspaceCompletionNode;
 
+/** Projection-owned occurrence/decision composition consumed by React as a keyed stage. */
+export interface WorkspaceOccurrenceStage {
+  readonly sourceOccurrenceNodeKey: string;
+  readonly outgoingDecisionNodeKey?: string;
+}
+
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
   readonly label: string;
@@ -1810,7 +1829,7 @@ export interface WorkspaceHubRailEntry {
  * One resolved primary room reward retained as a presentation-ready token.
  * The current rail renders `label`; a later compact token can render `offer`
  * without changing workspace policy. It never represents an aggregate of
- * room-local child rewards.
+ * room-local rewards.
  */
 export interface WorkspaceRailReward {
   readonly label: string;
@@ -1880,6 +1899,7 @@ export interface WorkspaceBiome {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  readonly occurrenceStages: readonly WorkspaceOccurrenceStage[];
   readonly owner: BiomeAddress;
   readonly rail: readonly WorkspaceRailEntry[];
   readonly source: WorkspaceProjectionSource;

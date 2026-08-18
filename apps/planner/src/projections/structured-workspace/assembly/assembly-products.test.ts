@@ -158,6 +158,7 @@ function hubInteractionRequirement(): WorkspaceHubInteractionRequirement {
           Object.freeze({ label: 'Open', value: true }),
         ]),
         owner: createHubSlotAddress(biome, owner.hubKey, 'combat01'),
+        localSlotKeys: Object.freeze([]),
         selected: false as const,
       }),
     ]),

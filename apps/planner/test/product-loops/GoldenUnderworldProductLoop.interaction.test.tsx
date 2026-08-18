@@ -333,8 +333,15 @@ describe('underworld product loop', () => {
     await view.user.click(normalRoom);
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
-    await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
+    await view.user.click(within(gate).getByRole('button', { name: 'Open Chaos 01 room' }));
+    await view.user.selectOptions(screen.getByLabelText('Map'), 'Chaos_06');
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createExitDecisionAddress(goldenFBiome, source)),
+      ),
+    );
+    const configuredGate = await screen.findByRole('article', { name: 'Chaos gate exit' });
+    await view.user.click(within(configuredGate).getByLabelText('Take Chaos gate'));
     expect(
       topology()?.occurrences.find((occurrence) => occurrence.occurrenceId === chaosOccurrenceId)
         ?.gameName,
@@ -427,6 +434,7 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, sourceOccurrenceId)),
       ),
     );
+    await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
     await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
 
@@ -800,8 +808,9 @@ describe('underworld product loop', () => {
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
-    expect(within(automaticReturn).getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
-    expect(within(automaticReturn).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(
+      within(automaticReturn).getByRole('button', { name: 'Open Combat 04 room' }),
+    ).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
     const gEvaluation = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')

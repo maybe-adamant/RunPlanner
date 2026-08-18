@@ -3,12 +3,10 @@ import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { AuthoredRoomState } from '../model';
 import {
-  requireEphyraSideRooms,
   requireFieldsCages,
   requireFieldsOptionalRewards,
   requireShipCombatWheels,
 } from './declaration';
-import { reconcileRoomEncounterState } from './encounters';
 
 function countedOfferIsAdmitted(
   binding: CountedRewardBinding,
@@ -206,7 +204,7 @@ function reconcileShipCombatState(
 }
 
 function reconcileEphyraCombatState(
-  catalog: Catalog,
+  _catalog: Catalog,
   previousRoom: RoomDeclaration,
   previousState: Extract<AuthoredRoomState, { readonly kind: 'ephyraCombat' }>,
   replacementRoom: RoomDeclaration,
@@ -215,75 +213,6 @@ function reconcileEphyraCombatState(
   if (!roomUsesTemplate(previousRoom, 'EphyraCombat')) {
     return replacementState;
   }
-  const previousDescriptor = requireEphyraSideRooms(previousRoom, previousRoom.gameName);
-  const replacementDescriptor = requireEphyraSideRooms(replacementRoom, replacementRoom.gameName);
-  if (
-    previousDescriptor?.key !== replacementDescriptor?.key ||
-    previousDescriptor === undefined ||
-    replacementDescriptor === undefined
-  ) {
-    return replacementState;
-  }
-  const previousSlots = new Map(previousDescriptor.slots.map((slot) => [slot.slotKey, slot]));
-  const retainedEntryOrder: { readonly slotKey: string; readonly ordinal: number }[] = [];
-  const reconciled = replacementDescriptor.slots.map((slot) => {
-    const fallback = replacementState.sideRooms[slot.slotKey];
-    if (fallback === undefined) {
-      throw new Error(`${replacementRoom.gameName} default omitted side room ${slot.slotKey}`);
-    }
-    const previousSlot = previousSlots.get(slot.slotKey);
-    const previousSide = previousState.sideRooms[slot.slotKey];
-    if (
-      previousSlot === undefined ||
-      previousSlot.roomGameName !== slot.roomGameName ||
-      previousSide === undefined
-    ) {
-      return { slotKey: slot.slotKey, state: fallback };
-    }
-    const previousChild = catalog.rooms.byKey[previousSlot.roomGameName];
-    const replacementChild = catalog.rooms.byKey[slot.roomGameName];
-    if (previousChild === undefined || replacementChild === undefined) {
-      throw new Error(`${replacementRoom.gameName} references an unknown side-room declaration`);
-    }
-    if (previousSide.enteredOrdinal !== null && previousSide.generation === 'generated') {
-      retainedEntryOrder.push({ slotKey: slot.slotKey, ordinal: previousSide.enteredOrdinal });
-    }
-    const childBinding = replacementChild.incomingReward;
-    const reward =
-      previousSide.reward === null
-        ? null
-        : childBinding.kind === 'countedChoice' &&
-            countedOfferIsAdmitted(childBinding, previousSide.reward.offer)
-          ? previousSide.reward
-          : fallback.reward;
-    return {
-      slotKey: slot.slotKey,
-      state: Object.freeze({
-        generation: previousSide.generation,
-        enteredOrdinal: null,
-        reward,
-        encounters: reconcileRoomEncounterState(
-          catalog,
-          previousChild,
-          previousSide.encounters,
-          replacementChild,
-          fallback.encounters,
-        ),
-      }),
-    };
-  });
-  retainedEntryOrder.sort((left, right) => left.ordinal - right.ordinal);
-  const retainedOrdinalBySlot = new Map(
-    retainedEntryOrder.map((entry, index) => [entry.slotKey, index + 1]),
-  );
-  const sideRooms = Object.fromEntries(
-    reconciled.map(({ slotKey, state }) => [
-      slotKey,
-      retainedOrdinalBySlot.has(slotKey)
-        ? Object.freeze({ ...state, enteredOrdinal: retainedOrdinalBySlot.get(slotKey) ?? null })
-        : state,
-    ]),
-  );
   const parentBinding = replacementRoom.incomingReward;
   const parentReward =
     previousState.reward === null
@@ -295,7 +224,6 @@ function reconcileEphyraCombatState(
   return Object.freeze({
     kind: 'ephyraCombat',
     reward: parentReward,
-    sideRooms: Object.freeze(sideRooms),
   });
 }
 

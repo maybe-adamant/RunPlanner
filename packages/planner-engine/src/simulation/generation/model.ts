@@ -1,7 +1,7 @@
 import type {
   ExitDecisionAddress,
   HubOpenSetAddress,
-  LocalChildAddress,
+  LocalVisitSlotAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { CounterAxis, HistoryRecord, NumericRange } from '../../requirements/model';
@@ -237,7 +237,7 @@ export interface HubOpenSlotConstraintSupportEntry {
 export type SideRoomGenerationOutcome = 'generated' | 'notGenerated';
 
 export interface HubSideRoomGenerationSupportEntry {
-  readonly origin: LocalChildAddress;
+  readonly origin: LocalVisitSlotAddress;
   readonly visitIndex: number;
   readonly availabilityRank: number;
   readonly generatedBefore: number;

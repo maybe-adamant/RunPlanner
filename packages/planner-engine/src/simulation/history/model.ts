@@ -6,7 +6,7 @@ import type {
   HubDecisionAddress,
   HubSlotAddress,
   HubVisitAddress,
-  LocalChildAddress,
+  LocalVisitSlotAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
@@ -22,7 +22,7 @@ export type RoomCreationSource =
   | 'hubTarget'
   | 'hubDecision'
   | 'layoutCompletion'
-  | 'localChild';
+  | 'localVisit';
 
 export interface BiomeStartedHistoryEvent extends HistoryEventBase {
   readonly kind: 'biomeStarted';
@@ -93,10 +93,10 @@ export type RoomCreatedHistoryEvent =
       readonly generationCount: number;
     })
   | (RoomCreatedHistoryEventBase & {
-      readonly source: 'localChild';
+      readonly source: 'localVisit';
       readonly picked: boolean;
       readonly parentOrigin: RoomHistoryOrigin;
-      readonly targetOrigin: LocalChildAddress;
+      readonly targetOrigin: LocalVisitSlotAddress;
       readonly generationIndex: number;
       readonly generationCount: number;
     })
@@ -123,7 +123,7 @@ export interface BiomeCounterResetHistoryEvent extends HistoryEventBase {
 
 export interface TargetGenerationCompletedHistoryEvent extends HistoryEventBase {
   readonly kind: 'targetGenerationCompleted';
-  readonly origin: HubDecisionAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
+  readonly origin: HubDecisionAddress | HubSlotAddress | LocalVisitSlotAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
   readonly parentOrigin: RoomHistoryOrigin;
   readonly generationIndex: number;
@@ -138,7 +138,7 @@ export interface EmptyOutgoingGenerationHistoryEvent extends HistoryEventBase {
 export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly kind: 'roomRestored';
   readonly origin: RoomHistoryOrigin;
-  readonly after: HubVisitAddress | LocalChildAddress;
+  readonly after: HubVisitAddress | LocalVisitSlotAddress;
   readonly restoreKind: 'hub' | 'parent';
   readonly biomeDepthCacheDelta: number;
   readonly roomHistoryOrdinalDelta: number;
@@ -192,7 +192,7 @@ export interface RoomRestoreHistoryEntry {
   readonly sequence: number;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
-  readonly after: HubVisitAddress | LocalChildAddress;
+  readonly after: HubVisitAddress | LocalVisitSlotAddress;
   readonly restoreKind: 'hub' | 'parent';
 }
 
@@ -229,7 +229,8 @@ export interface HistoryStateView {
 }
 
 export interface TargetGenerationView {
-  readonly targetOrigin: HubDecisionAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
+  readonly targetOrigin:
+    HubDecisionAddress | HubSlotAddress | LocalVisitSlotAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
   /** Sequence occupied by the target's room-created event. */
   readonly roomCreationSequence: number;

@@ -36,8 +36,8 @@ import {
   type HubDecisionAddress,
   type HubSlotAddress,
   type IncomingRewardAddress,
-  type LocalChildAddress,
-  type LocalChildGroupAddress,
+  type LocalVisitSlotAddress,
+  type LocalVisitOrderAddress,
   type LocalRewardAddress,
   type OccurrenceId,
   type OccurrenceAddress,
@@ -188,20 +188,21 @@ export interface CandidateProjectionSession {
   readonly hubSlots: (
     slot: HubSlotAddress,
     occurrenceId: OccurrenceId,
+    localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>,
     values: readonly boolean[],
   ) => readonly CandidateOptionProjection<boolean>[];
   readonly hubVisitOrders: (
     hub: HubDecisionAddress,
     values: readonly (readonly string[])[],
   ) => readonly CandidateOptionProjection<readonly string[]>[];
-  readonly sideRoomGenerations: (
-    sideRoom: LocalChildAddress,
+  readonly localVisitGenerations: (
+    slot: LocalVisitSlotAddress,
     values: readonly SideRoomGeneration[],
   ) => readonly CandidateOptionProjection<SideRoomGeneration>[];
-  readonly sideRoomEntryOrders: (
-    group: LocalChildGroupAddress,
-    values: readonly (readonly string[])[],
-  ) => readonly CandidateOptionProjection<readonly string[]>[];
+  readonly localVisitOrders: (
+    order: LocalVisitOrderAddress,
+    values: readonly (readonly OccurrenceId[])[],
+  ) => readonly CandidateOptionProjection<readonly OccurrenceId[]>[];
   readonly acquisitionOrders: (
     site: AcquisitionSiteAddress,
     values: readonly (readonly string[])[],
@@ -776,13 +777,28 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      hubSlots: (slot: HubSlotAddress, occurrenceId: OccurrenceId, values: readonly boolean[]) =>
+      hubSlots: (
+        slot: HubSlotAddress,
+        occurrenceId: OccurrenceId,
+        localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>,
+        values: readonly boolean[],
+      ) =>
         projectOptions(
           cache,
           assembly,
-          `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
+          `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(
+            Object.entries(localOccurrenceIdsBySlot)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([slotKey, localOccurrenceId]) => `${slotKey}:${localOccurrenceId}`),
+          )}:${domainKey(values.map(String))}`,
           values,
-          values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
+          values.map((open) => ({
+            kind: 'hubSlot',
+            slot,
+            open,
+            occurrenceId,
+            localOccurrenceIdsBySlot,
+          })),
           catalog,
           options,
         ),
@@ -798,7 +814,10 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      sideRoomGenerations: (sideRoom: LocalChildAddress, values: readonly SideRoomGeneration[]) =>
+      localVisitGenerations: (
+        sideRoom: LocalVisitSlotAddress,
+        values: readonly SideRoomGeneration[],
+      ) =>
         projectOptions(
           cache,
           assembly,
@@ -808,19 +827,19 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      sideRoomEntryOrders: (
-        group: LocalChildGroupAddress,
-        values: readonly (readonly string[])[],
+      localVisitOrders: (
+        group: LocalVisitOrderAddress,
+        values: readonly (readonly OccurrenceId[])[],
       ) =>
         projectOptions(
           cache,
           assembly,
           `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
           values,
-          values.map((enteredSlotKeys) => ({
+          values.map((occurrenceIds) => ({
             kind: 'sideRoomEntryOrder',
             group,
-            enteredSlotKeys,
+            occurrenceIds,
           })),
           catalog,
           options,

@@ -5,14 +5,19 @@ import {
   semanticAddressKey,
   type HubDecisionAddress,
   type HubSlotAddress,
-  type LocalChildAddress,
-  type LocalChildGroupAddress,
+  type LocalVisitSlotAddress,
+  type LocalVisitOrderAddress,
 } from '../../authored-project/addresses';
 import {
   applyProjectCommand,
   ProjectCommandContractError,
 } from '../../authored-project/commands/dispatch';
-import type { HubDecision, OccurrenceId, ProjectDocument } from '../../authored-project/model';
+import type {
+  HubDecision,
+  LocalVisitDecision,
+  OccurrenceId,
+  ProjectDocument,
+} from '../../authored-project/model';
 import {
   evaluateHubOpenSetConstraints,
   type HubSideRoomGenerationSupportEntry,
@@ -23,6 +28,7 @@ import type { ProjectEvaluation } from '../project';
 import {
   evaluateProgressiveBiome,
   evaluateProgressiveBiomeBeforeClamp,
+  ownsOccurrence,
 } from '../progressive/biome';
 import {
   coverageUnavailable,
@@ -48,6 +54,7 @@ export interface HubSlotCandidateQuery {
   readonly slot: HubSlotAddress;
   readonly open: boolean;
   readonly occurrenceId: OccurrenceId;
+  readonly localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>;
 }
 
 export interface HubVisitOrderCandidateQuery {
@@ -58,14 +65,14 @@ export interface HubVisitOrderCandidateQuery {
 
 export interface SideRoomGenerationCandidateQuery {
   readonly kind: 'sideRoomGeneration';
-  readonly sideRoom: LocalChildAddress;
+  readonly sideRoom: LocalVisitSlotAddress;
   readonly generation: 'generated' | 'notGenerated';
 }
 
 export interface SideRoomEntryOrderCandidateQuery {
   readonly kind: 'sideRoomEntryOrder';
-  readonly group: LocalChildGroupAddress;
-  readonly enteredSlotKeys: readonly string[];
+  readonly group: LocalVisitOrderAddress;
+  readonly occurrenceIds: readonly OccurrenceId[];
 }
 
 export interface HubSlotCandidateSupport {
@@ -360,20 +367,37 @@ function findingOwnsHubVisitOrder(
 ): boolean {
   return (
     visitOrigins.has(semanticAddressKey(finding.origin)) ||
-    ('occurrenceId' in finding.origin && occurrenceIds.has(finding.origin.occurrenceId))
+    findingOwnsAnyOccurrence(finding, occurrenceIds) ||
+    ('sourceOccurrenceId' in finding.origin && occurrenceIds.has(finding.origin.sourceOccurrenceId))
   );
 }
 
-function findingOwnsLocalGroup(finding: SemanticFinding, group: LocalChildGroupAddress): boolean {
+function findingOwnsAnyOccurrence(
+  finding: SemanticFinding,
+  occurrenceIds: ReadonlySet<OccurrenceId>,
+): boolean {
+  for (const occurrenceId of occurrenceIds) {
+    if (ownsOccurrence(finding.origin, occurrenceId)) return true;
+  }
+  return false;
+}
+
+function findingOwnsLocalGroup(
+  finding: SemanticFinding,
+  group: LocalVisitOrderAddress,
+  localOccurrenceIds: ReadonlySet<OccurrenceId>,
+): boolean {
   return (
-    (finding.origin.kind === 'localChild' || finding.origin.kind === 'localReward') &&
-    finding.origin.occurrenceId === group.occurrenceId &&
-    finding.origin.groupKey === group.groupKey
+    (semanticAddressKey(finding.origin) === semanticAddressKey(group) ||
+      (finding.origin.kind === 'localVisitSlot' &&
+        finding.origin.sourceOccurrenceId === group.sourceOccurrenceId) ||
+      findingOwnsAnyOccurrence(finding, localOccurrenceIds)) &&
+    ('groupKey' in finding.origin ? finding.origin.groupKey === group.groupKey : true)
   );
 }
 
 function hubSideSupport(
-  sideRoom: LocalChildAddress,
+  sideRoom: LocalVisitSlotAddress,
   biome: CandidateBiomeEvaluation | undefined,
 ): HubSideRoomGenerationSupportEntry | undefined {
   return biome?.roomGeneration.hub.sideRoomGenerations.find(
@@ -395,7 +419,7 @@ function candidateHubDecision(
 
 /** Bound a local group to the entered local prefix of its reached Hub visit. */
 function progressiveHubLocalGroupReached(
-  group: LocalChildGroupAddress,
+  group: LocalVisitOrderAddress,
   biome: CandidateBiomeEvaluation | undefined,
 ): boolean {
   if (candidateBlockedAt(biome) === undefined) return true;
@@ -404,7 +428,8 @@ function progressiveHubLocalGroupReached(
     hub?.visits.some((visit) =>
       visit.localSlots.some(
         (slot) =>
-          slot.origin.occurrenceId === group.occurrenceId && slot.groupKey === group.groupKey,
+          slot.localVisit.origin.sourceOccurrenceId === group.sourceOccurrenceId &&
+          slot.localVisit.groupKey === group.groupKey,
       ),
     ) ?? false
   );
@@ -458,6 +483,22 @@ export function evaluateHubSlotCandidate(
     ) {
       throw new CandidateEvaluationContractError(
         `Hub slot candidate occurrence ${query.occurrenceId} already exists`,
+      );
+    }
+    const hubSlot = state.descriptor.slots.find((slot) => slot.slotKey === query.slot.hubSlotKey);
+    const room = hubSlot === undefined ? undefined : catalog.rooms.byKey[hubSlot.roomGameName];
+    const localSlots = room?.localChildren[0];
+    const expectedLocalKeys =
+      localSlots?.kind === 'fixedRoomSlots' ? localSlots.slots.map((slot) => slot.slotKey) : [];
+    const suppliedLocalKeys = Object.keys(query.localOccurrenceIdsBySlot);
+    if (
+      suppliedLocalKeys.length !== expectedLocalKeys.length ||
+      suppliedLocalKeys.some((key) => !expectedLocalKeys.includes(key)) ||
+      new Set([query.occurrenceId, ...Object.values(query.localOccurrenceIdsBySlot)]).size !==
+        expectedLocalKeys.length + 1
+    ) {
+      throw new CandidateEvaluationContractError(
+        'Hub slot candidate local occurrence identities must match its declaration',
       );
     }
   }
@@ -556,13 +597,21 @@ export function evaluateHubVisitOrderCandidate(
           query.hub.hubKey,
           candidateHubSlotKeys.length,
         );
-  const occurrenceIds = new Set<OccurrenceId>(
+  const mainOccurrenceIds = new Set<OccurrenceId>(
     candidateHubSlotKeys.flatMap((hubSlotKey) =>
       state.decision.openTargets
         .filter((target) => target.hubSlotKey === hubSlotKey)
         .map((target) => target.occurrenceId),
     ),
   );
+  const occurrenceIds = new Set<OccurrenceId>([
+    ...mainOccurrenceIds,
+    ...state.topology.decisions.flatMap((decision) =>
+      decision.kind === 'localVisit' && mainOccurrenceIds.has(decision.sourceOccurrenceId)
+        ? Object.values(decision.targetsBySlot).map((target) => target.occurrenceId)
+        : [],
+    ),
+  ]);
   const visitOrigins = new Set(
     regional?.materializedPrefix.decisions
       .find(
@@ -595,11 +644,11 @@ export function evaluateSideRoomGenerationCandidate(
   evaluation: ProjectEvaluation,
   query: SideRoomGenerationCandidateQuery,
 ): SideRoomGenerationCandidateEvaluation {
-  const localGroup: LocalChildGroupAddress = Object.freeze({
-    kind: 'localChildGroup',
+  const localGroup: LocalVisitOrderAddress = Object.freeze({
+    kind: 'localVisitOrder',
     routeKey: query.sideRoom.routeKey,
     biomeKey: query.sideRoom.biomeKey,
-    occurrenceId: query.sideRoom.occurrenceId,
+    sourceOccurrenceId: query.sideRoom.sourceOccurrenceId,
     groupKey: query.sideRoom.groupKey,
   });
   const biome = candidateBiome(evaluation, query.sideRoom.routeKey, query.sideRoom.biomeKey);
@@ -608,10 +657,13 @@ export function evaluateSideRoomGenerationCandidate(
     return coverageUnavailable(evaluation, query.sideRoom, 'afterTargetGeneration');
   }
   const plan = planFor(project, query.sideRoom.routeKey, query.sideRoom.biomeKey);
-  const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === query.sideRoom.occurrenceId,
+  const localDecision = plan.topology?.decisions.find(
+    (candidate): candidate is LocalVisitDecision =>
+      candidate.kind === 'localVisit' &&
+      candidate.sourceOccurrenceId === query.sideRoom.sourceOccurrenceId &&
+      candidate.groupKey === query.sideRoom.groupKey,
   );
-  if (occurrence?.state.kind !== 'ephyraCombat') {
+  if (localDecision === undefined) {
     return unavailableForBiome(
       evaluation,
       query.sideRoom.routeKey,
@@ -620,13 +672,10 @@ export function evaluateSideRoomGenerationCandidate(
       'afterTargetGeneration',
     );
   }
-  const room = catalog.rooms.byKey[occurrence.gameName];
-  const group = room?.localChildren.find((candidate) => candidate.key === query.sideRoom.groupKey);
-  const sideState = occurrence.state;
-  const sideRoom = sideState.sideRooms[query.sideRoom.slotKey];
-  if (group?.kind !== 'fixedRoomSlots' || sideRoom === undefined) {
+  const target = localDecision.targetsBySlot[query.sideRoom.slotKey];
+  if (target === undefined) {
     throw new CandidateEvaluationContractError(
-      `${semanticAddressKey(query.sideRoom)} has no declared Ephyra side-room state`,
+      `${semanticAddressKey(query.sideRoom)} has no declared local visit slot`,
     );
   }
   if (query.generation !== 'generated' && query.generation !== 'notGenerated') {
@@ -637,12 +686,13 @@ export function evaluateSideRoomGenerationCandidate(
   if (baseline === undefined) {
     return coverageUnavailable(evaluation, query.sideRoom, 'afterTargetGeneration');
   }
-  const structurallyPossible = query.generation === 'generated' || sideRoom.enteredOrdinal === null;
+  const enteredOrdinal = localDecision.visitOrder.indexOf(target.occurrenceId);
+  const structurallyPossible = query.generation === 'generated' || enteredOrdinal < 0;
   const proposal =
-    structurallyPossible && sideRoom.generation !== query.generation
+    structurallyPossible && target.generation !== query.generation
       ? hubCandidateProposal(catalog, project, {
-          kind: 'ReplaceSideRoomGeneration',
-          sideRoom: query.sideRoom,
+          kind: 'SetLocalVisitGeneration',
+          slot: query.sideRoom,
           generation: query.generation,
         })
       : structurallyPossible
@@ -677,7 +727,7 @@ export function evaluateSideRoomGenerationCandidate(
     kind: 'sideRoomGeneration',
     result: Object.freeze({
       candidateGeneration: query.generation,
-      enteredOrdinal: sideRoom.enteredOrdinal,
+      enteredOrdinal: enteredOrdinal < 0 ? null : enteredOrdinal + 1,
       generatedBefore: baseline.generatedBefore,
       requiredGeneratedCount: baseline.requiredGeneratedCount,
       supportOutcomes: baseline.supportOutcomes,
@@ -701,10 +751,16 @@ export function evaluateSideRoomEntryOrderCandidate(
     return coverageUnavailable(evaluation, query.group, 'afterRoomLifecycle');
   }
   const plan = planFor(project, query.group.routeKey, query.group.biomeKey);
-  const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === query.group.occurrenceId,
+  const localDecision = plan.topology?.decisions.find(
+    (candidate): candidate is LocalVisitDecision =>
+      candidate.kind === 'localVisit' &&
+      candidate.sourceOccurrenceId === query.group.sourceOccurrenceId &&
+      candidate.groupKey === query.group.groupKey,
   );
-  if (occurrence?.state.kind !== 'ephyraCombat') {
+  const occurrence = plan.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === query.group.sourceOccurrenceId,
+  );
+  if (occurrence === undefined || localDecision === undefined) {
     return unavailableForBiome(
       evaluation,
       query.group.routeKey,
@@ -713,7 +769,6 @@ export function evaluateSideRoomEntryOrderCandidate(
       'afterRoomLifecycle',
     );
   }
-  const sideState = occurrence.state;
   const room = catalog.rooms.byKey[occurrence.gameName];
   const group = room?.localChildren.find((candidate) => candidate.key === query.group.groupKey);
   if (group?.kind !== 'fixedRoomSlots') {
@@ -721,26 +776,38 @@ export function evaluateSideRoomEntryOrderCandidate(
       `${semanticAddressKey(query.group)} has no declared Ephyra side-room group`,
     );
   }
-  if (new Set(query.enteredSlotKeys).size !== query.enteredSlotKeys.length) {
-    throw new CandidateEvaluationContractError('side-room entry order must contain distinct slots');
+  if (new Set(query.occurrenceIds).size !== query.occurrenceIds.length) {
+    throw new CandidateEvaluationContractError(
+      'local visit order must contain distinct occurrences',
+    );
   }
   const generatedSlotKeys = Object.freeze(
     group.slots.flatMap((slot) =>
-      sideState.sideRooms[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
+      localDecision.targetsBySlot[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
     ),
   );
   let includesUngeneratedSlot = false;
-  for (const slotKey of query.enteredSlotKeys) {
-    if (!group.slots.some((slot) => slot.slotKey === slotKey)) {
-      throw new CandidateEvaluationContractError(`unknown side-room slot ${slotKey}`);
+  for (const occurrenceId of query.occurrenceIds) {
+    const target = Object.values(localDecision.targetsBySlot).find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    if (target === undefined) {
+      throw new CandidateEvaluationContractError(`unknown local occurrence ${occurrenceId}`);
     }
-    if (sideState.sideRooms[slotKey]?.generation !== 'generated') includesUngeneratedSlot = true;
+    if (target.generation !== 'generated') includesUngeneratedSlot = true;
   }
   if (includesUngeneratedSlot) {
     return Object.freeze({
       kind: 'sideRoomEntryOrder',
       result: Object.freeze({
-        candidateEnteredSlotKeys: Object.freeze([...query.enteredSlotKeys]),
+        candidateEnteredSlotKeys: Object.freeze(
+          query.occurrenceIds.flatMap((occurrenceId) => {
+            const entry = Object.entries(localDecision.targetsBySlot).find(
+              ([, target]) => target.occurrenceId === occurrenceId,
+            );
+            return entry === undefined ? [] : [entry[0]];
+          }),
+        ),
         generatedSlotKeys,
         findings: Object.freeze([]),
         selectedPossible: false,
@@ -759,7 +826,7 @@ export function evaluateSideRoomEntryOrderCandidate(
     descriptor.hubKey,
   );
   const hubSlotKey = hub?.decision.openTargets.find(
-    (target) => target.occurrenceId === query.group.occurrenceId,
+    (target) => target.occurrenceId === query.group.sourceOccurrenceId,
   )?.hubSlotKey;
   const visitIndex =
     hubSlotKey === undefined ? undefined : (hub?.decision.visitOrder.indexOf(hubSlotKey) ?? -1);
@@ -767,9 +834,9 @@ export function evaluateSideRoomEntryOrderCandidate(
     return coverageUnavailable(evaluation, query.group, 'afterRoomLifecycle');
   }
   const proposal = hubCandidateProposal(catalog, project, {
-    kind: 'ReplaceSideRoomEntryOrder',
-    group: query.group,
-    enteredSlotKeys: query.enteredSlotKeys,
+    kind: 'ReplaceLocalVisitOrder',
+    order: query.group,
+    occurrenceIds: query.occurrenceIds,
   });
   const regional =
     proposal === undefined
@@ -783,13 +850,25 @@ export function evaluateSideRoomEntryOrderCandidate(
           hub.descriptor.hubKey,
           visitIndex + 1,
         );
+  const localOccurrenceIds = new Set<OccurrenceId>(
+    Object.values(localDecision.targetsBySlot).map((target) => target.occurrenceId),
+  );
   const findings = Object.freeze(
-    (regional?.findings ?? []).filter((finding) => findingOwnsLocalGroup(finding, query.group)),
+    (regional?.findings ?? []).filter((finding) =>
+      findingOwnsLocalGroup(finding, query.group, localOccurrenceIds),
+    ),
   );
   return Object.freeze({
     kind: 'sideRoomEntryOrder',
     result: Object.freeze({
-      candidateEnteredSlotKeys: Object.freeze([...query.enteredSlotKeys]),
+      candidateEnteredSlotKeys: Object.freeze(
+        query.occurrenceIds.flatMap((occurrenceId) => {
+          const entry = Object.entries(localDecision.targetsBySlot).find(
+            ([, target]) => target.occurrenceId === occurrenceId,
+          );
+          return entry === undefined ? [] : [entry[0]];
+        }),
+      ),
       generatedSlotKeys,
       findings,
       selectedPossible: proposal !== undefined && findings.length === 0,

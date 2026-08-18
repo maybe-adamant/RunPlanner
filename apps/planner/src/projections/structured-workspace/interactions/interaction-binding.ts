@@ -79,6 +79,8 @@ import type {
   WorkspaceHubVisitOrderProposal,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
+  WorkspaceLocalVisitGenerationInteraction,
+  WorkspaceLocalVisitOrderInteraction,
   WorkspaceCommandIntent,
   WorkspaceRewardControl,
   WorkspaceExplicitRewardControl,
@@ -576,14 +578,8 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceShopDeathDefianceConditionInteraction
   >;
-  readonly sideRoomEntryOrders: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<readonly string[]>
-  >;
-  readonly sideRoomGenerations: ReadonlyMap<
-    string,
-    WorkspaceCandidateInteraction<SideRoomGeneration>
-  >;
+  readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
+  readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
 }
@@ -610,8 +606,8 @@ function bindOccurrenceLocalInteractions(
     string,
     WorkspaceShopDeathDefianceConditionInteraction
   >();
-  const sideRoomEntryOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
-  const sideRoomGenerations = new Map<string, WorkspaceCandidateInteraction<SideRoomGeneration>>();
+  const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
+  const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
   const naturalChaosSpawns = new Map<string, WorkspaceNaturalChaosSpawnInteraction>();
   const set = <T>(
@@ -791,50 +787,72 @@ function bindOccurrenceLocalInteractions(
         );
         break;
       }
-      case 'ephyraSideRooms': {
+      case 'localVisits': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
         );
-        for (const sideRoom of requirement.sideRooms) {
-          const generationKey = semanticAddressKey(sideRoom.address);
+        for (const slot of requirement.slots) {
+          const generationKey = semanticAddressKey(slot.address);
           set(
-            sideRoomGenerations,
+            localVisitGenerations,
             generationKey,
-            candidateInteraction(
-              sideRoom.address,
-              requirement.generationChoices,
-              sideRoom.generation,
-              () => candidates.sideRoomGenerations(sideRoom.address, generationValues),
-            ),
-            'side-room generation',
+            Object.freeze({
+              ...candidateInteraction(
+                slot.address,
+                requirement.generationChoices,
+                slot.generation,
+                () => candidates.localVisitGenerations(slot.address, generationValues),
+              ),
+              intentFor: (generation: SideRoomGeneration) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetLocalVisitGeneration' as const,
+                    slot: slot.address,
+                    generation,
+                  }),
+                }),
+              owner: slot.address,
+            }),
+            'local-visit generation',
           );
-          const selected = sideRoom.entryOrder.options.find(
-            (option) => option.key === sideRoom.entryOrder.selectedKey,
+          const selected = slot.order.options.find(
+            (option) => option.key === slot.order.selectedKey,
           );
           if (selected === undefined) {
             throw new StructuredWorkspaceProjectionContractError(
-              `${generationKey} has no selected side-room entry position`,
+              `${generationKey} has no selected local-visit position`,
             );
           }
           const entryChoices = Object.freeze(
-            sideRoom.entryOrder.options.map((option) =>
-              Object.freeze({ label: option.label, value: option.proposedEnteredSlotKeys }),
+            slot.order.options.map((option) =>
+              Object.freeze({ label: option.label, value: option.proposedOccurrenceIds }),
             ),
           );
           const proposals = Object.freeze(
-            sideRoom.entryOrder.options.map((option) => option.proposedEnteredSlotKeys),
+            slot.order.options.map((option) => option.proposedOccurrenceIds),
           );
           set(
-            sideRoomEntryOrders,
-            sideRoom.entryOrder.interactionKey,
-            candidateInteraction(
-              requirement.owner,
-              entryChoices,
-              selected.proposedEnteredSlotKeys,
-              () => candidates.sideRoomEntryOrders(requirement.owner, proposals),
-              sideRoom.entryOrder.interactionKey,
-            ),
-            'side-room entry-order',
+            localVisitOrders,
+            slot.order.interactionKey,
+            Object.freeze({
+              ...candidateInteraction(
+                requirement.order,
+                entryChoices,
+                selected.proposedOccurrenceIds,
+                () => candidates.localVisitOrders(requirement.order, proposals),
+                slot.order.interactionKey,
+              ),
+              intentFor: (occurrenceIds: readonly OccurrenceId[]) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplaceLocalVisitOrder' as const,
+                    order: requirement.order,
+                    occurrenceIds: Object.freeze([...occurrenceIds]),
+                  }),
+                }),
+              owner: requirement.order,
+            }),
+            'local-visit order',
           );
         }
         break;
@@ -950,8 +968,8 @@ function bindOccurrenceLocalInteractions(
     shipCombatPhaseCounts,
     acquisitionOrders,
     shopDeathDefianceConditions,
-    sideRoomEntryOrders,
-    sideRoomGenerations,
+    localVisitOrders,
+    localVisitGenerations,
     zagreusSpawns,
     naturalChaosSpawns,
   });
@@ -1156,9 +1174,19 @@ function bindHubInteractions(
           Object.freeze({
             beginOpeningAttempt: () => {
               const proposedOccurrenceId = allocateOccurrenceId();
+              const localOccurrenceIdsBySlot = Object.freeze(
+                Object.fromEntries(
+                  slot.localSlotKeys.map((slotKey) => [slotKey, allocateOccurrenceId()] as const),
+                ),
+              );
               let loaded: readonly CandidateOptionProjection<boolean>[] | undefined;
               const load = () =>
-                (loaded ??= candidates.hubSlots(slot.owner, proposedOccurrenceId, values));
+                (loaded ??= candidates.hubSlots(
+                  slot.owner,
+                  proposedOccurrenceId,
+                  localOccurrenceIdsBySlot,
+                  values,
+                ));
               return Object.freeze({
                 choices: slot.choices,
                 intentFor: (open: true) => {
@@ -1167,6 +1195,7 @@ function bindHubInteractions(
                     command: Object.freeze({
                       kind: 'OpenHubSlot' as const,
                       occurrenceId: proposedOccurrenceId,
+                      localOccurrenceIdsBySlot,
                       slot: slot.owner,
                     }),
                   });
@@ -1191,7 +1220,12 @@ function bindHubInteractions(
           : (() => {
               let loaded: readonly CandidateOptionProjection<boolean>[] | undefined;
               const load = () =>
-                (loaded ??= candidates.hubSlots(slot.owner, slot.openedOccurrenceId, values));
+                (loaded ??= candidates.hubSlots(
+                  slot.owner,
+                  slot.openedOccurrenceId,
+                  Object.freeze({}),
+                  values,
+                ));
               return Object.freeze({
                 choices: slot.choices,
                 intentFor: (open: false) => {
@@ -1722,8 +1756,8 @@ export function bindWorkspaceInteractions(
     shipCombatPhaseCounts,
     acquisitionOrders,
     shopDeathDefianceConditions,
-    sideRoomEntryOrders,
-    sideRoomGenerations,
+    localVisitOrders,
+    localVisitGenerations,
     zagreusSpawns,
     naturalChaosSpawns,
   } = bindOccurrenceLocalInteractions(
@@ -2913,8 +2947,8 @@ export function bindWorkspaceInteractions(
     shipCombatPhaseCounts,
     acquisitionOrders,
     shopDeathDefianceConditions,
-    sideRoomEntryOrders,
-    sideRoomGenerations,
+    localVisitOrders,
+    localVisitGenerations,
     zagreusContracts,
     zagreusSpawns,
     starts,

@@ -142,8 +142,6 @@ function incomingStoreKey(
 }
 
 function localStoreKey(
-  catalog: Catalog,
-  occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   owner: LocalRewardAddress,
 ): string | undefined {
@@ -159,20 +157,6 @@ function localStoreKey(
       fail(`reward producer ${semanticAddressKey(owner)} has no bounded reward slot`);
     }
     return declaration.individualRewardStoreKey;
-  }
-  if (descriptor?.kind === 'fixedRoomSlots') {
-    const slot = descriptor.slots.find((candidate) => candidate.slotKey === owner.slotKey);
-    const sideRoom = slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
-    if (sideRoom === undefined) {
-      fail(`reward producer ${semanticAddressKey(owner)} has no fixed side-room slot`);
-    }
-    if (
-      occurrence.state.kind !== 'ephyraCombat' ||
-      occurrence.state.sideRooms[owner.slotKey] === undefined
-    ) {
-      fail(`reward producer ${semanticAddressKey(owner)} has no authored side-room state`);
-    }
-    return sideRoom.forcedRewardStoreKey ?? sideRoom.individualRewardStoreKey;
   }
   fail(`reward producer ${semanticAddressKey(owner)} has no local reward declaration`);
 }
@@ -192,7 +176,7 @@ function authoredStoreKey(
     case 'incomingReward':
       return incomingStoreKey(catalog, plan, occurrence, declaration, owner, route.loadout);
     case 'localReward':
-      return localStoreKey(catalog, occurrence, declaration, owner);
+      return localStoreKey(declaration, owner);
     case 'rewardWheelOffer': {
       if (occurrence.state.kind !== 'shipCombat') {
         fail(`reward producer ${semanticAddressKey(owner)} has no authored reward wheel`);

@@ -250,7 +250,7 @@ export {
   type CanonicalHubRoomReference,
   type CanonicalHubTarget,
   type CanonicalHubVisit,
-  type CanonicalLocalChildRoom,
+  type CanonicalLocalVisitRoom,
   type CanonicalLocalReward,
   type CanonicalPhysicalExit,
   type CanonicalResolvedIncomingReward,

@@ -17,11 +17,12 @@ import type {
   ExitSelection,
   ExitTargetReference,
   HubDecision,
+  LocalVisitDecision,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
-import type { RoomOccurrenceRole } from '../room-state/declaration';
+import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
 import { createSelectedPickupEntries, selectedPickupProducer } from '../traits';
@@ -125,7 +126,7 @@ function initialRewardStore(
 
 function replaceDecision(
   topology: BiomeTopology,
-  replacement: ExitDecision | HubDecision,
+  replacement: ExitDecision | HubDecision | LocalVisitDecision,
 ): BiomeTopology {
   const decisions = topology.decisions.map((decision) =>
     decision.kind === 'exit' && replacement.kind === 'exit'
@@ -136,19 +137,37 @@ function replaceDecision(
           replacement.kind === 'hub' &&
           decision.hubKey === replacement.hubKey
         ? replacement
-        : decision,
+        : decision.kind === 'localVisit' &&
+            replacement.kind === 'localVisit' &&
+            decision.sourceOccurrenceId === replacement.sourceOccurrenceId &&
+            decision.groupKey === replacement.groupKey
+          ? replacement
+          : decision,
   );
   return Object.freeze({ ...topology, decisions: Object.freeze(decisions) });
 }
 
 function appendDecision(
   topology: BiomeTopology,
-  decision: ExitDecision | HubDecision,
+  decision: ExitDecision | HubDecision | LocalVisitDecision,
 ): BiomeTopology {
   return Object.freeze({
     ...topology,
     decisions: Object.freeze([...topology.decisions, decision]),
   });
+}
+
+function localVisitDecisionForSource(
+  topology: BiomeTopology,
+  sourceOccurrenceId: OccurrenceId,
+  groupKey: string,
+): LocalVisitDecision | undefined {
+  return topology.decisions.find(
+    (decision): decision is LocalVisitDecision =>
+      decision.kind === 'localVisit' &&
+      decision.sourceOccurrenceId === sourceOccurrenceId &&
+      decision.groupKey === groupKey,
+  );
 }
 
 /**
@@ -814,6 +833,7 @@ function setExitSelection(
   if (previousSelectedOccurrenceId !== nextSelectedOccurrenceId) {
     const outgoing = topology.decisions.find(
       (candidate) =>
+        candidate.kind === 'exit' &&
         candidate.source.kind === 'occurrence' &&
         candidate.source.occurrenceId === previousSelectedOccurrenceId,
     );
@@ -848,6 +868,7 @@ function setExitSelection(
       );
       const targetAlreadyOwnsDecision = topology.decisions.some(
         (candidate) =>
+          candidate.kind === 'exit' &&
           candidate.source.kind === 'occurrence' &&
           candidate.source.occurrenceId === nextContinuation.target.occurrenceId,
       );
@@ -1212,6 +1233,28 @@ function updateHub(
     if (topology.occurrences.some((occurrence) => occurrence.occurrenceId === command.occurrenceId))
       failCommand(command, `occurrence ${command.occurrenceId} already exists`);
     const room = requireRoom(catalog, slot.roomGameName, located.layout.biomeKey, command);
+    const localGroup = requireEphyraSideRooms(room, room.gameName);
+    const expectedLocalSlots = localGroup?.slots ?? [];
+    const suppliedLocalSlotKeys = Object.keys(command.localOccurrenceIdsBySlot);
+    if (
+      suppliedLocalSlotKeys.length !== expectedLocalSlots.length ||
+      suppliedLocalSlotKeys.some(
+        (slotKey) => !expectedLocalSlots.some((candidate) => candidate.slotKey === slotKey),
+      )
+    ) {
+      failCommand(command, 'local occurrence identities must match the declaration-fixed slots');
+    }
+    const createdIds = [command.occurrenceId, ...Object.values(command.localOccurrenceIdsBySlot)];
+    if (new Set(createdIds).size !== createdIds.length) {
+      failCommand(command, 'main and local occurrence identities must be distinct');
+    }
+    if (
+      createdIds.some((occurrenceId) =>
+        topology.occurrences.some((occurrence) => occurrence.occurrenceId === occurrenceId),
+      )
+    ) {
+      failCommand(command, 'one or more supplied occurrence identities already exist');
+    }
     const replacement: HubDecision = Object.freeze({
       ...hub,
       openTargets: Object.freeze([
@@ -1219,26 +1262,65 @@ function updateHub(
         Object.freeze({ hubSlotKey: slot.slotKey, occurrenceId: command.occurrenceId }),
       ]),
     });
-    return updateTopology(
-      document,
-      located,
-      replaceDecision(
-        appendOccurrence(
-          topology,
+    let next = appendOccurrence(
+      topology,
+      defaultOccurrence(
+        catalog,
+        room,
+        command.occurrenceId,
+        'ordinary',
+        false,
+        undefined,
+        located.loadout,
+      ),
+      command,
+    );
+    if (localGroup !== undefined) {
+      const targetsBySlot: Record<
+        string,
+        { readonly occurrenceId: OccurrenceId; readonly generation: 'notGenerated' }
+      > = {};
+      for (const localSlot of localGroup.slots) {
+        const localOccurrenceId = command.localOccurrenceIdsBySlot[localSlot.slotKey];
+        if (localOccurrenceId === undefined) {
+          failCommand(command, `missing local occurrence identity for ${localSlot.slotKey}`);
+        }
+        const localRoom = requireRoom(
+          catalog,
+          localSlot.roomGameName,
+          located.layout.biomeKey,
+          command,
+        );
+        next = appendOccurrence(
+          next,
           defaultOccurrence(
             catalog,
-            room,
-            command.occurrenceId,
+            localRoom,
+            localOccurrenceId,
             'ordinary',
             false,
             undefined,
             located.loadout,
           ),
           command,
-        ),
-        replacement,
-      ),
-    );
+        );
+        targetsBySlot[localSlot.slotKey] = Object.freeze({
+          occurrenceId: localOccurrenceId,
+          generation: 'notGenerated',
+        });
+      }
+      next = appendDecision(
+        next,
+        Object.freeze({
+          kind: 'localVisit',
+          sourceOccurrenceId: command.occurrenceId,
+          groupKey: localGroup.key,
+          targetsBySlot: Object.freeze(targetsBySlot),
+          visitOrder: Object.freeze([]),
+        }),
+      );
+    }
+    return updateTopology(document, located, replaceDecision(next, replacement));
   }
   if (command.kind === 'CloseHubSlot') {
     if (command.slot.hubKey !== descriptor.hubKey)
@@ -1307,6 +1389,88 @@ function updateHub(
   );
 }
 
+function updateLocalVisit(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<
+    TopologyCommand,
+    { readonly kind: 'SetLocalVisitGeneration' | 'ReplaceLocalVisitOrder' }
+  >,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const address = command.kind === 'SetLocalVisitGeneration' ? command.slot : command.order;
+  const decision = localVisitDecisionForSource(
+    topology,
+    address.sourceOccurrenceId,
+    address.groupKey,
+  );
+  if (decision === undefined) failCommand(command, 'local visit decision does not exist');
+  const source = requireOccurrence(located.plan, decision.sourceOccurrenceId, command);
+  const room = requireRoom(catalog, source.gameName, located.layout.biomeKey, command);
+  const descriptor = requireEphyraSideRooms(room, room.gameName);
+  if (descriptor?.key !== decision.groupKey) {
+    failCommand(command, 'local visit decision does not match its source declaration');
+  }
+  if (command.kind === 'SetLocalVisitGeneration') {
+    const slot = descriptor.slots.find((candidate) => candidate.slotKey === command.slot.slotKey);
+    const target = decision.targetsBySlot[command.slot.slotKey];
+    if (slot === undefined || target === undefined)
+      failCommand(command, 'unknown local visit slot');
+    if (
+      command.generation === 'notGenerated' &&
+      decision.visitOrder.includes(target.occurrenceId)
+    ) {
+      failCommand(command, 'remove the local occurrence from visit order before disabling it');
+    }
+    if (target.generation === command.generation) return document;
+    return updateTopology(
+      document,
+      located,
+      replaceDecision(
+        topology,
+        Object.freeze({
+          ...decision,
+          targetsBySlot: Object.freeze({
+            ...decision.targetsBySlot,
+            [command.slot.slotKey]: Object.freeze({
+              ...target,
+              generation: command.generation,
+            }),
+          }),
+        }),
+      ),
+    );
+  }
+  if (new Set(command.occurrenceIds).size !== command.occurrenceIds.length) {
+    failCommand(command, 'local visit order must contain distinct occurrences');
+  }
+  const targets = Object.values(decision.targetsBySlot);
+  for (const occurrenceId of command.occurrenceIds) {
+    const target = targets.find((candidate) => candidate.occurrenceId === occurrenceId);
+    if (target === undefined) failCommand(command, `unknown local occurrence ${occurrenceId}`);
+    if (target.generation !== 'generated') {
+      failCommand(command, `${occurrenceId} must be generated before it can be entered`);
+    }
+  }
+  if (
+    command.occurrenceIds.length === decision.visitOrder.length &&
+    command.occurrenceIds.every(
+      (occurrenceId, index) => decision.visitOrder[index] === occurrenceId,
+    )
+  ) {
+    return document;
+  }
+  return updateTopology(
+    document,
+    located,
+    replaceDecision(
+      topology,
+      Object.freeze({ ...decision, visitOrder: Object.freeze([...command.occurrenceIds]) }),
+    ),
+  );
+}
+
 export function applyTopologyCommand(
   document: ProjectDocument,
   catalog: Catalog,
@@ -1342,6 +1506,9 @@ export function applyTopologyCommand(
     case 'CloseHubSlot':
     case 'ReplaceHubVisitOrder':
       return updateHub(document, catalog, located, command);
+    case 'SetLocalVisitGeneration':
+    case 'ReplaceLocalVisitOrder':
+      return updateLocalVisit(document, catalog, located, command);
     case 'ClearTopology':
       return clearTopology(document, located, command);
   }

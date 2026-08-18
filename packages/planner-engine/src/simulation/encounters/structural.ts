@@ -2,7 +2,6 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,
-  CanonicalLocalChildRoom,
   MaterializedBiomePrefix,
 } from '../materialization';
 import { selectedBatchContinuation } from '../materialization';
@@ -10,7 +9,7 @@ import { selectedBatchContinuation } from '../materialization';
 export type EncounterStructuralSnapshot =
   CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
 
-export type EncounterStructuralRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
+export type EncounterStructuralRoom = CanonicalAuthoredRoom;
 
 function decisions(snapshot: EncounterStructuralSnapshot) {
   const partialBatch =
@@ -25,7 +24,7 @@ function decisions(snapshot: EncounterStructuralSnapshot) {
 /**
  * Returns editable room-local encounter owners in their authored traversal
  * order. Hub board declaration order is intentionally not traversal order:
- * only its ordered visits enter rooms, and each visit's local children follow
+ * only its ordered visits enter rooms, and each visit's entered local rooms follow
  * its parent before the next visit begins.
  */
 export function structurallyActiveEncounterRooms(

@@ -271,14 +271,14 @@ describe('structured workspace biome presentation', () => {
     const firstVisit = hub.visits[0];
     if (
       firstVisit === undefined ||
-      firstVisit.node.room.roomLocal.kind !== 'ephyra' ||
-      firstVisit.node.room.roomLocal.incomingReward.offer === null
+      firstVisit.node.room.roomLocal.kind !== 'incomingReward' ||
+      firstVisit.node.room.roomLocal.control.offer === null
     ) {
       throw new Error('first Hub visit is missing its Ephyra main reward');
     }
     expect(firstVisit.mainReward).toEqual({
-      label: summarizeRewardOffer(catalog, firstVisit.node.room.roomLocal.incomingReward.offer),
-      offer: firstVisit.node.room.roomLocal.incomingReward.offer,
+      label: summarizeRewardOffer(catalog, firstVisit.node.room.roomLocal.control.offer),
+      offer: firstVisit.node.room.roomLocal.control.offer,
     });
     expect(
       completePresentation.presentation.focusDestinations.get(firstVisit.node.room.marker.focusKey),

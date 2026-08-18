@@ -140,6 +140,18 @@ function collectTopologyRemovalClosure(
         }
       }
     }
+
+    for (const decision of topology.decisions) {
+      if (decision.kind !== 'localVisit' || !removedOccurrences.has(decision.sourceOccurrenceId)) {
+        continue;
+      }
+      for (const target of Object.values(decision.targetsBySlot)) {
+        if (!removedOccurrences.has(target.occurrenceId)) {
+          removedOccurrences.add(target.occurrenceId);
+          changed = true;
+        }
+      }
+    }
   }
 
   return Object.freeze({
@@ -344,6 +356,14 @@ export function applyTopologyRemovalImpact(
     decisions: Object.freeze(
       topology.decisions.filter((decision) => {
         if (decision.kind === 'hub') return !removedHubDecisionKeys.has(decision.hubKey);
+        if (decision.kind === 'localVisit') {
+          return (
+            !removedOccurrences.has(decision.sourceOccurrenceId) &&
+            !Object.values(decision.targetsBySlot).some((target) =>
+              removedOccurrences.has(target.occurrenceId),
+            )
+          );
+        }
         return (
           !removedSources.has(sourceKey(decision.source)) &&
           !(

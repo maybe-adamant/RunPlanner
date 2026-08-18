@@ -1,9 +1,4 @@
 import {
-  createLocalChildGroupAddress,
-  type SemanticAddress,
-} from '@run-planner/engine/authored-project';
-
-import {
   assertExactObservedDestination,
   observedInteractionOwnerKey,
   type ObservedOwnedInteraction,
@@ -35,10 +30,10 @@ function leafInteraction(
       return observed.interactions.shipCombatPhaseCounts.get(key);
     case 'acquisitionOrder':
       return observed.interactions.acquisitionOrders.get(key);
-    case 'sideRoomEntryOrder':
-      return observed.interactions.sideRoomEntryOrders.get(key);
-    case 'sideRoomGeneration':
-      return observed.interactions.sideRoomGenerations.get(key);
+    case 'localVisitOrder':
+      return observed.interactions.localVisitOrders.get(key);
+    case 'localVisitGeneration':
+      return observed.interactions.localVisitGenerations.get(key);
     case 'levelResolution':
       return observed.interactions.levelResolutions.get(key);
     case 'traitOffer':
@@ -61,20 +56,6 @@ function leafInteractionLabel(kind: ExpectedWorkspaceLeafInteractionKind): strin
     default:
       return kind;
   }
-}
-
-function leafInteractionOwner(
-  kind: ExpectedWorkspaceLeafInteractionKind,
-  address: SemanticAddress,
-): SemanticAddress {
-  if (kind === 'sideRoomEntryOrder' && address.kind === 'localChild') {
-    return createLocalChildGroupAddress(
-      { biomeKey: address.biomeKey, kind: 'biome', routeKey: address.routeKey },
-      address.occurrenceId,
-      address.groupKey,
-    );
-  }
-  return address;
 }
 
 /** Close independent editable-leaf identities over typed public products. */
@@ -110,8 +91,7 @@ export function assertExpectedWorkspaceLeafClosure(input: {
       }
       if (
         interaction.key !== expectedInteraction.key ||
-        observedInteractionOwnerKey(interaction) !==
-          workspaceTestOwnerKey(leafInteractionOwner(expectedInteraction.kind, requirement.address))
+        observedInteractionOwnerKey(interaction) !== workspaceTestOwnerKey(requirement.address)
       ) {
         throw new Error(
           `authored ${leafInteractionLabel(expectedInteraction.kind)} leaf ${key} has a conflicting workspace interaction`,

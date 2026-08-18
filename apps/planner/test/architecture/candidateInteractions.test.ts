@@ -51,8 +51,8 @@ const families = [
   'rooms',
   'shipCombatPhaseCounts',
   'acquisitionOrders',
-  'sideRoomEntryOrders',
-  'sideRoomGenerations',
+  'localVisitOrders',
+  'localVisitGenerations',
 ] as const satisfies readonly (keyof WorkspaceInteractionCatalog)[];
 
 type InteractionFamily = (typeof families)[number];
@@ -75,8 +75,8 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   rooms: 1,
   shipCombatPhaseCounts: 1,
   acquisitionOrders: 1,
-  sideRoomEntryOrders: 1,
-  sideRoomGenerations: 1,
+  localVisitOrders: 1,
+  localVisitGenerations: 1,
 });
 
 function firstInteraction(

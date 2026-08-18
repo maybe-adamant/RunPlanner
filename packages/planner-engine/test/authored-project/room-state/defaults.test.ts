@@ -108,18 +108,6 @@ describe('authored room-state defaults', () => {
     ).toMatchObject({
       kind: 'ephyraCombat',
       reward: null,
-      sideRooms: {
-        sideDoor1: {
-          generation: 'notGenerated',
-          enteredOrdinal: null,
-          reward: null,
-        },
-        sideDoor2: {
-          generation: 'notGenerated',
-          enteredOrdinal: null,
-          reward: null,
-        },
-      },
     });
   });
 

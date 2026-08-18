@@ -7,7 +7,7 @@ import {
   createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
-  createLocalChildGroupAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
@@ -622,9 +622,9 @@ describe('Experimental Hammer', () => {
   it('does not spend an Experimental Hammer use for an entered N side room', () => {
     const base = createRepresentativeNProject();
     const withoutSide = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: [],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      occurrenceIds: [],
     });
     const evaluateN = (project: typeof base) => {
       const biome = simulateProject(catalog, project)

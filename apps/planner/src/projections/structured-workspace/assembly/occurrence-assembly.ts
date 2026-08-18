@@ -2,8 +2,6 @@ import {
   createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
   createLocalRewardAddress,
   createFieldsActionAddress,
   createOccurrenceAddress,
@@ -33,7 +31,6 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
-  type LocalChildAddress,
   type RoomOccurrence,
   type SemanticAddress,
   type AuthoredRewardState,
@@ -80,9 +77,6 @@ import {
 } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
-  workspaceSideRoomEntryOrderKey,
-  type WorkspaceEphyraSideRoomEntryOption,
-  type WorkspaceEphyraSideRoomEntryOrderControl,
   type WorkspaceEncounterPhase,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
@@ -551,44 +545,6 @@ function controlsForOccurrence(
       break;
     case 'ephyraCombat': {
       addIncoming(occurrence.state);
-      const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
-      if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) break;
-      if (group?.kind !== 'fixedRoomSlots') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ephyra state has no fixed side-room declaration`,
-        );
-      }
-      if (!input.facts.detailsActive) break;
-      for (const [slotKey, side] of Object.entries(occurrence.state.sideRooms)) {
-        const slot = group.slots.find((candidate) => candidate.slotKey === slotKey);
-        if (slot === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} has no side-room slot ${slotKey}`,
-          );
-        }
-        const sideRoom = requireRoom(input.catalog, slot.roomGameName);
-        if (sideRoom.incomingReward.kind !== 'countedChoice') {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${sideRoom.gameName} side room has no counted reward binding`,
-          );
-        }
-        if (side.generation !== 'generated') continue;
-        const address = createLocalRewardAddress(
-          input.biome,
-          occurrence.occurrenceId,
-          group.key,
-          slotKey,
-        );
-        controls.push(
-          rewardControl(
-            input,
-            { kind: 'localReward', address },
-            sideRoom.incomingReward,
-            side.reward?.offer ?? null,
-            side.reward,
-          ),
-        );
-      }
       break;
     }
     case 'fieldsCombat': {
@@ -1102,21 +1058,6 @@ function activeEncounterPhasesForOwner(
   return Object.freeze(phases);
 }
 
-function ordinalLabel(position: number): string {
-  const remainder = position % 100;
-  if (remainder >= 11 && remainder <= 13) return `${position}th`;
-  switch (position % 10) {
-    case 1:
-      return `${position}st`;
-    case 2:
-      return `${position}nd`;
-    case 3:
-      return `${position}rd`;
-    default:
-      return `${position}th`;
-  }
-}
-
 /** Complete semantic proposals for the one authorable site order. */
 function acquisitionOrderProposals(
   order: readonly string[],
@@ -1143,43 +1084,6 @@ function acquisitionOrderProposals(
       return [Object.freeze(proposal)];
     }),
   );
-}
-
-function ephyraSideRoomEntryOrderControl(
-  address: LocalChildAddress,
-  enteredSlotKeys: readonly string[],
-  slotKey: string,
-): WorkspaceEphyraSideRoomEntryOrderControl {
-  const index = enteredSlotKeys.indexOf(slotKey);
-  const withoutSlot = Object.freeze(enteredSlotKeys.filter((candidate) => candidate !== slotKey));
-  const options: WorkspaceEphyraSideRoomEntryOption[] = [
-    Object.freeze({
-      key: 'notEntered',
-      label: 'Not visited',
-      position: null,
-      proposedEnteredSlotKeys: withoutSlot,
-    }),
-  ];
-  for (let insertionIndex = 0; insertionIndex <= withoutSlot.length; insertionIndex += 1) {
-    const position = insertionIndex + 1;
-    options.push(
-      Object.freeze({
-        key: `position:${position}`,
-        label: ordinalLabel(position),
-        position,
-        proposedEnteredSlotKeys: Object.freeze([
-          ...withoutSlot.slice(0, insertionIndex),
-          slotKey,
-          ...withoutSlot.slice(insertionIndex),
-        ]),
-      }),
-    );
-  }
-  return Object.freeze({
-    interactionKey: workspaceSideRoomEntryOrderKey(address),
-    options: Object.freeze(options),
-    selectedKey: index < 0 ? 'notEntered' : `position:${index + 1}`,
-  });
 }
 
 interface ShopSupplementalAssemblyContext {
@@ -1546,105 +1450,8 @@ function roomLocalForOccurrence(
       });
     }
     case 'ephyraCombat': {
-      const state = occurrence.state;
       const incomingReward = requireProjectedRewardControl(controls, incoming, 'countedReward');
-      const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
-      // Ephyra combat state owns the incoming Hub reward for every Hub room;
-      // only declarations with fixed side-room slots expose the extra local lifecycle.
-      if (group === undefined && Object.keys(state.sideRooms).length === 0) {
-        return Object.freeze({ kind: 'incomingReward' as const, control: incomingReward });
-      }
-      if (group?.kind !== 'fixedRoomSlots') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ephyra state has no fixed side-room declaration`,
-        );
-      }
-      if (!input.facts.detailsActive) {
-        return Object.freeze({
-          kind: 'ephyra' as const,
-          incomingReward,
-          sideRooms: Object.freeze({ kind: 'withheld' as const }),
-        });
-      }
-      const groupAddress = createLocalChildGroupAddress(
-        input.biome,
-        occurrence.occurrenceId,
-        group.key,
-      );
-      const enteredSlotKeys = Object.entries(state.sideRooms)
-        .filter(([, side]) => side.enteredOrdinal !== null)
-        .sort((left, right) => left[1].enteredOrdinal! - right[1].enteredOrdinal!)
-        .map(([slotKey]) => slotKey);
-      const slots = [...group.slots]
-        .sort((left, right) => left.availabilityRank - right.availabilityRank)
-        .map((slot) => {
-          const side = state.sideRooms[slot.slotKey];
-          if (side === undefined) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${room.gameName} Ephyra state is missing side room ${slot.slotKey}`,
-            );
-          }
-          const sideRoom = requireRoom(input.catalog, slot.roomGameName);
-          const address = createLocalChildAddress(
-            input.biome,
-            occurrence.occurrenceId,
-            group.key,
-            slot.slotKey,
-          );
-          const encounterPhases =
-            side.enteredOrdinal !== null
-              ? activeEncounterPhasesForOwner(
-                  input,
-                  sideRoom,
-                  {
-                    kind: 'localChild',
-                    occurrenceId: occurrence.occurrenceId,
-                    groupKey: group.key,
-                    slotKey: slot.slotKey,
-                  },
-                  side.encounters,
-                )
-              : Object.freeze([]);
-          const descriptor = {
-            address,
-            availabilityRank: slot.availabilityRank,
-            entered: side.enteredOrdinal !== null,
-            enteredOrdinal: side.enteredOrdinal,
-            encounterPhases,
-            entryOrder: ephyraSideRoomEntryOrderControl(address, enteredSlotKeys, slot.slotKey),
-            key: slot.slotKey,
-            label: sideRoom.label,
-            marker: input.markerDestinations.marker(address),
-            physicalDoorId: slot.physicalDoorId,
-          };
-          if (side.generation === 'notGenerated') {
-            return Object.freeze({ ...descriptor, generation: side.generation });
-          }
-          const reward = createLocalRewardAddress(
-            input.biome,
-            occurrence.occurrenceId,
-            group.key,
-            slot.slotKey,
-          );
-          return Object.freeze({
-            ...descriptor,
-            generation: side.generation,
-            rewardControl: requireProjectedRewardControl(controls, reward, 'countedReward'),
-          });
-        });
-      return Object.freeze({
-        kind: 'ephyra' as const,
-        incomingReward,
-        sideRooms: Object.freeze({
-          group: Object.freeze({
-            address: groupAddress,
-            enteredSlotKeys: Object.freeze(enteredSlotKeys),
-            marker: input.markerDestinations.marker(groupAddress),
-            slots: Object.freeze(slots),
-          }),
-          kind: 'published' as const,
-        }),
-      });
+      return Object.freeze({ kind: 'incomingReward' as const, control: incomingReward });
     }
     case 'fieldsCombat': {
       const fieldsFacts = input.fieldsBatchFacts;
@@ -1945,7 +1752,7 @@ function roomLocalForOccurrence(
 }
 
 function encounterPhaseInteractionRequirement(
-  owner: LocalChildAddress | WorkspaceRoomSummary['address'],
+  owner: WorkspaceRoomSummary['address'],
   phases: readonly WorkspaceEncounterPhase[],
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
   const interactivePhases = phases.filter(
@@ -2011,8 +1818,6 @@ function hasRoomLocalCustomization(
     return true;
   }
   switch (roomLocal.kind) {
-    case 'ephyra':
-      return roomLocal.sideRooms.kind === 'published';
     case 'fields':
     case 'ship':
       return false;
@@ -2070,16 +1875,6 @@ function occurrenceInteractionRequirements(
     );
   }
 
-  if (room.roomLocal.kind === 'ephyra' && room.roomLocal.sideRooms.kind === 'published') {
-    for (const sideRoom of room.roomLocal.sideRooms.group.slots) {
-      const localEncounterRequirement = encounterPhaseInteractionRequirement(
-        sideRoom.address,
-        sideRoom.encounterPhases,
-      );
-      if (localEncounterRequirement !== undefined) requirements.push(localEncounterRequirement);
-    }
-  }
-
   switch (room.roomLocal.kind) {
     case 'none':
     case 'fixed':
@@ -2096,30 +1891,6 @@ function occurrenceInteractionRequirements(
         );
       }
       return Object.freeze(requirements);
-    case 'ephyra': {
-      if (room.roomLocal.sideRooms.kind === 'withheld') return Object.freeze(requirements);
-      const group = room.roomLocal.sideRooms.group;
-      const sideRooms = group.slots.map((sideRoom) =>
-        Object.freeze({
-          address: sideRoom.address,
-          entryOrder: sideRoom.entryOrder,
-          generation: sideRoom.generation,
-        }),
-      );
-      if (sideRooms.length === 0) return Object.freeze(requirements);
-      requirements.push(
-        Object.freeze({
-          kind: 'ephyraSideRooms' as const,
-          generationChoices: Object.freeze([
-            Object.freeze({ label: 'Generated', value: 'generated' as const }),
-            Object.freeze({ label: 'Not generated', value: 'notGenerated' as const }),
-          ]),
-          owner: group.address,
-          sideRooms: Object.freeze(sideRooms),
-        }),
-      );
-      return Object.freeze(requirements);
-    }
     case 'ship': {
       const declaration = requireRoom(catalog, room.gameName);
       const wheels = room.roomLocal.wheels.map((wheel) => {
@@ -2203,14 +1974,6 @@ export function assembleWorkspaceOccurrence(
   const { occurrence } = input;
   const room = requireRoom(input.catalog, occurrence.gameName);
   const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
-  if (
-    input.roomPicker !== undefined &&
-    semanticAddressKey(input.roomPicker.address) !== semanticAddressKey(address)
-  ) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(address)} received a room picker for ${semanticAddressKey(input.roomPicker.address)}`,
-    );
-  }
   const entered = input.evaluatedRoom?.entered ?? false;
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =

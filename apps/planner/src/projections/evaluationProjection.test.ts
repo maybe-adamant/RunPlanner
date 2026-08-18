@@ -7,8 +7,8 @@ import {
   createHubDecisionAddress,
   createHubRoomAddress,
   createKeepsakeEquipResultAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -443,23 +443,17 @@ describe('evaluation presentation', () => {
     expect(
       findingDestinationLabel(
         catalog,
-        createLocalRewardAddress(nBiome, nRoom, 'sideRooms', 'sideDoor3'),
-      ),
-    ).toBe('Ephyra · Side room 3 reward');
-    expect(
-      findingDestinationLabel(
-        catalog,
         createLocalRewardAddress(nBiome, nRoom, 'futureRewards', 'reward4'),
       ),
     ).toBe('Ephyra · Room reward 4');
     expect(
       findingDestinationLabel(
         catalog,
-        createLocalChildAddress(nBiome, nRoom, 'sideRooms', 'sideDoor2'),
+        createLocalVisitSlotAddress(nBiome, nRoom, 'sideRooms', 'sideDoor2'),
       ),
     ).toBe('Ephyra · Side room 2');
     expect(
-      findingDestinationLabel(catalog, createLocalChildGroupAddress(nBiome, nRoom, 'sideRooms')),
+      findingDestinationLabel(catalog, createLocalVisitOrderAddress(nBiome, nRoom, 'sideRooms')),
     ).toBe('Ephyra · Side room order');
     expect(findingDestinationLabel(catalog, createHubDecisionAddress(nBiome, 'hub'))).toBe(
       'Ephyra · Hub',

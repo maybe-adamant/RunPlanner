@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceId,
+  type LocalVisitDecision,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
@@ -13,137 +14,120 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 const combatId = createOccurrenceId('round-trip-n-combat02');
-const group = createLocalChildGroupAddress(nBiome, combatId, 'sideRooms');
+const sideDoor1 = createOccurrenceId('round-trip-n-combat02-sideDoor1');
+const sideDoor2 = createOccurrenceId('round-trip-n-combat02-sideDoor2');
+const order = createLocalVisitOrderAddress(nBiome, combatId, 'sideRooms');
 
-function sideRooms(project: ProjectDocument) {
-  const state = project.routes
+function localVisit(project: ProjectDocument): LocalVisitDecision {
+  const decision = project.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((biome) => biome.biomeKey === 'N')
-    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === combatId)?.state;
-  if (state?.kind !== 'ephyraCombat') throw new Error('missing Ephyra state');
-  return state.sideRooms;
+    ?.topology?.decisions.find(
+      (candidate): candidate is LocalVisitDecision =>
+        candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === combatId,
+    );
+  if (decision === undefined) throw new Error('missing local visit decision');
+  return decision;
 }
 
-describe('authored-project Ephyra occurrence commands', () => {
-  it('replaces generation and exact entry order and preserves unchanged identity', () => {
+describe('authored-project Ephyra local-visit commands', () => {
+  it('replaces generation and exact occurrence visit order and preserves unchanged identity', () => {
     let project = createCompleteNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2']) {
       project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceSideRoomGeneration',
-        sideRoom: createLocalChildAddress(nBiome, combatId, 'sideRooms', slotKey),
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', slotKey),
         generation: 'generated',
       });
     }
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group,
-      enteredSlotKeys: ['sideDoor2', 'sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order,
+      occurrenceIds: [sideDoor2, sideDoor1],
     });
 
-    expect(sideRooms(project)).toMatchObject({
-      sideDoor1: { generation: 'generated', enteredOrdinal: 2 },
-      sideDoor2: { generation: 'generated', enteredOrdinal: 1 },
+    expect(localVisit(project)).toMatchObject({
+      targetsBySlot: {
+        sideDoor1: { occurrenceId: sideDoor1, generation: 'generated' },
+        sideDoor2: { occurrenceId: sideDoor2, generation: 'generated' },
+      },
+      visitOrder: [sideDoor2, sideDoor1],
     });
     expect(
       applyProjectCommand(project, catalog, {
-        kind: 'ReplaceSideRoomEntryOrder',
-        group,
-        enteredSlotKeys: ['sideDoor2', 'sideDoor1'],
+        kind: 'ReplaceLocalVisitOrder',
+        order,
+        occurrenceIds: [sideDoor2, sideDoor1],
       }),
     ).toBe(project);
   });
 
-  it('requires distinct generated slots and removal from entry order before disabling generation', () => {
+  it('requires generated, distinct occurrences and removal before disabling generation', () => {
     const initial = createCompleteNProject();
     expect(() =>
       applyProjectCommand(initial, catalog, {
-        kind: 'ReplaceSideRoomEntryOrder',
-        group,
-        enteredSlotKeys: ['sideDoor1'],
+        kind: 'ReplaceLocalVisitOrder',
+        order,
+        occurrenceIds: [sideDoor1],
       }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceSideRoomEntryOrder',
-        detail: 'sideDoor1 must be generated before it can be entered',
-      }),
-    );
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceLocalVisitOrder' }));
 
     const generated = applyProjectCommand(initial, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
       generation: 'generated',
     });
     expect(() =>
       applyProjectCommand(generated, catalog, {
-        kind: 'ReplaceSideRoomEntryOrder',
-        group,
-        enteredSlotKeys: ['sideDoor1', 'sideDoor1'],
+        kind: 'ReplaceLocalVisitOrder',
+        order,
+        occurrenceIds: [sideDoor1, sideDoor1],
       }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceSideRoomEntryOrder',
-        detail: 'side-room entry order must contain distinct slots',
-      }),
-    );
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceLocalVisitOrder' }));
 
     const entered = applyProjectCommand(generated, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group,
-      enteredSlotKeys: ['sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order,
+      occurrenceIds: [sideDoor1],
     });
     expect(() =>
       applyProjectCommand(entered, catalog, {
-        kind: 'ReplaceSideRoomGeneration',
-        sideRoom: createLocalChildAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
         generation: 'notGenerated',
       }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceSideRoomGeneration',
-        detail: 'remove the side room from entry order before disabling generation',
-      }),
-    );
+    ).toThrowError(expect.objectContaining({ commandKind: 'SetLocalVisitGeneration' }));
 
     const cleared = applyProjectCommand(entered, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group,
-      enteredSlotKeys: [],
+      kind: 'ReplaceLocalVisitOrder',
+      order,
+      occurrenceIds: [],
     });
     const disabled = applyProjectCommand(cleared, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', 'sideDoor1'),
       generation: 'notGenerated',
     });
-    expect(sideRooms(disabled).sideDoor1).toMatchObject({
+    expect(localVisit(disabled).targetsBySlot.sideDoor1).toMatchObject({
+      occurrenceId: sideDoor1,
       generation: 'notGenerated',
-      enteredOrdinal: null,
     });
   });
 
-  it('rejects undeclared side groups and slots at their exact owners', () => {
+  it('rejects undeclared local groups and slots at their exact topology owners', () => {
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceSideRoomGeneration',
-        sideRoom: createLocalChildAddress(nBiome, combatId, 'sideRooms', 'sideDoor3'),
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, combatId, 'sideRooms', 'sideDoor3'),
         generation: 'generated',
       }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceSideRoomGeneration',
-        detail: 'unknown side-room slot sideDoor3',
-      }),
-    );
+    ).toThrowError(expect.objectContaining({ commandKind: 'SetLocalVisitGeneration' }));
     expect(() =>
       applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceSideRoomEntryOrder',
-        group: createLocalChildGroupAddress(nBiome, combatId, 'other'),
-        enteredSlotKeys: [],
+        kind: 'ReplaceLocalVisitOrder',
+        order: createLocalVisitOrderAddress(nBiome, combatId, 'other'),
+        occurrenceIds: [],
       }),
-    ).toThrowError(
-      expect.objectContaining({
-        commandKind: 'ReplaceSideRoomEntryOrder',
-        detail: 'N_Combat02 has no side-room group other',
-      }),
-    );
+    ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceLocalVisitOrder' }));
   });
 });

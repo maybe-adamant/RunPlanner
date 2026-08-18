@@ -3,6 +3,8 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
+  createLocalVisitDecisionAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   additionalExitsForDecision,
   declaredPhysicalExits as resolveDeclaredPhysicalExits,
@@ -37,7 +39,7 @@ import type {
   CanonicalHubDecision,
   CanonicalHubTarget,
   CanonicalHubVisit,
-  CanonicalLocalChildRoom,
+  CanonicalLocalVisitRoom,
   EncounterPhaseSequenceStatus,
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
@@ -184,25 +186,26 @@ function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom
   }
 }
 
-function appendLocalChildRoomOwners(keys: Set<string>, room: CanonicalLocalChildRoom): void {
-  appendOwner(keys, room.origin);
+function appendLocalVisitRoomOwners(keys: Set<string>, room: CanonicalLocalVisitRoom): void {
+  appendOwner(keys, room.localVisit.origin);
   const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
-  for (const phase of room.encounterPhases) {
-    appendOwner(
-      keys,
-      createEncounterPhaseAddress(
-        biome,
-        {
-          kind: 'localChild',
-          occurrenceId: room.origin.occurrenceId,
-          groupKey: room.groupKey,
-          slotKey: room.slotKey,
-        },
-        phase.slotKey,
-      ),
-    );
-  }
-  if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
+  appendOwner(
+    keys,
+    createLocalVisitDecisionAddress(
+      biome,
+      room.localVisit.origin.sourceOccurrenceId,
+      room.localVisit.groupKey,
+    ),
+  );
+  appendOwner(
+    keys,
+    createLocalVisitOrderAddress(
+      biome,
+      room.localVisit.origin.sourceOccurrenceId,
+      room.localVisit.groupKey,
+    ),
+  );
+  appendAuthoredRoomOwners(keys, room);
 }
 
 function appendTargetOwners(keys: Set<string>, target: CanonicalTarget): void {
@@ -237,7 +240,7 @@ function appendHubTargetOwners(keys: Set<string>, target: CanonicalHubTarget): v
 function appendHubVisitOwners(keys: Set<string>, visit: CanonicalHubVisit): void {
   appendOwner(keys, visit.origin);
   appendHubTargetOwners(keys, visit.target);
-  for (const local of visit.localSlots) appendLocalChildRoomOwners(keys, local);
+  for (const local of visit.localSlots) appendLocalVisitRoomOwners(keys, local);
   for (const restore of visit.parentRestores) {
     appendOwner(keys, restore.after);
     appendOwner(keys, restore.room.origin);
@@ -337,7 +340,7 @@ function appendPrefixOwners(
     if (hubVisitFrontier.phase !== 'targetLifecycle') {
       appendOwner(keys, hubVisitFrontier.origin);
       appendHubTargetOwners(keys, hubVisitFrontier.target);
-      for (const local of hubVisitFrontier.localSlots) appendLocalChildRoomOwners(keys, local);
+      for (const local of hubVisitFrontier.localSlots) appendLocalVisitRoomOwners(keys, local);
       for (const restore of hubVisitFrontier.parentRestores) {
         appendOwner(keys, restore.after);
         appendOwner(keys, restore.room.origin);
@@ -628,6 +631,7 @@ function createWorkspaceBiomeSource(
         exitDecisionsByOwner.set(key, decision);
         continue;
       }
+      if (decision.kind === 'localVisit') continue;
       const key = semanticAddressKey(createHubDecisionAddress(biome, decision.hubKey));
       if (hubDecisionsByKey.has(key)) {
         throw new StructuredWorkspaceProjectionContractError(

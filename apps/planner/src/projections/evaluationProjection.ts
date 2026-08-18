@@ -636,8 +636,6 @@ function localRewardDestinationLabel(groupKey: string, slotKey: string): string 
   switch (groupKey) {
     case 'cages':
       return `${numberedDestinationLabel('Cage', slotKey)} reward`;
-    case 'sideRooms':
-      return `${numberedDestinationLabel('Side room', slotKey)} reward`;
     default:
       return numberedDestinationLabel('Room reward', slotKey);
   }
@@ -686,9 +684,11 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
     case 'fieldsAction':
       return `${biomeLabel} · Fields room action`;
-    case 'localChild':
+    case 'localVisitDecision':
+      return `${biomeLabel} · Side rooms`;
+    case 'localVisitSlot':
       return `${biomeLabel} · ${numberedDestinationLabel('Side room', origin.slotKey)}`;
-    case 'localChildGroup':
+    case 'localVisitOrder':
       return `${biomeLabel} · Side room order`;
     case 'encounterPhase':
       return `${biomeLabel} · Encounter`;

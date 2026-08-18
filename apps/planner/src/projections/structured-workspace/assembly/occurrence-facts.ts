@@ -43,6 +43,10 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
       }
       continue;
     }
+    if (decision.kind === 'localVisit') {
+      for (const occurrenceId of decision.visitOrder) active.add(occurrenceId);
+      continue;
+    }
     const sourceOccurrenceId =
       decision.source.kind === 'occurrence' ? decision.source.occurrenceId : undefined;
     const continuation = selectedExitContinuation(

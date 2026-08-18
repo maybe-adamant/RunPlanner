@@ -6,7 +6,6 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { AcquisitionDispositionCommand } from './types';
 import { createNormalDispositionByAcquisitionRole } from '../reward-state';
@@ -200,34 +199,6 @@ export function applyAcquisitionDispositionCommand(
                   [owner.slotKey]: nextReward,
                 }),
               }),
-        });
-      } else if (occurrence.state.kind === 'ephyraCombat') {
-        const { state: ephyra, group } = requireEphyraSideGroup(
-          occurrence,
-          catalog,
-          located,
-          owner.groupKey,
-          command as unknown as import('./types').TraitOfferCommand,
-        );
-        if (!group.slots.some((slot) => slot.slotKey === owner.slotKey))
-          failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-        const side = ephyra.sideRooms[owner.slotKey];
-        if (side === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
-        state = Object.freeze({
-          ...occurrence.state,
-          sideRooms: Object.freeze({
-            ...ephyra.sideRooms,
-            [owner.slotKey]: Object.freeze({
-              ...side,
-              reward:
-                side.reward === null
-                  ? failCommand(
-                      command,
-                      'cannot edit acquisition disposition before reward authorship',
-                    )
-                  : replace(side.reward),
-            }),
-          }),
         });
       } else {
         return failCommand(command, `${occurrence.gameName} has no local reward`);

@@ -5,16 +5,18 @@ import {
   createExitDecisionAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createEncounterPhaseAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -37,9 +39,12 @@ import {
   appendCompleteN,
   createRepresentativeNProject,
   nBiome,
+  nLocalOccurrenceId,
+  nLocalOccurrenceIdsBySlot,
   nOccurrenceId,
   nOccurrenceIds,
   nOpenSlotKeys,
+  nVisitSlotKeys,
   authorLegalTraitOffers,
 } from '@run-planner/test-fixtures';
 
@@ -181,6 +186,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         kind: 'OpenHubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', 'miniBoss02'),
         occurrenceId: nOccurrenceId('miniBoss02'),
+        localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('miniBoss02'),
       }),
     ).toThrow(/Hub open-slot constraint excludes miniBoss02/);
   });
@@ -188,13 +194,13 @@ describe('N Hub rewards, validation, and candidates', () => {
   it('keeps unavailable side generation and its local reward owner precise', () => {
     let project = createRepresentativeNProject();
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: ['sideDoor2'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(
         nBiome,
         nOccurrenceId('combat05'),
         'sideRooms',
@@ -208,7 +214,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(biome.findings).toContainEqual(
       expect.objectContaining({
         code: 'sideRoomGenerationUnavailable',
-        origin: createLocalChildAddress(
+        origin: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId('combat05'),
           'sideRooms',
@@ -221,13 +227,13 @@ describe('N Hub rewards, validation, and candidates', () => {
   it('keeps the blocked side-generation owner assessable for repair', () => {
     let project = createRepresentativeNProject();
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: ['sideDoor2'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(
         nBiome,
         nOccurrenceId('combat05'),
         'sideRooms',
@@ -235,22 +241,22 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
       generation: 'notGenerated',
     });
-    const blockedSideRoom = createLocalChildAddress(
+    const blockedSideRoom = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat05'),
       'sideRooms',
       'sideDoor1',
     );
     const hub = createHubDecisionAddress(nBiome, 'hub');
-    const laterSideRoom = createLocalChildAddress(
+    const laterSideRoom = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat02'),
       'sideRooms',
       'sideDoor1',
     );
     const withLaterViolation = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
       value: { rewardType: 'AirBoost' },
     });
     const candidates = createPreparedProjectCandidateSession(
@@ -346,7 +352,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(
       candidates.evaluate({
         kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
+        sideRoom: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId('combat05'),
           'sideRooms',
@@ -358,8 +364,11 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(
       candidates.evaluate({
         kind: 'sideRoomEntryOrder',
-        group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-        enteredSlotKeys: ['sideDoor1', 'sideDoor2'],
+        group: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+        occurrenceIds: [
+          nLocalOccurrenceId('combat05', 'sideDoor1'),
+          nLocalOccurrenceId('combat05', 'sideDoor2'),
+        ],
       }),
     ).toMatchObject({
       kind: 'sideRoomEntryOrder',
@@ -405,6 +414,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('combat12'),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat12'),
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -487,6 +497,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'story'),
       occurrenceId: nOccurrenceId('story'),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('story'),
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -571,6 +582,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'story'),
       occurrenceId: nOccurrenceId('story'),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('story'),
     });
     // Free the singleton Max Health entry. The unresolved story slot first
     // proposes that same entry, so the focused combat09 candidate initially
@@ -691,7 +703,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
     const generated = hub.visits.flatMap((visit) =>
-      visit.localSlots.filter((slot) => slot.generation === 'generated'),
+      visit.localSlots.filter((slot) => slot.localVisit.generation === 'generated'),
     );
     const entered = hub.visits.flatMap((visit) => visit.enteredLocalRooms);
     const generatedOrigins = generated.map((slot) =>
@@ -757,11 +769,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     const parent = topology.occurrences.find(
       (occurrence) => occurrence.occurrenceId === target?.occurrenceId,
     );
-    if (target === undefined || parent?.state.kind !== 'ephyraCombat') {
+    const localOccurrence = topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === nLocalOccurrenceId('combat05', 'sideDoor1'),
+    );
+    if (target === undefined || parent === undefined || localOccurrence === undefined) {
       throw new Error('fixture lost Ephyra combat target');
     }
-    const side = parent.state.sideRooms.sideDoor1;
-    if (side === undefined) throw new Error('fixture lost Ephyra local slot');
     const offer = {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'DemeterUpgrade' },
@@ -778,38 +791,42 @@ describe('N Hub rewards, validation, and candidates', () => {
         selectedOptionKey: 'option1' as const,
       }),
     });
-    const replacedParent = Object.freeze({
-      ...parent,
+    if (!('reward' in localOccurrence.state)) {
+      throw new Error('fixture local room has no incoming reward state');
+    }
+    const replacedLocalOccurrence = Object.freeze({
+      ...localOccurrence,
       state: Object.freeze({
-        ...parent.state,
-        sideRooms: Object.freeze({
-          ...parent.state.sideRooms,
-          sideDoor1: Object.freeze({
-            ...side,
-            reward: Object.freeze({
-              offer,
-              dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(
-                catalog,
-                offer,
-              ),
-              traitOffersByAcquisitionRole,
-            }),
-          }),
+        ...localOccurrence.state,
+        reward: Object.freeze({
+          offer,
+          dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(catalog, offer),
+          traitOffersByAcquisitionRole,
         }),
       }),
     });
     const occurrences = new Map(
       topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
     );
-    occurrences.set(replacedParent.occurrenceId, replacedParent);
-    const canonical = materializeHubDecision(catalog, nBiome, descriptor, decision, occurrences, {
-      weaponKey: route.loadout.weaponKey,
-      aspectKey: route.loadout.aspectKey,
-    });
+    occurrences.set(replacedLocalOccurrence.occurrenceId, replacedLocalOccurrence);
+    const canonical = materializeHubDecision(
+      catalog,
+      nBiome,
+      descriptor,
+      decision,
+      topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
+      occurrences,
+      {
+        weaponKey: route.loadout.weaponKey,
+        aspectKey: route.loadout.aspectKey,
+      },
+    );
     const visit = canonical.visits.find(
       (candidate) => candidate.target.room.occurrenceId === parent.occurrenceId,
     );
-    const local = visit?.localSlots.find((candidate) => candidate.slotKey === 'sideDoor1');
+    const local = visit?.localSlots.find(
+      (candidate) => candidate.localVisit.slotKey === 'sideDoor1',
+    );
     const incoming = local?.incomingReward;
     if (incoming === undefined) throw new Error('fixture lost materialized local reward');
     expect(incoming.traitOffersByAcquisitionRole).toEqual(traitOffersByAcquisitionRole);
@@ -878,8 +895,8 @@ describe('N Hub rewards, validation, and candidates', () => {
     let project = createRepresentativeNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceLocalReward',
-        reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', slotKey),
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', slotKey)),
         value: { rewardType: 'AirBoost' },
       });
     }
@@ -889,14 +906,114 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(biome.findings).toContainEqual(
       expect.objectContaining({
         code: 'rewardBagEntryUnavailable',
-        origin: createLocalRewardAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor2',
-        ),
+        origin: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor2')),
       }),
     );
+  });
+
+  it('retains an entered local reward finding on local and aggregate Hub order candidates', () => {
+    let project = createRepresentativeNProject();
+    for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', slotKey)),
+        value: { rewardType: 'AirBoost' },
+      });
+    }
+    const findingOrigin = createIncomingRewardAddress(
+      nBiome,
+      nLocalOccurrenceId('combat05', 'sideDoor2'),
+    );
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+
+    expect(
+      candidates.evaluate({
+        kind: 'sideRoomEntryOrder',
+        group: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+        occurrenceIds: [
+          nLocalOccurrenceId('combat05', 'sideDoor2'),
+          nLocalOccurrenceId('combat05', 'sideDoor1'),
+        ],
+      }),
+    ).toMatchObject({
+      kind: 'sideRoomEntryOrder',
+      result: {
+        selectedPossible: false,
+        findings: [
+          expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: findingOrigin }),
+        ],
+      },
+    });
+    expect(
+      candidates.evaluate({
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: [...nVisitSlotKeys],
+      }),
+    ).toMatchObject({
+      kind: 'hubVisitOrder',
+      result: {
+        selectedPossible: true,
+        findings: [
+          expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: findingOrigin }),
+        ],
+      },
+    });
+  });
+
+  it('retains a nested entered-local encounter finding on local and aggregate Hub order candidates', () => {
+    const occurrenceId = nLocalOccurrenceId('combat02', 'sideDoor1');
+    const phase = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+
+    expect(
+      candidates.evaluate({
+        kind: 'sideRoomEntryOrder',
+        group: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms'),
+        occurrenceIds: [occurrenceId],
+      }),
+    ).toMatchObject({
+      kind: 'sideRoomEntryOrder',
+      result: {
+        selectedPossible: false,
+        findings: [expect.objectContaining({ code: 'figLeafSkipUnavailable', origin: phase })],
+      },
+    });
+    expect(
+      candidates.evaluate({
+        kind: 'hubVisitOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: [...nVisitSlotKeys],
+      }),
+    ).toMatchObject({
+      kind: 'hubVisitOrder',
+      result: {
+        selectedPossible: true,
+        findings: expect.arrayContaining([
+          expect.objectContaining({ code: 'figLeafSkipUnavailable', origin: phase }),
+        ]),
+      },
+    });
   });
 
   it('offers the fixed Story target without acquiring it or depleting the Hub bag', () => {
@@ -1057,18 +1174,21 @@ describe('N Hub rewards, validation, and candidates', () => {
         slot: createHubSlotAddress(nBiome, 'hub', 'miniBoss02'),
         open: true,
         occurrenceId: nOccurrenceId('candidate-miniBoss02'),
+        localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('miniBoss02'),
       },
       {
         kind: 'hubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
         open: true,
         occurrenceId: nOccurrenceId('candidate-combat12'),
+        localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat12'),
       },
       {
         kind: 'hubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', 'combat10'),
         open: false,
         occurrenceId: nOccurrenceId('combat10'),
+        localOccurrenceIdsBySlot: {},
       },
       {
         kind: 'hubVisitOrder',
@@ -1082,7 +1202,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
       {
         kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
+        sideRoom: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId('combat05'),
           'sideRooms',
@@ -1092,7 +1212,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
       {
         kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
+        sideRoom: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId('combat05'),
           'sideRooms',
@@ -1102,7 +1222,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
       {
         kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
+        sideRoom: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId('combat05'),
           'sideRooms',
@@ -1112,8 +1232,11 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
       {
         kind: 'sideRoomEntryOrder',
-        group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-        enteredSlotKeys: ['sideDoor1', 'sideDoor2'],
+        group: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+        occurrenceIds: [
+          nLocalOccurrenceId('combat05', 'sideDoor1'),
+          nLocalOccurrenceId('combat05', 'sideDoor2'),
+        ],
       },
     ]);
 
@@ -1138,7 +1261,16 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'hubVisitOrder',
       result: {
         selectedPossible: true,
-        findings: [expect.objectContaining({ code: 'sideRoomGenerationUnavailable' })],
+        findings: expect.arrayContaining([
+          expect.objectContaining({ code: 'sideRoomGenerationUnavailable' }),
+          expect.objectContaining({
+            code: 'traitOfferMissing',
+            origin: createTraitOfferAddress(
+              createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
+              'self',
+            ),
+          }),
+        ]),
       },
     });
     expect(duplicateVisit).toMatchObject({
@@ -1169,31 +1301,31 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('replays every proposed Hub visit and retains exact descendant findings as order evidence', () => {
     let project = createRepresentativeNProject();
-    const combat05Group = createLocalChildGroupAddress(
+    const combat05Group = createLocalVisitOrderAddress(
       nBiome,
       nOccurrenceId('combat05'),
       'sideRooms',
     );
-    const combat05SideDoor1 = createLocalChildAddress(
+    const combat05SideDoor1 = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat05'),
       'sideRooms',
       'sideDoor1',
     );
-    const combat03SideDoor1 = createLocalChildAddress(
+    const combat03SideDoor1 = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat03'),
       'sideRooms',
       'sideDoor1',
     );
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: combat05Group,
-      enteredSlotKeys: ['sideDoor2'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: combat05Group,
+      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: combat05SideDoor1,
+      kind: 'SetLocalVisitGeneration',
+      slot: combat05SideDoor1,
       generation: 'notGenerated',
     });
 
@@ -1218,7 +1350,7 @@ describe('N Hub rewards, validation, and candidates', () => {
           'combat23',
         ],
         selectedPossible: true,
-        findings: [
+        findings: expect.arrayContaining([
           expect.objectContaining({
             code: 'sideRoomGenerationUnavailable',
             origin: combat03SideDoor1,
@@ -1227,7 +1359,14 @@ describe('N Hub rewards, validation, and candidates', () => {
             code: 'sideRoomGenerationUnavailable',
             origin: combat05SideDoor1,
           }),
-        ],
+          expect.objectContaining({
+            code: 'traitOfferMissing',
+            origin: createTraitOfferAddress(
+              createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
+              'self',
+            ),
+          }),
+        ]),
       },
     });
   });
@@ -1237,6 +1376,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('close-referenced-slot'),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat12'),
     });
     const candidate = createPreparedProjectCandidateSession(
       catalog,
@@ -1246,6 +1386,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       slot: createHubSlotAddress(nBiome, 'hub', 'combat05'),
       open: false,
       occurrenceId: nOccurrenceId('combat05'),
+      localOccurrenceIdsBySlot: {},
     });
 
     expect(candidate).toMatchObject({
@@ -1264,6 +1405,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
       open: false,
       occurrenceId: nOccurrenceId('combat03'),
+      localOccurrenceIdsBySlot: {},
     });
 
     expect(candidate).toMatchObject({
@@ -1334,17 +1476,12 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('does not mutate reward ownership when replacing one local offer', () => {
     const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
       value: { rewardType: 'RoomMoneyTinyDrop' },
     });
     const { biome } = validN(project);
-    const owner = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor1',
-    );
+    const owner = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1'));
 
     expect(biome.snapshot.decisions.find((decision) => decision.kind === 'hub')).toBeDefined();
     expect(
@@ -1357,19 +1494,14 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps the Ephyra HubRewards bag independent from an Artificer conversion', () => {
-    const owner = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor1',
-    );
+    const owner = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1'));
     let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
       kind: 'ReplaceManualArcanaSelection',
       route: createRouteAddress('Surface'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalReward',
+      kind: 'ReplaceIncomingReward',
       reward: owner,
       value: { rewardType: 'MetaCurrencyDrop' },
     });

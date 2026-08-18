@@ -7,7 +7,6 @@ import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kerne
 import type {
   AuthoredRoomState,
   EphyraCombatState,
-  EphyraSideRoomState,
   RewardWheelState,
   ShipCombatState,
   ShopOfferState,
@@ -25,7 +24,6 @@ import {
   requireShopBinding,
   type RoomStateContext,
 } from './declaration';
-import { createDefaultRoomEncounterState } from './encounters';
 import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 import { shopProfileUsesDeathDefianceCondition } from '../shop';
 import { createDefaultFieldsActionOrder } from '../fields-actions';
@@ -141,28 +139,12 @@ function defaultShipCombatState(
 }
 
 function defaultEphyraCombatState(
-  catalog: Catalog,
+  _catalog: Catalog,
   room: RoomDeclaration,
   resolvedStoreKey: string | undefined,
   path: string,
 ): EphyraCombatState {
-  const sideRooms: Record<string, EphyraSideRoomState> = {};
-  for (const slot of requireEphyraSideRooms(room, path)?.slots ?? []) {
-    const sideRoom = catalog.rooms.byKey[slot.roomGameName];
-    if (sideRoom === undefined) {
-      failProjectDocument(`${path}.sideRooms.${slot.slotKey}`, `unknown room ${slot.roomGameName}`);
-    }
-    sideRooms[slot.slotKey] = Object.freeze({
-      generation: 'notGenerated',
-      enteredOrdinal: null,
-      reward: null,
-      encounters: createDefaultRoomEncounterState(
-        catalog,
-        sideRoom,
-        `${path}.sideRooms.${slot.slotKey}.encounters`,
-      ),
-    });
-  }
+  requireEphyraSideRooms(room, path);
   requireCountedStore(
     requireCountedBinding(room, path),
     defaultCountedStoreKey(room, resolvedStoreKey),
@@ -171,7 +153,6 @@ function defaultEphyraCombatState(
   return Object.freeze({
     kind: 'ephyraCombat',
     reward: null,
-    sideRooms: Object.freeze(sideRooms),
   });
 }
 

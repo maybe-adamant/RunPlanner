@@ -8,8 +8,7 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createTargetAddress,
@@ -655,20 +654,33 @@ describe('structured workspace source index', () => {
     const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const visited = nOccurrenceId('combat05');
     const dormant = nOccurrenceId('combat10');
+    const nTopology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const localOccurrence = (sourceOccurrenceId: typeof visited) => {
+      const decision = nTopology?.decisions.find(
+        (candidate) =>
+          candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === sourceOccurrenceId,
+      );
+      if (decision?.kind !== 'localVisit') throw new Error('missing local visit');
+      const target = decision.targetsBySlot.sideDoor1;
+      if (target === undefined) throw new Error('missing local target');
+      return target.occurrenceId;
+    };
 
     expect(source.isAssessed(createHubSlotAddress(nBiome, 'hub', 'combat05'))).toBe(true);
     expect(source.isAssessed(createHubVisitAddress(nBiome, 'hub', 1))).toBe(true);
     expect(source.isAssessed(createOccurrenceAddress(nBiome, visited))).toBe(true);
     expect(
-      source.isAssessed(createLocalChildAddress(nBiome, visited, 'sideRooms', 'sideDoor1')),
+      source.isAssessed(createLocalVisitSlotAddress(nBiome, visited, 'sideRooms', 'sideDoor1')),
     ).toBe(true);
-    expect(
-      source.isAssessed(createLocalRewardAddress(nBiome, visited, 'sideRooms', 'sideDoor1')),
-    ).toBe(true);
+    expect(source.isAssessed(createIncomingRewardAddress(nBiome, localOccurrence(visited)))).toBe(
+      true,
+    );
     expect(source.isAssessed(createOccurrenceAddress(nBiome, dormant))).toBe(true);
     expect(source.isAssessed(createIncomingRewardAddress(nBiome, dormant))).toBe(true);
     expect(
-      source.isAssessed(createLocalChildAddress(nBiome, dormant, 'sideRooms', 'sideDoor1')),
+      source.isAssessed(createLocalVisitSlotAddress(nBiome, dormant, 'sideRooms', 'sideDoor1')),
     ).toBe(false);
   });
 

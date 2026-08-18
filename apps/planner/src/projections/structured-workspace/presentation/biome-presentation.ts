@@ -158,12 +158,6 @@ function mainRailRewardForRoom(
         label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
         offer: room.roomLocal.control.offer,
       });
-    case 'ephyra':
-      if (room.roomLocal.incomingReward.offer === null) return undefined;
-      return Object.freeze({
-        label: summarizeRewardOffer(catalog, room.roomLocal.incomingReward.offer),
-        offer: room.roomLocal.incomingReward.offer,
-      });
     case 'none':
     case 'fields':
     case 'ship':
@@ -406,6 +400,42 @@ export function presentWorkspaceBiome(
       return runState === undefined ? node : Object.freeze({ ...node, runState });
     }),
   );
+  const occurrenceNodeById = new Map(
+    nodes.flatMap((node) =>
+      node.kind === 'occurrenceWorkbench' ? [[node.room.occurrenceId, node] as const] : [],
+    ),
+  );
+  const outgoingDecisionBySource = new Map<OccurrenceId, WorkspaceNode>();
+  for (const node of nodes) {
+    if (
+      (node.kind !== 'ordinaryBatch' &&
+        node.kind !== 'mixedBatch' &&
+        node.kind !== 'takeoverBatch') ||
+      node.source.kind !== 'occurrence'
+    ) {
+      continue;
+    }
+    if (outgoingDecisionBySource.has(node.source.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${node.source.occurrenceId} owns multiple outgoing workspace decisions`,
+      );
+    }
+    if (!occurrenceNodeById.has(node.source.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${node.source.occurrenceId} has an outgoing decision without an occurrence workbench`,
+      );
+    }
+    outgoingDecisionBySource.set(node.source.occurrenceId, node);
+  }
+  const occurrenceStages = Object.freeze(
+    [...occurrenceNodeById.entries()].map(([occurrenceId, occurrence]) => {
+      const outgoing = outgoingDecisionBySource.get(occurrenceId);
+      return Object.freeze({
+        sourceOccurrenceNodeKey: occurrence.key,
+        ...(outgoing === undefined ? {} : { outgoingDecisionNodeKey: outgoing.key }),
+      });
+    }),
+  );
   const rail: readonly WorkspaceRailEntry[] = Object.freeze(
     unboundRail.map((entry): WorkspaceRailEntry => {
       if (entry.kind === 'frontier') return entry;
@@ -455,6 +485,7 @@ export function presentWorkspaceBiome(
       : { echoKeepsakeReplay: semantic.echoKeepsakeReplay }),
     frontier,
     nodes,
+    occurrenceStages,
     rail,
   });
   const defaultInspector = defaultInspectorDestination(inspectorDefaults);
@@ -472,6 +503,7 @@ export function presentWorkspaceBiome(
     label: semantic.label,
     marker: semantic.marker,
     nodes,
+    occurrenceStages,
     owner: semantic.biome,
     rail,
     source: semantic.source,

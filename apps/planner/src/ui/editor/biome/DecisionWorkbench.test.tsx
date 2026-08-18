@@ -261,7 +261,8 @@ describe('DecisionWorkbench', () => {
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
     expect(gate.dataset.picked).toBe('false');
     expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
-    expect(within(gate).getByLabelText('Map')).toBeTruthy();
+    expect(within(gate).queryByLabelText('Map')).toBeNull();
+    expect(within(gate).getByRole('button', { name: 'Open Chaos 01 room' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove Chaos gate' })).toBeTruthy();
     expect(screen.getByLabelText('Take Chaos gate')).toBeTruthy();
   });
@@ -304,7 +305,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
   });
 
-  it('keeps a Midshop acquisition panel on the decision that selected the shop', () => {
+  it('keeps the selected Midshop as a lightweight link to its occurrence workbench', () => {
     let project = createFMidshopPomFrontierProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionOrder',
@@ -341,8 +342,8 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(createExitDecisionAddress(goldenFBiome, incomingDecision.source)),
     );
-    expect(screen.getByRole('heading', { level: 4, name: 'Acquisitions' })).toBeTruthy();
-    expect(screen.getAllByText('Pom Slice')).toHaveLength(2);
+    expect(screen.queryByRole('heading', { level: 4, name: 'Acquisitions' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open Midshop room' })).toBeTruthy();
 
     cleanup();
     renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(outgoingOwner));
@@ -406,7 +407,7 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('authors only the next physical target and publishes its room and reward controls', async () => {
+  it('authors only the next physical target and links to its occurrence workbench', async () => {
     const { owner, project } = fTwoDoorBatchProject();
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
     expect(screen.queryByText('partial')).toBeNull();
@@ -442,7 +443,34 @@ describe('DecisionWorkbench', () => {
       '.biome-target-row:not([data-missing="true"])',
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
-    expect(within(authoredOffer).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    const openRoom = within(authoredOffer).getByRole('button', { name: /^Open .+ room$/ });
+    const authoredDecision = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (node) =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    if (authoredDecision?.kind !== 'ordinaryBatch')
+      throw new Error('F authored decision is missing');
+    const authoredTarget = authoredDecision.targets[0];
+    if (authoredTarget === undefined) throw new Error('F authored target is missing');
+    const selectionBeforeOpen = authoredDecision.selection;
+    const historyBeforeOpen =
+      view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(openRoom);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeOpen,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      authoredTarget.room.address,
+    );
+    const decisionAfterOpen = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (node) =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    expect(
+      decisionAfterOpen?.kind === 'ordinaryBatch' ? decisionAfterOpen.selection : undefined,
+    ).toEqual(selectionBeforeOpen);
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
@@ -511,7 +539,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(true);
   });
 
-  it('publishes picked-room and reward edits as separate atomic decision commands', async () => {
+  it('publishes room selection separately from occurrence-workbench navigation', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(pBiome, {
@@ -542,6 +570,7 @@ describe('DecisionWorkbench', () => {
       historyBeforePick + 1,
     );
 
+    const selectedOffer = screen.getByRole('article', { name: `${roomLabel} room offer` });
     const selectedNode = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
       (node) =>
         node.kind === 'ordinaryBatch' &&
@@ -550,50 +579,17 @@ describe('DecisionWorkbench', () => {
     if (selectedNode?.kind !== 'ordinaryBatch') throw new Error('P Decision 1 is missing');
     const selectedTarget = selectedNode.targets.find((target) => target.room.label === roomLabel);
     if (selectedTarget === undefined) throw new Error('P selected target is missing');
-    const rewardBefore = selectedTarget.room.rewardControls.map((control) => control.offer);
-
-    const selectedOffer = screen.getByRole('article', { name: `${roomLabel} room offer` });
-    await view.user.click(within(selectedOffer).getByRole('button', { name: 'Reward' }));
-    const replacement = within(await screen.findByRole('listbox'))
-      .getAllByRole('option')
-      .find(
-        (option) =>
-          option.getAttribute('aria-disabled') !== 'true' &&
-          option.getAttribute('data-selected-value') !== 'true' &&
-          !/Boon|Devotion|Blind Box/.test(option.textContent ?? ''),
-      );
-    if (replacement === undefined) throw new Error('P picked room has no replacement reward');
-    const historyBeforeReward =
+    const historyBeforeOpen =
       view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(replacement);
-    await waitFor(() => {
-      const node = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
-        (candidate) =>
-          candidate.kind === 'ordinaryBatch' &&
-          semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
-      );
-      const target =
-        node?.kind === 'ordinaryBatch'
-          ? node.targets.find((candidate) => candidate.room.label === roomLabel)
-          : undefined;
-      expect(target?.room.rewardControls.map((control) => control.offer)).not.toEqual(rewardBefore);
-    });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBeforeReward + 1,
+    await view.user.click(
+      within(selectedOffer).getByRole('button', { name: `Open ${roomLabel} room` }),
     );
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() => {
-      const node = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
-        (candidate) =>
-          candidate.kind === 'ordinaryBatch' &&
-          semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
-      );
-      const target =
-        node?.kind === 'ordinaryBatch'
-          ? node.targets.find((candidate) => candidate.room.label === roomLabel)
-          : undefined;
-      expect(target?.room.rewardControls.map((control) => control.offer)).toEqual(rewardBefore);
-    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeOpen,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      selectedTarget.room.address,
+    );
   });
 
   it('authors terminal Preboss through the empty decision Door 1 picker', async () => {
@@ -698,6 +694,33 @@ describe('DecisionWorkbench', () => {
     expect(selector.closest('.batch-controls')).toBeNull();
     expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
     expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+  });
+
+  it('compares prepared Fields cage offers without rendering their editors on the door cards', () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-combat02'),
+    });
+    renderStaticDecisionWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      subjectForOwner(owner),
+    );
+
+    const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
+    const combat03 = screen.getByRole('article', { name: 'Combat 03 room offer' });
+    const combat09Offers = within(combat09).getByLabelText('Combat 09 Fields cage offers');
+    const combat03Offers = within(combat03).getByLabelText('Combat 03 Fields cage offers');
+    expect(combat09Offers.textContent).toContain('Cage 1Hermes');
+    expect(combat09Offers.textContent).toContain('Cage 2Hammer');
+    expect(combat03Offers.textContent).toContain('Cage 1Max Health');
+    expect(combat03Offers.textContent).toContain("Cage 2Selene's Gift");
+    for (const card of [combat09, combat03]) {
+      expect(within(card).queryByLabelText('Cage 1')).toBeNull();
+      expect(within(card).queryByRole('button', { name: 'Reward' })).toBeNull();
+      expect(within(card).queryByRole('combobox', { name: /Reward/ })).toBeNull();
+    }
   });
 
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
@@ -856,7 +879,7 @@ describe('DecisionWorkbench', () => {
     expect(within(offer).getByText('Room selected')).toBeTruthy();
     expect(within(offer).queryByText('Door taken')).toBeNull();
     expect(selectedControl).not.toHaveProperty('disabled', true);
-    expect(within(offer).getByRole('button', { name: /Door \d+ room/ })).not.toHaveProperty(
+    expect(within(offer).getByRole('button', { name: /^Open .+ room$/ })).not.toHaveProperty(
       'disabled',
       true,
     );
@@ -1144,11 +1167,11 @@ describe('DecisionWorkbench', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Door 1 room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open Preboss room' })).not.toHaveProperty(
       'disabled',
       true,
     );
-    expect(screen.getByRole('button', { name: 'Door 2 room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open The Verminancer room' })).not.toHaveProperty(
       'disabled',
       true,
     );

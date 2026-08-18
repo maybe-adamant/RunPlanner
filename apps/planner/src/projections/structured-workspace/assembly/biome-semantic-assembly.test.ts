@@ -367,8 +367,21 @@ describe('structured workspace biome semantic assembly', () => {
       )
       .map((node) => node.room.occurrenceId);
     expect(new Set(occurrenceIds).size).toBe(occurrenceIds.length);
+    const notGeneratedLocalOccurrences = new Set(
+      (source.plan.topology?.decisions ?? []).flatMap((decision) =>
+        decision.kind !== 'localVisit'
+          ? []
+          : Object.values(decision.targetsBySlot)
+              .filter((target) => target.generation === 'notGenerated')
+              .map((target) => target.occurrenceId),
+      ),
+    );
     expect(new Set(occurrenceIds)).toEqual(
-      new Set(source.plan.topology?.occurrences.map((occurrence) => occurrence.occurrenceId)),
+      new Set(
+        source.plan.topology?.occurrences
+          .filter((occurrence) => !notGeneratedLocalOccurrences.has(occurrence.occurrenceId))
+          .map((occurrence) => occurrence.occurrenceId),
+      ),
     );
     expect(assembly.hubInteractionRequirements.size).toBe(1);
     expect(assembly.occurrenceInteractionRequirements.size).toBeGreaterThan(0);
@@ -684,15 +697,21 @@ describe('structured workspace biome semantic assembly', () => {
     const blockedN = assembleWorkspaceBiomeSemantics(catalog, blockedNSource);
     const hub = blockedN.nodes.find((node) => node.kind === 'hubDecision');
     if (hub?.kind !== 'hubDecision') throw new Error('blocked N fixture lost its Hub');
-    const retainedEphyra = hub.slots.find(
-      (slot) => slot.marker.assessment === 'unassessed' && slot.room?.roomLocal.kind === 'ephyra',
+    const authoredHub = blockedNSource.plan.topology?.decisions.find(
+      (decision) => decision.kind === 'hub',
     );
-    if (retainedEphyra?.room?.roomLocal.kind !== 'ephyra') {
+    const visitedSlotKey = authoredHub?.kind === 'hub' ? authoredHub.visitOrder[0] : undefined;
+    const retainedEphyra = hub.slots.find(
+      (slot) => slot.hubSlotKey === visitedSlotKey && slot.room?.gameName.startsWith('N_Combat'),
+    );
+    if (retainedEphyra?.room === undefined) {
       throw new Error('blocked N fixture has no retained Ephyra room');
     }
     expect(retainedEphyra).toMatchObject({ open: true, visited: true });
     expect(retainedEphyra.room).toMatchObject({ detailsActive: true, entered: false });
-    expect(retainedEphyra.room.roomLocal.sideRooms).toMatchObject({ kind: 'published' });
+    expect(retainedEphyra.localVisit?.address.sourceOccurrenceId).toBe(
+      retainedEphyra.room.occurrenceId,
+    );
     expect(
       blockedN.rewardControls.has(
         semanticAddressKey(

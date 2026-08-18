@@ -5,7 +5,7 @@ import {
 } from '../../authored-project/addresses';
 import { projectRoomPreparationCheckpoint } from '../history/facts';
 import type { HistoryStateView } from '../history/model';
-import type { CanonicalAuthoredRoom, CanonicalLocalChildRoom } from '../materialization';
+import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
   findingRegion,
@@ -100,7 +100,7 @@ function hasExactCandidateContext(
  */
 export function evaluateEncounterCandidatesInternal(
   catalog: Catalog,
-  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalChildRoom)[],
+  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
   boundary?: EncounterCandidateBoundary,
   figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
@@ -235,7 +235,7 @@ export function evaluateEncounterCandidatesInternal(
 
 export function evaluateEncounterCandidates(
   catalog: Catalog,
-  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalChildRoom)[],
+  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
   boundary?: EncounterCandidateBoundary,
 ): EncounterCandidateEvaluation {

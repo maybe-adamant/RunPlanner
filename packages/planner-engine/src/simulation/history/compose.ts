@@ -9,7 +9,7 @@ import type {
   CanonicalHubRoom,
   CanonicalHubTarget,
   CanonicalHubVisit,
-  CanonicalLocalChildRoom,
+  CanonicalLocalVisitRoom,
   CanonicalRoomRestore,
   CanonicalTarget,
   MaterializedBiomePrefix,
@@ -221,35 +221,35 @@ function appendHubTargets(
 function appendLocalTargets(
   writer: HistorySegmentWriter,
   parent: CanonicalAuthoredRoom,
-  rooms: readonly CanonicalLocalChildRoom[],
+  rooms: readonly CanonicalLocalVisitRoom[],
 ): void {
   const generated = [...rooms]
-    .filter((room) => room.generation === 'generated')
-    .sort((left, right) => left.availabilityRank - right.availabilityRank);
+    .filter((room) => room.localVisit.generation === 'generated')
+    .sort((left, right) => left.localVisit.availabilityRank - right.localVisit.availabilityRank);
   if (generated.length === 0) {
     writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: parent.origin });
     return;
   }
   generated.forEach((room, index) => {
     const event: Omit<
-      Extract<RoomCreatedHistoryEvent, { readonly source: 'localChild' }>,
+      Extract<RoomCreatedHistoryEvent, { readonly source: 'localVisit' }>,
       'sequence'
     > = {
       kind: 'roomCreated',
       origin: room.origin,
       gameName: room.gameName,
       encounterEnvelopeKey: room.encounterEnvelopeKey,
-      source: 'localChild',
+      source: 'localVisit',
       picked: room.entered,
       parentOrigin: parent.origin,
-      targetOrigin: room.origin,
+      targetOrigin: room.localVisit.origin,
       generationIndex: index + 1,
       generationCount: generated.length,
     };
     writer.append(event);
     writer.append({
       kind: 'targetGenerationCompleted',
-      origin: room.origin,
+      origin: room.localVisit.origin,
       roomOrigin: room.origin,
       parentOrigin: parent.origin,
       generationIndex: index + 1,
@@ -289,7 +289,7 @@ function appendVisit(
     },
   });
   for (const [index, local] of visit.enteredLocalRooms.entries()) {
-    if (!local.entered || local.generation !== 'generated') {
+    if (!local.entered || local.localVisit.generation !== 'generated') {
       fail(`Hub visit ${visit.visitIndex} enters an unavailable side room`);
     }
     appendCanonicalRoomLifecycle(writer, catalog, local, fail);
@@ -331,7 +331,7 @@ function appendHubVisitFrontier(
     },
   });
   for (const [index, local] of visit.enteredLocalRooms.entries()) {
-    if (!local.entered || local.generation !== 'generated') {
+    if (!local.entered || local.localVisit.generation !== 'generated') {
       fail(`Hub visit ${visit.origin.visitIndex} enters an unavailable frontier side room`);
     }
     appendCanonicalRoomLifecycle(writer, catalog, local, fail);

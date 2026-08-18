@@ -16,8 +16,8 @@ import type {
   HubDecisionAddress,
   HubSlotAddress,
   IncomingRewardAddress,
-  LocalChildAddress,
-  LocalChildGroupAddress,
+  LocalVisitSlotAddress,
+  LocalVisitOrderAddress,
   LocalRewardAddress,
   OccurrenceAddress,
   RewardWheelAddress,
@@ -138,6 +138,7 @@ export type TopologyCommand =
       readonly kind: 'OpenHubSlot';
       readonly slot: HubSlotAddress;
       readonly occurrenceId: OccurrenceId;
+      readonly localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>;
     }
   | { readonly kind: 'CloseHubSlot'; readonly slot: HubSlotAddress }
   | {
@@ -145,6 +146,7 @@ export type TopologyCommand =
       readonly hub: HubDecisionAddress;
       readonly hubSlotKeys: readonly string[];
     }
+  | LocalVisitCommand
   | {
       readonly kind: 'SetExitSelection';
       readonly selection: ExitSelectionAddress;
@@ -268,16 +270,16 @@ export type ShipOccurrenceCommand =
       readonly pickedOfferIndex: number;
     };
 
-export type EphyraOccurrenceCommand =
+export type LocalVisitCommand =
   | {
-      readonly kind: 'ReplaceSideRoomGeneration';
-      readonly sideRoom: LocalChildAddress;
+      readonly kind: 'SetLocalVisitGeneration';
+      readonly slot: LocalVisitSlotAddress;
       readonly generation: 'generated' | 'notGenerated';
     }
   | {
-      readonly kind: 'ReplaceSideRoomEntryOrder';
-      readonly group: LocalChildGroupAddress;
-      readonly enteredSlotKeys: readonly string[];
+      readonly kind: 'ReplaceLocalVisitOrder';
+      readonly order: LocalVisitOrderAddress;
+      readonly occurrenceIds: readonly OccurrenceId[];
     };
 
 export type ShopOccurrenceCommand =
@@ -391,7 +393,6 @@ export type OccurrenceLeafCommand =
   | LocalRewardCommand
   | FieldsOccurrenceCommand
   | ShipOccurrenceCommand
-  | EphyraOccurrenceCommand
   | ShopOccurrenceCommand
   | EncounterOccurrenceCommand;
 

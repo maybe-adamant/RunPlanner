@@ -655,6 +655,8 @@ function InspectorNode({
   label,
   nextDecisionIntent,
   node,
+  outgoingDecision,
+  sourceOccurrence,
 }: {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -663,6 +665,11 @@ function InspectorNode({
     Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
   >;
   readonly node: WorkspaceNode;
+  readonly outgoingDecision?: Extract<
+    WorkspaceNode,
+    { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+  >;
+  readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
   switch (node.kind) {
     case 'occurrenceWorkbench': {
@@ -678,13 +685,24 @@ function InspectorNode({
         <>
           <OccurrenceWorkbench
             interactions={interactions}
+            {...(node.naturalChaosExit === undefined
+              ? {}
+              : { naturalChaosExit: node.naturalChaosExit })}
             {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
+            {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
             presentation={node.inspectorPresentation}
             room={node.room}
             {...(node.runState === undefined ? {} : { runState: node.runState })}
           />
           {sourceRemovalAnchor === undefined || sourceRemoval === undefined ? null : (
             <TopologyRemovalAction interaction={sourceRemoval} label={sourceRemovalAnchor.label} />
+          )}
+          {outgoingDecision === undefined ? null : (
+            <BatchWorkbench
+              interactions={interactions}
+              label="Outgoing doors"
+              node={outgoingDecision}
+            />
           )}
         </>
       );
@@ -693,12 +711,25 @@ function InspectorNode({
     case 'mixedBatch':
     case 'takeoverBatch':
       return (
-        <BatchWorkbench
-          interactions={interactions}
-          label={label}
-          {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
-          node={node}
-        />
+        <>
+          {sourceOccurrence === undefined ? null : (
+            <OccurrenceWorkbench
+              interactions={interactions}
+              {...(sourceOccurrence.naturalChaosExit === undefined
+                ? {}
+                : { naturalChaosExit: sourceOccurrence.naturalChaosExit })}
+              {...(sourceOccurrence.localVisit === undefined
+                ? {}
+                : { localVisit: sourceOccurrence.localVisit })}
+              presentation={sourceOccurrence.inspectorPresentation}
+              room={sourceOccurrence.room}
+              {...(sourceOccurrence.runState === undefined
+                ? {}
+                : { runState: sourceOccurrence.runState })}
+            />
+          )}
+          <BatchWorkbench interactions={interactions} label={label} node={node} />
+        </>
       );
     case 'completion':
       return <CompletionWorkbench interactions={interactions} node={node} />;
@@ -813,6 +844,33 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
         );
   const runState =
     runStateNode !== undefined && 'runState' in runStateNode ? runStateNode.runState : undefined;
+  const selectedNodeKey = subject?.kind === 'node' ? subject.node.key : undefined;
+  const selectedStage =
+    selectedNodeKey === undefined
+      ? undefined
+      : biome.occurrenceStages.find(
+          (stage) =>
+            stage.sourceOccurrenceNodeKey === selectedNodeKey ||
+            stage.outgoingDecisionNodeKey === selectedNodeKey,
+        );
+  const sourceOccurrenceCandidate =
+    selectedStage === undefined
+      ? undefined
+      : biome.nodes.find((node) => node.key === selectedStage.sourceOccurrenceNodeKey);
+  const sourceOccurrence =
+    sourceOccurrenceCandidate?.kind === 'occurrenceWorkbench'
+      ? sourceOccurrenceCandidate
+      : undefined;
+  const outgoingDecisionCandidate =
+    selectedStage?.outgoingDecisionNodeKey === undefined
+      ? undefined
+      : biome.nodes.find((node) => node.key === selectedStage.outgoingDecisionNodeKey);
+  const outgoingDecision =
+    outgoingDecisionCandidate?.kind === 'ordinaryBatch' ||
+    outgoingDecisionCandidate?.kind === 'mixedBatch' ||
+    outgoingDecisionCandidate?.kind === 'takeoverBatch'
+      ? outgoingDecisionCandidate
+      : undefined;
 
   return (
     <div className="biome-workspace">
@@ -888,6 +946,8 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
             label={inspectorTitle}
             {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
             node={subject.node}
+            {...(outgoingDecision === undefined ? {} : { outgoingDecision })}
+            {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
           />
         )}
       </aside>

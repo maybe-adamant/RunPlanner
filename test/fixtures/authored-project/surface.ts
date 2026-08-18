@@ -9,9 +9,8 @@ import {
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
@@ -103,6 +102,25 @@ export const nVisitSlotKeys = [
 
 export function nOccurrenceId(slotKey: string): OccurrenceId {
   return createOccurrenceId(`surface-n-${slotKey}`);
+}
+
+export function nLocalOccurrenceId(slotKey: string, localSlotKey: string): OccurrenceId {
+  return createOccurrenceId(`surface-n-${slotKey}-${localSlotKey}`);
+}
+
+export function nLocalOccurrenceIdsBySlot(slotKey: string): Readonly<Record<string, OccurrenceId>> {
+  const hub = catalog.biomeLayouts.byKey.N?.progression;
+  const hubSlot =
+    hub?.kind === 'hub' ? hub.slots.find((slot) => slot.slotKey === slotKey) : undefined;
+  const room = hubSlot === undefined ? undefined : catalog.rooms.byKey[hubSlot.roomGameName];
+  const group = room?.localChildren[0];
+  return Object.freeze(
+    Object.fromEntries(
+      group?.kind === 'fixedRoomSlots'
+        ? group.slots.map((slot) => [slot.slotKey, nLocalOccurrenceId(slotKey, slot.slotKey)])
+        : [],
+    ),
+  );
 }
 
 export function pOccurrenceId(
@@ -219,8 +237,8 @@ function configureNSideRooms(project: ProjectDocument): ProjectDocument {
   })) {
     for (const sideSlotKey of sideSlotKeys) {
       next = applyProjectCommand(next, catalog, {
-        kind: 'ReplaceSideRoomGeneration',
-        sideRoom: createLocalChildAddress(
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
           nBiome,
           nOccurrenceId(parentSlotKey),
           'sideRooms',
@@ -236,9 +254,9 @@ function configureNSideRooms(project: ProjectDocument): ProjectDocument {
     ['combat11', ['sideDoor1']],
   ] as const) {
     next = applyProjectCommand(next, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId(parentSlotKey), 'sideRooms'),
-      enteredSlotKeys,
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId(parentSlotKey), 'sideRooms'),
+      occurrenceIds: enteredSlotKeys.map((slotKey) => nLocalOccurrenceId(parentSlotKey, slotKey)),
     });
   }
   for (const [parentSlotKey, sideSlotKey, rewardType] of [
@@ -250,13 +268,8 @@ function configureNSideRooms(project: ProjectDocument): ProjectDocument {
     ['combat11', 'sideDoor1', 'EarthBoost'],
   ] as const) {
     next = applyProjectCommand(next, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(
-        nBiome,
-        nOccurrenceId(parentSlotKey),
-        'sideRooms',
-        sideSlotKey,
-      ),
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId(parentSlotKey, sideSlotKey)),
       value: { rewardType },
     });
   }
@@ -321,6 +334,7 @@ export function appendCompleteN(
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', hubSlotKey),
       occurrenceId: nOccurrenceId(hubSlotKey),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot(hubSlotKey),
     });
   }
   next = applyProjectCommand(next, catalog, {

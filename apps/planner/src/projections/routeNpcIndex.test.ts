@@ -2,7 +2,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
-  createLocalChildAddress,
+  createLocalVisitSlotAddress,
+  createOccurrenceAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -199,7 +200,7 @@ describe('route NPC index projection', () => {
         ownerKey,
         Object.freeze({
           ...destination,
-          ownerAddress: createLocalChildAddress(
+          ownerAddress: createLocalVisitSlotAddress(
             goldenFBiome,
             goldenFOccurrenceId(5, 1),
             'sideRooms',
@@ -215,24 +216,14 @@ describe('route NPC index projection', () => {
     }
   });
 
-  it('maps local-child records exactly and leaves presentation metadata outside simulation behavior', () => {
+  it('maps occurrence records exactly and leaves presentation metadata outside simulation behavior', () => {
     const project = selectEncounter(createCompleteFGProject(), fArtemisPhase, 'ArtemisCombatF');
     const fixture = routeIndexFixture(project);
     try {
-      const localOrigin = createLocalChildAddress(
-        goldenFBiome,
-        goldenFOccurrenceId(5, 1),
-        'sideRooms',
-        'sideDoor1',
-      );
+      const localOrigin = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
       const localPhase = createEncounterPhaseAddress(
         goldenFBiome,
-        {
-          kind: 'localChild',
-          occurrenceId: localOrigin.occurrenceId,
-          groupKey: localOrigin.groupKey,
-          slotKey: localOrigin.slotKey,
-        },
+        { kind: 'occurrence', occurrenceId: localOrigin.occurrenceId },
         'Encounter',
       );
       const originalHistory = latestHistory(fixture.route);
@@ -251,7 +242,7 @@ describe('route NPC index projection', () => {
         throw new Error('Artemis fixture has no latest history-bearing biome');
       }
       // This deliberately mutates only the published history ledger to prove
-      // that the generic address mapper accepts local-child NPC records.
+      // that the generic address mapper accepts occurrence-owned NPC records.
       const routeWithLocalRecord = Object.freeze({
         ...fixture.route,
         biomes: Object.freeze(

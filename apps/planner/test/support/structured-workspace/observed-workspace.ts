@@ -77,19 +77,6 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
     case 'incomingReward':
       appendRewardControlMarkers(markers, local.control);
       break;
-    case 'ephyra':
-      appendRewardControlMarkers(markers, local.incomingReward);
-      if (local.sideRooms.kind === 'published') {
-        appendMarker(markers, local.sideRooms.group.marker);
-        for (const slot of local.sideRooms.group.slots) {
-          appendMarker(markers, slot.marker);
-          for (const phase of slot.encounterPhases) appendMarker(markers, phase.marker);
-          if (slot.generation === 'generated') {
-            appendRewardControlMarkers(markers, slot.rewardControl);
-          }
-        }
-      }
-      break;
     case 'fields':
       for (const cage of local.cages) appendRewardControlMarkers(markers, cage.control);
       break;
@@ -137,15 +124,6 @@ function hubMainRewardMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMar
         ]),
         ...(local.control.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);
-    case 'ephyra':
-      return Object.freeze([
-        local.incomingReward.marker,
-        ...(local.incomingReward.traitOffers ?? []).flatMap((trait) => [
-          trait.marker,
-          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-        ]),
-        ...(local.incomingReward.levelResolutions ?? []).map((resolution) => resolution.marker),
-      ]);
     case 'none':
     case 'fields':
     case 'ship':
@@ -185,6 +163,11 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
       appendMarker(markers, node.openSet);
       for (const slot of node.slots) {
         appendMarker(markers, slot.marker);
+        if (slot.localVisit !== undefined) {
+          appendMarker(markers, slot.localVisit.marker);
+          appendMarker(markers, slot.localVisit.orderMarker);
+          for (const local of slot.localVisit.slots) appendMarker(markers, local.marker);
+        }
         if (slot.room !== undefined) {
           markers.push(...hubMainRewardMarkers(slot.room));
         }
@@ -213,13 +196,7 @@ function roomPackagesForNode(node: WorkspaceNode): readonly ObservedWorkspaceRoo
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':
-      return Object.freeze([
-        ...node.targets.flatMap((target) => packageFor(target.room)),
-        ...(node.zagreusContract === undefined
-          ? []
-          : packageFor(node.zagreusContract.contractRoom)),
-        ...(node.naturalChaos === undefined ? [] : packageFor(node.naturalChaos.chaosRoom)),
-      ]);
+      return Object.freeze(node.targets.flatMap((target) => packageFor(target.room)));
     case 'hubDecision':
       return Object.freeze(
         node.slots.flatMap((slot) => (slot.room === undefined ? [] : packageFor(slot.room))),

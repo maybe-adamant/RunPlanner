@@ -24,8 +24,9 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'incomingReward':
     case 'localReward':
     case 'fieldsAction':
-    case 'localChild':
-    case 'localChildGroup':
+    case 'localVisitDecision':
+    case 'localVisitSlot':
+    case 'localVisitOrder':
     case 'rewardWheel':
     case 'rewardWheelOffer':
     case 'hubSlot':

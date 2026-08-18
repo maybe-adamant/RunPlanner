@@ -8,7 +8,7 @@ import {
   createIncomingRewardAddress,
   createTraitOfferAddress,
   createKeepsakeEquipResultAddress,
-  createLocalChildAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -25,7 +25,7 @@ import {
 } from './finding-routing';
 
 const biome = createBiomeAddress('Surface', 'N');
-const owner = createLocalChildAddress(
+const owner = createLocalVisitSlotAddress(
   biome,
   createOccurrenceId('finding-routing-room'),
   'sideRooms',
