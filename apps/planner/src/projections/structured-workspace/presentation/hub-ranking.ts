@@ -1,18 +1,17 @@
 /**
- * Presentation-only ordering for the Hub's one ranked board. The authored
- * prefix is supplied by the Hub decision; only the relative tail order is
- * transient UI state. This module deliberately does not judge whether a
- * complete prefix is valid in the simulation—the aggregate Hub interaction
- * owns that candidate evidence.
+ * Presentation-only ordering for one ranked board. The authored prefix is
+ * supplied by the owning domain; only the relative tail order is transient UI
+ * state. This module deliberately does not judge whether a complete prefix is
+ * valid in simulation—the owning aggregate interaction supplies that evidence.
  */
 
-export interface HubBoardRanking {
+export interface RankedPrefix {
   readonly authoredVisitOrder: readonly string[];
   readonly rankedSlotKeys: readonly string[];
   readonly tailSlotKeys: readonly string[];
 }
 
-export type HubBoardMove =
+export type RankedPrefixMove =
   | { readonly kind: 'addToVisits'; readonly slotKey: string }
   | { readonly kind: 'moveEarlier'; readonly slotKey: string }
   | { readonly kind: 'moveLater'; readonly slotKey: string }
@@ -22,13 +21,13 @@ export type HubBoardMove =
  * A rendered drop location on the Hub roster. `nextVisit` is the compact
  * incomplete-prefix target rather than a stand-in for an unrendered row.
  */
-export type HubBoardDropTarget =
+export type RankedPrefixDropTarget =
   | { readonly kind: 'beforeSlot'; readonly slotKey: string }
   | { readonly kind: 'afterSlot'; readonly slotKey: string }
   | { readonly kind: 'nextVisit' };
 
-export interface HubBoardMoveResult {
-  readonly ranking: HubBoardRanking;
+export interface RankedPrefixMoveResult {
+  readonly ranking: RankedPrefix;
   /** Omitted when the move only changes transient tail presentation. */
   readonly proposedVisitOrder?: readonly string[];
 }
@@ -71,10 +70,7 @@ function sameSlotKeys(left: readonly string[], right: readonly string[]): boolea
   return left.length === right.length && left.every((slotKey, index) => slotKey === right[index]);
 }
 
-function rankingFor(
-  rankedSlotKeys: readonly string[],
-  authoredVisitCount: number,
-): HubBoardRanking {
+function rankingFor(rankedSlotKeys: readonly string[], authoredVisitCount: number): RankedPrefix {
   const authoredVisitOrder = Object.freeze(rankedSlotKeys.slice(0, authoredVisitCount));
   const tailSlotKeys = Object.freeze(rankedSlotKeys.slice(authoredVisitCount));
   return Object.freeze({
@@ -89,11 +85,11 @@ function rankingFor(
  * prefix always wins; surviving tail rooms keep their transient order, and
  * newly visible tail rooms enter in declaration order.
  */
-export function reconcileHubBoardRanking(input: {
+export function reconcileRankedPrefix(input: {
   readonly authoredVisitOrder: readonly string[];
   readonly declarationOpenSlotKeys: readonly string[];
   readonly retainedTailSlotKeys?: readonly string[];
-}): HubBoardRanking {
+}): RankedPrefix {
   const openKeys = new Set(input.declarationOpenSlotKeys);
   const authored: string[] = [];
   appendUniqueOpenKeys(authored, input.authoredVisitOrder, openKeys, new Set());
@@ -107,25 +103,25 @@ export function reconcileHubBoardRanking(input: {
 function semanticMoveResult(
   rankedSlotKeys: readonly string[],
   authoredVisitCount: number,
-): HubBoardMoveResult {
+): RankedPrefixMoveResult {
   const ranking = rankingFor(rankedSlotKeys, authoredVisitCount);
   return Object.freeze({ ranking, proposedVisitOrder: ranking.authoredVisitOrder });
 }
 
 function transientMoveResult(
-  ranking: HubBoardRanking,
+  ranking: RankedPrefix,
   rankedSlotKeys: readonly string[],
-): HubBoardMoveResult {
+): RankedPrefixMoveResult {
   return Object.freeze({
     ranking: rankingFor(rankedSlotKeys, ranking.authoredVisitOrder.length),
   });
 }
 
 function dropResult(
-  ranking: HubBoardRanking,
+  ranking: RankedPrefix,
   rankedSlotKeys: readonly string[],
   authoredVisitCount: number,
-): HubBoardMoveResult | undefined {
+): RankedPrefixMoveResult | undefined {
   const nextRanking = rankingFor(rankedSlotKeys, authoredVisitCount);
   if (
     authoredVisitCount === ranking.authoredVisitOrder.length &&
@@ -146,9 +142,9 @@ function dropResult(
 }
 
 function droppedAtSlot(
-  ranking: HubBoardRanking,
+  ranking: RankedPrefix,
   sourceIndex: number,
-  target: Exclude<HubBoardDropTarget, { readonly kind: 'nextVisit' }>,
+  target: Exclude<RankedPrefixDropTarget, { readonly kind: 'nextVisit' }>,
 ): readonly string[] | undefined {
   const sourceSlotKey = ranking.rankedSlotKeys[sourceIndex];
   if (sourceSlotKey === undefined || sourceSlotKey === target.slotKey) return undefined;
@@ -169,12 +165,12 @@ function droppedAtSlot(
  * authorship through `nextVisit`, and a full prefix may leave it through an
  * after-tail target so the next tail room promotes naturally.
  */
-export function dropHubBoardRoom(
-  ranking: HubBoardRanking,
+export function dropRankedPrefixItem(
+  ranking: RankedPrefix,
   requiredVisitCount: number,
   sourceSlotKey: string,
-  target: HubBoardDropTarget,
-): HubBoardMoveResult | undefined {
+  target: RankedPrefixDropTarget,
+): RankedPrefixMoveResult | undefined {
   const authoredVisitCount = ranking.authoredVisitOrder.length;
   if (
     !Number.isInteger(requiredVisitCount) ||
@@ -235,11 +231,11 @@ export function dropHubBoardRoom(
  * Produces one visual board move and, only when the active prefix changes,
  * its complete semantic proposal. It has no candidate or topology policy.
  */
-export function moveHubBoardRoom(
-  ranking: HubBoardRanking,
+export function moveRankedPrefixItem(
+  ranking: RankedPrefix,
   requiredVisitCount: number,
-  move: HubBoardMove,
-): HubBoardMoveResult | undefined {
+  move: RankedPrefixMove,
+): RankedPrefixMoveResult | undefined {
   const authoredVisitCount = ranking.authoredVisitOrder.length;
   const sourceIndex = ranking.rankedSlotKeys.indexOf(move.slotKey);
   if (sourceIndex === -1) return undefined;
@@ -305,3 +301,16 @@ export function moveHubBoardRoom(
     }
   }
 }
+
+/**
+ * Hub keeps its established domain vocabulary as aliases over the shared
+ * ranked-prefix mechanics. This preserves its public surface while acquisition
+ * editors consume the same implementation directly.
+ */
+export type HubBoardRanking = RankedPrefix;
+export type HubBoardDropTarget = RankedPrefixDropTarget;
+export type HubBoardMove = RankedPrefixMove;
+export type HubBoardMoveResult = RankedPrefixMoveResult;
+export const reconcileHubBoardRanking = reconcileRankedPrefix;
+export const moveHubBoardRoom = moveRankedPrefixItem;
+export const dropHubBoardRoom = dropRankedPrefixItem;

@@ -381,8 +381,10 @@ A materialized Shop preserves declaration order for inventory rows while
 deriving `Purchased` membership from its one occurrence-owned
 `acquisitionSites.roomExit.order` list. Each inventory row exposes only that
 membership toggle; the containing Acquisitions workbench owns ordered move
-controls and publishes one complete replacement order. Membership changes are
-structural set edits and do not activate chronological candidate evaluation;
+controls and publishes one complete replacement order. It uses the same ranked-
+prefix presentation as the Hub: numbered participant cards, compact arrow
+controls, pointer reordering, and a visible boundary before nonparticipants.
+Membership changes are structural set edits and do not activate chronological candidate evaluation;
 the same rule applies to declaration-produced pickup and Fields interaction
 checkboxes. Candidate support is evaluated only for move proposals; impossible positions remain visible
 with their evidence, and a selected invalid order remains editable for repair.
@@ -390,6 +392,11 @@ Per-offer Shop-purchase markers and finding destinations remain stable even
 though the aggregate acquisition-order candidate and order finding are owned by
 the exact `roomExit` AcquisitionSiteAddress. An individual purchase failure
 remains AcquisitionEntryAddress-owned when that is the semantic repair context.
+The Shop inventory row remains the sole editor for what was bought. Its
+Acquisitions row may edit acquisition-time trait, Pom, or disposition children,
+but cannot change the purchased reward identity. Producer-owned pickups such as
+Narcissus retain their outer reward editor in Acquisitions because that row is
+also the canonical payload owner.
 
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.

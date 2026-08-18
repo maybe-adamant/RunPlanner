@@ -805,7 +805,12 @@ is atomic and no row publishes a conflicting local order.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
-per-row membership and ordered Acquisitions controls from the one occurrence-owned list.
+per-row membership and one ranked Acquisitions surface from the occurrence-
+owned list. That surface remains on the producing occurrence; an outgoing
+decision never adopts the source room's settlement site. For Shop entries, the
+inventory owns reward identity while Acquisitions owns only chronology and
+acquisition-time resolution children. Generated pickup entries whose payload
+is owned by the settlement row retain the full reward editor there.
 
 ## Offer and Acquisition
 

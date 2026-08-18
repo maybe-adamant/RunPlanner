@@ -1955,6 +1955,10 @@ select {
   accent-color: #e2b971;
 }
 
+.anomaly-revert-action {
+  margin-top: 12px;
+}
+
 .room-selector {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2234,8 +2238,9 @@ select {
   overflow-wrap: anywhere;
 }
 
-.shop-purchase-membership {
+.shop-offer-table .shop-purchase-membership {
   width: 78px;
+  text-align: center;
 }
 
 .shop-purchase-membership .purchase-control {
@@ -2250,6 +2255,38 @@ select {
 
 .shop-offer-reward .reward-value-editor {
   gap: 6px;
+}
+
+.acquisitions-workbench {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.acquisitions-workbench > .owner-markers h4 {
+  margin: 0;
+}
+
+.acquisition-ranked-board {
+  padding: 0;
+}
+
+.acquisition-entry-primary {
+  align-items: center;
+}
+
+.acquisition-entry-identity > .owner-markers {
+  min-width: 0;
+}
+
+.acquisition-entry-identity strong {
+  overflow-wrap: anywhere;
+}
+
+.acquisition-entry-resolution {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #353640;
 }
 
 .fields-batch-editor {

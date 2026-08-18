@@ -544,7 +544,8 @@ the nearest workbench that owns the exact settlement site:
 - an entered N side room shows its room-end card inside that side-room surface
   when a local Shrine purchase, mandatory rush acquisition, or other extra item
   exists; and
-- a structural Shop shows its post-outgoing card below its exits.
+- a structural Shop shows its post-outgoing card in the producing Shop
+  occurrence, after the inventory and before any later outgoing-decision tab.
 
 Producer surfaces retain availability, room/reward selection, and any source
 action that exists before a concrete item does. They do not retain a second
@@ -555,6 +556,12 @@ pickups use the label picked up. A delayed Shrine purchase is different: its
 purchase schedules pending state, and the later materialized pickup
 participates at its delivery site. The settlement row owns acquisition order,
 trait offers, Pom targets, and their acquisition findings.
+
+The settlement surface uses one ranked participant prefix across producers.
+Its drag and arrow controls replace only the order of existing participants;
+the purchase or pickup checkbox is the sole insertion/removal control. Shop
+inventory remains the source of purchased reward identity, so the corresponding
+settlement row exposes resolution children but no second reward-identity editor.
 
 A Shrine offer therefore needs two visible authoring controls when supported:
 `Purchased` and `Delivery`. `Delivery` is dormant while unpurchased and offers

@@ -288,8 +288,7 @@ describe('trait offer editor', () => {
     await user.click(await screen.findByText('Air Quality'));
     await user.click(await screen.findByText('Water Fitness'));
     expect(commit).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Apply complete outcome' }));
-    expect(commit).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Apply complete outcome' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     expect(

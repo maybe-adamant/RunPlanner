@@ -254,6 +254,13 @@ describe('encounter envelope catalog', () => {
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTreant' },
       ],
     });
+    expect(catalog.rooms.byKey.F_MiniBoss03).toMatchObject({
+      label: 'Master-Slicer',
+      encounterEnvelopeKey: 'SingleEncounter',
+      encounterSlotBindings: [
+        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossAssassin' },
+      ],
+    });
     expect(catalog.rooms.byKey.F_PostBoss01).toMatchObject({
       encounterEnvelopeKey: 'SingleEncounter',
       encounterSlotBindings: [

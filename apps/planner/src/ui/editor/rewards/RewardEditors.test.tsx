@@ -432,7 +432,7 @@ describe('reward editor projections', () => {
     expect(screen.queryByText('Reward type')).toBeNull();
   });
 
-  it('labels a Blind Box source as an eventual result', async () => {
+  it('labels a Blind Box source without an extra eventual qualifier', async () => {
     const project = createGoldenFGHIProject();
     const blindBox = {
       rewardType: 'BlindBoxLoot',
@@ -442,7 +442,8 @@ describe('reward editor projections', () => {
     renderReward({ interactions: interactionsFor(project), offer: blindBox, owner: blindBoxOwner });
 
     const trigger = screen.getByLabelText('Reward');
-    expect(trigger.textContent).toContain('Mystery Boon · Apollo (eventual)');
+    expect(trigger.textContent).toContain('Mystery Boon · Apollo');
+    expect(trigger.textContent).not.toContain('(eventual)');
     await user.click(trigger);
     await screen.findByText('Reward type');
     await user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));

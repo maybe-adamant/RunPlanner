@@ -878,7 +878,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss03',
-    label: 'Phantom',
+    label: 'Master-Slicer',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',

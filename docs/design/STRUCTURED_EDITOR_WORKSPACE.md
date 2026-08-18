@@ -719,6 +719,9 @@ publishes ordinary paid-purchase trait and Pom controls only from active
 entries in its containing Acquisitions workbench. Unpurchased initial inventory
 exposes only `Purchased` membership; it has no acquisition-child control,
 finding, trait event, or equipped-state fold until its entry participates.
+The inventory remains the only reward-identity editor. Once purchased, its
+Acquisitions row exposes resolution children and chronology only; it cannot
+turn the purchased Boon, Mystery Boon, Pom, or other item into another reward.
 
 The same workbench contains declaration-produced pickups such as Narcissus
 outputs. It derives entry labels, participation, order, reward controls, and
@@ -792,6 +795,14 @@ participation proposals. One Acquisitions workbench owns the interleavable
 initial, Travel, Gold, and Contract chronology, including atomic source rebind,
 move, and dependent removal. The application does not infer a source or repair
 an order from rendered positions.
+
+Every Acquisitions workbench is hosted by the occurrence that owns its exact
+settlement site, including a Shop whose outgoing decision is authored later.
+It renders the shared ranked-prefix interaction used by the Hub: participating
+entries form a numbered draggable prefix with compact arrow controls, while
+optional nonparticipants remain below an explicit order boundary. Purchase or
+pickup checkboxes alone change membership; drag and arrows alone change the
+relative order of the existing participant set.
 
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the

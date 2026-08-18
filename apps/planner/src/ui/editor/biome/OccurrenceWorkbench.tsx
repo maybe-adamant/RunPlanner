@@ -4,11 +4,22 @@ import {
   type OccurrenceAddress,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
-import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
+import {
+  Fragment,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
+  dropRankedPrefixItem,
+  moveRankedPrefixItem,
+  reconcileRankedPrefix,
   workspaceInteractionKey,
+  type RankedPrefixDropTarget,
   type WorkspaceCommandIntent,
   type WorkspaceEncounterInteraction,
   type WorkspaceEncounterPhase,
@@ -28,7 +39,10 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useOptionalWorkspaceInteraction,
+  useWorkspaceInteraction,
+} from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
@@ -798,12 +812,13 @@ function ShopWorkbench({
         </label>
       )}
       <div className="shop-table-scroll">
-        <p>{room.totalOpportunityCount} opportunities</p>
         <table className="shop-offer-table">
           <thead>
             <tr>
               <th scope="col">Offer</th>
-              <th scope="col">Participation</th>
+              <th className="shop-purchase-membership" scope="col">
+                Buy
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -934,7 +949,55 @@ function ShopWorkbench({
   );
 }
 
-/** One canonical settlement surface, hosted by its declared lifecycle point. */
+interface AcquisitionPointerDrag {
+  readonly pointerId: number;
+  readonly entryKey: string;
+  readonly target: RankedPrefixDropTarget | undefined;
+  readonly x: number;
+  readonly y: number;
+}
+
+interface PendingAcquisitionPointerDrag {
+  readonly handle: HTMLElement;
+  readonly originX: number;
+  readonly originY: number;
+  readonly pointerId: number;
+  readonly entryKey: string;
+}
+
+function sameEntryKeys(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((key, index) => key === right[index]);
+}
+
+function sameAcquisitionDropTarget(
+  left: RankedPrefixDropTarget | undefined,
+  right: RankedPrefixDropTarget | undefined,
+): boolean {
+  if (left === right) return true;
+  if (left === undefined || right === undefined || left.kind !== right.kind) return false;
+  if (left.kind === 'nextVisit' || right.kind === 'nextVisit') return true;
+  return left.slotKey === right.slotKey;
+}
+
+function acquisitionDropTargetFromPoint(
+  root: HTMLElement | null,
+  x: number,
+  y: number,
+): RankedPrefixDropTarget | undefined {
+  const card = document
+    .elementFromPoint?.(x, y)
+    ?.closest<HTMLElement>('[data-acquisition-entry-key][data-in-order="true"]');
+  if (card === null || card === undefined || root?.contains(card) !== true) return undefined;
+  const entryKey = card.dataset.acquisitionEntryKey;
+  if (entryKey === undefined) return undefined;
+  const bounds = card.getBoundingClientRect();
+  return Object.freeze({
+    kind: y < bounds.top + bounds.height / 2 ? ('beforeSlot' as const) : ('afterSlot' as const),
+    slotKey: entryKey,
+  });
+}
+
+/** One canonical settlement surface, hosted by its producing room. */
 export function AcquisitionsWorkbench({
   acquisitions,
   interactions,
@@ -943,76 +1006,398 @@ export function AcquisitionsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   if (acquisitions.entries.length === 0) return null;
+  return <RankedAcquisitionsWorkbench acquisitions={acquisitions} interactions={interactions} />;
+}
+
+function RankedAcquisitionsWorkbench({
+  acquisitions,
+  interactions,
+}: {
+  readonly acquisitions: NonNullable<WorkspaceRoomSummary['acquisitions']>;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const dispatch = useAppDispatch();
+  const board = useRef<HTMLDivElement>(null);
+  const pendingPointerDrag = useRef<PendingAcquisitionPointerDrag | undefined>(undefined);
+  const activePointerDrag = useRef<AcquisitionPointerDrag | undefined>(undefined);
+  const pendingKeyboardFocus = useRef<
+    { readonly action: 'moveEarlier' | 'moveLater'; readonly entryKey: string } | undefined
+  >(undefined);
+  const [pointerDrag, setPointerDrag] = useState<AcquisitionPointerDrag | undefined>(undefined);
+  const [announcement, setAnnouncement] = useState('');
+  const participantEntries = acquisitions.entries.filter(
+    (entry) => entry.participation === undefined || entry.participation.selected,
+  );
+  const participantKeys = participantEntries.map((entry) => entry.key);
+  const participantKeyIdentity = participantKeys.join('\u0001');
+  const interaction =
+    participantEntries.length < 2
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.acquisitionOrders,
+          workspaceInteractionKey(acquisitions.site),
+        );
+  const projection = useOptionalWorkspaceInteraction(interaction);
+  const ranking = reconcileRankedPrefix({
+    authoredVisitOrder: participantKeys,
+    declarationOpenSlotKeys: acquisitions.entries.map((entry) => entry.key),
+  });
+  const entriesByKey = new Map(acquisitions.entries.map((entry) => [entry.key, entry] as const));
+  const orderedEntries = ranking.authoredVisitOrder.flatMap((key) => {
+    const entry = entriesByKey.get(key);
+    return entry === undefined ? [] : [entry];
+  });
+  const unselectedEntries = ranking.tailSlotKeys.flatMap((key) => {
+    const entry = entriesByKey.get(key);
+    return entry === undefined ? [] : [entry];
+  });
+  const candidateFor = (entryKeys: readonly string[]) =>
+    projection.result?.find((option) => sameEntryKeys(option.value, entryKeys));
+  const applyOrder = (
+    entryKeys: readonly string[],
+    nextAnnouncement: string,
+    focus?: { readonly action: 'moveEarlier' | 'moveLater'; readonly entryKey: string },
+  ): void => {
+    const options = projection.result ?? projection.activate();
+    const proposal = options?.find((option) => sameEntryKeys(option.value, entryKeys));
+    if (!candidateMayBeAuthored(proposal)) return;
+    pendingKeyboardFocus.current = focus;
+    setAnnouncement(nextAnnouncement);
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceAcquisitionOrder',
+        site: acquisitions.site,
+        entryKeys,
+      }),
+    );
+  };
+  const moveResult = (entryKey: string, kind: 'moveEarlier' | 'moveLater') =>
+    moveRankedPrefixItem(ranking, acquisitions.entries.length, { kind, slotKey: entryKey });
+  const beginPointerDrag = (event: ReactPointerEvent<HTMLSpanElement>, entryKey: string): void => {
+    if (event.button !== 0 || !event.isPrimary) return;
+    event.preventDefault();
+    projection.activate();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pendingPointerDrag.current = Object.freeze({
+      handle: event.currentTarget,
+      originX: event.clientX,
+      originY: event.clientY,
+      pointerId: event.pointerId,
+      entryKey,
+    });
+  };
+  const clearPointerDrag = (pointerId?: number): void => {
+    const pending = pendingPointerDrag.current;
+    const active = activePointerDrag.current;
+    if (pointerId !== undefined && (active?.pointerId ?? pending?.pointerId) !== pointerId) return;
+    if (pending?.handle.hasPointerCapture?.(pending.pointerId)) {
+      pending.handle.releasePointerCapture(pending.pointerId);
+    }
+    pendingPointerDrag.current = undefined;
+    activePointerDrag.current = undefined;
+    setPointerDrag(undefined);
+  };
+  const updatePointerDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const pending = pendingPointerDrag.current;
+    if (pending === undefined || pending.pointerId !== event.pointerId) return;
+    if (
+      activePointerDrag.current === undefined &&
+      Math.hypot(event.clientX - pending.originX, event.clientY - pending.originY) < 6
+    ) {
+      return;
+    }
+    const next = Object.freeze({
+      pointerId: pending.pointerId,
+      entryKey: pending.entryKey,
+      target: acquisitionDropTargetFromPoint(board.current, event.clientX, event.clientY),
+      x: event.clientX,
+      y: event.clientY,
+    });
+    activePointerDrag.current = next;
+    setPointerDrag(next);
+  };
+  const completePointerDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const active = activePointerDrag.current;
+    if (active === undefined || active.pointerId !== event.pointerId) {
+      clearPointerDrag(event.pointerId);
+      return;
+    }
+    const target = acquisitionDropTargetFromPoint(board.current, event.clientX, event.clientY);
+    clearPointerDrag(event.pointerId);
+    if (target === undefined) return;
+    const result = dropRankedPrefixItem(
+      ranking,
+      acquisitions.entries.length,
+      active.entryKey,
+      target,
+    );
+    const entryKeys = result?.proposedVisitOrder;
+    if (entryKeys === undefined || entryKeys.length !== participantKeys.length) return;
+    const entry = entriesByKey.get(active.entryKey);
+    const position = entryKeys.indexOf(active.entryKey) + 1;
+    applyOrder(
+      entryKeys,
+      `${entry?.label ?? active.entryKey} moved to acquisition ${position} of ${entryKeys.length}.`,
+    );
+  };
+
+  useLayoutEffect(() => {
+    const pending = pendingKeyboardFocus.current;
+    if (pending === undefined) return;
+    const card = Array.from(
+      board.current?.querySelectorAll<HTMLElement>('[data-acquisition-entry-key]') ?? [],
+    ).find((element) => element.dataset.acquisitionEntryKey === pending.entryKey);
+    const requested = card?.querySelector<HTMLButtonElement>(
+      `[data-acquisition-rank-action="${pending.action}"]`,
+    );
+    const fallback = Array.from(
+      card?.querySelectorAll<HTMLButtonElement>('[data-acquisition-rank-action]') ?? [],
+    ).find((button) => !button.disabled);
+    (requested?.disabled === false ? requested : fallback)?.focus({ preventScroll: true });
+    pendingKeyboardFocus.current = undefined;
+  }, [participantKeyIdentity]);
+
   return (
     <section className="acquisitions-workbench">
       <div className="owner-markers">
         <h4>Acquisitions</h4>
         <SemanticOwnerMarker address={acquisitions.marker.address} />
       </div>
-      {acquisitions.entries.map((entry) => {
-        const participants = acquisitions.entries.filter(
-          (candidate) => candidate.participation === undefined || candidate.participation.selected,
-        );
-        const participantIndex = participants.findIndex((candidate) => candidate.key === entry.key);
-        const without = participants.filter((candidate) => candidate.key !== entry.key);
-        const move = (nextIndex: number) => [
-          ...without.slice(0, nextIndex).map((candidate) => candidate.key),
-          entry.key,
-          ...without.slice(nextIndex).map((candidate) => candidate.key),
-        ];
-        return (
-          <div
-            className="acquisition-entry"
-            id={semanticOwnerControlElementId(entry.address)}
-            key={entry.key}
-            tabIndex={-1}
-          >
-            <div className="owner-markers">
-              <span>{entry.label}</span>
-              {entry.rewardControl === undefined ? null : (
-                <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
-              )}
-            </div>
-            {entry.participation?.selected === false || participants.length < 2 ? null : (
-              <AcquisitionMoveButton
-                disabled={participantIndex === 0}
-                entryKeys={move(participantIndex - 1)}
-                interactions={interactions}
-                label="Move earlier"
-                site={acquisitions.site}
-              />
-            )}
-            {entry.participation?.selected === false || participants.length < 2 ? null : (
-              <AcquisitionMoveButton
-                disabled={participantIndex === participants.length - 1}
-                entryKeys={move(participantIndex + 1)}
-                interactions={interactions}
-                label="Move later"
-                site={acquisitions.site}
-              />
-            )}
-            {entry.participation === undefined ? null : (
-              <PickupParticipationControl
-                entry={entry.address}
-                label={entry.participation.label}
-                selected={entry.participation.selected}
-                toggleEntryKeys={entry.participation.toggleEntryKeys}
-              />
-            )}
-            {entry.rewardControl === undefined ? null : (
-              <RewardControlEditor
-                control={entry.rewardControl}
-                idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
-                interactions={interactions}
-                showOffer={entry.rewardControl.offerEditVisibility === 'visible'}
-                {...(entry.rewardControl.offerEditStartStep === undefined
-                  ? {}
-                  : { offerStartStep: entry.rewardControl.offerEditStartStep })}
-              />
-            )}
+      <p aria-live="polite" className="visually-hidden">
+        {announcement}
+      </p>
+      <div
+        aria-label="Ranked acquisition order"
+        className="hub-ranked-room-board acquisition-ranked-board"
+        onLostPointerCapture={(event) => clearPointerDrag(event.pointerId)}
+        onPointerCancel={(event) => clearPointerDrag(event.pointerId)}
+        onPointerMove={updatePointerDrag}
+        onPointerUp={completePointerDrag}
+        ref={board}
+        role="group"
+        tabIndex={-1}
+      >
+        <div aria-label="Selected acquisition order" className="hub-ranked-visit-prefix">
+          {orderedEntries.map((entry, index) => {
+            const earlier = moveResult(entry.key, 'moveEarlier')?.proposedVisitOrder;
+            const later = moveResult(entry.key, 'moveLater')?.proposedVisitOrder;
+            const earlierCandidate = earlier === undefined ? undefined : candidateFor(earlier);
+            const laterCandidate = later === undefined ? undefined : candidateFor(later);
+            const dropState = (target: RankedPrefixDropTarget) => {
+              if (!sameAcquisitionDropTarget(pointerDrag?.target, target)) return undefined;
+              const result = dropRankedPrefixItem(
+                ranking,
+                acquisitions.entries.length,
+                pointerDrag!.entryKey,
+                target,
+              );
+              const proposal = result?.proposedVisitOrder;
+              return proposal === undefined || proposal.length !== participantKeys.length
+                ? 'unavailable'
+                : projection.result !== undefined && !candidateMayBeAuthored(candidateFor(proposal))
+                  ? 'unavailable'
+                  : 'available';
+            };
+            return (
+              <article
+                className="hub-open-room-card acquisition-entry"
+                data-acquisition-entry-key={entry.key}
+                data-dragging={pointerDrag?.entryKey === entry.key || undefined}
+                data-drop-after={dropState({ kind: 'afterSlot', slotKey: entry.key })}
+                data-drop-before={dropState({ kind: 'beforeSlot', slotKey: entry.key })}
+                data-in-order="true"
+                id={semanticOwnerControlElementId(entry.address)}
+                key={entry.key}
+                tabIndex={-1}
+              >
+                <div className="hub-roster-primary acquisition-entry-primary">
+                  <span
+                    aria-hidden="true"
+                    className="hub-roster-drag-handle"
+                    data-acquisition-drag-handle
+                    data-dragging={pointerDrag?.entryKey === entry.key || undefined}
+                    onPointerDown={(event) => beginPointerDrag(event, entry.key)}
+                  >
+                    ⠿
+                  </span>
+                  <span aria-hidden="true" className="hub-roster-rank">
+                    {index + 1}
+                  </span>
+                  <div className="hub-roster-identity acquisition-entry-identity">
+                    <div className="owner-markers">
+                      <strong>{entry.label}</strong>
+                      {entry.rewardControl === undefined ? null : (
+                        <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
+                      )}
+                    </div>
+                  </div>
+                  {entry.participation === undefined ? (
+                    <span />
+                  ) : (
+                    <PickupParticipationControl
+                      entry={entry.address}
+                      label={entry.participation.label}
+                      selected={entry.participation.selected}
+                      toggleEntryKeys={entry.participation.toggleEntryKeys}
+                    />
+                  )}
+                  <div
+                    aria-label={`Acquisition order controls for ${entry.label}; Position ${index + 1} of ${orderedEntries.length}`}
+                    className="hub-rank-actions"
+                    role="group"
+                  >
+                    <button
+                      aria-busy={projection.pending || undefined}
+                      aria-label={`Move ${entry.label} earlier`}
+                      className="quiet-action hub-rank-action"
+                      data-acquisition-rank-action="moveEarlier"
+                      data-candidate-support={candidateSupport(earlierCandidate)}
+                      disabled={
+                        earlier === undefined ||
+                        projection.pending ||
+                        (projection.result !== undefined &&
+                          !candidateMayBeAuthored(earlierCandidate))
+                      }
+                      onClick={() =>
+                        earlier === undefined
+                          ? undefined
+                          : applyOrder(
+                              earlier,
+                              `${entry.label} moved to acquisition ${index} of ${orderedEntries.length}.`,
+                              { action: 'moveEarlier', entryKey: entry.key },
+                            )
+                      }
+                      onFocus={projection.activate}
+                      onPointerDown={projection.activate}
+                      title={`Move ${entry.label} earlier`}
+                      type="button"
+                    >
+                      <span aria-hidden="true">↑</span>
+                    </button>
+                    <button
+                      aria-busy={projection.pending || undefined}
+                      aria-label={`Move ${entry.label} later`}
+                      className="quiet-action hub-rank-action"
+                      data-acquisition-rank-action="moveLater"
+                      data-candidate-support={candidateSupport(laterCandidate)}
+                      disabled={
+                        later === undefined ||
+                        projection.pending ||
+                        (projection.result !== undefined && !candidateMayBeAuthored(laterCandidate))
+                      }
+                      onClick={() =>
+                        later === undefined
+                          ? undefined
+                          : applyOrder(
+                              later,
+                              `${entry.label} moved to acquisition ${index + 2} of ${orderedEntries.length}.`,
+                              { action: 'moveLater', entryKey: entry.key },
+                            )
+                      }
+                      onFocus={projection.activate}
+                      onPointerDown={projection.activate}
+                      title={`Move ${entry.label} later`}
+                      type="button"
+                    >
+                      <span aria-hidden="true">↓</span>
+                    </button>
+                  </div>
+                </div>
+                {entry.rewardControl === undefined ? null : (
+                  <div className="acquisition-entry-resolution">
+                    <RewardControlEditor
+                      control={entry.rewardControl}
+                      idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
+                      interactions={interactions}
+                      showOffer={
+                        entry.rewardPresentation !== 'resolutionOnly' &&
+                        entry.rewardControl.offerEditVisibility === 'visible'
+                      }
+                      {...(entry.rewardControl.offerEditStartStep === undefined
+                        ? {}
+                        : { offerStartStep: entry.rewardControl.offerEditStartStep })}
+                    />
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+        {unselectedEntries.length === 0 ? null : (
+          <div aria-label="Acquisition-order boundary" className="hub-visit-boundary">
+            <span>Acquisition order ends here</span>
+            <span>{unselectedEntries.length} not picked up</span>
           </div>
-        );
-      })}
+        )}
+        {unselectedEntries.length === 0 ? null : (
+          <div aria-label="Unselected acquisitions" className="hub-ranked-tail">
+            {unselectedEntries.map((entry) => (
+              <article
+                className="hub-open-room-card acquisition-entry"
+                data-acquisition-entry-key={entry.key}
+                data-in-order="false"
+                id={semanticOwnerControlElementId(entry.address)}
+                key={entry.key}
+                tabIndex={-1}
+              >
+                <div className="hub-roster-primary acquisition-entry-primary">
+                  <span aria-hidden="true" className="hub-roster-drag-handle">
+                    ·
+                  </span>
+                  <span aria-hidden="true" className="hub-roster-rank">
+                    —
+                  </span>
+                  <div className="hub-roster-identity acquisition-entry-identity">
+                    <div className="owner-markers">
+                      <strong>{entry.label}</strong>
+                      {entry.rewardControl === undefined ? null : (
+                        <SemanticOwnerMarker address={entry.rewardControl.marker.address} />
+                      )}
+                    </div>
+                  </div>
+                  {entry.participation === undefined ? null : (
+                    <PickupParticipationControl
+                      entry={entry.address}
+                      label={entry.participation.label}
+                      selected={entry.participation.selected}
+                      toggleEntryKeys={entry.participation.toggleEntryKeys}
+                    />
+                  )}
+                  <span />
+                </div>
+                {entry.rewardControl === undefined ? null : (
+                  <div className="acquisition-entry-resolution">
+                    <RewardControlEditor
+                      control={entry.rewardControl}
+                      idPrefix={`acquisition-${entry.rewardControl.marker.focusKey}`}
+                      interactions={interactions}
+                      showOffer={
+                        entry.rewardPresentation !== 'resolutionOnly' &&
+                        entry.rewardControl.offerEditVisibility === 'visible'
+                      }
+                      {...(entry.rewardControl.offerEditStartStep === undefined
+                        ? {}
+                        : { offerStartStep: entry.rewardControl.offerEditStartStep })}
+                    />
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+        {pointerDrag === undefined ? null : (
+          <div
+            aria-hidden="true"
+            className="hub-roster-drag-preview"
+            style={{
+              transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
+            }}
+          >
+            <span>⠿</span>
+            {entriesByKey.get(pointerDrag.entryKey)?.label ?? 'Acquisition'}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -1048,62 +1433,6 @@ function PickupParticipationControl({
       />
       {label}
     </label>
-  );
-}
-
-function AcquisitionMoveButton({
-  disabled,
-  entryKeys,
-  interactions,
-  label,
-  site,
-}: {
-  readonly disabled: boolean;
-  readonly entryKeys: readonly string[];
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly label: string;
-  readonly site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress;
-}) {
-  const dispatch = useAppDispatch();
-  const interaction = requireWorkspaceInteraction(
-    interactions.acquisitionOrders,
-    workspaceInteractionKey(site),
-  );
-  const projection = useWorkspaceInteraction(interaction);
-  const candidate = projection.result?.find(
-    (option) =>
-      option.value.length === entryKeys.length &&
-      option.value.every((key, index) => key === entryKeys[index]),
-  );
-  const unavailable = projection.result !== undefined && !candidateMayBeAuthored(candidate);
-  const apply = () => {
-    const options = projection.result ?? projection.activate();
-    const proposal = options?.find(
-      (option) =>
-        option.value.length === entryKeys.length &&
-        option.value.every((key, index) => key === entryKeys[index]),
-    );
-    if (!candidateMayBeAuthored(proposal)) return;
-    dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceAcquisitionOrder',
-        site,
-        entryKeys,
-      }),
-    );
-  };
-  return (
-    <button
-      aria-busy={projection.pending || undefined}
-      data-candidate-support={candidateSupport(candidate)}
-      disabled={disabled || projection.pending || unavailable}
-      onClick={apply}
-      onFocus={projection.activate}
-      onPointerDown={projection.activate}
-      type="button"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -1237,21 +1566,23 @@ function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) 
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <button
-      className="danger-action action-compact"
-      data-command="RevertAnomaly"
-      onClick={() =>
-        dispatch(
-          authoredProjectCommandDispatched({
-            kind: 'RevertAnomaly',
-            occurrence: room.address,
-          }),
-        )
-      }
-      type="button"
-    >
-      Restore {anomaly.rememberedRoomLabel}
-    </button>
+    <div className="anomaly-revert-action">
+      <button
+        className="danger-action action-compact"
+        data-command="RevertAnomaly"
+        onClick={() =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'RevertAnomaly',
+              occurrence: room.address,
+            }),
+          )
+        }
+        type="button"
+      >
+        Restore {anomaly.rememberedRoomLabel}
+      </button>
+    </div>
   );
 }
 
@@ -1379,17 +1710,15 @@ export function RoomOfferEditor({
       {state.kind === 'shop' && state.materialized ? (
         <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
-      {state.kind === 'shop' &&
-      state.materialized &&
-      room.acquisitions?.placement === 'afterProducer' ? (
-        <AcquisitionsWorkbench acquisitions={room.acquisitions} interactions={interactions} />
-      ) : null}
       {state.kind === 'fields' ? (
         <FieldsWorkbench interactions={interactions} room={state} />
       ) : null}
       {state.kind === 'ship' ? (
         <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
+      {room.acquisitions === undefined ? null : (
+        <AcquisitionsWorkbench acquisitions={room.acquisitions} interactions={interactions} />
+      )}
       {room.hasRoomLocalCustomization ? (
         <RoomCustomizationDisclosure
           initiallyOpen={presentation === 'hubRoomLocal'}
